@@ -15,6 +15,7 @@ export function RightBar() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const { t } = useTranslation();
+    const router = useRouter();
 
     useEffect(() => {
         const fakeLoading = () => {
@@ -23,7 +24,7 @@ export function RightBar() {
                 setLoading(false);
             }, 1000);
         };
-        
+
         fakeLoading();
     }, []);
 
@@ -32,7 +33,7 @@ export function RightBar() {
     return (
         <View style={styles.container}>
             <SearchBar />
-            
+
             {/* Trust Score Widget */}
             <View style={styles.widgetContainer}>
                 <View style={styles.widgetHeader}>
@@ -46,12 +47,17 @@ export function RightBar() {
                         <Text style={styles.scoreNumber}>87</Text>
                     </View>
                     <Text style={styles.trustScoreText}>Your trust score is Good</Text>
-                    <TouchableOpacity style={styles.improveButton}>
+                    <TouchableOpacity
+                        style={styles.improveButton}
+                        onPress={() => {
+                            router.push('/profile/trust-score');
+                        }}
+                    >
                         <Text style={styles.improveButtonText}>Improve Score</Text>
                     </TouchableOpacity>
                 </View>
             </View>
-            
+
             {/* Featured Properties */}
             {!isPropertiesPage && (
                 <View style={styles.widgetContainer}>
@@ -72,7 +78,7 @@ export function RightBar() {
                     </View>
                 </View>
             )}
-            
+
             {/* Eco Certification */}
             <View style={styles.widgetContainer}>
                 <View style={styles.widgetHeader}>
@@ -90,7 +96,7 @@ export function RightBar() {
                     </TouchableOpacity>
                 </View>
             </View>
-            
+
             {/* Horizon Initiative */}
             <View style={styles.widgetContainer}>
                 <View style={styles.widgetHeader}>
@@ -100,7 +106,7 @@ export function RightBar() {
                     <Ionicons name="star" size={22} color="#FFD700" />
                 </View>
                 <Text style={styles.membershipText}>
-                Horizon is a global initiative offering fair housing, healthcare, and travel support. Integrated with Homiio, it ensures affordable living within a connected, sustainable network.
+                    Horizon is a global initiative offering fair housing, healthcare, and travel support. Integrated with Homiio, it ensures affordable living within a connected, sustainable network.
                 </Text>
                 <TouchableOpacity
                     style={styles.joinButton}
