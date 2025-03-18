@@ -126,7 +126,7 @@ export default function HomePage() {
                 onPress={() => router.push(`/properties/type/${type.id}`)}
               >
                 <View style={styles.categoryIconWrap}>
-                  <Ionicons name={type.icon} size={32} color={colors.primaryColor} />
+                  <Ionicons name={type.icon as keyof typeof Ionicons.glyphMap} size={32} color={colors.primaryColor} />
                 </View>
                 <Text style={styles.categoryName}>{type.name}</Text>
                 <View style={styles.categoryBadge}>
