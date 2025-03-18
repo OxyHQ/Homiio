@@ -400,7 +400,6 @@ export default function PropertyTypePage() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.COLOR_BACKGROUND,
   },
   container: {
     flex: 1,
