@@ -1,469 +1,270 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { colors } from '@/styles/colors';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
+import { ContractCard, ContractStatus } from '@/components/ContractCard';
+import { colors } from '@/styles/colors';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Contract = {
   id: string;
+  title: string;
+  propertyId: string;
   propertyName: string;
-  landlordName: string;
   startDate: string;
   endDate: string;
-  monthlyRent: string;
-  status: 'active' | 'pending' | 'expired' | 'upcoming';
-  depositAmount: string;
-  isEthical: boolean;
+  status: ContractStatus;
+  landlordName: string;
+  tenantName: string;
+  monthlyRent: number;
+  currency?: string;
 };
 
-export default function ContractsPage() {
+// Sample data for demonstration
+const sampleContracts: Contract[] = [
+  {
+    id: '1',
+    title: 'Apartment Rental Agreement',
+    propertyId: 'prop1',
+    propertyName: 'Modern Studio in Barcelona',
+    startDate: '2023-01-01',
+    endDate: '2023-12-31',
+    status: 'active',
+    landlordName: 'Maria Garcia',
+    tenantName: 'John Smith',
+    monthlyRent: 850,
+    currency: '€',
+  },
+  {
+    id: '2',
+    title: 'Co-living Space Agreement',
+    propertyId: 'prop2',
+    propertyName: 'Shared Apartment in Berlin',
+    startDate: '2023-02-15',
+    endDate: '2023-08-15',
+    status: 'pending',
+    landlordName: 'Klaus Schmidt',
+    tenantName: 'John Smith',
+    monthlyRent: 600,
+    currency: '€',
+  },
+  {
+    id: '3',
+    title: 'House Rental Agreement',
+    propertyId: 'prop3',
+    propertyName: 'Family Home in Stockholm',
+    startDate: '2022-05-01',
+    endDate: '2023-05-01',
+    status: 'expired',
+    landlordName: 'Erik Johansson',
+    tenantName: 'John Smith',
+    monthlyRent: 1200,
+    currency: '€',
+  },
+  {
+    id: '4',
+    title: 'Eco-Apartment Agreement',
+    propertyId: 'prop4',
+    propertyName: 'Sustainable Living in Amsterdam',
+    startDate: '2023-03-01',
+    endDate: '2024-03-01',
+    status: 'active',
+    landlordName: 'Jan de Vries',
+    tenantName: 'John Smith',
+    monthlyRent: 950,
+    currency: '€',
+  },
+  {
+    id: '5',
+    title: 'Studio Agreement - Draft',
+    propertyId: 'prop5',
+    propertyName: 'Studio in Madrid',
+    startDate: '2023-06-01',
+    endDate: '2024-06-01',
+    status: 'draft',
+    landlordName: 'Carlos Rodriguez',
+    tenantName: 'John Smith',
+    monthlyRent: 750,
+    currency: '€',
+  },
+];
+
+type FilterOptions = 'all' | 'active' | 'pending' | 'expired' | 'draft';
+
+export default function ContractsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [contracts, setContracts] = useState<Contract[]>([]);
-  const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
+  const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState<FilterOptions>('all');
 
-  useEffect(() => {
-    // Simulating API call with a timeout
-    const fetchContracts = setTimeout(() => {
-      const mockContracts: Contract[] = [
-        {
-          id: '1',
-          propertyName: 'Modern Studio Apartment',
-          landlordName: 'Maria Garcia',
-          startDate: '2023-01-01',
-          endDate: '2023-12-31',
-          monthlyRent: '€850',
-          status: 'active',
-          depositAmount: '€1700',
-          isEthical: true,
-        },
-        {
-          id: '2',
-          propertyName: 'Co-living Space with Garden',
-          landlordName: 'Thomas Weber',
-          startDate: '2023-06-01',
-          endDate: '2023-11-30',
-          monthlyRent: '€550',
-          status: 'pending',
-          depositAmount: '€1100',
-          isEthical: true,
-        },
-        {
-          id: '3',
-          propertyName: 'Spacious 2-Bedroom Apartment',
-          landlordName: 'Johanna Schmidt',
-          startDate: '2022-05-15',
-          endDate: '2023-05-14',
-          monthlyRent: '€1200',
-          status: 'expired',
-          depositAmount: '€2400',
-          isEthical: false,
-        },
-        {
-          id: '4',
-          propertyName: 'City Center Loft',
-          landlordName: 'Luis Rodriguez',
-          startDate: '2023-12-01',
-          endDate: '2024-11-30',
-          monthlyRent: '€950',
-          status: 'upcoming',
-          depositAmount: '€1900',
-          isEthical: true,
-        },
-      ];
-      
-      setContracts(mockContracts);
-      setLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(fetchContracts);
-  }, []);
-
-  const getStatusColor = (status: Contract['status']) => {
-    switch (status) {
-      case 'active':
-        return '#4CAF50'; // green
-      case 'pending':
-        return '#FF9800'; // orange
-      case 'expired':
-        return '#9E9E9E'; // grey
-      case 'upcoming':
-        return '#2196F3'; // blue
-      default:
-        return colors.COLOR_BLACK;
-    }
-  };
-
-  const getStatusText = (status: Contract['status']) => {
-    switch (status) {
-      case 'active':
-        return t('Active');
-      case 'pending':
-        return t('Pending');
-      case 'expired':
-        return t('Expired');
-      case 'upcoming':
-        return t('Upcoming');
-      default:
-        return '';
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-  };
-
-  const filteredContracts = contracts.filter(contract => {
-    if (activeTab === 'active') {
-      return contract.status === 'active' || contract.status === 'pending' || contract.status === 'upcoming';
-    } else {
-      return contract.status === 'expired';
-    }
+  // Filter contracts based on the selected filter
+  const filteredContracts = sampleContracts.filter((contract) => {
+    if (filter === 'all') return true;
+    return contract.status === filter;
   });
 
-  const renderContractItem = ({ item }: { item: Contract }) => (
+  const handleContractPress = (contractId: string) => {
+    router.push(`/contracts/${contractId}`);
+  };
+
+  const handleSharePress = (contractId: string) => {
+    // In a real app, this would open a share dialog
+    console.log(`Sharing contract ${contractId}`);
+  };
+
+  const handleDownloadPress = (contractId: string) => {
+    // In a real app, this would download the contract document
+    console.log(`Downloading contract ${contractId}`);
+  };
+
+  const handleAddNewContract = () => {
+    router.push('/contracts/new');
+  };
+
+  const renderFilterButton = (label: string, value: FilterOptions) => (
     <TouchableOpacity
-      style={styles.contractCard}
-      onPress={() => router.push(`/contracts/${item.id}`)}
+      style={[
+        styles.filterButton,
+        filter === value && styles.filterButtonActive
+      ]}
+      onPress={() => setFilter(value)}
     >
-      <View style={styles.contractHeader}>
-        <Text style={styles.propertyName} numberOfLines={1}>{item.propertyName}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-          <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
-        </View>
-      </View>
-      
-      <View style={styles.contractInfo}>
-        <View style={styles.infoRow}>
-          <Ionicons name="person-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
-          <Text style={styles.infoText}>{item.landlordName}</Text>
-        </View>
-        
-        <View style={styles.infoRow}>
-          <Ionicons name="calendar-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
-          <Text style={styles.infoText}>
-            {formatDate(item.startDate)} - {formatDate(item.endDate)}
-          </Text>
-        </View>
-        
-        <View style={styles.infoRow}>
-          <Ionicons name="cash-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
-          <Text style={styles.infoText}>{item.monthlyRent}/month</Text>
-        </View>
-      </View>
-      
-      <View style={styles.contractFooter}>
-        {item.isEthical ? (
-          <View style={styles.ethicalBadge}>
-            <Ionicons name="shield-checkmark" size={14} color={colors.primaryColor} />
-            <Text style={styles.ethicalText}>{t('Ethical Contract')}</Text>
-          </View>
-        ) : (
-          <View style={styles.nonEthicalBadge}>
-            <Ionicons name="alert-circle" size={14} color="#FF5722" />
-            <Text style={styles.nonEthicalText}>{t('Review Recommended')}</Text>
-          </View>
-        )}
-        
-        <TouchableOpacity style={styles.viewDetailsButton}>
-          <Text style={styles.viewDetailsText}>{t('View Details')}</Text>
-          <Ionicons name="chevron-forward" size={16} color={colors.primaryColor} />
-        </TouchableOpacity>
-      </View>
-      
-      {item.status === 'active' && (
-        <View style={styles.quickActionsContainer}>
-          <TouchableOpacity style={styles.quickActionButton}>
-            <Ionicons name="document-text-outline" size={18} color={colors.primaryColor} />
-            <Text style={styles.quickActionText}>{t('Contract')}</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.quickActionButton}>
-            <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.primaryColor} />
-            <Text style={styles.quickActionText}>{t('Contact')}</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.quickActionButton}>
-            <Ionicons name="cash-outline" size={18} color={colors.primaryColor} />
-            <Text style={styles.quickActionText}>{t('Pay Rent')}</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.quickActionButton}>
-            <Ionicons name="construct-outline" size={18} color={colors.primaryColor} />
-            <Text style={styles.quickActionText}>{t('Repairs')}</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      
-      {item.status === 'upcoming' && (
-        <View style={styles.moveInReminderContainer}>
-          <Ionicons name="information-circle" size={20} color={colors.primaryColor} />
-          <Text style={styles.moveInReminderText}>
-            {t('Move-in date')}: {formatDate(item.startDate)}
-          </Text>
-        </View>
-      )}
+      <Text
+        style={[
+          styles.filterButtonText,
+          filter === value && styles.filterButtonTextActive
+        ]}
+      >
+        {label}
+      </Text>
     </TouchableOpacity>
   );
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <Header
+          options={{
+            title: t("Contracts"),
+            titlePosition: 'center',
+          }}
+        />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primaryColor} />
+          <Text style={styles.loadingText}>{t("Loading contracts...")}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <Header
         options={{
-          title: t('Contracts'),
+          title: t("Rental Contracts"),
           titlePosition: 'center',
+          rightComponents: [
+            <TouchableOpacity key="add" style={styles.headerButton} onPress={handleAddNewContract}>
+              <Ionicons name="add-circle-outline" size={24} color={colors.COLOR_BLACK} />
+            </TouchableOpacity>,
+          ],
         }}
       />
-      
-      <View style={styles.container}>
-        <View style={styles.tabsContainer}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'active' && styles.activeTab]}
-            onPress={() => setActiveTab('active')}
-          >
-            <Text style={[styles.tabText, activeTab === 'active' && styles.activeTabText]}>
-              {t('Active')}
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'history' && styles.activeTab]}
-            onPress={() => setActiveTab('history')}
-          >
-            <Text style={[styles.tabText, activeTab === 'history' && styles.activeTabText]}>
-              {t('History')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-        
-        <View style={styles.ethicalHousingInfo}>
-          <Ionicons name="shield-checkmark" size={20} color={colors.primaryColor} />
-          <Text style={styles.ethicalHousingText}>
-            {t('Ethical contracts are reviewed for fair terms and transparency')}
-          </Text>
-          <TouchableOpacity style={styles.learnMoreButton}>
-            <Text style={styles.learnMoreText}>{t('Learn More')}</Text>
-          </TouchableOpacity>
-        </View>
 
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primaryColor} />
-            <Text style={styles.loadingText}>{t('Loading contracts...')}</Text>
-          </View>
-        ) : filteredContracts.length === 0 ? (
+      <View style={styles.filterContainer}>
+        {renderFilterButton(t('All'), 'all')}
+        {renderFilterButton(t('Active'), 'active')}
+        {renderFilterButton(t('Pending'), 'pending')}
+        {renderFilterButton(t('Expired'), 'expired')}
+        {renderFilterButton(t('Drafts'), 'draft')}
+      </View>
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {filteredContracts.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="document-text-outline" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
-            <Text style={styles.emptyText}>
-              {activeTab === 'active'
-                ? t('You have no active contracts')
-                : t('No contract history found')}
+            <Text style={styles.emptyText}>{t("No contracts found")}</Text>
+            <Text style={styles.emptySubtext}>
+              {filter === 'all' ?
+                t("You don't have any rental contracts yet") :
+                t(`You don't have any ${filter} contracts`)}
             </Text>
-            {activeTab === 'active' && (
-              <TouchableOpacity
-                style={styles.browsePropertiesButton}
-                onPress={() => router.push('/properties')}
-              >
-                <Text style={styles.browsePropertiesText}>{t('Browse Properties')}</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={styles.emptyButton}
+              onPress={handleAddNewContract}
+            >
+              <Text style={styles.emptyButtonText}>{t("Create New Contract")}</Text>
+            </TouchableOpacity>
           </View>
         ) : (
-          <FlatList
-            data={filteredContracts}
-            renderItem={renderContractItem}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContainer}
-            showsVerticalScrollIndicator={false}
-          />
+          filteredContracts.map((contract) => (
+            <ContractCard
+              key={contract.id}
+              {...contract}
+              onPress={() => handleContractPress(contract.id)}
+              onSharePress={() => handleSharePress(contract.id)}
+              onDownloadPress={() => handleDownloadPress(contract.id)}
+            />
+          ))
         )}
+      </ScrollView>
+
+      <View style={styles.bottomButtonContainer}>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={handleAddNewContract}
+        >
+          <Ionicons name="add" size={24} color="white" />
+          <Text style={styles.addButtonText}>{t("New Contract")}</Text>
+        </TouchableOpacity>
       </View>
-      
-      <TouchableOpacity 
-        style={styles.helpButton}
-        onPress={() => router.push('/support/legal')}
-      >
-        <Ionicons name="help-circle" size={24} color="white" />
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.COLOR_BACKGROUND,
-  },
   container: {
     flex: 1,
-    padding: 15,
-  },
-  tabsContainer: {
-    flexDirection: 'row',
     backgroundColor: colors.primaryLight,
-    borderRadius: 8,
-    marginBottom: 15,
-    padding: 3,
   },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 6,
+  headerButton: {
+    padding: 8,
   },
-  activeTab: {
+  filterContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: colors.primaryLight,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.COLOR_BLACK_LIGHT_5,
+  },
+  filterButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    marginHorizontal: 4,
+  },
+  filterButtonActive: {
     backgroundColor: colors.primaryColor,
   },
-  tabText: {
-    fontWeight: '600',
+  filterButtonText: {
+    fontSize: 14,
+    color: colors.primaryDark_1,
   },
-  activeTabText: {
+  filterButtonTextActive: {
     color: 'white',
+    fontWeight: '500',
   },
-  ethicalHousingInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primaryLight,
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 15,
-  },
-  ethicalHousingText: {
+  scrollView: {
     flex: 1,
-    marginLeft: 8,
-    fontSize: 14,
   },
-  learnMoreButton: {},
-  learnMoreText: {
-    color: colors.primaryColor,
-    fontWeight: '600',
-  },
-  listContainer: {
-    paddingBottom: 20,
-  },
-  contractCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  contractHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  propertyName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    flex: 1,
-    marginRight: 10,
-  },
-  statusBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-  },
-  statusText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 12,
-  },
-  contractInfo: {
-    marginBottom: 15,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  infoText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_1,
-  },
-  contractFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#eeeeee',
-    paddingTop: 12,
-  },
-  ethicalBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ethicalText: {
-    marginLeft: 5,
-    color: colors.primaryColor,
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  nonEthicalBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  nonEthicalText: {
-    marginLeft: 5,
-    color: '#FF5722',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  viewDetailsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  viewDetailsText: {
-    color: colors.primaryColor,
-    fontWeight: '600',
-    marginRight: 5,
-  },
-  quickActionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 15,
-    paddingTop: 15,
-    borderTopWidth: 1,
-    borderTopColor: '#eeeeee',
-  },
-  quickActionButton: {
-    alignItems: 'center',
-  },
-  quickActionText: {
-    fontSize: 12,
-    color: colors.primaryColor,
-    marginTop: 5,
-  },
-  moveInReminderContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primaryLight,
-    marginTop: 15,
-    padding: 10,
-    borderRadius: 8,
-  },
-  moveInReminderText: {
-    marginLeft: 8,
-    fontSize: 14,
-    flex: 1,
+  scrollContent: {
+    paddingVertical: 12,
   },
   loadingContainer: {
     flex: 1,
@@ -471,46 +272,58 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 10,
-    color: colors.COLOR_BLACK_LIGHT_3,
+    marginTop: 12,
+    fontSize: 16,
+    color: colors.primaryDark_1,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 30,
+    padding: 40,
+    marginTop: 60,
   },
   emptyText: {
-    fontSize: 16,
-    color: colors.COLOR_BLACK_LIGHT_2,
-    textAlign: 'center',
-    marginTop: 15,
-    marginBottom: 20,
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.primaryDark,
+    marginTop: 16,
+    marginBottom: 8,
   },
-  browsePropertiesButton: {
+  emptySubtext: {
+    fontSize: 14,
+    color: colors.primaryDark_1,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  emptyButton: {
     backgroundColor: colors.primaryColor,
     paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+    paddingHorizontal: 24,
+    borderRadius: 24,
   },
-  browsePropertiesText: {
+  emptyButtonText: {
     color: 'white',
     fontWeight: '600',
   },
-  helpButton: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  bottomButtonContainer: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.COLOR_BLACK_LIGHT_5,
+  },
+  addButton: {
     backgroundColor: colors.primaryColor,
-    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 24,
+    flexDirection: 'row',
     alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    justifyContent: 'center',
+  },
+  addButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 16,
+    marginLeft: 8,
   },
 });

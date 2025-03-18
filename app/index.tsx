@@ -101,8 +101,8 @@ export default function HomePage() {
           <Text style={styles.sectionTitle}>{t("Featured Cities")}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
             {featuredCities.map((city) => (
-              <TouchableOpacity 
-                key={city.id} 
+              <TouchableOpacity
+                key={city.id}
                 style={styles.cityCard}
                 onPress={() => router.push(`/properties/city/${city.id}`)}
               >
@@ -120,8 +120,8 @@ export default function HomePage() {
           <Text style={styles.sectionTitle}>{t("Browse by Category")}</Text>
           <View style={styles.categoryContainer}>
             {propertyTypes.map((type) => (
-              <TouchableOpacity 
-                key={type.id} 
+              <TouchableOpacity
+                key={type.id}
                 style={styles.categoryCard}
                 onPress={() => router.push(`/properties/type/${type.id}`)}
               >
