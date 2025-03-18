@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback, useState, useContext } from "react";
 import { ScrollView, Keyboard, LogBox, Platform } from "react-native";
 import * as SplashScreen from 'expo-splash-screen';
 import { Provider } from 'react-redux';
@@ -24,20 +24,20 @@ import { initReactI18next, I18nextProvider, useTranslation } from "react-i18next
 import en from "@/locales/en.json";
 import es from "@/locales/es.json";
 import it from "@/locales/it.json";
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, } from 'react-native';
 import { BottomBar } from "@/components/BottomBar";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { initialWindowMetrics } from 'react-native-safe-area-context';
 import { MenuProvider } from 'react-native-popup-menu';
-import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { BottomSheetModal, BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import WebSplashScreen from "@/components/WebSplashScreen";
 import LoadingTopSpinner from "@/components/LoadingTopSpinner";
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { BottomSheetProvider } from '@/context/BottomSheetContext';
+import { BottomSheetContext } from '@/context/BottomSheetContext';
+import { setBottomSheetContextRef, setAuthBottomSheetFactory } from '@/utils/auth';
 
-// Import React Query from lib folder
-import { QueryClientProvider } from '@tanstack/react-query';
-import { queryClient } from '@/lib/reactQuery';
+import "../styles/global.css";
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -61,7 +61,6 @@ export default function RootLayout() {
   const [appIsReady, setAppIsReady] = useState(false);
   const { i18n } = useTranslation();
   const colorScheme = useColorScheme();
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const [loaded] = useFonts({
     "Inter-Black": require("@/assets/fonts/inter/Inter-Black.otf"),
@@ -74,6 +73,19 @@ export default function RootLayout() {
     "Inter-SemiBold": require("@/assets/fonts/inter/Inter-SemiBold.otf"),
     "Inter-Thin": require("@/assets/fonts/inter/Inter-Thin.otf"),
   });
+
+  const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const bottomSheetContext = useContext(BottomSheetContext);
+
+  const handleSheetChanges = useCallback((index: number) => {
+    console.log('handleSheetChanges', index);
+  }, []);
+
+  const openBottomSheet = () => {
+    bottomSheetRef.current?.expand();
+  };
+
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   useEffect(() => {
     const show = Keyboard.addListener("keyboardDidShow", () => setKeyboardVisible(true));
@@ -155,29 +167,27 @@ export default function RootLayout() {
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <Provider store={store}>
-          <QueryClientProvider client={queryClient}>
-            <I18nextProvider i18n={i18n}>
-                <MenuProvider>
-                  <ErrorBoundary>
-                    <BottomSheetModalProvider>
-                      <BottomSheetProvider>
-                        <View style={styles.container}>
-                          <SideBar />
-                          <View style={styles.mainContentWrapper}>
-                            <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0, }} />
-                            <Slot />
-                          </View>
-                          <RightBar />
-                        </View>
-                        <StatusBar style="auto" />
-                        <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
-                        {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
-                      </BottomSheetProvider>
-                    </BottomSheetModalProvider>
-                  </ErrorBoundary>
-                </MenuProvider>
-            </I18nextProvider>
-          </QueryClientProvider>
+          <I18nextProvider i18n={i18n}>
+            <MenuProvider>
+              <ErrorBoundary>
+                <BottomSheetModalProvider>
+                  <BottomSheetProvider>
+                    <View style={styles.container}>
+                      <SideBar />
+                      <View style={styles.mainContentWrapper}>
+                        <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0, }} />
+                        <Slot />
+                      </View>
+                      <RightBar />
+                    </View>
+                    <StatusBar style="auto" />
+                    <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
+                    {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
+                  </BottomSheetProvider>
+                </BottomSheetModalProvider>
+              </ErrorBoundary>
+            </MenuProvider>
+          </I18nextProvider>
         </Provider>
       </GestureHandlerRootView>
     </SafeAreaProvider>
