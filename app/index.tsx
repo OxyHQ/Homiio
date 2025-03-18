@@ -118,29 +118,40 @@ export default function HomePage() {
         {/* Property Types */}
         <View style={styles.typesSection}>
           <Text style={styles.sectionTitle}>{t("Browse by Category")}</Text>
-          <View style={styles.propertyTypesGrid}>
+          <View style={styles.categoryContainer}>
             {propertyTypes.map((type) => (
               <TouchableOpacity 
                 key={type.id} 
-                style={styles.typeCard}
+                style={styles.categoryCard}
                 onPress={() => router.push(`/properties/type/${type.id}`)}
               >
-                <Ionicons name={type.icon} size={28} color={colors.primaryColor} />
-                <Text style={styles.typeName}>{type.name}</Text>
+                <View style={styles.categoryIconWrap}>
+                  <Ionicons name={type.icon} size={32} color={colors.primaryColor} />
+                </View>
+                <Text style={styles.categoryName}>{type.name}</Text>
+                <View style={styles.categoryBadge}>
+                  <Text style={styles.categoryBadgeText}>{t("View")}</Text>
+                </View>
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        {/* Horizon Membership */}
+        {/* Horizon Initiative */}
         <View style={styles.horizonSection}>
-          <Text style={styles.horizonTitle}>{t("Join Horizon Membership")}</Text>
-          <Text style={styles.horizonDescription}>
-            {t("Get priority access to verified properties, reduced deposits, and exclusive benefits within the Oxy ecosystem.")}
-          </Text>
-          <TouchableOpacity style={styles.horizonButton} onPress={() => router.push('/horizon')}>
-            <Text style={styles.horizonButtonText}>{t("Learn More")}</Text>
-          </TouchableOpacity>
+          <View style={styles.horizonContent}>
+            <Text style={styles.horizonTitle}>{t("Join Horizon")}</Text>
+            <Text style={styles.horizonDescription}>
+              {t("Horizon is a global initiative offering fair housing, healthcare, and travel support. Now integrated with Homiio.")}
+            </Text>
+            <TouchableOpacity style={styles.horizonButton} onPress={() => router.push('/horizon')}>
+              <Text style={styles.horizonButtonText}>{t("Learn More")}</Text>
+              <Ionicons name="arrow-forward" size={16} color="#333" style={{ marginLeft: 5 }} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.horizonImagePlaceholder}>
+            <Ionicons name="globe-outline" size={50} color="#FFD700" />
+          </View>
         </View>
 
         {/* Eco Certification */}
@@ -298,21 +309,49 @@ const styles = StyleSheet.create({
   typesSection: {
     padding: 20,
   },
-  propertyTypesGrid: {
+  categoryContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
-  typeCard: {
+  categoryCard: {
     width: '48%',
-    backgroundColor: colors.primaryLight,
+    backgroundColor: 'white',
     padding: 20,
     marginBottom: 15,
-    borderRadius: 10,
+    borderRadius: 16,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  typeName: {
+  categoryIconWrap: {
+    backgroundColor: colors.primaryLight,
+    borderRadius: 50,
+    width: 70,
+    height: 70,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  categoryName: {
+    fontWeight: '600',
+    fontSize: 16,
+    marginBottom: 8,
+    color: colors.COLOR_BLACK,
+  },
+  categoryBadge: {
+    backgroundColor: colors.primaryColor,
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 15,
     marginTop: 10,
+  },
+  categoryBadgeText: {
+    color: 'white',
+    fontSize: 12,
     fontWeight: '600',
   },
   horizonSection: {
@@ -320,7 +359,11 @@ const styles = StyleSheet.create({
     padding: 20,
     margin: 20,
     borderRadius: 15,
+    flexDirection: 'row',
     alignItems: 'center',
+  },
+  horizonContent: {
+    flex: 1,
   },
   horizonTitle: {
     fontSize: 18,
@@ -337,10 +380,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   horizonButtonText: {
     fontWeight: 'bold',
     color: '#333',
+  },
+  horizonImagePlaceholder: {
+    marginLeft: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   ecoSection: {
     flexDirection: 'row',

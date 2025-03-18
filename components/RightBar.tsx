@@ -91,19 +91,25 @@ export function RightBar() {
                 </View>
             </View>
             
-            {/* Horizon Membership */}
+            {/* Horizon Initiative */}
             <View style={styles.widgetContainer}>
                 <View style={styles.widgetHeader}>
                     <Text style={styles.widgetTitle}>
-                        {t("Horizon Membership")}
+                        {t("Horizon Initiative")}
                     </Text>
                     <Ionicons name="star" size={22} color="#FFD700" />
                 </View>
                 <Text style={styles.membershipText}>
-                    Join Horizon to get access to premium properties and priority verification.
+                Horizon is a global initiative offering fair housing, healthcare, and travel support. Integrated with Homiio, it ensures affordable living within a connected, sustainable network.
                 </Text>
-                <TouchableOpacity style={styles.joinButton}>
-                    <Text style={styles.joinButtonText}>Join Horizon</Text>
+                <TouchableOpacity
+                    style={styles.joinButton}
+                    onPress={() => {
+                        const url = "https://oxy.so/horizon";
+                        window.open(url, "_blank");
+                    }}
+                >
+                    <Text style={styles.joinButtonText}>Learn More</Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -313,7 +319,7 @@ const styles = StyleSheet.create({
     showMoreButton: {
         padding: 12,
         backgroundColor: '#f5f5f5',
-        borderRadius: 8,
+        borderRadius: 35,
         alignItems: 'center',
         marginTop: 5,
     },
@@ -345,13 +351,13 @@ const styles = StyleSheet.create({
         lineHeight: 20,
     },
     joinButton: {
-        backgroundColor: '#FFD700',
+        backgroundColor: '#c2e3ff',
         paddingVertical: 10,
-        borderRadius: 8,
+        borderRadius: 35,
         alignItems: 'center',
     },
     joinButtonText: {
-        color: '#333',
+        color: '#002646',
         fontWeight: 'bold',
     },
 });

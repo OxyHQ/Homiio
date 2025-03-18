@@ -164,7 +164,7 @@ export default function RootLayout() {
                         <View style={styles.container}>
                           <SideBar />
                           <View style={styles.mainContentWrapper}>
-                            <LoadingTopSpinner showLoading={false} size={20} />
+                            <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0, }} />
                             <Slot />
                           </View>
                           <RightBar />
