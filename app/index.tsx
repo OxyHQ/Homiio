@@ -177,7 +177,6 @@ export default function HomePage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.primaryLight,
   },
   heroSection: {
     height: 300,
@@ -312,20 +311,16 @@ const styles = StyleSheet.create({
   categoryContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    gap: 10,
   },
   categoryCard: {
-    width: '48%',
-    backgroundColor: 'white',
-    padding: 20,
-    marginBottom: 15,
-    borderRadius: 16,
+    width: '49%',
+    backgroundColor: colors.primaryLight,
+    padding: 10,
+    borderRadius: 35,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: colors.primaryColor,
   },
   categoryIconWrap: {
     backgroundColor: colors.primaryLight,
@@ -371,7 +366,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   horizonDescription: {
-    textAlign: 'center',
     marginBottom: 15,
     lineHeight: 20,
   },
@@ -382,6 +376,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
+    marginRight: 'auto',
   },
   horizonButtonText: {
     fontWeight: 'bold',
@@ -398,7 +393,7 @@ const styles = StyleSheet.create({
     padding: 20,
     margin: 20,
     marginTop: 0,
-    borderRadius: 15,
+    borderRadius: 35,
     alignItems: 'center',
   },
   ecoIcon: {
