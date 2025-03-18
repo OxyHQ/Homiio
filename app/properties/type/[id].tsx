@@ -48,7 +48,7 @@ export default function PropertyTypePage() {
       let typeData: PropertyType | null = null;
 
       // Mock property type data based on ID
-      switch(id) {
+      switch (id) {
         case '1': // Apartments
           typeData = {
             id: '1',
@@ -123,7 +123,7 @@ export default function PropertyTypePage() {
             { id: 'pets', label: t('Pets Allowed'), icon: 'paw-outline' },
           ]);
       }
-      
+
       setPropertyType(typeData);
 
       // Generate mock properties based on the type
@@ -135,13 +135,13 @@ export default function PropertyTypePage() {
         '4': ['Solar Panels', 'Rainwater Collection', 'Energy Efficient', 'Sustainable Materials', 'Green Roof'],
       };
 
-      const features = featureSets[id as keyof typeof featureSets] || 
+      const features = featureSets[id as keyof typeof featureSets] ||
         ['Wi-Fi', 'Central Location', 'Modern Design', 'Well Maintained'];
-      
+
       for (let i = 1; i <= 12; i++) {
         const randomFeatures: string[] = [];
         const featureCount = Math.floor(Math.random() * 3) + 2; // 2-4 features
-        
+
         for (let j = 0; j < featureCount; j++) {
           const feature = features[Math.floor(Math.random() * features.length)];
           if (!randomFeatures.includes(feature)) {
@@ -153,14 +153,13 @@ export default function PropertyTypePage() {
 
         mockProperties.push({
           id: `${id}-${i}`,
-          title: `${i % 3 === 0 ? 'Modern' : i % 3 === 1 ? 'Cozy' : 'Spacious'} ${
-            id === '1' ? 'Apartment' : 
-            id === '2' ? 'House' : 
-            id === '3' ? 'Co-Living Space' : 
-            'Property'
-          }`,
+          title: `${i % 3 === 0 ? 'Modern' : i % 3 === 1 ? 'Cozy' : 'Spacious'} ${id === '1' ? 'Apartment' :
+              id === '2' ? 'House' :
+                id === '3' ? 'Co-Living Space' :
+                  'Property'
+            }`,
           location: ['Barcelona', 'Berlin', 'Amsterdam', 'Stockholm'][Math.floor(Math.random() * 4)],
-          price: `€${Math.floor(600 + Math.random() * 900)}/month`,
+          price: `⊜${Math.floor(600 + Math.random() * 900)}/month`,
           bedrooms: id === '3' ? 1 : Math.floor(Math.random() * 3) + 1,
           bathrooms: Math.floor(Math.random() * 2) + 1,
           size: Math.floor(45 + Math.random() * 60),
@@ -170,7 +169,7 @@ export default function PropertyTypePage() {
           rating: parseFloat((3.8 + Math.random() * 1.2).toFixed(1)),
         });
       }
-      
+
       setProperties(mockProperties);
       setLoading(false);
     }, 1000);
@@ -180,14 +179,14 @@ export default function PropertyTypePage() {
 
   const getFilteredProperties = () => {
     if (!activeFilter) return properties;
-    
-    switch(activeFilter) {
+
+    switch (activeFilter) {
       case 'balcony':
         return properties.filter(p => p.features.some(f => f.toLowerCase().includes('balcony')));
       case 'elevator':
         return properties.filter(p => p.features.some(f => f.toLowerCase().includes('elevator')));
       case 'furnished':
-        return properties.filter(p => p.features.some(f => 
+        return properties.filter(p => p.features.some(f =>
           f.toLowerCase().includes('furnished') || f.toLowerCase().includes('bed')
         ));
       case 'garden':
@@ -197,17 +196,17 @@ export default function PropertyTypePage() {
       case 'fireplace':
         return properties.filter(p => p.features.some(f => f.toLowerCase().includes('fireplace')));
       case 'workspace':
-        return properties.filter(p => p.features.some(f => 
+        return properties.filter(p => p.features.some(f =>
           f.toLowerCase().includes('workspace') || f.toLowerCase().includes('working')
         ));
       case 'events':
-        return properties.filter(p => p.features.some(f => 
+        return properties.filter(p => p.features.some(f =>
           f.toLowerCase().includes('event') || f.toLowerCase().includes('activities')
         ));
       case 'gym':
         return properties.filter(p => p.features.some(f => f.toLowerCase().includes('gym')));
       case 'cleaning':
-        return properties.filter(p => p.features.some(f => 
+        return properties.filter(p => p.features.some(f =>
           f.toLowerCase().includes('cleaning') || f.toLowerCase().includes('laundry') || f.toLowerCase().includes('service')
         ));
       case 'solar':
@@ -251,51 +250,51 @@ export default function PropertyTypePage() {
   );
 
   const renderPropertyItem = ({ item }: { item: Property }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.propertyCard}
       onPress={() => router.push(`/properties/${item.id}`)}
     >
       <View style={styles.propertyImagePlaceholder}>
         {/* This would be replaced with an actual image in a real app */}
         <Ionicons name={propertyType?.icon as any} size={40} color={colors.COLOR_BLACK_LIGHT_3} />
-        
+
         {item.isVerified && (
           <View style={styles.verifiedBadge}>
             <Ionicons name="shield-checkmark" size={14} color="white" />
           </View>
         )}
-        
+
         {item.isEcoCertified && (
           <View style={styles.ecoBadge}>
             <Ionicons name="leaf" size={14} color="white" />
           </View>
         )}
       </View>
-      
+
       <View style={styles.propertyContent}>
         <Text style={styles.propertyTitle} numberOfLines={1}>{item.title}</Text>
-        
+
         <Text style={styles.propertyLocation}>
           <Ionicons name="location-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} /> {item.location}
         </Text>
-        
+
         <View style={styles.propertyDetailsRow}>
           <View style={styles.propertyDetail}>
             <Ionicons name="bed-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
             <Text style={styles.detailText}>{item.bedrooms}</Text>
           </View>
-          
+
           <View style={styles.propertyDetail}>
             <Ionicons name="water-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
             <Text style={styles.detailText}>{item.bathrooms}</Text>
           </View>
-          
+
           <View style={styles.propertyDetail}>
             <Ionicons name="resize-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
             <Text style={styles.detailText}>{item.size} m²</Text>
           </View>
         </View>
-        
+
         <View style={styles.featuresContainer}>
           {item.features.slice(0, 3).map((feature, index) => (
             <View key={index} style={styles.featureTag}>
@@ -306,7 +305,7 @@ export default function PropertyTypePage() {
             <Text style={styles.moreFeatures}>+{item.features.length - 3}</Text>
           )}
         </View>
-        
+
         <View style={styles.propertyFooter}>
           <Text style={styles.propertyPrice}>{item.price}</Text>
           <View style={styles.ratingContainer}>
@@ -345,14 +344,14 @@ export default function PropertyTypePage() {
           titlePosition: 'center',
         }}
       />
-      
+
       <View style={styles.container}>
         {/* Type Overview */}
         <View style={styles.typeOverview}>
           <View style={styles.typeIconContainer}>
             <Ionicons name={propertyType.icon as any} size={30} color={colors.primaryColor} />
           </View>
-          
+
           <View style={styles.typeContent}>
             <Text style={styles.typeTitle}>{propertyType.name}</Text>
             <Text style={styles.typeDescription}>{propertyType.description}</Text>
@@ -361,7 +360,7 @@ export default function PropertyTypePage() {
             </Text>
           </View>
         </View>
-        
+
         {/* Filters */}
         <View style={styles.filtersContainer}>
           <Text style={styles.filtersTitle}>{t("Filter by:")}</Text>
@@ -369,7 +368,7 @@ export default function PropertyTypePage() {
             {filterOptions.map(renderFilterOption)}
           </View>
         </View>
-        
+
         {/* Properties List */}
         <FlatList
           data={getFilteredProperties()}
@@ -383,7 +382,7 @@ export default function PropertyTypePage() {
               <Text style={styles.emptyText}>
                 {t("No properties match your filters")}
               </Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.resetButton}
                 onPress={() => setActiveFilter(null)}
               >

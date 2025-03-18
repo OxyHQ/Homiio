@@ -53,9 +53,9 @@ export default function CityPropertiesPage() {
     // Simulate API calls to fetch city data and properties
     const fetchData = setTimeout(() => {
       let cityData: City | null = null;
-      
+
       // Mock city data based on ID
-      switch(id) {
+      switch (id) {
         case '1': // Barcelona
           cityData = {
             id: '1',
@@ -63,7 +63,7 @@ export default function CityPropertiesPage() {
             country: 'Spain',
             description: 'A vibrant coastal city known for its art, architecture, and Mediterranean lifestyle.',
             propertiesCount: 128,
-            averagePrice: '€950',
+            averagePrice: '⊜950',
             popularNeighborhoods: ['Gracia', 'El Born', 'Eixample', 'Barceloneta']
           };
           break;
@@ -74,7 +74,7 @@ export default function CityPropertiesPage() {
             country: 'Germany',
             description: 'A cultural hub with a rich history, diverse neighborhoods, and thriving arts scene.',
             propertiesCount: 94,
-            averagePrice: '€750',
+            averagePrice: '⊜750',
             popularNeighborhoods: ['Kreuzberg', 'Neukölln', 'Mitte', 'Prenzlauer Berg']
           };
           break;
@@ -85,7 +85,7 @@ export default function CityPropertiesPage() {
             country: 'Sweden',
             description: 'A beautiful city built on islands, offering a perfect blend of historical charm and innovation.',
             propertiesCount: 75,
-            averagePrice: '€1,050',
+            averagePrice: '⊜1,050',
             popularNeighborhoods: ['Södermalm', 'Östermalm', 'Kungsholmen', 'Vasastan']
           };
           break;
@@ -96,7 +96,7 @@ export default function CityPropertiesPage() {
             country: 'Netherlands',
             description: 'Famous for its canals, historical houses, and progressive culture.',
             propertiesCount: 103,
-            averagePrice: '€1,200',
+            averagePrice: '⊜1,200',
             popularNeighborhoods: ['Jordaan', 'De Pijp', 'Oud-West', 'Amsterdam Noord']
           };
           break;
@@ -107,17 +107,17 @@ export default function CityPropertiesPage() {
             country: 'Country',
             description: 'A beautiful city with many properties.',
             propertiesCount: 50,
-            averagePrice: '€900',
+            averagePrice: '⊜900',
             popularNeighborhoods: ['Downtown', 'Riverside', 'University District']
           };
       }
-      
+
       setCity(cityData);
-      
+
       // Generate mock properties for the selected city
       const mockProperties: Property[] = [];
       const neighborhoodOptions = cityData.popularNeighborhoods;
-      
+
       for (let i = 1; i <= 10; i++) {
         const neighborhood = neighborhoodOptions[Math.floor(Math.random() * neighborhoodOptions.length)];
         mockProperties.push({
@@ -125,7 +125,7 @@ export default function CityPropertiesPage() {
           title: `${i % 3 === 0 ? 'Modern' : i % 3 === 1 ? 'Cozy' : 'Spacious'} ${i % 2 === 0 ? 'Studio' : 'Apartment'} in ${neighborhood}`,
           location: `${cityData.name}, ${cityData.country}`,
           neighborhood,
-          price: `€${Math.floor(600 + Math.random() * 900)}/month`,
+          price: `⊜${Math.floor(600 + Math.random() * 900)}/month`,
           bedrooms: Math.floor(Math.random() * 3) + 1,
           bathrooms: Math.floor(Math.random() * 2) + 1,
           size: Math.floor(45 + Math.random() * 60),
@@ -134,20 +134,20 @@ export default function CityPropertiesPage() {
           rating: parseFloat((3.8 + Math.random() * 1.2).toFixed(1)),
         });
       }
-      
+
       setProperties(mockProperties);
       setLoading(false);
     }, 1000);
-    
+
     return () => clearTimeout(fetchData);
   }, [id]);
 
   const getFilteredAndSortedProperties = () => {
     let result = [...properties];
-    
+
     // Apply filters
     if (activeFilter) {
-      switch(activeFilter) {
+      switch (activeFilter) {
         case 'verified':
           result = result.filter(p => p.isVerified);
           break;
@@ -162,9 +162,9 @@ export default function CityPropertiesPage() {
           break;
       }
     }
-    
+
     // Apply sorting
-    switch(activeSort) {
+    switch (activeSort) {
       case 'price_asc':
         result.sort((a, b) => {
           const priceA = parseInt(a.price.replace(/[^0-9]/g, ''));
@@ -183,7 +183,7 @@ export default function CityPropertiesPage() {
         result.sort((a, b) => parseFloat(b.rating.toString()) - parseFloat(a.rating.toString()));
         break;
     }
-    
+
     return result;
   };
 
@@ -215,7 +215,7 @@ export default function CityPropertiesPage() {
   );
 
   const renderPropertyItem = ({ item }: { item: Property }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.propertyCard}
       onPress={() => router.push(`/properties/${item.id}`)}
     >
@@ -232,31 +232,31 @@ export default function CityPropertiesPage() {
           </View>
         )}
       </View>
-      
+
       <View style={styles.propertyContent}>
         <Text style={styles.propertyTitle} numberOfLines={1}>{item.title}</Text>
-        
+
         <Text style={styles.propertyLocation}>
           <Ionicons name="location-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} /> {item.location}
         </Text>
-        
+
         <View style={styles.propertyDetailsRow}>
           <View style={styles.propertyDetail}>
             <Ionicons name="bed-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
             <Text style={styles.detailText}>{item.bedrooms}</Text>
           </View>
-          
+
           <View style={styles.propertyDetail}>
             <Ionicons name="water-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
             <Text style={styles.detailText}>{item.bathrooms}</Text>
           </View>
-          
+
           <View style={styles.propertyDetail}>
             <Ionicons name="resize-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
             <Text style={styles.detailText}>{item.size} m²</Text>
           </View>
         </View>
-        
+
         <View style={styles.propertyFooter}>
           <Text style={styles.propertyPrice}>{item.price}</Text>
           <View style={styles.ratingContainer}>
@@ -295,7 +295,7 @@ export default function CityPropertiesPage() {
           titlePosition: 'center',
         }}
       />
-      
+
       <View style={styles.container}>
         {/* City Overview */}
         <View style={styles.cityOverview}>
@@ -303,25 +303,25 @@ export default function CityPropertiesPage() {
             {city.name}, <Text style={styles.countryText}>{city.country}</Text>
           </Text>
           <Text style={styles.cityDescription}>{city.description}</Text>
-          
+
           <View style={styles.cityStats}>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{city.propertiesCount}</Text>
               <Text style={styles.statLabel}>{t("Properties")}</Text>
             </View>
-            
+
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{city.averagePrice}</Text>
               <Text style={styles.statLabel}>{t("Avg. Price")}</Text>
             </View>
-            
+
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{city.popularNeighborhoods.length}</Text>
               <Text style={styles.statLabel}>{t("Neighborhoods")}</Text>
             </View>
           </View>
         </View>
-        
+
         {/* Neighborhood Pills */}
         <View style={styles.neighborhoodSection}>
           <Text style={styles.sectionTitle}>{t("Popular Neighborhoods")}</Text>
@@ -333,26 +333,26 @@ export default function CityPropertiesPage() {
             ))}
           </View>
         </View>
-        
+
         {/* Properties List */}
         <View style={styles.propertiesSection}>
           <View style={styles.propertiesHeader}>
             <Text style={styles.sectionTitle}>{t("Available Properties")}</Text>
             <View style={styles.sortContainer}>
               <Text style={styles.sortLabel}>{t("Sort by:")}</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.sortOption, activeSort === 'price_asc' && styles.activeSortOption]}
                 onPress={() => setActiveSort('price_asc')}
               >
-                <Text style={styles.sortText}>€↑</Text>
+                <Text style={styles.sortText}>⊜↑</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.sortOption, activeSort === 'price_desc' && styles.activeSortOption]}
                 onPress={() => setActiveSort('price_desc')}
               >
-                <Text style={styles.sortText}>€↓</Text>
+                <Text style={styles.sortText}>⊜↓</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.sortOption, activeSort === 'rating' && styles.activeSortOption]}
                 onPress={() => setActiveSort('rating')}
               >
@@ -360,11 +360,11 @@ export default function CityPropertiesPage() {
               </TouchableOpacity>
             </View>
           </View>
-          
+
           <View style={styles.filtersContainer}>
             {filterOptions.map(renderFilterOption)}
           </View>
-          
+
           <FlatList
             data={getFilteredAndSortedProperties()}
             renderItem={renderPropertyItem}
@@ -376,7 +376,7 @@ export default function CityPropertiesPage() {
                 <Text style={styles.emptyText}>
                   {t("No properties match your filters")}
                 </Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.resetButton}
                   onPress={() => setActiveFilter(null)}
                 >
@@ -394,7 +394,6 @@ export default function CityPropertiesPage() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.COLOR_BACKGROUND,
   },
   container: {
     flex: 1,

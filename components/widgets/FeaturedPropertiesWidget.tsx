@@ -44,7 +44,7 @@ function FeaturedProperties() {
             id: '1',
             title: 'Modern Studio in City Center',
             location: 'Barcelona, Spain',
-            price: '€850/month',
+            price: '⊜850/month',
             isEcoCertified: true,
             rating: 4.8
         },
@@ -52,7 +52,7 @@ function FeaturedProperties() {
             id: '2',
             title: 'Co-living Space with Garden',
             location: 'Berlin, Germany',
-            price: '€550/month',
+            price: '⊜550/month',
             isEcoCertified: true,
             rating: 4.9
         }

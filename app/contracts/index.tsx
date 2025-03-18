@@ -35,7 +35,7 @@ const sampleContracts: Contract[] = [
     landlordName: 'Maria Garcia',
     tenantName: 'John Smith',
     monthlyRent: 850,
-    currency: '€',
+    currency: '⊜',
   },
   {
     id: '2',
@@ -48,7 +48,7 @@ const sampleContracts: Contract[] = [
     landlordName: 'Klaus Schmidt',
     tenantName: 'John Smith',
     monthlyRent: 600,
-    currency: '€',
+    currency: '⊜',
   },
   {
     id: '3',
@@ -61,7 +61,7 @@ const sampleContracts: Contract[] = [
     landlordName: 'Erik Johansson',
     tenantName: 'John Smith',
     monthlyRent: 1200,
-    currency: '€',
+    currency: '⊜',
   },
   {
     id: '4',
@@ -74,7 +74,7 @@ const sampleContracts: Contract[] = [
     landlordName: 'Jan de Vries',
     tenantName: 'John Smith',
     monthlyRent: 950,
-    currency: '€',
+    currency: '⊜',
   },
   {
     id: '5',
@@ -87,7 +87,7 @@ const sampleContracts: Contract[] = [
     landlordName: 'Carlos Rodriguez',
     tenantName: 'John Smith',
     monthlyRent: 750,
-    currency: '€',
+    currency: '⊜',
   },
 ];
 

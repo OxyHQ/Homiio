@@ -113,8 +113,6 @@ export function WidgetManager({ screenId, customWidgets = [] }: WidgetManagerPro
 
 const styles = StyleSheet.create({
     container: {
-        width: 350,
-        paddingStart: 20,
         flexDirection: 'column',
         gap: 20,
     },

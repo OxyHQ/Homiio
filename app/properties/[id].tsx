@@ -45,7 +45,7 @@ export default function PropertyDetailPage() {
         title: 'Modern Studio Apartment',
         description: 'A beautiful, recently renovated studio apartment in the heart of the city. Perfect for young professionals or students. The apartment features high ceilings, large windows providing plenty of natural light, and modern furnishings. Located in a historic building with easy access to public transportation, restaurants, and shops.',
         location: 'Barcelona, Spain',
-        price: '€850/month',
+        price: '⊜850/month',
         bedrooms: 1,
         bathrooms: 1,
         size: 45,
@@ -121,7 +121,7 @@ export default function PropertyDetailPage() {
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
           <Text style={styles.errorText}>{t("Property not found")}</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.goBackButton}
             onPress={() => router.back()}
           >
@@ -156,10 +156,10 @@ export default function PropertyDetailPage() {
           <View style={styles.imageGalleryPlaceholder}>
             <Text style={styles.galleryPlaceholderText}>Property Image {activeImageIndex + 1}</Text>
           </View>
-          
+
           <View style={styles.imageDotContainer}>
             {property.images.map((_, index) => (
-              <View 
+              <View
                 key={index}
                 style={[
                   styles.imageDot,

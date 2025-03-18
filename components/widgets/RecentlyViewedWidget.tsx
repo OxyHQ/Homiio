@@ -25,7 +25,7 @@ export function RecentlyViewedWidget() {
             id: '101',
             title: 'Modern Loft in City Center',
             location: 'Madrid, Spain',
-            price: '€950/month',
+            price: '⊜950/month',
             imageUrl: 'https://via.placeholder.com/80',
             isEcoCertified: true
         },
@@ -33,14 +33,14 @@ export function RecentlyViewedWidget() {
             id: '102',
             title: 'Cozy Studio near Beach',
             location: 'Barcelona, Spain',
-            price: '€800/month',
+            price: '⊜800/month',
             imageUrl: 'https://via.placeholder.com/80'
         },
         {
             id: '103',
             title: 'Spacious Apartment with Terrace',
             location: 'Berlin, Germany',
-            price: '€1,200/month',
+            price: '⊜1,200/month',
             imageUrl: 'https://via.placeholder.com/80',
             isEcoCertified: true
         }

@@ -31,7 +31,7 @@ export function ContractCard({
     landlordName,
     tenantName,
     monthlyRent,
-    currency = '€',
+    currency = '⊜',
     onPress,
     onSharePress,
     onDownloadPress,

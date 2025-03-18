@@ -40,7 +40,7 @@ export default function EcoPropertiesPage() {
           id: '1',
           title: 'Eco-friendly Studio with Solar Panels',
           location: 'Barcelona, Spain',
-          price: '€950/month',
+          price: '⊜950/month',
           energyRating: 'A',
           features: ['Solar Panels', 'Recycled Materials', 'Energy Efficient'],
           rating: 4.9
@@ -49,7 +49,7 @@ export default function EcoPropertiesPage() {
           id: '2',
           title: 'Green Co-Living House with Garden',
           location: 'Berlin, Germany',
-          price: '€650/month',
+          price: '⊜650/month',
           energyRating: 'A+',
           features: ['Community Garden', 'Rainwater Collection', 'Solar Heating'],
           rating: 4.8
@@ -58,7 +58,7 @@ export default function EcoPropertiesPage() {
           id: '3',
           title: 'Sustainable Apartment near City Center',
           location: 'Amsterdam, Netherlands',
-          price: '€1,100/month',
+          price: '⊜1,100/month',
           energyRating: 'A',
           features: ['Green Roof', 'Triple Glazing', 'Smart Temperature Control'],
           rating: 4.7
@@ -67,7 +67,7 @@ export default function EcoPropertiesPage() {
           id: '4',
           title: 'Energy-Positive Tiny House',
           location: 'Stockholm, Sweden',
-          price: '€800/month',
+          price: '⊜800/month',
           energyRating: 'A+',
           features: ['Net Energy Producer', 'Sustainable Materials', 'Minimal Footprint'],
           rating: 4.9
@@ -76,7 +76,7 @@ export default function EcoPropertiesPage() {
           id: '5',
           title: 'Eco Co-Living Community Space',
           location: 'Copenhagen, Denmark',
-          price: '€700/month',
+          price: '⊜700/month',
           energyRating: 'A',
           features: ['Shared Electric Vehicles', 'Urban Farming', 'Zero Waste Policy'],
           rating: 4.6
@@ -92,8 +92,8 @@ export default function EcoPropertiesPage() {
 
   const getFilteredProperties = () => {
     if (!activeFilter) return properties;
-    
-    switch(activeFilter) {
+
+    switch (activeFilter) {
       case 'energy-a':
         return properties.filter(p => p.energyRating.startsWith('A'));
       case 'solar':
@@ -137,7 +137,7 @@ export default function EcoPropertiesPage() {
   );
 
   const renderPropertyItem = ({ item }: { item: Property }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.propertyCard}
       onPress={() => router.push(`/properties/${item.id}`)}
     >
@@ -147,7 +147,7 @@ export default function EcoPropertiesPage() {
           <Text style={styles.energyRatingText}>{item.energyRating}</Text>
         </View>
       </View>
-      
+
       <View style={styles.propertyContent}>
         <View style={styles.propertyHeader}>
           <Text style={styles.propertyTitle} numberOfLines={1}>{item.title}</Text>
@@ -156,11 +156,11 @@ export default function EcoPropertiesPage() {
             <Text style={styles.ratingText}>{item.rating}</Text>
           </View>
         </View>
-        
+
         <Text style={styles.propertyLocation}>
           <Ionicons name="location-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} /> {item.location}
         </Text>
-        
+
         <View style={styles.propertyFeatures}>
           {item.features.slice(0, 2).map((feature, index) => (
             <View key={index} style={styles.featureBadge}>
@@ -171,7 +171,7 @@ export default function EcoPropertiesPage() {
             <Text style={styles.moreFeatures}>+{item.features.length - 2}</Text>
           )}
         </View>
-        
+
         <Text style={styles.propertyPrice}>{item.price}</Text>
       </View>
     </TouchableOpacity>
@@ -186,7 +186,7 @@ export default function EcoPropertiesPage() {
           titlePosition: 'center',
         }}
       />
-      
+
       <View style={styles.container}>
         {/* Hero Banner */}
         <View style={styles.ecoBanner}>
@@ -208,7 +208,7 @@ export default function EcoPropertiesPage() {
             {filterOptions.map(renderFilterOption)}
           </View>
         </View>
-        
+
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="green" />
@@ -226,7 +226,7 @@ export default function EcoPropertiesPage() {
                 <Text style={styles.emptyText}>
                   {t("No eco properties match your filters")}
                 </Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.resetButton}
                   onPress={() => setActiveFilter(null)}
                 >
@@ -245,14 +245,14 @@ export default function EcoPropertiesPage() {
             </View>
             <Text style={styles.infoText}>{t("Top energy efficiency rating")}</Text>
           </View>
-          
+
           <View style={styles.infoItem}>
             <View style={styles.infoIcon}>
               <Ionicons name="water-outline" size={22} color="green" />
             </View>
             <Text style={styles.infoText}>{t("Water conservation features")}</Text>
           </View>
-          
+
           <View style={styles.infoItem}>
             <View style={styles.infoIcon}>
               <Ionicons name="leaf-outline" size={22} color="green" />

@@ -27,7 +27,7 @@ const samplePayments: Payment[] = [
     {
         id: '1',
         amount: 850,
-        currency: '€',
+        currency: '⊜',
         status: 'completed',
         type: 'rent',
         date: '2023-05-01',
@@ -40,7 +40,7 @@ const samplePayments: Payment[] = [
     {
         id: '2',
         amount: 1900,
-        currency: '€',
+        currency: '⊜',
         status: 'completed',
         type: 'deposit',
         date: '2023-04-15',
@@ -53,7 +53,7 @@ const samplePayments: Payment[] = [
     {
         id: '3',
         amount: 850,
-        currency: '€',
+        currency: '⊜',
         status: 'pending',
         type: 'rent',
         date: '2023-06-01',
@@ -77,7 +77,7 @@ const samplePayments: Payment[] = [
     {
         id: '5',
         amount: 120,
-        currency: '€',
+        currency: '⊜',
         status: 'completed',
         type: 'service',
         date: '2023-04-22',
@@ -185,7 +185,7 @@ export default function PaymentsScreen() {
             <View style={styles.balanceSection}>
                 <View style={styles.balanceCard}>
                     <Text style={styles.balanceLabel}>{t("Your Balance")}</Text>
-                    <Text style={styles.balanceAmount}>€2,450.00</Text>
+                    <Text style={styles.balanceAmount}>⊜2,450.00</Text>
                     <View style={styles.balanceActions}>
                         <TouchableOpacity style={styles.balanceActionButton}>
                             <Ionicons name="add-circle-outline" size={20} color="white" />

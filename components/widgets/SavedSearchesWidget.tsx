@@ -22,7 +22,7 @@ export function SavedSearchesWidget() {
         {
             id: '1',
             name: 'Barcelona Studios',
-            criteria: '1BR, Max €900/month',
+            criteria: '1BR, Max ⊜900/month',
             newResults: 3
         },
         {

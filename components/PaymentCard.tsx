@@ -24,7 +24,7 @@ type PaymentCardProps = {
 
 export function PaymentCard({
     amount,
-    currency = '€',
+    currency = '⊜',
     status,
     type,
     date,

@@ -41,7 +41,7 @@ export function PropertyAlertWidget() {
                         <Text style={styles.inputLabel}>Min Price</Text>
                         <TextInput
                             style={styles.input}
-                            placeholder="Min €"
+                            placeholder="Min ⊜"
                             value={minPrice}
                             onChangeText={setMinPrice}
                             keyboardType="numeric"
@@ -52,7 +52,7 @@ export function PropertyAlertWidget() {
                         <Text style={styles.inputLabel}>Max Price</Text>
                         <TextInput
                             style={styles.input}
-                            placeholder="Max €"
+                            placeholder="Max ⊜"
                             value={maxPrice}
                             onChangeText={setMaxPrice}
                             keyboardType="numeric"

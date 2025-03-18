@@ -43,7 +43,7 @@ export function PropertyCard({
     title,
     location,
     price,
-    currency = '€',
+    currency = '⊜',
     type,
     imageUrl,
     bedrooms,

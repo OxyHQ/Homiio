@@ -87,7 +87,7 @@ export const SearchBar = () => {
                     returnKeyType="search"
                     onSubmitEditing={() => handleSearch(searchQuery)}
                 />
-                <TouchableOpacity 
+                <TouchableOpacity
                     onPress={() => setShowFilters(!showFilters)}
                     style={{
                         padding: 10,
@@ -109,17 +109,17 @@ export const SearchBar = () => {
                     <Text style={{ fontWeight: 'bold', marginBottom: 10 }}>
                         {t("Quick Filters")}
                     </Text>
-                    
+
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                         <FilterPill label="Eco-friendly" />
                         <FilterPill label="Co-living" />
                         <FilterPill label="Furnished" />
                         <FilterPill label="Pets Allowed" />
-                        <FilterPill label="< €1000" />
+                        <FilterPill label="< ⊜1000" />
                         <FilterPill label="Verified" />
                     </View>
-                    
-                    <TouchableOpacity 
+
+                    <TouchableOpacity
                         style={{
                             backgroundColor: colors.primaryColor,
                             padding: 10,
@@ -144,7 +144,7 @@ export const SearchBar = () => {
 
 const FilterPill = ({ label }: { label: string }) => {
     const [isSelected, setIsSelected] = useState(false);
-    
+
     return (
         <TouchableOpacity
             style={{
@@ -157,7 +157,7 @@ const FilterPill = ({ label }: { label: string }) => {
             }}
             onPress={() => setIsSelected(!isSelected)}
         >
-            <Text style={{ 
+            <Text style={{
                 color: isSelected ? 'white' : colors.COLOR_BLACK_LIGHT_4,
                 fontSize: 14,
                 fontWeight: isSelected ? '600' : 'normal',

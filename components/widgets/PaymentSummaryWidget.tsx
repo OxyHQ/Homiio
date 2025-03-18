@@ -14,7 +14,7 @@ export function PaymentSummaryWidget() {
     const pendingPayments = 1;
     const nextPaymentAmount = 850;
     const nextPaymentDate = 'Jun 15, 2023';
-    const currency = '€';
+    const currency = '⊜';
 
     return (
         <BaseWidget

@@ -73,28 +73,28 @@ export default function PropertyMonitoringScreen() {
             title: 'Switch to LED Lighting',
             description: 'Replace all bulbs with LED alternatives to reduce electricity consumption by up to 80%.',
             icon: 'bulb',
-            savings: 'Save up to €120/year',
+            savings: 'Save up to ⊜120/year',
         },
         {
             id: '2',
             title: 'Install Water-Saving Shower Heads',
             description: 'Reduce water usage while maintaining pressure for a comfortable shower experience.',
             icon: 'water',
-            savings: 'Save up to €80/year',
+            savings: 'Save up to ⊜80/year',
         },
         {
             id: '3',
             title: 'Set Optimal Heating Temperature',
             description: 'Lowering your thermostat by just 1°C can reduce heating bills by up to 10%.',
             icon: 'thermometer',
-            savings: 'Save up to €90/year',
+            savings: 'Save up to ⊜90/year',
         },
         {
             id: '4',
             title: 'Use Smart Power Strips',
             description: 'Eliminate phantom energy use from devices on standby mode.',
             icon: 'flash',
-            savings: 'Save up to €60/year',
+            savings: 'Save up to ⊜60/year',
         },
     ];
 
@@ -119,7 +119,7 @@ export default function PropertyMonitoringScreen() {
                     icon: 'flash',
                     color: '#FFC107',
                     background: 'rgba(255, 193, 7, 0.1)',
-                    savings: '€25.30 this month',
+                    savings: '⊜25.30 this month',
                 };
             case 'water':
                 return {
@@ -131,7 +131,7 @@ export default function PropertyMonitoringScreen() {
                     icon: 'water',
                     color: '#2196F3',
                     background: 'rgba(33, 150, 243, 0.1)',
-                    savings: '€12.80 this month',
+                    savings: '⊜12.80 this month',
                 };
             case 'gas':
                 return {
@@ -143,7 +143,7 @@ export default function PropertyMonitoringScreen() {
                     icon: 'flame',
                     color: '#4CAF50',
                     background: 'rgba(76, 175, 80, 0.1)',
-                    savings: '€18.50 this month',
+                    savings: '⊜18.50 this month',
                 };
         }
     };

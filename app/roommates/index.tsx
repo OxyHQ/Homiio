@@ -47,7 +47,7 @@ const sampleRoommates: RoommateProfile[] = [
         ],
         interests: ['Design', 'Cooking', 'Hiking', 'Photography'],
         location: 'Gracia, Barcelona',
-        budget: { min: 600, max: 800, currency: '€' },
+        budget: { min: 600, max: 800, currency: '⊜' },
         moveInDate: '2023-07-01',
         duration: '12+ months',
         lastActive: '2 hours ago',
@@ -66,7 +66,7 @@ const sampleRoommates: RoommateProfile[] = [
         ],
         interests: ['Programming', 'Gaming', 'Cycling', 'Science'],
         location: 'Poblenou, Barcelona',
-        budget: { min: 700, max: 900, currency: '€' },
+        budget: { min: 700, max: 900, currency: '⊜' },
         moveInDate: '2023-06-15',
         duration: '12+ months',
         lastActive: '1 day ago',
@@ -85,7 +85,7 @@ const sampleRoommates: RoommateProfile[] = [
         ],
         interests: ['Environment', 'Gardening', 'Yoga', 'Reading'],
         location: 'Eixample, Barcelona',
-        budget: { min: 500, max: 650, currency: '€' },
+        budget: { min: 500, max: 650, currency: '⊜' },
         moveInDate: '2023-08-01',
         duration: '6+ months',
         lastActive: '3 hours ago',
@@ -104,7 +104,7 @@ const sampleRoommates: RoommateProfile[] = [
         ],
         interests: ['Music', 'Travel', 'Cooking', 'Nightlife'],
         location: 'El Born, Barcelona',
-        budget: { min: 650, max: 850, currency: '€' },
+        budget: { min: 650, max: 850, currency: '⊜' },
         moveInDate: '2023-06-01',
         duration: '12+ months',
         lastActive: '5 hours ago',
@@ -123,7 +123,7 @@ const sampleRoommates: RoommateProfile[] = [
         ],
         interests: ['Languages', 'Cooking', 'Travel', 'Art'],
         location: 'Sant Antoni, Barcelona',
-        budget: { min: 600, max: 750, currency: '€' },
+        budget: { min: 600, max: 750, currency: '⊜' },
         moveInDate: '2023-07-15',
         duration: '12+ months',
         lastActive: '1 day ago',
@@ -368,7 +368,7 @@ export default function RoommatesScreen() {
 
                     <View style={styles.filterSection}>
                         <Text style={styles.filterLabel}>
-                            {t("Maximum Budget")} ({filters.maxBudget}€)
+                            {t("Maximum Budget")} ({filters.maxBudget}⊜)
                         </Text>
                         <Slider
                             style={styles.slider}

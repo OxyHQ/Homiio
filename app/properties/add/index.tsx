@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
   TextInput,
   TouchableOpacity,
   Switch,
@@ -76,8 +76,8 @@ export default function AddPropertyPage() {
   const toggleAmenity = (id: string) => {
     setAmenities(prev =>
       prev.map(amenity =>
-        amenity.id === id 
-          ? { ...amenity, selected: !amenity.selected } 
+        amenity.id === id
+          ? { ...amenity, selected: !amenity.selected }
           : amenity
       )
     );
@@ -97,7 +97,7 @@ export default function AddPropertyPage() {
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    
+
     // Simulate API call
     setTimeout(() => {
       setIsSubmitting(false);
@@ -109,8 +109,8 @@ export default function AddPropertyPage() {
     return (
       <View style={styles.stepIndicatorContainer}>
         {Array.from({ length: totalSteps }).map((_, index) => (
-          <View 
-            key={index} 
+          <View
+            key={index}
             style={[
               styles.stepDot,
               currentStep > index && styles.completedStep,
@@ -127,9 +127,9 @@ export default function AddPropertyPage() {
     return (
       <View style={styles.stepContainer}>
         <Text style={styles.stepTitle}>{t('What type of property are you listing?')}</Text>
-        
+
         {propertyTypes.map(type => (
-          <TouchableOpacity 
+          <TouchableOpacity
             key={type.id}
             style={[
               styles.propertyTypeButton,
@@ -137,7 +137,7 @@ export default function AddPropertyPage() {
             ]}
             onPress={() => setPropertyType(type.id)}
           >
-            <Text 
+            <Text
               style={[
                 styles.propertyTypeText,
                 propertyType === type.id && styles.selectedPropertyTypeText
@@ -163,7 +163,7 @@ export default function AddPropertyPage() {
     return (
       <View style={styles.stepContainer}>
         <Text style={styles.stepTitle}>{t('Tell us about your property')}</Text>
-        
+
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>{t('Title')}</Text>
           <TextInput
@@ -201,9 +201,9 @@ export default function AddPropertyPage() {
               keyboardType="numeric"
             />
           </View>
-          
+
           <View style={[styles.inputGroup, { flex: 1 }]}>
-            <Text style={styles.inputLabel}>{t('Price (€/month)')}</Text>
+            <Text style={styles.inputLabel}>{t('Price (⊜/month)')}</Text>
             <TextInput
               style={styles.input}
               value={price}
@@ -227,7 +227,7 @@ export default function AddPropertyPage() {
               keyboardType="numeric"
             />
           </View>
-          
+
           <View style={[styles.inputGroup, { flex: 1 }]}>
             <Text style={styles.inputLabel}>{t('Bathrooms')}</Text>
             <TextInput
@@ -249,7 +249,7 @@ export default function AddPropertyPage() {
     return (
       <View style={styles.stepContainer}>
         <Text style={styles.stepTitle}>{t('Location & Availability')}</Text>
-        
+
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>{t('Address')}</Text>
           <TextInput
@@ -272,7 +272,7 @@ export default function AddPropertyPage() {
               placeholderTextColor="#999"
             />
           </View>
-          
+
           <View style={[styles.inputGroup, { flex: 1 }]}>
             <Text style={styles.inputLabel}>{t('Postal Code')}</Text>
             <TextInput
@@ -328,7 +328,7 @@ export default function AddPropertyPage() {
     return (
       <View style={styles.stepContainer}>
         <Text style={styles.stepTitle}>{t('Amenities & Features')}</Text>
-        
+
         <View style={styles.switchGroup}>
           <View style={styles.switchLabelContainer}>
             <Ionicons name="leaf" size={20} color={isEcoFriendly ? 'green' : colors.COLOR_BLACK_LIGHT_3} />
@@ -371,7 +371,7 @@ export default function AddPropertyPage() {
         <Text style={styles.sectionLabel}>{t('Select Amenities')}</Text>
         <View style={styles.amenitiesGrid}>
           {amenities.map(amenity => (
-            <TouchableOpacity 
+            <TouchableOpacity
               key={amenity.id}
               style={[
                 styles.amenityButton,
@@ -379,7 +379,7 @@ export default function AddPropertyPage() {
               ]}
               onPress={() => toggleAmenity(amenity.id)}
             >
-              <Text 
+              <Text
                 style={[
                   styles.amenityButtonText,
                   amenity.selected && styles.selectedAmenityText
@@ -432,19 +432,19 @@ export default function AddPropertyPage() {
       <ScrollView style={styles.container}>
         {renderStepIndicator()}
         {renderCurrentStep()}
-        
+
         <View style={styles.navigationButtons}>
           {currentStep > 1 && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.backButton}
               onPress={prevStep}
             >
               <Text style={styles.backButtonText}>{t('Back')}</Text>
             </TouchableOpacity>
           )}
-          
+
           {currentStep < totalSteps ? (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
                 styles.nextButton,
                 currentStep === 1 && !propertyType && styles.disabledButton
@@ -455,7 +455,7 @@ export default function AddPropertyPage() {
               <Text style={styles.nextButtonText}>{t('Next')}</Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.submitButton}
               onPress={handleSubmit}
               disabled={isSubmitting}
