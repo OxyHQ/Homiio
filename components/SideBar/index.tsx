@@ -126,6 +126,7 @@ export function SideBar() {
                                     color: colors.COLOR_BLACK,
                                     fontSize: 25,
                                     fontWeight: 'bold',
+                                    fontFamily: 'Phudu',
                                     flexWrap: 'wrap',
                                     textAlign: 'left',
                                     maxWidth: 200,

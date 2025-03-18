@@ -72,6 +72,7 @@ export default function RootLayout() {
     "Inter-Regular": require("@/assets/fonts/inter/Inter-Regular.otf"),
     "Inter-SemiBold": require("@/assets/fonts/inter/Inter-SemiBold.otf"),
     "Inter-Thin": require("@/assets/fonts/inter/Inter-Thin.otf"),
+    "Phudu": require("@/assets/fonts/Phudu-VariableFont_wght.ttf"),
   });
 
   const bottomSheetRef = useRef<BottomSheetModal>(null);
@@ -125,6 +126,10 @@ export default function RootLayout() {
 
   const isScreenNotMobile = useMediaQuery({ minWidth: 500 })
 
+  if (!loaded) {
+    return null;
+  }
+
   if (!appIsReady) {
     // check if we are in web
     if (Platform.OS === 'web') {
@@ -136,7 +141,6 @@ export default function RootLayout() {
 
   const styles = StyleSheet.create({
     container: {
-      fontFamily: "Inter-Regular",
       maxWidth: 1300,
       width: '100%',
       paddingHorizontal: isScreenNotMobile ? 10 : 0,
@@ -158,10 +162,6 @@ export default function RootLayout() {
       alignItems: 'center',
     },
   });
-
-  if (!loaded) {
-    return null;
-  }
 
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>

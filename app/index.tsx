@@ -194,6 +194,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 28,
     fontWeight: 'bold',
+    fontFamily: 'Phudu',
     color: 'white',
     textAlign: 'center',
     marginBottom: 10,

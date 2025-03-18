@@ -121,6 +121,7 @@ return {
                     './assets/fonts/inter/Inter-SemiBoldItalic.otf',
                     './assets/fonts/inter/Inter-ExtraBold.otf',
                     './assets/fonts/inter/Inter-ExtraBoldItalic.otf',
+                    './assets/fonts/Phudu-VariableFont_wght.ttf',
                   ],
                 },
               ],
