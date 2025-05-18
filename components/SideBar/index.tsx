@@ -14,6 +14,7 @@ import { Hashtag, HashtagActive } from '@/assets/icons/hashtag-icon';
 import { Search, SearchActive } from '@/assets/icons/search-icon';
 import { Compose } from '@/assets/icons/compose-icon';
 import { Ionicons } from '@expo/vector-icons';
+import { OxySignInButton } from '@oxyhq/services';
 
 const WindowHeight = Dimensions.get('window').height;
 
@@ -213,7 +214,8 @@ export function SideBar() {
                         </View>)}
                 </View>
                 <View style={{ flex: 1, }}></View>
-                <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+                <View style={{ flexDirection: 'column', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+                    <OxySignInButton />
                     <Text>Homio - Ethical Housing Platform</Text>
                 </View>
             </View>

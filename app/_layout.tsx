@@ -35,7 +35,7 @@ import LoadingTopSpinner from "@/components/LoadingTopSpinner";
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { BottomSheetProvider } from '@/context/BottomSheetContext';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
-import { setBottomSheetContextRef, setAuthBottomSheetFactory } from '@/utils/auth';
+import { OxyLogo, OxyProvider, OxyServices, OxySignInButton, useOxy } from '@oxyhq/services';
 
 import "../styles/global.css";
 
@@ -61,6 +61,18 @@ export default function RootLayout() {
   const [appIsReady, setAppIsReady] = useState(false);
   const { i18n } = useTranslation();
   const colorScheme = useColorScheme();
+
+  // Initialize OxyServices
+  const oxyServices = new OxyServices({
+    baseURL: 'https://api.oxy.so',
+  });
+
+  // Handle user authentication - no hooks here
+  const handleAuthenticated = (user: any) => {
+    console.log('User authenticated:', user);
+    // We'll just log the authentication event here
+    // The bottom sheet will be closed by the OxyProvider internally
+  };
 
   const [loaded] = useFonts({
     "Inter-Black": require("@/assets/fonts/inter/Inter-Black.otf"),
@@ -166,29 +178,40 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <Provider store={store}>
-          <I18nextProvider i18n={i18n}>
-            <MenuProvider>
-              <ErrorBoundary>
-                <BottomSheetModalProvider>
-                  <BottomSheetProvider>
-                    <View style={styles.container}>
-                      <SideBar />
-                      <View style={styles.mainContentWrapper}>
-                        <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0, }} />
-                        <Slot />
+        <OxyProvider
+          oxyServices={oxyServices}
+          initialScreen="SignIn"
+          autoPresent={false} // Don't auto-present, we'll control it with the button
+          onClose={() => console.log('Sheet closed')}
+          onAuthenticated={handleAuthenticated}
+          onAuthStateChange={(user) => console.log('Auth state changed:', user?.username || 'logged out')}
+          storageKeyPrefix="oxy_example" // Prefix for stored auth tokens
+          theme="light"
+        >
+          <Provider store={store}>
+            <I18nextProvider i18n={i18n}>
+              <MenuProvider>
+                <ErrorBoundary>
+                  <BottomSheetModalProvider>
+                    <BottomSheetProvider>
+                      <View style={styles.container}>
+                        <SideBar />
+                        <View style={styles.mainContentWrapper}>
+                          <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0, }} />
+                          <Slot />
+                        </View>
+                        <RightBar />
                       </View>
-                      <RightBar />
-                    </View>
-                    <StatusBar style="auto" />
-                    <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
-                    {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
-                  </BottomSheetProvider>
-                </BottomSheetModalProvider>
-              </ErrorBoundary>
-            </MenuProvider>
-          </I18nextProvider>
-        </Provider>
+                      <StatusBar style="auto" />
+                      <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
+                      {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
+                    </BottomSheetProvider>
+                  </BottomSheetModalProvider>
+                </ErrorBoundary>
+              </MenuProvider>
+            </I18nextProvider>
+          </Provider>
+        </OxyProvider>
       </GestureHandlerRootView>
     </SafeAreaProvider>
   );
