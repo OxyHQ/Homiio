@@ -3,11 +3,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, usePathname } from 'expo-router';
 import React from 'react';
 import Avatar from './Avatar';
+import { useOxy } from '@oxyhq/services';
 
 export const BottomBar = () => {
     const router = useRouter();
     const [activeRoute, setActiveRoute] = React.useState('/');
     const pathname = usePathname();
+    const { showBottomSheet, hideBottomSheet } = useOxy();
 
     const handlePress = (route: '/' | '/properties' | '/saved' | '/contracts' | '/profile') => {
         setActiveRoute(route);
@@ -59,7 +61,7 @@ export const BottomBar = () => {
                 <Ionicons name={activeRoute === '/contracts' ? "document-text" : "document-text-outline"} size={28} color={activeRoute === '/contracts' ? "#4E67EB" : "#000"} />
             </Pressable>
             <View style={styles.tab}>
-                <Avatar />
+                <Avatar onPress={() => showBottomSheet?.('SignIn')} />
             </View>
         </View>
     );

@@ -1,5 +1,5 @@
 import React from "react";
-import { Image, ImageSourcePropType } from 'react-native';
+import { Image, ImageSourcePropType, Pressable } from 'react-native';
 import { StyleSheet, ImageStyle } from "react-native";
 import { colors } from "@/styles/colors";
 import defaultAvatar from "@/assets/images/default-avatar.jpg";
@@ -8,9 +8,10 @@ interface AvatarProps {
   id?: string; // Avatar ID or full URL
   size?: number;
   style?: ImageStyle;
+  onPress?: () => void;
 }
 
-const Avatar: React.FC<AvatarProps> = ({ id, size = 40, style }) => {
+const Avatar: React.FC<AvatarProps> = ({ id, size = 40, style, onPress }) => {
   // Handle different avatar formats
   let source;
 
@@ -26,12 +27,14 @@ const Avatar: React.FC<AvatarProps> = ({ id, size = 40, style }) => {
   }
 
   return (
-    <Image
-      source={source}
-      style={[styles.avatar, { width: size, height: size, borderRadius: size }, style]}
-      defaultSource={defaultAvatar}
-      onError={(e) => console.warn('Avatar image failed to load:', id)}
-    />
+    <Pressable onPress={onPress} disabled={!onPress}>
+      <Image
+        source={source}
+        style={[styles.avatar, { width: size, height: size, borderRadius: size }, style]}
+        defaultSource={defaultAvatar}
+        onError={(e) => console.warn('Avatar image failed to load:', id)}
+      />
+    </Pressable>
   );
 };
 
