@@ -144,7 +144,9 @@ return {
                     buildToolsVersion: '35.0.0',
                   },
                 },
-              ],
+            ],
+            "expo-router",
+    "expo-web-browser",
         ],
         extra: {
             eas: {

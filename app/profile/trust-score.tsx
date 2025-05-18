@@ -4,9 +4,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';
 import { Ionicons } from '@expo/vector-icons';
+import { useOxy } from '@oxyhq/services';
 
 export default function TrustScorePage() {
     const { t } = useTranslation();
+    const { showBottomSheet } = useOxy();
 
     const scoreItems = [
         {
@@ -128,10 +130,7 @@ export default function TrustScorePage() {
                     </Text>
                     <TouchableOpacity
                         style={styles.learnMoreButton}
-                        onPress={() => {
-                            const url = "https://oxy.so";
-                            window.open(url, "_blank");
-                        }}
+                        onPress={() => showBottomSheet?.('AboutKarma')}
                     >
                         <Text style={styles.learnMoreText}>Learn More</Text>
                     </TouchableOpacity>
