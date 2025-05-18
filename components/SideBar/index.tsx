@@ -14,7 +14,7 @@ import { Hashtag, HashtagActive } from '@/assets/icons/hashtag-icon';
 import { Search, SearchActive } from '@/assets/icons/search-icon';
 import { Compose } from '@/assets/icons/compose-icon';
 import { Ionicons } from '@expo/vector-icons';
-import { OxySignInButton } from '@oxyhq/services';
+import { OxySignInButton, useOxy } from '@oxyhq/services';
 
 const WindowHeight = Dimensions.get('window').height;
 
@@ -24,6 +24,8 @@ export function SideBar() {
     const state = {
         userId: null,
     }
+
+    const { showBottomSheet } = useOxy();
 
     const sideBarData: { title: string; icon: React.ReactNode, iconActive: React.ReactNode, route: string }[] = [
         {
@@ -152,6 +154,7 @@ export function SideBar() {
                                             paddingHorizontal: 15,
                                             paddingVertical: 8,
                                         }}
+                                        onPress={() => showBottomSheet?.('SignUp')}
                                     >
                                         <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>{t("Sign Up")}</Text>
                                     </TouchableOpacity>
@@ -164,6 +167,7 @@ export function SideBar() {
                                             paddingHorizontal: 15,
                                             paddingVertical: 8,
                                         }}
+                                        onPress={() => showBottomSheet?.('SignIn')}
                                     >
                                         <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>{t("Sign In")}</Text>
                                     </TouchableOpacity>
