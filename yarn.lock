@@ -1987,10 +1987,10 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
-"@oxyhq/services@^5.1.9":
-  version "5.1.9"
-  resolved "https://registry.yarnpkg.com/@oxyhq/services/-/services-5.1.9.tgz#8555c837556b33528c826811140565997430236b"
-  integrity sha512-uaneYIi+PolU2xBaWxftLbyVLHy2Li1IAVhvuU46/a9lGCehK+UK09iqfLEdijDVPW/3pZlbxuS6TwPfbjQVaQ==
+"@oxyhq/services@^5.1.12":
+  version "5.1.12"
+  resolved "https://registry.yarnpkg.com/@oxyhq/services/-/services-5.1.12.tgz#d464c59569ac7ab308c06c8b123d1981fdb9f80b"
+  integrity sha512-UjDBKNMtSEDD/rdT3M3YPBZXxvZeER/BGZK4JyW4HT1CIKpPhP8e/XggVPKVhZ6StHCE4d6VNRTLtJC7ZYKs8A==
   dependencies:
     "@gorhom/bottom-sheet" "^5.1.0"
     "@react-native-async-storage/async-storage" "^2.1.2"
