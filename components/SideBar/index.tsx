@@ -20,12 +20,11 @@ const WindowHeight = Dimensions.get('window').height;
 
 export function SideBar() {
     const { t } = useTranslation();
-    const isAuthenticated = false;
     const state = {
         userId: null,
     }
 
-    const { showBottomSheet } = useOxy();
+    const { isAuthenticated, user, showBottomSheet } = useOxy();
 
     const sideBarData: { title: string; icon: React.ReactNode, iconActive: React.ReactNode, route: string }[] = [
         {
@@ -175,7 +174,7 @@ export function SideBar() {
                             )}
                         </View>
                     )}
-                    {state.userId && (
+                    {user && user.id && (
                         <View style={{
                             justifyContent: 'center',
                             alignItems: 'flex-start',
