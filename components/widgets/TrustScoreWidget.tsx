@@ -5,10 +5,16 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
+import { useOxy } from '@oxyhq/services';
 
 export function TrustScoreWidget() {
+    const { isAuthenticated } = useOxy();
     const { t } = useTranslation();
     const router = useRouter();
+
+    if (!isAuthenticated) {
+        return null; // Don't show the widget if the user is not authenticated
+    }
 
     return (
         <BaseWidget
