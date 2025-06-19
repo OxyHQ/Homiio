@@ -4,7 +4,7 @@
  */
 
 const { Property } = require('../models');
-const { fairCoinService, energyService, horizonService } = require('../services');
+const { energyService } = require('../services');
 const { logger, businessLogger } = require('../middlewares/logging');
 const { AppError, successResponse, paginationResponse } = require('../middlewares/errorHandler');
 
@@ -29,13 +29,6 @@ class PropertyController {
       // In a real implementation, save to database
       // const savedProperty = await PropertyModel.create(property);
       property.id = `prop_${Date.now()}`;
-
-      // Sync with Horizon if enabled
-      try {
-        await horizonService.syncPropertyData(property.id, property.toJSON());
-      } catch (error) {
-        logger.warn('Failed to sync property with Horizon', { error: error.message });
-      }
 
       businessLogger.propertyCreated(property.id, property.ownerId);
 
@@ -149,7 +142,6 @@ class PropertyController {
         squareFootage: 1200,
         rent: { amount: 3500, currency: 'USD', paymentFrequency: 'monthly' },
         amenities: ['gym', 'pool', 'parking', 'laundry'],
-        fairCoinEnabled: true,
         energyMonitoring: { enabled: true, sensors: ['main_meter'] }
       });
 
@@ -206,13 +198,6 @@ class PropertyController {
         throw new AppError('Validation failed', 400, 'VALIDATION_ERROR');
       }
 
-      // Sync with Horizon
-      try {
-        await horizonService.syncPropertyData(propertyId, updatedProperty.toJSON());
-      } catch (error) {
-        logger.warn('Failed to sync updated property with Horizon', { error: error.message });
-      }
-
       res.json(successResponse(
         updatedProperty.toJSON(),
         'Property updated successfully'
@@ -255,87 +240,15 @@ class PropertyController {
 
       const energyData = await energyService.getEnergyStats(propertyId, period);
       
-      // Get energy efficiency recommendations from Horizon
-      let recommendations = null;
-      try {
-        recommendations = await horizonService.getEnergyRecommendations(propertyId, energyData);
-      } catch (error) {
-        logger.warn('Failed to get energy recommendations', { error: error.message });
-      }
-
       const response = {
         propertyId,
         period,
-        data: energyData,
-        recommendations
+        data: energyData
       };
 
       res.json(successResponse(
         response,
         'Energy data retrieved successfully'
-      ));
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Get property market insights
-   */
-  async getPropertyMarketInsights(req, res, next) {
-    try {
-      const { propertyId } = req.params;
-
-      // In a real implementation, get property details first
-      const mockProperty = {
-        address: { city: 'San Francisco', state: 'CA' },
-        type: 'apartment'
-      };
-
-      const location = `${mockProperty.address.city}, ${mockProperty.address.state}`;
-      const insights = await horizonService.getMarketInsights(location, mockProperty.type);
-
-      res.json(successResponse(
-        insights,
-        'Market insights retrieved successfully'
-      ));
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Share property listing on Horizon network
-   */
-  async sharePropertyListing(req, res, next) {
-    try {
-      const { propertyId } = req.params;
-      const { visibility = 'public', features = [] } = req.body;
-
-      // In a real implementation, get full property data
-      const mockProperty = new Property({
-        id: propertyId,
-        title: 'Modern Downtown Apartment',
-        description: 'Beautiful apartment with FairCoin payments',
-        fairCoinEnabled: true,
-        energyMonitoring: { enabled: true }
-      });
-
-      const listingData = {
-        ...mockProperty.toJSON(),
-        visibility,
-        features: [
-          ...features,
-          'faircoin_payments',
-          'energy_monitoring'
-        ]
-      };
-
-      const result = await horizonService.sharePropertyListing(propertyId, listingData);
-
-      res.json(successResponse(
-        result,
-        'Property listing shared successfully'
       ));
     } catch (error) {
       next(error);

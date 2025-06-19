@@ -1,11 +1,13 @@
-import { useEffect, useRef, useCallback, useState, useContext } from "react";
+import React, { useEffect, useRef, useCallback, useState, useContext } from "react";
 import { ScrollView, Keyboard, LogBox, Platform } from "react-native";
 import * as SplashScreen from 'expo-splash-screen';
 import { Provider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from "expo-font";
 import { Slot } from 'expo-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import store from '@/store/store';
+import { queryClient } from '@/lib/reactQuery';
 import { useMediaQuery } from 'react-responsive'
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
@@ -189,27 +191,29 @@ export default function RootLayout() {
           theme="light"
         >
           <Provider store={store}>
-            <I18nextProvider i18n={i18n}>
-              <MenuProvider>
-                <ErrorBoundary>
-                  <BottomSheetModalProvider>
-                    <BottomSheetProvider>
-                      <View style={styles.container}>
-                        <SideBar />
-                        <View style={styles.mainContentWrapper}>
-                          <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0, }} />
-                          <Slot />
+            <QueryClientProvider client={queryClient}>
+              <I18nextProvider i18n={i18n}>
+                <MenuProvider>
+                  <ErrorBoundary>
+                    <BottomSheetModalProvider>
+                      <BottomSheetProvider>
+                        <View style={styles.container}>
+                          <SideBar />
+                          <View style={styles.mainContentWrapper}>
+                            <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0, }} />
+                            <Slot />
+                          </View>
+                          <RightBar />
                         </View>
-                        <RightBar />
-                      </View>
-                      <StatusBar style="auto" />
-                      <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
-                      {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
-                    </BottomSheetProvider>
-                  </BottomSheetModalProvider>
-                </ErrorBoundary>
-              </MenuProvider>
-            </I18nextProvider>
+                        <StatusBar style="auto" />
+                        <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
+                        {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
+                      </BottomSheetProvider>
+                    </BottomSheetModalProvider>
+                  </ErrorBoundary>
+                </MenuProvider>
+              </I18nextProvider>
+            </QueryClientProvider>
           </Provider>
         </OxyProvider>
       </GestureHandlerRootView>
