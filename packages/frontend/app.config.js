@@ -99,7 +99,6 @@ return {
                     recordAudioAndroid: true
                 }
             ],
-            "expo-video",
             "expo-image-picker",
             [
                 "expo-secure-store",

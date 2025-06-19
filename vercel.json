@@ -1,13 +1,13 @@
 {
-    "buildCommand": "expo export -p web",
-    "outputDirectory": "dist",
-    "devCommand": "expo",
-    "cleanUrls": true,
-    "framework": null,
-    "rewrites": [
-        {
-            "source": "/:path*",
-            "destination": "/"
-        }
-    ]
+  "name": "oxy-notes-frontend",
+  "buildCommand": "cd packages/frontend && npm run build-web:prod",
+  "outputDirectory": "packages/frontend/dist",
+  "installCommand": "npm install",
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }

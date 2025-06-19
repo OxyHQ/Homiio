@@ -1,0 +1,85 @@
+{
+  "name": "homiio-frontend",
+  "main": "expo-router/entry",
+  "version": "1.0.1",
+  "scripts": {
+    "start": "expo start --reset-cache --tunnel --clear",
+    "reset-project": "node ./scripts/reset-project.js",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "build-web": "expo export --platform web --output-dir dist",
+    "build-web:prod": "npm install @oxyhq/services@latest && expo export --platform web --output-dir dist",
+    "test": "jest --watchAll",
+    "lint": "expo lint"
+  },
+  "jest": {
+    "preset": "jest-expo"
+  },
+  "dependencies": {
+    "@bitdrift/react-native": "^0.6.13",
+    "@expo/vector-icons": "^14.1.0",
+    "@oxyhq/services": "^5.4.1",
+    "@react-native-community/slider": "^4.5.7",
+    "@react-navigation/bottom-tabs": "^7.3.17",
+    "@react-navigation/elements": "^2.4.6",
+    "@react-navigation/native": "^7.1.13",
+    "@reduxjs/toolkit": "^2.8.2",
+    "expo": "~53.0.9",
+    "expo-av": "^15.1.6",
+    "expo-blur": "~14.1.4",
+    "expo-build-properties": "^0.14.6",
+    "expo-camera": "^16.1.8",
+    "expo-constants": "~17.1.6",
+    "expo-font": "~13.3.1",
+    "expo-haptics": "~14.1.4",
+    "expo-image": "~2.1.7",
+    "expo-image-picker": "^16.1.4",
+    "expo-linking": "~7.1.5",
+    "expo-notifications": "^0.31.3",
+    "expo-router": "~5.0.6",
+    "expo-secure-store": "^14.2.3",
+    "expo-splash-screen": "^0.30.9",
+    "expo-status-bar": "~2.2.3",
+    "expo-symbols": "^0.4.5",
+    "expo-system-ui": "~5.0.7",
+    "expo-web-browser": "~14.1.6",
+    "i18next": "^25.2.1",
+    "nativewind": "^4.1.23",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-i18next": "^15.5.3",
+    "react-native": "^0.79.2",
+    "react-native-chart-kit": "^6.12.0",
+    "react-native-compressor": "^1.11.0",
+    "react-native-gesture-handler": "~2.24.0",
+    "react-native-popup-menu": "^0.18.0",
+    "react-native-reanimated": "~3.17.4",
+    "react-native-safe-area-context": "^5.4.0",
+    "react-native-screens": "~4.10.0",
+    "react-native-svg-transformer": "^1.5.1",
+    "react-native-web": "^0.20.0",
+    "react-native-web-hover": "^0.2.9",
+    "react-native-webview": "^13.13.5",
+    "react-redux": "^9.2.0",
+    "react-responsive": "^10.0.1",
+    "socket.io-client": "^4.8.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.27.4",
+    "@types/react": "~19.0.10",
+    "babel-plugin-module-resolver": "^5.0.2",
+    "eslint": "^9.29.0",
+    "eslint-config-expo": "~9.2.0",
+    "react-native-dotenv": "^3.4.11",
+    "typescript": "~5.8.3"
+  },
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "listUnknownPackages": false
+      }
+    }
+  },
+  "private": true
+}
