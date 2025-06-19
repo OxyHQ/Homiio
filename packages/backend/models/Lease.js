@@ -24,11 +24,6 @@ class Lease {
       noticePeriod: data.terms?.noticePeriod || 30, // days
       earlyTerminationFee: data.terms?.earlyTerminationFee || 0
     };
-    this.fairCoin = {
-      enabled: data.fairCoin?.enabled || false,
-      walletAddress: data.fairCoin?.walletAddress || null,
-      autoPayment: data.fairCoin?.autoPayment || false
-    };
     this.signatures = {
       landlord: {
         signed: data.signatures?.landlord?.signed || false,
@@ -98,7 +93,6 @@ class Lease {
       endDate: this.endDate,
       rent: this.rent,
       terms: this.terms,
-      fairCoin: this.fairCoin,
       signatures: this.signatures,
       documents: this.documents,
       status: this.status,

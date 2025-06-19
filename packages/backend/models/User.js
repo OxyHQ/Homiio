@@ -47,16 +47,6 @@ class User {
     };
     this.addresses = data.addresses || [];
     this.documents = data.documents || []; // ID, lease agreements, etc.
-    this.fairCoin = {
-      walletAddress: data.fairCoin?.walletAddress || null,
-      autoPayments: data.fairCoin?.autoPayments || false,
-      balance: data.fairCoin?.balance || 0
-    };
-    this.horizon = {
-      connected: data.horizon?.connected || false,
-      userId: data.horizon?.userId || null,
-      lastSync: data.horizon?.lastSync || null
-    };
     this.ratings = {
       asLandlord: {
         average: data.ratings?.asLandlord?.average || 0,
@@ -182,12 +172,6 @@ class User {
       verification: this.verification,
       preferences: this.preferences,
       addresses: this.addresses,
-      fairCoin: {
-        walletAddress: this.fairCoin.walletAddress,
-        autoPayments: this.fairCoin.autoPayments
-        // Balance excluded for security
-      },
-      horizon: this.horizon,
       ratings: this.ratings,
       subscription: this.subscription,
       fullName: this.getFullName(),

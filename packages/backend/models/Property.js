@@ -51,7 +51,7 @@ class Property {
       enabled: data.energyMonitoring?.enabled || false,
       sensors: data.energyMonitoring?.sensors || []
     };
-    this.fairCoinEnabled = data.fairCoinEnabled || false;
+    this.rooms = data.rooms || []; // Array of room IDs or Room objects
     this.createdAt = data.createdAt || new Date();
     this.updatedAt = data.updatedAt || new Date();
     this.status = data.status || 'active'; // active, inactive, archived
@@ -93,7 +93,7 @@ class Property {
       availability: this.availability,
       deviceId: this.deviceId,
       energyMonitoring: this.energyMonitoring,
-      fairCoinEnabled: this.fairCoinEnabled,
+      rooms: this.rooms,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
       status: this.status

@@ -20,17 +20,11 @@ const config = {
     }
   },
   
-  // FairCoin Integration
-  fairCoin: {
-    apiUrl: process.env.FAIRCOIN_API_URL || 'https://api.faircoin.co',
-    apiKey: process.env.FAIRCOIN_API_KEY,
-    webhookSecret: process.env.FAIRCOIN_WEBHOOK_SECRET,
-  },
-  
-  // Horizon Integration
-  horizon: {
-    apiUrl: process.env.HORIZON_API_URL || 'https://api.horizon.oxy.so',
-    apiKey: process.env.HORIZON_API_KEY,
+  // Raspberry Pi Device Configuration (for future energy monitoring)
+  raspberryPi: {
+    mqttBroker: process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883',
+    apiEndpoint: process.env.RASPI_API_ENDPOINT || 'http://localhost:8080',
+    authToken: process.env.RASPI_AUTH_TOKEN,
   },
   
   // JWT Configuration
