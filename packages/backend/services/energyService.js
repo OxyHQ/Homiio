@@ -31,6 +31,30 @@ class EnergyService {
       throw new AppError('Failed to configure device', 500, 'ENERGY_ERROR');
     }
   }
+
+  async processDeviceData(deviceId, dataPoints) {
+    try {
+      // In a real implementation, this would process and store device data
+      logger.info('Processing device data', { 
+        deviceId, 
+        dataPointsCount: Array.isArray(dataPoints) ? dataPoints.length : 1 
+      });
+      
+      // Mock processing - validate data format
+      if (Array.isArray(dataPoints)) {
+        dataPoints.forEach(point => {
+          if (!point.timestamp) point.timestamp = new Date().toISOString();
+        });
+      } else if (dataPoints && !dataPoints.timestamp) {
+        dataPoints.timestamp = new Date().toISOString();
+      }
+
+      return { success: true, processed: true };
+    } catch (error) {
+      logger.error('Failed to process device data', { deviceId, error: error.message });
+      throw new AppError('Failed to process device data', 500, 'ENERGY_ERROR');
+    }
+  }
 }
 
 module.exports = new EnergyService();
