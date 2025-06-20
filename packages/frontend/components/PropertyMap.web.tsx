@@ -47,6 +47,18 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
         // eslint-disable-next-line
     }, []);
 
+    // Update map when latitude/longitude change
+    useEffect(() => {
+        if (leafletMap.current && (window as any).L && latitude && longitude) {
+            const L = (window as any).L;
+            if (markerRef.current) {
+                leafletMap.current.removeLayer(markerRef.current);
+            }
+            markerRef.current = L.marker([latitude, longitude]).addTo(leafletMap.current);
+            leafletMap.current.setView([latitude, longitude], 16);
+        }
+    }, [latitude, longitude]);
+
     // Initialize map
     const initializeMap = () => {
         if (!mapRef.current || !(window as any).L) return;

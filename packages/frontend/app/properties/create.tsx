@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, ScrollView, TextInput, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -62,12 +62,77 @@ export default function CreatePropertyScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const isMapSelectionRef = useRef(false);
+
+  // Custom search query setter
+  const setSearchQueryWithSource = (query: string, fromMap: boolean = false) => {
+    if (fromMap) {
+      isMapSelectionRef.current = true;
+    }
+    setSearchQuery(query);
+  };
 
   // Ethical pricing validation
   const [pricingValidation, setPricingValidation] = useState<any>(null);
   const [showPricingGuidance, setShowPricingGuidance] = useState(false);
 
   const createPropertyMutation = useCreateProperty();
+
+  // Better address parsing function for OpenStreetMap Nominatim format
+  const parseAddress = (fullAddress: string) => {
+    console.log('Parsing address:', fullAddress); // Debug log
+
+    // Nominatim typically returns: "Street Number, Street Name, City, State/Province, ZIP, Country"
+    const parts = fullAddress.split(', ').map(part => part.trim());
+    console.log('Address parts:', parts); // Debug log
+
+    let street = '';
+    let city = '';
+    let state = '';
+    let zipCode = '';
+
+    // More robust parsing based on actual Nominatim format
+    if (parts.length >= 5) {
+      // Format: "123, Main Street, City, State/Province, ZIP, Country"
+      // Street: First two parts (number + street name)
+      street = `${parts[0]}, ${parts[1]}`;
+      city = parts[2];
+      state = parts[3]; // This could be state or province
+
+      // Find ZIP code (look for 5-digit pattern or postal code)
+      for (let i = 4; i < parts.length; i++) {
+        if (/^\d{5}(-\d{4})?$/.test(parts[i]) || /^[A-Z]\d[A-Z] \d[A-Z]\d$/.test(parts[i])) {
+          zipCode = parts[i];
+          break;
+        }
+      }
+    } else if (parts.length === 4) {
+      // Format: "123 Main Street, City, State/Province, ZIP"
+      street = parts[0];
+      city = parts[1];
+      state = parts[2]; // This could be state or province
+
+      if (/^\d{5}(-\d{4})?$/.test(parts[3]) || /^[A-Z]\d[A-Z] \d[A-Z]\d$/.test(parts[3])) {
+        zipCode = parts[3];
+      }
+    } else if (parts.length === 3) {
+      // Format: "Street, City, State/Province"
+      street = parts[0];
+      city = parts[1];
+      state = parts[2]; // This could be state or province
+    } else if (parts.length === 2) {
+      // Format: "Street, City"
+      street = parts[0];
+      city = parts[1];
+    } else {
+      // Single part
+      street = fullAddress;
+    }
+
+    const result = { street, city, state, zipCode };
+    console.log('Parsed result:', result); // Debug log
+    return result;
+  };
 
   // Validate pricing when property details change
   useEffect(() => {
@@ -161,6 +226,12 @@ export default function CreatePropertyScreen() {
 
   // Search handler
   useEffect(() => {
+    // Don't search if this is from map selection
+    if (isMapSelectionRef.current) {
+      isMapSelectionRef.current = false;
+      return;
+    }
+
     if (searchQuery.length < 3) {
       setSearchResults([]);
       setShowSearchResults(false);
@@ -181,7 +252,7 @@ export default function CreatePropertyScreen() {
     }, 400);
 
     return () => clearTimeout(timeout);
-  }, [searchQuery]);
+  }, [searchQuery, isMapSelectionRef]);
 
   const handleSearchSelect = (result: any) => {
     const lat = parseFloat(result.lat);
@@ -189,46 +260,64 @@ export default function CreatePropertyScreen() {
     const address = result.display_name;
 
     setSelectedLocation({ latitude: lat, longitude: lng, address });
-    setSearchQuery(address);
+    setSearchQueryWithSource(address);
     setShowSearchResults(false);
 
-    // Parse the address to extract components
-    const addressParts = address.split(', ');
-    if (addressParts.length >= 3) {
-      const street = addressParts[0];
-      const city = addressParts[1];
-      const state = addressParts[2];
-      const zipCode = addressParts.length > 3 ? addressParts[3] : '';
-
-      updateAddressField('street', street);
-      updateAddressField('city', city);
-      updateAddressField('state', state);
-      updateAddressField('zipCode', zipCode);
+    // Use structured address data from Nominatim if available
+    if (result.address) {
+      const addr = result.address;
+      updateAddressField('street', `${addr.house_number || ''} ${addr.road || addr.street || ''}`.trim());
+      updateAddressField('city', addr.city || addr.town || addr.village || addr.county || '');
+      // Prioritize province over state for international addresses
+      updateAddressField('state', addr.province || addr.state || '');
+      updateAddressField('zipCode', addr.postcode || '');
     } else {
-      // If we can't parse the address, just use the full address as street
-      updateAddressField('street', address);
+      // Fallback to parsing display_name
+      const parsedAddress = parseAddress(address);
+      updateAddressField('street', parsedAddress.street);
+      updateAddressField('city', parsedAddress.city);
+      updateAddressField('state', parsedAddress.state);
+      updateAddressField('zipCode', parsedAddress.zipCode);
     }
   };
 
   const handleLocationSelect = (lat: number, lng: number, address: string) => {
     setSelectedLocation({ latitude: lat, longitude: lng, address });
 
-    // Parse the address to extract components
-    const addressParts = address.split(', ');
-    if (addressParts.length >= 3) {
-      const street = addressParts[0];
-      const city = addressParts[1];
-      const state = addressParts[2];
-      const zipCode = addressParts.length > 3 ? addressParts[3] : '';
+    // Update search field with the selected address (from map)
+    setSearchQueryWithSource(address, true);
 
-      updateAddressField('street', street);
-      updateAddressField('city', city);
-      updateAddressField('state', state);
-      updateAddressField('zipCode', zipCode);
-    } else {
-      // If we can't parse the address, just use the full address as street
-      updateAddressField('street', address);
-    }
+    // Hide search results when location is selected on map
+    setShowSearchResults(false);
+
+    // For map clicks, we need to fetch the structured address data
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.address) {
+          const addr = data.address;
+          updateAddressField('street', `${addr.house_number || ''} ${addr.road || addr.street || ''}`.trim());
+          updateAddressField('city', addr.city || addr.town || addr.village || addr.county || '');
+          // Prioritize province over state for international addresses
+          updateAddressField('state', addr.province || addr.state || '');
+          updateAddressField('zipCode', addr.postcode || '');
+        } else {
+          // Fallback to parsing display_name
+          const parsedAddress = parseAddress(address);
+          updateAddressField('street', parsedAddress.street);
+          updateAddressField('city', parsedAddress.city);
+          updateAddressField('state', parsedAddress.state);
+          updateAddressField('zipCode', parsedAddress.zipCode);
+        }
+      })
+      .catch(() => {
+        // Fallback to parsing display_name if API call fails
+        const parsedAddress = parseAddress(address);
+        updateAddressField('street', parsedAddress.street);
+        updateAddressField('city', parsedAddress.city);
+        updateAddressField('state', parsedAddress.state);
+        updateAddressField('zipCode', parsedAddress.zipCode);
+      });
   };
 
   const handleSubmit = async () => {
@@ -394,9 +483,18 @@ export default function CreatePropertyScreen() {
               <TextInput
                 style={styles.searchInput}
                 value={searchQuery}
-                onChangeText={setSearchQuery}
+                onChangeText={setSearchQueryWithSource}
                 placeholder="Search for an address..."
-                onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
+                onFocus={() => {
+                  // Only show results if user is actively searching (not from map selection)
+                  if (searchResults.length > 0 && searchQuery.length >= 3) {
+                    setShowSearchResults(true);
+                  }
+                }}
+                onBlur={() => {
+                  // Hide results when input loses focus
+                  setTimeout(() => setShowSearchResults(false), 200);
+                }}
               />
 
               {/* Search Results */}
@@ -425,13 +523,6 @@ export default function CreatePropertyScreen() {
               height={300}
               interactive={true}
             />
-            {selectedLocation && (
-              <View style={styles.locationInfo}>
-                <ThemedText style={styles.locationText}>
-                  Selected: {selectedLocation.address}
-                </ThemedText>
-              </View>
-            )}
           </View>
 
           <View style={styles.inputGroup}>
@@ -859,18 +950,6 @@ const styles = StyleSheet.create({
   pickerOptionTextSelected: {
     color: 'white',
     fontWeight: '600',
-  },
-  locationInfo: {
-    marginTop: 8,
-    padding: 12,
-    backgroundColor: colors.primaryLight,
-    borderWidth: 1,
-    borderColor: colors.primaryLight_1,
-    borderRadius: 8,
-  },
-  locationText: {
-    fontSize: 14,
-    color: colors.primaryDark,
   },
   subLabel: {
     fontSize: 14,

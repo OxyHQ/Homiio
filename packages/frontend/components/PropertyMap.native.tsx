@@ -106,6 +106,25 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
         }
     };
 
+    // Function to update map location programmatically
+    const updateMapLocation = (lat: number, lng: number) => {
+        if (webViewRef.current) {
+            const updateScript = `
+                if (marker) map.removeLayer(marker);
+                marker = L.marker([${lat}, ${lng}]).addTo(map);
+                map.setView([${lat}, ${lng}], 16);
+            `;
+            webViewRef.current.injectJavaScript(updateScript);
+        }
+    };
+
+    // Update map when coordinates change
+    useEffect(() => {
+        if (latitude && longitude && webViewRef.current) {
+            updateMapLocation(latitude, longitude);
+        }
+    }, [latitude, longitude]);
+
     if (error) {
         return (
             <View style={[styles.container, { height }, styles.errorContainer]}>
@@ -118,6 +137,7 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
     return (
         <View style={[styles.container, { height }]}>
             <WebView
+                key={`${latitude}-${longitude}`}
                 ref={webViewRef}
                 source={{ html: mapHtml }}
                 style={styles.webview}

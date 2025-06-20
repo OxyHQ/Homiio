@@ -41,7 +41,6 @@ const handleValidationErrors = (req, res, next) => {
  * Property validation rules
  */
 const validateProperty = [
-  body('title').notEmpty().withMessage('Title is required'),
   body('description').optional().isString(),
   body('address.street').notEmpty().withMessage('Street address is required'),
   body('address.city').notEmpty().withMessage('City is required'),

@@ -5,6 +5,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
+import { PropertyMap } from '@/components/PropertyMap';
 import { useProperty } from '@/hooks/usePropertyQueries';
 import { useTrackPropertyView, useSaveProperty, useUnsaveProperty, useSavedProperties } from '@/hooks/useUserQueries';
 import { useOxy } from '@oxyhq/services';
@@ -187,6 +188,9 @@ export default function PropertyDetailPage() {
 
   const renderAmenity = (amenity: string, index: number) => (
     <View key={index} style={styles.amenityItem}>
+      <View style={styles.amenityIcon}>
+        <Text style={styles.amenityIconText}>✓</Text>
+      </View>
       <Text style={styles.amenityText}>{amenity}</Text>
     </View>
   );
@@ -237,17 +241,21 @@ export default function PropertyDetailPage() {
       <Header
         options={{
           showBackButton: true,
-          title: property.title,
+          title: '',
           titlePosition: 'center',
           rightComponents: [
-            <TouchableOpacity key="share" style={styles.headerButton}>
-              <Text style={{ fontSize: 20, color: colors.COLOR_BLACK, opacity: 0.7 }}>Share</Text>
+            <TouchableOpacity key="share" style={styles.headerButton} onPress={() => {
+              // Share functionality
+              toast.success('Share feature coming soon!');
+            }}>
+              <Ionicons name="share-outline" size={24} color={colors.COLOR_BLACK} />
             </TouchableOpacity>,
             <TouchableOpacity
               key="save"
               onPress={handleSave}
               disabled={saveProperty.isPending || unsaveProperty.isPending}
               activeOpacity={0.7}
+              style={styles.headerButton}
             >
               {(saveProperty.isPending || unsaveProperty.isPending) ? (
                 <ActivityIndicator size="small" color={isPropertySaved ? colors.primaryColor : colors.COLOR_BLACK} />
@@ -255,13 +263,32 @@ export default function PropertyDetailPage() {
                 <Ionicons
                   name={isPropertySaved ? "bookmark" : "bookmark-outline"}
                   size={24}
-                  color={isPropertySaved ? colors.primaryColor : colors.COLOR_BLACK}
+                  color={isPropertySaved ? colors.primaryColor : '#333333'}
                 />
               )}
             </TouchableOpacity>,
           ],
         }}
       />
+
+      {/* Enhanced Header Section */}
+      <View style={styles.enhancedHeader}>
+        <Text style={styles.headerTitle} numberOfLines={2}>{property.title}</Text>
+        <View style={styles.headerLocation}>
+          <Text style={styles.headerLocationText}>{property.location}</Text>
+        </View>
+        <View style={styles.headerStats}>
+          <View style={styles.headerStat}>
+            <Text style={styles.headerStatText}>{property.bedrooms} {t("Bed")}</Text>
+          </View>
+          <View style={styles.headerStat}>
+            <Text style={styles.headerStatText}>{property.bathrooms} {t("Bath")}</Text>
+          </View>
+          <View style={styles.headerStat}>
+            <Text style={styles.headerStatText}>{property.size}m²</Text>
+          </View>
+        </View>
+      </View>
 
       <ScrollView style={styles.container}>
         {/* Image Gallery */}
@@ -298,22 +325,6 @@ export default function PropertyDetailPage() {
 
         {/* Basic Info */}
         <View style={styles.infoContainer}>
-          <Text style={styles.propertyTitle}>{property.title}</Text>
-          <View style={styles.locationContainer}>
-            <Text style={styles.locationText}>{property.location}</Text>
-          </View>
-
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={styles.statText}>{property.bedrooms} {t("Bedrooms")}</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statText}>{property.bathrooms} {t("Bathrooms")}</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statText}>{property.size} m²</Text>
-            </View>
-          </View>
 
           <View style={styles.priceContainer}>
             <Text style={styles.priceLabel}>{t("Monthly Rent")}</Text>
@@ -399,10 +410,38 @@ export default function PropertyDetailPage() {
           {/* Amenities */}
           <Text style={styles.sectionTitle}>{t("Amenities")}</Text>
           <View style={styles.amenitiesContainer}>
-            {property.amenities.map(renderAmenity)}
+            {property.amenities.length > 0 ? (
+              property.amenities.map((amenity, index) => (
+                <View key={index} style={styles.amenityItem}>
+                  <View style={styles.amenityIcon}>
+                    <Text style={styles.amenityIconText}>✓</Text>
+                  </View>
+                  <Text style={styles.amenityText}>{amenity}</Text>
+                </View>
+              ))
+            ) : (
+              <View style={styles.noAmenitiesContainer}>
+                <Text style={styles.noAmenitiesText}>{t("No amenities listed")}</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.divider} />
+
+          {/* Map - Only show if location coordinates are available */}
+          {apiProperty?.address?.coordinates?.lat && apiProperty?.address?.coordinates?.lng && (
+            <>
+              <Text style={styles.sectionTitle}>{t("Location")}</Text>
+              <PropertyMap
+                latitude={apiProperty.address.coordinates.lat}
+                longitude={apiProperty.address.coordinates.lng}
+                address={property.location}
+                height={200}
+                interactive={false}
+              />
+              <View style={styles.divider} />
+            </>
+          )}
 
           {/* Landlord Info */}
           <Text style={styles.sectionTitle}>{t("Landlord")}</Text>
@@ -466,7 +505,6 @@ export default function PropertyDetailPage() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.primaryLight,
   },
   container: {
     flex: 1,
@@ -767,10 +805,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   fraudWarningText: {
-    marginLeft: 8,
-    fontSize: 13,
-    color: '#FFA000',
-    flex: 1,
+    fontSize: 14,
+    color: colors.COLOR_BLACK_LIGHT_3,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   loadingContainer: {
     flex: 1,
@@ -878,5 +916,79 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     fontSize: 14,
     color: colors.primaryColor,
+  },
+  mapContainer: {
+    marginVertical: 10,
+  },
+  enhancedHeader: {
+    backgroundColor: colors.primaryLight,
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    borderTopLeftRadius: 35,
+    borderTopRightRadius: 35,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  headerLocation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  headerLocationText: {
+    marginLeft: 5,
+    fontSize: 16,
+    color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  headerStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerStat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerStatText: {
+    marginLeft: 5,
+    fontSize: 14,
+  },
+  amenityIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.primaryColor,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  amenityIconText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  noAmenitiesContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noAmenitiesText: {
+    color: colors.COLOR_BLACK_LIGHT_3,
+    fontSize: 14,
+  },
+  headerIconText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  saveButtonIcon: {
+    fontSize: 20,
+    fontWeight: 'bold',
   },
 });
