@@ -3,7 +3,7 @@
  * Handles property-related operations
  */
 
-const { Property } = require('../models');
+const { Property, PropertyModel } = require('../models');
 const { energyService } = require('../services');
 const { logger, businessLogger } = require('../middlewares/logging');
 const { AppError, successResponse, paginationResponse } = require('../middlewares/errorHandler');
@@ -14,29 +14,68 @@ class PropertyController {
    */
   async createProperty(req, res, next) {
     try {
+      // Check if user is authenticated
+      if (!req.userId) {
+        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
+      }
+
       const propertyData = {
         ...req.body,
         ownerId: req.userId
       };
 
-      const property = new Property(propertyData);
-      const validation = property.validate();
-      
-      if (!validation.isValid) {
-        throw new AppError('Validation failed', 400, 'VALIDATION_ERROR');
-      }
+      logger.info('Creating property with data', { propertyData });
 
-      // In a real implementation, save to database
-      // const savedProperty = await PropertyModel.create(property);
-      property.id = `prop_${Date.now()}`;
+      // Create and save property using Mongoose model
+      const property = new PropertyModel(propertyData);
+      const savedProperty = await property.save();
 
-      businessLogger.propertyCreated(property.id, property.ownerId);
+      businessLogger.propertyCreated(savedProperty._id, savedProperty.ownerId);
 
       res.status(201).json(successResponse(
-        property.toJSON(),
+        savedProperty.toJSON(),
         'Property created successfully'
       ));
     } catch (error) {
+      if (error.name === 'ValidationError') {
+        const validationErrors = Object.values(error.errors).map(err => err.message);
+        const validationError = new AppError('Property validation failed', 400, 'VALIDATION_ERROR');
+        validationError.details = validationErrors;
+        return next(validationError);
+      }
+      next(error);
+    }
+  }
+
+  /**
+   * Create a new property (development/testing version without auth)
+   */
+  async createPropertyDev(req, res, next) {
+    try {
+      const propertyData = {
+        ...req.body,
+        ownerId: req.userId || 'dev_user_' + Date.now() // Use provided userId or generate one
+      };
+
+      logger.info('Creating property with data (dev mode)', { propertyData });
+
+      // Create and save property using Mongoose model
+      const property = new PropertyModel(propertyData);
+      const savedProperty = await property.save();
+
+      businessLogger.propertyCreated(savedProperty._id, savedProperty.ownerId);
+
+      res.status(201).json(successResponse(
+        savedProperty.toJSON(),
+        'Property created successfully (dev mode)'
+      ));
+    } catch (error) {
+      if (error.name === 'ValidationError') {
+        const validationErrors = Object.values(error.errors).map(err => err.message);
+        const validationError = new AppError('Property validation failed', 400, 'VALIDATION_ERROR');
+        validationError.details = validationErrors;
+        return next(validationError);
+      }
       next(error);
     }
   }
@@ -64,49 +103,57 @@ class PropertyController {
       // Build filters
       const filters = {};
       if (type) filters.type = type;
-      if (minRent) filters.minRent = parseFloat(minRent);
-      if (maxRent) filters.maxRent = parseFloat(maxRent);
-      if (city) filters.city = city;
+      if (city) filters['address.city'] = new RegExp(city, 'i');
       if (bedrooms) filters.bedrooms = parseInt(bedrooms);
       if (bathrooms) filters.bathrooms = parseInt(bathrooms);
-      if (amenities) filters.amenities = amenities.split(',');
-      if (available !== undefined) filters.available = available === 'true';
+      if (available !== undefined) {
+        filters['availability.isAvailable'] = available === 'true';
+        filters.status = 'active';
+      }
+      if (amenities) {
+        const amenityList = amenities.split(',');
+        filters.amenities = { $in: amenityList };
+      }
 
-      // In a real implementation, query database with filters
-      // const { properties, total } = await PropertyModel.findWithFilters(filters, { page, limit, sortBy, sortOrder });
-      
-      // Mock data for demonstration
-      const mockProperties = [
-        new Property({
-          id: 'prop_1',
-          ownerId: 'user_1',
-          title: 'Modern Downtown Apartment',
-          address: { city: 'San Francisco', state: 'CA' },
-          type: 'apartment',
-          bedrooms: 2,
-          bathrooms: 2,
-          rent: { amount: 3500, currency: 'USD' }
-        }),
-        new Property({
-          id: 'prop_2',
-          ownerId: 'user_2',
-          title: 'Cozy Suburban House',
-          address: { city: 'Austin', state: 'TX' },
-          type: 'house',
-          bedrooms: 3,
-          bathrooms: 2.5,
-          rent: { amount: 2200, currency: 'USD' }
-        })
-      ];
+      // Build rent filter
+      if (minRent !== undefined || maxRent !== undefined) {
+        filters['rent.amount'] = {};
+        if (minRent !== undefined) filters['rent.amount'].$gte = parseFloat(minRent);
+        if (maxRent !== undefined) filters['rent.amount'].$lte = parseFloat(maxRent);
+      }
 
-      const properties = mockProperties.map(p => p.toJSON());
-      const total = mockProperties.length;
+      // Build sort options
+      const sortOptions = {};
+      sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+      // Calculate pagination
+      const pageNumber = parseInt(page);
+      const limitNumber = parseInt(limit);
+      const skip = (pageNumber - 1) * limitNumber;
+
+      // Query database
+      const [properties, total] = await Promise.all([
+        PropertyModel.find(filters)
+          .sort(sortOptions)
+          .skip(skip)
+          .limit(limitNumber)
+          .populate('rooms', 'name type status')
+          .lean(),
+        PropertyModel.countDocuments(filters)
+      ]);
+
+      const totalPages = Math.ceil(total / limitNumber);
 
       res.json(paginationResponse(
         properties,
-        parseInt(page),
-        parseInt(limit),
-        total,
+        {
+          page: pageNumber,
+          limit: limitNumber,
+          total,
+          totalPages,
+          hasNext: pageNumber < totalPages,
+          hasPrev: pageNumber > 1
+        },
         'Properties retrieved successfully'
       ));
     } catch (error) {
@@ -121,37 +168,21 @@ class PropertyController {
     try {
       const { propertyId } = req.params;
 
-      // In a real implementation, fetch from database
-      // const property = await PropertyModel.findById(propertyId);
-      
-      const mockProperty = new Property({
-        id: propertyId,
-        ownerId: 'user_1',
-        title: 'Modern Downtown Apartment',
-        description: 'Beautiful 2-bedroom apartment with city views',
-        address: {
-          street: '123 Main St',
-          city: 'San Francisco',
-          state: 'CA',
-          zipCode: '94102',
-          country: 'USA'
-        },
-        type: 'apartment',
-        bedrooms: 2,
-        bathrooms: 2,
-        squareFootage: 1200,
-        rent: { amount: 3500, currency: 'USD', paymentFrequency: 'monthly' },
-        amenities: ['gym', 'pool', 'parking', 'laundry'],
-        energyMonitoring: { enabled: true, sensors: ['main_meter'] }
-      });
+      // Fetch from database
+      const property = await PropertyModel.findById(propertyId)
+        .populate('rooms', 'name type status availability')
+        .lean();
 
-      if (!mockProperty) {
-        throw new AppError('Property not found', 404, 'NOT_FOUND');
+      if (!property) {
+        return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));
       }
+
+      // Increment view count
+      await PropertyModel.findByIdAndUpdate(propertyId, { $inc: { views: 1 } });
 
       // Get energy data if monitoring is enabled
       let energyData = null;
-      if (mockProperty.energyMonitoring.enabled) {
+      if (property.energyMonitoring && property.energyMonitoring.enabled) {
         try {
           energyData = await energyService.getEnergyStats(propertyId);
         } catch (error) {
@@ -160,7 +191,7 @@ class PropertyController {
       }
 
       const response = {
-        ...mockProperty.toJSON(),
+        ...property,
         energyData
       };
 
@@ -169,6 +200,9 @@ class PropertyController {
         'Property retrieved successfully'
       ));
     } catch (error) {
+      if (error.name === 'CastError') {
+        return next(new AppError('Invalid property ID', 400, 'INVALID_ID'));
+      }
       next(error);
     }
   }

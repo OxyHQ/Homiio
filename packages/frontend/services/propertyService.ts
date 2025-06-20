@@ -83,6 +83,7 @@ export interface CreatePropertyData {
 export interface PropertyFilters {
   type?: string;
   status?: string;
+  available?: boolean;
   minRent?: number;
   maxRent?: number;
   bedrooms?: number;

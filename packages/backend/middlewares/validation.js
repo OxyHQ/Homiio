@@ -11,9 +11,27 @@ const { body, param, query, validationResult } = require('express-validator');
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    const { logger } = require('./logging');
+    
+    // Log validation errors for debugging
+    logger.error('Validation errors detected', {
+      errors: errors.array(),
+      body: req.body,
+      params: req.params,
+      query: req.query
+    });
+    
+    const formattedErrors = errors.array().map(error => ({
+      field: error.path || error.param,
+      message: error.msg,
+      value: error.value,
+      location: error.location
+    }));
+    
     return res.status(400).json({
       error: 'Validation failed',
-      details: errors.array()
+      details: formattedErrors,
+      message: `Validation failed for: ${formattedErrors.map(e => e.field).join(', ')}`
     });
   }
   next();
@@ -29,11 +47,11 @@ const validateProperty = [
   body('address.city').notEmpty().withMessage('City is required'),
   body('address.state').notEmpty().withMessage('State is required'),
   body('address.zipCode').notEmpty().withMessage('ZIP code is required'),
-  body('rent.amount').isFloat({ min: 0 }).withMessage('Rent amount must be a positive number'),
+  body('rent.amount').isFloat({ min: 0.01 }).withMessage('Rent amount must be greater than 0'),
   body('rent.currency').optional().isIn(['USD', 'EUR', 'GBP', 'CAD']).withMessage('Invalid currency'),
   body('bedrooms').optional().isInt({ min: 0 }).withMessage('Bedrooms must be a non-negative integer'),
   body('bathrooms').optional().isFloat({ min: 0 }).withMessage('Bathrooms must be a non-negative number'),
-  body('squareFootage').optional().isFloat({ min: 0 }).withMessage('Square footage must be positive'),
+  body('squareFootage').optional().isFloat({ min: 0 }).withMessage('Square footage must be non-negative'),
   body('type').isIn(['apartment', 'house', 'room', 'studio']).withMessage('Invalid property type'),
   handleValidationErrors
 ];
@@ -141,40 +159,6 @@ const validateDateRange = [
 ];
 
 /**
- * Authentication validation rules
- */
-const validateLogin = [
-  body('email').isEmail().withMessage('Valid email is required'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  handleValidationErrors
-];
-
-const validateRegister = [
-  body('email').isEmail().withMessage('Valid email is required'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('username').isLength({ min: 3, max: 30 }).withMessage('Username must be 3-30 characters'),
-  body('firstName').notEmpty().withMessage('First name is required'),
-  body('lastName').notEmpty().withMessage('Last name is required'),
-  handleValidationErrors
-];
-
-const validateRefreshToken = [
-  body('refreshToken').notEmpty().withMessage('Refresh token is required'),
-  handleValidationErrors
-];
-
-const validateEmail = [
-  body('email').isEmail().withMessage('Valid email is required'),
-  handleValidationErrors
-];
-
-const validatePasswordReset = [
-  body('token').notEmpty().withMessage('Reset token is required'),
-  body('newPassword').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  handleValidationErrors
-];
-
-/**
  * File upload validation
  */
 const validateFileUpload = (req, res, next) => {
@@ -199,11 +183,6 @@ const validateFileUpload = (req, res, next) => {
 
 module.exports = {
   handleValidationErrors,
-  validateLogin,
-  validateRegister,
-  validateRefreshToken,
-  validateEmail,
-  validatePasswordReset,
   validateProperty,
   validateLease,
   validatePayment,

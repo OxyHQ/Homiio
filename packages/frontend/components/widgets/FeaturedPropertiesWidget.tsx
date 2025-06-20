@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
 import { useProperties } from '@/hooks/usePropertyQueries';
@@ -10,15 +9,17 @@ import { useProperties } from '@/hooks/usePropertyQueries';
 export function FeaturedPropertiesWidget() {
     const { t } = useTranslation();
     const { data, isLoading, error } = useProperties({ 
-        limit: 3, 
-        status: 'available'
+        limit: 3,
+        available: true
     });
 
     if (error) {
         return (
             <BaseWidget title={t("Featured Properties")}>
                 <View style={styles.errorContainer}>
-                    <Text style={styles.errorText}>Failed to load properties</Text>
+                    <Text style={styles.errorText}>
+                        {error?.message || 'Failed to load properties'}
+                    </Text>
                 </View>
             </BaseWidget>
         );
@@ -43,32 +44,26 @@ export function FeaturedPropertiesWidget() {
 function FeaturedProperties({ properties }: { properties: any[] }) {
     const router = useRouter();
 
-    // Use real API data, fall back to mock data if empty
-    const propertyItems = properties.length > 0 ? properties.map(property => ({
+    // Map API data to display format
+    const propertyItems = properties.map(property => ({
         id: property.id,
-        title: property.title,
+        title: property.title || 'Untitled Property',
         location: `${property.address?.city || 'Unknown'}, ${property.address?.state || 'Unknown'}`,
         price: `$${property.rent?.amount || 0}/${property.rent?.paymentFrequency || 'month'}`,
-        isEcoCertified: property.amenities?.includes('eco-friendly') || false,
+        isEcoCertified: property.amenities?.includes('eco-friendly') || 
+                       property.amenities?.includes('green') || 
+                       property.amenities?.includes('solar') || false,
         rating: 4.5 // Default rating since it's not in the API yet
-    })) : [
-        {
-            id: '1',
-            title: 'Modern Studio in City Center',
-            location: 'Barcelona, Spain',
-            price: '$850/month',
-            isEcoCertified: true,
-            rating: 4.8
-        },
-        {
-            id: '2',
-            title: 'Co-living Space with Garden',
-            location: 'Berlin, Germany',
-            price: '$550/month',
-            isEcoCertified: true,
-            rating: 4.9
-        }
-    ];
+    }));
+
+    // Show message if no properties available
+    if (propertyItems.length === 0) {
+        return (
+            <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No featured properties available at the moment</Text>
+            </View>
+        );
+    }
 
     return (
         <>
@@ -82,14 +77,14 @@ function FeaturedProperties({ properties }: { properties: any[] }) {
                             <View style={styles.propertyHeader}>
                                 <Text style={styles.propertyTitle} numberOfLines={1}>{property.title}</Text>
                                 {property.isEcoCertified && (
-                                    <Ionicons name="leaf" size={16} color="green" />
+                                    <Text style={styles.ecoIcon}>🌿</Text>
                                 )}
                             </View>
                             <Text style={styles.propertyLocation}>{property.location}</Text>
                             <View style={styles.propertyFooter}>
                                 <Text style={styles.propertyPrice}>{property.price}</Text>
                                 <View style={styles.ratingContainer}>
-                                    <Ionicons name="star" size={14} color="#FFD700" />
+                                    <Text style={styles.starIcon}>⭐</Text>
                                     <Text style={styles.ratingText}>{property.rating}</Text>
                                 </View>
                             </View>
@@ -127,6 +122,16 @@ const styles = StyleSheet.create({
     errorText: {
         color: '#ff6b6b',
         fontWeight: '500',
+    },
+    emptyContainer: {
+        padding: 20,
+        alignItems: 'center',
+        borderRadius: 15,
+    },
+    emptyText: {
+        color: colors.COLOR_BLACK_LIGHT_4,
+        fontSize: 14,
+        textAlign: 'center',
     },
     propertyItem: {
         flexDirection: 'row',
@@ -196,5 +201,13 @@ const styles = StyleSheet.create({
     showMoreText: {
         color: colors.primaryColor,
         fontWeight: '600',
+    },
+    ecoIcon: {
+        fontSize: 16,
+        marginLeft: 5,
+    },
+    starIcon: {
+        fontSize: 14,
+        color: '#FFD700',
     },
 }); 

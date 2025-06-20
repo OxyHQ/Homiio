@@ -125,9 +125,6 @@ OXY_API_URL=http://localhost:3001
 OXY_API_KEY=your_oxy_api_key
 DATABASE_URL=mongodb://localhost:27017/homiio
 JWT_SECRET=your_jwt_secret
-MQTT_BROKER_URL=mqtt://localhost:1883
-RASPI_API_ENDPOINT=http://localhost:8080
-RASPI_AUTH_TOKEN=your_device_token
 ```
 
 ## Models

@@ -4,7 +4,7 @@ const { analyticsController } = require('../controllers');
 
 const router = express.Router();
 
-router.get('/', auth.verifyToken, (req, res, next) =>
+router.get('/', (req, res, next) =>
   analyticsController.getAnalytics(req, res, next)
 );
 

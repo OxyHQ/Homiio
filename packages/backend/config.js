@@ -13,24 +13,13 @@ const config = {
   
   // Database Configuration
   database: {
-    url: process.env.DATABASE_URL || 'mongodb://localhost:27017/homiio',
+    url: process.env.MONGODB_URI || process.env.DATABASE_URL || 'mongodb://localhost:27017/homiio',
     options: {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
+      // Modern MongoDB driver doesn't need these deprecated options
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
     }
-  },
-  
-  // Raspberry Pi Device Configuration (for future energy monitoring)
-  raspberryPi: {
-    mqttBroker: process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883',
-    apiEndpoint: process.env.RASPI_API_ENDPOINT || 'http://localhost:8080',
-    authToken: process.env.RASPI_AUTH_TOKEN,
-  },
-
-  // Horizon Integration (used for analytics and ecosystem features)
-  horizon: {
-    apiUrl: process.env.HORIZON_API_URL || 'https://api.horizon.oxy.so',
-    apiKey: process.env.HORIZON_API_KEY,
   },
   
   // JWT Configuration

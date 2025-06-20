@@ -7,7 +7,7 @@ const express = require('express');
 
 module.exports = function(authenticateToken) {
   const userRoutes = require('./users')(authenticateToken);
-  const propertyRoutes = require('./properties');
+  const propertyRoutes = require('./properties')(authenticateToken);
   const roomRoutes = require('./rooms');
   const deviceRoutes = require('./devices')(authenticateToken);
   const leaseRoutes = require('./leases')(authenticateToken);

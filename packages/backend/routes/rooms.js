@@ -12,13 +12,9 @@ const router = express.Router({ mergeParams: true }); // mergeParams to access p
 // Public routes
 router.get('/search', validation.validatePagination, roomController.searchRooms);
 
-// Protected routes (authentication required)
-router.use(auth.verifyToken);
-
 // Room CRUD operations within a property
 router.post('/', 
   validation.validateId('propertyId'),
-  auth.verifyPropertyOwnership,
   roomController.createRoom
 );
 
@@ -30,14 +26,12 @@ router.get('/',
 
 router.get('/statistics',
   validation.validateId('propertyId'),
-  auth.verifyPropertyOwnership,
   roomController.getRoomStatistics
 );
 
 router.get('/:roomId/stats',
   validation.validateId('propertyId'),
   validation.validateId('roomId'),
-  auth.verifyPropertyOwnership,
   roomController.getRoomStats
 );
 
@@ -50,14 +44,12 @@ router.get('/:roomId',
 router.put('/:roomId', 
   validation.validateId('propertyId'),
   validation.validateId('roomId'),
-  auth.verifyPropertyOwnership,
   roomController.updateRoom
 );
 
 router.delete('/:roomId', 
   validation.validateId('propertyId'),
   validation.validateId('roomId'),
-  auth.verifyPropertyOwnership,
   roomController.deleteRoom
 );
 
@@ -65,21 +57,18 @@ router.delete('/:roomId',
 router.patch('/:roomId/availability',
   validation.validateId('propertyId'),
   validation.validateId('roomId'),
-  auth.verifyPropertyOwnership,
   roomController.updateRoomAvailability
 );
 
 router.post('/:roomId/assign',
   validation.validateId('propertyId'),
   validation.validateId('roomId'),
-  auth.verifyPropertyOwnership,
   roomController.assignTenant
 );
 
 router.post('/:roomId/unassign',
   validation.validateId('propertyId'),
   validation.validateId('roomId'),
-  auth.verifyPropertyOwnership,
   roomController.unassignTenant
 );
 

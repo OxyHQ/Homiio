@@ -38,6 +38,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import { BottomSheetProvider } from '@/context/BottomSheetContext';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { OxyLogo, OxyProvider, OxyServices, OxySignInButton, useOxy } from '@oxyhq/services';
+import { setOxyServices } from '@/utils/api';
 
 import "../styles/global.css";
 
@@ -58,6 +59,19 @@ i18n.use(initReactI18next).init({
 }).catch(error => {
   console.error("Failed to initialize i18n:", error);
 });
+
+// Component to set OxyServices instance for API calls
+function OxyServicesInitializer() {
+  const { oxyServices, activeSessionId } = useOxy();
+  
+  useEffect(() => {
+    if (oxyServices && activeSessionId) {
+      setOxyServices(oxyServices, activeSessionId);
+    }
+  }, [oxyServices, activeSessionId]);
+  
+  return null;
+}
 
 export default function RootLayout() {
   const [appIsReady, setAppIsReady] = useState(false);
@@ -190,6 +204,7 @@ export default function RootLayout() {
           storageKeyPrefix="oxy_example" // Prefix for stored auth tokens
           theme="light"
         >
+          <OxyServicesInitializer />
           <Provider store={store}>
             <QueryClientProvider client={queryClient}>
               <I18nextProvider i18n={i18n}>

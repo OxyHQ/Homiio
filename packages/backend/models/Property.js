@@ -61,11 +61,55 @@ class Property {
   validate() {
     const errors = [];
     
-    if (!this.title) errors.push('Title is required');
-    if (!this.ownerId) errors.push('Owner ID is required');
-    if (!this.address.street) errors.push('Street address is required');
-    if (!this.address.city) errors.push('City is required');
-    if (this.rent.amount <= 0) errors.push('Rent amount must be greater than 0');
+    // Required fields
+    if (!this.title || this.title.trim() === '') {
+      errors.push('Title is required and cannot be empty');
+    }
+    if (!this.ownerId) {
+      errors.push('Owner ID is required');
+    }
+    
+    // Address validation
+    if (!this.address.street || this.address.street.trim() === '') {
+      errors.push('Street address is required and cannot be empty');
+    }
+    if (!this.address.city || this.address.city.trim() === '') {
+      errors.push('City is required and cannot be empty');
+    }
+    if (!this.address.state || this.address.state.trim() === '') {
+      errors.push('State is required and cannot be empty');
+    }
+    if (!this.address.zipCode || this.address.zipCode.trim() === '') {
+      errors.push('ZIP code is required and cannot be empty');
+    }
+    
+    // Rent validation
+    if (!this.rent.amount || this.rent.amount <= 0) {
+      errors.push('Rent amount must be greater than 0');
+    }
+    
+    // Type validation
+    const validTypes = ['apartment', 'house', 'room', 'studio'];
+    if (!validTypes.includes(this.type)) {
+      errors.push(`Property type must be one of: ${validTypes.join(', ')}`);
+    }
+    
+    // Optional field validation (if provided, must be valid)
+    if (this.bedrooms < 0) {
+      errors.push('Bedrooms cannot be negative');
+    }
+    if (this.bathrooms < 0) {
+      errors.push('Bathrooms cannot be negative');
+    }
+    if (this.squareFootage < 0) {
+      errors.push('Square footage cannot be negative');
+    }
+    
+    // Currency validation
+    const validCurrencies = ['USD', 'EUR', 'GBP', 'CAD'];
+    if (this.rent.currency && !validCurrencies.includes(this.rent.currency)) {
+      errors.push(`Currency must be one of: ${validCurrencies.join(', ')}`);
+    }
     
     return {
       isValid: errors.length === 0,

@@ -121,10 +121,15 @@ const errorHandler = (err, req, res, next) => {
     }
   };
 
+  // Add validation details if they exist
+  if (error.details) {
+    errorResponse.error.details = error.details;
+  }
+
   // Add stack trace in development
   if (config.environment === 'development') {
     errorResponse.error.stack = err.stack;
-    errorResponse.error.details = err;
+    errorResponse.error.fullError = err;
   }
 
   // Add request information for debugging
