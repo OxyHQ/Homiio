@@ -26,6 +26,12 @@ const config = {
     apiEndpoint: process.env.RASPI_API_ENDPOINT || 'http://localhost:8080',
     authToken: process.env.RASPI_AUTH_TOKEN,
   },
+
+  // Horizon Integration (used for analytics and ecosystem features)
+  horizon: {
+    apiUrl: process.env.HORIZON_API_URL || 'https://api.horizon.oxy.so',
+    apiKey: process.env.HORIZON_API_KEY,
+  },
   
   // JWT Configuration
   jwt: {

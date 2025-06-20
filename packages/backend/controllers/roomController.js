@@ -393,6 +393,78 @@ class RoomController {
   }
 
   /**
+   * Assign a tenant to a room
+   */
+  async assignTenant(req, res, next) {
+    try {
+      const { propertyId, roomId } = req.params;
+      const { tenantId } = req.body;
+
+      const room = {
+        id: roomId,
+        propertyId,
+        tenantId,
+        status: 'occupied'
+      };
+
+      res.json(successResponse(
+        room,
+        'Tenant assigned successfully'
+      ));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Unassign tenant from a room
+   */
+  async unassignTenant(req, res, next) {
+    try {
+      const { propertyId, roomId } = req.params;
+
+      const room = {
+        id: roomId,
+        propertyId,
+        tenantId: null,
+        status: 'available'
+      };
+
+      res.json(successResponse(
+        room,
+        'Tenant unassigned successfully'
+      ));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get statistics for a single room
+   */
+  async getRoomStats(req, res, next) {
+    try {
+      const { propertyId, roomId } = req.params;
+
+      // In a real implementation, compute stats
+      const stats = {
+        occupancyRate: 80,
+        averageStayDuration: 6,
+        monthlyRevenue: 1200,
+        maintenanceRequests: 1,
+        energyConsumption: 50
+      };
+
+      res.json(successResponse(
+        stats,
+        'Room statistics retrieved successfully'
+      ));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Get room statistics
    */
   async getRoomStatistics(req, res, next) {

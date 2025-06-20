@@ -4,7 +4,9 @@
  */
 
 const energyService = require('./energyService');
+const horizonService = require('./horizonService');
 
 module.exports = {
   energyService,
+  horizonService,
 };
