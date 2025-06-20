@@ -4,7 +4,7 @@ import { fetchData } from '@/utils/api';
 export const fetchAnalytics = createAsyncThunk(
   'analytics/fetchAnalytics',
   async ({ userID, period }: { userID: string; period: string }) => {
-    const response = await fetchData(`analytics?userID=${userID}&period=${period}`);
+    const response = await fetchData(`/api/analytics?userID=${userID}&period=${period}`);
     return response;
   }
 );

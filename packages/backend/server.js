@@ -57,14 +57,11 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Apply authentication middleware to API routes
-app.use('/api', authenticateToken);
-
 // Mount API routes
 app.use('/api', routes);
 
 // Test endpoint (authenticated)
-app.post('/api/test', async (req, res) => {  
+app.post('/api/test', authenticateToken, async (req, res) => {
   try {  
     const { title, content } = req.body;
       
@@ -90,28 +87,6 @@ app.use(logging.errorLogger);
 app.use(errorHandler.notFound);
 app.use(errorHandler.errorHandler);
 
-// Test endpoint (authenticated)
-app.post('/api/test', auth.authenticate, async (req, res) => {  
-  try {  
-    const { title, content } = req.body;
-      
-    res.json({   
-      success: true,
-      userId: req.userId,
-      user: {
-        id: req.user.id || req.user._id,
-        username: req.user.username,
-        email: req.user.email
-      },
-      message: 'Test run successfully',
-      data: { title, content },
-      timestamp: new Date().toISOString()
-    });  
-  } catch (error) {  
-    res.status(500).json({ error: error.message });  
-  }  
-});
-
 const port = config.port;
 
 app.listen(port, () => {
@@ -122,8 +97,12 @@ app.listen(port, () => {
   console.log('  GET  /health - Health check (public)');
   console.log('  GET  /api/health - API health check');
   console.log('  GET  /api/properties - List properties');
+  console.log('  GET  /api/properties/search - Search properties');
   console.log('  POST /api/properties - Create property (authenticated)');
   console.log('  GET  /api/properties/:id/rooms - List rooms in property');
+  console.log('  GET  /api/properties/:id/stats - Property statistics (authenticated)');
+  console.log('  GET  /api/properties/:id/rooms/:roomId/stats - Room statistics (authenticated)');
+  console.log('  GET  /api/analytics - User analytics (authenticated)');
   console.log('  POST /api/test - Test endpoint (authenticated)');
 });
 

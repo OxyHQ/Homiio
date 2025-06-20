@@ -332,6 +332,62 @@ class PropertyController {
       next(error);
     }
   }
+
+  /**
+   * Search properties
+   */
+  async searchProperties(req, res, next) {
+    try {
+      const { query, page = 1, limit = 10 } = req.query;
+
+      // In a real implementation, perform database search
+      const mockResults = [
+        new Property({
+          id: 'prop_search_1',
+          ownerId: 'user_1',
+          title: `Result for ${query}`,
+          type: 'apartment',
+          rent: { amount: 1000, currency: 'USD' }
+        })
+      ];
+
+      res.json(paginationResponse(
+        mockResults.map(p => p.toJSON()),
+        parseInt(page),
+        parseInt(limit),
+        mockResults.length,
+        'Search completed successfully'
+      ));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get property statistics
+   */
+  async getPropertyStats(req, res, next) {
+    try {
+      const { propertyId } = req.params;
+
+      // In a real implementation, calculate statistics from database
+      const stats = {
+        totalRooms: 4,
+        occupiedRooms: 2,
+        availableRooms: 2,
+        monthlyRevenue: 4500,
+        averageRent: 1125,
+        occupancyRate: 50
+      };
+
+      res.json(successResponse(
+        stats,
+        'Property statistics retrieved successfully'
+      ));
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new PropertyController();

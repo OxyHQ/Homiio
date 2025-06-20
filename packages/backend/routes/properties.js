@@ -11,6 +11,7 @@ const router = express.Router();
 
 // Public routes (no authentication required)
 router.get('/', propertyController.getProperties);
+router.get('/search', propertyController.searchProperties);
 router.get('/:propertyId', validation.validateId('propertyId'), propertyController.getPropertyById);
 
 // Protected routes (authentication required)
@@ -43,6 +44,12 @@ router.post('/:propertyId/energy/configure',
   validation.validateId('propertyId'),
   auth.verifyPropertyOwnership,
   propertyController.configureEnergyMonitoring
+);
+
+router.get('/:propertyId/stats',
+  validation.validateId('propertyId'),
+  auth.verifyPropertyOwnership,
+  propertyController.getPropertyStats
 );
 
 module.exports = router;

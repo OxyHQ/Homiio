@@ -34,6 +34,13 @@ router.get('/statistics',
   roomController.getRoomStatistics
 );
 
+router.get('/:roomId/stats',
+  validation.validateId('propertyId'),
+  validation.validateId('roomId'),
+  auth.verifyPropertyOwnership,
+  roomController.getRoomStats
+);
+
 router.get('/:roomId', 
   validation.validateId('propertyId'),
   validation.validateId('roomId'),
@@ -60,6 +67,20 @@ router.patch('/:roomId/availability',
   validation.validateId('roomId'),
   auth.verifyPropertyOwnership,
   roomController.updateRoomAvailability
+);
+
+router.post('/:roomId/assign',
+  validation.validateId('propertyId'),
+  validation.validateId('roomId'),
+  auth.verifyPropertyOwnership,
+  roomController.assignTenant
+);
+
+router.post('/:roomId/unassign',
+  validation.validateId('propertyId'),
+  validation.validateId('roomId'),
+  auth.verifyPropertyOwnership,
+  roomController.unassignTenant
 );
 
 // Room energy data
