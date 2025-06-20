@@ -57,8 +57,8 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Mount API routes
-app.use('/api', routes);
+// Mount API routes with authentication middleware
+app.use('/api', routes(authenticateToken));
 
 // Test endpoint (authenticated)
 app.post('/api/test', authenticateToken, async (req, res) => {
