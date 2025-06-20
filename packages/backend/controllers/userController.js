@@ -10,7 +10,7 @@ const {
   AppError,
 } = require("../middlewares/errorHandler");
 const { logger } = require("../middlewares/logging");
-const { PropertyModel, RecentlyViewedModel } = require("../models");
+const { PropertyModel, RecentlyViewedModel, SavedPropertyModel } = require("../models");
 
 class UserController {
   /**
@@ -328,6 +328,239 @@ class UserController {
       );
     } catch (error) {
       console.error("Error getting recent properties:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Get user's saved properties
+   */
+  async getSavedProperties(req, res, next) {
+    try {
+      const userId = req.userId;
+      const oxyUserId = req.user?.id || req.user?._id;
+      
+      console.log(`Getting saved properties for user ${userId} (Oxy ID: ${oxyUserId})`);
+
+      // Check if user is authenticated
+      if (!userId || !oxyUserId) {
+        console.log('No userId or oxyUserId provided - authentication required');
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+          code: 'AUTHENTICATION_REQUIRED'
+        });
+      }
+
+      // Get saved properties for this Oxy user
+      const savedProperties = await SavedPropertyModel.find({ oxyUserId })
+        .sort({ savedAt: -1 })
+        .populate('propertyId')
+        .lean();
+
+      console.log('Raw saved properties from database:', savedProperties);
+
+      if (!savedProperties || savedProperties.length === 0) {
+        console.log(`No saved properties found for Oxy user ${oxyUserId}`);
+        return res.json(
+          successResponse(
+            [],
+            "No saved properties found",
+          ),
+        );
+      }
+
+      // Extract the properties with their saved metadata
+      const properties = savedProperties
+        .map(item => {
+          const propertyData = item.propertyId;
+          if (!propertyData) return null;
+          
+          const result = {
+            ...propertyData.toObject ? propertyData.toObject() : propertyData,
+            _id: propertyData._id || propertyData.id,
+            id: propertyData._id || propertyData.id,
+            savedAt: item.savedAt,
+            notes: item.notes,
+            savedPropertyId: item._id
+          };
+          
+          console.log('Processed property:', result);
+          return result;
+        })
+        .filter(item => item); // Remove any null properties
+
+      console.log(`Found ${properties.length} saved properties for Oxy user ${oxyUserId}`);
+
+      res.json(
+        successResponse(
+          properties,
+          "Saved properties retrieved successfully",
+        ),
+      );
+    } catch (error) {
+      console.error("Error getting saved properties:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Save a property for the user
+   */
+  async saveProperty(req, res, next) {
+    try {
+      const userId = req.userId;
+      const oxyUserId = req.user?.id || req.user?._id;
+      const { propertyId, notes } = req.body;
+      
+      console.log(`Saving property ${propertyId} for user ${userId} (Oxy ID: ${oxyUserId})`);
+
+      // Check if user is authenticated
+      if (!userId || !oxyUserId) {
+        console.log('No userId or oxyUserId provided - authentication required');
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+          code: 'AUTHENTICATION_REQUIRED'
+        });
+      }
+
+      // Check if property exists
+      const property = await PropertyModel.findById(propertyId);
+      if (!property) {
+        return res.status(404).json({
+          success: false,
+          message: 'Property not found',
+          code: 'PROPERTY_NOT_FOUND'
+        });
+      }
+
+      // Check if already saved
+      const existingSaved = await SavedPropertyModel.findOne({ oxyUserId, propertyId });
+      if (existingSaved) {
+        return res.status(409).json({
+          success: false,
+          message: 'Property already saved',
+          code: 'PROPERTY_ALREADY_SAVED'
+        });
+      }
+
+      // Save the property
+      const savedProperty = new SavedPropertyModel({
+        oxyUserId,
+        propertyId,
+        notes: notes || ''
+      });
+
+      await savedProperty.save();
+
+      console.log(`Successfully saved property ${propertyId} for Oxy user ${oxyUserId}`);
+
+      res.status(201).json(
+        successResponse(
+          savedProperty,
+          "Property saved successfully",
+        ),
+      );
+    } catch (error) {
+      console.error("Error saving property:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Unsave a property for the user
+   */
+  async unsaveProperty(req, res, next) {
+    try {
+      const userId = req.userId;
+      const oxyUserId = req.user?.id || req.user?._id;
+      const { propertyId } = req.params;
+      
+      console.log(`Unsaving property ${propertyId} for user ${userId} (Oxy ID: ${oxyUserId})`);
+
+      // Check if user is authenticated
+      if (!userId || !oxyUserId) {
+        console.log('No userId or oxyUserId provided - authentication required');
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+          code: 'AUTHENTICATION_REQUIRED'
+        });
+      }
+
+      // Find and delete the saved property
+      const deletedSaved = await SavedPropertyModel.findOneAndDelete({ oxyUserId, propertyId });
+
+      if (!deletedSaved) {
+        return res.status(404).json({
+          success: false,
+          message: 'Saved property not found',
+          code: 'SAVED_PROPERTY_NOT_FOUND'
+        });
+      }
+
+      console.log(`Successfully unsaved property ${propertyId} for Oxy user ${oxyUserId}`);
+
+      res.json(
+        successResponse(
+          { propertyId },
+          "Property unsaved successfully",
+        ),
+      );
+    } catch (error) {
+      console.error("Error unsaving property:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Update notes for a saved property
+   */
+  async updateSavedPropertyNotes(req, res, next) {
+    try {
+      const userId = req.userId;
+      const oxyUserId = req.user?.id || req.user?._id;
+      const { propertyId } = req.params;
+      const { notes } = req.body;
+      
+      console.log(`Updating notes for property ${propertyId} for user ${userId} (Oxy ID: ${oxyUserId})`);
+
+      // Check if user is authenticated
+      if (!userId || !oxyUserId) {
+        console.log('No userId or oxyUserId provided - authentication required');
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+          code: 'AUTHENTICATION_REQUIRED'
+        });
+      }
+
+      // Update the saved property notes
+      const updatedSaved = await SavedPropertyModel.findOneAndUpdate(
+        { oxyUserId, propertyId },
+        { notes: notes || '' },
+        { new: true }
+      );
+
+      if (!updatedSaved) {
+        return res.status(404).json({
+          success: false,
+          message: 'Saved property not found',
+          code: 'SAVED_PROPERTY_NOT_FOUND'
+        });
+      }
+
+      console.log(`Successfully updated notes for property ${propertyId} for Oxy user ${oxyUserId}`);
+
+      res.json(
+        successResponse(
+          updatedSaved,
+          "Property notes updated successfully",
+        ),
+      );
+    } catch (error) {
+      console.error("Error updating property notes:", error);
       next(error);
     }
   }

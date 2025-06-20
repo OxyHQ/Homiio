@@ -446,25 +446,77 @@ class PropertyController {
    */
   async searchProperties(req, res, next) {
     try {
-      const { query, page = 1, limit = 10 } = req.query;
+      const { 
+        query, 
+        type, 
+        minRent, 
+        maxRent, 
+        bedrooms, 
+        bathrooms, 
+        page = 1, 
+        limit = 10 
+      } = req.query;
 
-      // In a real implementation, perform database search
-      const mockResults = [
-        new Property({
-          id: "prop_search_1",
-          ownerId: "user_1",
-          title: `Result for ${query}`,
-          type: "apartment",
-          rent: { amount: 1000, currency: "USD" },
-        }),
-      ];
+      // Build search query
+      const searchQuery = {};
+      
+      // Text search across title, description, and address
+      if (query) {
+        searchQuery.$or = [
+          { title: { $regex: query, $options: 'i' } },
+          { description: { $regex: query, $options: 'i' } },
+          { 'address.city': { $regex: query, $options: 'i' } },
+          { 'address.state': { $regex: query, $options: 'i' } },
+          { 'address.street': { $regex: query, $options: 'i' } }
+        ];
+      }
+
+      // Filter by property type
+      if (type) {
+        searchQuery.type = type;
+      }
+
+      // Filter by rent range
+      if (minRent || maxRent) {
+        searchQuery['rent.amount'] = {};
+        if (minRent) searchQuery['rent.amount'].$gte = parseInt(minRent);
+        if (maxRent) searchQuery['rent.amount'].$lte = parseInt(maxRent);
+      }
+
+      // Filter by bedrooms
+      if (bedrooms) {
+        searchQuery.bedrooms = parseInt(bedrooms);
+      }
+
+      // Filter by bathrooms
+      if (bathrooms) {
+        searchQuery.bathrooms = parseInt(bathrooms);
+      }
+
+      // Only show available properties
+      searchQuery['availability.isAvailable'] = true;
+      searchQuery.status = 'active';
+
+      // Execute search
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+      
+      const [properties, total] = await Promise.all([
+        PropertyModel.find(searchQuery)
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(parseInt(limit))
+          .lean(),
+        PropertyModel.countDocuments(searchQuery)
+      ]);
+
+      const totalPages = Math.ceil(total / parseInt(limit));
 
       res.json(
         paginationResponse(
-          mockResults.map((p) => p.toJSON()),
+          properties,
           parseInt(page),
           parseInt(limit),
-          mockResults.length,
+          total,
           "Search completed successfully",
         ),
       );

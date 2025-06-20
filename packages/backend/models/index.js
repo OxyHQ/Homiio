@@ -19,6 +19,7 @@ const UserModel = require('./schemas/UserSchema');
 const LeaseModel = require('./schemas/LeaseSchema');
 const EnergyDataModel = require('./schemas/EnergyDataSchema');
 const RecentlyViewedModel = require('./schemas/RecentlyViewedSchema');
+const SavedPropertyModel = require('./schemas/SavedPropertySchema');
 
 module.exports = {
   // Class-based models (legacy)
@@ -36,5 +37,6 @@ module.exports = {
   UserModel,
   LeaseModel,
   EnergyDataModel,
-  RecentlyViewedModel
+  RecentlyViewedModel,
+  SavedPropertyModel
 };

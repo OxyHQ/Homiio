@@ -20,6 +20,8 @@ export function RightBar() {
         if (pathname === '/contracts' || pathname.startsWith('/contracts/')) return 'contracts';
         if (pathname === '/payments' || pathname.startsWith('/payments/')) return 'payments';
         if (pathname === '/messages' || pathname.startsWith('/messages/')) return 'messages';
+        if (pathname === '/search') return 'search';
+        if (pathname.startsWith('/search/')) return 'search-results';
         return 'home'; // Default to home
     };
 

@@ -29,7 +29,7 @@ export const SearchBar = () => {
             if (!query.trim()) return;
             setIsLoading(true);
             try {
-                await router.push(`/properties/search/${encodeURIComponent(query)}`);
+                await router.push(`/search/${encodeURIComponent(query)}`);
             } finally {
                 setIsLoading(false);
             }

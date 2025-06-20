@@ -21,11 +21,12 @@ export type ScreenId =
     | 'profile'
     | 'contracts'
     | 'payments'
-    | 'messages';
+    | 'messages'
+    | 'search'
+    | 'search-results';
 
 interface WidgetManagerProps {
     screenId: ScreenId;
-    customWidgets?: ReactNode[];
 }
 
 /**
@@ -34,7 +35,7 @@ interface WidgetManagerProps {
  * This component controls which widgets should appear on which screens.
  * It provides a centralized way to manage widget visibility based on screen context.
  */
-export function WidgetManager({ screenId, customWidgets = [] }: WidgetManagerProps) {
+export function WidgetManager({ screenId }: WidgetManagerProps) {
     // Define which widgets should appear on which screens
     const getWidgetsForScreen = (screen: ScreenId): ReactNode[] => {
         switch (screen) {
@@ -87,6 +88,18 @@ export function WidgetManager({ screenId, customWidgets = [] }: WidgetManagerPro
             case 'messages':
                 return [];
 
+            case 'search':
+                return [
+                    <SavedSearchesWidget key="saved-searches" />,
+                    <PropertyAlertWidget key="property-alert" />
+                ];
+
+            case 'search-results':
+                return [
+                    <SavedSearchesWidget key="saved-searches" />,
+                    <PropertyAlertWidget key="property-alert" />
+                ];
+
             default:
                 return [];
         }
@@ -94,16 +107,13 @@ export function WidgetManager({ screenId, customWidgets = [] }: WidgetManagerPro
 
     const screenWidgets = getWidgetsForScreen(screenId);
 
-    // Combine screen-specific widgets with any custom widgets passed as props
-    const allWidgets = [...screenWidgets, ...customWidgets];
-
-    if (allWidgets.length === 0) {
+    if (screenWidgets.length === 0) {
         return null;
     }
 
     return (
         <View style={styles.container}>
-            {allWidgets.map((widget, index) => (
+            {screenWidgets.map((widget, index) => (
                 <View key={`widget-${index}`} style={styles.widgetWrapper}>
                     {widget}
                 </View>

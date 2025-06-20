@@ -63,13 +63,13 @@ i18n.use(initReactI18next).init({
 // Component to set OxyServices instance for API calls
 function OxyServicesInitializer() {
   const { oxyServices, activeSessionId } = useOxy();
-  
+
   useEffect(() => {
     if (oxyServices && activeSessionId) {
       setOxyServices(oxyServices, activeSessionId);
     }
   }, [oxyServices, activeSessionId]);
-  
+
   return null;
 }
 

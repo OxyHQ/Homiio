@@ -3,11 +3,14 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/styles/colors';
-import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
 import { useProperty } from '@/hooks/usePropertyQueries';
-import { useTrackPropertyView } from '@/hooks/useUserQueries';
+import { useTrackPropertyView, useSaveProperty, useUnsaveProperty, useSavedProperties } from '@/hooks/useUserQueries';
+import { useOxy } from '@oxyhq/services';
+import { Ionicons } from '@expo/vector-icons';
+import { toast } from 'sonner';
+import * as Haptics from 'expo-haptics';
 
 type PropertyDetail = {
   id: string;
@@ -34,10 +37,15 @@ export default function PropertyDetailPage() {
   const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams();
+  const { oxyServices, activeSessionId } = useOxy();
   const { data: apiProperty, isLoading, error } = useProperty(id as string);
   const trackPropertyView = useTrackPropertyView();
+  const saveProperty = useSaveProperty();
+  const unsaveProperty = useUnsaveProperty();
+  const { data: savedProperties = [] } = useSavedProperties();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [landlordVerified, setLandlordVerified] = useState(true);
+  const [localSaveStatus, setLocalSaveStatus] = useState<boolean | null>(null);
   const hasViewedRef = useRef(false);
 
   // Track property view when component mounts
@@ -57,7 +65,7 @@ export default function PropertyDetailPage() {
       : '';
 
     return {
-      id: apiProperty._id || apiProperty.id,
+      id: apiProperty._id || apiProperty.id || '',
       title: apiProperty.title,
       description: apiProperty.description || '',
       location: `${apiProperty.address?.city || ''}, ${apiProperty.address?.country || ''}`,
@@ -79,6 +87,14 @@ export default function PropertyDetailPage() {
     };
   }, [apiProperty]);
 
+  // Reset local save status when saved properties data changes
+  useEffect(() => {
+    if (property && savedProperties.length >= 0) {
+      const isSaved = savedProperties.some(p => p._id === property.id || p.id === property.id);
+      setLocalSaveStatus(isSaved);
+    }
+  }, [property, savedProperties]);
+
   const handleContact = () => {
     // In a real app, this would open a chat with the landlord
     router.push(`/chat/${property?.id}`);
@@ -94,9 +110,74 @@ export default function PropertyDetailPage() {
     router.push(`/properties/${property?.id}/apply`);
   };
 
+  const handleSave = () => {
+    if (property && oxyServices && activeSessionId) {
+      // Add haptic feedback
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      console.log('=== SAVE BUTTON DEBUG ===');
+      console.log('Property ID:', property.id);
+      console.log('Property object:', property);
+      console.log('Saved properties count:', savedProperties.length);
+      console.log('Saved properties:', savedProperties);
+      console.log('Saved properties IDs:', savedProperties.map(p => ({ _id: p._id, id: p.id, title: p.title })));
+
+      const isSaved = savedProperties.some(p => p._id === property.id || p.id === property.id);
+      console.log('Is property saved?', isSaved);
+      console.log('Property ID comparison:', savedProperties.map(p => ({
+        savedId: p._id,
+        savedIdAlt: p.id,
+        propertyId: property.id,
+        matches: p._id === property.id || p.id === property.id
+      })));
+
+      // Update local state immediately for instant UI feedback
+      setLocalSaveStatus(!isSaved);
+
+      if (isSaved) {
+        console.log('Unsaving property:', property.id);
+        unsaveProperty.mutate(property.id, {
+          onError: () => {
+            // Revert local state on error
+            setLocalSaveStatus(isSaved);
+          }
+        });
+      } else {
+        console.log('Saving property:', property.id);
+        saveProperty.mutate({ propertyId: property.id }, {
+          onError: () => {
+            // Revert local state on error
+            setLocalSaveStatus(isSaved);
+          }
+        });
+      }
+    } else {
+      console.log('Cannot save: property, oxyServices, or activeSessionId missing');
+      console.log('Property:', property);
+      console.log('OxyServices:', !!oxyServices);
+      console.log('ActiveSessionId:', !!activeSessionId);
+    }
+  };
+
+  const isPropertySaved = useMemo(() => {
+    // Use local state if available (for immediate feedback)
+    if (localSaveStatus !== null) {
+      return localSaveStatus;
+    }
+
+    if (!property || !savedProperties.length) return false;
+
+    console.log('=== IS PROPERTY SAVED DEBUG ===');
+    console.log('Property ID:', property.id);
+    console.log('Saved properties:', savedProperties.map(p => ({ _id: p._id, id: p.id, title: p.title })));
+
+    const saved = savedProperties.some(p => p._id === property.id || p.id === property.id);
+    console.log('Is property saved result:', saved);
+    return saved;
+  }, [property, savedProperties, localSaveStatus]);
+
   const renderAmenity = (amenity: string, index: number) => (
     <View key={index} style={styles.amenityItem}>
-      <Ionicons name="checkmark-circle" size={18} color={colors.primaryColor} />
       <Text style={styles.amenityText}>{amenity}</Text>
     </View>
   );
@@ -130,7 +211,6 @@ export default function PropertyDetailPage() {
           }}
         />
         <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
           <Text style={styles.errorText}>{t("Property not found")}</Text>
           <TouchableOpacity
             style={styles.goBackButton}
@@ -152,10 +232,23 @@ export default function PropertyDetailPage() {
           titlePosition: 'center',
           rightComponents: [
             <TouchableOpacity key="share" style={styles.headerButton}>
-              <Ionicons name="share-outline" size={24} color={colors.COLOR_BLACK} />
+              <Text style={{ fontSize: 20, color: colors.COLOR_BLACK, opacity: 0.7 }}>Share</Text>
             </TouchableOpacity>,
-            <TouchableOpacity key="save" style={styles.headerButton}>
-              <Ionicons name="bookmark-outline" size={24} color={colors.COLOR_BLACK} />
+            <TouchableOpacity
+              key="save"
+              onPress={handleSave}
+              disabled={saveProperty.isPending || unsaveProperty.isPending}
+              activeOpacity={0.7}
+            >
+              {(saveProperty.isPending || unsaveProperty.isPending) ? (
+                <ActivityIndicator size="small" color={isPropertySaved ? colors.primaryColor : colors.COLOR_BLACK} />
+              ) : (
+                <Ionicons
+                  name={isPropertySaved ? "bookmark" : "bookmark-outline"}
+                  size={24}
+                  color={isPropertySaved ? colors.primaryColor : colors.COLOR_BLACK}
+                />
+              )}
             </TouchableOpacity>,
           ],
         }}
@@ -183,14 +276,12 @@ export default function PropertyDetailPage() {
           {/* Badges */}
           {property.isVerified && (
             <View style={styles.verifiedBadge}>
-              <Ionicons name="shield-checkmark" size={16} color="white" />
               <Text style={styles.badgeText}>{t("Verified Property")}</Text>
             </View>
           )}
 
           {property.isEcoCertified && (
             <View style={styles.ecoBadge}>
-              <Ionicons name="leaf" size={16} color="white" />
               <Text style={styles.badgeText}>{t("Eco-Certified")}</Text>
             </View>
           )}
@@ -200,21 +291,17 @@ export default function PropertyDetailPage() {
         <View style={styles.infoContainer}>
           <Text style={styles.propertyTitle}>{property.title}</Text>
           <View style={styles.locationContainer}>
-            <Ionicons name="location" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
             <Text style={styles.locationText}>{property.location}</Text>
           </View>
 
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
-              <Ionicons name="bed-outline" size={20} color={colors.COLOR_BLACK} />
               <Text style={styles.statText}>{property.bedrooms} {t("Bedrooms")}</Text>
             </View>
             <View style={styles.statItem}>
-              <Ionicons name="water-outline" size={20} color={colors.COLOR_BLACK} />
               <Text style={styles.statText}>{property.bathrooms} {t("Bathrooms")}</Text>
             </View>
             <View style={styles.statItem}>
-              <Ionicons name="resize-outline" size={20} color={colors.COLOR_BLACK} />
               <Text style={styles.statText}>{property.size} m²</Text>
             </View>
           </View>
@@ -224,13 +311,49 @@ export default function PropertyDetailPage() {
             <Text style={styles.priceValue}>{property.price}</Text>
           </View>
 
+          {/* Save/Unsave Button */}
+          <TouchableOpacity
+            style={[
+              styles.saveButton,
+              isPropertySaved ? styles.savedButton : styles.unsavedButton,
+              (saveProperty.isPending || unsaveProperty.isPending) && styles.loadingButton
+            ]}
+            onPress={handleSave}
+            disabled={saveProperty.isPending || unsaveProperty.isPending}
+            activeOpacity={0.8}
+          >
+            {(saveProperty.isPending || unsaveProperty.isPending) ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color={isPropertySaved ? colors.primaryColor : 'white'} />
+                <Text style={[styles.saveButtonText, styles.loadingText, { marginLeft: 12 }]}>
+                  {isPropertySaved ? 'Removing...' : 'Saving...'}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.saveButtonContent}>
+                <View style={styles.iconContainer}>
+                  <Ionicons
+                    name={isPropertySaved ? "bookmark" : "bookmark-outline"}
+                    size={22}
+                    color={isPropertySaved ? colors.primaryColor : 'white'}
+                  />
+                </View>
+                <Text style={[
+                  styles.saveButtonText,
+                  isPropertySaved ? styles.savedButtonText : styles.unsavedButtonText
+                ]}>
+                  {isPropertySaved ? 'Saved to Favorites' : 'Save to Favorites'}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
           <View style={styles.divider} />
 
           {/* Eco Rating */}
           {property.isEcoCertified && (
             <View style={styles.ecoRatingContainer}>
               <View style={styles.ratingHeader}>
-                <Ionicons name="leaf" size={20} color="green" />
                 <Text style={styles.ratingTitle}>{t("Energy Efficiency")}</Text>
               </View>
               <View style={styles.energyRatingContainer}>
@@ -283,11 +406,10 @@ export default function PropertyDetailPage() {
                 <View style={styles.landlordNameContainer}>
                   <Text style={styles.landlordName}>{property.landlordName}</Text>
                   {landlordVerified && (
-                    <Ionicons name="checkmark-circle" size={16} color={colors.primaryColor} />
+                    <Text style={styles.landlordVerified}>✓</Text>
                   )}
                 </View>
                 <View style={styles.landlordRatingContainer}>
-                  <Ionicons name="star" size={14} color="#FFD700" />
                   <Text style={styles.landlordRatingText}>{property.landlordRating}</Text>
                 </View>
               </View>
@@ -301,9 +423,6 @@ export default function PropertyDetailPage() {
 
           {/* Trust and Safety */}
           <View style={styles.trustContainer}>
-            <View style={styles.trustIconContainer}>
-              <Ionicons name="shield-checkmark" size={36} color={colors.primaryColor} />
-            </View>
             <View style={styles.trustTextContainer}>
               <Text style={styles.trustTitle}>{t("Homio Verified")}</Text>
               <Text style={styles.trustDescription}>
@@ -324,7 +443,6 @@ export default function PropertyDetailPage() {
 
           {/* Fraud Warning */}
           <View style={styles.fraudWarningContainer}>
-            <Ionicons name="information-circle" size={20} color={colors.COLOR_BLACK_LIGHT_3} />
             <Text style={styles.fraudWarningText}>
               {t("Never pay or transfer funds outside the Homio platform")}
             </Text>
@@ -593,9 +711,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 20,
   },
-  trustIconContainer: {
-    marginRight: 15,
-  },
   trustTextContainer: {
     flex: 1,
   },
@@ -654,8 +769,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 10,
-    color: colors.COLOR_BLACK_LIGHT_3,
+    opacity: 0.8,
   },
   errorContainer: {
     flex: 1,
@@ -678,5 +792,82 @@ const styles = StyleSheet.create({
   goBackButtonText: {
     color: 'white',
     fontWeight: '600',
+  },
+  saveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    marginVertical: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+    minHeight: 56,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  savedButton: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 2,
+    borderColor: colors.primaryColor,
+    shadowColor: colors.primaryColor,
+    shadowOpacity: 0.2,
+  },
+  unsavedButton: {
+    backgroundColor: colors.primaryColor,
+    borderWidth: 0,
+    shadowColor: colors.primaryColor,
+    shadowOpacity: 0.3,
+  },
+  loadingButton: {
+    backgroundColor: colors.primaryColor,
+    opacity: 0.8,
+  },
+  saveButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  iconContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  checkmarkContainer: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.primaryColor,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  savedButtonText: {
+    color: colors.primaryColor,
+  },
+  unsavedButtonText: {
+    color: 'white',
+  },
+  landlordVerified: {
+    marginLeft: 5,
+    fontSize: 14,
+    color: colors.primaryColor,
   },
 });

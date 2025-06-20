@@ -49,5 +49,11 @@ module.exports = function (authenticateToken) {
     userController.markNotificationAsRead,
   );
 
+  // Saved properties
+  router.get('/me/saved-properties', authenticateToken, userController.getSavedProperties);
+  router.post('/me/saved-properties', authenticateToken, userController.saveProperty);
+  router.delete('/me/saved-properties/:propertyId', authenticateToken, userController.unsaveProperty);
+  router.patch('/me/saved-properties/:propertyId/notes', authenticateToken, userController.updateSavedPropertyNotes);
+
   return router;
 };
