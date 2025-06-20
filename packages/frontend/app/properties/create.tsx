@@ -129,6 +129,15 @@ export default function CreatePropertyScreen() {
     }));
   };
 
+  const toggleAmenity = (amenity: string) => {
+    setFormData(prev => ({
+      ...prev,
+      amenities: prev.amenities?.includes(amenity)
+        ? prev.amenities.filter(a => a !== amenity)
+        : [...(prev.amenities || []), amenity]
+    }));
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ThemedView style={styles.header}>
@@ -307,6 +316,31 @@ export default function CreatePropertyScreen() {
                     ]}
                   >
                     {utility.charAt(0).toUpperCase() + utility.slice(1)}
+                  </ThemedText>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <ThemedText style={styles.label}>Amenities</ThemedText>
+            <View style={styles.pickerContainer}>
+              {['wifi', 'parking', 'gym', 'pool', 'laundry', 'dishwasher', 'air_conditioning', 'heating', 'balcony', 'garden'].map((amenity) => (
+                <TouchableOpacity
+                  key={amenity}
+                  style={[
+                    styles.pickerOption,
+                    formData.amenities?.includes(amenity) && styles.pickerOptionSelected
+                  ]}
+                  onPress={() => toggleAmenity(amenity)}
+                >
+                  <ThemedText 
+                    style={[
+                      styles.pickerOptionText,
+                      formData.amenities?.includes(amenity) && styles.pickerOptionTextSelected
+                    ]}
+                  >
+                    {amenity.charAt(0).toUpperCase() + amenity.slice(1).replace('_', ' ')}
                   </ThemedText>
                 </TouchableOpacity>
               ))}
