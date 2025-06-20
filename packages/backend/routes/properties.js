@@ -10,10 +10,32 @@ const { validation } = require('../middlewares');
 module.exports = function(authenticateToken) {
   const router = express.Router();
 
+  // Optional authentication middleware for public routes that can benefit from auth
+  const optionalAuth = (req, res, next) => {
+    // Try to authenticate, but don't fail if no token provided
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      // If token is provided, try to authenticate
+      authenticateToken(req, res, (err) => {
+        // Continue even if authentication fails
+        next();
+      });
+    } else {
+      // No token provided, continue as guest
+      next();
+    }
+  };
+
   // Public routes (no authentication required)
   router.get('/', propertyController.getProperties);
   router.get('/search', propertyController.searchProperties);
-  router.get('/:propertyId', validation.validateId('propertyId'), propertyController.getPropertyById);
+  
+  // Property viewing with optional authentication (for recently viewed tracking)
+  router.get('/:propertyId', 
+    validation.validateId('propertyId'), 
+    optionalAuth,
+    propertyController.getPropertyById
+  );
 
   // Property CRUD operations (require authentication)
   router.post('/', authenticateToken, validation.validateProperty, propertyController.createProperty);

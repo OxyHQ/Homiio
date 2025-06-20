@@ -10,7 +10,7 @@ const {
   AppError,
 } = require("../middlewares/errorHandler");
 const { logger } = require("../middlewares/logging");
-const { UserModel, PropertyModel } = require("../models");
+const { PropertyModel, RecentlyViewedModel } = require("../models");
 
 class UserController {
   /**
@@ -282,15 +282,43 @@ class UserController {
   async getRecentProperties(req, res, next) {
     try {
       const userId = req.userId;
+      const oxyUserId = req.user?.id || req.user?._id;
+      
+      console.log(`Getting recent properties for user ${userId} (Oxy ID: ${oxyUserId})`);
 
-      const user = await UserModel.findById(userId)
-        .populate({
-          path: "recentlyViewedProperties",
-          populate: { path: "rooms", select: "name type status availability" },
-        })
+      // Check if user is authenticated
+      if (!userId || !oxyUserId) {
+        console.log('No userId or oxyUserId provided - authentication required');
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+          code: 'AUTHENTICATION_REQUIRED'
+        });
+      }
+
+      // Get recently viewed properties for this Oxy user
+      const recentlyViewed = await RecentlyViewedModel.find({ oxyUserId })
+        .sort({ viewedAt: -1 })
+        .limit(10)
+        .populate('propertyId')
         .lean();
 
-      const properties = user?.recentlyViewedProperties || [];
+      if (!recentlyViewed || recentlyViewed.length === 0) {
+        console.log(`No recent properties found for Oxy user ${oxyUserId}`);
+        return res.json(
+          successResponse(
+            [],
+            "No recently viewed properties found",
+          ),
+        );
+      }
+
+      // Extract the properties from the populated documents
+      const properties = recentlyViewed
+        .map(item => item.propertyId)
+        .filter(Boolean); // Remove any null properties
+
+      console.log(`Found ${properties.length} recent properties for Oxy user ${oxyUserId}`);
 
       res.json(
         successResponse(
@@ -299,6 +327,7 @@ class UserController {
         ),
       );
     } catch (error) {
+      console.error("Error getting recent properties:", error);
       next(error);
     }
   }

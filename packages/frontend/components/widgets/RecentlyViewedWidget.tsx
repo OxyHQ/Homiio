@@ -64,6 +64,12 @@ export function RecentlyViewedWidget() {
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="small" color={colors.primaryColor} />
                     </View>
+                ) : recentProperties.length === 0 ? (
+                    <View style={styles.emptyContainer}>
+                        <Ionicons name="time-outline" size={32} color={colors.COLOR_BLACK_LIGHT_4} />
+                        <Text style={styles.emptyText}>No recently viewed properties</Text>
+                        <Text style={styles.emptySubtext}>Start browsing to see your recent activity here</Text>
+                    </View>
                 ) : recentProperties.map((property) => (
                     <TouchableOpacity
                         key={property.id}
@@ -98,7 +104,7 @@ export function RecentlyViewedWidget() {
 
                 <TouchableOpacity
                     style={styles.viewAllButton}
-                    onPress={() => router.push('/properties/history')}
+                    onPress={() => router.push('/properties')}
                 >
                     <Text style={styles.viewAllText}>View All</Text>
                     <Ionicons name="chevron-forward" size={16} color={colors.primaryColor} />
@@ -180,6 +186,26 @@ const styles = StyleSheet.create({
         height: 140,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 30,
+        paddingHorizontal: 20,
+    },
+    emptyText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: colors.COLOR_BLACK_LIGHT_4,
+        marginTop: 8,
+        textAlign: 'center',
+    },
+    emptySubtext: {
+        fontSize: 12,
+        color: colors.COLOR_BLACK_LIGHT_4,
+        marginTop: 4,
+        textAlign: 'center',
     },
     errorContainer: {
         padding: 15,

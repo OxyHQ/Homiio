@@ -3,7 +3,7 @@
  * Handles property-related operations
  */
 
-const { Property, PropertyModel, UserModel } = require("../models");
+const { Property, PropertyModel, RecentlyViewedModel } = require("../models");
 const { energyService } = require("../services");
 const { logger, businessLogger } = require("../middlewares/logging");
 const {
@@ -216,20 +216,42 @@ class PropertyController {
       // Increment view count
       await PropertyModel.findByIdAndUpdate(propertyId, { $inc: { views: 1 } });
 
-      // Update user's recently viewed list if authenticated
-      if (req.userId) {
-        try {
-          const user = await UserModel.findById(req.userId);
-          if (user) {
-            await user.addRecentlyViewedProperty(propertyId);
+      // Update user's recently viewed list if authenticated (async, non-blocking)
+      if (req.userId && (req.user?.id || req.user?._id)) {
+        const oxyUserId = req.user.id || req.user._id;
+        console.log(`Authenticated user ${req.userId} (Oxy ID: ${oxyUserId}) viewing property ${propertyId}`);
+        
+        // Track recently viewed property using OxyServices user ID
+        RecentlyViewedModel.findOneAndUpdate(
+          { oxyUserId, propertyId },
+          { 
+            oxyUserId, 
+            propertyId, 
+            viewedAt: new Date() 
+          },
+          { 
+            upsert: true, 
+            new: true 
           }
-        } catch (err) {
-          logger.warn("Failed to update recently viewed properties", {
-            userId: req.userId,
+        )
+        .then(() => {
+          console.log(`Successfully tracked property ${propertyId} for Oxy user ${oxyUserId}`);
+        })
+        .catch((err) => {
+          console.error("Failed to track recently viewed property", {
+            oxyUserId,
             propertyId,
             error: err.message,
           });
-        }
+          logger.warn("Failed to track recently viewed property", {
+            oxyUserId,
+            propertyId,
+            error: err.message,
+          });
+        });
+      } else {
+        // Guest user - this is expected behavior, not an error
+        console.log(`Guest user viewing property ${propertyId} - recently viewed tracking requires authentication`);
       }
 
       // Get energy data if monitoring is enabled

@@ -41,6 +41,7 @@ export function WidgetManager({ screenId, customWidgets = [] }: WidgetManagerPro
             case 'home':
                 return [
                     <TrustScoreWidget key="trust-score" />,
+                    <RecentlyViewedWidget key="recently-viewed" />,
                     <FeaturedPropertiesWidget key="featured-properties" />,
                     <HorizonInitiativeWidget key="horizon" />,
                     <EcoCertificationWidget key="eco-cert" />

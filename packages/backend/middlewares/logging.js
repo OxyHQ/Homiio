@@ -95,7 +95,7 @@ const requestLogger = (req, res, next) => {
     url: req.originalUrl,
     ip: ip,
     userAgent: userAgent,
-    userId: req.user ? req.user.id : null,
+    userId: req.userId || (req.user ? req.user.id : null),
     requestId: req.id || null
   });
 
@@ -113,7 +113,7 @@ const requestLogger = (req, res, next) => {
       duration: duration,
       contentLength: contentLength,
       ip: ip,
-      userId: req.user ? req.user.id : null,
+      userId: req.userId || (req.user ? req.user.id : null),
       requestId: req.id || null
     });
 
@@ -138,7 +138,7 @@ const errorLogger = (err, req, res, next) => {
       code: err.code,
       statusCode: err.statusCode
     },
-    userId: req.user ? req.user.id : null,
+    userId: req.userId || (req.user ? req.user.id : null),
     requestId: req.id || null,
     body: req.body,
     params: req.params,

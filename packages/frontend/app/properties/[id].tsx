@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
 import { useProperty } from '@/hooks/usePropertyQueries';
+import { useTrackPropertyView } from '@/hooks/useUserQueries';
 
 type PropertyDetail = {
   id: string;
@@ -34,8 +35,18 @@ export default function PropertyDetailPage() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const { data: apiProperty, isLoading, error } = useProperty(id as string);
+  const trackPropertyView = useTrackPropertyView();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [landlordVerified, setLandlordVerified] = useState(true);
+  const hasViewedRef = useRef(false);
+
+  // Track property view when component mounts
+  useEffect(() => {
+    if (id && typeof id === 'string' && !hasViewedRef.current) {
+      trackPropertyView.mutate(id);
+      hasViewedRef.current = true;
+    }
+  }, [id]);
 
   const property = useMemo<PropertyDetail | null>(() => {
     if (!apiProperty) return null;

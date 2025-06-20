@@ -1,4 +1,4 @@
-import api, { getCacheKey, setCacheEntry, getCacheEntry } from '@/utils/api';
+import api, { getCacheKey, setCacheEntry, getCacheEntry, getOxyServices } from '@/utils/api';
 import type { Property } from './propertyService';
 
 export interface User {
@@ -157,13 +157,56 @@ class UserService {
     const cached = getCacheEntry<Property[]>(cacheKey);
 
     if (cached) {
+      console.log('Returning cached recent properties:', cached.length);
       return cached;
     }
 
-    const response = await api.get(`${this.baseUrl}/me/recent-properties`);
-    const properties = response.data.data || response.data.properties || [];
-    setCacheEntry(cacheKey, properties, 300000);
-    return properties;
+    try {
+      console.log('Fetching recent properties from API...');
+      
+      // Check if OxyServices is available
+      const { oxyServices, activeSessionId } = getOxyServices();
+      
+      if (oxyServices && activeSessionId) {
+        console.log('Using OxyServices authentication for recent properties');
+        const tokenData = await oxyServices.getTokenBySession(activeSessionId);
+        
+        if (tokenData) {
+          // Make authenticated request using the token
+          const response = await fetch(`${api.defaults.baseURL}${this.baseUrl}/me/recent-properties`, {
+            headers: {
+              'Authorization': `Bearer ${tokenData.accessToken}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          
+          const data = await response.json();
+          const properties = data.data || data.properties || [];
+          console.log('Recent properties API response (OxyServices):', properties.length);
+          setCacheEntry(cacheKey, properties, 300000); // 5 minute cache
+          return properties;
+        }
+      }
+      
+      // Fallback to the old method
+      console.log('Using fallback authentication for recent properties');
+      const response = await api.get(`${this.baseUrl}/me/recent-properties`, {
+        timeout: 15000, // Increase timeout to 15 seconds
+      });
+      console.log('Recent properties API response (fallback):', response.data);
+      const properties = response.data.data || response.data.properties || [];
+      console.log('Parsed recent properties count:', properties.length);
+      setCacheEntry(cacheKey, properties, 300000); // 5 minute cache
+      return properties;
+    } catch (error) {
+      console.error('Error fetching recent properties:', error);
+      // Return empty array on error instead of throwing
+      return [];
+    }
   }
 
   async getUserNotifications(): Promise<any[]> {

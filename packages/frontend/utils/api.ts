@@ -104,7 +104,7 @@ async function apiRequest<T = any>(
 // Create axios instance
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 10000,
+  timeout: 15000, // Increase timeout to 15 seconds
   headers: {
     'Content-Type': 'application/json',
   },

@@ -323,6 +323,7 @@ const userSchema = new mongoose.Schema(
 // Indexes (only for fields that don't have unique: true)
 userSchema.index({ role: 1, status: 1 });
 userSchema.index({ "preferences.preferredLocations.city": 1 });
+userSchema.index({ recentlyViewedProperties: 1 });
 
 // Virtual for full name
 userSchema.virtual("fullName").get(function () {
@@ -442,22 +443,39 @@ userSchema.methods.removeSavedProperty = function (propertyId) {
   return this.save();
 };
 
-userSchema.methods.addRecentlyViewedProperty = function (
+userSchema.methods.addRecentlyViewedProperty = async function (
   propertyId,
   limit = 10,
 ) {
-  const idStr = propertyId.toString();
-  this.recentlyViewedProperties = this.recentlyViewedProperties.filter(
-    (id) => id.toString() !== idStr,
+  const mongoose = require('mongoose');
+  
+  // Use atomic operations for better performance
+  return await mongoose.model('User').findByIdAndUpdate(
+    this._id,
+    [
+      {
+        $set: {
+          recentlyViewedProperties: {
+            $slice: [
+              {
+                $concatArrays: [
+                  [propertyId],
+                  {
+                    $filter: {
+                      input: "$recentlyViewedProperties",
+                      cond: { $ne: ["$$this", propertyId] }
+                    }
+                  }
+                ]
+              },
+              limit
+            ]
+          }
+        }
+      }
+    ],
+    { new: true }
   );
-  this.recentlyViewedProperties.unshift(propertyId);
-  if (this.recentlyViewedProperties.length > limit) {
-    this.recentlyViewedProperties = this.recentlyViewedProperties.slice(
-      0,
-      limit,
-    );
-  }
-  return this.save();
 };
 
 module.exports = mongoose.model("User", userSchema);
