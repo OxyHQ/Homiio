@@ -109,8 +109,14 @@ class PropertyService {
     }
 
     const response = await api.get(this.baseUrl, { params: filters });
-    setCacheEntry(cacheKey, response.data);
-    return response.data;
+    const result = {
+      properties: response.data.data || [],
+      total: response.data.pagination?.total || 0,
+      page: response.data.pagination?.page || 1,
+      totalPages: response.data.pagination?.totalPages || 1,
+    };
+    setCacheEntry(cacheKey, result);
+    return result;
   }
 
   async getProperty(id: string): Promise<Property> {
@@ -166,8 +172,12 @@ class PropertyService {
     }
 
     const response = await api.get(`${this.baseUrl}/search`, { params });
-    setCacheEntry(cacheKey, response.data, 60000); // 1 minute cache for search
-    return response.data;
+    const result = {
+      properties: response.data.data || [],
+      total: response.data.pagination?.total || 0,
+    };
+    setCacheEntry(cacheKey, result, 60000); // 1 minute cache for search
+    return result;
   }
 
   async getPropertyStats(id: string): Promise<{
@@ -186,8 +196,8 @@ class PropertyService {
     }
 
     const response = await api.get(`${this.baseUrl}/${id}/stats`);
-    setCacheEntry(cacheKey, response.data.stats, 300000); // 5 minute cache
-    return response.data.stats;
+    setCacheEntry(cacheKey, response.data.data || response.data.stats, 300000); // 5 minute cache
+    return response.data.data || response.data.stats;
   }
 
   async getPropertyEnergyStats(id: string, period: 'day' | 'week' | 'month' = 'day'): Promise<any> {
