@@ -46,7 +46,7 @@ export default function PropertyDetailPage() {
       : '';
 
     return {
-      id: apiProperty.id,
+      id: apiProperty._id || apiProperty.id,
       title: apiProperty.title,
       description: apiProperty.description || '',
       location: `${apiProperty.address?.city || ''}, ${apiProperty.address?.country || ''}`,

@@ -44,17 +44,23 @@ export function FeaturedPropertiesWidget() {
 function FeaturedProperties({ properties }: { properties: any[] }) {
     const router = useRouter();
 
+    // Debug: Log the properties to see the actual structure
+    console.log('FeaturedProperties received:', properties);
+
     // Map API data to display format
-    const propertyItems = properties.map(property => ({
-        id: property.id,
-        title: property.title || 'Untitled Property',
-        location: `${property.address?.city || 'Unknown'}, ${property.address?.state || 'Unknown'}`,
-        price: `$${property.rent?.amount || 0}/${property.rent?.paymentFrequency || 'month'}`,
-        isEcoCertified: property.amenities?.includes('eco-friendly') || 
-                       property.amenities?.includes('green') || 
-                       property.amenities?.includes('solar') || false,
-        rating: 4.5 // Default rating since it's not in the API yet
-    }));
+    const propertyItems = properties.map(property => {
+        console.log('Mapping property:', property); // Debug each property
+        return {
+            id: property._id || property.id, // Use _id from MongoDB or fallback to id
+            title: property.title || 'Untitled Property',
+            location: `${property.address?.city || 'Unknown'}, ${property.address?.state || 'Unknown'}`,
+            price: `$${property.rent?.amount || 0}/${property.rent?.paymentFrequency || 'month'}`,
+            isEcoCertified: property.amenities?.includes('eco-friendly') || 
+                           property.amenities?.includes('green') || 
+                           property.amenities?.includes('solar') || false,
+            rating: 4.5 // Default rating since it's not in the API yet
+        };
+    });
 
     // Show message if no properties available
     if (propertyItems.length === 0) {

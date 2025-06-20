@@ -1,7 +1,8 @@
 import api, { getCacheKey, setCacheEntry, getCacheEntry } from '@/utils/api';
 
 export interface Property {
-  id: string;
+  _id: string; // MongoDB ObjectId
+  id?: string; // Optional fallback
   title: string;
   address: {
     street: string;
