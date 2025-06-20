@@ -11,6 +11,7 @@ import { useCreateProperty } from '@/hooks/usePropertyQueries';
 import { CreatePropertyData } from '@/services/propertyService';
 import { useOxy } from '@oxyhq/services';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
+import { calculateEthicalRent, validateEthicalPricing, getPricingGuidance } from '@/utils/ethicalPricing';
 
 export default function CreatePropertyScreen() {
   const router = useRouter();
@@ -37,6 +38,18 @@ export default function CreatePropertyScreen() {
       utilities: 'excluded',
     },
     amenities: [],
+    floor: undefined,
+    hasElevator: false,
+    parkingSpaces: 1,
+    yearBuilt: undefined,
+    isFurnished: false,
+    utilitiesIncluded: false,
+    petFriendly: false,
+    hasBalcony: false,
+    hasGarden: false,
+    proximityToTransport: false,
+    proximityToSchools: false,
+    proximityToShopping: false,
   });
 
   const [selectedLocation, setSelectedLocation] = useState<{
@@ -50,7 +63,101 @@ export default function CreatePropertyScreen() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
 
+  // Ethical pricing validation
+  const [pricingValidation, setPricingValidation] = useState<any>(null);
+  const [showPricingGuidance, setShowPricingGuidance] = useState(false);
+
   const createPropertyMutation = useCreateProperty();
+
+  // Validate pricing when property details change
+  useEffect(() => {
+    if (formData.rent.amount > 0 && formData.address.city && (formData.squareFootage || 0) > 0) {
+      const propertyCharacteristics = {
+        type: formData.type,
+        bedrooms: formData.bedrooms || 0,
+        bathrooms: formData.bathrooms || 0,
+        squareFootage: formData.squareFootage || 0,
+        amenities: formData.amenities || [],
+        location: {
+          city: formData.address.city,
+          state: formData.address.state,
+        },
+        // Additional comprehensive details
+        floor: formData.floor,
+        hasElevator: formData.hasElevator,
+        parkingSpaces: formData.parkingSpaces,
+        yearBuilt: formData.yearBuilt,
+        isFurnished: formData.isFurnished,
+        utilitiesIncluded: formData.utilitiesIncluded,
+        petFriendly: formData.petFriendly,
+        hasBalcony: formData.hasBalcony,
+        hasGarden: formData.hasGarden,
+        proximityToTransport: formData.proximityToTransport,
+        proximityToSchools: formData.proximityToSchools,
+        proximityToShopping: formData.proximityToShopping,
+      };
+
+      const validation = validateEthicalPricing(formData.rent.amount, propertyCharacteristics);
+      setPricingValidation(validation);
+    } else {
+      setPricingValidation(null);
+    }
+  }, [
+    formData.rent.amount,
+    formData.type,
+    formData.bedrooms,
+    formData.bathrooms,
+    formData.squareFootage,
+    formData.amenities,
+    formData.address.city,
+    formData.address.state,
+    formData.floor,
+    formData.hasElevator,
+    formData.parkingSpaces,
+    formData.yearBuilt,
+    formData.isFurnished,
+    formData.utilitiesIncluded,
+    formData.petFriendly,
+    formData.hasBalcony,
+    formData.hasGarden,
+    formData.proximityToTransport,
+    formData.proximityToSchools,
+    formData.proximityToShopping,
+  ]);
+
+  // Get pricing guidance
+  const getCurrentPricingGuidance = () => {
+    if (!formData.address.city || (formData.squareFootage || 0) <= 0) {
+      return 'Please fill in city and square footage to get pricing guidance.';
+    }
+
+    const propertyCharacteristics = {
+      type: formData.type,
+      bedrooms: formData.bedrooms || 0,
+      bathrooms: formData.bathrooms || 0,
+      squareFootage: formData.squareFootage || 0,
+      amenities: formData.amenities || [],
+      location: {
+        city: formData.address.city,
+        state: formData.address.state,
+      },
+      // Additional comprehensive details
+      floor: formData.floor,
+      hasElevator: formData.hasElevator,
+      parkingSpaces: formData.parkingSpaces,
+      yearBuilt: formData.yearBuilt,
+      isFurnished: formData.isFurnished,
+      utilitiesIncluded: formData.utilitiesIncluded,
+      petFriendly: formData.petFriendly,
+      hasBalcony: formData.hasBalcony,
+      hasGarden: formData.hasGarden,
+      proximityToTransport: formData.proximityToTransport,
+      proximityToSchools: formData.proximityToSchools,
+      proximityToShopping: formData.proximityToShopping,
+    };
+
+    return getPricingGuidance(propertyCharacteristics);
+  };
 
   // Search handler
   useEffect(() => {
@@ -163,6 +270,18 @@ export default function CreatePropertyScreen() {
 
     if (formData.rent.amount <= 0) {
       errors.push('Rent amount must be greater than 0');
+    }
+
+    // Ethical pricing validation
+    if (pricingValidation && !pricingValidation.isWithinEthicalRange) {
+      errors.push(`Rent price exceeds ethical maximum ($${pricingValidation.maxRent})`);
+      if (pricingValidation.warnings.length > 0) {
+        pricingValidation.warnings.forEach((warning: string) => {
+          if (warning.includes('speculative')) {
+            errors.push('Pricing appears to be speculative. Please consider a fair market rate.');
+          }
+        });
+      }
     }
 
     if (formData.bedrooms !== undefined && formData.bedrooms < 0) {
@@ -433,12 +552,59 @@ export default function CreatePropertyScreen() {
             <View style={styles.halfInput}>
               <ThemedText style={styles.label}>Monthly Rent *</ThemedText>
               <TextInput
-                style={styles.textInput}
+                style={[
+                  styles.textInput,
+                  pricingValidation && !pricingValidation.isWithinEthicalRange && styles.textInputError
+                ]}
                 value={formData.rent.amount?.toString() || ''}
                 onChangeText={(text) => updateRentField('amount', parseFloat(text) || 0)}
                 placeholder="0"
                 keyboardType="numeric"
               />
+
+              {/* Pricing Guidance */}
+              <TouchableOpacity
+                style={styles.pricingGuidanceButton}
+                onPress={() => setShowPricingGuidance(!showPricingGuidance)}
+              >
+                <ThemedText style={styles.pricingGuidanceButtonText}>
+                  💡 Get Ethical Pricing Guidance
+                </ThemedText>
+              </TouchableOpacity>
+
+              {showPricingGuidance && (
+                <View style={styles.pricingGuidanceContainer}>
+                  <ThemedText style={styles.pricingGuidanceText}>
+                    {getCurrentPricingGuidance()}
+                  </ThemedText>
+                </View>
+              )}
+
+              {/* Pricing Validation Feedback */}
+              {pricingValidation && (
+                <View style={[
+                  styles.pricingValidationContainer,
+                  pricingValidation.isWithinEthicalRange
+                    ? styles.pricingValidationGood
+                    : styles.pricingValidationWarning
+                ]}>
+                  <ThemedText style={styles.pricingValidationText}>
+                    {pricingValidation.isWithinEthicalRange
+                      ? '✅ Price is within ethical range'
+                      : '⚠️ Price exceeds ethical maximum'
+                    }
+                  </ThemedText>
+                  {pricingValidation.warnings.length > 0 && (
+                    <View style={styles.pricingWarningsContainer}>
+                      {pricingValidation.warnings.map((warning: string, index: number) => (
+                        <ThemedText key={index} style={styles.pricingWarningText}>
+                          • {warning}
+                        </ThemedText>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )}
             </View>
           </View>
 
@@ -844,5 +1010,56 @@ const styles = StyleSheet.create({
   previewDepositText: {
     fontSize: 14,
     color: colors.primaryDark_1,
+  },
+  pricingGuidanceButton: {
+    padding: 8,
+    borderWidth: 1,
+    borderColor: colors.primaryLight_1,
+    borderRadius: 8,
+  },
+  pricingGuidanceButtonText: {
+    fontSize: 14,
+    color: colors.primaryDark,
+  },
+  pricingGuidanceContainer: {
+    marginTop: 8,
+    padding: 12,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primaryLight_1,
+    borderRadius: 8,
+  },
+  pricingGuidanceText: {
+    fontSize: 14,
+    color: colors.primaryDark,
+  },
+  pricingValidationContainer: {
+    marginTop: 8,
+    padding: 12,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primaryLight_1,
+    borderRadius: 8,
+  },
+  pricingValidationGood: {
+    backgroundColor: colors.primaryLight_1,
+  },
+  pricingValidationWarning: {
+    backgroundColor: colors.primaryLight_1,
+  },
+  pricingValidationText: {
+    fontSize: 14,
+    color: colors.primaryDark,
+  },
+  pricingWarningsContainer: {
+    marginTop: 8,
+  },
+  pricingWarningText: {
+    fontSize: 12,
+    color: colors.primaryDark_1,
+    marginBottom: 2,
+  },
+  textInputError: {
+    borderColor: '#ff6b6b',
   },
 });

@@ -82,6 +82,19 @@ export interface CreatePropertyData {
     latitude: number;
     longitude: number;
   };
+  // Additional comprehensive details for ethical pricing
+  floor?: number;
+  hasElevator?: boolean;
+  parkingSpaces?: number;
+  yearBuilt?: number;
+  isFurnished?: boolean;
+  utilitiesIncluded?: boolean;
+  petFriendly?: boolean;
+  hasBalcony?: boolean;
+  hasGarden?: boolean;
+  proximityToTransport?: boolean;
+  proximityToSchools?: boolean;
+  proximityToShopping?: boolean;
 }
 
 export interface PropertyFilters {
