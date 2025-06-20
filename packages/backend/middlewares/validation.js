@@ -121,7 +121,7 @@ const validatePagination = [
  * ID parameter validation
  */
 const validateId = (paramName = 'id') => [
-  param(paramName).isAlphanumeric().withMessage(`${paramName} must be alphanumeric`),
+  param(paramName).matches(/^[a-zA-Z0-9_-]+$/).withMessage(`${paramName} must contain only alphanumeric characters, underscores, and hyphens`),
   handleValidationErrors
 ];
 
@@ -137,6 +137,40 @@ const validateDateRange = [
     }
     return true;
   }),
+  handleValidationErrors
+];
+
+/**
+ * Authentication validation rules
+ */
+const validateLogin = [
+  body('email').isEmail().withMessage('Valid email is required'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  handleValidationErrors
+];
+
+const validateRegister = [
+  body('email').isEmail().withMessage('Valid email is required'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('username').isLength({ min: 3, max: 30 }).withMessage('Username must be 3-30 characters'),
+  body('firstName').notEmpty().withMessage('First name is required'),
+  body('lastName').notEmpty().withMessage('Last name is required'),
+  handleValidationErrors
+];
+
+const validateRefreshToken = [
+  body('refreshToken').notEmpty().withMessage('Refresh token is required'),
+  handleValidationErrors
+];
+
+const validateEmail = [
+  body('email').isEmail().withMessage('Valid email is required'),
+  handleValidationErrors
+];
+
+const validatePasswordReset = [
+  body('token').notEmpty().withMessage('Reset token is required'),
+  body('newPassword').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
   handleValidationErrors
 ];
 
@@ -165,6 +199,11 @@ const validateFileUpload = (req, res, next) => {
 
 module.exports = {
   handleValidationErrors,
+  validateLogin,
+  validateRegister,
+  validateRefreshToken,
+  validateEmail,
+  validatePasswordReset,
   validateProperty,
   validateLease,
   validatePayment,
