@@ -19,32 +19,41 @@ export function RecentlyViewedWidget() {
     const { t } = useTranslation();
     const router = useRouter();
 
-    // Mock data for recently viewed properties
-    const recentProperties: PropertyItem[] = [
-        {
-            id: '101',
-            title: 'Modern Loft in City Center',
-            location: 'Madrid, Spain',
-            price: '⊜950/month',
-            imageUrl: 'https://via.placeholder.com/80',
-            isEcoCertified: true
-        },
-        {
-            id: '102',
-            title: 'Cozy Studio near Beach',
-            location: 'Barcelona, Spain',
-            price: '⊜800/month',
-            imageUrl: 'https://via.placeholder.com/80'
-        },
-        {
-            id: '103',
-            title: 'Spacious Apartment with Terrace',
-            location: 'Berlin, Germany',
-            price: '⊜1,200/month',
-            imageUrl: 'https://via.placeholder.com/80',
-            isEcoCertified: true
-        }
-    ];
+    // In a real app, this would come from a local storage or user preferences API
+    // For now, we'll use mock data but structure it to be easily replaceable
+    const getRecentlyViewedProperties = (): PropertyItem[] => {
+        // This would typically get data from:
+        // - AsyncStorage/localStorage for recent views
+        // - User API endpoint for viewing history
+        // - Browser history for web
+        return [
+            {
+                id: '101',
+                title: 'Modern Loft in City Center',
+                location: 'Madrid, Spain',
+                price: '$950/month',
+                imageUrl: 'https://via.placeholder.com/80',
+                isEcoCertified: true
+            },
+            {
+                id: '102',
+                title: 'Cozy Studio near Beach',
+                location: 'Barcelona, Spain',
+                price: '$800/month',
+                imageUrl: 'https://via.placeholder.com/80'
+            },
+            {
+                id: '103',
+                title: 'Spacious Apartment with Terrace',
+                location: 'Berlin, Germany',
+                price: '$1,200/month',
+                imageUrl: 'https://via.placeholder.com/80',
+                isEcoCertified: true
+            }
+        ];
+    };
+
+    const recentProperties = getRecentlyViewedProperties();
 
     const navigateToProperty = (propertyId: string) => {
         router.push(`/properties/${propertyId}`);
