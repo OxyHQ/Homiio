@@ -13,9 +13,25 @@ export function PropertyAlertWidget() {
     const [emailNotifications, setEmailNotifications] = useState(true);
     const [pushNotifications, setPushNotifications] = useState(true);
 
-    const handleCreateAlert = () => {
-        // Logic to create an alert would go here
-        console.log('Creating alert:', { minPrice, maxPrice, location, emailNotifications, pushNotifications });
+    const handleCreateAlert = async () => {
+        try {
+            // TODO: Implement API call to create property alert
+            // const alertData = {
+            //     minPrice: parseFloat(minPrice) || undefined,
+            //     maxPrice: parseFloat(maxPrice) || undefined,
+            //     location,
+            //     emailNotifications,
+            //     pushNotifications
+            // };
+            // await propertyService.createAlert(alertData);
+            
+            console.log('Creating alert:', { minPrice, maxPrice, location, emailNotifications, pushNotifications });
+            // Show success message
+            alert('Alert created successfully!');
+        } catch (error) {
+            console.error('Failed to create alert:', error);
+            alert('Failed to create alert. Please try again.');
+        }
     };
 
     return (

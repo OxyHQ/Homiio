@@ -187,7 +187,7 @@ export function SideBar() {
                                         isActive={pathname === route} />
                                 })}
                             <Button
-                                href="/properties/add"
+                                href="/properties/create"
                                 renderText={({ state }) =>
                                     state === 'desktop' ? (
                                         <Text className="text-white text-[17px] font-bold">

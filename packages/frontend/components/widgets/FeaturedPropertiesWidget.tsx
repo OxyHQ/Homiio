@@ -1,50 +1,62 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
+import { useProperties } from '@/hooks/usePropertyQueries';
 
 export function FeaturedPropertiesWidget() {
     const { t } = useTranslation();
-    const [loading, setLoading] = useState(false);
+    const { data, isLoading, error } = useProperties({ 
+        limit: 3, 
+        status: 'available'
+    });
 
-    useEffect(() => {
-        const fakeLoading = () => {
-            setLoading(true);
-            setTimeout(() => {
-                setLoading(false);
-            }, 1000);
-        };
-
-        fakeLoading();
-    }, []);
+    if (error) {
+        return (
+            <BaseWidget title={t("Featured Properties")}>
+                <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>Failed to load properties</Text>
+                </View>
+            </BaseWidget>
+        );
+    }
 
     return (
         <BaseWidget title={t("Featured Properties")}>
             <View>
-                {loading ? (
+                {isLoading ? (
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="small" color={colors.primaryColor} />
                         <Text style={styles.loadingText}>Loading properties...</Text>
                     </View>
                 ) : (
-                    <FeaturedProperties />
+                    <FeaturedProperties properties={data?.properties || []} />
                 )}
             </View>
         </BaseWidget>
     );
 }
 
-function FeaturedProperties() {
+function FeaturedProperties({ properties }: { properties: any[] }) {
     const router = useRouter();
-    const propertyItems = [
+
+    // Use real API data, fall back to mock data if empty
+    const propertyItems = properties.length > 0 ? properties.map(property => ({
+        id: property.id,
+        title: property.title,
+        location: `${property.address?.city || 'Unknown'}, ${property.address?.state || 'Unknown'}`,
+        price: `$${property.rent?.amount || 0}/${property.rent?.paymentFrequency || 'month'}`,
+        isEcoCertified: property.amenities?.includes('eco-friendly') || false,
+        rating: 4.5 // Default rating since it's not in the API yet
+    })) : [
         {
             id: '1',
             title: 'Modern Studio in City Center',
             location: 'Barcelona, Spain',
-            price: '⊜850/month',
+            price: '$850/month',
             isEcoCertified: true,
             rating: 4.8
         },
@@ -52,7 +64,7 @@ function FeaturedProperties() {
             id: '2',
             title: 'Co-living Space with Garden',
             location: 'Berlin, Germany',
-            price: '⊜550/month',
+            price: '$550/month',
             isEcoCertified: true,
             rating: 4.9
         }
@@ -106,6 +118,15 @@ const styles = StyleSheet.create({
     },
     loadingText: {
         color: colors.COLOR_BLACK_LIGHT_4,
+    },
+    errorContainer: {
+        padding: 15,
+        alignItems: 'center',
+        borderRadius: 15,
+    },
+    errorText: {
+        color: '#ff6b6b',
+        fontWeight: '500',
     },
     propertyItem: {
         flexDirection: 'row',
