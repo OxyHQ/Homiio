@@ -10,6 +10,7 @@ import { PropertyMap } from '@/components/PropertyMap';
 import { useCreateProperty } from '@/hooks/usePropertyQueries';
 import { CreatePropertyData } from '@/services/propertyService';
 import { useOxy } from '@oxyhq/services';
+import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 
 export default function CreatePropertyScreen() {
   const router = useRouter();
@@ -502,6 +503,99 @@ export default function CreatePropertyScreen() {
             </View>
           </View>
 
+          {/* Property Preview Card */}
+          <View style={styles.previewSection}>
+            <ThemedText style={styles.previewTitle}>Property Preview</ThemedText>
+            <View style={styles.previewCard}>
+              <View style={styles.previewHeader}>
+                <ThemedText style={styles.previewPropertyTitle}>
+                  {generatePropertyTitle({
+                    type: formData.type,
+                    address: formData.address,
+                    bedrooms: formData.bedrooms,
+                    bathrooms: formData.bathrooms
+                  })}
+                </ThemedText>
+                <ThemedText style={styles.previewPrice}>
+                  ${formData.rent.amount?.toLocaleString() || '0'}/month
+                </ThemedText>
+              </View>
+
+              <View style={styles.previewLocation}>
+                <ThemedText style={styles.previewAddress}>
+                  {formData.address.street && formData.address.city
+                    ? `${formData.address.street}, ${formData.address.city}, ${formData.address.state}`
+                    : 'Address not specified'
+                  }
+                </ThemedText>
+              </View>
+
+              <View style={styles.previewDetails}>
+                <View style={styles.previewDetail}>
+                  <ThemedText style={styles.previewDetailLabel}>Bedrooms:</ThemedText>
+                  <ThemedText style={styles.previewDetailValue}>
+                    {formData.bedrooms || 0}
+                  </ThemedText>
+                </View>
+                <View style={styles.previewDetail}>
+                  <ThemedText style={styles.previewDetailLabel}>Bathrooms:</ThemedText>
+                  <ThemedText style={styles.previewDetailValue}>
+                    {formData.bathrooms || 0}
+                  </ThemedText>
+                </View>
+                {formData.squareFootage && formData.squareFootage > 0 && (
+                  <View style={styles.previewDetail}>
+                    <ThemedText style={styles.previewDetailLabel}>Size:</ThemedText>
+                    <ThemedText style={styles.previewDetailValue}>
+                      {formData.squareFootage} sq ft
+                    </ThemedText>
+                  </View>
+                )}
+              </View>
+
+              {formData.description && (
+                <View style={styles.previewDescription}>
+                  <ThemedText style={styles.previewDescriptionText}>
+                    {formData.description.length > 100
+                      ? `${formData.description.substring(0, 100)}...`
+                      : formData.description
+                    }
+                  </ThemedText>
+                </View>
+              )}
+
+              {formData.amenities && formData.amenities.length > 0 && (
+                <View style={styles.previewAmenities}>
+                  <ThemedText style={styles.previewAmenitiesTitle}>Amenities:</ThemedText>
+                  <View style={styles.previewAmenitiesList}>
+                    {formData.amenities.slice(0, 4).map((amenity, index) => (
+                      <View key={index} style={styles.previewAmenityTag}>
+                        <ThemedText style={styles.previewAmenityText}>
+                          {amenity.charAt(0).toUpperCase() + amenity.slice(1).replace('_', ' ')}
+                        </ThemedText>
+                      </View>
+                    ))}
+                    {formData.amenities.length > 4 && (
+                      <View style={styles.previewAmenityTag}>
+                        <ThemedText style={styles.previewAmenityText}>
+                          +{formData.amenities.length - 4} more
+                        </ThemedText>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              )}
+
+              {formData.rent.deposit && formData.rent.deposit > 0 && (
+                <View style={styles.previewDeposit}>
+                  <ThemedText style={styles.previewDepositText}>
+                    Security Deposit: ${formData.rent.deposit.toLocaleString()}
+                  </ThemedText>
+                </View>
+              )}
+            </View>
+          </View>
+
           <Button
             onPress={handleSubmit}
             disabled={createPropertyMutation.isPending}
@@ -652,5 +746,103 @@ const styles = StyleSheet.create({
   searchResultText: {
     fontSize: 14,
     color: colors.primaryDark,
+  },
+  previewSection: {
+    marginBottom: 24,
+  },
+  previewTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.primaryDark,
+    marginBottom: 8,
+  },
+  previewCard: {
+    backgroundColor: colors.primaryLight,
+    borderRadius: 25,
+    padding: 16,
+    shadowColor: colors.primaryDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  previewPropertyTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.primaryDark,
+  },
+  previewPrice: {
+    fontSize: 14,
+    color: colors.primaryDark_1,
+  },
+  previewLocation: {
+    marginBottom: 8,
+  },
+  previewAddress: {
+    fontSize: 14,
+    color: colors.primaryDark,
+  },
+  previewDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  previewDetail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  previewDetailLabel: {
+    fontSize: 14,
+    color: colors.primaryDark_1,
+    marginRight: 8,
+  },
+  previewDetailValue: {
+    fontSize: 14,
+    color: colors.primaryDark,
+  },
+  previewDescription: {
+    marginBottom: 8,
+  },
+  previewDescriptionText: {
+    fontSize: 14,
+    color: colors.primaryDark,
+  },
+  previewAmenities: {
+    marginBottom: 8,
+  },
+  previewAmenitiesTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: colors.primaryDark,
+    marginBottom: 8,
+  },
+  previewAmenitiesList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  previewAmenityTag: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: colors.primaryLight_1,
+    borderRadius: 25,
+  },
+  previewAmenityText: {
+    fontSize: 14,
+    color: colors.primaryDark,
+  },
+  previewDeposit: {
+    marginTop: 8,
+  },
+  previewDepositText: {
+    fontSize: 14,
+    color: colors.primaryDark_1,
   },
 });
