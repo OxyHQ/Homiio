@@ -6,11 +6,14 @@ import { colors } from '@/styles/colors';
 import Button from '@/components/Button';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { useCreateProperty } from '@/hooks/usePropertyQueries';
+import { useOxyCreateProperty } from '@/hooks/useOxyPropertyQueries';
 import { CreatePropertyData } from '@/services/propertyService';
+import { useOxy } from '@oxyhq/services';
 
 export default function CreatePropertyScreen() {
   const router = useRouter();
+  const { oxyServices, activeSessionId } = useOxy();
+  
   const [formData, setFormData] = useState<CreatePropertyData>({
     title: '',
     address: {
@@ -35,9 +38,24 @@ export default function CreatePropertyScreen() {
     amenities: [],
   });
 
-  const createPropertyMutation = useCreateProperty();
+  const createPropertyMutation = useOxyCreateProperty(oxyServices, activeSessionId);
 
   const handleSubmit = async () => {
+    // Check authentication first
+    if (!oxyServices || !activeSessionId) {
+      Alert.alert(
+        'Authentication Required', 
+        'Please sign in with OxyServices to create a property.',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.back(),
+          },
+        ]
+      );
+      return;
+    }
+
     // Validation
     const errors = [];
     
@@ -99,7 +117,12 @@ export default function CreatePropertyScreen() {
       
       let errorMessage = 'Failed to create property. Please try again.';
       
-      if (error.response?.data?.message) {
+      // Handle OxyServices authentication errors specifically
+      if (error.message && error.message.includes('Authentication')) {
+        errorMessage = 'Authentication failed. Please sign in again.';
+      } else if (error.status === 401) {
+        errorMessage = 'Authentication required. Please sign in with OxyServices.';
+      } else if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.response?.data?.error) {
         errorMessage = error.response.data.error;
