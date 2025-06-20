@@ -9,6 +9,7 @@ const userRoutes = require('./users');
 const propertyRoutes = require('./properties');
 const roomRoutes = require('./rooms');
 const deviceRoutes = require('./devices');
+const leaseRoutes = require('./leases');
 const notificationRoutes = require('./notifications');
 const analyticsRoutes = require('./analytics');
 
@@ -20,6 +21,7 @@ router.use('/users', userRoutes);
 router.use('/properties', propertyRoutes);
 router.use('/properties/:propertyId/rooms', roomRoutes);
 router.use('/devices', deviceRoutes);
+router.use('/leases', leaseRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/analytics', analyticsRoutes);
 

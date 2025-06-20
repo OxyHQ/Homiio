@@ -121,7 +121,7 @@ const validatePagination = [
  * ID parameter validation
  */
 const validateId = (paramName = 'id') => [
-  param(paramName).isAlphanumeric().withMessage(`${paramName} must be alphanumeric`),
+  param(paramName).matches(/^[a-zA-Z0-9_-]+$/).withMessage(`${paramName} must contain only alphanumeric characters, underscores, and hyphens`),
   handleValidationErrors
 ];
 

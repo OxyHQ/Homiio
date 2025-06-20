@@ -10,6 +10,7 @@ const authController = require('./authController');
 const userController = require('./userController');
 const deviceController = require('./deviceController');
 const notificationController = require('./notificationController');
+const leaseController = require('./leaseController');
 
 module.exports = {
   propertyController,
@@ -18,5 +19,6 @@ module.exports = {
   authController,
   userController,
   deviceController,
-  notificationController
+  notificationController,
+  leaseController
 };
