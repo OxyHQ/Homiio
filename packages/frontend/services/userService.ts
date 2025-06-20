@@ -1,4 +1,5 @@
 import api, { getCacheKey, setCacheEntry, getCacheEntry } from '@/utils/api';
+import type { Property } from './propertyService';
 
 export interface User {
   id: string;
@@ -149,6 +150,20 @@ class UserService {
     const response = await api.get(`${this.baseUrl}/me/properties`);
     setCacheEntry(cacheKey, response.data, 300000); // 5 minute cache
     return response.data;
+  }
+
+  async getRecentlyViewedProperties(): Promise<Property[]> {
+    const cacheKey = getCacheKey(`${this.baseUrl}/me/recent-properties`);
+    const cached = getCacheEntry<Property[]>(cacheKey);
+
+    if (cached) {
+      return cached;
+    }
+
+    const response = await api.get(`${this.baseUrl}/me/recent-properties`);
+    const properties = response.data.data || response.data.properties || [];
+    setCacheEntry(cacheKey, properties, 300000);
+    return properties;
   }
 
   async getUserNotifications(): Promise<any[]> {

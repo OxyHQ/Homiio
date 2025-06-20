@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
+import { useRecentlyViewedProperties } from '@/hooks/useUserQueries';
 
 interface PropertyItem {
     id: string;
@@ -19,45 +20,34 @@ export function RecentlyViewedWidget() {
     const { t } = useTranslation();
     const router = useRouter();
 
-    // In a real app, this would come from a local storage or user preferences API
-    // For now, we'll use mock data but structure it to be easily replaceable
-    const getRecentlyViewedProperties = (): PropertyItem[] => {
-        // This would typically get data from:
-        // - AsyncStorage/localStorage for recent views
-        // - User API endpoint for viewing history
-        // - Browser history for web
-        return [
-            {
-                id: '101',
-                title: 'Modern Loft in City Center',
-                location: 'Madrid, Spain',
-                price: '$950/month',
-                imageUrl: 'https://via.placeholder.com/80',
-                isEcoCertified: true
-            },
-            {
-                id: '102',
-                title: 'Cozy Studio near Beach',
-                location: 'Barcelona, Spain',
-                price: '$800/month',
-                imageUrl: 'https://via.placeholder.com/80'
-            },
-            {
-                id: '103',
-                title: 'Spacious Apartment with Terrace',
-                location: 'Berlin, Germany',
-                price: '$1,200/month',
-                imageUrl: 'https://via.placeholder.com/80',
-                isEcoCertified: true
-            }
-        ];
-    };
+    const { data, isLoading, error } = useRecentlyViewedProperties();
 
-    const recentProperties = getRecentlyViewedProperties();
+    const recentProperties: PropertyItem[] = (data || []).map((property) => ({
+        id: property._id || property.id,
+        title: property.title,
+        location: `${property.address?.city || 'Unknown'}, ${property.address?.state || ''}`,
+        price: `$${property.rent?.amount || 0}/${property.rent?.paymentFrequency || 'month'}`,
+        imageUrl: property.images?.[0] || 'https://via.placeholder.com/80',
+        isEcoCertified:
+            property.amenities?.includes('eco-friendly') ||
+            property.amenities?.includes('green') ||
+            property.amenities?.includes('solar') || false,
+    }));
 
     const navigateToProperty = (propertyId: string) => {
         router.push(`/properties/${propertyId}`);
     };
+
+    if (error) {
+        return (
+            <BaseWidget title={t("Recently Viewed")}
+                icon={<Ionicons name="time-outline" size={22} color={colors.primaryColor} />}>
+                <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>{error.message || 'Failed to load properties'}</Text>
+                </View>
+            </BaseWidget>
+        );
+    }
 
     return (
         <BaseWidget
@@ -70,7 +60,11 @@ export function RecentlyViewedWidget() {
                 style={styles.container}
                 contentContainerStyle={styles.scrollContent}
             >
-                {recentProperties.map((property) => (
+                {isLoading ? (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="small" color={colors.primaryColor} />
+                    </View>
+                ) : recentProperties.map((property) => (
                     <TouchableOpacity
                         key={property.id}
                         style={styles.propertyCard}
@@ -181,4 +175,18 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         marginBottom: 4,
     },
-}); 
+    loadingContainer: {
+        width: '100%',
+        height: 140,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    errorContainer: {
+        padding: 15,
+        alignItems: 'center',
+    },
+    errorText: {
+        color: colors.COLOR_BLACK_LIGHT_4,
+        fontSize: 12,
+    },
+});

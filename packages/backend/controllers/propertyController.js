@@ -3,10 +3,14 @@
  * Handles property-related operations
  */
 
-const { Property, PropertyModel } = require('../models');
-const { energyService } = require('../services');
-const { logger, businessLogger } = require('../middlewares/logging');
-const { AppError, successResponse, paginationResponse } = require('../middlewares/errorHandler');
+const { Property, PropertyModel, UserModel } = require("../models");
+const { energyService } = require("../services");
+const { logger, businessLogger } = require("../middlewares/logging");
+const {
+  AppError,
+  successResponse,
+  paginationResponse,
+} = require("../middlewares/errorHandler");
 
 class PropertyController {
   /**
@@ -16,15 +20,21 @@ class PropertyController {
     try {
       // Check if user is authenticated
       if (!req.userId) {
-        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
+        return next(
+          new AppError(
+            "Authentication required",
+            401,
+            "AUTHENTICATION_REQUIRED",
+          ),
+        );
       }
 
       const propertyData = {
         ...req.body,
-        ownerId: req.userId
+        ownerId: req.userId,
       };
 
-      logger.info('Creating property with data', { propertyData });
+      logger.info("Creating property with data", { propertyData });
 
       // Create and save property using Mongoose model
       const property = new PropertyModel(propertyData);
@@ -32,14 +42,24 @@ class PropertyController {
 
       businessLogger.propertyCreated(savedProperty._id, savedProperty.ownerId);
 
-      res.status(201).json(successResponse(
-        savedProperty.toJSON(),
-        'Property created successfully'
-      ));
+      res
+        .status(201)
+        .json(
+          successResponse(
+            savedProperty.toJSON(),
+            "Property created successfully",
+          ),
+        );
     } catch (error) {
-      if (error.name === 'ValidationError') {
-        const validationErrors = Object.values(error.errors).map(err => err.message);
-        const validationError = new AppError('Property validation failed', 400, 'VALIDATION_ERROR');
+      if (error.name === "ValidationError") {
+        const validationErrors = Object.values(error.errors).map(
+          (err) => err.message,
+        );
+        const validationError = new AppError(
+          "Property validation failed",
+          400,
+          "VALIDATION_ERROR",
+        );
         validationError.details = validationErrors;
         return next(validationError);
       }
@@ -54,10 +74,10 @@ class PropertyController {
     try {
       const propertyData = {
         ...req.body,
-        ownerId: req.userId || 'dev_user_' + Date.now() // Use provided userId or generate one
+        ownerId: req.userId || "dev_user_" + Date.now(), // Use provided userId or generate one
       };
 
-      logger.info('Creating property with data (dev mode)', { propertyData });
+      logger.info("Creating property with data (dev mode)", { propertyData });
 
       // Create and save property using Mongoose model
       const property = new PropertyModel(propertyData);
@@ -65,14 +85,24 @@ class PropertyController {
 
       businessLogger.propertyCreated(savedProperty._id, savedProperty.ownerId);
 
-      res.status(201).json(successResponse(
-        savedProperty.toJSON(),
-        'Property created successfully (dev mode)'
-      ));
+      res
+        .status(201)
+        .json(
+          successResponse(
+            savedProperty.toJSON(),
+            "Property created successfully (dev mode)",
+          ),
+        );
     } catch (error) {
-      if (error.name === 'ValidationError') {
-        const validationErrors = Object.values(error.errors).map(err => err.message);
-        const validationError = new AppError('Property validation failed', 400, 'VALIDATION_ERROR');
+      if (error.name === "ValidationError") {
+        const validationErrors = Object.values(error.errors).map(
+          (err) => err.message,
+        );
+        const validationError = new AppError(
+          "Property validation failed",
+          400,
+          "VALIDATION_ERROR",
+        );
         validationError.details = validationErrors;
         return next(validationError);
       }
@@ -96,35 +126,37 @@ class PropertyController {
         bathrooms,
         amenities,
         available,
-        sortBy = 'createdAt',
-        sortOrder = 'desc'
+        sortBy = "createdAt",
+        sortOrder = "desc",
       } = req.query;
 
       // Build filters
       const filters = {};
       if (type) filters.type = type;
-      if (city) filters['address.city'] = new RegExp(city, 'i');
+      if (city) filters["address.city"] = new RegExp(city, "i");
       if (bedrooms) filters.bedrooms = parseInt(bedrooms);
       if (bathrooms) filters.bathrooms = parseInt(bathrooms);
       if (available !== undefined) {
-        filters['availability.isAvailable'] = available === 'true';
-        filters.status = 'active';
+        filters["availability.isAvailable"] = available === "true";
+        filters.status = "active";
       }
       if (amenities) {
-        const amenityList = amenities.split(',');
+        const amenityList = amenities.split(",");
         filters.amenities = { $in: amenityList };
       }
 
       // Build rent filter
       if (minRent !== undefined || maxRent !== undefined) {
-        filters['rent.amount'] = {};
-        if (minRent !== undefined) filters['rent.amount'].$gte = parseFloat(minRent);
-        if (maxRent !== undefined) filters['rent.amount'].$lte = parseFloat(maxRent);
+        filters["rent.amount"] = {};
+        if (minRent !== undefined)
+          filters["rent.amount"].$gte = parseFloat(minRent);
+        if (maxRent !== undefined)
+          filters["rent.amount"].$lte = parseFloat(maxRent);
       }
 
       // Build sort options
       const sortOptions = {};
-      sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+      sortOptions[sortBy] = sortOrder === "desc" ? -1 : 1;
 
       // Calculate pagination
       const pageNumber = parseInt(page);
@@ -137,25 +169,27 @@ class PropertyController {
           .sort(sortOptions)
           .skip(skip)
           .limit(limitNumber)
-          .populate('rooms', 'name type status')
+          .populate("rooms", "name type status")
           .lean(),
-        PropertyModel.countDocuments(filters)
+        PropertyModel.countDocuments(filters),
       ]);
 
       const totalPages = Math.ceil(total / limitNumber);
 
-      res.json(paginationResponse(
-        properties,
-        {
-          page: pageNumber,
-          limit: limitNumber,
-          total,
-          totalPages,
-          hasNext: pageNumber < totalPages,
-          hasPrev: pageNumber > 1
-        },
-        'Properties retrieved successfully'
-      ));
+      res.json(
+        paginationResponse(
+          properties,
+          {
+            page: pageNumber,
+            limit: limitNumber,
+            total,
+            totalPages,
+            hasNext: pageNumber < totalPages,
+            hasPrev: pageNumber > 1,
+          },
+          "Properties retrieved successfully",
+        ),
+      );
     } catch (error) {
       next(error);
     }
@@ -170,15 +204,33 @@ class PropertyController {
 
       // Fetch from database
       const property = await PropertyModel.findById(propertyId)
-        .populate('rooms', 'name type status availability')
+        .populate("rooms", "name type status availability")
         .lean();
 
       if (!property) {
-        return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));
+        return next(
+          new AppError("Property not found", 404, "PROPERTY_NOT_FOUND"),
+        );
       }
 
       // Increment view count
       await PropertyModel.findByIdAndUpdate(propertyId, { $inc: { views: 1 } });
+
+      // Update user's recently viewed list if authenticated
+      if (req.userId) {
+        try {
+          const user = await UserModel.findById(req.userId);
+          if (user) {
+            await user.addRecentlyViewedProperty(propertyId);
+          }
+        } catch (err) {
+          logger.warn("Failed to update recently viewed properties", {
+            userId: req.userId,
+            propertyId,
+            error: err.message,
+          });
+        }
+      }
 
       // Get energy data if monitoring is enabled
       let energyData = null;
@@ -186,22 +238,22 @@ class PropertyController {
         try {
           energyData = await energyService.getEnergyStats(propertyId);
         } catch (error) {
-          logger.warn('Failed to get energy data for property', { propertyId, error: error.message });
+          logger.warn("Failed to get energy data for property", {
+            propertyId,
+            error: error.message,
+          });
         }
       }
 
       const response = {
         ...property,
-        energyData
+        energyData,
       };
 
-      res.json(successResponse(
-        response,
-        'Property retrieved successfully'
-      ));
+      res.json(successResponse(response, "Property retrieved successfully"));
     } catch (error) {
-      if (error.name === 'CastError') {
-        return next(new AppError('Invalid property ID', 400, 'INVALID_ID'));
+      if (error.name === "CastError") {
+        return next(new AppError("Invalid property ID", 400, "INVALID_ID"));
       }
       next(error);
     }
@@ -224,18 +276,20 @@ class PropertyController {
       const updatedProperty = new Property({
         id: propertyId,
         ...updateData,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       });
 
       const validation = updatedProperty.validate();
       if (!validation.isValid) {
-        throw new AppError('Validation failed', 400, 'VALIDATION_ERROR');
+        throw new AppError("Validation failed", 400, "VALIDATION_ERROR");
       }
 
-      res.json(successResponse(
-        updatedProperty.toJSON(),
-        'Property updated successfully'
-      ));
+      res.json(
+        successResponse(
+          updatedProperty.toJSON(),
+          "Property updated successfully",
+        ),
+      );
     } catch (error) {
       next(error);
     }
@@ -255,10 +309,7 @@ class PropertyController {
       // }
       // await PropertyModel.softDelete(propertyId);
 
-      res.json(successResponse(
-        null,
-        'Property deleted successfully'
-      ));
+      res.json(successResponse(null, "Property deleted successfully"));
     } catch (error) {
       next(error);
     }
@@ -270,20 +321,17 @@ class PropertyController {
   async getPropertyEnergyData(req, res, next) {
     try {
       const { propertyId } = req.params;
-      const { period = 'day', startDate, endDate } = req.query;
+      const { period = "day", startDate, endDate } = req.query;
 
       const energyData = await energyService.getEnergyStats(propertyId, period);
-      
+
       const response = {
         propertyId,
         period,
-        data: energyData
+        data: energyData,
       };
 
-      res.json(successResponse(
-        response,
-        'Energy data retrieved successfully'
-      ));
+      res.json(successResponse(response, "Energy data retrieved successfully"));
     } catch (error) {
       next(error);
     }
@@ -302,25 +350,27 @@ class PropertyController {
 
       const mockProperties = [
         new Property({
-          id: 'prop_1',
+          id: "prop_1",
           ownerId: ownerId,
-          title: 'My Downtown Apartment',
-          type: 'apartment',
-          rent: { amount: 3500, currency: 'USD' },
-          status: 'active'
-        })
+          title: "My Downtown Apartment",
+          type: "apartment",
+          rent: { amount: 3500, currency: "USD" },
+          status: "active",
+        }),
       ];
 
-      const properties = mockProperties.map(p => p.toJSON());
+      const properties = mockProperties.map((p) => p.toJSON());
       const total = mockProperties.length;
 
-      res.json(paginationResponse(
-        properties,
-        parseInt(page),
-        parseInt(limit),
-        total,
-        'Your properties retrieved successfully'
-      ));
+      res.json(
+        paginationResponse(
+          properties,
+          parseInt(page),
+          parseInt(limit),
+          total,
+          "Your properties retrieved successfully",
+        ),
+      );
     } catch (error) {
       next(error);
     }
@@ -338,7 +388,7 @@ class PropertyController {
       const configuration = {
         enabled,
         sensors,
-        alertThresholds
+        alertThresholds,
       };
 
       // Configure connected devices
@@ -347,21 +397,23 @@ class PropertyController {
           try {
             await energyService.configureDevice(sensor.deviceId, {
               samplingRate: sensor.samplingRate || 60,
-              alertThresholds: alertThresholds
+              alertThresholds: alertThresholds,
             });
           } catch (error) {
-            logger.warn('Failed to configure device', { 
-              deviceId: sensor.deviceId, 
-              error: error.message 
+            logger.warn("Failed to configure device", {
+              deviceId: sensor.deviceId,
+              error: error.message,
             });
           }
         }
       }
 
-      res.json(successResponse(
-        configuration,
-        'Energy monitoring configured successfully'
-      ));
+      res.json(
+        successResponse(
+          configuration,
+          "Energy monitoring configured successfully",
+        ),
+      );
     } catch (error) {
       next(error);
     }
@@ -377,21 +429,23 @@ class PropertyController {
       // In a real implementation, perform database search
       const mockResults = [
         new Property({
-          id: 'prop_search_1',
-          ownerId: 'user_1',
+          id: "prop_search_1",
+          ownerId: "user_1",
           title: `Result for ${query}`,
-          type: 'apartment',
-          rent: { amount: 1000, currency: 'USD' }
-        })
+          type: "apartment",
+          rent: { amount: 1000, currency: "USD" },
+        }),
       ];
 
-      res.json(paginationResponse(
-        mockResults.map(p => p.toJSON()),
-        parseInt(page),
-        parseInt(limit),
-        mockResults.length,
-        'Search completed successfully'
-      ));
+      res.json(
+        paginationResponse(
+          mockResults.map((p) => p.toJSON()),
+          parseInt(page),
+          parseInt(limit),
+          mockResults.length,
+          "Search completed successfully",
+        ),
+      );
     } catch (error) {
       next(error);
     }
@@ -411,13 +465,12 @@ class PropertyController {
         availableRooms: 2,
         monthlyRevenue: 4500,
         averageRent: 1125,
-        occupancyRate: 50
+        occupancyRate: 50,
       };
 
-      res.json(successResponse(
-        stats,
-        'Property statistics retrieved successfully'
-      ));
+      res.json(
+        successResponse(stats, "Property statistics retrieved successfully"),
+      );
     } catch (error) {
       next(error);
     }
