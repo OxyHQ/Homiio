@@ -123,18 +123,20 @@ export function SideBar() {
                     <Logo />
                     {!state.userId && (
                         <View>
-                            <Text
-                                style={{
-                                    color: colors.COLOR_BLACK,
-                                    fontSize: 25,
-                                    fontWeight: 'bold',
-                                    fontFamily: 'Phudu',
-                                    flexWrap: 'wrap',
-                                    textAlign: 'left',
-                                    maxWidth: 200,
-                                    lineHeight: 30,
-                                }}
-                            >{t("Find your ethical home")}</Text>
+                            {isFullSideBar && (
+                                <Text
+                                    style={{
+                                        color: colors.COLOR_BLACK,
+                                        fontSize: 25,
+                                        fontWeight: 'bold',
+                                        fontFamily: 'Phudu',
+                                        flexWrap: 'wrap',
+                                        textAlign: 'left',
+                                        maxWidth: 200,
+                                        lineHeight: 30,
+                                    }}
+                                >{t("Find your ethical home")}</Text>
+                            )}
                             {!isAuthenticated && (
                                 <View
                                     style={{
