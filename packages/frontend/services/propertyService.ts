@@ -2,15 +2,30 @@ import api, { getCacheKey, setCacheEntry, getCacheEntry } from '@/utils/api';
 
 export interface Property {
   id: string;
-  name: string;
-  address: string;
-  type: 'apartment' | 'house' | 'condo' | 'studio' | 'other';
+  title: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    coordinates?: {
+      lat: number | null;
+      lng: number | null;
+    };
+  };
+  type: 'apartment' | 'house' | 'room' | 'studio';
   description?: string;
-  size?: number;
+  squareFootage?: number;
   bedrooms?: number;
   bathrooms?: number;
-  rent?: number;
-  currency?: string;
+  rent: {
+    amount: number;
+    currency: string;
+    paymentFrequency: 'monthly' | 'weekly' | 'daily';
+    deposit: number;
+    utilities: 'included' | 'excluded' | 'partial';
+  };
   amenities?: string[];
   images?: string[];
   status: 'available' | 'occupied' | 'maintenance' | 'offline';
@@ -41,15 +56,26 @@ export interface Property {
 }
 
 export interface CreatePropertyData {
-  name: string;
-  address: string;
-  type: 'apartment' | 'house' | 'condo' | 'studio' | 'other';
+  title: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country?: string;
+  };
+  type: 'apartment' | 'house' | 'room' | 'studio';
   description?: string;
-  size?: number;
+  squareFootage?: number;
   bedrooms?: number;
   bathrooms?: number;
-  rent?: number;
-  currency?: string;
+  rent: {
+    amount: number;
+    currency?: string;
+    paymentFrequency?: 'monthly' | 'weekly' | 'daily';
+    deposit?: number;
+    utilities?: 'included' | 'excluded' | 'partial';
+  };
   amenities?: string[];
   images?: string[];
 }
@@ -83,8 +109,14 @@ class PropertyService {
     }
 
     const response = await api.get(this.baseUrl, { params: filters });
-    setCacheEntry(cacheKey, response.data);
-    return response.data;
+    const result = {
+      properties: response.data.data || [],
+      total: response.data.pagination?.total || 0,
+      page: response.data.pagination?.page || 1,
+      totalPages: response.data.pagination?.totalPages || 1,
+    };
+    setCacheEntry(cacheKey, result);
+    return result;
   }
 
   async getProperty(id: string): Promise<Property> {
@@ -96,8 +128,8 @@ class PropertyService {
     }
 
     const response = await api.get(`${this.baseUrl}/${id}`);
-    setCacheEntry(cacheKey, response.data.property);
-    return response.data.property;
+    setCacheEntry(cacheKey, response.data.data || response.data.property);
+    return response.data.data || response.data.property;
   }
 
   async createProperty(data: CreatePropertyData): Promise<Property> {
@@ -106,7 +138,7 @@ class PropertyService {
     // Clear properties cache
     this.clearPropertiesCache();
     
-    return response.data.property;
+    return response.data.data; // Backend returns { success, message, data }
   }
 
   async updateProperty(id: string, data: Partial<CreatePropertyData>): Promise<Property> {
@@ -116,7 +148,7 @@ class PropertyService {
     this.clearPropertyCache(id);
     this.clearPropertiesCache();
     
-    return response.data.property;
+    return response.data.data || response.data.property;
   }
 
   async deleteProperty(id: string): Promise<void> {
@@ -140,8 +172,12 @@ class PropertyService {
     }
 
     const response = await api.get(`${this.baseUrl}/search`, { params });
-    setCacheEntry(cacheKey, response.data, 60000); // 1 minute cache for search
-    return response.data;
+    const result = {
+      properties: response.data.data || [],
+      total: response.data.pagination?.total || 0,
+    };
+    setCacheEntry(cacheKey, result, 60000); // 1 minute cache for search
+    return result;
   }
 
   async getPropertyStats(id: string): Promise<{
@@ -160,8 +196,8 @@ class PropertyService {
     }
 
     const response = await api.get(`${this.baseUrl}/${id}/stats`);
-    setCacheEntry(cacheKey, response.data.stats, 300000); // 5 minute cache
-    return response.data.stats;
+    setCacheEntry(cacheKey, response.data.data || response.data.stats, 300000); // 5 minute cache
+    return response.data.data || response.data.stats;
   }
 
   async getPropertyEnergyStats(id: string, period: 'day' | 'week' | 'month' = 'day'): Promise<any> {
