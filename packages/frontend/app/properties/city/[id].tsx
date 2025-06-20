@@ -6,21 +6,9 @@ import { colors } from '@/styles/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
-
-type Property = {
-  id: string;
-  title: string;
-  location: string;
-  neighborhood: string;
-  price: string;
-  bedrooms: number;
-  bathrooms: number;
-  size: number;
-  isVerified: boolean;
-  isEcoCertified: boolean;
-  rating: number;
-  imageUrl?: string;
-};
+import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
+import { useProperties } from '@/hooks/usePropertyQueries';
+import { Property } from '@/services/propertyService';
 
 type City = {
   id: string;
@@ -36,111 +24,78 @@ export default function CityPropertiesPage() {
   const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const [loading, setLoading] = useState(true);
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [city, setCity] = useState<City | null>(null);
-  const [activeSort, setActiveSort] = useState<'price_asc' | 'price_desc' | 'rating'>('rating');
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [activeSort, setActiveSort] = useState<string | null>(null);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Use real API data instead of mock data
+  const { data: apiData, isLoading, error } = useProperties({
+    city: id as string
+  });
+
+  // City data definitions
+  const cities: { [key: string]: City } = {
+    'barcelona': {
+      id: 'barcelona',
+      name: 'Barcelona',
+      country: 'Spain',
+      description: t('Cosmopolitan city with stunning architecture and vibrant culture'),
+      propertiesCount: apiData?.properties?.length || 0,
+      averagePrice: '⊜1,200',
+      popularNeighborhoods: ['Eixample', 'Gràcia', 'Sant Martí', 'Sants-Montjuïc', 'Sarrià-Sant Gervasi'],
+    },
+    'berlin': {
+      id: 'berlin',
+      name: 'Berlin',
+      country: 'Germany',
+      description: t('Creative capital with rich history and diverse neighborhoods'),
+      propertiesCount: apiData?.properties?.length || 0,
+      averagePrice: '⊜1,100',
+      popularNeighborhoods: ['Kreuzberg', 'Neukölln', 'Mitte', 'Friedrichshain', 'Prenzlauer Berg'],
+    },
+    'amsterdam': {
+      id: 'amsterdam',
+      name: 'Amsterdam',
+      country: 'Netherlands',
+      description: t('Charming canals and bike-friendly city with international appeal'),
+      propertiesCount: apiData?.properties?.length || 0,
+      averagePrice: '⊜1,400',
+      popularNeighborhoods: ['Jordaan', 'De Pijp', 'Oud-West', 'Centrum', 'Oost'],
+    },
+    'stockholm': {
+      id: 'stockholm',
+      name: 'Stockholm',
+      country: 'Sweden',
+      description: t('Scandinavian beauty with islands and modern sustainability'),
+      propertiesCount: apiData?.properties?.length || 0,
+      averagePrice: '⊜1,300',
+      popularNeighborhoods: ['Södermalm', 'Östermalm', 'Vasastan', 'Kungsholmen', 'Norrmalm'],
+    },
+  };
+
+  const city = cities[id as string];
+
+  // Update properties when API data changes
+  useEffect(() => {
+    if (apiData?.properties) {
+      setProperties(apiData.properties);
+      setLoading(false);
+    }
+  }, [apiData]);
 
   const filterOptions = [
     { id: 'verified', label: t('Verified'), icon: 'shield-checkmark' },
-    { id: 'eco', label: t('Eco'), icon: 'leaf' },
+    { id: 'eco', label: t('Eco-Friendly'), icon: 'leaf' },
     { id: '1bed', label: t('1+ Bed'), icon: 'bed' },
     { id: '2bed', label: t('2+ Bed'), icon: 'bed' },
   ];
 
-  useEffect(() => {
-    // Simulate API calls to fetch city data and properties
-    const fetchData = setTimeout(() => {
-      let cityData: City | null = null;
-
-      // Mock city data based on ID
-      switch (id) {
-        case '1': // Barcelona
-          cityData = {
-            id: '1',
-            name: 'Barcelona',
-            country: 'Spain',
-            description: 'A vibrant coastal city known for its art, architecture, and Mediterranean lifestyle.',
-            propertiesCount: 128,
-            averagePrice: '⊜950',
-            popularNeighborhoods: ['Gracia', 'El Born', 'Eixample', 'Barceloneta']
-          };
-          break;
-        case '2': // Berlin
-          cityData = {
-            id: '2',
-            name: 'Berlin',
-            country: 'Germany',
-            description: 'A cultural hub with a rich history, diverse neighborhoods, and thriving arts scene.',
-            propertiesCount: 94,
-            averagePrice: '⊜750',
-            popularNeighborhoods: ['Kreuzberg', 'Neukölln', 'Mitte', 'Prenzlauer Berg']
-          };
-          break;
-        case '3': // Stockholm
-          cityData = {
-            id: '3',
-            name: 'Stockholm',
-            country: 'Sweden',
-            description: 'A beautiful city built on islands, offering a perfect blend of historical charm and innovation.',
-            propertiesCount: 75,
-            averagePrice: '⊜1,050',
-            popularNeighborhoods: ['Södermalm', 'Östermalm', 'Kungsholmen', 'Vasastan']
-          };
-          break;
-        case '4': // Amsterdam
-          cityData = {
-            id: '4',
-            name: 'Amsterdam',
-            country: 'Netherlands',
-            description: 'Famous for its canals, historical houses, and progressive culture.',
-            propertiesCount: 103,
-            averagePrice: '⊜1,200',
-            popularNeighborhoods: ['Jordaan', 'De Pijp', 'Oud-West', 'Amsterdam Noord']
-          };
-          break;
-        default:
-          cityData = {
-            id: id as string,
-            name: 'City',
-            country: 'Country',
-            description: 'A beautiful city with many properties.',
-            propertiesCount: 50,
-            averagePrice: '⊜900',
-            popularNeighborhoods: ['Downtown', 'Riverside', 'University District']
-          };
-      }
-
-      setCity(cityData);
-
-      // Generate mock properties for the selected city
-      const mockProperties: Property[] = [];
-      const neighborhoodOptions = cityData.popularNeighborhoods;
-
-      for (let i = 1; i <= 10; i++) {
-        const neighborhood = neighborhoodOptions[Math.floor(Math.random() * neighborhoodOptions.length)];
-        mockProperties.push({
-          id: `${id}-${i}`,
-          title: `${i % 3 === 0 ? 'Modern' : i % 3 === 1 ? 'Cozy' : 'Spacious'} ${i % 2 === 0 ? 'Studio' : 'Apartment'} in ${neighborhood}`,
-          location: `${cityData.name}, ${cityData.country}`,
-          neighborhood,
-          price: `⊜${Math.floor(600 + Math.random() * 900)}/month`,
-          bedrooms: Math.floor(Math.random() * 3) + 1,
-          bathrooms: Math.floor(Math.random() * 2) + 1,
-          size: Math.floor(45 + Math.random() * 60),
-          isVerified: Math.random() > 0.3,
-          isEcoCertified: Math.random() > 0.7,
-          rating: parseFloat((3.8 + Math.random() * 1.2).toFixed(1)),
-        });
-      }
-
-      setProperties(mockProperties);
-      setLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(fetchData);
-  }, [id]);
+  const sortOptions = [
+    { id: 'price_asc', label: t('Price: Low to High'), icon: 'arrow-up' },
+    { id: 'price_desc', label: t('Price: High to Low'), icon: 'arrow-down' },
+    { id: 'rating', label: t('Rating'), icon: 'star' },
+  ];
 
   const getFilteredAndSortedProperties = () => {
     let result = [...properties];
@@ -149,39 +104,46 @@ export default function CityPropertiesPage() {
     if (activeFilter) {
       switch (activeFilter) {
         case 'verified':
-          result = result.filter(p => p.isVerified);
+          result = result.filter(p => p.status === 'available');
           break;
         case 'eco':
-          result = result.filter(p => p.isEcoCertified);
+          result = result.filter(p => p.amenities?.some(a =>
+            a.toLowerCase().includes('eco') ||
+            a.toLowerCase().includes('green') ||
+            a.toLowerCase().includes('solar')
+          ));
           break;
         case '1bed':
-          result = result.filter(p => p.bedrooms >= 1);
+          result = result.filter(p => (p.bedrooms || 0) >= 1);
           break;
         case '2bed':
-          result = result.filter(p => p.bedrooms >= 2);
+          result = result.filter(p => (p.bedrooms || 0) >= 2);
           break;
       }
     }
 
     // Apply sorting
-    switch (activeSort) {
-      case 'price_asc':
-        result.sort((a, b) => {
-          const priceA = parseInt(a.price.replace(/[^0-9]/g, ''));
-          const priceB = parseInt(b.price.replace(/[^0-9]/g, ''));
-          return priceA - priceB;
-        });
-        break;
-      case 'price_desc':
-        result.sort((a, b) => {
-          const priceA = parseInt(a.price.replace(/[^0-9]/g, ''));
-          const priceB = parseInt(b.price.replace(/[^0-9]/g, ''));
-          return priceB - priceA;
-        });
-        break;
-      case 'rating':
-        result.sort((a, b) => parseFloat(b.rating.toString()) - parseFloat(a.rating.toString()));
-        break;
+    if (activeSort) {
+      switch (activeSort) {
+        case 'price_asc':
+          result.sort((a, b) => {
+            const priceA = a.rent?.amount || 0;
+            const priceB = b.rent?.amount || 0;
+            return priceA - priceB;
+          });
+          break;
+        case 'price_desc':
+          result.sort((a, b) => {
+            const priceA = a.rent?.amount || 0;
+            const priceB = b.rent?.amount || 0;
+            return priceB - priceA;
+          });
+          break;
+        case 'rating':
+          // Use a default rating since it's not in the API
+          result.sort((a, b) => 4.5 - 4.5); // No change since we don't have ratings
+          break;
+      }
     }
 
     return result;

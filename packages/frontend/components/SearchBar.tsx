@@ -17,7 +17,11 @@ const debounce = (func: Function, wait: number) => {
     };
 };
 
-export const SearchBar = () => {
+interface SearchBarProps {
+    hideFilterIcon?: boolean;
+}
+
+export const SearchBar = ({ hideFilterIcon = false }: SearchBarProps) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
@@ -87,15 +91,22 @@ export const SearchBar = () => {
                     returnKeyType="search"
                     onSubmitEditing={() => handleSearch(searchQuery)}
                 />
-                <TouchableOpacity
-                    onPress={() => setShowFilters(!showFilters)}
-                    style={{
+                {hideFilterIcon ? (
+                    <View style={{
                         padding: 10,
                         marginRight: 5,
-                    }}
-                >
-                    <Ionicons name="options-outline" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
-                </TouchableOpacity>
+                    }} />
+                ) : (
+                    <TouchableOpacity
+                        onPress={() => setShowFilters(!showFilters)}
+                        style={{
+                            padding: 10,
+                            marginRight: 5,
+                        }}
+                    >
+                        <Ionicons name="options-outline" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
+                    </TouchableOpacity>
+                )}
             </View>
 
             {showFilters && (

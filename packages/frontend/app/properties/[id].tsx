@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/styles/colors';
@@ -11,6 +11,7 @@ import { useOxy } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
 import { toast } from 'sonner';
 import * as Haptics from 'expo-haptics';
+import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 
 type PropertyDetail = {
   id: string;
@@ -64,9 +65,17 @@ export default function PropertyDetailPage() {
       ? `${currency}${apiProperty.rent.amount}/${apiProperty.rent.paymentFrequency || 'month'}`
       : '';
 
+    // Generate title dynamically from property data
+    const generatedTitle = generatePropertyTitle({
+      type: apiProperty.type,
+      address: apiProperty.address,
+      bedrooms: apiProperty.bedrooms,
+      bathrooms: apiProperty.bathrooms
+    });
+
     return {
       id: apiProperty._id || apiProperty.id || '',
-      title: apiProperty.title,
+      title: generatedTitle,
       description: apiProperty.description || '',
       location: `${apiProperty.address?.city || ''}, ${apiProperty.address?.country || ''}`,
       price,

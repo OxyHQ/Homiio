@@ -147,12 +147,6 @@ const propertySchema = new mongoose.Schema({
     type: String,
     required: [true, 'Owner ID is required']
   },
-  title: {
-    type: String,
-    required: [true, 'Property title is required'],
-    trim: true,
-    maxlength: [200, 'Title cannot exceed 200 characters']
-  },
   description: {
     type: String,
     trim: true,

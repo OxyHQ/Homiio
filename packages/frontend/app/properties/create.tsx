@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TextInput, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -6,6 +6,7 @@ import { colors } from '@/styles/colors';
 import Button from '@/components/Button';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { PropertyMap } from '@/components/PropertyMap';
 import { useCreateProperty } from '@/hooks/usePropertyQueries';
 import { CreatePropertyData } from '@/services/propertyService';
 import { useOxy } from '@oxyhq/services';
@@ -13,9 +14,8 @@ import { useOxy } from '@oxyhq/services';
 export default function CreatePropertyScreen() {
   const router = useRouter();
   const { oxyServices, activeSessionId } = useOxy();
-  
+
   const [formData, setFormData] = useState<CreatePropertyData>({
-    title: '',
     address: {
       street: '',
       city: '',
@@ -38,13 +38,96 @@ export default function CreatePropertyScreen() {
     amenities: [],
   });
 
+  const [selectedLocation, setSelectedLocation] = useState<{
+    latitude: number;
+    longitude: number;
+    address: string;
+  } | null>(null);
+
+  // Search functionality
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+
   const createPropertyMutation = useCreateProperty();
 
+  // Search handler
+  useEffect(() => {
+    if (searchQuery.length < 3) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5`)
+        .then(res => res.json())
+        .then(data => {
+          setSearchResults(data);
+          setShowSearchResults(true);
+        })
+        .catch(() => {
+          setSearchResults([]);
+          setShowSearchResults(false);
+        });
+    }, 400);
+
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
+
+  const handleSearchSelect = (result: any) => {
+    const lat = parseFloat(result.lat);
+    const lng = parseFloat(result.lon);
+    const address = result.display_name;
+
+    setSelectedLocation({ latitude: lat, longitude: lng, address });
+    setSearchQuery(address);
+    setShowSearchResults(false);
+
+    // Parse the address to extract components
+    const addressParts = address.split(', ');
+    if (addressParts.length >= 3) {
+      const street = addressParts[0];
+      const city = addressParts[1];
+      const state = addressParts[2];
+      const zipCode = addressParts.length > 3 ? addressParts[3] : '';
+
+      updateAddressField('street', street);
+      updateAddressField('city', city);
+      updateAddressField('state', state);
+      updateAddressField('zipCode', zipCode);
+    } else {
+      // If we can't parse the address, just use the full address as street
+      updateAddressField('street', address);
+    }
+  };
+
+  const handleLocationSelect = (lat: number, lng: number, address: string) => {
+    setSelectedLocation({ latitude: lat, longitude: lng, address });
+
+    // Parse the address to extract components
+    const addressParts = address.split(', ');
+    if (addressParts.length >= 3) {
+      const street = addressParts[0];
+      const city = addressParts[1];
+      const state = addressParts[2];
+      const zipCode = addressParts.length > 3 ? addressParts[3] : '';
+
+      updateAddressField('street', street);
+      updateAddressField('city', city);
+      updateAddressField('state', state);
+      updateAddressField('zipCode', zipCode);
+    } else {
+      // If we can't parse the address, just use the full address as street
+      updateAddressField('street', address);
+    }
+  };
+
   const handleSubmit = async () => {
-    // Check authentication first
+    // Check if user is authenticated
     if (!oxyServices || !activeSessionId) {
       Alert.alert(
-        'Authentication Required', 
+        'Authentication Required',
         'Please sign in with OxyServices to create a property.',
         [
           {
@@ -58,43 +141,41 @@ export default function CreatePropertyScreen() {
 
     // Validation
     const errors = [];
-    
-    if (!formData.title.trim()) {
-      errors.push('Property title is required');
-    }
-    
+
+    // Title is now generated dynamically when displaying properties
+
     if (!formData.address.street.trim()) {
       errors.push('Street address is required');
     }
-    
+
     if (!formData.address.city.trim()) {
       errors.push('City is required');
     }
-    
+
     if (!formData.address.state.trim()) {
       errors.push('State is required');
     }
-    
+
     if (!formData.address.zipCode.trim()) {
       errors.push('ZIP code is required');
     }
-    
+
     if (formData.rent.amount <= 0) {
       errors.push('Rent amount must be greater than 0');
     }
-    
+
     if (formData.bedrooms !== undefined && formData.bedrooms < 0) {
       errors.push('Bedrooms cannot be negative');
     }
-    
+
     if (formData.bathrooms !== undefined && formData.bathrooms < 0) {
       errors.push('Bathrooms cannot be negative');
     }
-    
+
     if (formData.squareFootage !== undefined && formData.squareFootage < 0) {
       errors.push('Square footage cannot be negative');
     }
-    
+
     if (formData.rent.deposit !== undefined && formData.rent.deposit < 0) {
       errors.push('Security deposit cannot be negative');
     }
@@ -105,7 +186,16 @@ export default function CreatePropertyScreen() {
     }
 
     try {
-      await createPropertyMutation.mutateAsync(formData);
+      // Add location data to the form data
+      const propertyData = {
+        ...formData,
+        location: selectedLocation ? {
+          latitude: selectedLocation.latitude,
+          longitude: selectedLocation.longitude,
+        } : undefined,
+      };
+
+      await createPropertyMutation.mutateAsync(propertyData);
       Alert.alert('Success', 'Property created successfully!', [
         {
           text: 'OK',
@@ -114,9 +204,9 @@ export default function CreatePropertyScreen() {
       ]);
     } catch (error: any) {
       console.error('Property creation error:', error);
-      
+
       let errorMessage = 'Failed to create property. Please try again.';
-      
+
       // Handle OxyServices authentication errors specifically
       if (error.message && error.message.includes('Authentication')) {
         errorMessage = 'Authentication failed. Please sign in again.';
@@ -129,7 +219,7 @@ export default function CreatePropertyScreen() {
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       Alert.alert('Error', errorMessage);
     }
   };
@@ -139,15 +229,15 @@ export default function CreatePropertyScreen() {
   };
 
   const updateAddressField = (field: keyof CreatePropertyData['address'], value: string) => {
-    setFormData(prev => ({ 
-      ...prev, 
+    setFormData(prev => ({
+      ...prev,
       address: { ...prev.address, [field]: value }
     }));
   };
 
   const updateRentField = (field: keyof CreatePropertyData['rent'], value: any) => {
-    setFormData(prev => ({ 
-      ...prev, 
+    setFormData(prev => ({
+      ...prev,
       rent: { ...prev.rent, [field]: value }
     }));
   };
@@ -172,14 +262,56 @@ export default function CreatePropertyScreen() {
 
       <ScrollView style={styles.scrollView}>
         <View style={styles.form}>
+          {/* Map Section */}
           <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Property Title *</ThemedText>
-            <TextInput
-              style={styles.textInput}
-              value={formData.title}
-              onChangeText={(text) => updateField('title', text)}
-              placeholder="Enter property title"
+            <ThemedText style={styles.label}>Location *</ThemedText>
+            <ThemedText style={styles.subLabel}>
+              Search for an address or click on the map to select a location
+            </ThemedText>
+
+            {/* Search Input */}
+            <View style={styles.searchContainer}>
+              <TextInput
+                style={styles.searchInput}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Search for an address..."
+                onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
+              />
+
+              {/* Search Results */}
+              {showSearchResults && searchResults.length > 0 && (
+                <View style={styles.searchResults}>
+                  {searchResults.map((result, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={styles.searchResult}
+                      onPress={() => handleSearchSelect(result)}
+                    >
+                      <ThemedText style={styles.searchResultText}>
+                        {result.display_name}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            <PropertyMap
+              latitude={selectedLocation?.latitude}
+              longitude={selectedLocation?.longitude}
+              address={selectedLocation?.address}
+              onLocationSelect={handleLocationSelect}
+              height={300}
+              interactive={true}
             />
+            {selectedLocation && (
+              <View style={styles.locationInfo}>
+                <ThemedText style={styles.locationText}>
+                  Selected: {selectedLocation.address}
+                </ThemedText>
+              </View>
+            )}
           </View>
 
           <View style={styles.inputGroup}>
@@ -236,7 +368,7 @@ export default function CreatePropertyScreen() {
                   ]}
                   onPress={() => updateField('type', type)}
                 >
-                  <ThemedText 
+                  <ThemedText
                     style={[
                       styles.pickerOptionText,
                       formData.type === type && styles.pickerOptionTextSelected
@@ -332,7 +464,7 @@ export default function CreatePropertyScreen() {
                   ]}
                   onPress={() => updateRentField('utilities', utility)}
                 >
-                  <ThemedText 
+                  <ThemedText
                     style={[
                       styles.pickerOptionText,
                       formData.rent.utilities === utility && styles.pickerOptionTextSelected
@@ -357,7 +489,7 @@ export default function CreatePropertyScreen() {
                   ]}
                   onPress={() => toggleAmenity(amenity)}
                 >
-                  <ThemedText 
+                  <ThemedText
                     style={[
                       styles.pickerOptionText,
                       formData.amenities?.includes(amenity) && styles.pickerOptionTextSelected
@@ -465,7 +597,60 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
   },
   pickerOptionTextSelected: {
-    color: colors.primaryLight,
+    color: 'white',
     fontWeight: '600',
+  },
+  locationInfo: {
+    marginTop: 8,
+    padding: 12,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primaryLight_1,
+    borderRadius: 8,
+  },
+  locationText: {
+    fontSize: 14,
+    color: colors.primaryDark,
+  },
+  subLabel: {
+    fontSize: 14,
+    color: colors.primaryDark_1,
+    marginBottom: 8,
+  },
+  searchContainer: {
+    position: 'relative',
+    marginBottom: 12,
+    zIndex: 1000,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: colors.primaryLight_1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    backgroundColor: colors.primaryLight,
+    color: colors.primaryDark,
+  },
+  searchResults: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primaryLight_1,
+    borderRadius: 8,
+    maxHeight: 200,
+    zIndex: 1001,
+  },
+  searchResult: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.primaryLight_1,
+  },
+  searchResultText: {
+    fontSize: 14,
+    color: colors.primaryDark,
   },
 });

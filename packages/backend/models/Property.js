@@ -6,7 +6,7 @@ class Property {
   constructor(data = {}) {
     this.id = data.id || null;
     this.ownerId = data.ownerId || null;
-    this.title = data.title || '';
+    // Title removed - will be generated dynamically when displaying properties
     this.description = data.description || '';
     this.address = {
       street: data.address?.street || '',
@@ -61,10 +61,7 @@ class Property {
   validate() {
     const errors = [];
     
-    // Required fields
-    if (!this.title || this.title.trim() === '') {
-      errors.push('Title is required and cannot be empty');
-    }
+    // Required fields (title is now optional since we auto-generate it)
     if (!this.ownerId) {
       errors.push('Owner ID is required');
     }
@@ -122,7 +119,7 @@ class Property {
     return {
       id: this.id,
       ownerId: this.ownerId,
-      title: this.title,
+      // Title will be generated dynamically when displaying properties
       description: this.description,
       address: this.address,
       type: this.type,

@@ -3,7 +3,6 @@ import api, { getCacheKey, setCacheEntry, getCacheEntry } from '@/utils/api';
 export interface Property {
   _id: string; // MongoDB ObjectId
   id?: string; // Optional fallback
-  title: string;
   address: {
     street: string;
     city: string;
@@ -57,7 +56,7 @@ export interface Property {
 }
 
 export interface CreatePropertyData {
-  title: string;
+  // Title removed - will be generated dynamically when displaying properties
   address: {
     street: string;
     city: string;
@@ -79,6 +78,10 @@ export interface CreatePropertyData {
   };
   amenities?: string[];
   images?: string[];
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
 }
 
 export interface PropertyFilters {

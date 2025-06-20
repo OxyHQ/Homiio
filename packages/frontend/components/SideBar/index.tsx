@@ -192,7 +192,12 @@ export function SideBar() {
                                 href="/properties/create"
                                 renderText={({ state }) =>
                                     state === 'desktop' ? (
-                                        <Text className="text-white text-[17px] font-bold">
+                                        <Text style={{
+                                            color: 'white',
+                                            fontSize: 17,
+                                            fontWeight: 'bold',
+                                            textAlign: 'center'
+                                        }}>
                                             Add Property
                                         </Text>
                                     ) : null

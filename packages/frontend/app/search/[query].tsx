@@ -18,6 +18,7 @@ import { colors } from '@/styles/colors';
 import { PropertyCard } from '@/components/PropertyCard';
 import { useSearchProperties } from '@/hooks/usePropertyQueries';
 import { Property, PropertyFilters } from '@/services/propertyService';
+import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 
 interface SearchFilters {
     type?: string;
@@ -39,6 +40,8 @@ export default function SearchResultsScreen() {
     const [filters, setFilters] = useState<SearchFilters>({});
     const [showFilters, setShowFilters] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [properties, setProperties] = useState<Property[]>([]);
+    const [loading, setLoading] = useState(true);
 
     // Property type options
     const propertyTypes = [
@@ -70,14 +73,19 @@ export default function SearchResultsScreen() {
 
     // Use the search hook
     const {
-        data: searchData,
+        data: apiData,
         isLoading,
         error,
         refetch,
     } = useSearchProperties(searchQuery, apiFilters);
 
-    const properties = searchData?.properties || [];
-    const totalResults = searchData?.total || 0;
+    // Update properties when API data changes
+    useEffect(() => {
+        if (apiData?.properties) {
+            setProperties(apiData.properties);
+            setLoading(false);
+        }
+    }, [apiData]);
 
     // Handle refresh
     const handleRefresh = useCallback(async () => {
@@ -92,22 +100,32 @@ export default function SearchResultsScreen() {
     };
 
     // Convert Property to PropertyCard props
-    const convertPropertyToCardProps = (property: Property) => ({
-        id: property._id || property.id || '',
-        title: property.title,
-        location: `${property.address.city}, ${property.address.state}`,
-        price: property.rent.amount,
-        currency: property.rent.currency,
-        type: property.type as any,
-        imageUrl: property.images?.[0] || 'https://via.placeholder.com/300x200',
-        bedrooms: property.bedrooms || 0,
-        bathrooms: property.bathrooms || 0,
-        size: property.squareFootage || 0,
-        sizeUnit: 'm²',
-        isFavorite: false,
-        isVerified: true,
-        onPress: () => handlePropertyPress(property),
-    });
+    const convertPropertyToCardProps = (property: Property) => {
+        // Generate title dynamically from property data
+        const generatedTitle = generatePropertyTitle({
+            type: property.type,
+            address: property.address,
+            bedrooms: property.bedrooms,
+            bathrooms: property.bathrooms
+        });
+
+        return {
+            id: property._id || property.id || '',
+            title: generatedTitle,
+            location: `${property.address.city}, ${property.address.state}`,
+            price: property.rent.amount,
+            currency: property.rent.currency,
+            type: property.type as any,
+            imageUrl: property.images?.[0] || 'https://via.placeholder.com/300x200',
+            bedrooms: property.bedrooms || 0,
+            bathrooms: property.bathrooms || 0,
+            size: property.squareFootage || 0,
+            sizeUnit: 'm²',
+            isFavorite: false,
+            isVerified: true,
+            onPress: () => handlePropertyPress(property),
+        };
+    };
 
     // Handle filter changes
     const handleFilterChange = (key: keyof SearchFilters, value: any) => {
@@ -254,7 +272,7 @@ export default function SearchResultsScreen() {
 
     // Render search results
     const renderSearchResults = () => {
-        if (isLoading && !isRefreshing) {
+        if (loading && !isRefreshing) {
             return (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={colors.primaryColor} />
@@ -295,7 +313,7 @@ export default function SearchResultsScreen() {
             <View style={styles.resultsContainer}>
                 <View style={styles.resultsHeader}>
                     <Text style={styles.resultsCount}>
-                        {t('{{count}} properties found', { count: totalResults })}
+                        {t('{{count}} properties found', { count: apiData?.total || 0 })}
                     </Text>
                     {Object.keys(filters).length > 0 && (
                         <TouchableOpacity onPress={clearFilters}>

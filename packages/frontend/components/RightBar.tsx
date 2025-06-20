@@ -25,11 +25,13 @@ export function RightBar() {
         return 'home'; // Default to home
     };
 
+    const isSearchScreen = pathname === '/search' || pathname.startsWith('/search/');
+
     if (!isRightBarVisible) return null;
 
     return (
         <View style={styles.container}>
-            <SearchBar />
+            <SearchBar hideFilterIcon={isSearchScreen} />
             <WidgetManager screenId={getScreenId()} />
         </View>
     )

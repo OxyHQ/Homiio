@@ -6,21 +6,9 @@ import { colors } from '@/styles/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
-
-type Property = {
-  id: string;
-  title: string;
-  location: string;
-  price: string;
-  bedrooms: number;
-  bathrooms: number;
-  size: number;
-  isVerified: boolean;
-  isEcoCertified: boolean;
-  features: string[];
-  rating: number;
-  imageUrl?: string;
-};
+import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
+import { useProperties } from '@/hooks/usePropertyQueries';
+import { Property } from '@/services/propertyService';
 
 type PropertyType = {
   id: string;
@@ -34,189 +22,113 @@ export default function PropertyTypePage() {
   const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const [loading, setLoading] = useState(true);
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [propertyType, setPropertyType] = useState<PropertyType | null>(null);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Filter options can vary based on property type
-  const [filterOptions, setFilterOptions] = useState<Array<{ id: string; label: string; icon: string }>>([]);
+  // Use real API data instead of mock data
+  const { data: apiData, isLoading, error } = useProperties({ type: id as string });
 
+  // Property type definitions
+  const propertyTypes: { [key: string]: PropertyType } = {
+    '1': {
+      id: '1',
+      name: t('Apartments'),
+      description: t('Modern apartments with all amenities'),
+      icon: 'business-outline',
+      propertiesCount: apiData?.properties?.length || 0,
+    },
+    '2': {
+      id: '2',
+      name: t('Houses'),
+      description: t('Spacious houses with gardens'),
+      icon: 'home-outline',
+      propertiesCount: apiData?.properties?.length || 0,
+    },
+    '3': {
+      id: '3',
+      name: t('Co-Living'),
+      description: t('Shared spaces for community living'),
+      icon: 'people-outline',
+      propertiesCount: apiData?.properties?.length || 0,
+    },
+    '4': {
+      id: '4',
+      name: t('Eco-Friendly'),
+      description: t('Sustainable and energy-efficient properties'),
+      icon: 'leaf-outline',
+      propertiesCount: apiData?.properties?.length || 0,
+    },
+  };
+
+  const propertyType = propertyTypes[id as string];
+
+  // Update properties when API data changes
   useEffect(() => {
-    // Simulate API call to get property type details and properties
-    const fetchData = setTimeout(() => {
-      let typeData: PropertyType | null = null;
-
-      // Mock property type data based on ID
-      switch (id) {
-        case '1': // Apartments
-          typeData = {
-            id: '1',
-            name: 'Apartments',
-            description: 'Modern apartments in urban centers with convenient access to amenities and transportation.',
-            icon: 'business-outline',
-            propertiesCount: 85
-          };
-          setFilterOptions([
-            { id: 'balcony', label: t('Balcony'), icon: 'sunny-outline' },
-            { id: 'elevator', label: t('Elevator'), icon: 'arrow-up-outline' },
-            { id: 'furnished', label: t('Furnished'), icon: 'bed-outline' },
-            { id: 'pets', label: t('Pets Allowed'), icon: 'paw-outline' },
-          ]);
-          break;
-        case '2': // Houses
-          typeData = {
-            id: '2',
-            name: 'Houses',
-            description: 'Spacious houses with private gardens and multiple bedrooms for families and shared living.',
-            icon: 'home-outline',
-            propertiesCount: 62
-          };
-          setFilterOptions([
-            { id: 'garden', label: t('Garden'), icon: 'leaf-outline' },
-            { id: 'parking', label: t('Parking'), icon: 'car-outline' },
-            { id: 'fireplace', label: t('Fireplace'), icon: 'flame-outline' },
-            { id: 'pets', label: t('Pets Allowed'), icon: 'paw-outline' },
-          ]);
-          break;
-        case '3': // Co-living
-          typeData = {
-            id: '3',
-            name: 'Co-Living Spaces',
-            description: 'Shared living environments with private bedrooms and community-oriented common spaces.',
-            icon: 'people-outline',
-            propertiesCount: 43
-          };
-          setFilterOptions([
-            { id: 'workspace', label: t('Workspace'), icon: 'laptop-outline' },
-            { id: 'events', label: t('Events'), icon: 'calendar-outline' },
-            { id: 'gym', label: t('Gym Access'), icon: 'barbell-outline' },
-            { id: 'cleaning', label: t('Cleaning'), icon: 'sparkles-outline' },
-          ]);
-          break;
-        case '4': // Eco-friendly
-          typeData = {
-            id: '4',
-            name: 'Eco-Friendly',
-            description: 'Sustainable properties with energy-efficient features and environmentally-conscious design.',
-            icon: 'leaf-outline',
-            propertiesCount: 38
-          };
-          setFilterOptions([
-            { id: 'solar', label: t('Solar Panels'), icon: 'sunny-outline' },
-            { id: 'garden', label: t('Garden'), icon: 'leaf-outline' },
-            { id: 'ecoRating', label: t('A+ Rating'), icon: 'ribbon-outline' },
-            { id: 'water', label: t('Water Saving'), icon: 'water-outline' },
-          ]);
-          break;
-        default:
-          typeData = {
-            id: id as string,
-            name: 'Properties',
-            description: 'Browse our selection of quality properties.',
-            icon: 'home-outline',
-            propertiesCount: 30
-          };
-          setFilterOptions([
-            { id: 'verified', label: t('Verified'), icon: 'shield-checkmark-outline' },
-            { id: 'furnished', label: t('Furnished'), icon: 'bed-outline' },
-            { id: 'pets', label: t('Pets Allowed'), icon: 'paw-outline' },
-          ]);
-      }
-
-      setPropertyType(typeData);
-
-      // Generate mock properties based on the type
-      const mockProperties: Property[] = [];
-      const featureSets = {
-        '1': ['Balcony', 'City View', 'Elevator', 'Security', 'Close to Transport'],
-        '2': ['Garden', 'Parking', 'Terrace', 'Storage', 'Family Room'],
-        '3': ['Shared Kitchen', 'Events Space', 'Co-working Area', 'Laundry Service', 'Community Activities'],
-        '4': ['Solar Panels', 'Rainwater Collection', 'Energy Efficient', 'Sustainable Materials', 'Green Roof'],
-      };
-
-      const features = featureSets[id as keyof typeof featureSets] ||
-        ['Wi-Fi', 'Central Location', 'Modern Design', 'Well Maintained'];
-
-      for (let i = 1; i <= 12; i++) {
-        const randomFeatures: string[] = [];
-        const featureCount = Math.floor(Math.random() * 3) + 2; // 2-4 features
-
-        for (let j = 0; j < featureCount; j++) {
-          const feature = features[Math.floor(Math.random() * features.length)];
-          if (!randomFeatures.includes(feature)) {
-            randomFeatures.push(feature);
-          }
-        }
-
-        const isEco = id === '4' || Math.random() > 0.7;
-
-        mockProperties.push({
-          id: `${id}-${i}`,
-          title: `${i % 3 === 0 ? 'Modern' : i % 3 === 1 ? 'Cozy' : 'Spacious'} ${id === '1' ? 'Apartment' :
-              id === '2' ? 'House' :
-                id === '3' ? 'Co-Living Space' :
-                  'Property'
-            }`,
-          location: ['Barcelona', 'Berlin', 'Amsterdam', 'Stockholm'][Math.floor(Math.random() * 4)],
-          price: `⊜${Math.floor(600 + Math.random() * 900)}/month`,
-          bedrooms: id === '3' ? 1 : Math.floor(Math.random() * 3) + 1,
-          bathrooms: Math.floor(Math.random() * 2) + 1,
-          size: Math.floor(45 + Math.random() * 60),
-          isVerified: Math.random() > 0.2,
-          isEcoCertified: isEco,
-          features: randomFeatures,
-          rating: parseFloat((3.8 + Math.random() * 1.2).toFixed(1)),
-        });
-      }
-
-      setProperties(mockProperties);
+    if (apiData?.properties) {
+      setProperties(apiData.properties);
       setLoading(false);
-    }, 1000);
+    }
+  }, [apiData]);
 
-    return () => clearTimeout(fetchData);
-  }, [id, t]);
+  // Filter options
+  const filterOptions = [
+    { id: 'balcony', label: t('Balcony'), icon: 'sunny-outline' },
+    { id: 'elevator', label: t('Elevator'), icon: 'arrow-up-outline' },
+    { id: 'furnished', label: t('Furnished'), icon: 'bed-outline' },
+    { id: 'garden', label: t('Garden'), icon: 'leaf-outline' },
+    { id: 'parking', label: t('Parking'), icon: 'car-outline' },
+    { id: 'fireplace', label: t('Fireplace'), icon: 'flame-outline' },
+    { id: 'workspace', label: t('Workspace'), icon: 'laptop-outline' },
+    { id: 'events', label: t('Events'), icon: 'calendar-outline' },
+    { id: 'gym', label: t('Gym'), icon: 'fitness-outline' },
+    { id: 'cleaning', label: t('Cleaning'), icon: 'brush-outline' },
+    { id: 'solar', label: t('Solar'), icon: 'sunny-outline' },
+    { id: 'ecoRating', label: t('Eco Rating'), icon: 'leaf-outline' },
+    { id: 'water', label: t('Water'), icon: 'water-outline' },
+    { id: 'pets', label: t('Pets'), icon: 'paw-outline' },
+  ];
 
   const getFilteredProperties = () => {
     if (!activeFilter) return properties;
 
     switch (activeFilter) {
       case 'balcony':
-        return properties.filter(p => p.features.some(f => f.toLowerCase().includes('balcony')));
+        return properties.filter(p => p.amenities?.some(a => a.toLowerCase().includes('balcony')));
       case 'elevator':
-        return properties.filter(p => p.features.some(f => f.toLowerCase().includes('elevator')));
+        return properties.filter(p => p.amenities?.some(a => a.toLowerCase().includes('elevator')));
       case 'furnished':
-        return properties.filter(p => p.features.some(f =>
-          f.toLowerCase().includes('furnished') || f.toLowerCase().includes('bed')
+        return properties.filter(p => p.amenities?.some(a =>
+          a.toLowerCase().includes('furnished') || a.toLowerCase().includes('bed')
         ));
       case 'garden':
-        return properties.filter(p => p.features.some(f => f.toLowerCase().includes('garden')));
+        return properties.filter(p => p.amenities?.some(a => a.toLowerCase().includes('garden')));
       case 'parking':
-        return properties.filter(p => p.features.some(f => f.toLowerCase().includes('parking')));
+        return properties.filter(p => p.amenities?.some(a => a.toLowerCase().includes('parking')));
       case 'fireplace':
-        return properties.filter(p => p.features.some(f => f.toLowerCase().includes('fireplace')));
+        return properties.filter(p => p.amenities?.some(a => a.toLowerCase().includes('fireplace')));
       case 'workspace':
-        return properties.filter(p => p.features.some(f =>
-          f.toLowerCase().includes('workspace') || f.toLowerCase().includes('working')
+        return properties.filter(p => p.amenities?.some(a =>
+          a.toLowerCase().includes('workspace') || a.toLowerCase().includes('working')
         ));
       case 'events':
-        return properties.filter(p => p.features.some(f =>
-          f.toLowerCase().includes('event') || f.toLowerCase().includes('activities')
+        return properties.filter(p => p.amenities?.some(a =>
+          a.toLowerCase().includes('event') || a.toLowerCase().includes('activities')
         ));
       case 'gym':
-        return properties.filter(p => p.features.some(f => f.toLowerCase().includes('gym')));
+        return properties.filter(p => p.amenities?.some(a => a.toLowerCase().includes('gym')));
       case 'cleaning':
-        return properties.filter(p => p.features.some(f =>
-          f.toLowerCase().includes('cleaning') || f.toLowerCase().includes('laundry') || f.toLowerCase().includes('service')
+        return properties.filter(p => p.amenities?.some(a =>
+          a.toLowerCase().includes('cleaning') || a.toLowerCase().includes('laundry') || a.toLowerCase().includes('service')
         ));
       case 'solar':
-        return properties.filter(p => p.features.some(f => f.toLowerCase().includes('solar')));
+        return properties.filter(p => p.amenities?.some(a => a.toLowerCase().includes('solar')));
       case 'ecoRating':
-        return properties.filter(p => p.isEcoCertified);
+        return properties.filter(p => p.amenities?.some(a => a.toLowerCase().includes('eco')));
       case 'water':
-        return properties.filter(p => p.features.some(f => f.toLowerCase().includes('water')));
+        return properties.filter(p => p.amenities?.some(a => a.toLowerCase().includes('water')));
       case 'pets':
-        return properties.filter(p => p.features.some(f => f.toLowerCase().includes('pet')));
+        return properties.filter(p => p.amenities?.some(a => a.toLowerCase().includes('pet')));
       default:
         return properties;
     }
@@ -249,73 +161,91 @@ export default function PropertyTypePage() {
     </TouchableOpacity>
   );
 
-  const renderPropertyItem = ({ item }: { item: Property }) => (
-    <TouchableOpacity
-      style={styles.propertyCard}
-      onPress={() => router.push(`/properties/${item.id}`)}
-    >
-      <View style={styles.propertyImagePlaceholder}>
-        {/* This would be replaced with an actual image in a real app */}
-        <Ionicons name={propertyType?.icon as any} size={40} color={colors.COLOR_BLACK_LIGHT_3} />
+  const renderPropertyItem = ({ item }: { item: Property }) => {
+    // Generate title dynamically from real property data
+    const generatedTitle = generatePropertyTitle({
+      type: item.type,
+      address: item.address,
+      bedrooms: item.bedrooms,
+      bathrooms: item.bathrooms
+    });
 
-        {item.isVerified && (
-          <View style={styles.verifiedBadge}>
-            <Ionicons name="shield-checkmark" size={14} color="white" />
-          </View>
-        )}
+    const isEcoCertified = item.amenities?.some(a =>
+      a.toLowerCase().includes('eco') ||
+      a.toLowerCase().includes('green') ||
+      a.toLowerCase().includes('solar')
+    );
 
-        {item.isEcoCertified && (
-          <View style={styles.ecoBadge}>
-            <Ionicons name="leaf" size={14} color="white" />
-          </View>
-        )}
-      </View>
+    return (
+      <TouchableOpacity
+        style={styles.propertyCard}
+        onPress={() => router.push(`/properties/${item._id || item.id}`)}
+      >
+        <View style={styles.propertyImagePlaceholder}>
+          <Ionicons name={propertyType?.icon as any} size={40} color={colors.COLOR_BLACK_LIGHT_3} />
 
-      <View style={styles.propertyContent}>
-        <Text style={styles.propertyTitle} numberOfLines={1}>{item.title}</Text>
-
-        <Text style={styles.propertyLocation}>
-          <Ionicons name="location-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} /> {item.location}
-        </Text>
-
-        <View style={styles.propertyDetailsRow}>
-          <View style={styles.propertyDetail}>
-            <Ionicons name="bed-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
-            <Text style={styles.detailText}>{item.bedrooms}</Text>
-          </View>
-
-          <View style={styles.propertyDetail}>
-            <Ionicons name="water-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
-            <Text style={styles.detailText}>{item.bathrooms}</Text>
-          </View>
-
-          <View style={styles.propertyDetail}>
-            <Ionicons name="resize-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
-            <Text style={styles.detailText}>{item.size} m²</Text>
-          </View>
-        </View>
-
-        <View style={styles.featuresContainer}>
-          {item.features.slice(0, 3).map((feature, index) => (
-            <View key={index} style={styles.featureTag}>
-              <Text style={styles.featureText}>{feature}</Text>
+          {item.status === 'available' && (
+            <View style={styles.verifiedBadge}>
+              <Ionicons name="shield-checkmark" size={14} color="white" />
             </View>
-          ))}
-          {item.features.length > 3 && (
-            <Text style={styles.moreFeatures}>+{item.features.length - 3}</Text>
+          )}
+
+          {isEcoCertified && (
+            <View style={styles.ecoBadge}>
+              <Ionicons name="leaf" size={14} color="white" />
+            </View>
           )}
         </View>
 
-        <View style={styles.propertyFooter}>
-          <Text style={styles.propertyPrice}>{item.price}</Text>
-          <View style={styles.ratingContainer}>
-            <Ionicons name="star" size={14} color="#FFD700" />
-            <Text style={styles.ratingText}>{item.rating}</Text>
+        <View style={styles.propertyContent}>
+          <Text style={styles.propertyTitle} numberOfLines={1}>{generatedTitle}</Text>
+
+          <Text style={styles.propertyLocation}>
+            <Ionicons name="location-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} />
+            {item.address?.city}, {item.address?.state}
+          </Text>
+
+          <View style={styles.propertyDetailsRow}>
+            <View style={styles.propertyDetail}>
+              <Ionicons name="bed-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
+              <Text style={styles.detailText}>{item.bedrooms}</Text>
+            </View>
+
+            <View style={styles.propertyDetail}>
+              <Ionicons name="water-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
+              <Text style={styles.detailText}>{item.bathrooms}</Text>
+            </View>
+
+            <View style={styles.propertyDetail}>
+              <Ionicons name="resize-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
+              <Text style={styles.detailText}>{item.squareFootage} m²</Text>
+            </View>
+          </View>
+
+          <View style={styles.featuresContainer}>
+            {item.amenities?.slice(0, 3).map((amenity, index) => (
+              <View key={index} style={styles.featureTag}>
+                <Text style={styles.featureText}>{amenity}</Text>
+              </View>
+            ))}
+            {item.amenities && item.amenities.length > 3 && (
+              <Text style={styles.moreFeatures}>+{item.amenities.length - 3}</Text>
+            )}
+          </View>
+
+          <View style={styles.propertyFooter}>
+            <Text style={styles.propertyPrice}>
+              {item.rent?.currency || '⊜'}{item.rent?.amount}/{item.rent?.paymentFrequency || 'month'}
+            </Text>
+            <View style={styles.ratingContainer}>
+              <Ionicons name="star" size={14} color="#FFD700" />
+              <Text style={styles.ratingText}>4.5</Text>
+            </View>
           </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   if (loading || !propertyType) {
     return (
@@ -373,7 +303,7 @@ export default function PropertyTypePage() {
         <FlatList
           data={getFilteredProperties()}
           renderItem={renderPropertyItem}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item._id || item.id}
           contentContainerStyle={styles.propertiesList}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={

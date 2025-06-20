@@ -61,7 +61,6 @@ export function QuickFiltersWidget() {
     return (
         <BaseWidget
             title={t("Quick Filters")}
-            icon={<Ionicons name="options" size={22} color={colors.primaryColor} />}
         >
             <View style={styles.container}>
                 <View style={styles.filtersGrid}>

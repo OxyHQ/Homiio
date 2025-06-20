@@ -34,6 +34,19 @@ class PropertyController {
         ownerId: req.userId,
       };
 
+      // Handle location data - map to address coordinates
+      if (req.body.location && req.body.location.latitude && req.body.location.longitude) {
+        if (!propertyData.address) {
+          propertyData.address = {};
+        }
+        propertyData.address.coordinates = {
+          lat: req.body.location.latitude,
+          lng: req.body.location.longitude
+        };
+        // Remove the location field as it's not part of the schema
+        delete propertyData.location;
+      }
+
       logger.info("Creating property with data", { propertyData });
 
       // Create and save property using Mongoose model

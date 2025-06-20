@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
   TextInput,
   ActivityIndicator,
   Alert,
@@ -16,8 +16,11 @@ import { colors } from '@/styles/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
+import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
+import { useProperty } from '@/hooks/usePropertyQueries';
+import { Property } from '@/services/propertyService';
 
-type Property = {
+type PropertyData = {
   id: string;
   title: string;
   location: string;
@@ -25,119 +28,84 @@ type Property = {
   landlordRating: number;
 };
 
-type TimeSlot = {
-  id: string;
-  date: string;
-  time: string;
-  isAvailable: boolean;
-};
-
 export default function BookViewingPage() {
   const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams();
+  const [property, setProperty] = useState<PropertyData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [property, setProperty] = useState<Property | null>(null);
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
-  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
-  const [note, setNote] = useState('');
-  const [activeDate, setActiveDate] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [selectedTime, setSelectedTime] = useState<string>('');
+  const [message, setMessage] = useState<string>('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const today = new Date();
-  const nextWeekDates = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
-    return date;
+  // Use real API data instead of mock data
+  const { data: apiProperty, isLoading, error } = useProperty(id as string);
+
+  // Update property data when API data changes
+  useEffect(() => {
+    if (apiProperty) {
+      // Generate title dynamically from real property data
+      const generatedTitle = generatePropertyTitle({
+        type: apiProperty.type,
+        address: apiProperty.address,
+        bedrooms: apiProperty.bedrooms,
+        bathrooms: apiProperty.bathrooms
+      });
+
+      const propertyData: PropertyData = {
+        id: apiProperty._id || apiProperty.id || '',
+        title: generatedTitle,
+        location: `${apiProperty.address?.city || ''}, ${apiProperty.address?.state || ''}`,
+        landlordName: 'Property Owner', // This would come from landlord data in a real app
+        landlordRating: 4.8, // This would come from landlord rating in a real app
+      };
+
+      setProperty(propertyData);
+      setLoading(false);
+    }
+  }, [apiProperty]);
+
+  // Available time slots
+  const timeSlots = [
+    '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+    '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'
+  ];
+
+  // Available dates (next 7 days)
+  const availableDates = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() + i + 1);
+    return date.toISOString().split('T')[0];
   });
 
-  useEffect(() => {
-    // Simulate API call to fetch property and available time slots
-    const fetchData = setTimeout(() => {
-      // Mock property data
-      const mockProperty: Property = {
-        id: id as string,
-        title: 'Spacious Apartment with Balcony',
-        location: 'Barcelona, Spain',
-        landlordName: 'Maria Garcia',
-        landlordRating: 4.9,
-      };
-      
-      setProperty(mockProperty);
-      
-      // Set active date to today
-      setActiveDate(formatDate(nextWeekDates[0]));
-      
-      // Generate mock time slots for the next 7 days
-      const mockTimeSlots: TimeSlot[] = [];
-      
-      nextWeekDates.forEach((date, dateIndex) => {
-        // Generate 3-5 time slots per day
-        const slotsCount = 3 + Math.floor(Math.random() * 3);
-        const startHour = 9 + Math.floor(Math.random() * 2); // Start between 9-10 AM
-        
-        for (let i = 0; i < slotsCount; i++) {
-          const hour = startHour + (i * 2); // 2-hour intervals
-          if (hour >= 18) continue; // Don't go past 6 PM
-          
-          mockTimeSlots.push({
-            id: `${formatDate(date)}-${hour}`,
-            date: formatDate(date),
-            time: `${hour}:00 - ${hour + 1}:00`,
-            isAvailable: Math.random() > 0.3, // 70% of slots are available
-          });
-        }
-      });
-      
-      setTimeSlots(mockTimeSlots);
-      setLoading(false);
-    }, 1000);
-    
-    return () => clearTimeout(fetchData);
-  }, [id]);
-
-  const formatDate = (date: Date): string => {
-    return date.toISOString().split('T')[0];
-  };
-
-  const formatDisplayDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-  };
-
-  const getTimeSlotsByDate = (date: string): TimeSlot[] => {
-    return timeSlots.filter(slot => slot.date === date);
-  };
-
-  const handleSelectSlot = (slotId: string) => {
-    setSelectedSlot(selectedSlot === slotId ? null : slotId);
-  };
-
-  const handleSubmit = () => {
-    if (!selectedSlot) {
-      Alert.alert(t('Error'), t('Please select a time slot'));
+  const handleSubmit = async () => {
+    if (!selectedDate || !selectedTime) {
+      Alert.alert(t('Error'), t('Please select a date and time'));
       return;
     }
-    
-    setIsSubmitting(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
-      
-      // Show success message and navigate back
-      if (Platform.OS === 'web') {
-        alert(t('Viewing request submitted successfully!'));
-      } else {
-        Alert.alert(
-          t('Success'),
-          t('Your viewing request has been submitted. The landlord will confirm shortly.'),
-          [{ text: t('OK'), onPress: () => router.back() }]
-        );
-      }
-      
-      router.back();
-    }, 1500);
+
+    setSubmitting(true);
+
+    try {
+      // In a real app, this would make an API call to book the viewing
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
+
+      Alert.alert(
+        t('Success'),
+        t('Viewing request submitted successfully! We will contact you soon.'),
+        [
+          {
+            text: t('OK'),
+            onPress: () => router.back()
+          }
+        ]
+      );
+    } catch (error) {
+      Alert.alert(t('Error'), t('Failed to submit viewing request. Please try again.'));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading || !property) {
@@ -167,7 +135,7 @@ export default function BookViewingPage() {
           titlePosition: 'center',
         }}
       />
-      
+
       <ScrollView style={styles.container}>
         {/* Property Summary */}
         <View style={styles.propertyCard}>
@@ -175,7 +143,7 @@ export default function BookViewingPage() {
           <Text style={styles.propertyLocation}>
             <Ionicons name="location-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} /> {property.location}
           </Text>
-          
+
           <View style={styles.landlordInfo}>
             <View style={styles.landlordAvatar}>
               <Text style={styles.landlordAvatarText}>
@@ -195,28 +163,27 @@ export default function BookViewingPage() {
         {/* Calendar Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("Select Date")}</Text>
-          <ScrollView 
-            horizontal 
+          <ScrollView
+            horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.datesContainer}
           >
-            {nextWeekDates.map((date, index) => {
-              const dateString = formatDate(date);
-              const isActive = activeDate === dateString;
+            {availableDates.map((date, index) => {
+              const isActive = selectedDate === date;
               return (
                 <TouchableOpacity
                   key={index}
                   style={[styles.dateCard, isActive && styles.activeDateCard]}
-                  onPress={() => setActiveDate(dateString)}
+                  onPress={() => setSelectedDate(date)}
                 >
                   <Text style={[styles.dateDay, isActive && styles.activeDateText]}>
-                    {date.toLocaleDateString(undefined, { weekday: 'short' })}
+                    {new Date(date).toLocaleDateString(undefined, { weekday: 'short' })}
                   </Text>
                   <Text style={[styles.dateNumber, isActive && styles.activeDateText]}>
-                    {date.getDate()}
+                    {new Date(date).getDate()}
                   </Text>
                   <Text style={[styles.dateMonth, isActive && styles.activeDateText]}>
-                    {date.toLocaleDateString(undefined, { month: 'short' })}
+                    {new Date(date).toLocaleDateString(undefined, { month: 'short' })}
                   </Text>
                 </TouchableOpacity>
               );
@@ -227,42 +194,33 @@ export default function BookViewingPage() {
         {/* Time Slots Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            {t("Available Time Slots")} - {activeDate && formatDisplayDate(activeDate)}
+            {t("Available Time Slots")} - {selectedDate && new Date(selectedDate).toLocaleDateString()}
           </Text>
-          
+
           <View style={styles.timeSlotsContainer}>
-            {activeDate && getTimeSlotsByDate(activeDate).length > 0 ? (
-              getTimeSlotsByDate(activeDate).map((slot) => (
-                <TouchableOpacity
-                  key={slot.id}
+            {timeSlots.map((time, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.timeSlot,
+                  selectedTime === time && styles.selectedSlot,
+                ]}
+                onPress={() => setSelectedTime(time)}
+              >
+                <Text
                   style={[
-                    styles.timeSlot,
-                    !slot.isAvailable && styles.disabledSlot,
-                    selectedSlot === slot.id && styles.selectedSlot,
+                    styles.timeSlotText,
+                    selectedTime === time && styles.selectedSlotText,
                   ]}
-                  onPress={() => slot.isAvailable && handleSelectSlot(slot.id)}
-                  disabled={!slot.isAvailable}
                 >
-                  <Text
-                    style={[
-                      styles.timeSlotText,
-                      !slot.isAvailable && styles.disabledSlotText,
-                      selectedSlot === slot.id && styles.selectedSlotText,
-                    ]}
-                  >
-                    {slot.time}
-                  </Text>
-                  
-                  {selectedSlot === slot.id && (
-                    <Ionicons name="checkmark-circle" size={18} color="white" />
-                  )}
-                </TouchableOpacity>
-              ))
-            ) : (
-              <Text style={styles.noSlotsText}>
-                {t("No time slots available for this date")}
-              </Text>
-            )}
+                  {time}
+                </Text>
+
+                {selectedTime === time && (
+                  <Ionicons name="checkmark-circle" size={18} color="white" />
+                )}
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
@@ -275,11 +233,11 @@ export default function BookViewingPage() {
             numberOfLines={4}
             placeholder={t("Any questions for the landlord? (optional)")}
             placeholderTextColor={colors.COLOR_BLACK_LIGHT_3}
-            value={note}
-            onChangeText={setNote}
+            value={message}
+            onChangeText={setMessage}
           />
         </View>
-        
+
         {/* Viewing Policy */}
         <View style={styles.policyContainer}>
           <Ionicons name="information-circle" size={20} color={colors.COLOR_BLACK_LIGHT_3} />
@@ -289,12 +247,12 @@ export default function BookViewingPage() {
         </View>
 
         {/* Submit Button */}
-        <TouchableOpacity 
-          style={[styles.submitButton, !selectedSlot && styles.disabledButton]}
+        <TouchableOpacity
+          style={[styles.submitButton, !selectedDate || !selectedTime && styles.disabledButton]}
           onPress={handleSubmit}
-          disabled={!selectedSlot || isSubmitting}
+          disabled={!selectedDate || !selectedTime || submitting}
         >
-          {isSubmitting ? (
+          {submitting ? (
             <ActivityIndicator color="white" size="small" />
           ) : (
             <Text style={styles.submitButtonText}>{t("Request Viewing")}</Text>
@@ -451,9 +409,6 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
-  disabledSlot: {
-    backgroundColor: '#f5f5f5',
-  },
   selectedSlot: {
     backgroundColor: colors.primaryColor,
   },
@@ -462,23 +417,9 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK,
     marginRight: 5,
   },
-  disabledSlotText: {
-    color: colors.COLOR_BLACK_LIGHT_3,
-    textDecorationLine: 'line-through',
-  },
   selectedSlotText: {
     color: 'white',
     fontWeight: '600',
-  },
-  noSlotsText: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    fontStyle: 'italic',
-    textAlign: 'center',
-    padding: 20,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 10,
-    width: '100%',
   },
   notesInput: {
     backgroundColor: 'white',

@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
 import { useRecentlyViewedProperties } from '@/hooks/useUserQueries';
+import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 
 interface PropertyItem {
     id: string;
@@ -22,17 +23,27 @@ export function RecentlyViewedWidget() {
 
     const { data, isLoading, error } = useRecentlyViewedProperties();
 
-    const recentProperties: PropertyItem[] = (data || []).map((property) => ({
-        id: property._id || property.id,
-        title: property.title,
-        location: `${property.address?.city || 'Unknown'}, ${property.address?.state || ''}`,
-        price: `$${property.rent?.amount || 0}/${property.rent?.paymentFrequency || 'month'}`,
-        imageUrl: property.images?.[0] || 'https://via.placeholder.com/80',
-        isEcoCertified:
-            property.amenities?.includes('eco-friendly') ||
-            property.amenities?.includes('green') ||
-            property.amenities?.includes('solar') || false,
-    }));
+    const recentProperties: PropertyItem[] = (data || []).map((property) => {
+        // Generate title dynamically from property data
+        const generatedTitle = generatePropertyTitle({
+            type: property.type,
+            address: property.address,
+            bedrooms: property.bedrooms,
+            bathrooms: property.bathrooms
+        });
+
+        return {
+            id: (property._id || property.id) as string,
+            title: generatedTitle,
+            location: `${property.address?.city || 'Unknown'}, ${property.address?.state || ''}`,
+            price: `$${property.rent?.amount || 0}/${property.rent?.paymentFrequency || 'month'}`,
+            imageUrl: property.images?.[0] || 'https://via.placeholder.com/80',
+            isEcoCertified:
+                property.amenities?.includes('eco-friendly') ||
+                property.amenities?.includes('green') ||
+                property.amenities?.includes('solar') || false,
+        };
+    });
 
     const navigateToProperty = (propertyId: string) => {
         router.push(`/properties/${propertyId}`);

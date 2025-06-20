@@ -13,4 +13,19 @@ declare global {
   }
 }
 
+// React compatibility types to resolve conflicts
+declare module 'react' {
+  interface ReactNode {
+    children?: ReactNode;
+  }
+}
+
+// Ensure Text component accepts style prop
+declare module 'react-native' {
+  interface TextProps {
+    style?: any;
+    children?: React.ReactNode;
+  }
+}
+
 export {};

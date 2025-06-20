@@ -9,7 +9,8 @@ import {
     PaymentSummaryWidget,
     PropertyAlertWidget,
     NeighborhoodRatingWidget,
-    RecentlyViewedWidget
+    RecentlyViewedWidget,
+    QuickFiltersWidget
 } from './';
 
 // Define screen IDs
@@ -90,12 +91,14 @@ export function WidgetManager({ screenId }: WidgetManagerProps) {
 
             case 'search':
                 return [
+                    <QuickFiltersWidget key="quick-filters" />,
                     <SavedSearchesWidget key="saved-searches" />,
                     <PropertyAlertWidget key="property-alert" />
                 ];
 
             case 'search-results':
                 return [
+                    <QuickFiltersWidget key="quick-filters" />,
                     <SavedSearchesWidget key="saved-searches" />,
                     <PropertyAlertWidget key="property-alert" />
                 ];
