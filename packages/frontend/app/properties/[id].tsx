@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
+import { useProperty } from '@/hooks/usePropertyQueries';
 
 type PropertyDetail = {
   id: string;
@@ -32,41 +33,40 @@ export default function PropertyDetailPage() {
   const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const [loading, setLoading] = useState(true);
-  const [property, setProperty] = useState<PropertyDetail | null>(null);
+  const { data: apiProperty, isLoading, error } = useProperty(id as string);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [landlordVerified, setLandlordVerified] = useState(true);
 
-  useEffect(() => {
-    // Simulating API call with a timeout
-    const fetchProperty = setTimeout(() => {
-      const mockProperty: PropertyDetail = {
-        id: id as string,
-        title: 'Modern Studio Apartment',
-        description: 'A beautiful, recently renovated studio apartment in the heart of the city. Perfect for young professionals or students. The apartment features high ceilings, large windows providing plenty of natural light, and modern furnishings. Located in a historic building with easy access to public transportation, restaurants, and shops.',
-        location: 'Barcelona, Spain',
-        price: '⊜850/month',
-        bedrooms: 1,
-        bathrooms: 1,
-        size: 45,
-        isVerified: true,
-        isEcoCertified: true,
-        amenities: ['WiFi', 'Washing Machine', 'Kitchen', 'Heating', 'Air Conditioning', 'Elevator', 'Workspace'],
-        landlordName: 'Maria Garcia',
-        landlordRating: 4.9,
-        availableFrom: '2023-12-01',
-        minStay: '6 months',
-        rating: 4.8,
-        energyRating: 'A',
-        images: ['image1', 'image2', 'image3'], // placeholders
-      };
+  const property = useMemo<PropertyDetail | null>(() => {
+    if (!apiProperty) return null;
 
-      setProperty(mockProperty);
-      setLoading(false);
-    }, 1000);
+    const currency = apiProperty.rent?.currency || '⊜';
+    const price = apiProperty.rent
+      ? `${currency}${apiProperty.rent.amount}/${apiProperty.rent.paymentFrequency || 'month'}`
+      : '';
 
-    return () => clearTimeout(fetchProperty);
-  }, [id]);
+    return {
+      id: apiProperty.id,
+      title: apiProperty.title,
+      description: apiProperty.description || '',
+      location: `${apiProperty.address?.city || ''}, ${apiProperty.address?.country || ''}`,
+      price,
+      bedrooms: apiProperty.bedrooms || 0,
+      bathrooms: apiProperty.bathrooms || 0,
+      size: apiProperty.squareFootage || 0,
+      isVerified: apiProperty.status === 'available',
+      isEcoCertified:
+        apiProperty.amenities?.some(a => a.toLowerCase().includes('eco')) || false,
+      amenities: apiProperty.amenities || [],
+      landlordName: '',
+      landlordRating: 0,
+      availableFrom: apiProperty.createdAt?.split('T')[0] || '',
+      minStay: 'N/A',
+      rating: 0,
+      energyRating: apiProperty.energyStats ? 'A' : 'N/A',
+      images: apiProperty.images || [],
+    };
+  }, [apiProperty]);
 
   const handleContact = () => {
     // In a real app, this would open a chat with the landlord
@@ -90,7 +90,7 @@ export default function PropertyDetailPage() {
     </View>
   );
 
-  if (loading) {
+  if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <Header
@@ -108,7 +108,7 @@ export default function PropertyDetailPage() {
     );
   }
 
-  if (!property) {
+  if (error || !property) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <Header
