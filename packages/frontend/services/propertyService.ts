@@ -2,15 +2,30 @@ import api, { getCacheKey, setCacheEntry, getCacheEntry } from '@/utils/api';
 
 export interface Property {
   id: string;
-  name: string;
-  address: string;
-  type: 'apartment' | 'house' | 'condo' | 'studio' | 'other';
+  title: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    coordinates?: {
+      lat: number | null;
+      lng: number | null;
+    };
+  };
+  type: 'apartment' | 'house' | 'room' | 'studio';
   description?: string;
-  size?: number;
+  squareFootage?: number;
   bedrooms?: number;
   bathrooms?: number;
-  rent?: number;
-  currency?: string;
+  rent: {
+    amount: number;
+    currency: string;
+    paymentFrequency: 'monthly' | 'weekly' | 'daily';
+    deposit: number;
+    utilities: 'included' | 'excluded' | 'partial';
+  };
   amenities?: string[];
   images?: string[];
   status: 'available' | 'occupied' | 'maintenance' | 'offline';
@@ -41,15 +56,26 @@ export interface Property {
 }
 
 export interface CreatePropertyData {
-  name: string;
-  address: string;
-  type: 'apartment' | 'house' | 'condo' | 'studio' | 'other';
+  title: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country?: string;
+  };
+  type: 'apartment' | 'house' | 'room' | 'studio';
   description?: string;
-  size?: number;
+  squareFootage?: number;
   bedrooms?: number;
   bathrooms?: number;
-  rent?: number;
-  currency?: string;
+  rent: {
+    amount: number;
+    currency?: string;
+    paymentFrequency?: 'monthly' | 'weekly' | 'daily';
+    deposit?: number;
+    utilities?: 'included' | 'excluded' | 'partial';
+  };
   amenities?: string[];
   images?: string[];
 }
@@ -96,8 +122,8 @@ class PropertyService {
     }
 
     const response = await api.get(`${this.baseUrl}/${id}`);
-    setCacheEntry(cacheKey, response.data.property);
-    return response.data.property;
+    setCacheEntry(cacheKey, response.data.data || response.data.property);
+    return response.data.data || response.data.property;
   }
 
   async createProperty(data: CreatePropertyData): Promise<Property> {
@@ -106,7 +132,7 @@ class PropertyService {
     // Clear properties cache
     this.clearPropertiesCache();
     
-    return response.data.property;
+    return response.data.data; // Backend returns { success, message, data }
   }
 
   async updateProperty(id: string, data: Partial<CreatePropertyData>): Promise<Property> {
@@ -116,7 +142,7 @@ class PropertyService {
     this.clearPropertyCache(id);
     this.clearPropertiesCache();
     
-    return response.data.property;
+    return response.data.data || response.data.property;
   }
 
   async deleteProperty(id: string): Promise<void> {

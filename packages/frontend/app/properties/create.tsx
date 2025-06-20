@@ -12,36 +12,68 @@ import { CreatePropertyData } from '@/services/propertyService';
 export default function CreatePropertyScreen() {
   const router = useRouter();
   const [formData, setFormData] = useState<CreatePropertyData>({
-    name: '',
-    address: '',
+    title: '',
+    address: {
+      street: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      country: 'US',
+    },
     type: 'apartment',
     description: '',
-    size: 0,
+    squareFootage: 0,
     bedrooms: 1,
     bathrooms: 1,
-    rent: 0,
-    currency: 'USD',
+    rent: {
+      amount: 0,
+      currency: 'USD',
+      paymentFrequency: 'monthly',
+      deposit: 0,
+      utilities: 'excluded',
+    },
     amenities: [],
   });
 
   const createPropertyMutation = useCreateProperty();
 
   const handleSubmit = async () => {
-    if (!formData.name || !formData.address) {
-      Alert.alert('Error', 'Please fill in all required fields');
+    if (!formData.title || !formData.address.street || !formData.address.city || !formData.address.state || !formData.address.zipCode) {
+      Alert.alert('Error', 'Please fill in all required fields (title, street, city, state, zip code)');
+      return;
+    }
+
+    if (formData.rent.amount <= 0) {
+      Alert.alert('Error', 'Please enter a valid rent amount');
       return;
     }
 
     try {
       await createPropertyMutation.mutateAsync(formData);
+      Alert.alert('Success', 'Property created successfully');
       router.back();
     } catch (error) {
-      Alert.alert('Error', 'Failed to create property');
+      console.error('Property creation error:', error);
+      Alert.alert('Error', 'Failed to create property. Please try again.');
     }
   };
 
   const updateField = (field: keyof CreatePropertyData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const updateAddressField = (field: keyof CreatePropertyData['address'], value: string) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      address: { ...prev.address, [field]: value }
+    }));
+  };
+
+  const updateRentField = (field: keyof CreatePropertyData['rent'], value: any) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      rent: { ...prev.rent, [field]: value }
+    }));
   };
 
   return (
@@ -56,23 +88,54 @@ export default function CreatePropertyScreen() {
       <ScrollView style={styles.scrollView}>
         <View style={styles.form}>
           <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Property Name *</ThemedText>
+            <ThemedText style={styles.label}>Property Title *</ThemedText>
             <TextInput
               style={styles.textInput}
-              value={formData.name}
-              onChangeText={(text) => updateField('name', text)}
-              placeholder="Enter property name"
+              value={formData.title}
+              onChangeText={(text) => updateField('title', text)}
+              placeholder="Enter property title"
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Address *</ThemedText>
+            <ThemedText style={styles.label}>Street Address *</ThemedText>
             <TextInput
               style={styles.textInput}
-              value={formData.address}
-              onChangeText={(text) => updateField('address', text)}
-              placeholder="Enter property address"
-              multiline
+              value={formData.address.street}
+              onChangeText={(text) => updateAddressField('street', text)}
+              placeholder="Enter street address"
+            />
+          </View>
+
+          <View style={styles.row}>
+            <View style={styles.halfInput}>
+              <ThemedText style={styles.label}>City *</ThemedText>
+              <TextInput
+                style={styles.textInput}
+                value={formData.address.city}
+                onChangeText={(text) => updateAddressField('city', text)}
+                placeholder="Enter city"
+              />
+            </View>
+
+            <View style={styles.halfInput}>
+              <ThemedText style={styles.label}>State *</ThemedText>
+              <TextInput
+                style={styles.textInput}
+                value={formData.address.state}
+                onChangeText={(text) => updateAddressField('state', text)}
+                placeholder="Enter state"
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <ThemedText style={styles.label}>ZIP Code *</ThemedText>
+            <TextInput
+              style={styles.textInput}
+              value={formData.address.zipCode}
+              onChangeText={(text) => updateAddressField('zipCode', text)}
+              placeholder="Enter ZIP code"
             />
           </View>
 
@@ -117,23 +180,34 @@ export default function CreatePropertyScreen() {
               <ThemedText style={styles.label}>Size (sq ft)</ThemedText>
               <TextInput
                 style={styles.textInput}
-                value={formData.size?.toString() || ''}
-                onChangeText={(text) => updateField('size', parseInt(text) || 0)}
+                value={formData.squareFootage?.toString() || ''}
+                onChangeText={(text) => updateField('squareFootage', parseInt(text) || 0)}
                 placeholder="0"
                 keyboardType="numeric"
               />
             </View>
 
             <View style={styles.halfInput}>
-              <ThemedText style={styles.label}>Monthly Rent</ThemedText>
+              <ThemedText style={styles.label}>Monthly Rent *</ThemedText>
               <TextInput
                 style={styles.textInput}
-                value={formData.rent?.toString() || ''}
-                onChangeText={(text) => updateField('rent', parseFloat(text) || 0)}
+                value={formData.rent.amount?.toString() || ''}
+                onChangeText={(text) => updateRentField('amount', parseFloat(text) || 0)}
                 placeholder="0"
                 keyboardType="numeric"
               />
             </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <ThemedText style={styles.label}>Security Deposit</ThemedText>
+            <TextInput
+              style={styles.textInput}
+              value={formData.rent.deposit?.toString() || ''}
+              onChangeText={(text) => updateRentField('deposit', parseFloat(text) || 0)}
+              placeholder="0"
+              keyboardType="numeric"
+            />
           </View>
 
           <Button
