@@ -1,0 +1,83 @@
+{
+    "name": "Homiio - Ethical Housing Platform",
+    "short_name": "Homiio",
+    "description": "Find your ethical home with transparent rentals, fair agreements, and verified properties",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#4F46E5",
+    "orientation": "portrait-primary",
+    "scope": "/",
+    "lang": "en",
+    "categories": [
+        "lifestyle",
+        "business",
+        "finance"
+    ],
+    "icons": [
+        {
+            "src": "/assets/images/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/assets/images/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/assets/images/icon-192-maskable.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/assets/images/icon-512-maskable.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "/assets/images/screenshot-wide.png",
+            "sizes": "1280x720",
+            "type": "image/png",
+            "form_factor": "wide"
+        },
+        {
+            "src": "/assets/images/screenshot-narrow.png",
+            "sizes": "750x1334",
+            "type": "image/png",
+            "form_factor": "narrow"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Search Properties",
+            "short_name": "Search",
+            "description": "Search for properties",
+            "url": "/search",
+            "icons": [
+                {
+                    "src": "/assets/images/search-icon.png",
+                    "sizes": "96x96"
+                }
+            ]
+        },
+        {
+            "name": "Saved Properties",
+            "short_name": "Saved",
+            "description": "View saved properties",
+            "url": "/saved",
+            "icons": [
+                {
+                    "src": "/assets/images/saved-icon.png",
+                    "sizes": "96x96"
+                }
+            ]
+        }
+    ]
+}

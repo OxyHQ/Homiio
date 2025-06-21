@@ -12,6 +12,7 @@ import { Header } from '@/components/Header';
 import { IconButton } from '@/components/IconButton';
 import { colors } from '@/styles/colors';
 import type { Property } from '@/services/propertyService';
+import { useSEO } from '@/hooks/useDocumentTitle';
 
 interface SavedProperty extends Property {
     savedAt: string;
@@ -25,6 +26,14 @@ export default function SavedPropertiesScreen() {
     const { data: savedProperties = [], isLoading, error, refetch } = useSavedProperties();
     const unsaveProperty = useUnsaveProperty();
     const updateNotes = useUpdateSavedPropertyNotes();
+
+    // Set enhanced SEO for saved properties page
+    useSEO({
+        title: 'Saved Properties',
+        description: 'View and manage your saved properties. Add notes, organize your favorites, and keep track of properties you love.',
+        keywords: 'saved properties, property favorites, housing bookmarks, property notes, real estate favorites',
+        type: 'website'
+    });
 
     const [selectedProperty, setSelectedProperty] = useState<SavedProperty | null>(null);
     const [notesModalVisible, setNotesModalVisible] = useState(false);

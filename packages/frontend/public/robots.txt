@@ -1,0 +1,24 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://homiio.com/sitemap.xml
+
+# Disallow admin and private areas
+Disallow: /admin/
+Disallow: /private/
+Disallow: /api/
+Disallow: /_next/
+Disallow: /_expo/
+
+# Allow important pages
+Allow: /properties/
+Allow: /search/
+Allow: /about/
+Allow: /contact/
+Allow: /help/
+Allow: /privacy/
+Allow: /terms/
+
+# Crawl delay for respectful crawling
+Crawl-delay: 1 

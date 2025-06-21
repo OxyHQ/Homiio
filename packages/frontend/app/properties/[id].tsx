@@ -1,18 +1,22 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Platform, TextInput, Modal } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
 import { PropertyMap } from '@/components/PropertyMap';
+import { ThemedText } from '@/components/ThemedText';
 import { useProperty } from '@/hooks/usePropertyQueries';
 import { useTrackPropertyView, useSaveProperty, useUnsaveProperty, useSavedProperties } from '@/hooks/useUserQueries';
 import { useOxy } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
 import { toast } from 'sonner';
 import * as Haptics from 'expo-haptics';
+import * as Sharing from 'expo-sharing';
+import * as Clipboard from 'expo-clipboard';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 type PropertyDetail = {
   id: string;
@@ -50,52 +54,72 @@ export default function PropertyDetailPage() {
   const [localSaveStatus, setLocalSaveStatus] = useState<boolean | null>(null);
   const hasViewedRef = useRef(false);
 
-  // Track property view when component mounts
+  // Debug logging
   useEffect(() => {
-    if (id && typeof id === 'string' && !hasViewedRef.current) {
-      trackPropertyView.mutate(id);
-      hasViewedRef.current = true;
-    }
-  }, [id]);
+    console.log('PropertyDetailPage Debug:', {
+      id,
+      apiProperty: !!apiProperty,
+      isLoading,
+      error: error?.message,
+      oxyServices: !!oxyServices,
+      activeSessionId: !!activeSessionId
+    });
+  }, [id, apiProperty, isLoading, error, oxyServices, activeSessionId]);
 
   const property = useMemo<PropertyDetail | null>(() => {
     if (!apiProperty) return null;
 
-    const currency = apiProperty.rent?.currency || '⊜';
-    const price = apiProperty.rent
-      ? `${currency}${apiProperty.rent.amount}/${apiProperty.rent.paymentFrequency || 'month'}`
-      : '';
+    try {
+      const currency = apiProperty.rent?.currency || '⊜';
+      const price = apiProperty.rent
+        ? `${currency}${apiProperty.rent.amount}/${apiProperty.rent.paymentFrequency || 'month'}`
+        : '';
 
-    // Generate title dynamically from property data
-    const generatedTitle = generatePropertyTitle({
-      type: apiProperty.type,
-      address: apiProperty.address,
-      bedrooms: apiProperty.bedrooms,
-      bathrooms: apiProperty.bathrooms
-    });
+      // Generate title dynamically from property data
+      const generatedTitle = generatePropertyTitle({
+        type: apiProperty.type,
+        address: apiProperty.address,
+        bedrooms: apiProperty.bedrooms,
+        bathrooms: apiProperty.bathrooms
+      });
 
-    return {
-      id: apiProperty._id || apiProperty.id || '',
-      title: generatedTitle,
-      description: apiProperty.description || '',
-      location: `${apiProperty.address?.city || ''}, ${apiProperty.address?.country || ''}`,
-      price,
-      bedrooms: apiProperty.bedrooms || 0,
-      bathrooms: apiProperty.bathrooms || 0,
-      size: apiProperty.squareFootage || 0,
-      isVerified: apiProperty.status === 'available',
-      isEcoCertified:
-        apiProperty.amenities?.some(a => a.toLowerCase().includes('eco')) || false,
-      amenities: apiProperty.amenities || [],
-      landlordName: '',
-      landlordRating: 0,
-      availableFrom: apiProperty.createdAt?.split('T')[0] || '',
-      minStay: 'N/A',
-      rating: 0,
-      energyRating: apiProperty.energyStats ? 'A' : 'N/A',
-      images: apiProperty.images || [],
-    };
+      return {
+        id: apiProperty._id || apiProperty.id || '',
+        title: generatedTitle,
+        description: apiProperty.description || '',
+        location: `${apiProperty.address?.city || ''}, ${apiProperty.address?.country || ''}`,
+        price,
+        bedrooms: apiProperty.bedrooms || 0,
+        bathrooms: apiProperty.bathrooms || 0,
+        size: apiProperty.squareFootage || 0,
+        isVerified: apiProperty.status === 'available',
+        isEcoCertified:
+          apiProperty.amenities?.some(a => a.toLowerCase().includes('eco')) || false,
+        amenities: apiProperty.amenities || [],
+        landlordName: '',
+        landlordRating: 0,
+        availableFrom: apiProperty.createdAt?.split('T')[0] || '',
+        minStay: 'N/A',
+        rating: 0,
+        energyRating: apiProperty.energyStats ? 'A' : 'N/A',
+        images: apiProperty.images || [],
+      };
+    } catch (err) {
+      console.error('Error creating property object:', err);
+      return null;
+    }
   }, [apiProperty]);
+
+  // Set document title for web
+  useDocumentTitle(property?.title || 'Property Details');
+
+  // Track property view when component mounts
+  useEffect(() => {
+    if (apiProperty && !hasViewedRef.current) {
+      trackPropertyView.mutate(apiProperty._id);
+      hasViewedRef.current = true;
+    }
+  }, [apiProperty, trackPropertyView]);
 
   // Reset local save status when saved properties data changes
   useEffect(() => {
@@ -185,6 +209,54 @@ export default function PropertyDetailPage() {
     console.log('Is property saved result:', saved);
     return saved;
   }, [property, savedProperties, localSaveStatus]);
+
+  const handleShare = async () => {
+    if (!property) return;
+
+    try {
+      // Add haptic feedback
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      // Create a deep link to the property
+      const propertyUrl = `https://homiio.app/properties/${property.id}`;
+
+      // Full details for clipboard
+      const fullDetails = `🏠 ${property.title}
+
+📍 ${property.location}
+💰 ${property.price}
+🛏️ ${property.bedrooms} Bedrooms
+🚿 ${property.bathrooms} Bathrooms
+📏 ${property.size}m²
+
+${propertyUrl}`;
+
+      const isAvailable = await Sharing.isAvailableAsync();
+
+      if (isAvailable) {
+        // Share only the link via native sharing
+        await Sharing.shareAsync(propertyUrl, {
+          mimeType: 'text/plain',
+          dialogTitle: 'Share Property',
+        });
+      } else {
+        // Copy full details to clipboard
+        await Clipboard.setStringAsync(fullDetails);
+        toast.success('Property details copied to clipboard!');
+      }
+    } catch (error) {
+      console.error('Error sharing property:', error);
+      // Fallback: copy full details to clipboard
+      try {
+        const propertyUrl = `https://homiio.app/properties/${property.id}`;
+        const fallbackMessage = `🏠 ${property.title}\n\n📍 ${property.location}\n💰 ${property.price}\n🛏️ ${property.bedrooms} Bedrooms\n🚿 ${property.bathrooms} Bathrooms\n📏 ${property.size}m²\n\n${propertyUrl}`;
+        await Clipboard.setStringAsync(fallbackMessage);
+        toast.success('Property details copied to clipboard!');
+      } catch (clipboardError) {
+        toast.error('Failed to share property');
+      }
+    }
+  };
 
   const renderAmenity = (amenity: string, index: number) => {
     // Map amenities to appropriate Ionicons
@@ -284,10 +356,7 @@ export default function PropertyDetailPage() {
           title: '',
           titlePosition: 'center',
           rightComponents: [
-            <TouchableOpacity key="share" style={styles.headerButton} onPress={() => {
-              // Share functionality
-              toast.success('Share feature coming soon!');
-            }}>
+            <TouchableOpacity key="share" style={styles.headerButton} onPress={handleShare}>
               <Ionicons name="share-outline" size={24} color={colors.COLOR_BLACK} />
             </TouchableOpacity>,
             <TouchableOpacity
@@ -1105,27 +1174,6 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 1,
   },
-  messageButton: {
-    backgroundColor: colors.primaryColor,
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-    marginRight: 10,
-  },
-  messageButtonText: {
-    color: 'white',
-    fontWeight: '500',
-  },
-  callButton: {
-    backgroundColor: colors.primaryColor,
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-  },
-  callButtonText: {
-    color: 'white',
-    fontWeight: '500',
-  },
   landlordStats: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1133,10 +1181,6 @@ const styles = StyleSheet.create({
   responseTime: {
     fontSize: 14,
     color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  landlordActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   imageGridContainer: {
     marginBottom: 12,
@@ -1265,5 +1309,50 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     marginBottom: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  shareOptionsContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 16,
+    width: '80%',
+    maxHeight: '80%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  shareOptionsTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  shareOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.primaryColor,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  shareOptionText: {
+    marginLeft: 10,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  cancelShareButton: {
+    backgroundColor: colors.primaryColor,
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 20,
+  },
+  cancelShareButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

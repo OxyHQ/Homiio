@@ -5,11 +5,22 @@ import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useDocumentTitle, useSEO } from '@/hooks/useDocumentTitle';
+import { useColorScheme } from "@/hooks/useColorScheme";
+import { Toaster } from '@/lib/sonner';
 
 export default function HomePage() {
   const { t } = useTranslation();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Set enhanced SEO for home page
+  useSEO({
+    title: 'Find Your Ethical Home',
+    description: 'Discover transparent rentals with fair agreements and verified properties. Join thousands of users finding their perfect ethical home on Homiio.',
+    keywords: 'ethical housing, transparent rentals, verified properties, fair agreements, housing platform, rental search',
+    type: 'website'
+  });
 
   const featuredCities = [
     { id: '1', name: 'Barcelona', count: 128 },

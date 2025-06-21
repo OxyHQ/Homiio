@@ -21,8 +21,8 @@ module.exports = function(config) {
 
 return {
     expo: {
-        name: "Mention",
-        slug: "mention",
+        name: "Homiio",
+        slug: "homiio",
         version: VERSION,
         orientation: "portrait",
         icon: "./assets/images/mention-icon.png",
@@ -73,7 +73,23 @@ return {
         web: {
             bundler: "metro",
             output: "static",
-            favicon: "./assets/images/favicon.png"
+            favicon: "./assets/images/favicon.png",
+            manifest: "./public/manifest.json",
+            meta: {
+                viewport: "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no",
+                themeColor: "#4F46E5",
+                appleMobileWebAppCapable: "yes",
+                appleMobileWebAppStatusBarStyle: "default",
+                appleMobileWebAppTitle: "Homiio",
+                applicationName: "Homiio",
+                msapplicationTileColor: "#4F46E5",
+                msapplicationConfig: "/browserconfig.xml"
+            },
+            build: {
+                babel: {
+                    include: ["@expo/vector-icons"]
+                }
+            }
         },
         plugins: [
             [

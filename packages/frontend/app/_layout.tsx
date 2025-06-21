@@ -15,6 +15,7 @@ import { SideBar } from '@/components/SideBar';
 import { RightBar } from '@/components/RightBar';
 import { colors } from '@/styles/colors';
 import { useColorScheme } from "@/hooks/useColorScheme";
+import { useDocumentTitle, useSEO } from "@/hooks/useDocumentTitle";
 import { Toaster } from '@/lib/sonner';
 import {
   setupNotifications,
@@ -39,6 +40,7 @@ import { BottomSheetProvider } from '@/context/BottomSheetContext';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { OxyLogo, OxyProvider, OxyServices, OxySignInButton, useOxy } from '@oxyhq/services';
 import { setOxyServices } from '@/utils/api';
+import { generateWebsiteStructuredData, injectStructuredData } from '@/utils/structuredData';
 
 import "../styles/global.css";
 
@@ -77,6 +79,22 @@ export default function RootLayout() {
   const [appIsReady, setAppIsReady] = useState(false);
   const { i18n } = useTranslation();
   const colorScheme = useColorScheme();
+
+  // Set default document title and SEO for web
+  useSEO({
+    title: 'Ethical Housing Platform',
+    description: 'Find your ethical home with transparent rentals, fair agreements, and verified properties. Join Homiio for a better housing experience.',
+    keywords: 'housing, rental, property, ethical housing, transparent rentals, verified properties, fair agreements',
+    type: 'website'
+  });
+
+  // Inject website structured data
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      const websiteData = generateWebsiteStructuredData();
+      injectStructuredData(websiteData);
+    }
+  }, []);
 
   // Initialize OxyServices
   const oxyServices = new OxyServices({
