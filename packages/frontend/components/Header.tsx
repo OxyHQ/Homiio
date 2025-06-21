@@ -29,8 +29,14 @@ interface Props {
 export const Header: React.FC<Props> = ({ options }) => {
     const router = useRouter();
     const [isSticky, setIsSticky] = useState(false);
+    const [canGoBack, setCanGoBack] = useState(false);
 
     const titlePosition = options?.titlePosition || 'left';
+
+    useEffect(() => {
+        // Check if we can go back
+        setCanGoBack(router.canGoBack());
+    }, [router]);
 
     useEffect(() => {
         if (Platform.OS === 'web') {
@@ -52,7 +58,7 @@ export const Header: React.FC<Props> = ({ options }) => {
     return (
         <View style={[styles.topRow, isSticky && styles.stickyHeader]}>
             <View style={styles.leftContainer}>
-                {options?.showBackButton && (
+                {options?.showBackButton && canGoBack && (
                     <Pressable onPress={() => router.back()} style={styles.backButton}>
                         <IconComponent name="arrow-back" size={24} color={colors.COLOR_BLACK} />
                     </Pressable>
