@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+    <!-- Basic SEO -->
+    <title>Homiio - Ethical Housing Platform</title>
+    <meta name="description"
+        content="Find your ethical home with transparent rentals, fair agreements, and verified properties. Join Homiio for a better housing experience." />
+    <meta name="keywords"
+        content="housing, rental, property, ethical housing, transparent rentals, verified properties, fair agreements" />
+    <meta name="author" content="Homiio" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Theme and branding -->
+    <meta name="theme-color" content="#4F46E5" />
+    <meta name="msapplication-TileColor" content="#4F46E5" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
+
+    <!-- Apple specific -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Homiio" />
+    <meta name="application-name" content="Homiio" />
+    <meta name="format-detection" content="telephone=no" />
+
+    <!-- Open Graph (Facebook, LinkedIn, WhatsApp, Telegram) -->
+    <meta property="og:title" content="Homiio - Ethical Housing Platform" />
+    <meta property="og:description"
+        content="Find your ethical home with transparent rentals, fair agreements, and verified properties. Join Homiio for a better housing experience." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/assets/images/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Homiio - Ethical Housing Platform" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:secure_url" content="/assets/images/og-image.png" />
+    <meta property="og:url" content="https://homiio.com" />
+    <meta property="og:site_name" content="Homiio" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Homiio - Ethical Housing Platform" />
+    <meta name="twitter:description"
+        content="Find your ethical home with transparent rentals, fair agreements, and verified properties. Join Homiio for a better housing experience." />
+    <meta name="twitter:image" content="/assets/images/og-image.png" />
+    <meta name="twitter:image:alt" content="Homiio - Ethical Housing Platform" />
+    <meta name="twitter:site" content="@homiio" />
+    <meta name="twitter:creator" content="@homiio" />
+
+    <!-- Additional social networks -->
+    <meta name="pinterest-rich-pin" content="true" />
+
+    <!-- Schema.org structured data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Homiio",
+        "description": "Find your ethical home with transparent rentals, fair agreements, and verified properties. Join Homiio for a better housing experience.",
+        "url": "https://homiio.com",
+        "image": "/assets/images/og-image.png",
+        "publisher": {
+            "@type": "Organization",
+            "name": "Homiio",
+            "url": "https://homiio.com"
+        }
+    }
+    </script>
+
+    <!-- Favicon and icons -->
+    <link rel="icon" href="/assets/images/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/images/icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://homiio.com" />
+
+    <!-- Preconnect to external domains for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- Prevent indexing of development environments -->
+    <meta name="robots" content="noindex, nofollow" />
+</head>
+
+<body>
+    <div id="root"></div>
+    <script>
+        // Ensure meta tags are available for social media crawlers
+        window.addEventListener('load', function () {
+            // Update meta tags dynamically if needed
+            const updateMetaTags = (title, description, image, url) => {
+                if (title) {
+                    document.title = title;
+                    document.querySelector('meta[property="og:title"]').setAttribute('content', title);
+                    document.querySelector('meta[name="twitter:title"]').setAttribute('content', title);
+                }
+                if (description) {
+                    document.querySelector('meta[name="description"]').setAttribute('content', description);
+                    document.querySelector('meta[property="og:description"]').setAttribute('content', description);
+                    document.querySelector('meta[name="twitter:description"]').setAttribute('content', description);
+                }
+                if (image) {
+                    document.querySelector('meta[property="og:image"]').setAttribute('content', image);
+                    document.querySelector('meta[name="twitter:image"]').setAttribute('content', image);
+                }
+                if (url) {
+                    document.querySelector('meta[property="og:url"]').setAttribute('content', url);
+                    document.querySelector('link[rel="canonical"]').setAttribute('href', url);
+                }
+            };
+
+            // Make updateMetaTags available globally
+            window.updateMetaTags = updateMetaTags;
+        });
+    </script>
+</body>
+
+</html>

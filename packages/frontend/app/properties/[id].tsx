@@ -16,7 +16,8 @@ import * as Haptics from 'expo-haptics';
 import * as Sharing from 'expo-sharing';
 import * as Clipboard from 'expo-clipboard';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useDocumentTitle, useSEO } from '@/hooks/useDocumentTitle';
+import { updateSocialMediaMetaTags, generatePropertyTitle as generateSEOTitle, generatePropertyDescription as generateSEODescription, forceMetaTagRefresh } from '@/utils/seoUtils';
 
 type PropertyDetail = {
   id: string;
@@ -112,6 +113,51 @@ export default function PropertyDetailPage() {
 
   // Set document title for web
   useDocumentTitle(property?.title || 'Property Details');
+
+  // Enhanced SEO for social media sharing (Telegram, Twitter, etc.)
+  useEffect(() => {
+    if (property && Platform.OS === 'web') {
+      const seoTitle = generateSEOTitle({
+        title: property.title,
+        address: property.location,
+        city: property.location.split(',')[0]?.trim(),
+        price: parseFloat(property.price.replace(/[^\d.]/g, '')),
+        bedrooms: property.bedrooms,
+        bathrooms: property.bathrooms
+      });
+
+      const seoDescription = generateSEODescription({
+        description: property.description,
+        address: property.location,
+        city: property.location.split(',')[0]?.trim(),
+        price: parseFloat(property.price.replace(/[^\d.]/g, '')),
+        bedrooms: property.bedrooms,
+        bathrooms: property.bathrooms,
+        features: property.amenities
+      });
+
+      const propertyImage = property.images && property.images.length > 0
+        ? property.images[0]
+        : '/assets/images/og-image.png';
+
+      const propertyUrl = `https://homiio.com/properties/${property.id}`;
+
+      // Update meta tags for social media
+      updateSocialMediaMetaTags({
+        title: seoTitle,
+        description: seoDescription,
+        image: propertyImage,
+        url: propertyUrl,
+        type: 'property',
+        tags: ['housing', 'rental', 'property', 'real estate']
+      });
+
+      // Force meta tag refresh for crawlers
+      setTimeout(() => {
+        forceMetaTagRefresh();
+      }, 100);
+    }
+  }, [property]);
 
   // Track property view when component mounts
   useEffect(() => {

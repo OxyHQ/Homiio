@@ -51,6 +51,11 @@ export function useSEO({
       // Set document title
       document.title = fullTitle;
       
+      // Use the global updateMetaTags function if available (from static HTML)
+      if (typeof window !== 'undefined' && (window as any).updateMetaTags) {
+        (window as any).updateMetaTags(fullTitle, description, imageUrl, currentUrl);
+      }
+      
       // Enhanced meta tags for better social media support
       const metaTags = [
         // Basic SEO
@@ -181,6 +186,13 @@ export function useSEO({
       script.type = 'application/ld+json';
       script.textContent = JSON.stringify(structuredData);
       document.head.appendChild(script);
+      
+      // Force social media crawlers to re-fetch meta tags
+      // This is especially important for Telegram and other platforms
+      if (typeof window !== 'undefined' && window.location.href !== currentUrl) {
+        // Update URL without page reload for SPA
+        window.history.replaceState({}, fullTitle, currentUrl);
+      }
     }
   }, [title, description, keywords, image, url, type, twitterHandle, author, publishedTime, modifiedTime, section, tags]);
 } 
