@@ -472,16 +472,10 @@ class PropertyController {
 
       // Build search query
       const searchQuery = {};
-      
-      // Text search across title, description, and address
+
+      // Use MongoDB text search when a query string is provided
       if (query) {
-        searchQuery.$or = [
-          { title: { $regex: query, $options: 'i' } },
-          { description: { $regex: query, $options: 'i' } },
-          { 'address.city': { $regex: query, $options: 'i' } },
-          { 'address.state': { $regex: query, $options: 'i' } },
-          { 'address.street': { $regex: query, $options: 'i' } }
-        ];
+        searchQuery.$text = { $search: query };
       }
 
       // Filter by property type
@@ -512,13 +506,22 @@ class PropertyController {
 
       // Execute search
       const skip = (parseInt(page) - 1) * parseInt(limit);
-      
+
+      const queryOptions = PropertyModel.find(searchQuery)
+        .skip(skip)
+        .limit(parseInt(limit));
+
+      // If text search was used, sort by relevance
+      if (searchQuery.$text) {
+        queryOptions
+          .sort({ score: { $meta: 'textScore' } })
+          .select({ score: { $meta: 'textScore' } });
+      } else {
+        queryOptions.sort({ createdAt: -1 });
+      }
+
       const [properties, total] = await Promise.all([
-        PropertyModel.find(searchQuery)
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(parseInt(limit))
-          .lean(),
+        queryOptions.lean(),
         PropertyModel.countDocuments(searchQuery)
       ]);
 
