@@ -284,6 +284,14 @@ propertySchema.index({ 'rent.amount': 1 });
 propertySchema.index({ bedrooms: 1, bathrooms: 1 });
 propertySchema.index({ amenities: 1 });
 propertySchema.index({ createdAt: -1 });
+// Text index for search functionality across multiple fields
+propertySchema.index({
+  title: 'text',
+  description: 'text',
+  'address.city': 'text',
+  'address.state': 'text',
+  'address.street': 'text'
+});
 
 // Virtual for full address
 propertySchema.virtual('fullAddress').get(function() {
