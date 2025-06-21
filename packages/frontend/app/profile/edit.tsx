@@ -21,6 +21,17 @@ export default function ProfileEditScreen() {
     const [activeSection, setActiveSection] = useState('personal');
     const [isFormInitialized, setIsFormInitialized] = useState(false);
 
+    // Track previous profile to detect changes
+    const prevProfileIdRef = React.useRef<string | null>(null);
+
+    // Reset initialization when a different profile loads
+    useEffect(() => {
+        if (activeProfile?.id && activeProfile.id !== prevProfileIdRef.current) {
+            prevProfileIdRef.current = activeProfile.id;
+            setIsFormInitialized(false);
+        }
+    }, [activeProfile?.id]);
+
     // Get profile type to determine which UI to show
     const profileType = activeProfile?.profileType || 'personal';
 
