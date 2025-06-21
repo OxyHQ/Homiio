@@ -186,14 +186,54 @@ export default function PropertyDetailPage() {
     return saved;
   }, [property, savedProperties, localSaveStatus]);
 
-  const renderAmenity = (amenity: string, index: number) => (
-    <View key={index} style={styles.amenityItem}>
-      <View style={styles.amenityIcon}>
-        <Text style={styles.amenityIconText}>✓</Text>
+  const renderAmenity = (amenity: string, index: number) => {
+    // Map amenities to appropriate Ionicons
+    const getAmenityIcon = (amenityName: string) => {
+      const lowerAmenity = amenityName.toLowerCase();
+
+      if (lowerAmenity.includes('wifi') || lowerAmenity.includes('internet')) return 'wifi';
+      if (lowerAmenity.includes('parking') || lowerAmenity.includes('garage')) return 'car';
+      if (lowerAmenity.includes('gym') || lowerAmenity.includes('fitness')) return 'fitness';
+      if (lowerAmenity.includes('pool') || lowerAmenity.includes('swimming')) return 'water';
+      if (lowerAmenity.includes('balcony') || lowerAmenity.includes('terrace')) return 'leaf';
+      if (lowerAmenity.includes('elevator') || lowerAmenity.includes('lift')) return 'arrow-up';
+      if (lowerAmenity.includes('air conditioning') || lowerAmenity.includes('ac')) return 'snow';
+      if (lowerAmenity.includes('heating') || lowerAmenity.includes('heat')) return 'flame';
+      if (lowerAmenity.includes('dishwasher') || lowerAmenity.includes('washer')) return 'water';
+      if (lowerAmenity.includes('laundry') || lowerAmenity.includes('washing')) return 'shirt';
+      if (lowerAmenity.includes('pet') || lowerAmenity.includes('dog') || lowerAmenity.includes('cat')) return 'paw';
+      if (lowerAmenity.includes('furnished') || lowerAmenity.includes('furniture')) return 'bed';
+      if (lowerAmenity.includes('security') || lowerAmenity.includes('cctv')) return 'shield-checkmark';
+      if (lowerAmenity.includes('garden') || lowerAmenity.includes('yard')) return 'flower';
+      if (lowerAmenity.includes('bike') || lowerAmenity.includes('bicycle')) return 'bicycle';
+      if (lowerAmenity.includes('storage') || lowerAmenity.includes('closet')) return 'cube';
+      if (lowerAmenity.includes('fireplace') || lowerAmenity.includes('fire')) return 'flame';
+      if (lowerAmenity.includes('view') || lowerAmenity.includes('mountain') || lowerAmenity.includes('sea')) return 'eye';
+      if (lowerAmenity.includes('eco') || lowerAmenity.includes('green') || lowerAmenity.includes('solar')) return 'leaf';
+      if (lowerAmenity.includes('rooftop') || lowerAmenity.includes('roof')) return 'home';
+      if (lowerAmenity.includes('concierge') || lowerAmenity.includes('doorman')) return 'person';
+      if (lowerAmenity.includes('playground') || lowerAmenity.includes('kids')) return 'happy';
+      if (lowerAmenity.includes('bbq') || lowerAmenity.includes('grill')) return 'restaurant';
+      if (lowerAmenity.includes('sauna') || lowerAmenity.includes('spa')) return 'thermometer';
+      if (lowerAmenity.includes('tennis') || lowerAmenity.includes('sport')) return 'tennisball';
+
+      // Default icon for unmatched amenities
+      return 'checkmark-circle';
+    };
+
+    return (
+      <View key={index} style={styles.amenityItem}>
+        <View style={styles.amenityIconContainer}>
+          <Ionicons
+            name={getAmenityIcon(amenity) as any}
+            size={20}
+            color={colors.primaryColor}
+          />
+        </View>
+        <Text style={styles.amenityText}>{amenity}</Text>
       </View>
-      <Text style={styles.amenityText}>{amenity}</Text>
-    </View>
-  );
+    );
+  };
 
   if (isLoading) {
     return (
@@ -368,32 +408,41 @@ export default function PropertyDetailPage() {
             )}
           </TouchableOpacity>
 
-          <View style={styles.divider} />
-
           {/* Eco Rating */}
           {property.isEcoCertified && (
-            <View style={styles.ecoRatingContainer}>
-              <View style={styles.ratingHeader}>
-                <Text style={styles.ratingTitle}>{t("Energy Efficiency")}</Text>
-              </View>
-              <View style={styles.energyRatingContainer}>
-                <View style={[styles.energyRatingBadge, { backgroundColor: '#2e7d32' }]}>
-                  <Text style={styles.energyRatingText}>{property.energyRating}</Text>
+            <>
+              <View style={styles.divider} />
+              <View style={styles.ecoRatingContainer}>
+                <View style={styles.ratingHeader}>
+                  <Text style={styles.ratingTitle}>{t("Energy Efficiency")}</Text>
                 </View>
-                <Text style={styles.energyRatingDesc}>
-                  {t("This property meets high standards for energy efficiency")}
-                </Text>
+                <View style={styles.energyRatingContainer}>
+                  <View style={[styles.energyRatingBadge, { backgroundColor: '#2e7d32' }]}>
+                    <Text style={styles.energyRatingText}>{property.energyRating}</Text>
+                  </View>
+                  <Text style={styles.energyRatingDesc}>
+                    {t("This property meets high standards for energy efficiency")}
+                  </Text>
+                </View>
               </View>
-            </View>
+            </>
           )}
 
-          <View style={styles.divider} />
-
           {/* Description */}
-          <Text style={styles.sectionTitle}>{t("About this property")}</Text>
-          <Text style={styles.descriptionText}>{property.description}</Text>
+          {property.description && property.description.trim() !== '' && (
+            <>
+              <View style={styles.divider} />
+              <View style={styles.descriptionContainer}>
+                <Text style={styles.sectionTitle}>{t("About this property")}</Text>
+                <View style={styles.descriptionCard}>
+                  <Text style={styles.descriptionText}>{property.description}</Text>
+                </View>
+              </View>
+            </>
+          )}
 
           {/* Availability */}
+          <View style={styles.divider} />
           <View style={styles.availabilityContainer}>
             <View style={styles.availabilityItem}>
               <Text style={styles.availabilityLabel}>{t("Available From")}</Text>
@@ -405,20 +454,14 @@ export default function PropertyDetailPage() {
             </View>
           </View>
 
-          <View style={styles.divider} />
-
           {/* Amenities */}
+          <View style={styles.divider} />
           <Text style={styles.sectionTitle}>{t("Amenities")}</Text>
           <View style={styles.amenitiesContainer}>
             {property.amenities.length > 0 ? (
-              property.amenities.map((amenity, index) => (
-                <View key={index} style={styles.amenityItem}>
-                  <View style={styles.amenityIcon}>
-                    <Text style={styles.amenityIconText}>✓</Text>
-                  </View>
-                  <Text style={styles.amenityText}>{amenity}</Text>
-                </View>
-              ))
+              property.amenities.map((amenity, index) =>
+                renderAmenity(amenity, index)
+              )
             ) : (
               <View style={styles.noAmenitiesContainer}>
                 <Text style={styles.noAmenitiesText}>{t("No amenities listed")}</Text>
@@ -426,11 +469,10 @@ export default function PropertyDetailPage() {
             )}
           </View>
 
-          <View style={styles.divider} />
-
           {/* Map - Only show if location coordinates are available */}
           {apiProperty?.address?.coordinates?.lat && apiProperty?.address?.coordinates?.lng && (
             <>
+              <View style={styles.divider} />
               <Text style={styles.sectionTitle}>{t("Location")}</Text>
               <PropertyMap
                 latitude={apiProperty.address.coordinates.lat}
@@ -439,11 +481,11 @@ export default function PropertyDetailPage() {
                 height={200}
                 interactive={false}
               />
-              <View style={styles.divider} />
             </>
           )}
 
           {/* Landlord Info */}
+          <View style={styles.divider} />
           <Text style={styles.sectionTitle}>{t("Landlord")}</Text>
           <View style={styles.landlordContainer}>
             <View style={styles.landlordInfoContainer}>
@@ -467,9 +509,8 @@ export default function PropertyDetailPage() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.divider} />
-
           {/* Trust and Safety */}
+          <View style={styles.divider} />
           <View style={styles.trustContainer}>
             <View style={styles.trustTextContainer}>
               <Text style={styles.trustTitle}>{t("Homio Verified")}</Text>
@@ -664,9 +705,10 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   descriptionText: {
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 20,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.COLOR_BLACK,
+    textAlign: 'justify',
   },
   availabilityContainer: {
     flexDirection: 'row',
@@ -687,16 +729,37 @@ const styles = StyleSheet.create({
   amenitiesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: 8,
+    paddingVertical: 8,
   },
   amenityItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    width: '50%',
-    marginBottom: 10,
+    backgroundColor: '#f8f9fa',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  amenityIconContainer: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: colors.primaryColor + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 6,
   },
   amenityText: {
-    marginLeft: 8,
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.COLOR_BLACK,
   },
   landlordContainer: {
     flexDirection: 'row',
@@ -960,14 +1023,14 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     fontSize: 14,
   },
-  amenityIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: colors.primaryColor,
+  amenityIconContainer: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: colors.primaryColor + '15',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    marginRight: 6,
   },
   amenityIconText: {
     color: 'white',
@@ -990,5 +1053,20 @@ const styles = StyleSheet.create({
   saveButtonIcon: {
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  descriptionContainer: {
+    marginBottom: 20,
+  },
+  descriptionCard: {
+    backgroundColor: '#f8f9fa',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
 });
