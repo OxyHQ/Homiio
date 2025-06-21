@@ -23,9 +23,19 @@ export function usePrimaryProfile() {
   
   console.log('usePrimaryProfile - user:', user ? 'authenticated' : 'not authenticated');
   
-  return useQuery<Profile>({
+  return useQuery<Profile | null>({
     queryKey: profileKeys.primary(),
-    queryFn: () => profileService.getOrCreatePrimaryProfile(),
+    queryFn: async () => {
+      try {
+        const profile = await profileService.getOrCreatePrimaryProfile();
+        // The backend now returns null when no profile exists, so we can return it directly
+        return profile;
+      } catch (error: any) {
+        // Handle any other errors that might still occur
+        console.error('Error fetching primary profile:', error);
+        throw error;
+      }
+    },
     enabled: !!user, // Only run when user is authenticated
     staleTime: 1 * 60 * 1000, // 1 minute - reduce stale time for better updates
     gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache longer
@@ -52,7 +62,7 @@ export function useUserProfiles() {
 }
 
 // Hook to get profile by type
-export function useProfileByType(profileType: 'personal' | 'roommate' | 'agency') {
+export function useProfileByType(profileType: 'personal' | 'roommate' | 'agency' | 'business') {
   const { user } = useOxy();
   
   return useQuery<Profile>({

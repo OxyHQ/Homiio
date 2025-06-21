@@ -155,22 +155,51 @@ export interface AgencyProfile {
   }>;
 }
 
+export interface BusinessProfile {
+  businessType: 'small_business' | 'startup' | 'freelancer' | 'consultant' | 'other';
+  legalCompanyName?: string;
+  description?: string;
+  businessDetails: {
+    licenseNumber?: string;
+    taxId?: string;
+    yearEstablished?: number;
+    employeeCount?: '1-5' | '6-10' | '11-25' | '26+';
+    industry?: string;
+    specialties?: string[];
+    serviceAreas?: Array<{
+      city: string;
+      state: string;
+      radius: number;
+    }>;
+  };
+  verification: {
+    businessLicense: boolean;
+    insurance: boolean;
+    backgroundCheck: boolean;
+  };
+  ratings: {
+    average: number;
+    count: number;
+  };
+}
+
 export interface Profile {
   id: string;
   _id?: string;
   oxyUserId: string;
-  profileType: 'personal' | 'roommate' | 'agency';
+  profileType: 'personal' | 'roommate' | 'agency' | 'business';
   isPrimary: boolean;
   isActive: boolean;
   personalProfile?: PersonalProfile;
   roommateProfile?: RoommateProfile;
   agencyProfile?: AgencyProfile;
+  businessProfile?: BusinessProfile;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface CreateProfileData {
-  profileType: 'personal' | 'roommate' | 'agency';
+  profileType: 'personal' | 'roommate' | 'agency' | 'business';
   data: {
     preferences?: PersonalProfile['preferences'];
     verification?: PersonalProfile['verification'];
@@ -178,9 +207,10 @@ export interface CreateProfileData {
     roommatePreferences?: RoommateProfile['roommatePreferences'];
     roommateHistory?: RoommateProfile['roommateHistory'];
     references?: RoommateProfile['references'];
-    businessType?: AgencyProfile['businessType'];
+    businessType?: AgencyProfile['businessType'] | BusinessProfile['businessType'];
     description?: string;
-    businessDetails?: AgencyProfile['businessDetails'];
+    businessDetails?: AgencyProfile['businessDetails'] | BusinessProfile['businessDetails'];
+    legalCompanyName?: string;
   };
 }
 
@@ -188,6 +218,7 @@ export interface UpdateProfileData {
   personalProfile?: Partial<PersonalProfile>;
   roommateProfile?: Partial<RoommateProfile>;
   agencyProfile?: Partial<AgencyProfile>;
+  businessProfile?: Partial<BusinessProfile>;
   isPrimary?: boolean;
   isActive?: boolean;
 }
@@ -198,11 +229,11 @@ class ProfileService {
   /**
    * Get or create user's primary profile
    */
-  async getOrCreatePrimaryProfile(): Promise<Profile> {
+  async getOrCreatePrimaryProfile(): Promise<Profile | null> {
     const cacheKey = getCacheKey(`${this.baseUrl}/me`);
     
     // Check cache first
-    const cachedData = getCacheEntry<Profile>(cacheKey);
+    const cachedData = getCacheEntry<Profile | null>(cacheKey);
     if (cachedData) {
       console.log('ProfileService: Returning cached profile data');
       return cachedData;
@@ -210,11 +241,11 @@ class ProfileService {
 
     console.log('ProfileService: Fetching fresh profile data from server');
     const response = await api.get(`${this.baseUrl}/me`);
-    const profile = response.data.data;
+    const profile = response.data.data; // This can now be null
     
     console.log('ProfileService: Received profile data:', profile);
     
-    // Cache the result
+    // Cache the result (including null)
     setCacheEntry(cacheKey, profile, 10 * 60 * 1000); // Cache for 10 minutes
     
     return profile;
@@ -245,7 +276,7 @@ class ProfileService {
   /**
    * Get profile by type
    */
-  async getProfileByType(profileType: 'personal' | 'roommate' | 'agency'): Promise<Profile> {
+  async getProfileByType(profileType: 'personal' | 'roommate' | 'agency' | 'business'): Promise<Profile> {
     const cacheKey = getCacheKey(`${this.baseUrl}/me/${profileType}`);
     const cached = getCacheEntry<Profile>(cacheKey);
 
@@ -337,8 +368,14 @@ class ProfileService {
    */
   async updateProfile(profileId: string, updateData: UpdateProfileData): Promise<Profile> {
     try {
+      console.log('ProfileService.updateProfile called with:', { profileId, updateData });
+      console.log('Making API call to:', `${this.baseUrl}/${profileId}`);
+      
       const response = await api.put(`${this.baseUrl}/${profileId}`, updateData);
+      console.log('ProfileService.updateProfile API response:', response);
+      
       const updatedProfile = response.data.data;
+      console.log('ProfileService.updateProfile updated profile:', updatedProfile);
 
       // If this profile was fetched earlier, update or invalidate cache
       const cacheKey = getCacheKey(`${this.baseUrl}/${profileId}`);
@@ -350,7 +387,7 @@ class ProfileService {
 
       return updatedProfile;
     } catch (error) {
-      console.error('Error updating profile:', error);
+      console.error('ProfileService.updateProfile error:', error);
       throw error;
     }
   }

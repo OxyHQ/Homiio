@@ -4,10 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/colors';
 import { useRouter } from 'expo-router';
-import { IconButton } from '@/components/IconButton';
+import { Ionicons } from '@expo/vector-icons';
 import { useCreateProfile } from '@/hooks/useProfileQueries';
+import { toast } from 'sonner';
 
-type ProfileType = 'personal' | 'roommate' | 'agency';
+// Type assertion for Ionicons compatibility with React 19
+const IconComponent = Ionicons as any;
+
+type ProfileType = 'roommate' | 'agency' | 'business' | 'personal';
 
 export default function ProfileCreateScreen() {
     const { t } = useTranslation();
@@ -32,29 +36,32 @@ export default function ProfileCreateScreen() {
         {
             type: 'personal' as ProfileType,
             title: 'Personal Profile',
-            description: 'For individual property searches and preferences',
+            description: 'For individual users looking for properties',
             icon: 'person-outline',
-            color: colors.primaryColor,
         },
         {
             type: 'roommate' as ProfileType,
             title: 'Roommate Profile',
             description: 'For finding roommates and shared housing',
             icon: 'people-outline',
-            color: colors.success,
         },
         {
             type: 'agency' as ProfileType,
             title: 'Agency Profile',
             description: 'For real estate agencies and property management',
             icon: 'business-outline',
-            color: colors.warning,
+        },
+        {
+            type: 'business' as ProfileType,
+            title: 'Business Profile',
+            description: 'For small businesses and freelancers',
+            icon: 'briefcase-outline',
         },
     ];
 
     const handleCreateProfile = async () => {
         if (!selectedType) {
-            Alert.alert('Error', 'Please select a profile type.');
+            toast.error('Please select a profile type.');
             return;
         }
 
@@ -66,7 +73,35 @@ export default function ProfileCreateScreen() {
             };
 
             // Add type-specific data
-            if (selectedType === 'agency') {
+            if (selectedType === 'personal') {
+                profileData.data = {
+                    preferences: {
+                        propertyTypes: ['apartment', 'house'],
+                        maxRent: 2000,
+                        minBedrooms: 1,
+                        minBathrooms: 1,
+                        petFriendly: true,
+                        smokingAllowed: false
+                    },
+                    settings: {
+                        notifications: { email: true, push: true, sms: false },
+                        privacy: { profileVisibility: 'public', showContactInfo: true, showIncome: false },
+                        language: 'en',
+                        timezone: 'UTC'
+                    }
+                };
+            } else if (selectedType === 'agency') {
+                profileData.data = {
+                    businessType: formData.businessType,
+                    description: formData.description,
+                    businessDetails: {
+                        ...formData.businessDetails,
+                        yearEstablished: formData.businessDetails.yearEstablished ?
+                            parseInt(formData.businessDetails.yearEstablished) : undefined,
+                    },
+                    legalCompanyName: formData.legalCompanyName,
+                };
+            } else if (selectedType === 'business') {
                 profileData.data = {
                     businessType: formData.businessType,
                     description: formData.description,
@@ -80,10 +115,10 @@ export default function ProfileCreateScreen() {
             }
 
             await createProfile.mutateAsync(profileData);
-            Alert.alert('Success', `${profileTypes.find(p => p.type === selectedType)?.title} created successfully!`);
+            toast.success(`${profileTypes.find(p => p.type === selectedType)?.title} created successfully!`);
             router.back();
         } catch (error) {
-            Alert.alert('Error', 'Failed to create profile. Please try again.');
+            toast.error('Failed to create profile. Please try again.');
         } finally {
             setIsCreating(false);
         }
@@ -104,10 +139,11 @@ export default function ProfileCreateScreen() {
     const employeeCountOptions = ['1-10', '11-50', '51-200', '200+'];
 
     return (
-        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <SafeAreaView style={styles.container} edges={['top']}>
+            {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <IconButton name="arrow-back" size={24} color={colors.primaryDark} />
+                    <IconComponent name="arrow-back" size={24} color="#000" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Create Profile</Text>
                 <TouchableOpacity
@@ -116,53 +152,51 @@ export default function ProfileCreateScreen() {
                     disabled={!selectedType || isCreating}
                 >
                     {isCreating ? (
-                        <ActivityIndicator size="small" color={colors.primaryLight} />
+                        <ActivityIndicator size="small" color="#fff" />
                     ) : (
                         <Text style={styles.createButtonText}>Create</Text>
                     )}
                 </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.container}>
+            <ScrollView style={styles.content}>
                 {/* Profile Type Selection */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Choose Profile Type</Text>
-                    <Text style={styles.sectionSubtitle}>
-                        Select the type of profile you want to create
-                    </Text>
 
-                    {profileTypes.map((profileType) => (
+                    {profileTypes.map((profileType, index) => (
                         <TouchableOpacity
                             key={profileType.type}
                             style={[
-                                styles.profileTypeCard,
-                                selectedType === profileType.type && styles.profileTypeCardSelected
+                                styles.settingItem,
+                                index === 0 && styles.firstSettingItem,
+                                index === profileTypes.length - 1 && styles.lastSettingItem,
+                                selectedType === profileType.type && styles.selectedItem,
                             ]}
                             onPress={() => setSelectedType(profileType.type)}
                         >
-                            <View style={styles.profileTypeHeader}>
-                                <IconButton
+                            <View style={styles.settingInfo}>
+                                <IconComponent
                                     name={profileType.icon as any}
-                                    size={32}
-                                    color={selectedType === profileType.type ? colors.primaryLight : profileType.color}
-                                    backgroundColor={selectedType === profileType.type ? profileType.color : 'transparent'}
-                                    style={styles.profileTypeIcon}
+                                    size={20}
+                                    color={selectedType === profileType.type ? colors.primaryColor : '#666'}
+                                    style={styles.settingIcon}
                                 />
-                                <View style={styles.profileTypeInfo}>
+                                <View>
                                     <Text style={[
-                                        styles.profileTypeTitle,
-                                        selectedType === profileType.type && styles.profileTypeTitleSelected
+                                        styles.settingLabel,
+                                        selectedType === profileType.type && styles.selectedLabel
                                     ]}>
                                         {profileType.title}
                                     </Text>
-                                    <Text style={[
-                                        styles.profileTypeDescription,
-                                        selectedType === profileType.type && styles.profileTypeDescriptionSelected
-                                    ]}>
+                                    <Text style={styles.settingDescription}>
                                         {profileType.description}
                                     </Text>
                                 </View>
                             </View>
+                            {selectedType === profileType.type && (
+                                <IconComponent name="checkmark" size={20} color={colors.primaryColor} />
+                            )}
                         </TouchableOpacity>
                     ))}
                 </View>
@@ -308,20 +342,161 @@ export default function ProfileCreateScreen() {
                     </View>
                 )}
 
+                {/* Business-specific form */}
+                {selectedType === 'business' && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Business Information</Text>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Business Type *</Text>
+                            <View style={styles.radioGroup}>
+                                {['small_business', 'startup', 'freelancer', 'consultant', 'other'].map((type) => (
+                                    <TouchableOpacity
+                                        key={type}
+                                        style={[
+                                            styles.radioButton,
+                                            formData.businessType === type && styles.radioButtonSelected
+                                        ]}
+                                        onPress={() => setFormData(prev => ({ ...prev, businessType: type }))}
+                                    >
+                                        <Text style={[
+                                            styles.radioButtonText,
+                                            formData.businessType === type && styles.radioButtonTextSelected
+                                        ]}>
+                                            {type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Description</Text>
+                            <TextInput
+                                style={[styles.input, styles.textArea]}
+                                value={formData.description}
+                                onChangeText={(text) => setFormData(prev => ({ ...prev, description: text }))}
+                                placeholder="Describe your business..."
+                                multiline
+                                numberOfLines={4}
+                            />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>License Number</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={formData.businessDetails.licenseNumber}
+                                onChangeText={(text) => setFormData(prev => ({
+                                    ...prev,
+                                    businessDetails: { ...prev.businessDetails, licenseNumber: text }
+                                }))}
+                                placeholder="Enter license number (if applicable)"
+                            />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Tax ID</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={formData.businessDetails.taxId}
+                                onChangeText={(text) => setFormData(prev => ({
+                                    ...prev,
+                                    businessDetails: { ...prev.businessDetails, taxId: text }
+                                }))}
+                                placeholder="Enter tax ID"
+                            />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Year Established</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={formData.businessDetails.yearEstablished}
+                                onChangeText={(text) => setFormData(prev => ({
+                                    ...prev,
+                                    businessDetails: { ...prev.businessDetails, yearEstablished: text }
+                                }))}
+                                placeholder="e.g., 2020"
+                                keyboardType="numeric"
+                            />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Number of Employees</Text>
+                            <View style={styles.radioGroup}>
+                                {['1-5', '6-10', '11-25', '26+'].map((count) => (
+                                    <TouchableOpacity
+                                        key={count}
+                                        style={[
+                                            styles.radioButton,
+                                            formData.businessDetails.employeeCount === count && styles.radioButtonSelected
+                                        ]}
+                                        onPress={() => setFormData(prev => ({
+                                            ...prev,
+                                            businessDetails: { ...prev.businessDetails, employeeCount: count }
+                                        }))}
+                                    >
+                                        <Text style={[
+                                            styles.radioButtonText,
+                                            formData.businessDetails.employeeCount === count && styles.radioButtonTextSelected
+                                        ]}>
+                                            {count}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Specialties</Text>
+                            <View style={styles.checkboxGroup}>
+                                {['consulting', 'technology', 'design', 'marketing', 'finance', 'healthcare', 'education', 'retail', 'services'].map((specialty) => (
+                                    <TouchableOpacity
+                                        key={specialty}
+                                        style={[
+                                            styles.checkbox,
+                                            formData.businessDetails.specialties.includes(specialty) && styles.checkboxSelected
+                                        ]}
+                                        onPress={() => toggleSpecialty(specialty)}
+                                    >
+                                        <Text style={[
+                                            styles.checkboxText,
+                                            formData.businessDetails.specialties.includes(specialty) && styles.checkboxTextSelected
+                                        ]}>
+                                            {specialty.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Legal Company Name *</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={formData.legalCompanyName}
+                                onChangeText={(text) => setFormData(prev => ({ ...prev, legalCompanyName: text }))}
+                                placeholder="Enter your legal company name"
+                            />
+                        </View>
+                    </View>
+                )}
+
                 {/* Profile Type Info */}
                 {selectedType && (
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>What's Next?</Text>
-                        <Text style={styles.infoText}>
-                            After creating your {selectedType} profile, you can:
-                        </Text>
-                        <View style={styles.infoList}>
-                            <Text style={styles.infoItem}>• Customize your preferences and settings</Text>
-                            <Text style={styles.infoItem}>• Add verification documents</Text>
-                            <Text style={styles.infoItem}>• Build your trust score</Text>
-                            {selectedType === 'agency' && (
-                                <Text style={styles.infoItem}>• Add team members to your agency</Text>
-                            )}
+                        <View style={[styles.settingItem, styles.firstSettingItem, styles.lastSettingItem]}>
+                            <View style={styles.settingInfo}>
+                                <IconComponent name="information-circle" size={20} color="#666" style={styles.settingIcon} />
+                                <View style={styles.infoContent}>
+                                    <Text style={styles.settingLabel}>Profile Setup</Text>
+                                    <Text style={styles.settingDescription}>
+                                        After creating your {selectedType} profile, you can customize preferences, add verification documents, and build your trust score.
+                                    </Text>
+                                </View>
+                            </View>
                         </View>
                     </View>
                 )}
@@ -331,23 +506,28 @@ export default function ProfileCreateScreen() {
 }
 
 const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#f2f2f2',
+    },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: colors.primaryLight,
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        paddingBottom: 16,
+        backgroundColor: '#fff',
         borderBottomWidth: 1,
-        borderBottomColor: colors.primaryLight_1,
+        borderBottomColor: '#e0e0e0',
     },
     backButton: {
         padding: 8,
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: 24,
         fontWeight: 'bold',
-        color: colors.primaryDark,
+        color: '#000',
     },
     createButton: {
         paddingHorizontal: 16,
@@ -356,70 +536,72 @@ const styles = StyleSheet.create({
         borderRadius: 20,
     },
     createButtonDisabled: {
-        backgroundColor: colors.primaryLight_1,
+        backgroundColor: '#ccc',
     },
     createButtonText: {
-        color: colors.primaryLight,
+        color: '#fff',
         fontSize: 16,
         fontWeight: '600',
     },
-    container: {
+    content: {
         flex: 1,
-        backgroundColor: colors.primaryLight,
+        padding: 16,
     },
     section: {
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.primaryLight_1,
+        marginBottom: 24,
     },
     sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: colors.primaryDark,
-        marginBottom: 8,
-    },
-    sectionSubtitle: {
-        fontSize: 14,
-        color: colors.COLOR_BLACK_LIGHT_5,
-        marginBottom: 16,
-    },
-    profileTypeCard: {
-        padding: 16,
-        borderRadius: 12,
-        borderWidth: 2,
-        borderColor: colors.primaryLight_1,
-        backgroundColor: colors.primaryLight,
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
         marginBottom: 12,
     },
-    profileTypeCardSelected: {
-        borderColor: colors.primaryColor,
-        backgroundColor: colors.primaryLight_1,
-    },
-    profileTypeHeader: {
+    settingItem: {
+        backgroundColor: '#fff',
+        padding: 16,
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 2,
     },
-    profileTypeIcon: {
-        marginRight: 16,
+    firstSettingItem: {
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        marginBottom: 2,
     },
-    profileTypeInfo: {
+    lastSettingItem: {
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+        marginBottom: 8,
+    },
+    settingInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
         flex: 1,
     },
-    profileTypeTitle: {
+    settingIcon: {
+        marginRight: 12,
+    },
+    settingLabel: {
         fontSize: 16,
-        fontWeight: 'bold',
-        color: colors.primaryDark,
-        marginBottom: 4,
+        fontWeight: '500',
+        color: '#333',
+        marginBottom: 2,
     },
-    profileTypeTitleSelected: {
-        color: colors.primaryColor,
-    },
-    profileTypeDescription: {
+    settingDescription: {
         fontSize: 14,
-        color: colors.COLOR_BLACK_LIGHT_5,
+        color: '#666',
+        flexWrap: 'wrap',
+        flexShrink: 1,
     },
-    profileTypeDescriptionSelected: {
-        color: colors.primaryDark,
+    selectedItem: {
+        backgroundColor: '#f8fafc',
+        borderWidth: 1,
+        borderColor: colors.primaryColor,
+    },
+    selectedLabel: {
+        color: colors.primaryColor,
+        fontWeight: '600',
     },
     inputGroup: {
         marginBottom: 16,
@@ -427,17 +609,17 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 16,
         fontWeight: '600',
-        color: colors.primaryDark,
+        color: '#333',
         marginBottom: 8,
     },
     input: {
         borderWidth: 1,
-        borderColor: colors.primaryLight_1,
+        borderColor: '#e0e0e0',
         borderRadius: 8,
         paddingHorizontal: 12,
         paddingVertical: 12,
         fontSize: 16,
-        backgroundColor: colors.primaryLight,
+        backgroundColor: '#fff',
     },
     textArea: {
         height: 100,
@@ -453,8 +635,8 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: colors.primaryLight_1,
-        backgroundColor: colors.primaryLight,
+        borderColor: '#e0e0e0',
+        backgroundColor: '#fff',
     },
     radioButtonSelected: {
         backgroundColor: colors.primaryColor,
@@ -462,10 +644,10 @@ const styles = StyleSheet.create({
     },
     radioButtonText: {
         fontSize: 14,
-        color: colors.primaryDark,
+        color: '#333',
     },
     radioButtonTextSelected: {
-        color: colors.primaryLight,
+        color: '#fff',
     },
     checkboxGroup: {
         flexDirection: 'row',
@@ -477,8 +659,8 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: colors.primaryLight_1,
-        backgroundColor: colors.primaryLight,
+        borderColor: '#e0e0e0',
+        backgroundColor: '#fff',
     },
     checkboxSelected: {
         backgroundColor: colors.primaryColor,
@@ -486,22 +668,12 @@ const styles = StyleSheet.create({
     },
     checkboxText: {
         fontSize: 14,
-        color: colors.primaryDark,
+        color: '#333',
     },
     checkboxTextSelected: {
-        color: colors.primaryLight,
+        color: '#fff',
     },
-    infoText: {
-        fontSize: 16,
-        color: colors.primaryDark,
-        marginBottom: 12,
-    },
-    infoList: {
-        marginLeft: 8,
-    },
-    infoItem: {
-        fontSize: 14,
-        color: colors.COLOR_BLACK_LIGHT_5,
-        marginBottom: 4,
+    infoContent: {
+        flex: 1,
     },
 }); 

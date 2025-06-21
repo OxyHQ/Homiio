@@ -106,15 +106,17 @@ export default function SettingsScreen() {
                         onPress={() => showBottomSheet?.('AccountSettings')}
                     >
                         <View style={styles.userIcon}>
-                            <IconComponent name="person" size={24} color="#fff" />
+                            <Ionicons name="person" size={24} color="#fff" />
                         </View>
                         <View style={styles.settingInfo}>
                             <View>
-                                <Text style={styles.settingLabel}>John Doe</Text>
-                                <Text style={styles.settingDescription}>john.doe@example.com</Text>
+                                <Text style={styles.settingLabel}>
+                                    {typeof user.name === 'string' ? user.name : user.name?.full || user.name?.first || user.username}
+                                </Text>
+                                <Text style={styles.settingDescription}>{user.username}</Text>
                             </View>
                         </View>
-                        <IconComponent name="chevron-forward" size={16} color="#ccc" />
+                        <Ionicons name="chevron-forward" size={16} color="#ccc" />
                     </TouchableOpacity>
                 </View>
 

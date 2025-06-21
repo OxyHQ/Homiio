@@ -8,6 +8,7 @@ interface ProfileContextType {
     allProfiles: Profile[];
     isLoading: boolean;
     error: Error | null;
+    hasPrimaryProfile: boolean;
     refetch: () => void;
 }
 
@@ -36,9 +37,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
     // Update state when data changes
     useEffect(() => {
-        if (primaryProfileData) {
-            setPrimaryProfile(primaryProfileData);
-        }
+        setPrimaryProfile(primaryProfileData ?? null);
     }, [primaryProfileData]);
 
     useEffect(() => {
@@ -57,6 +56,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
     const isLoading = isPrimaryLoading || isAllProfilesLoading;
     const error = primaryError || allProfilesError;
+    const hasPrimaryProfile = !!primaryProfile;
 
     const refetch = () => {
         refetchPrimary();
@@ -68,6 +68,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         allProfiles,
         isLoading,
         error,
+        hasPrimaryProfile,
         refetch,
     };
 
@@ -102,6 +103,12 @@ export function useRoommateProfile() {
 export function useAgencyProfiles() {
     const { allProfiles } = useProfile();
     return allProfiles.filter(profile => profile.profileType === 'agency');
+}
+
+// Hook to get business profiles specifically
+export function useBusinessProfiles() {
+    const { allProfiles } = useProfile();
+    return allProfiles.filter(profile => profile.profileType === 'business');
 }
 
 // Hook to get owned agency profiles

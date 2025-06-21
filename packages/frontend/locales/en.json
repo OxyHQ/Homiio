@@ -200,6 +200,19 @@
         "share": "Share",
         "contact": "Contact",
         "bookViewing": "Book Viewing",
+        "my": {
+            "title": "My Properties",
+            "edit": "Edit",
+            "delete": "Delete",
+            "deleteTitle": "Delete Property",
+            "deleteMessage": "Are you sure you want to delete \"{{title}}\"? This action cannot be undone.",
+            "deleteSuccess": "Property deleted successfully",
+            "emptyTitle": "No Properties Yet",
+            "emptyDescription": "You haven't created any properties yet. Start by adding your first property listing.",
+            "createFirst": "Create Your First Property",
+            "errorTitle": "Error Loading Properties",
+            "errorDescription": "There was an error loading your properties. Please try again."
+        },
         "details": {
             "price": "Price",
             "location": "Location",

@@ -126,6 +126,52 @@
   "error.chat.load_failed": "Error al cargar mensajes",
   "error.data.fetch_failed": "Error al obtener datos: {{message}}",
   "error.users.fetch_failed": "Error al obtener usuarios: {{message}}",
+  "properties": {
+    "title": "Propiedades",
+    "filters": "Filtros",
+    "sort": "Ordenar",
+    "view": "Ver",
+    "save": "Guardar",
+    "share": "Compartir",
+    "contact": "Contactar",
+    "bookViewing": "Reservar Visita",
+    "my": {
+      "title": "Mis Propiedades",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "deleteTitle": "Eliminar Propiedad",
+      "deleteMessage": "¿Estás seguro de que quieres eliminar \"{{title}}\"? Esta acción no se puede deshacer.",
+      "deleteSuccess": "Propiedad eliminada exitosamente",
+      "emptyTitle": "Aún No Hay Propiedades",
+      "emptyDescription": "Aún no has creado ninguna propiedad. Comienza agregando tu primera lista de propiedad.",
+      "createFirst": "Crear Tu Primera Propiedad",
+      "errorTitle": "Error al Cargar Propiedades",
+      "errorDescription": "Hubo un error al cargar tus propiedades. Por favor, inténtalo de nuevo."
+    },
+    "details": {
+      "price": "Precio",
+      "location": "Ubicación",
+      "bedrooms": "Habitaciones",
+      "bathrooms": "Baños",
+      "size": "Tamaño",
+      "available": "Disponible",
+      "description": "Descripción",
+      "amenities": "Comodidades",
+      "photos": "Fotos",
+      "map": "Mapa",
+      "contactInfo": "Información de Contacto"
+    },
+    "filters": {
+      "priceRange": "Rango de Precio",
+      "propertyType": "Tipo de Propiedad",
+      "bedrooms": "Habitaciones",
+      "bathrooms": "Baños",
+      "amenities": "Comodidades",
+      "availability": "Disponibilidad",
+      "apply": "Aplicar Filtros",
+      "clear": "Limpiar Todo"
+    }
+  },
   "settings": {
     "title": "Configuración",
     "signOut": "Cerrar Sesión",

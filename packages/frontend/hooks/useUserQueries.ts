@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 export const userKeys = {
   recentProperties: () => ['user', 'recent-properties'] as const,
   savedProperties: () => ['user', 'saved-properties'] as const,
+  userProperties: () => ['user', 'properties'] as const,
 };
 
 // OxyServices-based recently viewed properties hook
@@ -413,5 +414,69 @@ export function useUpdateSavedPropertyNotes() {
       queryClient.invalidateQueries({ queryKey: userKeys.savedProperties() });
       console.log('Invalidated saved properties cache');
     },
+  });
+}
+
+// Hook to get user's owned properties
+export function useUserProperties() {
+  const { oxyServices, activeSessionId } = useOxy();
+  
+  return useQuery<{
+    properties: Property[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }>({
+    queryKey: userKeys.userProperties(),
+    queryFn: async () => {
+      // Check if OxyServices is available
+      if (!oxyServices || !activeSessionId) {
+        console.log('OxyServices not available - returning empty properties');
+        return { properties: [], total: 0, page: 1, totalPages: 1 };
+      }
+
+      try {
+        console.log('Fetching user properties with OxyServices authentication');
+        
+        // Get the token from OxyServices
+        const tokenData = await oxyServices.getTokenBySession(activeSessionId);
+        
+        if (!tokenData) {
+          console.log('No token available from OxyServices');
+          return { properties: [], total: 0, page: 1, totalPages: 1 };
+        }
+
+        // Make authenticated request
+        const response = await fetch(`${API_URL}/api/users/me/properties`, {
+          headers: {
+            'Authorization': `Bearer ${tokenData.accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            console.log('Authentication failed for user properties');
+            return { properties: [], total: 0, page: 1, totalPages: 1 };
+          }
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const result = {
+          properties: data.data || [],
+          total: data.pagination?.total || 0,
+          page: data.pagination?.page || 1,
+          totalPages: data.pagination?.totalPages || 1,
+        };
+        console.log(`Successfully fetched ${result.properties.length} user properties`);
+        return result;
+      } catch (error) {
+        console.error('Error fetching user properties:', error);
+        return { properties: [], total: 0, page: 1, totalPages: 1 };
+      }
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: !!(oxyServices && activeSessionId), // Only run when authenticated
   });
 }

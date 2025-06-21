@@ -342,6 +342,19 @@
     "share": "Condividi",
     "contact": "Contatta",
     "bookViewing": "Prenota Visita",
+    "my": {
+      "title": "Le Mie Proprietà",
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "deleteTitle": "Elimina Proprietà",
+      "deleteMessage": "Sei sicuro di voler eliminare \"{{title}}\"? Questa azione non può essere annullata.",
+      "deleteSuccess": "Proprietà eliminata con successo",
+      "emptyTitle": "Nessuna Proprietà Ancora",
+      "emptyDescription": "Non hai ancora creato nessuna proprietà. Inizia aggiungendo la tua prima lista di proprietà.",
+      "createFirst": "Crea la Tua Prima Proprietà",
+      "errorTitle": "Errore nel Caricamento delle Proprietà",
+      "errorDescription": "Si è verificato un errore nel caricamento delle tue proprietà. Riprova."
+    },
     "details": {
       "price": "Prezzo",
       "location": "Posizione",

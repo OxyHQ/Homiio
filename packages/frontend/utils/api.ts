@@ -114,27 +114,41 @@ const api = axios.create({
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     try {
+      console.log('API Request interceptor - URL:', config.url);
+      console.log('API Request interceptor - Method:', config.method);
+      console.log('API Request interceptor - Global OxyServices available:', !!globalOxyServices);
+      console.log('API Request interceptor - Global ActiveSessionId:', globalActiveSessionId);
+      
       // Use OxyServices if available
       if (globalOxyServices && globalActiveSessionId) {
+        console.log('API Request interceptor - Getting token from OxyServices...');
         const tokenData = await globalOxyServices.getTokenBySession(globalActiveSessionId);
         
         if (tokenData) {
+          console.log('API Request interceptor - Token obtained successfully');
           config.headers.Authorization = `Bearer ${tokenData.accessToken}`;
           return config;
+        } else {
+          console.log('API Request interceptor - No token data from OxyServices');
         }
       }
       
       // Fallback to legacy token
+      console.log('API Request interceptor - Trying legacy token...');
       const token = await getData('authToken');
       if (token) {
+        console.log('API Request interceptor - Legacy token found');
         config.headers.Authorization = `Bearer ${token}`;
+      } else {
+        console.log('API Request interceptor - No legacy token found');
       }
     } catch (error) {
-      console.error('Failed to get auth token:', error);
+      console.error('API Request interceptor - Failed to get auth token:', error);
     }
     return config;
   },
   (error: AxiosError) => {
+    console.error('API Request interceptor - Error:', error);
     return Promise.reject(error);
   }
 );
@@ -142,9 +156,24 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response: AxiosResponse) => {
+    console.log('API Response interceptor - Success:', {
+      url: response.config.url,
+      method: response.config.method,
+      status: response.status,
+      statusText: response.statusText
+    });
     return response;
   },
   async (error: AxiosError) => {
+    console.log('API Response interceptor - Error:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      message: error.message,
+      responseData: error.response?.data
+    });
+    
     const status = error.response?.status;
     
     if (status === 401) {
@@ -211,6 +240,39 @@ export function cleanExpiredCache(): void {
     if (now > entry.expiration) {
       cache.delete(key);
     }
+  }
+}
+
+// Web-compatible alert function
+export function webAlert(title: string, message: string, buttons?: Array<{ text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void }>) {
+  if (Platform.OS === 'web') {
+    if (buttons && buttons.length > 1) {
+      // For confirmation dialogs, use browser confirm
+      const result = window.confirm(`${title}\n\n${message}`);
+      if (result) {
+        // Find the non-cancel button and call its onPress
+        const confirmButton = buttons.find(btn => btn.style !== 'cancel');
+        if (confirmButton?.onPress) {
+          confirmButton.onPress();
+        }
+      } else {
+        // Find the cancel button and call its onPress
+        const cancelButton = buttons.find(btn => btn.style === 'cancel');
+        if (cancelButton?.onPress) {
+          cancelButton.onPress();
+        }
+      }
+    } else {
+      // For simple alerts, use browser alert
+      window.alert(`${title}\n\n${message}`);
+      if (buttons?.[0]?.onPress) {
+        buttons[0].onPress();
+      }
+    }
+  } else {
+    // On mobile, use React Native Alert
+    const { Alert } = require('react-native');
+    Alert.alert(title, message, buttons);
   }
 }
 

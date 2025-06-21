@@ -273,19 +273,19 @@ const personalProfileSchema = new mongoose.Schema({
   },
 }, { _id: false });
 
-// Roommate Profile Schema - app-specific roommate preferences
+// Roommate Profile Schema
 const roommateProfileSchema = new mongoose.Schema({
   roommatePreferences: {
     ageRange: {
       min: {
         type: Number,
-        min: 18,
-        max: 100,
+        min: [18, "Minimum age must be at least 18"],
+        max: [100, "Minimum age cannot exceed 100"],
       },
       max: {
         type: Number,
-        min: 18,
-        max: 100,
+        min: [18, "Maximum age must be at least 18"],
+        max: [100, "Maximum age cannot exceed 100"],
       },
     },
     gender: {
@@ -297,7 +297,7 @@ const roommateProfileSchema = new mongoose.Schema({
       smoking: {
         type: String,
         enum: ["yes", "no", "prefer_not"],
-        default: "prefer_not",
+        default: "no",
       },
       pets: {
         type: String,
@@ -307,12 +307,12 @@ const roommateProfileSchema = new mongoose.Schema({
       partying: {
         type: String,
         enum: ["yes", "no", "prefer_not"],
-        default: "prefer_not",
+        default: "no",
       },
       cleanliness: {
         type: String,
         enum: ["very_clean", "clean", "average", "relaxed"],
-        default: "average",
+        default: "clean",
       },
       schedule: {
         type: String,
@@ -323,11 +323,11 @@ const roommateProfileSchema = new mongoose.Schema({
     budget: {
       min: {
         type: Number,
-        min: 0,
+        min: [0, "Minimum budget cannot be negative"],
       },
       max: {
         type: Number,
-        min: 0,
+        min: [0, "Maximum budget cannot be negative"],
       },
     },
     moveInDate: {
@@ -340,17 +340,45 @@ const roommateProfileSchema = new mongoose.Schema({
     },
   },
   roommateHistory: [{
-    startDate: Date,
-    endDate: Date,
-    location: String,
-    roommateCount: Number,
-    reason: String,
+    startDate: {
+      type: Date,
+      required: true,
+    },
+    endDate: {
+      type: Date,
+    },
+    location: {
+      type: String,
+      required: true,
+    },
+    roommateCount: {
+      type: Number,
+      min: [1, "Roommate count must be at least 1"],
+    },
+    reason: {
+      type: String,
+      trim: true,
+    },
   }],
   references: [{
-    name: String,
-    relationship: String,
-    phone: String,
-    email: String,
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    relationship: {
+      type: String,
+      trim: true,
+    },
+    phone: {
+      type: String,
+      trim: true,
+    },
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+    },
     verified: {
       type: Boolean,
       default: false,
@@ -443,6 +471,95 @@ const agencyProfileSchema = new mongoose.Schema({
   }],
 }, { _id: false });
 
+// Business Profile Schema
+const businessProfileSchema = new mongoose.Schema({
+  businessType: {
+    type: String,
+    enum: ["small_business", "startup", "freelancer", "consultant", "other"],
+    required: true,
+  },
+  legalCompanyName: {
+    type: String,
+    trim: true,
+  },
+  description: {
+    type: String,
+    maxlength: [1000, "Description cannot exceed 1000 characters"],
+  },
+  businessDetails: {
+    licenseNumber: {
+      type: String,
+      trim: true,
+    },
+    taxId: {
+      type: String,
+      trim: true,
+    },
+    yearEstablished: {
+      type: Number,
+      min: [1900, "Year established cannot be before 1900"],
+      max: [new Date().getFullYear(), "Year established cannot be in the future"],
+    },
+    employeeCount: {
+      type: String,
+      enum: ["1-5", "6-10", "11-25", "26+"],
+    },
+    industry: {
+      type: String,
+      trim: true,
+    },
+    specialties: [{
+      type: String,
+      trim: true,
+      lowercase: true,
+    }],
+    serviceAreas: [{
+      city: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      state: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      radius: {
+        type: Number,
+        min: [1, "Radius must be at least 1 mile"],
+        max: [100, "Radius cannot exceed 100 miles"],
+        default: 10,
+      },
+    }],
+  },
+  verification: {
+    businessLicense: {
+      type: Boolean,
+      default: false,
+    },
+    insurance: {
+      type: Boolean,
+      default: false,
+    },
+    backgroundCheck: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  ratings: {
+    average: {
+      type: Number,
+      min: 0,
+      max: 5,
+      default: 0,
+    },
+    count: {
+      type: Number,
+      default: 0,
+    },
+  },
+}, { _id: false });
+
 // Main Profile Schema
 const profileSchema = new mongoose.Schema({
   oxyUserId: {
@@ -452,7 +569,7 @@ const profileSchema = new mongoose.Schema({
   },
   profileType: {
     type: String,
-    enum: ["personal", "roommate", "agency"],
+    enum: ['personal', 'roommate', 'agency', 'business'],
     required: true,
   },
   isPrimary: {
@@ -471,6 +588,9 @@ const profileSchema = new mongoose.Schema({
   },
   agencyProfile: {
     type: agencyProfileSchema,
+  },
+  businessProfile: {
+    type: businessProfileSchema,
   },
 }, {
   timestamps: true,
@@ -509,14 +629,19 @@ profileSchema.pre("save", async function(next) {
 
 // Static methods
 profileSchema.statics.findPrimaryByOxyUserId = function(oxyUserId, select = null) {
+  console.log('🔍 findPrimaryByOxyUserId called with:', { oxyUserId, select });
+  
   const query = this.findOne({ 
     oxyUserId, 
     isPrimary: true, 
     isActive: true 
   });
   
+  console.log('🔍 Query conditions:', { oxyUserId, isPrimary: true, isActive: true });
+  
   if (select) {
     query.select(select);
+    console.log('🔍 Added select:', select);
   }
   
   return query.lean();
@@ -524,8 +649,7 @@ profileSchema.statics.findPrimaryByOxyUserId = function(oxyUserId, select = null
 
 profileSchema.statics.findByOxyUserId = function(oxyUserId, select = null) {
   const query = this.find({ 
-    oxyUserId, 
-    isActive: true 
+    oxyUserId
   }).sort({ isPrimary: -1, createdAt: -1 });
   
   if (select) {
@@ -538,8 +662,7 @@ profileSchema.statics.findByOxyUserId = function(oxyUserId, select = null) {
 profileSchema.statics.findByOxyUserIdAndType = function(oxyUserId, profileType) {
   return this.findOne({ 
     oxyUserId, 
-    profileType, 
-    isActive: true 
+    profileType
   }).lean();
 };
 
@@ -707,54 +830,6 @@ profileSchema.methods.calculateTrustScore = function(forceRecalculate = false) {
         value: verificationScore,
         maxValue: verificationMax,
         label: "Verification Status"
-      });
-    }
-  }
-
-  // Roommate Profile Scoring
-  if (this.roommateProfile) {
-    const roommate = this.roommateProfile;
-    
-    // Preferences (15 points)
-    if (roommate.preferences) {
-      const preferencesMax = 15;
-      let preferencesScore = 0;
-      
-      if (roommate.preferences.lifestyle) preferencesScore += 3;
-      if (roommate.preferences.cleanliness) preferencesScore += 2;
-      if (roommate.preferences.noiseLevel) preferencesScore += 2;
-      if (roommate.preferences.smoking) preferencesScore += 1;
-      if (roommate.preferences.pets) preferencesScore += 2;
-      if (roommate.preferences.visitors) preferencesScore += 2;
-      if (roommate.preferences.budget) preferencesScore += 3;
-      
-      totalScore += preferencesScore;
-      maxScore += preferencesMax;
-      factors.push({
-        type: "roommate_preferences",
-        value: preferencesScore,
-        maxValue: preferencesMax,
-        label: "Roommate Preferences"
-      });
-    }
-
-    // Compatibility (10 points)
-    if (roommate.compatibility) {
-      const compatibilityMax = 10;
-      let compatibilityScore = 0;
-      
-      if (roommate.compatibility.schedule) compatibilityScore += 2;
-      if (roommate.compatibility.interests && roommate.compatibility.interests.length > 0) compatibilityScore += 3;
-      if (roommate.compatibility.communicationStyle) compatibilityScore += 2;
-      if (roommate.compatibility.sharedResponsibilities) compatibilityScore += 3;
-      
-      totalScore += compatibilityScore;
-      maxScore += compatibilityMax;
-      factors.push({
-        type: "roommate_compatibility",
-        value: compatibilityScore,
-        maxValue: compatibilityMax,
-        label: "Roommate Compatibility"
       });
     }
   }
