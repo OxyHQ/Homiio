@@ -258,6 +258,101 @@ const personalProfileSchema = new mongoose.Schema({
         default: false,
       },
     },
+    roommate: {
+      enabled: {
+        type: Boolean,
+        default: false,
+      },
+      preferences: {
+        ageRange: {
+          min: {
+            type: Number,
+            min: [18, "Minimum age must be at least 18"],
+            max: [100, "Minimum age cannot exceed 100"],
+            default: 18,
+          },
+          max: {
+            type: Number,
+            min: [18, "Maximum age must be at least 18"],
+            max: [100, "Maximum age cannot exceed 100"],
+            default: 35,
+          },
+        },
+        gender: {
+          type: String,
+          enum: ["male", "female", "any"],
+          default: "any",
+        },
+        lifestyle: {
+          smoking: {
+            type: String,
+            enum: ["yes", "no", "prefer_not"],
+            default: "no",
+          },
+          pets: {
+            type: String,
+            enum: ["yes", "no", "prefer_not"],
+            default: "prefer_not",
+          },
+          partying: {
+            type: String,
+            enum: ["yes", "no", "prefer_not"],
+            default: "no",
+          },
+          cleanliness: {
+            type: String,
+            enum: ["very_clean", "clean", "average", "relaxed"],
+            default: "clean",
+          },
+          schedule: {
+            type: String,
+            enum: ["early_bird", "night_owl", "flexible"],
+            default: "flexible",
+          },
+        },
+        budget: {
+          min: {
+            type: Number,
+            min: [0, "Minimum budget cannot be negative"],
+            default: 800,
+          },
+          max: {
+            type: Number,
+            min: [0, "Maximum budget cannot be negative"],
+            default: 1500,
+          },
+        },
+        moveInDate: {
+          type: Date,
+        },
+        leaseDuration: {
+          type: String,
+          enum: ["monthly", "3_months", "6_months", "yearly", "flexible"],
+          default: "yearly",
+        },
+      },
+      history: [{
+        startDate: {
+          type: Date,
+          required: true,
+        },
+        endDate: {
+          type: Date,
+        },
+        location: {
+          type: String,
+          required: true,
+        },
+        roommateCount: {
+          type: Number,
+          min: [1, "Roommate count must be at least 1"],
+        },
+        reason: {
+          type: String,
+          trim: true,
+        },
+      }],
+    },
     language: {
       type: String,
       default: "en",
@@ -271,119 +366,6 @@ const personalProfileSchema = new mongoose.Schema({
       default: "USD",
     },
   },
-}, { _id: false });
-
-// Roommate Profile Schema
-const roommateProfileSchema = new mongoose.Schema({
-  roommatePreferences: {
-    ageRange: {
-      min: {
-        type: Number,
-        min: [18, "Minimum age must be at least 18"],
-        max: [100, "Minimum age cannot exceed 100"],
-      },
-      max: {
-        type: Number,
-        min: [18, "Maximum age must be at least 18"],
-        max: [100, "Maximum age cannot exceed 100"],
-      },
-    },
-    gender: {
-      type: String,
-      enum: ["male", "female", "any"],
-      default: "any",
-    },
-    lifestyle: {
-      smoking: {
-        type: String,
-        enum: ["yes", "no", "prefer_not"],
-        default: "no",
-      },
-      pets: {
-        type: String,
-        enum: ["yes", "no", "prefer_not"],
-        default: "prefer_not",
-      },
-      partying: {
-        type: String,
-        enum: ["yes", "no", "prefer_not"],
-        default: "no",
-      },
-      cleanliness: {
-        type: String,
-        enum: ["very_clean", "clean", "average", "relaxed"],
-        default: "clean",
-      },
-      schedule: {
-        type: String,
-        enum: ["early_bird", "night_owl", "flexible"],
-        default: "flexible",
-      },
-    },
-    budget: {
-      min: {
-        type: Number,
-        min: [0, "Minimum budget cannot be negative"],
-      },
-      max: {
-        type: Number,
-        min: [0, "Maximum budget cannot be negative"],
-      },
-    },
-    moveInDate: {
-      type: Date,
-    },
-    leaseDuration: {
-      type: String,
-      enum: ["monthly", "3_months", "6_months", "yearly", "flexible"],
-      default: "yearly",
-    },
-  },
-  roommateHistory: [{
-    startDate: {
-      type: Date,
-      required: true,
-    },
-    endDate: {
-      type: Date,
-    },
-    location: {
-      type: String,
-      required: true,
-    },
-    roommateCount: {
-      type: Number,
-      min: [1, "Roommate count must be at least 1"],
-    },
-    reason: {
-      type: String,
-      trim: true,
-    },
-  }],
-  references: [{
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    relationship: {
-      type: String,
-      trim: true,
-    },
-    phone: {
-      type: String,
-      trim: true,
-    },
-    email: {
-      type: String,
-      trim: true,
-      lowercase: true,
-    },
-    verified: {
-      type: Boolean,
-      default: false,
-    },
-  }],
 }, { _id: false });
 
 // Agency Profile Schema - app-specific business data
@@ -569,7 +551,7 @@ const profileSchema = new mongoose.Schema({
   },
   profileType: {
     type: String,
-    enum: ['personal', 'roommate', 'agency', 'business'],
+    enum: ['personal', 'agency', 'business'],
     required: true,
   },
   isPrimary: {
@@ -582,9 +564,6 @@ const profileSchema = new mongoose.Schema({
   },
   personalProfile: {
     type: personalProfileSchema,
-  },
-  roommateProfile: {
-    type: roommateProfileSchema,
   },
   agencyProfile: {
     type: agencyProfileSchema,
@@ -629,19 +608,14 @@ profileSchema.pre("save", async function(next) {
 
 // Static methods
 profileSchema.statics.findPrimaryByOxyUserId = function(oxyUserId, select = null) {
-  console.log('🔍 findPrimaryByOxyUserId called with:', { oxyUserId, select });
-  
   const query = this.findOne({ 
     oxyUserId, 
     isPrimary: true, 
     isActive: true 
   });
   
-  console.log('🔍 Query conditions:', { oxyUserId, isPrimary: true, isActive: true });
-  
   if (select) {
     query.select(select);
-    console.log('🔍 Added select:', select);
   }
   
   return query.lean();

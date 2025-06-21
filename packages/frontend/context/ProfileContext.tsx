@@ -93,12 +93,6 @@ export function usePersonalProfile() {
     return allProfiles.find(profile => profile.profileType === 'personal') || null;
 }
 
-// Hook to get roommate profile specifically
-export function useRoommateProfile() {
-    const { allProfiles } = useProfile();
-    return allProfiles.find(profile => profile.profileType === 'roommate') || null;
-}
-
 // Hook to get agency profiles specifically
 export function useAgencyProfiles() {
     const { allProfiles } = useProfile();

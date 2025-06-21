@@ -7,20 +7,20 @@ import { useRouter } from 'expo-router';
 import { IconButton } from '@/components/IconButton';
 import { TrustScore } from '@/components/TrustScore';
 import { Header } from '@/components/Header';
-import { usePrimaryProfile, useUpdatePrimaryProfile } from '@/hooks/useProfileQueries';
+import { useActiveProfile, useUpdateProfile } from '@/hooks/useProfileQueries';
 import { UpdateProfileData } from '@/services/profileService';
 
 export default function ProfileEditScreen() {
     const { t } = useTranslation();
     const router = useRouter();
-    const { data: primaryProfile, isLoading: profileLoading, refetch: refetchProfile } = usePrimaryProfile();
-    const updateProfileMutation = useUpdatePrimaryProfile();
+    const { data: activeProfile, isLoading: profileLoading, refetch: refetchProfile } = useActiveProfile();
+    const updateProfileMutation = useUpdateProfile();
     const [isSaving, setIsSaving] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [activeSection, setActiveSection] = useState('personal');
 
     // Get profile type to determine which UI to show
-    const profileType = primaryProfile?.profileType || 'personal';
+    const profileType = activeProfile?.profileType || 'personal';
 
     // Set default active section based on profile type
     useEffect(() => {
@@ -67,6 +67,26 @@ export default function ProfileEditScreen() {
             businessLicense: false,
             insurance: false,
             bonding: false,
+            backgroundCheck: false,
+        },
+    });
+
+    // Form state for business profile
+    const [businessInfo, setBusinessInfo] = useState({
+        businessType: 'startup' as 'small_business' | 'startup' | 'freelancer' | 'consultant' | 'other',
+        legalCompanyName: '',
+        description: '',
+        businessDetails: {
+            licenseNumber: '',
+            taxId: '',
+            yearEstablished: '',
+            employeeCount: '1-5' as '1-5' | '6-10' | '11-25' | '26+',
+            industry: '',
+            specialties: [] as string[],
+        },
+        verification: {
+            businessLicense: false,
+            insurance: false,
             backgroundCheck: false,
         },
     });
@@ -127,10 +147,10 @@ export default function ProfileEditScreen() {
 
     // Update form state when profile data loads
     useEffect(() => {
-        console.log('ProfileEditScreen: primaryProfile changed:', primaryProfile);
+        console.log('ProfileEditScreen: activeProfile changed:', activeProfile);
 
-        if (profileType === 'personal' && primaryProfile?.personalProfile) {
-            const profile = primaryProfile.personalProfile;
+        if (profileType === 'personal' && activeProfile?.personalProfile) {
+            const profile = activeProfile.personalProfile;
             console.log('ProfileEditScreen: Updating form state with profile data:', profile);
             console.log('ProfileEditScreen: personalInfo from profile:', profile.personalInfo);
 
@@ -213,8 +233,8 @@ export default function ProfileEditScreen() {
             setRentalHistory(newRentalHistory);
 
             setHasUnsavedChanges(false);
-        } else if (profileType === 'agency' && primaryProfile?.agencyProfile) {
-            const profile = primaryProfile.agencyProfile;
+        } else if (profileType === 'agency' && activeProfile?.agencyProfile) {
+            const profile = activeProfile.agencyProfile;
             console.log('ProfileEditScreen: Updating agency form state with profile data:', profile);
 
             setAgencyInfo({
@@ -237,16 +257,40 @@ export default function ProfileEditScreen() {
             });
 
             setHasUnsavedChanges(false);
+        } else if (profileType === 'business' && activeProfile?.businessProfile) {
+            const profile = activeProfile.businessProfile;
+            console.log('ProfileEditScreen: Updating business form state with profile data:', profile);
+
+            setBusinessInfo({
+                businessType: profile.businessType || 'startup',
+                description: profile.description || '',
+                businessDetails: {
+                    licenseNumber: profile.businessDetails?.licenseNumber || '',
+                    taxId: profile.businessDetails?.taxId || '',
+                    yearEstablished: profile.businessDetails?.yearEstablished?.toString() || '',
+                    employeeCount: profile.businessDetails?.employeeCount || '1-5',
+                    industry: profile.businessDetails?.industry || '',
+                    specialties: profile.businessDetails?.specialties || [],
+                },
+                verification: {
+                    businessLicense: profile.verification?.businessLicense || false,
+                    insurance: profile.verification?.insurance || false,
+                    backgroundCheck: profile.verification?.backgroundCheck || false,
+                },
+                legalCompanyName: profile.legalCompanyName || '',
+            });
+
+            setHasUnsavedChanges(false);
         }
-    }, [primaryProfile, profileType]);
+    }, [activeProfile, profileType]);
 
     // Memoize trust score data to prevent unnecessary re-renders
     const trustScoreData = useMemo(() => {
-        if (!primaryProfile?.personalProfile?.trustScore) {
+        if (!activeProfile?.personalProfile?.trustScore) {
             return { score: 0, factors: [] };
         }
 
-        const trustScore = primaryProfile.personalProfile.trustScore;
+        const trustScore = activeProfile.personalProfile.trustScore;
         return {
             score: trustScore.score || 0,
             factors: trustScore.factors?.map(factor => ({
@@ -256,21 +300,27 @@ export default function ProfileEditScreen() {
                 label: factor.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
             })) || []
         };
-    }, [primaryProfile?.personalProfile?.trustScore]);
+    }, [activeProfile?.personalProfile?.trustScore]);
 
     // Memoize the handleSave function to prevent unnecessary re-renders
     const handleSave = useCallback(async () => {
-        if (!primaryProfile) {
+        if (!activeProfile) {
             Alert.alert('Error', 'No profile found to update.');
             return;
         }
 
         setIsSaving(true);
+
         try {
+            const profileId = activeProfile.id || activeProfile._id;
+            if (!profileId) {
+                throw new Error('Profile ID not found');
+            }
+
             let updateData: UpdateProfileData = {};
 
             if (profileType === 'personal') {
-                const updateData: UpdateProfileData = {
+                updateData = {
                     personalProfile: {
                         personalInfo: {
                             ...personalInfo,
@@ -317,29 +367,41 @@ export default function ProfileEditScreen() {
                         verification: agencyInfo.verification,
                     },
                 };
+            } else if (profileType === 'business') {
+                updateData = {
+                    businessProfile: {
+                        businessType: businessInfo.businessType,
+                        description: businessInfo.description,
+                        legalCompanyName: businessInfo.legalCompanyName,
+                        businessDetails: {
+                            licenseNumber: businessInfo.businessDetails.licenseNumber,
+                            taxId: businessInfo.businessDetails.taxId,
+                            yearEstablished: businessInfo.businessDetails.yearEstablished ?
+                                parseInt(businessInfo.businessDetails.yearEstablished) : undefined,
+                            employeeCount: businessInfo.businessDetails.employeeCount,
+                            industry: businessInfo.businessDetails.industry,
+                            specialties: businessInfo.businessDetails.specialties,
+                            serviceAreas: [],
+                        },
+                        verification: businessInfo.verification,
+                    },
+                };
             }
 
-            const result = await updateProfileMutation.mutateAsync(updateData);
-            console.log('Updated profile data:', result);
-
-            Alert.alert(
-                'Success',
-                'Profile updated successfully! Your changes have been saved.',
-                [{ text: 'OK' }]
-            );
+            await updateProfileMutation.mutateAsync({
+                profileId,
+                updateData
+            });
 
             setHasUnsavedChanges(false);
-        } catch (error) {
-            console.error('Error updating profile:', error);
-            Alert.alert(
-                'Error',
-                'Failed to update profile. Please try again.',
-                [{ text: 'OK' }]
-            );
+            Alert.alert('Success', 'Profile updated successfully!');
+        } catch (error: any) {
+            console.error('Error saving profile:', error);
+            Alert.alert('Error', error.message || 'Failed to update profile.');
         } finally {
             setIsSaving(false);
         }
-    }, [primaryProfile, profileType, personalInfo, preferences, references, rentalHistory, settings, agencyInfo, updateProfileMutation]);
+    }, [activeProfile, profileType, personalInfo, preferences, references, rentalHistory, settings, agencyInfo, businessInfo, updateProfileMutation]);
 
     // Track changes
     const updatePersonalInfo = (updates: Partial<typeof personalInfo>) => {
@@ -428,27 +490,57 @@ export default function ProfileEditScreen() {
         setHasUnsavedChanges(true);
     };
 
+    const updateBusinessInfo = (updates: Partial<typeof businessInfo>) => {
+        setBusinessInfo(prev => ({ ...prev, ...updates }));
+        setHasUnsavedChanges(true);
+    };
+
     const toggleSpecialty = (specialty: string) => {
-        setAgencyInfo(prev => ({
-            ...prev,
-            businessDetails: {
-                ...prev.businessDetails,
-                specialties: prev.businessDetails.specialties.includes(specialty)
-                    ? prev.businessDetails.specialties.filter(s => s !== specialty)
-                    : [...prev.businessDetails.specialties, specialty]
-            }
-        }));
+        if (profileType === 'agency') {
+            setAgencyInfo(prev => ({
+                ...prev,
+                businessDetails: {
+                    ...prev.businessDetails,
+                    specialties: prev.businessDetails.specialties.includes(specialty)
+                        ? prev.businessDetails.specialties.filter(s => s !== specialty)
+                        : [...prev.businessDetails.specialties, specialty]
+                }
+            }));
+        } else if (profileType === 'business') {
+            setBusinessInfo(prev => ({
+                ...prev,
+                businessDetails: {
+                    ...prev.businessDetails,
+                    specialties: prev.businessDetails.specialties.includes(specialty)
+                        ? prev.businessDetails.specialties.filter(s => s !== specialty)
+                        : [...prev.businessDetails.specialties, specialty]
+                }
+            }));
+        }
         setHasUnsavedChanges(true);
     };
 
     const toggleVerification = (field: keyof typeof agencyInfo.verification) => {
-        setAgencyInfo(prev => ({
-            ...prev,
-            verification: {
-                ...prev.verification,
-                [field]: !prev.verification[field]
-            }
-        }));
+        if (profileType === 'agency') {
+            setAgencyInfo(prev => ({
+                ...prev,
+                verification: {
+                    ...prev.verification,
+                    [field]: !prev.verification[field]
+                }
+            }));
+        } else if (profileType === 'business') {
+            // Business profiles don't have bonding, so we need to handle this differently
+            if (field === 'bonding') return; // Skip bonding for business profiles
+
+            setBusinessInfo(prev => ({
+                ...prev,
+                verification: {
+                    ...prev.verification,
+                    [field]: !prev.verification[field]
+                }
+            }));
+        }
         setHasUnsavedChanges(true);
     };
 
@@ -466,6 +558,8 @@ export default function ProfileEditScreen() {
     const renderSection = () => {
         if (profileType === 'agency') {
             return renderAgencySection();
+        } else if (profileType === 'business') {
+            return renderBusinessSection();
         } else {
             return renderPersonalSection();
         }
@@ -669,28 +763,30 @@ export default function ProfileEditScreen() {
                                 </View>
                             </TouchableOpacity>
 
-                            <TouchableOpacity
-                                style={[
-                                    styles.verificationItem,
-                                    agencyInfo.verification.bonding && styles.verificationItemCompleted
-                                ]}
-                                onPress={() => toggleVerification('bonding')}
-                            >
-                                <View style={styles.verificationItemContent}>
-                                    <Text style={styles.verificationItemTitle}>Bonding</Text>
-                                    <Text style={styles.verificationItemDescription}>
-                                        Provide surety bond information
-                                    </Text>
-                                </View>
-                                <View style={[
-                                    styles.verificationStatus,
-                                    agencyInfo.verification.bonding && styles.verificationStatusCompleted
-                                ]}>
-                                    <Text style={styles.verificationStatusText}>
-                                        {agencyInfo.verification.bonding ? '✓' : '○'}
-                                    </Text>
-                                </View>
-                            </TouchableOpacity>
+                            {profileType === 'agency' && (
+                                <TouchableOpacity
+                                    style={[
+                                        styles.verificationItem,
+                                        agencyInfo.verification.bonding && styles.verificationItemCompleted
+                                    ]}
+                                    onPress={() => toggleVerification('bonding')}
+                                >
+                                    <View style={styles.verificationItemContent}>
+                                        <Text style={styles.verificationItemTitle}>Bonding</Text>
+                                        <Text style={styles.verificationItemDescription}>
+                                            Provide surety bond information
+                                        </Text>
+                                    </View>
+                                    <View style={[
+                                        styles.verificationStatus,
+                                        agencyInfo.verification.bonding && styles.verificationStatusCompleted
+                                    ]}>
+                                        <Text style={styles.verificationStatusText}>
+                                            {agencyInfo.verification.bonding ? '✓' : '○'}
+                                        </Text>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
 
                             <TouchableOpacity
                                 style={[
@@ -719,6 +815,11 @@ export default function ProfileEditScreen() {
                 );
 
             case 'team':
+                // Only show team section for agency profiles
+                if (profileType !== 'agency') {
+                    return null;
+                }
+
                 return (
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Team Management</Text>
@@ -726,8 +827,8 @@ export default function ProfileEditScreen() {
                             Manage your team members and their roles
                         </Text>
 
-                        {primaryProfile?.agencyProfile?.members && primaryProfile.agencyProfile.members.length > 0 ? (
-                            primaryProfile.agencyProfile.members.map((member, index) => (
+                        {activeProfile?.agencyProfile?.members && activeProfile.agencyProfile.members.length > 0 ? (
+                            activeProfile.agencyProfile.members.map((member, index) => (
                                 <View key={index} style={styles.teamMemberItem}>
                                     <View style={styles.teamMemberInfo}>
                                         <Text style={styles.teamMemberName}>Member {index + 1}</Text>
@@ -745,6 +846,297 @@ export default function ProfileEditScreen() {
                         <TouchableOpacity style={styles.addButton}>
                             <Text style={styles.addButtonText}>+ Add Team Member</Text>
                         </TouchableOpacity>
+                    </View>
+                );
+
+            case 'settings':
+                return (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Business Settings</Text>
+                        <Text style={styles.sectionSubtitle}>
+                            Configure your business profile settings
+                        </Text>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Profile Visibility</Text>
+                            <View style={styles.pickerContainer}>
+                                {['public', 'private', 'contacts_only'].map((visibility) => (
+                                    <TouchableOpacity
+                                        key={visibility}
+                                        style={[
+                                            styles.pickerOption,
+                                            settings.privacy.profileVisibility === visibility && styles.pickerOptionSelected
+                                        ]}
+                                        onPress={() => updateSettings({
+                                            privacy: { ...settings.privacy, profileVisibility: visibility as any }
+                                        })}
+                                    >
+                                        <Text style={[
+                                            styles.pickerOptionText,
+                                            settings.privacy.profileVisibility === visibility && styles.pickerOptionTextSelected
+                                        ]}>
+                                            {visibility.replace('_', ' ').toUpperCase()}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Notifications</Text>
+                            <View style={styles.checkboxGroup}>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.checkbox,
+                                        settings.notifications.email && styles.checkboxSelected
+                                    ]}
+                                    onPress={() => updateSettings({
+                                        notifications: { ...settings.notifications, email: !settings.notifications.email }
+                                    })}
+                                >
+                                    <Text style={[
+                                        styles.checkboxText,
+                                        settings.notifications.email && styles.checkboxTextSelected
+                                    ]}>
+                                        Email Notifications
+                                    </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.checkbox,
+                                        settings.notifications.push && styles.checkboxSelected
+                                    ]}
+                                    onPress={() => updateSettings({
+                                        notifications: { ...settings.notifications, push: !settings.notifications.push }
+                                    })}
+                                >
+                                    <Text style={[
+                                        styles.checkboxText,
+                                        settings.notifications.push && styles.checkboxTextSelected
+                                    ]}>
+                                        Push Notifications
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                );
+
+            default:
+                return null;
+        }
+    };
+
+    const renderBusinessSection = () => {
+        switch (activeSection) {
+            case 'business':
+                return (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Business Information</Text>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Business Type *</Text>
+                            <View style={styles.checkboxGroup}>
+                                {['small_business', 'startup', 'freelancer', 'consultant', 'other'].map((type) => (
+                                    <TouchableOpacity
+                                        key={type}
+                                        style={[
+                                            styles.checkbox,
+                                            businessInfo.businessType === type && styles.checkboxSelected
+                                        ]}
+                                        onPress={() => updateBusinessInfo({ businessType: type as any })}
+                                    >
+                                        <Text style={[
+                                            styles.checkboxText,
+                                            businessInfo.businessType === type && styles.checkboxTextSelected
+                                        ]}>
+                                            {type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Legal Company Name *</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={businessInfo.legalCompanyName}
+                                onChangeText={(text) => updateBusinessInfo({ legalCompanyName: text })}
+                                placeholder="Enter your legal company name"
+                            />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Description</Text>
+                            <TextInput
+                                style={[styles.input, styles.textArea]}
+                                value={businessInfo.description}
+                                onChangeText={(text) => updateBusinessInfo({ description: text })}
+                                placeholder="Describe your business..."
+                                multiline
+                                numberOfLines={4}
+                            />
+                        </View>
+
+                        <View style={styles.row}>
+                            <View style={[styles.inputGroup, styles.halfWidth]}>
+                                <Text style={styles.label}>License Number</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    value={businessInfo.businessDetails.licenseNumber}
+                                    onChangeText={(text) => updateBusinessInfo({
+                                        businessDetails: { ...businessInfo.businessDetails, licenseNumber: text }
+                                    })}
+                                    placeholder="Enter license number"
+                                />
+                            </View>
+                            <View style={[styles.inputGroup, styles.halfWidth]}>
+                                <Text style={styles.label}>Tax ID</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    value={businessInfo.businessDetails.taxId}
+                                    onChangeText={(text) => updateBusinessInfo({
+                                        businessDetails: { ...businessInfo.businessDetails, taxId: text }
+                                    })}
+                                    placeholder="Enter tax ID"
+                                />
+                            </View>
+                        </View>
+
+                        <View style={styles.row}>
+                            <View style={[styles.inputGroup, styles.halfWidth]}>
+                                <Text style={styles.label}>Year Established</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    value={businessInfo.businessDetails.yearEstablished}
+                                    onChangeText={(text) => updateBusinessInfo({
+                                        businessDetails: { ...businessInfo.businessDetails, yearEstablished: text }
+                                    })}
+                                    placeholder="e.g., 2020"
+                                    keyboardType="numeric"
+                                />
+                            </View>
+                            <View style={[styles.inputGroup, styles.halfWidth]}>
+                                <Text style={styles.label}>Number of Employees</Text>
+                                <View style={styles.pickerContainer}>
+                                    {['1-5', '6-10', '11-25', '26+'].map((count) => (
+                                        <TouchableOpacity
+                                            key={count}
+                                            style={[
+                                                styles.pickerOption,
+                                                businessInfo.businessDetails.employeeCount === count && styles.pickerOptionSelected
+                                            ]}
+                                            onPress={() => updateBusinessInfo({
+                                                businessDetails: { ...businessInfo.businessDetails, employeeCount: count as any }
+                                            })}
+                                        >
+                                            <Text style={[
+                                                styles.pickerOptionText,
+                                                businessInfo.businessDetails.employeeCount === count && styles.pickerOptionTextSelected
+                                            ]}>
+                                                {count}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </View>
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Industry</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={businessInfo.businessDetails.industry}
+                                onChangeText={(text) => updateBusinessInfo({
+                                    businessDetails: { ...businessInfo.businessDetails, industry: text }
+                                })}
+                                placeholder="Enter industry"
+                            />
+                        </View>
+                    </View>
+                );
+
+            case 'verification':
+                return (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Business Verification</Text>
+                        <Text style={styles.sectionSubtitle}>
+                            Complete these verifications to build trust with clients
+                        </Text>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Verification Status</Text>
+
+                            <TouchableOpacity
+                                style={[
+                                    styles.verificationItem,
+                                    businessInfo.verification.businessLicense && styles.verificationItemCompleted
+                                ]}
+                                onPress={() => updateBusinessInfo({ verification: { ...businessInfo.verification, businessLicense: !businessInfo.verification.businessLicense } })}
+                            >
+                                <View style={styles.verificationItemContent}>
+                                    <Text style={styles.verificationItemTitle}>Business License</Text>
+                                    <Text style={styles.verificationItemDescription}>
+                                        Upload your business license for verification
+                                    </Text>
+                                </View>
+                                <View style={[
+                                    styles.verificationStatus,
+                                    businessInfo.verification.businessLicense && styles.verificationStatusCompleted
+                                ]}>
+                                    <Text style={styles.verificationStatusText}>
+                                        {businessInfo.verification.businessLicense ? '✓' : '○'}
+                                    </Text>
+                                </View>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[
+                                    styles.verificationItem,
+                                    businessInfo.verification.insurance && styles.verificationItemCompleted
+                                ]}
+                                onPress={() => updateBusinessInfo({ verification: { ...businessInfo.verification, insurance: !businessInfo.verification.insurance } })}
+                            >
+                                <View style={styles.verificationItemContent}>
+                                    <Text style={styles.verificationItemTitle}>Insurance</Text>
+                                    <Text style={styles.verificationItemDescription}>
+                                        Provide proof of business insurance
+                                    </Text>
+                                </View>
+                                <View style={[
+                                    styles.verificationStatus,
+                                    businessInfo.verification.insurance && styles.verificationStatusCompleted
+                                ]}>
+                                    <Text style={styles.verificationStatusText}>
+                                        {businessInfo.verification.insurance ? '✓' : '○'}
+                                    </Text>
+                                </View>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[
+                                    styles.verificationItem,
+                                    businessInfo.verification.backgroundCheck && styles.verificationItemCompleted
+                                ]}
+                                onPress={() => updateBusinessInfo({ verification: { ...businessInfo.verification, backgroundCheck: !businessInfo.verification.backgroundCheck } })}
+                            >
+                                <View style={styles.verificationItemContent}>
+                                    <Text style={styles.verificationItemTitle}>Background Check</Text>
+                                    <Text style={styles.verificationItemDescription}>
+                                        Complete background check for all team members
+                                    </Text>
+                                </View>
+                                <View style={[
+                                    styles.verificationStatus,
+                                    businessInfo.verification.backgroundCheck && styles.verificationStatusCompleted
+                                ]}>
+                                    <Text style={styles.verificationStatusText}>
+                                        {businessInfo.verification.backgroundCheck ? '✓' : '○'}
+                                    </Text>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 );
 
@@ -1361,70 +1753,6 @@ export default function ProfileEditScreen() {
                                         Push Notifications
                                     </Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[
-                                        styles.switch,
-                                        settings.notifications.sms && styles.switchActive
-                                    ]}
-                                    onPress={() => updateSettings({
-                                        notifications: { ...settings.notifications, sms: !settings.notifications.sms }
-                                    })}
-                                >
-                                    <Text style={[
-                                        styles.switchText,
-                                        settings.notifications.sms && styles.switchTextActive
-                                    ]}>
-                                        SMS Notifications
-                                    </Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[
-                                        styles.switch,
-                                        settings.notifications.propertyAlerts && styles.switchActive
-                                    ]}
-                                    onPress={() => updateSettings({
-                                        notifications: { ...settings.notifications, propertyAlerts: !settings.notifications.propertyAlerts }
-                                    })}
-                                >
-                                    <Text style={[
-                                        styles.switchText,
-                                        settings.notifications.propertyAlerts && styles.switchTextActive
-                                    ]}>
-                                        Property Alerts
-                                    </Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[
-                                        styles.switch,
-                                        settings.notifications.viewingReminders && styles.switchActive
-                                    ]}
-                                    onPress={() => updateSettings({
-                                        notifications: { ...settings.notifications, viewingReminders: !settings.notifications.viewingReminders }
-                                    })}
-                                >
-                                    <Text style={[
-                                        styles.switchText,
-                                        settings.notifications.viewingReminders && styles.switchTextActive
-                                    ]}>
-                                        Viewing Reminders
-                                    </Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[
-                                        styles.switch,
-                                        settings.notifications.leaseUpdates && styles.switchActive
-                                    ]}
-                                    onPress={() => updateSettings({
-                                        notifications: { ...settings.notifications, leaseUpdates: !settings.notifications.leaseUpdates }
-                                    })}
-                                >
-                                    <Text style={[
-                                        styles.switchText,
-                                        settings.notifications.leaseUpdates && styles.switchTextActive
-                                    ]}>
-                                        Lease Updates
-                                    </Text>
-                                </TouchableOpacity>
                             </View>
                         </View>
 
@@ -1520,7 +1848,7 @@ export default function ProfileEditScreen() {
         <SafeAreaView style={{ flex: 1 }} edges={['top']}>
             <Header
                 options={{
-                    title: `Edit ${profileType === 'agency' ? 'Agency' : 'Personal'} Profile${hasUnsavedChanges ? ' *' : ''}`,
+                    title: `Edit ${profileType === 'agency' ? 'Agency' : profileType === 'business' ? 'Business' : 'Personal'} Profile${hasUnsavedChanges ? ' *' : ''}`,
                     showBackButton: true,
                     rightComponents: [
                         <TouchableOpacity
@@ -1549,6 +1877,29 @@ export default function ProfileEditScreen() {
                         { key: 'business', label: 'Agency' },
                         { key: 'verification', label: 'Verification' },
                         { key: 'team', label: 'Team' },
+                        { key: 'settings', label: 'Settings' },
+                    ].map((tab) => (
+                        <TouchableOpacity
+                            key={tab.key}
+                            style={[
+                                styles.tab,
+                                activeSection === tab.key && styles.tabActive
+                            ]}
+                            onPress={() => setActiveSection(tab.key)}
+                        >
+                            <Text style={[
+                                styles.tabText,
+                                activeSection === tab.key && styles.tabTextActive
+                            ]}>
+                                {tab.label}
+                            </Text>
+                        </TouchableOpacity>
+                    ))
+                ) : profileType === 'business' ? (
+                    // Business profile tabs
+                    [
+                        { key: 'business', label: 'Business' },
+                        { key: 'verification', label: 'Verification' },
                         { key: 'settings', label: 'Settings' },
                     ].map((tab) => (
                         <TouchableOpacity
@@ -1598,7 +1949,7 @@ export default function ProfileEditScreen() {
 
             <ScrollView
                 style={styles.container}
-                key={primaryProfile ? 'profile-loaded' : 'profile-loading'}
+                key={activeProfile ? 'profile-loaded' : 'profile-loading'}
             >
                 {renderSection()}
             </ScrollView>

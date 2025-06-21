@@ -71,8 +71,6 @@ class ProfileController {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       
-      console.log('🔍 getOrCreatePrimaryProfile - oxyUserId:', oxyUserId);
-      
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -83,33 +81,18 @@ class ProfileController {
       let profile = this.getCachedProfile(oxyUserId, 'primary');
       
       if (!profile) {
-        console.log('🔍 No cached profile found, querying database...');
-        
         // Try to find existing primary profile
         profile = await Profile.findPrimaryByOxyUserId(oxyUserId);
         
-        console.log('🔍 Database query result:', profile);
-        
         if (!profile) {
-          console.log('🔍 No primary profile found in database');
-          
-          // Let's also check if there are any profiles at all for this user
-          const allProfiles = await Profile.find({ oxyUserId, isActive: true });
-          console.log('🔍 All profiles for user:', allProfiles.length);
-          allProfiles.forEach(p => {
-            console.log(`  - Profile ID: ${p._id}, Type: ${p.profileType}, Primary: ${p.isPrimary}, Active: ${p.isActive}`);
-          });
-          
           // Check if there's a personal profile (even if not primary)
           const personalProfile = await Profile.findOne({ oxyUserId, profileType: "personal" });
           if (personalProfile) {
-            console.log('🔍 Found personal profile, making it primary');
+            // Make personal profile primary but don't change active status
             personalProfile.isPrimary = true;
-            personalProfile.isActive = true;
             await personalProfile.save();
             profile = personalProfile;
           } else {
-            console.log('🔍 No personal profile found, creating one by default');
             // Create a default personal profile
             const defaultPersonalProfile = new Profile({
               oxyUserId,
@@ -144,36 +127,24 @@ class ProfileController {
             defaultPersonalProfile.calculateTrustScore();
             await defaultPersonalProfile.save();
             profile = defaultPersonalProfile;
-            console.log('🔍 Default personal profile created');
           }
         } else {
-          console.log('🔍 Primary profile found:', {
-            id: profile._id,
-            type: profile.profileType,
-            isPrimary: profile.isPrimary,
-            isActive: profile.isActive
-          });
-          
           // Always return full profile data unless explicitly requesting minimal
           const minimal = req.query.minimal === 'true';
           if (!minimal) {
             profile = await Profile.findById(profile._id);
-            console.log('🔍 Full profile data retrieved');
           }
         }
         
         // Cache the result
         this.setCachedProfile(oxyUserId, profile, 'primary');
-        console.log('🔍 Profile cached');
-      } else {
-        console.log('🔍 Returning cached profile');
       }
 
       res.json(
         successResponse(profile, "Profile retrieved successfully")
       );
     } catch (error) {
-      console.error("❌ Error getting primary profile:", error);
+      console.error("Error getting primary profile:", error);
       next(error);
     }
   }
@@ -185,8 +156,6 @@ class ProfileController {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       
-      console.log('🔍 getUserProfiles - oxyUserId:', oxyUserId);
-      
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -196,16 +165,6 @@ class ProfileController {
       // Use field selection for better performance
       const selectFields = '_id oxyUserId profileType isPrimary isActive createdAt updatedAt';
       const profiles = await Profile.findByOxyUserId(oxyUserId, selectFields);
-      
-      console.log('🔍 getUserProfiles - profiles found:', profiles?.length || 0);
-      console.log('🔍 getUserProfiles - profiles:', profiles);
-      
-      // Also check raw query to see if there are any issues
-      const rawProfiles = await Profile.find({ oxyUserId });
-      console.log('🔍 Raw query - all profiles for user:', rawProfiles.length);
-      rawProfiles.forEach(p => {
-        console.log(`  - Raw Profile: ID=${p._id}, Type=${p.profileType}, Primary=${p.isPrimary}, Active=${p.isActive}, oxyUserId=${p.oxyUserId}`);
-      });
       
       res.json(
         successResponse(profiles, "Profiles retrieved successfully")
@@ -230,7 +189,7 @@ class ProfileController {
         );
       }
 
-      if (!["personal", "roommate", "agency", "business"].includes(profileType)) {
+      if (!["personal", "agency", "business"].includes(profileType)) {
         return res.status(400).json(
           errorResponse("Invalid profile type", "INVALID_PROFILE_TYPE")
         );
@@ -267,7 +226,7 @@ class ProfileController {
         );
       }
 
-      if (!["personal", "roommate", "agency", "business"].includes(profileType)) {
+      if (!["personal", "agency", "business"].includes(profileType)) {
         return res.status(400).json(
           errorResponse("Invalid profile type", "INVALID_PROFILE_TYPE")
         );
@@ -292,6 +251,11 @@ class ProfileController {
             errorResponse("Personal profile already exists for this user. Only one personal profile is allowed per user.", "PERSONAL_PROFILE_ALREADY_EXISTS")
           );
         }
+        
+        // Prevent manual creation of personal profiles - they should be created automatically
+        return res.status(400).json(
+          errorResponse("Personal profiles cannot be created manually. They are created automatically when you first access the system.", "PERSONAL_PROFILE_MANUAL_CREATION_NOT_ALLOWED")
+        );
       }
 
       // Check if this is the user's first profile (no primary profile exists)
@@ -329,26 +293,6 @@ class ProfileController {
               language: "en",
               timezone: "UTC"
             }
-          };
-          break;
-          
-        case "roommate":
-          profileData.roommateProfile = {
-            roommatePreferences: data.roommatePreferences || {
-              ageRange: { min: 18, max: 35 },
-              gender: "any",
-              lifestyle: {
-                smoking: "no",
-                pets: "prefer_not",
-                partying: "no",
-                cleanliness: "clean",
-                schedule: "flexible"
-              },
-              budget: { min: 800, max: 1500 },
-              leaseDuration: "yearly"
-            },
-            roommateHistory: data.roommateHistory || [],
-            references: data.references || []
           };
           break;
           
@@ -429,9 +373,24 @@ class ProfileController {
         );
       }
 
+      // If activating this profile, deactivate all others for this user
+      if (updateData.isActive === true) {
+        // Find all other profiles for this user and deactivate them
+        const otherProfiles = await Profile.find({ 
+          oxyUserId, 
+          _id: { $ne: profile._id } 
+        });
+        
+        // Deactivate each profile individually to ensure data consistency
+        for (const otherProfile of otherProfiles) {
+          otherProfile.isActive = false;
+          await otherProfile.save();
+        }
+      }
+
       // Update profile data
       Object.keys(updateData).forEach(key => {
-        if (key === "personalProfile" || key === "roommateProfile" || key === "agencyProfile" || key === "businessProfile") {
+        if (key === "personalProfile" || key === "agencyProfile" || key === "businessProfile") {
           profile[key] = { ...profile[key], ...updateData[key] };
         } else {
           profile[key] = updateData[key];
@@ -665,18 +624,26 @@ class ProfileController {
         );
       }
 
+      // If activating this profile, deactivate all others for this user
+      if (updateData.isActive === true) {
+        // Find all other profiles for this user and deactivate them
+        const otherProfiles = await Profile.find({ 
+          oxyUserId, 
+          _id: { $ne: profile._id } 
+        });
+        
+        // Deactivate each profile individually to ensure data consistency
+        for (const otherProfile of otherProfiles) {
+          otherProfile.isActive = false;
+          await otherProfile.save();
+        }
+      }
+
       // Update the profile
       if (updateData.personalProfile) {
         profile.personalProfile = {
           ...profile.personalProfile,
           ...updateData.personalProfile
-        };
-      }
-
-      if (updateData.roommateProfile) {
-        profile.roommateProfile = {
-          ...profile.roommateProfile,
-          ...updateData.roommateProfile
         };
       }
 

@@ -78,47 +78,40 @@ export interface PersonalProfile {
       showRentalHistory?: boolean;
       showReferences?: boolean;
     };
+    roommate?: {
+      enabled: boolean;
+      preferences?: {
+        ageRange?: {
+          min: number;
+          max: number;
+        };
+        gender?: 'male' | 'female' | 'any';
+        lifestyle?: {
+          smoking: 'yes' | 'no' | 'prefer_not';
+          pets: 'yes' | 'no' | 'prefer_not';
+          partying: 'yes' | 'no' | 'prefer_not';
+          cleanliness: 'very_clean' | 'clean' | 'average' | 'relaxed';
+          schedule: 'early_bird' | 'night_owl' | 'flexible';
+        };
+        budget?: {
+          min: number;
+          max: number;
+        };
+        moveInDate?: string;
+        leaseDuration?: 'monthly' | '3_months' | '6_months' | 'yearly' | 'flexible';
+      };
+      history?: Array<{
+        startDate: string;
+        endDate?: string;
+        location: string;
+        roommateCount?: number;
+        reason?: string;
+      }>;
+    };
     language: string;
     timezone: string;
     currency?: string;
   };
-}
-
-export interface RoommateProfile {
-  roommatePreferences: {
-    ageRange?: {
-      min: number;
-      max: number;
-    };
-    gender?: 'male' | 'female' | 'any';
-    lifestyle?: {
-      smoking: 'yes' | 'no' | 'prefer_not';
-      pets: 'yes' | 'no' | 'prefer_not';
-      partying: 'yes' | 'no' | 'prefer_not';
-      cleanliness: 'very_clean' | 'clean' | 'average' | 'relaxed';
-      schedule: 'early_bird' | 'night_owl' | 'flexible';
-    };
-    budget?: {
-      min: number;
-      max: number;
-    };
-    moveInDate?: string;
-    leaseDuration?: 'monthly' | '3_months' | '6_months' | 'yearly' | 'flexible';
-  };
-  roommateHistory: Array<{
-    startDate: string;
-    endDate: string;
-    location: string;
-    roommateCount: number;
-    reason: string;
-  }>;
-  references: Array<{
-    name: string;
-    relationship: string;
-    phone: string;
-    email: string;
-    verified: boolean;
-  }>;
 }
 
 export interface AgencyProfile {
@@ -187,11 +180,10 @@ export interface Profile {
   id: string;
   _id?: string;
   oxyUserId: string;
-  profileType: 'personal' | 'roommate' | 'agency' | 'business';
+  profileType: 'personal' | 'agency' | 'business';
   isPrimary: boolean;
   isActive: boolean;
   personalProfile?: PersonalProfile;
-  roommateProfile?: RoommateProfile;
   agencyProfile?: AgencyProfile;
   businessProfile?: BusinessProfile;
   createdAt: string;
@@ -199,14 +191,11 @@ export interface Profile {
 }
 
 export interface CreateProfileData {
-  profileType: 'personal' | 'roommate' | 'agency' | 'business';
+  profileType: 'personal' | 'agency' | 'business';
   data: {
     preferences?: PersonalProfile['preferences'];
     verification?: PersonalProfile['verification'];
     settings?: PersonalProfile['settings'];
-    roommatePreferences?: RoommateProfile['roommatePreferences'];
-    roommateHistory?: RoommateProfile['roommateHistory'];
-    references?: RoommateProfile['references'];
     businessType?: AgencyProfile['businessType'] | BusinessProfile['businessType'];
     description?: string;
     businessDetails?: AgencyProfile['businessDetails'] | BusinessProfile['businessDetails'];
@@ -216,7 +205,6 @@ export interface CreateProfileData {
 
 export interface UpdateProfileData {
   personalProfile?: Partial<PersonalProfile>;
-  roommateProfile?: Partial<RoommateProfile>;
   agencyProfile?: Partial<AgencyProfile>;
   businessProfile?: Partial<BusinessProfile>;
   isPrimary?: boolean;
@@ -276,7 +264,7 @@ class ProfileService {
   /**
    * Get profile by type
    */
-  async getProfileByType(profileType: 'personal' | 'roommate' | 'agency' | 'business'): Promise<Profile> {
+  async getProfileByType(profileType: 'personal' | 'agency' | 'business'): Promise<Profile> {
     const cacheKey = getCacheKey(`${this.baseUrl}/me/${profileType}`);
     const cached = getCacheEntry<Profile>(cacheKey);
 

@@ -28,8 +28,6 @@ const getProfileDisplayName = (profile: Profile): string => {
         case 'personal':
             // Personal profiles are unique and linked to the Oxy account
             return 'Personal Profile';
-        case 'roommate':
-            return 'Roommate Profile';
         case 'agency':
             return profile.agencyProfile?.legalCompanyName || 'Agency Profile';
         case 'business':
@@ -84,37 +82,28 @@ export default function ProfileScreen() {
 
     useEffect(() => {
         if (profiles && profiles.length > 0) {
-            console.log('📊 Profiles loaded:', profiles.map(p => ({ id: p.id, _id: p._id, profileType: p.profileType, isActive: p.isActive })));
             const activeProfile = profiles.find(p => p.isActive);
-            console.log('🎯 Active profile found:', activeProfile);
             const profileId = activeProfile?.id || activeProfile?._id || profiles[0].id || profiles[0]._id;
             if (profileId) {
                 setActiveProfileId(profileId);
             }
-        } else {
-            console.log('📊 No profiles loaded or empty array');
         }
     }, [profiles]);
 
     const handleProfileSwitch = async (profileId: string) => {
-        console.log('🔄 Profile switch initiated:', { profileId, currentActive: activeProfileId });
-        console.log('📊 Available profiles:', profiles?.map(p => ({ id: p.id, _id: p._id, profileType: p.profileType, isActive: p.isActive })));
-
         if (!profileId) {
-            console.error('❌ Profile ID is undefined or null');
             toast.error('Invalid profile ID');
-            return;
-        }
-
-        if (profileId === activeProfileId) {
-            console.log('⚠️ Profile already active, skipping switch');
             return;
         }
 
         const profile = profiles?.find(p => p.id === profileId || p._id === profileId);
         if (!profile) {
-            console.error('❌ Profile not found:', profileId);
             toast.error('Profile not found');
+            return;
+        }
+
+        // Check if this profile is already active
+        if (profile.isActive) {
             return;
         }
 
@@ -122,7 +111,6 @@ export default function ProfileScreen() {
         const finalProfileId = profile.id || profile._id;
 
         if (!finalProfileId) {
-            console.error('❌ No valid profile ID found');
             toast.error('Invalid profile data');
             return;
         }
@@ -138,35 +126,16 @@ export default function ProfileScreen() {
                 {
                     text: 'Switch',
                     onPress: async () => {
-                        console.log('✅ User confirmed profile switch');
                         setIsSwitching(true);
 
                         try {
-                            console.log('📡 Making API calls to switch profile...');
-
-                            // First, set all profiles to inactive
-                            const deactivatePromises = profiles?.map(p => {
-                                const pId = p.id || p._id;
-                                if (!pId) {
-                                    console.warn('⚠️ Profile without ID found:', p);
-                                    return Promise.resolve();
-                                }
-                                return updateProfileMutation.mutateAsync({
-                                    profileId: pId,
-                                    updateData: { isActive: false }
-                                });
-                            }).filter(Boolean) || [];
-
-                            await Promise.all(deactivatePromises);
-                            console.log('✅ All profiles set to inactive');
-
-                            // Then, set the target profile to active
+                            // Simply activate the target profile - backend will handle deactivating others
                             await updateProfileMutation.mutateAsync({
                                 profileId: finalProfileId,
                                 updateData: { isActive: true }
                             });
-                            console.log('✅ Target profile set to active');
 
+                            // Update local state immediately
                             setActiveProfileId(finalProfileId);
                             toast.success(`Switched to ${profileName}`);
 
@@ -174,7 +143,7 @@ export default function ProfileScreen() {
                             await refetch();
 
                         } catch (error) {
-                            console.error('❌ Profile switch failed:', error);
+                            console.error('Profile switch failed:', error);
                             toast.error('Failed to switch profile');
                         } finally {
                             setIsSwitching(false);
@@ -282,18 +251,10 @@ export default function ProfileScreen() {
         );
     }
 
-    const activeProfile = profiles?.find(p => p.id === activeProfileId);
+    const activeProfile = profiles?.find(p => p.isActive);
     const personalProfiles = profiles?.filter(p => p.profileType === 'personal') || [];
     const businessProfiles = profiles?.filter(p => p.profileType === 'business') || [];
     const agencyProfiles = profiles?.filter(p => p.profileType === 'agency') || [];
-
-    console.log('🔍 Profile categorization:', {
-        total: profiles?.length || 0,
-        personal: personalProfiles.length,
-        business: businessProfiles.length,
-        agency: agencyProfiles.length,
-        allProfiles: profiles?.map(p => ({ id: p.id, profileType: p.profileType, isActive: p.isActive }))
-    });
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
@@ -375,7 +336,6 @@ export default function ProfileScreen() {
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Personal Profiles</Text>
                         {personalProfiles.map((profile, index) => {
-                            console.log('🎨 Rendering personal profile:', { id: profile.id, _id: profile._id, profileType: profile.profileType });
                             return (
                                 <TouchableOpacity
                                     key={profile.id || profile._id}
@@ -385,12 +345,10 @@ export default function ProfileScreen() {
                                         index === personalProfiles.length - 1 && styles.lastSettingItem,
                                     ]}
                                     onPress={() => {
-                                        console.log('🖱️ Personal profile clicked:', { id: profile.id, _id: profile._id });
                                         const profileId = profile.id || profile._id;
                                         if (profileId) {
                                             handleProfileSwitch(profileId);
                                         } else {
-                                            console.error('❌ No valid profile ID found for personal profile');
                                             toast.error('Invalid profile data');
                                         }
                                     }}
@@ -430,7 +388,6 @@ export default function ProfileScreen() {
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Business Profiles</Text>
                         {businessProfiles.map((profile, index) => {
-                            console.log('🎨 Rendering business profile:', { id: profile.id, _id: profile._id, profileType: profile.profileType });
                             return (
                                 <TouchableOpacity
                                     key={profile.id || profile._id}
@@ -440,12 +397,10 @@ export default function ProfileScreen() {
                                         index === businessProfiles.length - 1 && styles.lastSettingItem,
                                     ]}
                                     onPress={() => {
-                                        console.log('🖱️ Business profile clicked:', { id: profile.id, _id: profile._id });
                                         const profileId = profile.id || profile._id;
                                         if (profileId) {
                                             handleProfileSwitch(profileId);
                                         } else {
-                                            console.error('❌ No valid profile ID found for business profile');
                                             toast.error('Invalid profile data');
                                         }
                                     }}
@@ -484,7 +439,6 @@ export default function ProfileScreen() {
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Agency Profiles</Text>
                         {agencyProfiles.map((profile, index) => {
-                            console.log('🎨 Rendering agency profile:', { id: profile.id, _id: profile._id, profileType: profile.profileType });
                             return (
                                 <TouchableOpacity
                                     key={profile.id || profile._id}
@@ -494,12 +448,10 @@ export default function ProfileScreen() {
                                         index === agencyProfiles.length - 1 && styles.lastSettingItem,
                                     ]}
                                     onPress={() => {
-                                        console.log('🖱️ Agency profile clicked:', { id: profile.id, _id: profile._id });
                                         const profileId = profile.id || profile._id;
                                         if (profileId) {
                                             handleProfileSwitch(profileId);
                                         } else {
-                                            console.error('❌ No valid profile ID found for agency profile');
                                             toast.error('Invalid profile data');
                                         }
                                     }}

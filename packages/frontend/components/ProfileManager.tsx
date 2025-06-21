@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { useProfile, usePersonalProfile, useRoommateProfile, useAgencyProfiles } from '@/context/ProfileContext';
+import { useProfile, usePersonalProfile, useAgencyProfiles } from '@/context/ProfileContext';
 import { useCreateProfile, useUpdateProfile, useDeleteProfile } from '@/hooks/useProfileQueries';
 import { useOxy } from '@oxyhq/services';
 import type { CreateProfileData, UpdateProfileData } from '@/services/profileService';
@@ -9,14 +9,13 @@ export function ProfileManager() {
     const { oxyServices, activeSessionId } = useOxy();
     const { primaryProfile, allProfiles, isLoading, error } = useProfile();
     const personalProfile = usePersonalProfile();
-    const roommateProfile = useRoommateProfile();
     const agencyProfiles = useAgencyProfiles();
 
     const createProfileMutation = useCreateProfile();
     const updateProfileMutation = useUpdateProfile();
     const deleteProfileMutation = useDeleteProfile();
 
-    const [selectedProfileType, setSelectedProfileType] = useState<'personal' | 'roommate' | 'agency'>('personal');
+    const [selectedProfileType, setSelectedProfileType] = useState<'personal' | 'agency'>('personal');
 
     if (!oxyServices || !activeSessionId) {
         return (
@@ -45,7 +44,7 @@ export function ProfileManager() {
         );
     }
 
-    const handleCreateProfile = async (profileType: 'personal' | 'roommate' | 'agency') => {
+    const handleCreateProfile = async (profileType: 'personal' | 'agency') => {
         try {
             const profileData: CreateProfileData = {
                 profileType,
@@ -69,24 +68,6 @@ export function ProfileManager() {
                             privacy: { profileVisibility: 'public', showContactInfo: true, showIncome: false },
                             language: 'en',
                             timezone: 'UTC'
-                        }
-                    };
-                    break;
-
-                case 'roommate':
-                    profileData.data = {
-                        roommatePreferences: {
-                            ageRange: { min: 25, max: 35 },
-                            gender: 'any',
-                            lifestyle: {
-                                smoking: 'no',
-                                pets: 'prefer_not',
-                                partying: 'no',
-                                cleanliness: 'clean',
-                                schedule: 'flexible'
-                            },
-                            budget: { min: 800, max: 1500 },
-                            leaseDuration: 'yearly'
                         }
                     };
                     break;
@@ -156,14 +137,6 @@ export function ProfileManager() {
                     </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={[styles.selectorButton, selectedProfileType === 'roommate' && styles.selectorButtonActive]}
-                    onPress={() => setSelectedProfileType('roommate')}
-                >
-                    <Text style={[styles.selectorButtonText, selectedProfileType === 'roommate' && styles.selectorButtonTextActive]}>
-                        Roommate
-                    </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
                     style={[styles.selectorButton, selectedProfileType === 'agency' && styles.selectorButtonActive]}
                     onPress={() => setSelectedProfileType('agency')}
                 >
@@ -184,9 +157,6 @@ export function ProfileManager() {
                 </Text>
                 <Text style={styles.statusText}>
                     Personal: {personalProfile ? '✓' : '✗'}
-                </Text>
-                <Text style={styles.statusText}>
-                    Roommate: {roommateProfile ? '✓' : '✗'}
                 </Text>
                 <Text style={styles.statusText}>
                     Agency: {agencyProfiles.length}
@@ -210,18 +180,6 @@ export function ProfileManager() {
                     </TouchableOpacity>
                 )}
 
-                {selectedProfileType === 'roommate' && !roommateProfile && (
-                    <TouchableOpacity
-                        style={styles.button}
-                        onPress={() => handleCreateProfile('roommate')}
-                        disabled={createProfileMutation.isPending}
-                    >
-                        <Text style={styles.buttonText}>
-                            {createProfileMutation.isPending ? 'Creating...' : 'Create Roommate Profile'}
-                        </Text>
-                    </TouchableOpacity>
-                )}
-
                 {selectedProfileType === 'agency' && (
                     <TouchableOpacity
                         style={styles.button}
@@ -236,14 +194,12 @@ export function ProfileManager() {
 
                 {/* Update Profile Button */}
                 {((selectedProfileType === 'personal' && personalProfile) ||
-                    (selectedProfileType === 'roommate' && roommateProfile) ||
                     (selectedProfileType === 'agency' && agencyProfiles.length > 0)) && (
                         <TouchableOpacity
                             style={[styles.button, styles.buttonSecondary]}
                             onPress={() => {
                                 const profile = selectedProfileType === 'personal' ? personalProfile :
-                                    selectedProfileType === 'roommate' ? roommateProfile :
-                                        agencyProfiles[0];
+                                    agencyProfiles[0];
 
                                 if (profile) {
                                     handleUpdateProfile(profile.id, {
@@ -261,14 +217,12 @@ export function ProfileManager() {
 
                 {/* Delete Profile Button */}
                 {((selectedProfileType === 'personal' && personalProfile && !personalProfile.isPrimary) ||
-                    (selectedProfileType === 'roommate' && roommateProfile) ||
                     (selectedProfileType === 'agency' && agencyProfiles.length > 0)) && (
                         <TouchableOpacity
                             style={[styles.button, styles.buttonDanger]}
                             onPress={() => {
                                 const profile = selectedProfileType === 'personal' ? personalProfile :
-                                    selectedProfileType === 'roommate' ? roommateProfile :
-                                        agencyProfiles[0];
+                                    agencyProfiles[0];
 
                                 if (profile) {
                                     handleDeleteProfile(profile.id);
@@ -291,14 +245,6 @@ export function ProfileManager() {
                         <Text style={styles.detailText}>Trust Score: {personalProfile.personalProfile?.trustScore.score || 0}</Text>
                         <Text style={styles.detailText}>Verified: {personalProfile.personalProfile?.verification.identity ? '✓' : '✗'}</Text>
                         <Text style={styles.detailText}>Max Rent: ${personalProfile.personalProfile?.preferences.maxRent || 'Not set'}</Text>
-                    </View>
-                )}
-
-                {selectedProfileType === 'roommate' && roommateProfile && (
-                    <View style={styles.profileDetails}>
-                        <Text style={styles.detailText}>Budget: ${roommateProfile.roommateProfile?.roommatePreferences.budget?.min || 0} - ${roommateProfile.roommateProfile?.roommatePreferences.budget?.max || 0}</Text>
-                        <Text style={styles.detailText}>Lifestyle: {roommateProfile.roommateProfile?.roommatePreferences.lifestyle?.cleanliness || 'Not set'}</Text>
-                        <Text style={styles.detailText}>References: {roommateProfile.roommateProfile?.references.length || 0}</Text>
                     </View>
                 )}
 

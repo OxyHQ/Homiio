@@ -62,7 +62,7 @@ export function useUserProfiles() {
 }
 
 // Hook to get profile by type
-export function useProfileByType(profileType: 'personal' | 'roommate' | 'agency' | 'business') {
+export function useProfileByType(profileType: 'personal' | 'agency' | 'business') {
   const { user } = useOxy();
   
   return useQuery<Profile>({
@@ -279,4 +279,19 @@ export function useUpdateTrustScore() {
       toast.error(error.message || 'Failed to update trust score');
     },
   });
+}
+
+// Hook to get the currently active profile
+export function useActiveProfile() {
+  const { data: profiles, isLoading, error, refetch } = useUserProfiles();
+  
+  const activeProfile = profiles?.find(p => p.isActive);
+  
+  return {
+    data: activeProfile || null,
+    isLoading,
+    error,
+    refetch,
+    profiles // Also return all profiles in case they're needed
+  };
 } 
