@@ -76,53 +76,14 @@ return {
             favicon: "./assets/images/favicon.png",
             manifest: "./public/manifest.json",
             meta: {
-                // Basic SEO
                 viewport: "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no",
-                description: "Find your ethical home with transparent rentals, fair agreements, and verified properties. Join Homiio for a better housing experience.",
-                keywords: "housing, rental, property, ethical housing, transparent rentals, verified properties, fair agreements",
-                author: "Homiio",
-                robots: "index, follow",
-                
-                // Theme and branding
                 themeColor: "#4F46E5",
-                msapplicationTileColor: "#4F46E5",
-                msapplicationConfig: "/browserconfig.xml",
-                
-                // Apple specific
                 appleMobileWebAppCapable: "yes",
                 appleMobileWebAppStatusBarStyle: "default",
                 appleMobileWebAppTitle: "Homiio",
                 applicationName: "Homiio",
-                formatDetection: "telephone=no",
-                
-                // Open Graph (Facebook, LinkedIn, WhatsApp, Telegram)
-                "og:title": "Homiio - Ethical Housing Platform",
-                "og:description": "Find your ethical home with transparent rentals, fair agreements, and verified properties. Join Homiio for a better housing experience.",
-                "og:type": "website",
-                "og:image": "/assets/images/og-image.png",
-                "og:image:width": "1200",
-                "og:image:height": "630",
-                "og:image:alt": "Homiio - Ethical Housing Platform",
-                "og:image:type": "image/png",
-                "og:image:secure_url": "/assets/images/og-image.png",
-                "og:url": "https://homiio.com",
-                "og:site_name": "Homiio",
-                "og:locale": "en_US",
-                
-                // Twitter Card
-                "twitter:card": "summary_large_image",
-                "twitter:title": "Homiio - Ethical Housing Platform",
-                "twitter:description": "Find your ethical home with transparent rentals, fair agreements, and verified properties. Join Homiio for a better housing experience.",
-                "twitter:image": "/assets/images/og-image.png",
-                "twitter:image:alt": "Homiio - Ethical Housing Platform",
-                "twitter:site": "@homiio",
-                "twitter:creator": "@homiio",
-                
-                // Additional social networks
-                "pinterest-rich-pin": "true",
-                
-                // Schema.org structured data
-                "application-name": "Homiio",
+                msapplicationTileColor: "#4F46E5",
+                msapplicationConfig: "/browserconfig.xml"
             },
             build: {
                 babel: {
