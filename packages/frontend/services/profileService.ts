@@ -1,4 +1,4 @@
-import api, { getCacheKey, setCacheEntry, getCacheEntry } from '@/utils/api';
+import api, { getCacheKey, setCacheEntry, getCacheEntry, clearCache } from '@/utils/api';
 
 export interface PersonalProfile {
   personalInfo?: {
@@ -278,7 +278,17 @@ class ProfileService {
   async updatePrimaryProfile(updateData: UpdateProfileData): Promise<Profile> {
     try {
       const response = await api.put(`${this.baseUrl}/me`, updateData);
-      return response.data.data;
+      const updatedProfile = response.data.data;
+
+      // Update cached primary profile data so edits are reflected immediately
+      const cacheKey = getCacheKey(`${this.baseUrl}/me`);
+      setCacheEntry(cacheKey, updatedProfile);
+
+      // Invalidate cached list of user profiles
+      clearCache(`${this.baseUrl}/me/all`);
+      clearCache(`${this.baseUrl}/${updatedProfile.id}`);
+
+      return updatedProfile;
     } catch (error) {
       console.error('Error updating primary profile:', error);
       throw error;
@@ -320,7 +330,17 @@ class ProfileService {
   async updateProfile(profileId: string, updateData: UpdateProfileData): Promise<Profile> {
     try {
       const response = await api.put(`${this.baseUrl}/${profileId}`, updateData);
-      return response.data.data;
+      const updatedProfile = response.data.data;
+
+      // If this profile was fetched earlier, update or invalidate cache
+      const cacheKey = getCacheKey(`${this.baseUrl}/${profileId}`);
+      setCacheEntry(cacheKey, updatedProfile);
+
+      // Also clear related caches so next fetch gets fresh data
+      clearCache(`${this.baseUrl}/me`);
+      clearCache(`${this.baseUrl}/me/all`);
+
+      return updatedProfile;
     } catch (error) {
       console.error('Error updating profile:', error);
       throw error;
