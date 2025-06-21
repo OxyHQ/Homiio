@@ -12,6 +12,8 @@ import { colors } from '@/styles/colors'
 import { useRouter } from 'expo-router'
 import { ReactNode } from 'react'
 
+const IconComponent = Ionicons as any;
+
 interface Props {
     style?: ViewStyle
     options?: {
@@ -52,7 +54,7 @@ export const Header: React.FC<Props> = ({ options }) => {
             <View style={styles.leftContainer}>
                 {options?.showBackButton && (
                     <Pressable onPress={() => router.back()} style={styles.backButton}>
-                        <Ionicons name="arrow-back" size={24} color={colors.COLOR_BLACK} />
+                        <IconComponent name="arrow-back" size={24} color={colors.COLOR_BLACK} />
                     </Pressable>
                 )}
                 {options?.leftComponents?.map((component, index) => (

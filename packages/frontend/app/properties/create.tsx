@@ -4,15 +4,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import { colors } from '@/styles/colors';
-import Button from '@/components/Button';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { PropertyMap } from '@/components/PropertyMap';
+import { Header } from '@/components/Header';
 import { useCreateProperty } from '@/hooks/usePropertyQueries';
 import { CreatePropertyData } from '@/services/propertyService';
 import { useOxy } from '@oxyhq/services';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { calculateEthicalRent, validateEthicalPricing, getPricingGuidance } from '@/utils/ethicalPricing';
+import { Ionicons } from '@expo/vector-icons';
+
+const IconComponent = Ionicons as any;
 
 export default function CreatePropertyScreen() {
   const router = useRouter();
@@ -632,13 +635,48 @@ export default function CreatePropertyScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ThemedView style={styles.header}>
-        <ThemedText style={styles.title}>Create Property</ThemedText>
-        <Button onPress={() => router.back()}>
-          Cancel
-        </Button>
-      </ThemedView>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <Header
+        options={{
+          showBackButton: true,
+          title: 'Create Property',
+          titlePosition: 'center',
+          rightComponents: [
+            <TouchableOpacity
+              key="close"
+              style={styles.headerButton}
+              onPress={() => router.back()}
+            >
+              <IconComponent name="close" size={24} color={colors.primaryDark} />
+            </TouchableOpacity>,
+          ],
+        }}
+      />
+
+      {/* Progress Indicator */}
+      <View style={styles.progressContainer}>
+        <View style={styles.progressBar}>
+          <View style={[styles.progressFill, { width: '25%' }]} />
+        </View>
+        <View style={styles.progressSteps}>
+          <View style={[styles.progressStep, styles.progressStepActive]}>
+            <View style={[styles.progressStepDot, styles.progressStepDotActive]} />
+            <ThemedText style={[styles.progressStepText, styles.progressStepTextActive]}>Location</ThemedText>
+          </View>
+          <View style={styles.progressStep}>
+            <View style={styles.progressStepDot} />
+            <ThemedText style={styles.progressStepText}>Details</ThemedText>
+          </View>
+          <View style={styles.progressStep}>
+            <View style={styles.progressStepDot} />
+            <ThemedText style={styles.progressStepText}>Pricing</ThemedText>
+          </View>
+          <View style={styles.progressStep}>
+            <View style={styles.progressStepDot} />
+            <ThemedText style={styles.progressStepText}>Review</ThemedText>
+          </View>
+        </View>
+      </View>
 
       <ScrollView style={styles.scrollView}>
         <View style={styles.form}>
@@ -1089,13 +1127,25 @@ export default function CreatePropertyScreen() {
             </View>
           </View>
 
-          <Button
+          <TouchableOpacity
             onPress={handleSubmit}
             disabled={createPropertyMutation.isPending}
-            style={styles.submitButton}
+            style={[styles.submitButton, createPropertyMutation.isPending && styles.submitButtonDisabled]}
+            activeOpacity={0.8}
           >
-            {createPropertyMutation.isPending ? 'Creating...' : 'Create Property'}
-          </Button>
+            {createPropertyMutation.isPending ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color="white" />
+                <ThemedText style={[styles.submitButtonText, { marginLeft: 8 }]}>
+                  Creating...
+                </ThemedText>
+              </View>
+            ) : (
+              <ThemedText style={styles.submitButtonText}>
+                Create Property
+              </ThemedText>
+            )}
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -1105,21 +1155,6 @@ export default function CreatePropertyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.primaryLight,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.primaryLight_1,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.primaryDark,
   },
   scrollView: {
     flex: 1,
@@ -1157,10 +1192,6 @@ const styles = StyleSheet.create({
   },
   halfInput: {
     flex: 0.48,
-  },
-  submitButton: {
-    marginTop: 24,
-    paddingVertical: 16,
   },
   pickerContainer: {
     flexDirection: 'row',
@@ -1226,6 +1257,18 @@ const styles = StyleSheet.create({
   },
   searchResultText: {
     fontSize: 14,
+    color: colors.primaryDark,
+  },
+  headerButton: {
+    padding: 8,
+    borderRadius: 35,
+    borderWidth: 1,
+    borderColor: colors.primaryLight_1,
+    backgroundColor: colors.primaryLight,
+  },
+  headerButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
     color: colors.primaryDark,
   },
   previewSection: {
@@ -1453,5 +1496,71 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+  },
+  progressContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.primaryLight,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.primaryLight_1,
+  },
+  progressBar: {
+    height: 4,
+    backgroundColor: colors.primaryLight_1,
+    borderRadius: 2,
+    marginBottom: 16,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.primaryColor,
+    borderRadius: 2,
+  },
+  progressSteps: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  progressStep: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  progressStepActive: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  progressStepDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.primaryLight_1,
+    marginBottom: 4,
+  },
+  progressStepDotActive: {
+    backgroundColor: colors.primaryColor,
+  },
+  progressStepText: {
+    fontSize: 12,
+    color: colors.primaryDark_1,
+    textAlign: 'center',
+  },
+  progressStepTextActive: {
+    color: colors.primaryColor,
+  },
+  submitButton: {
+    marginTop: 24,
+    paddingVertical: 16,
+    backgroundColor: colors.primaryColor,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitButtonDisabled: {
+    backgroundColor: colors.primaryLight_1,
+  },
+  submitButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+    textAlign: 'center',
   },
 });
