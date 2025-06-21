@@ -123,6 +123,7 @@ export interface RoommateProfile {
 
 export interface AgencyProfile {
   businessType: 'real_estate_agency' | 'property_management' | 'brokerage' | 'developer' | 'other';
+  legalCompanyName?: string;
   description?: string;
   businessDetails: {
     licenseNumber?: string;

@@ -235,7 +235,7 @@ export default function ProfileScreen() {
                     {primaryProfile?.profileType === 'agency' && primaryProfile?.agencyProfile && (
                         <View style={styles.trustScoreContainer}>
                             <View style={styles.businessVerificationContainer}>
-                                <Text style={styles.businessVerificationTitle}>Business Verification</Text>
+                                <Text style={styles.businessVerificationTitle}>Agency Verification</Text>
                                 <View style={styles.verificationStatusGrid}>
                                     {Object.entries(primaryProfile.agencyProfile.verification || {}).map(([key, value]) => (
                                         <View key={key} style={styles.verificationStatusItem}>
@@ -252,8 +252,7 @@ export default function ProfileScreen() {
                                     ))}
                                 </View>
                                 <Text style={styles.businessInfoText}>
-                                    {primaryProfile.agencyProfile.businessType?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} •
-                                    {primaryProfile.agencyProfile.members?.length || 0} Team Members
+                                    {primaryProfile.agencyProfile.businessType?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} • {primaryProfile.agencyProfile.businessDetails?.employeeCount || '1-10'} employees
                                 </Text>
                             </View>
                         </View>

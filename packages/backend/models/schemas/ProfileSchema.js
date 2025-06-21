@@ -365,6 +365,11 @@ const agencyProfileSchema = new mongoose.Schema({
     enum: ["real_estate_agency", "property_management", "brokerage", "developer", "other"],
     required: true,
   },
+  legalCompanyName: {
+    type: String,
+    trim: true,
+    maxlength: [200, "Legal company name cannot exceed 200 characters"],
+  },
   description: {
     type: String,
     trim: true,

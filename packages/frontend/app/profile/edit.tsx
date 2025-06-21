@@ -54,6 +54,7 @@ export default function ProfileEditScreen() {
     // Form state for agency profile
     const [agencyInfo, setAgencyInfo] = useState({
         businessType: 'real_estate_agency' as 'real_estate_agency' | 'property_management' | 'brokerage' | 'developer' | 'other',
+        legalCompanyName: '',
         description: '',
         businessDetails: {
             licenseNumber: '',
@@ -232,6 +233,7 @@ export default function ProfileEditScreen() {
                     bonding: profile.verification?.bonding || false,
                     backgroundCheck: profile.verification?.backgroundCheck || false,
                 },
+                legalCompanyName: profile.legalCompanyName || '',
             });
 
             setHasUnsavedChanges(false);
@@ -474,7 +476,7 @@ export default function ProfileEditScreen() {
             case 'business':
                 return (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Business Information</Text>
+                        <Text style={styles.sectionTitle}>Agency Information</Text>
 
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>Business Type *</Text>
@@ -497,6 +499,16 @@ export default function ProfileEditScreen() {
                                     </TouchableOpacity>
                                 ))}
                             </View>
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Legal Company Name *</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={agencyInfo.legalCompanyName}
+                                onChangeText={(text) => updateAgencyInfo({ legalCompanyName: text })}
+                                placeholder="Enter your legal company name"
+                            />
                         </View>
 
                         <View style={styles.inputGroup}>
@@ -603,7 +615,7 @@ export default function ProfileEditScreen() {
             case 'verification':
                 return (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Business Verification</Text>
+                        <Text style={styles.sectionTitle}>Agency Verification</Text>
                         <Text style={styles.sectionSubtitle}>
                             Complete these verifications to build trust with clients
                         </Text>
@@ -1508,145 +1520,9 @@ export default function ProfileEditScreen() {
         <SafeAreaView style={{ flex: 1 }} edges={['top']}>
             <Header
                 options={{
-                    title: `Edit ${profileType === 'agency' ? 'Business' : 'Personal'} Profile${hasUnsavedChanges ? ' *' : ''}`,
+                    title: `Edit ${profileType === 'agency' ? 'Agency' : 'Personal'} Profile${hasUnsavedChanges ? ' *' : ''}`,
                     showBackButton: true,
                     rightComponents: [
-                        <TouchableOpacity
-                            key="debug"
-                            onPress={() => {
-                                console.log('=== DEBUG INFO ===');
-                                console.log('primaryProfile:', primaryProfile);
-                                console.log('personalInfo state:', personalInfo);
-                                console.log('profileLoading:', profileLoading);
-                                console.log('==================');
-                            }}
-                            style={styles.headerButton}
-                        >
-                            <IconButton
-                                name="bug-report"
-                                size={20}
-                                color={colors.primaryDark}
-                            />
-                        </TouchableOpacity>,
-                        <TouchableOpacity
-                            key="test"
-                            onPress={async () => {
-                                try {
-                                    console.log('Creating test profile data...');
-                                    const testData = {
-                                        personalProfile: {
-                                            personalInfo: {
-                                                bio: "Test bio - I am a software developer",
-                                                occupation: "Software Engineer",
-                                                employer: "Tech Company",
-                                                annualIncome: 75000,
-                                                employmentStatus: "employed" as const,
-                                                moveInDate: "2024-06-01",
-                                                leaseDuration: "yearly" as const,
-                                            },
-                                            preferences: {
-                                                propertyTypes: ["apartment", "house"],
-                                                maxRent: 2000,
-                                                minBedrooms: 2,
-                                                minBathrooms: 1,
-                                                preferredAmenities: ["parking", "gym"],
-                                                petFriendly: true,
-                                                smokingAllowed: false,
-                                                furnished: false,
-                                                parkingRequired: true,
-                                                accessibility: false,
-                                            },
-                                            references: [
-                                                {
-                                                    name: "John Smith",
-                                                    relationship: "landlord" as const,
-                                                    phone: "555-123-4567",
-                                                    email: "john.smith@email.com",
-                                                },
-                                                {
-                                                    name: "Jane Doe",
-                                                    relationship: "employer" as const,
-                                                    phone: "555-987-6543",
-                                                    email: "jane.doe@company.com",
-                                                }
-                                            ],
-                                            rentalHistory: [
-                                                {
-                                                    address: "123 Main St, City, State 12345",
-                                                    startDate: "2022-01-01",
-                                                    endDate: "2023-12-31",
-                                                    monthlyRent: 1500,
-                                                    reasonForLeaving: "lease_ended" as const,
-                                                    landlordContact: {
-                                                        name: "John Smith",
-                                                        phone: "555-123-4567",
-                                                        email: "john.smith@email.com",
-                                                    },
-                                                },
-                                                {
-                                                    address: "456 Oak Ave, City, State 12345",
-                                                    startDate: "2020-06-01",
-                                                    endDate: "2021-12-31",
-                                                    monthlyRent: 1200,
-                                                    reasonForLeaving: "job_relocation" as const,
-                                                    landlordContact: {
-                                                        name: "Mary Johnson",
-                                                        phone: "555-456-7890",
-                                                        email: "mary.johnson@email.com",
-                                                    },
-                                                }
-                                            ],
-                                            settings: {
-                                                notifications: {
-                                                    email: true,
-                                                    push: true,
-                                                    sms: false,
-                                                    propertyAlerts: true,
-                                                    viewingReminders: true,
-                                                    leaseUpdates: true,
-                                                },
-                                                privacy: {
-                                                    profileVisibility: "public" as const,
-                                                    showContactInfo: true,
-                                                    showIncome: false,
-                                                    showRentalHistory: false,
-                                                    showReferences: false,
-                                                },
-                                                language: "en",
-                                                timezone: "UTC",
-                                                currency: "USD",
-                                            },
-                                        },
-                                    };
-
-                                    const result = await updateProfileMutation.mutateAsync(testData);
-                                    console.log('Test profile created:', result);
-                                    Alert.alert('Success', 'Test profile data created!');
-                                } catch (error) {
-                                    console.error('Error creating test profile:', error);
-                                    Alert.alert('Error', 'Failed to create test profile');
-                                }
-                            }}
-                            style={styles.headerButton}
-                        >
-                            <IconButton
-                                name="add"
-                                size={20}
-                                color={colors.primaryDark}
-                            />
-                        </TouchableOpacity>,
-                        <TouchableOpacity
-                            key="refresh"
-                            onPress={handleRefresh}
-                            style={styles.headerButton}
-                            disabled={profileLoading}
-                        >
-                            <IconButton
-                                name="refresh"
-                                size={20}
-                                color={colors.primaryDark}
-                            />
-                        </TouchableOpacity>,
                         <TouchableOpacity
                             key="save"
                             onPress={handleSave}
@@ -1670,7 +1546,7 @@ export default function ProfileEditScreen() {
                 {profileType === 'agency' ? (
                     // Agency profile tabs
                     [
-                        { key: 'business', label: 'Business' },
+                        { key: 'business', label: 'Agency' },
                         { key: 'verification', label: 'Verification' },
                         { key: 'team', label: 'Team' },
                         { key: 'settings', label: 'Settings' },
@@ -1934,9 +1810,6 @@ const styles = StyleSheet.create({
         color: colors.primaryColor,
         fontSize: 14,
         fontWeight: '600',
-    },
-    headerButton: {
-        padding: 8,
     },
     saveButton: {
         paddingHorizontal: 16,

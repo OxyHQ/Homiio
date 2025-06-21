@@ -48,10 +48,10 @@ export function SideBar() {
             route: '/contracts',
         },
         {
-            title: t("Verification"),
-            icon: <View><IconComponent name="shield-checkmark-outline" size={24} color={colors.COLOR_BLACK} /></View>,
-            iconActive: <View><IconComponent name="shield-checkmark" size={24} color={colors.primaryColor} /></View>,
-            route: '/verification',
+            title: t("Profile"),
+            icon: <View><IconComponent name="person-outline" size={24} color={colors.COLOR_BLACK} /></View>,
+            iconActive: <View><IconComponent name="person" size={24} color={colors.primaryColor} /></View>,
+            route: '/profile',
         },
         {
             title: t("Payments"),
