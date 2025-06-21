@@ -81,8 +81,8 @@ class ProfileController {
       let profile = this.getCachedProfile(oxyUserId, 'primary');
       
       if (!profile) {
-        // Try to find existing primary profile with minimal fields for faster query
-        profile = await Profile.findPrimaryByOxyUserId(oxyUserId, 'oxyUserId profileType isPrimary isActive createdAt updatedAt');
+        // Try to find existing primary profile
+        profile = await Profile.findPrimaryByOxyUserId(oxyUserId);
         
         if (!profile) {
           // Create a new personal profile as primary
@@ -119,9 +119,9 @@ class ProfileController {
           // Fetch the complete profile after creation
           profile = await Profile.findById(newProfile._id);
         } else {
-          // If profile exists, fetch complete data only if needed
-          const needsFullData = req.query.full === 'true' || req.query.details === 'true';
-          if (needsFullData) {
+          // Always return full profile data unless explicitly requesting minimal
+          const minimal = req.query.minimal === 'true';
+          if (!minimal) {
             profile = await Profile.findById(profile._id);
           }
         }
