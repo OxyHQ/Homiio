@@ -17,6 +17,7 @@ interface SavedProperty extends Property {
     savedAt: string;
     notes?: string;
     savedPropertyId: string;
+    title: string;
 }
 
 export default function SavedPropertiesScreen() {
@@ -83,7 +84,7 @@ export default function SavedPropertiesScreen() {
     };
 
     const renderPropertyItem = ({ item }: { item: SavedProperty }) => (
-        <View style={styles.propertyContainer}>
+        <TouchableOpacity onPress={() => handlePropertyPress(item)} style={styles.cardContainer}>
             <PropertyCard
                 id={item._id}
                 title={item.title}
@@ -94,72 +95,65 @@ export default function SavedPropertiesScreen() {
                 bedrooms={item.bedrooms || 0}
                 bathrooms={item.bathrooms || 0}
                 size={item.squareFootage || 0}
-                onPress={() => handlePropertyPress(item)}
-                style={styles.propertyCard}
             />
-            <View style={styles.propertyActions}>
-                <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => handleEditNotes(item)}
-                >
+            <View style={styles.cardFooter}>
+                <View style={styles.notesSection}>
+                    <ThemedText style={styles.notesLabel}>My Notes:</ThemedText>
+                    <ThemedText style={styles.notesText} numberOfLines={2}>
+                        {item.notes || 'No notes yet. Tap to add some.'}
+                    </ThemedText>
+                </View>
+                <View style={styles.cardActions}>
                     <IconButton
                         name="create-outline"
-                        size={18}
+                        size={22}
                         color={colors.primaryColor}
-                        backgroundColor="transparent"
-                        style={styles.actionIcon}
+                        onPress={() => handleEditNotes(item)}
                     />
-                    <Text style={styles.actionText}>Notes</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.actionButton, styles.unsaveButton]}
-                    onPress={() => handleUnsaveProperty(item)}
-                >
                     <IconButton
                         name="bookmark"
-                        size={18}
+                        size={22}
                         color={colors.chatUnreadBadge}
-                        backgroundColor="transparent"
-                        style={styles.actionIcon}
+                        onPress={() => handleUnsaveProperty(item)}
                     />
-                    <Text style={[styles.actionText, styles.unsaveText]}>Unsave</Text>
-                </TouchableOpacity>
-            </View>
-            {item.notes && (
-                <View style={styles.notesContainer}>
-                    <Text style={styles.notesLabel}>Notes:</Text>
-                    <Text style={styles.notesText}>{item.notes}</Text>
                 </View>
-            )}
-        </View>
+            </View>
+        </TouchableOpacity>
     );
 
     const renderEmptyState = () => (
-        <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>🔖</Text>
-            <ThemedText style={styles.emptyTitle}>No Saved Properties</ThemedText>
-            <ThemedText style={styles.emptySubtitle}>
-                Properties you save will appear here for easy access
-            </ThemedText>
-            <Button onPress={() => router.push('/properties')}>
-                Browse Properties
-            </Button>
+        <View style={styles.emptyStateContainer}>
+            <View style={styles.emptyStateContent}>
+                <Text style={styles.emptyStateIcon}>🔖</Text>
+                <ThemedText style={styles.emptyStateTitle}>No Saved Properties Yet</ThemedText>
+                <ThemedText style={styles.emptyStateSubtitle}>
+                    Tap the bookmark icon on any property to save it here for later.
+                </ThemedText>
+                <Button
+                    onPress={() => router.push('/properties')}
+                    style={styles.browseButton}
+                >
+                    <ThemedText style={styles.browseButtonText}>Start Browsing</ThemedText>
+                </Button>
+            </View>
         </View>
     );
 
     const renderAuthRequired = () => (
-        <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>🔒</Text>
-            <ThemedText style={styles.emptyTitle}>Authentication Required</ThemedText>
-            <ThemedText style={styles.emptySubtitle}>
-                Please sign in to view and manage your saved properties
-            </ThemedText>
+        <View style={styles.emptyStateContainer}>
+            <View style={styles.emptyStateContent}>
+                <Text style={styles.emptyStateIcon}>🔒</Text>
+                <ThemedText style={styles.emptyStateTitle}>Authentication Required</ThemedText>
+                <ThemedText style={styles.emptyStateSubtitle}>
+                    Please sign in to view and manage your saved properties
+                </ThemedText>
+            </View>
         </View>
     );
 
     if (!oxyServices || !activeSessionId) {
         return (
-            <ThemedView style={styles.container}>
+            <ThemedView style={styles.container} lightColor="transparent" darkColor="transparent">
                 <Header options={{ title: 'Saved Properties', showBackButton: true }} />
                 {renderAuthRequired()}
             </ThemedView>
@@ -167,7 +161,7 @@ export default function SavedPropertiesScreen() {
     }
 
     return (
-        <ThemedView style={styles.container}>
+        <ThemedView style={styles.container} lightColor="transparent" darkColor="transparent">
             <Header
                 options={{
                     title: 'Saved Properties',
@@ -216,50 +210,29 @@ export default function SavedPropertiesScreen() {
                 transparent={true}
                 onRequestClose={() => setNotesModalVisible(false)}
             >
-                <View style={styles.modalOverlay}>
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPressOut={() => setNotesModalVisible(false)}
+                >
                     <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <ThemedText style={styles.modalTitle}>
-                                Notes for {selectedProperty?.title}
-                            </ThemedText>
-                            <TouchableOpacity
-                                onPress={() => setNotesModalVisible(false)}
-                                style={styles.closeButton}
-                            >
-                                <IconButton
-                                    name="close"
-                                    size={20}
-                                    color={colors.primaryDark_1}
-                                    backgroundColor="transparent"
-                                />
-                            </TouchableOpacity>
-                        </View>
+                        <ThemedText style={styles.modalTitle}>Edit Notes</ThemedText>
+                        <ThemedText style={styles.modalSubtitle}>
+                            Add a personal note for "{selectedProperty?.title}"
+                        </ThemedText>
                         <TextInput
                             style={styles.notesInput}
                             value={notesText}
                             onChangeText={setNotesText}
-                            placeholder="Add your notes about this property..."
+                            placeholder="e.g., 'Love the big kitchen, but the backyard is small.'"
                             placeholderTextColor={colors.primaryDark_2}
                             multiline
-                            numberOfLines={4}
-                            textAlignVertical="top"
                         />
-                        <View style={styles.modalActions}>
-                            <Button
-                                onPress={() => setNotesModalVisible(false)}
-                                style={styles.cancelButton}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                onPress={handleSaveNotes}
-                                style={styles.saveButton}
-                            >
-                                Save Notes
-                            </Button>
-                        </View>
+                        <Button onPress={handleSaveNotes} style={styles.saveButton}>
+                            <ThemedText style={styles.saveButtonText}>Save Notes</ThemedText>
+                        </Button>
                     </View>
-                </View>
+                </TouchableOpacity>
             </Modal>
         </ThemedView>
     );
@@ -268,101 +241,82 @@ export default function SavedPropertiesScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.primaryLight,
     },
     listContainer: {
         padding: 16,
     },
-    propertyContainer: {
-        marginBottom: 16,
-        backgroundColor: colors.primaryLight,
+    cardContainer: {
+        backgroundColor: 'white',
         borderRadius: 12,
+        marginBottom: 16,
         overflow: 'hidden',
-        shadowColor: colors.primaryDark,
-        shadowOffset: { width: 0, height: 2 },
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
-        elevation: 3,
-        borderWidth: 1,
-        borderColor: colors.primaryLight_1,
     },
-    propertyCard: {
-        marginBottom: 0,
-    },
-    propertyActions: {
+    cardFooter: {
+        padding: 12,
         flexDirection: 'row',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderTopWidth: 1,
-        borderTopColor: colors.primaryLight_1,
-        gap: 12,
-    },
-    actionButton: {
-        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: 8,
-        backgroundColor: colors.primaryLight_1,
-        flex: 1,
-        justifyContent: 'center',
-    },
-    actionIcon: {
-        marginRight: 6,
-    },
-    actionText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: colors.primaryColor,
-    },
-    unsaveButton: {
-        backgroundColor: colors.primaryLight_2,
-    },
-    unsaveText: {
-        color: colors.chatUnreadBadge,
-    },
-    notesContainer: {
-        paddingHorizontal: 16,
-        paddingBottom: 12,
         borderTopWidth: 1,
-        borderTopColor: colors.primaryLight_1,
-        backgroundColor: colors.primaryLight_1,
+        borderTopColor: '#f0f0f0',
+    },
+    notesSection: {
+        flex: 1,
+        marginRight: 12,
     },
     notesLabel: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: colors.primaryDark,
+        fontSize: 12,
+        color: colors.primaryDark_2,
         marginBottom: 4,
+        fontWeight: '500',
     },
     notesText: {
         fontSize: 14,
         color: colors.primaryDark_1,
-        lineHeight: 20,
     },
-    emptyState: {
+    cardActions: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    emptyStateContainer: {
         flex: 1,
-        alignItems: 'center',
         justifyContent: 'center',
-        paddingHorizontal: 32,
-        paddingVertical: 64,
+        alignItems: 'center',
+        padding: 24,
     },
-    emptyIcon: {
-        fontSize: 64,
+    emptyStateContent: {
+        alignItems: 'center',
+        textAlign: 'center',
+    },
+    emptyStateIcon: {
+        fontSize: 48,
         marginBottom: 16,
     },
-    emptyTitle: {
-        fontSize: 20,
+    emptyStateTitle: {
+        fontSize: 22,
         fontWeight: '600',
         marginBottom: 8,
-        textAlign: 'center',
-        color: colors.primaryDark,
     },
-    emptySubtitle: {
+    emptyStateSubtitle: {
         fontSize: 16,
-        textAlign: 'center',
+        color: colors.primaryDark_2,
         marginBottom: 24,
-        opacity: 0.7,
-        color: colors.primaryDark_1,
+        paddingHorizontal: 16,
+    },
+    browseButton: {
+        backgroundColor: colors.primaryColor,
+        paddingVertical: 12,
+        paddingHorizontal: 32,
+        borderRadius: 50,
+    },
+    browseButtonText: {
+        color: 'white',
+        fontWeight: '600',
+        fontSize: 16,
     },
     errorContainer: {
         flex: 1,
@@ -379,58 +333,48 @@ const styles = StyleSheet.create({
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: colors.overlay,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
     modalContent: {
-        backgroundColor: colors.primaryLight,
-        borderRadius: 12,
-        padding: 20,
-        margin: 20,
+        backgroundColor: 'white',
+        borderRadius: 16,
+        padding: 24,
         width: '90%',
-        maxWidth: 400,
-        shadowColor: colors.primaryDark,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
         shadowRadius: 8,
-        elevation: 5,
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 16,
     },
     modalTitle: {
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: '600',
-        flex: 1,
-        color: colors.primaryDark,
+        marginBottom: 8,
     },
-    closeButton: {
-        padding: 4,
-    },
-    notesInput: {
-        borderWidth: 1,
-        borderColor: colors.primaryLight_1,
-        borderRadius: 8,
-        padding: 12,
-        fontSize: 16,
-        color: colors.primaryDark,
-        backgroundColor: colors.primaryLight,
-        minHeight: 100,
+    modalSubtitle: {
+        fontSize: 14,
+        color: colors.primaryDark_2,
         marginBottom: 16,
     },
-    modalActions: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        gap: 12,
-    },
-    cancelButton: {
-        backgroundColor: colors.primaryLight_1,
+    notesInput: {
+        backgroundColor: '#f0f0f0',
+        borderRadius: 8,
+        padding: 16,
+        minHeight: 100,
+        fontSize: 16,
+        textAlignVertical: 'top',
+        marginBottom: 16,
     },
     saveButton: {
         backgroundColor: colors.primaryColor,
+        borderRadius: 50,
+        paddingVertical: 12,
+    },
+    saveButtonText: {
+        color: 'white',
+        fontWeight: '600',
+        textAlign: 'center',
     },
 }); 

@@ -58,13 +58,13 @@ const WebMap: React.FC<PropertyMapProps> = ({
     const L = (window as any).L;
     let map: any, marker: any, searchTimeout: any;
 
-    // Initialize map
-    map = L.map(mapRef.current).setView([latitude, longitude], 13);
+    // Initialize map and disable the default attribution control
+    map = L.map(mapRef.current, {
+      attributionControl: false,
+    }).setView([latitude, longitude], 13);
 
-    // Add OpenStreetMap tiles
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
+    // Add OpenStreetMap tiles without any attribution text
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
     // Add marker if coordinates are provided
     if (latitude && longitude) {
@@ -271,7 +271,7 @@ const MobileMap: React.FC<PropertyMapProps> = (props) => {
       <html>
         <head>
           <meta charset="utf-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
           <title>Property Map</title>
           <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
           <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -341,6 +341,9 @@ const MobileMap: React.FC<PropertyMapProps> = (props) => {
               font-size: 14px;
               color: #333;
             }
+            .leaflet-control-attribution {
+              display: none !important;
+            }
           </style>
         </head>
         <body>
@@ -363,13 +366,14 @@ const MobileMap: React.FC<PropertyMapProps> = (props) => {
           <script>
             let map, marker, searchTimeout;
             
-            // Initialize map
-            map = L.map('map').setView([${props.latitude}, ${props.longitude}], 13);
+            // Initialize map and disable the default attribution control
+            map = L.map('map', {
+                zoomControl: ${props.interactive},
+                attributionControl: false,
+            }).setView([${props.latitude}, ${props.longitude}], 13);
             
-            // Add OpenStreetMap tiles
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-              attribution: '© OpenStreetMap contributors'
-            }).addTo(map);
+            // Add OpenStreetMap tiles without any attribution text
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
             
             // Add marker if coordinates are provided
             ${props.latitude && props.longitude ? `

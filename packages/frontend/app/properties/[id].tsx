@@ -331,36 +331,37 @@ export default function PropertyDetailPage() {
       </View>
 
       <ScrollView style={styles.container}>
-        {/* Image Gallery */}
-        <View style={styles.imageContainer}>
-          <View style={styles.imageGalleryPlaceholder}>
-            <Text style={styles.galleryPlaceholderText}>Property Image {activeImageIndex + 1}</Text>
-          </View>
-
-          <View style={styles.imageDotContainer}>
-            {property.images.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.imageDot,
-                  activeImageIndex === index && styles.activeImageDot
-                ]}
-              />
-            ))}
-          </View>
-
-          {/* Badges */}
-          {property.isVerified && (
-            <View style={styles.verifiedBadge}>
-              <Text style={styles.badgeText}>{t("Verified Property")}</Text>
+        {/* Property Images Grid */}
+        <View style={styles.imageGridContainer}>
+          <View style={styles.imageGrid}>
+            {/* Left Column */}
+            <View style={styles.mainImageContainer}>
+              <View style={styles.imagePlaceholder}>
+                <Text style={styles.imagePlaceholderText}>Main Photo</Text>
+              </View>
             </View>
-          )}
 
-          {property.isEcoCertified && (
-            <View style={styles.ecoBadge}>
-              <Text style={styles.badgeText}>{t("Eco-Certified")}</Text>
+            {/* Right Column */}
+            <View style={styles.rightColumn}>
+              <View style={styles.sideImageContainer}>
+                <View style={styles.imagePlaceholder}>
+                  <Text style={styles.imagePlaceholderText}>Photo 2</Text>
+                </View>
+              </View>
+              <View style={styles.mapPreviewContainer}>
+                <PropertyMap
+                  latitude={apiProperty?.address?.coordinates?.lat || 40.7128}
+                  longitude={apiProperty?.address?.coordinates?.lng || -74.0060}
+                  address={property.location}
+                  height={96}
+                  interactive={false}
+                />
+                <View style={styles.mapOverlay}>
+                  <Text style={styles.mapOverlayText}>Location</Text>
+                </View>
+              </View>
             </View>
-          )}
+          </View>
         </View>
 
         {/* Basic Info */}
@@ -487,26 +488,29 @@ export default function PropertyDetailPage() {
           {/* Landlord Info */}
           <View style={styles.divider} />
           <Text style={styles.sectionTitle}>{t("Landlord")}</Text>
-          <View style={styles.landlordContainer}>
-            <View style={styles.landlordInfoContainer}>
-              <View style={styles.landlordImagePlaceholder}>
-                <Text style={styles.landlordInitial}>{property.landlordName[0]}</Text>
+          <View style={styles.landlordCard}>
+            <View style={styles.landlordHeader}>
+              <View style={styles.landlordAvatar}>
+                <Text style={styles.landlordInitial}>S</Text>
               </View>
-              <View style={styles.landlordDetails}>
-                <View style={styles.landlordNameContainer}>
-                  <Text style={styles.landlordName}>{property.landlordName}</Text>
-                  {landlordVerified && (
-                    <Text style={styles.landlordVerified}>✓</Text>
-                  )}
+              <View style={styles.landlordInfo}>
+                <View style={styles.landlordNameRow}>
+                  <Text style={styles.landlordName}>Sarah Johnson</Text>
+                  <View style={styles.verifiedBadge}>
+                    <Text style={styles.verifiedText}>✓</Text>
+                  </View>
                 </View>
-                <View style={styles.landlordRatingContainer}>
-                  <Text style={styles.landlordRatingText}>{property.landlordRating}</Text>
-                </View>
+                <Text style={styles.landlordRating}>★ 4.8 • Responds within 2 hours</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.contactButton} onPress={handleContact}>
-              <Text style={styles.contactButtonText}>{t("Contact")}</Text>
-            </TouchableOpacity>
+            <View style={styles.landlordActions}>
+              <TouchableOpacity style={styles.messageButton} onPress={handleContact}>
+                <Text style={styles.messageButtonText}>{t("Message")}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.callButton} onPress={handleContact}>
+                <Text style={styles.callButtonText}>{t("Call")}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Trust and Safety */}
@@ -761,58 +765,95 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: colors.COLOR_BLACK,
   },
-  landlordContainer: {
+  landlordCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  landlordHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  landlordAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#4F46E5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  landlordInitial: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  landlordInfo: {
+    flex: 1,
+  },
+  landlordNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  landlordName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginRight: 8,
+  },
+  verifiedBadge: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  verifiedText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  landlordRating: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  landlordActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  landlordInfoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  messageButton: {
+    backgroundColor: '#4F46E5',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    flex: 1,
+    marginRight: 8,
   },
-  landlordImagePlaceholder: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  landlordInitial: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  landlordDetails: {
-    justifyContent: 'center',
-  },
-  landlordNameContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  landlordName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginRight: 5,
-  },
-  landlordRatingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 5,
-  },
-  landlordRatingText: {
-    marginLeft: 5,
+  messageButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    textAlign: 'center',
     fontSize: 14,
   },
-  contactButton: {
-    backgroundColor: colors.primaryColor,
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 20,
+  callButton: {
+    backgroundColor: '#10B981',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    flex: 1,
+    marginLeft: 8,
   },
-  contactButtonText: {
+  callButtonText: {
     color: 'white',
-    fontWeight: '500',
+    fontWeight: '600',
+    textAlign: 'center',
+    fontSize: 14,
   },
   trustContainer: {
     flexDirection: 'row',
@@ -975,11 +1016,6 @@ const styles = StyleSheet.create({
   unsavedButtonText: {
     color: 'white',
   },
-  landlordVerified: {
-    marginLeft: 5,
-    fontSize: 14,
-    color: colors.primaryColor,
-  },
   mapContainer: {
     marginVertical: 10,
   },
@@ -1068,5 +1104,166 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 1,
+  },
+  messageButton: {
+    backgroundColor: colors.primaryColor,
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  messageButtonText: {
+    color: 'white',
+    fontWeight: '500',
+  },
+  callButton: {
+    backgroundColor: colors.primaryColor,
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+  },
+  callButtonText: {
+    color: 'white',
+    fontWeight: '500',
+  },
+  landlordStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  responseTime: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  landlordActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  imageGridContainer: {
+    marginBottom: 12,
+    padding: 8,
+  },
+  imageGrid: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  mainImageContainer: {
+    width: '66%',
+    height: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  rightColumn: {
+    flex: 1,
+    gap: 8,
+  },
+  sideImageContainer: {
+    height: 96,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  mapPreviewContainer: {
+    height: 96,
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  imagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imagePlaceholderText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  mapOverlay: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  mapOverlayText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  fullWidthContainer: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  halfWidthContainer: {
+    width: '50%',
+    height: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  heroContainer: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  equalContainer: {
+    width: '50%',
+    height: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  lMainContainer: {
+    width: '60%',
+    height: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  lTopContainer: {
+    width: '40%',
+    height: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  lBottomContainer: {
+    width: '40%',
+    height: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  gridContainer: {
+    width: '50%',
+    height: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  masonryLarge: {
+    width: '60%',
+    height: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  masonrySmall: {
+    width: '38%',
+    height: 96,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  masonryMedium: {
+    width: '38%',
+    height: 120,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  detailsContainer: {
+    padding: 16,
+    paddingTop: 8,
+  },
+  headerContainer: {
+    marginBottom: 20,
   },
 });
