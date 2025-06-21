@@ -8,7 +8,7 @@ import { IconButton } from '@/components/IconButton';
 import { ListItem } from '@/components/ListItem';
 import { useOxy } from '@oxyhq/services';
 import { Avatar } from '@oxyhq/services/ui';
-import { usePrimaryProfile, useUserProfiles, useDeleteProfile } from '@/hooks/useProfileQueries';
+import { usePrimaryProfile, useUserProfiles, useDeleteProfile, useUpdateProfile } from '@/hooks/useProfileQueries';
 import { TrustScore } from '@/components/TrustScore';
 import { Profile } from '@/services/profileService';
 import { useQueryClient } from '@tanstack/react-query';
@@ -20,6 +20,7 @@ export default function ProfileScreen() {
     const { data: primaryProfile, isLoading: profileLoading, error: profileError } = usePrimaryProfile();
     const { data: allProfiles, isLoading: profilesLoading } = useUserProfiles();
     const deleteProfile = useDeleteProfile();
+    const updateProfile = useUpdateProfile();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const queryClient = useQueryClient();
 
@@ -80,7 +81,7 @@ export default function ProfileScreen() {
     const handleProfileAction = (action: string, profileId?: string) => {
         switch (action) {
             case 'create':
-                showBottomSheet?.('profile-create');
+                router.push('/profile/create');
                 break;
             case 'edit':
                 if (profileId) {
@@ -107,21 +108,60 @@ export default function ProfileScreen() {
         }
     };
 
+    const handleSwitchProfile = async (profileId: string) => {
+        try {
+            await updateProfile.mutateAsync({ profileId, updateData: { isPrimary: true } });
+            await handleRefresh();
+        } catch (error) {
+            Alert.alert('Error', 'Failed to switch profile. Please try again.');
+        }
+    };
+
+    const handleSetAsDefault = async (profileId: string, profileType: string) => {
+        Alert.alert(
+            'Set as Default Profile',
+            `Are you sure you want to set this ${profileType} profile as your default profile? This will make it your primary profile.`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Set as Default',
+                    onPress: async () => {
+                        try {
+                            await updateProfile.mutateAsync({ profileId, updateData: { isPrimary: true } });
+                            await handleRefresh();
+                            Alert.alert('Success', `${profileType} profile is now your default profile.`);
+                        } catch (error) {
+                            Alert.alert('Error', 'Failed to set profile as default. Please try again.');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     const getProfileTypeLabel = (type: string) => {
         switch (type) {
-            case 'personal': return 'Personal Profile';
-            case 'roommate': return 'Roommate Profile';
-            case 'agency': return 'Agency Profile';
-            default: return type;
+            case 'personal':
+                return 'Personal';
+            case 'roommate':
+                return 'Roommate';
+            case 'agency':
+                return 'Agency';
+            default:
+                return 'Unknown';
         }
     };
 
     const getProfileTypeIcon = (type: string) => {
         switch (type) {
-            case 'personal': return 'person-outline';
-            case 'roommate': return 'people-outline';
-            case 'agency': return 'business-outline';
-            default: return 'document-outline';
+            case 'personal':
+                return 'user';
+            case 'roommate':
+                return 'users';
+            case 'agency':
+                return 'building';
+            default:
+                return 'user';
         }
     };
 
@@ -191,6 +231,34 @@ export default function ProfileScreen() {
                         </View>
                     )}
 
+                    {/* Business Verification Display for Agency Profiles */}
+                    {primaryProfile?.profileType === 'agency' && primaryProfile?.agencyProfile && (
+                        <View style={styles.trustScoreContainer}>
+                            <View style={styles.businessVerificationContainer}>
+                                <Text style={styles.businessVerificationTitle}>Business Verification</Text>
+                                <View style={styles.verificationStatusGrid}>
+                                    {Object.entries(primaryProfile.agencyProfile.verification || {}).map(([key, value]) => (
+                                        <View key={key} style={styles.verificationStatusItem}>
+                                            <Text style={[
+                                                styles.verificationStatusIcon,
+                                                { color: value ? colors.online : colors.busy }
+                                            ]}>
+                                                {value ? '✓' : '○'}
+                                            </Text>
+                                            <Text style={styles.verificationStatusLabel}>
+                                                {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                            </Text>
+                                        </View>
+                                    ))}
+                                </View>
+                                <Text style={styles.businessInfoText}>
+                                    {primaryProfile.agencyProfile.businessType?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} •
+                                    {primaryProfile.agencyProfile.members?.length || 0} Team Members
+                                </Text>
+                            </View>
+                        </View>
+                    )}
+
                     <View style={styles.editProfileButtonContainer}>
                         <TouchableOpacity
                             style={styles.editProfileButton}
@@ -215,19 +283,68 @@ export default function ProfileScreen() {
                         Manage your different profile types
                     </Text>
 
+                    {/* Current Default Profile Display */}
+                    {primaryProfile && (
+                        <View style={styles.defaultProfileCard}>
+                            <View style={styles.defaultProfileHeader}>
+                                <IconButton
+                                    name={getProfileTypeIcon(primaryProfile.profileType)}
+                                    size={24}
+                                    color={colors.primaryColor}
+                                    backgroundColor="transparent"
+                                />
+                                <View style={styles.defaultProfileInfo}>
+                                    <Text style={styles.defaultProfileTitle}>
+                                        Current Default: {getProfileTypeLabel(primaryProfile.profileType)}
+                                    </Text>
+                                    <Text style={styles.defaultProfileSubtitle}>
+                                        This is your active profile for the app
+                                    </Text>
+                                </View>
+                                <View style={styles.defaultBadge}>
+                                    <IconButton
+                                        name="checkmark-circle"
+                                        size={20}
+                                        color={colors.primaryLight}
+                                        backgroundColor="transparent"
+                                    />
+                                </View>
+                            </View>
+                        </View>
+                    )}
+
                     {/* Debug Info */}
-                    <View style={styles.debugInfo}>
-                        <Text style={styles.debugText}>Primary Profile: {primaryProfile ? 'Found' : 'Not Found'}</Text>
-                        <Text style={styles.debugText}>All Profiles Count: {allProfiles?.length || 0}</Text>
-                        <Text style={styles.debugText}>Profile Loading: {profileLoading ? 'Yes' : 'No'}</Text>
-                        <Text style={styles.debugText}>Profiles Loading: {profilesLoading ? 'Yes' : 'No'}</Text>
-                        {primaryProfile && (
-                            <Text style={styles.debugText}>Primary Profile ID: {primaryProfile.id || primaryProfile._id}</Text>
-                        )}
-                        {allProfiles && allProfiles.length > 0 && (
-                            <Text style={styles.debugText}>First Profile ID: {allProfiles[0].id || allProfiles[0]._id}</Text>
-                        )}
-                    </View>
+                    {/* Quick Profile Switcher */}
+                    {allProfiles && allProfiles.length > 1 && (
+                        <View style={styles.quickSwitcherContainer}>
+                            <Text style={styles.quickSwitcherTitle}>Quick Switch Profile</Text>
+                            <View style={styles.quickSwitcherButtons}>
+                                {allProfiles.map((profile: Profile) => (
+                                    <TouchableOpacity
+                                        key={profile.id || profile._id}
+                                        style={[
+                                            styles.quickSwitchButton,
+                                            profile.isPrimary && styles.quickSwitchButtonActive
+                                        ]}
+                                        onPress={() => {
+                                            const profileId = profile.id || profile._id;
+                                            if (profileId && !profile.isPrimary) {
+                                                handleSetAsDefault(profileId, profile.profileType);
+                                            }
+                                        }}
+                                        disabled={profile.isPrimary || updateProfile.isPending}
+                                    >
+                                        <Text style={[
+                                            styles.quickSwitchButtonText,
+                                            profile.isPrimary && styles.quickSwitchButtonTextActive
+                                        ]}>
+                                            {getProfileTypeLabel(profile.profileType)}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+                    )}
 
                     {allProfiles && allProfiles.length > 0 ? (
                         allProfiles.map((profile: Profile) => (
@@ -244,7 +361,19 @@ export default function ProfileScreen() {
                                             {getProfileTypeLabel(profile.profileType)}
                                         </Text>
                                         <Text style={styles.profileCardStatus}>
-                                            {profile.isPrimary ? 'Primary Profile' : 'Secondary Profile'}
+                                            {profile.isPrimary ? (
+                                                <View style={styles.defaultStatusContainer}>
+                                                    <IconButton
+                                                        name="checkmark-circle"
+                                                        size={16}
+                                                        color={colors.online}
+                                                        backgroundColor="transparent"
+                                                    />
+                                                    <Text style={styles.defaultStatusText}>Default Profile</Text>
+                                                </View>
+                                            ) : (
+                                                'Secondary Profile'
+                                            )}
                                         </Text>
                                     </View>
                                     <View style={styles.profileCardActions}>
@@ -260,19 +389,35 @@ export default function ProfileScreen() {
                                             <Text style={styles.profileActionText}>Edit</Text>
                                         </TouchableOpacity>
                                         {!profile.isPrimary && (
-                                            <TouchableOpacity
-                                                style={[styles.profileActionButton, styles.deleteButton]}
-                                                onPress={() => {
-                                                    const profileId = profile.id || profile._id;
-                                                    if (profileId) {
-                                                        handleDeleteProfile(profileId, profile.profileType);
-                                                    }
-                                                }}
-                                            >
-                                                <Text style={[styles.profileActionText, styles.deleteButtonText]}>
-                                                    Delete
-                                                </Text>
-                                            </TouchableOpacity>
+                                            <>
+                                                <TouchableOpacity
+                                                    style={[styles.profileActionButton, styles.switchButton]}
+                                                    onPress={() => {
+                                                        const profileId = profile.id || profile._id;
+                                                        if (profileId) {
+                                                            handleSetAsDefault(profileId, profile.profileType);
+                                                        }
+                                                    }}
+                                                    disabled={updateProfile.isPending}
+                                                >
+                                                    <Text style={styles.profileActionText}>
+                                                        {updateProfile.isPending ? 'Switching...' : 'Set as Default'}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                                <TouchableOpacity
+                                                    style={[styles.profileActionButton, styles.deleteButton]}
+                                                    onPress={() => {
+                                                        const profileId = profile.id || profile._id;
+                                                        if (profileId) {
+                                                            handleDeleteProfile(profileId, profile.profileType);
+                                                        }
+                                                    }}
+                                                >
+                                                    <Text style={[styles.profileActionText, styles.deleteButtonText]}>
+                                                        Delete
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            </>
                                         )}
                                     </View>
                                 </View>
@@ -346,7 +491,6 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.primaryLight,
     },
     loadingContainer: {
         flex: 1,
@@ -456,11 +600,11 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         color: colors.primaryDark,
+        marginBottom: 4,
     },
     profileCardStatus: {
         fontSize: 12,
         color: colors.COLOR_BLACK_LIGHT_5,
-        marginTop: 2,
     },
     profileCardActions: {
         flexDirection: 'row',
@@ -530,14 +674,6 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: colors.chatUnreadBadge,
     },
-    debugInfo: {
-        marginBottom: 16,
-    },
-    debugText: {
-        fontSize: 12,
-        color: colors.COLOR_BLACK_LIGHT_5,
-        marginBottom: 4,
-    },
     noProfilesContainer: {
         padding: 20,
         alignItems: 'center',
@@ -555,5 +691,114 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: colors.COLOR_BLACK_LIGHT_5,
         textAlign: 'center',
+    },
+    switchButton: {
+        borderColor: colors.online,
+        backgroundColor: colors.primaryLight,
+    },
+    businessVerificationContainer: {
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    businessVerificationTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: colors.primaryDark,
+        marginBottom: 8,
+    },
+    verificationStatusGrid: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    verificationStatusItem: {
+        alignItems: 'center',
+    },
+    verificationStatusIcon: {
+        fontSize: 20,
+        marginBottom: 4,
+    },
+    verificationStatusLabel: {
+        fontSize: 12,
+        color: colors.COLOR_BLACK_LIGHT_5,
+    },
+    businessInfoText: {
+        fontSize: 14,
+        color: colors.COLOR_BLACK_LIGHT_5,
+        marginTop: 8,
+    },
+    defaultProfileCard: {
+        backgroundColor: colors.primaryLight,
+        padding: 16,
+        borderRadius: 8,
+        marginBottom: 12,
+        shadowColor: colors.shadow,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    defaultProfileHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    defaultProfileInfo: {
+        flex: 1,
+        marginLeft: 12,
+    },
+    defaultProfileTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: colors.primaryDark,
+    },
+    defaultProfileSubtitle: {
+        fontSize: 12,
+        color: colors.COLOR_BLACK_LIGHT_5,
+    },
+    defaultBadge: {
+        padding: 4,
+        borderRadius: 12,
+        backgroundColor: colors.primaryColor,
+    },
+    quickSwitcherContainer: {
+        marginBottom: 16,
+    },
+    quickSwitcherTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: colors.primaryDark,
+        marginBottom: 8,
+    },
+    quickSwitcherButtons: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    quickSwitchButton: {
+        padding: 12,
+        borderRadius: 12,
+        backgroundColor: colors.primaryLight,
+        borderWidth: 1,
+        borderColor: colors.primaryColor,
+    },
+    quickSwitchButtonActive: {
+        borderColor: colors.online,
+        backgroundColor: colors.primaryLight,
+    },
+    quickSwitchButtonText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: colors.primaryColor,
+    },
+    quickSwitchButtonTextActive: {
+        color: colors.online,
+    },
+    defaultStatusContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    defaultStatusText: {
+        marginLeft: 4,
+        fontSize: 12,
+        fontWeight: '600',
+        color: colors.online,
     },
 }); 

@@ -6,6 +6,7 @@ import { colors } from '@/styles/colors';
 import { useRouter } from 'expo-router';
 import { IconButton } from '@/components/IconButton';
 import { TrustScore } from '@/components/TrustScore';
+import { Header } from '@/components/Header';
 import { usePrimaryProfile, useUpdatePrimaryProfile } from '@/hooks/useProfileQueries';
 import { UpdateProfileData } from '@/services/profileService';
 
@@ -18,6 +19,18 @@ export default function ProfileEditScreen() {
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [activeSection, setActiveSection] = useState('personal');
 
+    // Get profile type to determine which UI to show
+    const profileType = primaryProfile?.profileType || 'personal';
+
+    // Set default active section based on profile type
+    useEffect(() => {
+        if (profileType === 'agency') {
+            setActiveSection('business');
+        } else {
+            setActiveSection('personal');
+        }
+    }, [profileType]);
+
     // Debug logging for component lifecycle
     useEffect(() => {
         console.log('ProfileEditScreen: Component mounted');
@@ -27,7 +40,7 @@ export default function ProfileEditScreen() {
         console.log('ProfileEditScreen: profileLoading changed to:', profileLoading);
     }, [profileLoading]);
 
-    // Form state
+    // Form state for personal profile
     const [personalInfo, setPersonalInfo] = useState({
         bio: '',
         occupation: '',
@@ -36,6 +49,25 @@ export default function ProfileEditScreen() {
         employmentStatus: 'employed' as 'employed' | 'self_employed' | 'student' | 'retired' | 'unemployed' | 'other',
         moveInDate: '',
         leaseDuration: 'yearly' as 'monthly' | '3_months' | '6_months' | 'yearly' | 'flexible',
+    });
+
+    // Form state for agency profile
+    const [agencyInfo, setAgencyInfo] = useState({
+        businessType: 'real_estate_agency' as 'real_estate_agency' | 'property_management' | 'brokerage' | 'developer' | 'other',
+        description: '',
+        businessDetails: {
+            licenseNumber: '',
+            taxId: '',
+            yearEstablished: '',
+            employeeCount: '1-10' as '1-10' | '11-50' | '51-200' | '200+',
+            specialties: [] as string[],
+        },
+        verification: {
+            businessLicense: false,
+            insurance: false,
+            bonding: false,
+            backgroundCheck: false,
+        },
     });
 
     const [preferences, setPreferences] = useState({
@@ -96,7 +128,7 @@ export default function ProfileEditScreen() {
     useEffect(() => {
         console.log('ProfileEditScreen: primaryProfile changed:', primaryProfile);
 
-        if (primaryProfile?.personalProfile) {
+        if (profileType === 'personal' && primaryProfile?.personalProfile) {
             const profile = primaryProfile.personalProfile;
             console.log('ProfileEditScreen: Updating form state with profile data:', profile);
             console.log('ProfileEditScreen: personalInfo from profile:', profile.personalInfo);
@@ -180,10 +212,31 @@ export default function ProfileEditScreen() {
             setRentalHistory(newRentalHistory);
 
             setHasUnsavedChanges(false);
-        } else {
-            console.log('ProfileEditScreen: No personalProfile found in primaryProfile');
+        } else if (profileType === 'agency' && primaryProfile?.agencyProfile) {
+            const profile = primaryProfile.agencyProfile;
+            console.log('ProfileEditScreen: Updating agency form state with profile data:', profile);
+
+            setAgencyInfo({
+                businessType: profile.businessType || 'real_estate_agency',
+                description: profile.description || '',
+                businessDetails: {
+                    licenseNumber: profile.businessDetails?.licenseNumber || '',
+                    taxId: profile.businessDetails?.taxId || '',
+                    yearEstablished: profile.businessDetails?.yearEstablished?.toString() || '',
+                    employeeCount: profile.businessDetails?.employeeCount || '1-10',
+                    specialties: profile.businessDetails?.specialties || [],
+                },
+                verification: {
+                    businessLicense: profile.verification?.businessLicense || false,
+                    insurance: profile.verification?.insurance || false,
+                    bonding: profile.verification?.bonding || false,
+                    backgroundCheck: profile.verification?.backgroundCheck || false,
+                },
+            });
+
+            setHasUnsavedChanges(false);
         }
-    }, [primaryProfile?.personalProfile]);
+    }, [primaryProfile, profileType]);
 
     // Memoize trust score data to prevent unnecessary re-renders
     const trustScoreData = useMemo(() => {
@@ -212,40 +265,57 @@ export default function ProfileEditScreen() {
 
         setIsSaving(true);
         try {
-            const updateData: UpdateProfileData = {
-                personalProfile: {
-                    personalInfo: {
-                        ...personalInfo,
-                        annualIncome: personalInfo.annualIncome ? parseInt(personalInfo.annualIncome) : undefined,
-                        moveInDate: personalInfo.moveInDate || undefined,
-                    },
-                    preferences: {
-                        ...preferences,
-                        maxRent: preferences.maxRent ? parseInt(preferences.maxRent) : undefined,
-                        minBedrooms: preferences.minBedrooms ? parseInt(preferences.minBedrooms) : undefined,
-                        minBathrooms: preferences.minBathrooms ? parseInt(preferences.minBathrooms) : undefined,
-                    },
-                    references: references.filter(ref => ref.name.trim()).map(ref => ({
-                        name: ref.name,
-                        relationship: ref.relationship,
-                        phone: ref.phone,
-                        email: ref.email,
-                    })),
-                    rentalHistory: rentalHistory.filter(history => history.address.trim()).map(history => ({
-                        address: history.address,
-                        startDate: history.startDate,
-                        endDate: history.endDate,
-                        monthlyRent: history.monthlyRent ? parseInt(history.monthlyRent) : undefined,
-                        reasonForLeaving: history.reasonForLeaving,
-                        landlordContact: {
-                            name: history.landlordContact.name,
-                            phone: history.landlordContact.phone,
-                            email: history.landlordContact.email,
+            let updateData: UpdateProfileData = {};
+
+            if (profileType === 'personal') {
+                const updateData: UpdateProfileData = {
+                    personalProfile: {
+                        personalInfo: {
+                            ...personalInfo,
+                            annualIncome: personalInfo.annualIncome ? parseInt(personalInfo.annualIncome) : undefined,
+                            moveInDate: personalInfo.moveInDate || undefined,
                         },
-                    })),
-                    settings,
-                },
-            };
+                        preferences: {
+                            ...preferences,
+                            maxRent: preferences.maxRent ? parseInt(preferences.maxRent) : undefined,
+                            minBedrooms: preferences.minBedrooms ? parseInt(preferences.minBedrooms) : undefined,
+                            minBathrooms: preferences.minBathrooms ? parseInt(preferences.minBathrooms) : undefined,
+                        },
+                        references: references.filter(ref => ref.name.trim()).map(ref => ({
+                            name: ref.name,
+                            relationship: ref.relationship,
+                            phone: ref.phone,
+                            email: ref.email,
+                        })),
+                        rentalHistory: rentalHistory.filter(history => history.address.trim()).map(history => ({
+                            address: history.address,
+                            startDate: history.startDate,
+                            endDate: history.endDate,
+                            monthlyRent: history.monthlyRent ? parseInt(history.monthlyRent) : undefined,
+                            reasonForLeaving: history.reasonForLeaving,
+                            landlordContact: {
+                                name: history.landlordContact.name,
+                                phone: history.landlordContact.phone,
+                                email: history.landlordContact.email,
+                            },
+                        })),
+                        settings,
+                    },
+                };
+            } else if (profileType === 'agency') {
+                updateData = {
+                    agencyProfile: {
+                        businessType: agencyInfo.businessType,
+                        description: agencyInfo.description,
+                        businessDetails: {
+                            ...agencyInfo.businessDetails,
+                            yearEstablished: agencyInfo.businessDetails.yearEstablished ?
+                                parseInt(agencyInfo.businessDetails.yearEstablished) : undefined,
+                        },
+                        verification: agencyInfo.verification,
+                    },
+                };
+            }
 
             const result = await updateProfileMutation.mutateAsync(updateData);
             console.log('Updated profile data:', result);
@@ -267,7 +337,7 @@ export default function ProfileEditScreen() {
         } finally {
             setIsSaving(false);
         }
-    }, [primaryProfile, personalInfo, preferences, references, rentalHistory, settings, updateProfileMutation]);
+    }, [primaryProfile, profileType, personalInfo, preferences, references, rentalHistory, settings, agencyInfo, updateProfileMutation]);
 
     // Track changes
     const updatePersonalInfo = (updates: Partial<typeof personalInfo>) => {
@@ -351,6 +421,35 @@ export default function ProfileEditScreen() {
         setHasUnsavedChanges(true);
     };
 
+    const updateAgencyInfo = (updates: Partial<typeof agencyInfo>) => {
+        setAgencyInfo(prev => ({ ...prev, ...updates }));
+        setHasUnsavedChanges(true);
+    };
+
+    const toggleSpecialty = (specialty: string) => {
+        setAgencyInfo(prev => ({
+            ...prev,
+            businessDetails: {
+                ...prev.businessDetails,
+                specialties: prev.businessDetails.specialties.includes(specialty)
+                    ? prev.businessDetails.specialties.filter(s => s !== specialty)
+                    : [...prev.businessDetails.specialties, specialty]
+            }
+        }));
+        setHasUnsavedChanges(true);
+    };
+
+    const toggleVerification = (field: keyof typeof agencyInfo.verification) => {
+        setAgencyInfo(prev => ({
+            ...prev,
+            verification: {
+                ...prev.verification,
+                [field]: !prev.verification[field]
+            }
+        }));
+        setHasUnsavedChanges(true);
+    };
+
     // Manual refresh function
     const handleRefresh = async () => {
         try {
@@ -363,6 +462,359 @@ export default function ProfileEditScreen() {
     };
 
     const renderSection = () => {
+        if (profileType === 'agency') {
+            return renderAgencySection();
+        } else {
+            return renderPersonalSection();
+        }
+    };
+
+    const renderAgencySection = () => {
+        switch (activeSection) {
+            case 'business':
+                return (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Business Information</Text>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Business Type *</Text>
+                            <View style={styles.checkboxGroup}>
+                                {['real_estate_agency', 'property_management', 'brokerage', 'developer', 'other'].map((type) => (
+                                    <TouchableOpacity
+                                        key={type}
+                                        style={[
+                                            styles.checkbox,
+                                            agencyInfo.businessType === type && styles.checkboxSelected
+                                        ]}
+                                        onPress={() => updateAgencyInfo({ businessType: type as any })}
+                                    >
+                                        <Text style={[
+                                            styles.checkboxText,
+                                            agencyInfo.businessType === type && styles.checkboxTextSelected
+                                        ]}>
+                                            {type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Description</Text>
+                            <TextInput
+                                style={[styles.input, styles.textArea]}
+                                value={agencyInfo.description}
+                                onChangeText={(text) => updateAgencyInfo({ description: text })}
+                                placeholder="Describe your business..."
+                                multiline
+                                numberOfLines={4}
+                            />
+                        </View>
+
+                        <View style={styles.row}>
+                            <View style={[styles.inputGroup, styles.halfWidth]}>
+                                <Text style={styles.label}>License Number</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    value={agencyInfo.businessDetails.licenseNumber}
+                                    onChangeText={(text) => updateAgencyInfo({
+                                        businessDetails: { ...agencyInfo.businessDetails, licenseNumber: text }
+                                    })}
+                                    placeholder="Enter license number"
+                                />
+                            </View>
+                            <View style={[styles.inputGroup, styles.halfWidth]}>
+                                <Text style={styles.label}>Tax ID</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    value={agencyInfo.businessDetails.taxId}
+                                    onChangeText={(text) => updateAgencyInfo({
+                                        businessDetails: { ...agencyInfo.businessDetails, taxId: text }
+                                    })}
+                                    placeholder="Enter tax ID"
+                                />
+                            </View>
+                        </View>
+
+                        <View style={styles.row}>
+                            <View style={[styles.inputGroup, styles.halfWidth]}>
+                                <Text style={styles.label}>Year Established</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    value={agencyInfo.businessDetails.yearEstablished}
+                                    onChangeText={(text) => updateAgencyInfo({
+                                        businessDetails: { ...agencyInfo.businessDetails, yearEstablished: text }
+                                    })}
+                                    placeholder="e.g., 2020"
+                                    keyboardType="numeric"
+                                />
+                            </View>
+                            <View style={[styles.inputGroup, styles.halfWidth]}>
+                                <Text style={styles.label}>Number of Employees</Text>
+                                <View style={styles.pickerContainer}>
+                                    {['1-10', '11-50', '51-200', '200+'].map((count) => (
+                                        <TouchableOpacity
+                                            key={count}
+                                            style={[
+                                                styles.pickerOption,
+                                                agencyInfo.businessDetails.employeeCount === count && styles.pickerOptionSelected
+                                            ]}
+                                            onPress={() => updateAgencyInfo({
+                                                businessDetails: { ...agencyInfo.businessDetails, employeeCount: count as any }
+                                            })}
+                                        >
+                                            <Text style={[
+                                                styles.pickerOptionText,
+                                                agencyInfo.businessDetails.employeeCount === count && styles.pickerOptionTextSelected
+                                            ]}>
+                                                {count}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </View>
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Specialties</Text>
+                            <View style={styles.checkboxGroup}>
+                                {['residential', 'commercial', 'luxury', 'student_housing', 'senior_housing', 'vacation_rentals'].map((specialty) => (
+                                    <TouchableOpacity
+                                        key={specialty}
+                                        style={[
+                                            styles.checkbox,
+                                            agencyInfo.businessDetails.specialties.includes(specialty) && styles.checkboxSelected
+                                        ]}
+                                        onPress={() => toggleSpecialty(specialty)}
+                                    >
+                                        <Text style={[
+                                            styles.checkboxText,
+                                            agencyInfo.businessDetails.specialties.includes(specialty) && styles.checkboxTextSelected
+                                        ]}>
+                                            {specialty.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+                    </View>
+                );
+
+            case 'verification':
+                return (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Business Verification</Text>
+                        <Text style={styles.sectionSubtitle}>
+                            Complete these verifications to build trust with clients
+                        </Text>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Verification Status</Text>
+
+                            <TouchableOpacity
+                                style={[
+                                    styles.verificationItem,
+                                    agencyInfo.verification.businessLicense && styles.verificationItemCompleted
+                                ]}
+                                onPress={() => toggleVerification('businessLicense')}
+                            >
+                                <View style={styles.verificationItemContent}>
+                                    <Text style={styles.verificationItemTitle}>Business License</Text>
+                                    <Text style={styles.verificationItemDescription}>
+                                        Upload your business license for verification
+                                    </Text>
+                                </View>
+                                <View style={[
+                                    styles.verificationStatus,
+                                    agencyInfo.verification.businessLicense && styles.verificationStatusCompleted
+                                ]}>
+                                    <Text style={styles.verificationStatusText}>
+                                        {agencyInfo.verification.businessLicense ? '✓' : '○'}
+                                    </Text>
+                                </View>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[
+                                    styles.verificationItem,
+                                    agencyInfo.verification.insurance && styles.verificationItemCompleted
+                                ]}
+                                onPress={() => toggleVerification('insurance')}
+                            >
+                                <View style={styles.verificationItemContent}>
+                                    <Text style={styles.verificationItemTitle}>Insurance</Text>
+                                    <Text style={styles.verificationItemDescription}>
+                                        Provide proof of business insurance
+                                    </Text>
+                                </View>
+                                <View style={[
+                                    styles.verificationStatus,
+                                    agencyInfo.verification.insurance && styles.verificationStatusCompleted
+                                ]}>
+                                    <Text style={styles.verificationStatusText}>
+                                        {agencyInfo.verification.insurance ? '✓' : '○'}
+                                    </Text>
+                                </View>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[
+                                    styles.verificationItem,
+                                    agencyInfo.verification.bonding && styles.verificationItemCompleted
+                                ]}
+                                onPress={() => toggleVerification('bonding')}
+                            >
+                                <View style={styles.verificationItemContent}>
+                                    <Text style={styles.verificationItemTitle}>Bonding</Text>
+                                    <Text style={styles.verificationItemDescription}>
+                                        Provide surety bond information
+                                    </Text>
+                                </View>
+                                <View style={[
+                                    styles.verificationStatus,
+                                    agencyInfo.verification.bonding && styles.verificationStatusCompleted
+                                ]}>
+                                    <Text style={styles.verificationStatusText}>
+                                        {agencyInfo.verification.bonding ? '✓' : '○'}
+                                    </Text>
+                                </View>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[
+                                    styles.verificationItem,
+                                    agencyInfo.verification.backgroundCheck && styles.verificationItemCompleted
+                                ]}
+                                onPress={() => toggleVerification('backgroundCheck')}
+                            >
+                                <View style={styles.verificationItemContent}>
+                                    <Text style={styles.verificationItemTitle}>Background Check</Text>
+                                    <Text style={styles.verificationItemDescription}>
+                                        Complete background check for all team members
+                                    </Text>
+                                </View>
+                                <View style={[
+                                    styles.verificationStatus,
+                                    agencyInfo.verification.backgroundCheck && styles.verificationStatusCompleted
+                                ]}>
+                                    <Text style={styles.verificationStatusText}>
+                                        {agencyInfo.verification.backgroundCheck ? '✓' : '○'}
+                                    </Text>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                );
+
+            case 'team':
+                return (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Team Management</Text>
+                        <Text style={styles.sectionSubtitle}>
+                            Manage your team members and their roles
+                        </Text>
+
+                        {primaryProfile?.agencyProfile?.members && primaryProfile.agencyProfile.members.length > 0 ? (
+                            primaryProfile.agencyProfile.members.map((member, index) => (
+                                <View key={index} style={styles.teamMemberItem}>
+                                    <View style={styles.teamMemberInfo}>
+                                        <Text style={styles.teamMemberName}>Member {index + 1}</Text>
+                                        <Text style={styles.teamMemberRole}>{member.role}</Text>
+                                        <Text style={styles.teamMemberDate}>
+                                            Added: {new Date(member.addedAt).toLocaleDateString()}
+                                        </Text>
+                                    </View>
+                                </View>
+                            ))
+                        ) : (
+                            <Text style={styles.emptyStateText}>No team members added yet.</Text>
+                        )}
+
+                        <TouchableOpacity style={styles.addButton}>
+                            <Text style={styles.addButtonText}>+ Add Team Member</Text>
+                        </TouchableOpacity>
+                    </View>
+                );
+
+            case 'settings':
+                return (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Business Settings</Text>
+                        <Text style={styles.sectionSubtitle}>
+                            Configure your business profile settings
+                        </Text>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Profile Visibility</Text>
+                            <View style={styles.pickerContainer}>
+                                {['public', 'private', 'contacts_only'].map((visibility) => (
+                                    <TouchableOpacity
+                                        key={visibility}
+                                        style={[
+                                            styles.pickerOption,
+                                            settings.privacy.profileVisibility === visibility && styles.pickerOptionSelected
+                                        ]}
+                                        onPress={() => updateSettings({
+                                            privacy: { ...settings.privacy, profileVisibility: visibility as any }
+                                        })}
+                                    >
+                                        <Text style={[
+                                            styles.pickerOptionText,
+                                            settings.privacy.profileVisibility === visibility && styles.pickerOptionTextSelected
+                                        ]}>
+                                            {visibility.replace('_', ' ').toUpperCase()}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Notifications</Text>
+                            <View style={styles.checkboxGroup}>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.checkbox,
+                                        settings.notifications.email && styles.checkboxSelected
+                                    ]}
+                                    onPress={() => updateSettings({
+                                        notifications: { ...settings.notifications, email: !settings.notifications.email }
+                                    })}
+                                >
+                                    <Text style={[
+                                        styles.checkboxText,
+                                        settings.notifications.email && styles.checkboxTextSelected
+                                    ]}>
+                                        Email Notifications
+                                    </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.checkbox,
+                                        settings.notifications.push && styles.checkboxSelected
+                                    ]}
+                                    onPress={() => updateSettings({
+                                        notifications: { ...settings.notifications, push: !settings.notifications.push }
+                                    })}
+                                >
+                                    <Text style={[
+                                        styles.checkboxText,
+                                        settings.notifications.push && styles.checkboxTextSelected
+                                    ]}>
+                                        Push Notifications
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                );
+
+            default:
+                return null;
+        }
+    };
+
+    const renderPersonalSection = () => {
         console.log('ProfileEditScreen: Rendering section with personalInfo:', personalInfo);
         console.log('ProfileEditScreen: Rendering section with references:', references);
         console.log('ProfileEditScreen: Rendering section with rentalHistory:', rentalHistory);
@@ -1054,195 +1506,223 @@ export default function ProfileEditScreen() {
 
     return (
         <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <IconButton name="arrow-back" size={24} color={colors.primaryDark} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>
-                    Edit Profile
-                    {hasUnsavedChanges && <Text style={styles.unsavedIndicator}> *</Text>}
-                </Text>
-                <View style={styles.headerActions}>
-                    <TouchableOpacity
-                        onPress={() => {
-                            console.log('=== DEBUG INFO ===');
-                            console.log('primaryProfile:', primaryProfile);
-                            console.log('personalInfo state:', personalInfo);
-                            console.log('profileLoading:', profileLoading);
-                            console.log('==================');
-                        }}
-                        style={[styles.headerButton, styles.debugButton]}
-                    >
-                        <IconButton
-                            name="bug-report"
-                            size={20}
-                            color={colors.primaryDark}
-                        />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={async () => {
-                            try {
-                                console.log('Creating test profile data...');
-                                const testData = {
-                                    personalProfile: {
-                                        personalInfo: {
-                                            bio: "Test bio - I am a software developer",
-                                            occupation: "Software Engineer",
-                                            employer: "Tech Company",
-                                            annualIncome: 75000,
-                                            employmentStatus: "employed" as const,
-                                            moveInDate: "2024-06-01",
-                                            leaseDuration: "yearly" as const,
-                                        },
-                                        preferences: {
-                                            propertyTypes: ["apartment", "house"],
-                                            maxRent: 2000,
-                                            minBedrooms: 2,
-                                            minBathrooms: 1,
-                                            preferredAmenities: ["parking", "gym"],
-                                            petFriendly: true,
-                                            smokingAllowed: false,
-                                            furnished: false,
-                                            parkingRequired: true,
-                                            accessibility: false,
-                                        },
-                                        references: [
-                                            {
-                                                name: "John Smith",
-                                                relationship: "landlord" as const,
-                                                phone: "555-123-4567",
-                                                email: "john.smith@email.com",
+            <Header
+                options={{
+                    title: `Edit ${profileType === 'agency' ? 'Business' : 'Personal'} Profile${hasUnsavedChanges ? ' *' : ''}`,
+                    showBackButton: true,
+                    rightComponents: [
+                        <TouchableOpacity
+                            key="debug"
+                            onPress={() => {
+                                console.log('=== DEBUG INFO ===');
+                                console.log('primaryProfile:', primaryProfile);
+                                console.log('personalInfo state:', personalInfo);
+                                console.log('profileLoading:', profileLoading);
+                                console.log('==================');
+                            }}
+                            style={styles.headerButton}
+                        >
+                            <IconButton
+                                name="bug-report"
+                                size={20}
+                                color={colors.primaryDark}
+                            />
+                        </TouchableOpacity>,
+                        <TouchableOpacity
+                            key="test"
+                            onPress={async () => {
+                                try {
+                                    console.log('Creating test profile data...');
+                                    const testData = {
+                                        personalProfile: {
+                                            personalInfo: {
+                                                bio: "Test bio - I am a software developer",
+                                                occupation: "Software Engineer",
+                                                employer: "Tech Company",
+                                                annualIncome: 75000,
+                                                employmentStatus: "employed" as const,
+                                                moveInDate: "2024-06-01",
+                                                leaseDuration: "yearly" as const,
                                             },
-                                            {
-                                                name: "Jane Doe",
-                                                relationship: "employer" as const,
-                                                phone: "555-987-6543",
-                                                email: "jane.doe@company.com",
-                                            }
-                                        ],
-                                        rentalHistory: [
-                                            {
-                                                address: "123 Main St, City, State 12345",
-                                                startDate: "2022-01-01",
-                                                endDate: "2023-12-31",
-                                                monthlyRent: 1500,
-                                                reasonForLeaving: "lease_ended" as const,
-                                                landlordContact: {
+                                            preferences: {
+                                                propertyTypes: ["apartment", "house"],
+                                                maxRent: 2000,
+                                                minBedrooms: 2,
+                                                minBathrooms: 1,
+                                                preferredAmenities: ["parking", "gym"],
+                                                petFriendly: true,
+                                                smokingAllowed: false,
+                                                furnished: false,
+                                                parkingRequired: true,
+                                                accessibility: false,
+                                            },
+                                            references: [
+                                                {
                                                     name: "John Smith",
+                                                    relationship: "landlord" as const,
                                                     phone: "555-123-4567",
                                                     email: "john.smith@email.com",
                                                 },
-                                            },
-                                            {
-                                                address: "456 Oak Ave, City, State 12345",
-                                                startDate: "2020-06-01",
-                                                endDate: "2021-12-31",
-                                                monthlyRent: 1200,
-                                                reasonForLeaving: "job_relocation" as const,
-                                                landlordContact: {
-                                                    name: "Mary Johnson",
-                                                    phone: "555-456-7890",
-                                                    email: "mary.johnson@email.com",
+                                                {
+                                                    name: "Jane Doe",
+                                                    relationship: "employer" as const,
+                                                    phone: "555-987-6543",
+                                                    email: "jane.doe@company.com",
+                                                }
+                                            ],
+                                            rentalHistory: [
+                                                {
+                                                    address: "123 Main St, City, State 12345",
+                                                    startDate: "2022-01-01",
+                                                    endDate: "2023-12-31",
+                                                    monthlyRent: 1500,
+                                                    reasonForLeaving: "lease_ended" as const,
+                                                    landlordContact: {
+                                                        name: "John Smith",
+                                                        phone: "555-123-4567",
+                                                        email: "john.smith@email.com",
+                                                    },
                                                 },
-                                            }
-                                        ],
-                                        settings: {
-                                            notifications: {
-                                                email: true,
-                                                push: true,
-                                                sms: false,
-                                                propertyAlerts: true,
-                                                viewingReminders: true,
-                                                leaseUpdates: true,
+                                                {
+                                                    address: "456 Oak Ave, City, State 12345",
+                                                    startDate: "2020-06-01",
+                                                    endDate: "2021-12-31",
+                                                    monthlyRent: 1200,
+                                                    reasonForLeaving: "job_relocation" as const,
+                                                    landlordContact: {
+                                                        name: "Mary Johnson",
+                                                        phone: "555-456-7890",
+                                                        email: "mary.johnson@email.com",
+                                                    },
+                                                }
+                                            ],
+                                            settings: {
+                                                notifications: {
+                                                    email: true,
+                                                    push: true,
+                                                    sms: false,
+                                                    propertyAlerts: true,
+                                                    viewingReminders: true,
+                                                    leaseUpdates: true,
+                                                },
+                                                privacy: {
+                                                    profileVisibility: "public" as const,
+                                                    showContactInfo: true,
+                                                    showIncome: false,
+                                                    showRentalHistory: false,
+                                                    showReferences: false,
+                                                },
+                                                language: "en",
+                                                timezone: "UTC",
+                                                currency: "USD",
                                             },
-                                            privacy: {
-                                                profileVisibility: "public" as const,
-                                                showContactInfo: true,
-                                                showIncome: false,
-                                                showRentalHistory: false,
-                                                showReferences: false,
-                                            },
-                                            language: "en",
-                                            timezone: "UTC",
-                                            currency: "USD",
                                         },
-                                    },
-                                };
+                                    };
 
-                                const result = await updateProfileMutation.mutateAsync(testData);
-                                console.log('Test profile created:', result);
-                                Alert.alert('Success', 'Test profile data created!');
-                            } catch (error) {
-                                console.error('Error creating test profile:', error);
-                                Alert.alert('Error', 'Failed to create test profile');
-                            }
-                        }}
-                        style={[styles.headerButton, styles.testButton]}
-                    >
-                        <IconButton
-                            name="add"
-                            size={20}
-                            color={colors.primaryDark}
-                        />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={handleRefresh}
-                        style={[styles.headerButton, styles.refreshButton]}
-                        disabled={profileLoading}
-                    >
-                        <IconButton
-                            name="refresh"
-                            size={20}
-                            color={colors.primaryDark}
-                        />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={handleSave}
-                        style={[
-                            styles.saveButton,
-                            hasUnsavedChanges && styles.saveButtonActive
-                        ]}
-                        disabled={isSaving || !hasUnsavedChanges}
-                    >
-                        {isSaving ? (
-                            <ActivityIndicator size="small" color={colors.primaryLight} />
-                        ) : (
-                            <Text style={styles.saveButtonText}>Save</Text>
-                        )}
-                    </TouchableOpacity>
-                </View>
-            </View>
+                                    const result = await updateProfileMutation.mutateAsync(testData);
+                                    console.log('Test profile created:', result);
+                                    Alert.alert('Success', 'Test profile data created!');
+                                } catch (error) {
+                                    console.error('Error creating test profile:', error);
+                                    Alert.alert('Error', 'Failed to create test profile');
+                                }
+                            }}
+                            style={styles.headerButton}
+                        >
+                            <IconButton
+                                name="add"
+                                size={20}
+                                color={colors.primaryDark}
+                            />
+                        </TouchableOpacity>,
+                        <TouchableOpacity
+                            key="refresh"
+                            onPress={handleRefresh}
+                            style={styles.headerButton}
+                            disabled={profileLoading}
+                        >
+                            <IconButton
+                                name="refresh"
+                                size={20}
+                                color={colors.primaryDark}
+                            />
+                        </TouchableOpacity>,
+                        <TouchableOpacity
+                            key="save"
+                            onPress={handleSave}
+                            style={[
+                                styles.saveButton,
+                                hasUnsavedChanges && styles.saveButtonActive
+                            ]}
+                            disabled={isSaving || !hasUnsavedChanges}
+                        >
+                            {isSaving ? (
+                                <ActivityIndicator size="small" color={colors.primaryLight} />
+                            ) : (
+                                <Text style={styles.saveButtonText}>Save</Text>
+                            )}
+                        </TouchableOpacity>
+                    ]
+                }}
+            />
 
             <View style={styles.tabContainer}>
-                {[
-                    { key: 'personal', label: 'Personal' },
-                    { key: 'preferences', label: 'Preferences' },
-                    { key: 'references', label: 'References' },
-                    { key: 'rental-history', label: 'History' },
-                    { key: 'trust-score', label: 'Trust Score' },
-                    { key: 'settings', label: 'Settings' },
-                ].map((tab) => (
-                    <TouchableOpacity
-                        key={tab.key}
-                        style={[
-                            styles.tab,
-                            activeSection === tab.key && styles.tabActive
-                        ]}
-                        onPress={() => setActiveSection(tab.key)}
-                    >
-                        <Text style={[
-                            styles.tabText,
-                            activeSection === tab.key && styles.tabTextActive
-                        ]}>
-                            {tab.label}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
+                {profileType === 'agency' ? (
+                    // Agency profile tabs
+                    [
+                        { key: 'business', label: 'Business' },
+                        { key: 'verification', label: 'Verification' },
+                        { key: 'team', label: 'Team' },
+                        { key: 'settings', label: 'Settings' },
+                    ].map((tab) => (
+                        <TouchableOpacity
+                            key={tab.key}
+                            style={[
+                                styles.tab,
+                                activeSection === tab.key && styles.tabActive
+                            ]}
+                            onPress={() => setActiveSection(tab.key)}
+                        >
+                            <Text style={[
+                                styles.tabText,
+                                activeSection === tab.key && styles.tabTextActive
+                            ]}>
+                                {tab.label}
+                            </Text>
+                        </TouchableOpacity>
+                    ))
+                ) : (
+                    // Personal profile tabs
+                    [
+                        { key: 'personal', label: 'Personal' },
+                        { key: 'preferences', label: 'Preferences' },
+                        { key: 'references', label: 'References' },
+                        { key: 'rental-history', label: 'History' },
+                        { key: 'trust-score', label: 'Trust Score' },
+                        { key: 'settings', label: 'Settings' },
+                    ].map((tab) => (
+                        <TouchableOpacity
+                            key={tab.key}
+                            style={[
+                                styles.tab,
+                                activeSection === tab.key && styles.tabActive
+                            ]}
+                            onPress={() => setActiveSection(tab.key)}
+                        >
+                            <Text style={[
+                                styles.tabText,
+                                activeSection === tab.key && styles.tabTextActive
+                            ]}>
+                                {tab.label}
+                            </Text>
+                        </TouchableOpacity>
+                    ))
+                )}
             </View>
 
             <ScrollView
                 style={styles.container}
-                key={primaryProfile?.personalProfile ? 'profile-loaded' : 'profile-loading'}
+                key={primaryProfile ? 'profile-loaded' : 'profile-loading'}
             >
                 {renderSection()}
             </ScrollView>
@@ -1260,42 +1740,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: colors.COLOR_BLACK_LIGHT_5,
         marginTop: 12,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: colors.primaryLight,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.primaryLight_1,
-    },
-    backButton: {
-        padding: 8,
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: colors.primaryDark,
-    },
-    unsavedIndicator: {
-        color: colors.primaryColor,
-        fontWeight: 'bold',
-    },
-    saveButton: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        backgroundColor: colors.primaryLight_1,
-        borderRadius: 20,
-    },
-    saveButtonActive: {
-        backgroundColor: colors.primaryColor,
-    },
-    saveButtonText: {
-        color: colors.primaryLight,
-        fontSize: 16,
-        fontWeight: '600',
     },
     tabContainer: {
         flexDirection: 'row',
@@ -1323,7 +1767,6 @@ const styles = StyleSheet.create({
     },
     container: {
         flex: 1,
-        backgroundColor: colors.primaryLight,
     },
     section: {
         padding: 16,
@@ -1340,6 +1783,11 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: 'bold',
         color: colors.primaryDark,
+        marginBottom: 16,
+    },
+    sectionSubtitle: {
+        fontSize: 14,
+        color: colors.COLOR_BLACK_LIGHT_5,
         marginBottom: 16,
     },
     subsection: {
@@ -1451,10 +1899,12 @@ const styles = StyleSheet.create({
         color: colors.primaryLight,
     },
     addButton: {
+        paddingVertical: 12,
         paddingHorizontal: 16,
-        paddingVertical: 8,
+        borderRadius: 8,
         backgroundColor: colors.primaryColor,
-        borderRadius: 20,
+        alignItems: 'center',
+        marginTop: 16,
     },
     addButtonText: {
         color: colors.primaryLight,
@@ -1485,21 +1935,93 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
     },
-    headerActions: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
     headerButton: {
         padding: 8,
     },
-    refreshButton: {
-        padding: 8,
+    saveButton: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        backgroundColor: colors.primaryLight_1,
+        borderRadius: 20,
     },
-    debugButton: {
-        padding: 8,
+    saveButtonActive: {
+        backgroundColor: colors.primaryColor,
     },
-    testButton: {
-        padding: 8,
+    saveButtonText: {
+        color: colors.primaryLight,
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    verificationItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        borderWidth: 1,
+        borderColor: colors.primaryLight_1,
+        borderRadius: 8,
+        marginBottom: 8,
+    },
+    verificationItemCompleted: {
+        borderColor: colors.online,
+        backgroundColor: colors.primaryLight_1,
+    },
+    verificationItemContent: {
+        flex: 1,
+    },
+    verificationItemTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: colors.primaryDark,
+    },
+    verificationItemDescription: {
+        fontSize: 14,
+        color: colors.primaryDark,
+    },
+    verificationStatus: {
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: colors.primaryLight_1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    verificationStatusCompleted: {
+        backgroundColor: colors.primaryColor,
+        borderColor: colors.primaryColor,
+    },
+    verificationStatusText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: colors.primaryLight,
+    },
+    teamMemberItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.primaryLight_1,
+    },
+    teamMemberInfo: {
+        flex: 1,
+    },
+    teamMemberName: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: colors.primaryDark,
+    },
+    teamMemberRole: {
+        fontSize: 14,
+        color: colors.primaryDark,
+    },
+    teamMemberDate: {
+        fontSize: 14,
+        color: colors.primaryDark,
+    },
+    emptyStateText: {
+        fontSize: 16,
+        color: colors.primaryDark,
+        textAlign: 'center',
+        marginVertical: 20,
     },
 }); 
