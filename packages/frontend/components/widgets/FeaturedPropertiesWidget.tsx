@@ -6,6 +6,9 @@ import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
 import { useProperties } from '@/hooks/usePropertyQueries';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
+import { Ionicons } from '@expo/vector-icons';
+
+const IconComponent = Ionicons as any;
 
 export function FeaturedPropertiesWidget() {
     const { t } = useTranslation();
@@ -16,7 +19,7 @@ export function FeaturedPropertiesWidget() {
 
     if (error) {
         return (
-            <BaseWidget>
+            <BaseWidget title={t("Featured Properties")}>
                 <View style={styles.errorContainer}>
                     <Text style={styles.errorText}>
                         {error?.message || 'Failed to load properties'}
@@ -27,7 +30,7 @@ export function FeaturedPropertiesWidget() {
     }
 
     return (
-        <BaseWidget>
+        <BaseWidget title={t("Featured Properties")}>
             <View>
                 {isLoading ? (
                     <View style={styles.loadingContainer}>
@@ -100,7 +103,7 @@ function FeaturedProperties({ properties }: { properties: any[] }) {
                             <View style={styles.propertyFooter}>
                                 <Text style={styles.propertyPrice}>{property.price}</Text>
                                 <View style={styles.ratingContainer}>
-                                    <Text style={styles.starIcon}>⭐</Text>
+                                    <IconComponent name="star" size={14} color="#FFD700" />
                                     <Text style={styles.ratingText}>{property.rating}</Text>
                                 </View>
                             </View>

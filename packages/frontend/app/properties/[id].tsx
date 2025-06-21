@@ -39,6 +39,8 @@ type PropertyDetail = {
   images: string[]; // placeholder for now
 };
 
+const IconComponent = Ionicons as any;
+
 export default function PropertyDetailPage() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -296,7 +298,7 @@ ${propertyUrl}`;
     return (
       <View key={index} style={styles.amenityItem}>
         <View style={styles.amenityIconContainer}>
-          <Ionicons
+          <IconComponent
             name={getAmenityIcon(amenity) as any}
             size={20}
             color={colors.primaryColor}
@@ -357,7 +359,7 @@ ${propertyUrl}`;
           titlePosition: 'center',
           rightComponents: [
             <TouchableOpacity key="share" style={styles.headerButton} onPress={handleShare}>
-              <Ionicons name="share-outline" size={24} color={colors.COLOR_BLACK} />
+              <IconComponent name="share-outline" size={24} color={colors.COLOR_BLACK} />
             </TouchableOpacity>,
             <TouchableOpacity
               key="save"
@@ -369,7 +371,7 @@ ${propertyUrl}`;
               {(saveProperty.isPending || unsaveProperty.isPending) ? (
                 <ActivityIndicator size="small" color={isPropertySaved ? colors.primaryColor : colors.COLOR_BLACK} />
               ) : (
-                <Ionicons
+                <IconComponent
                   name={isPropertySaved ? "bookmark" : "bookmark-outline"}
                   size={24}
                   color={isPropertySaved ? colors.primaryColor : '#333333'}
@@ -462,7 +464,7 @@ ${propertyUrl}`;
             ) : (
               <View style={styles.saveButtonContent}>
                 <View style={styles.iconContainer}>
-                  <Ionicons
+                  <IconComponent
                     name={isPropertySaved ? "bookmark" : "bookmark-outline"}
                     size={22}
                     color={isPropertySaved ? colors.primaryColor : 'white'}
@@ -990,7 +992,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingText: {
-    opacity: 0.8,
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 16,
+    letterSpacing: 0.5,
+    opacity: 1,
   },
   errorContainer: {
     flex: 1,
@@ -1018,35 +1024,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 16,
     marginVertical: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
-    minHeight: 56,
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
+    elevation: 6,
+    minHeight: 52,
     position: 'relative',
     overflow: 'hidden',
+    borderWidth: 2,
   },
   savedButton: {
-    backgroundColor: '#f8fafc',
-    borderWidth: 2,
+    backgroundColor: '#f4f8fb',
     borderColor: colors.primaryColor,
     shadowColor: colors.primaryColor,
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.12,
   },
   unsavedButton: {
     backgroundColor: colors.primaryColor,
-    borderWidth: 0,
+    borderColor: colors.primaryColor,
     shadowColor: colors.primaryColor,
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.18,
   },
   loadingButton: {
     backgroundColor: colors.primaryColor,
-    opacity: 0.8,
+    borderColor: colors.primaryColor,
+    opacity: 0.85,
   },
   saveButtonContent: {
     flexDirection: 'row',
@@ -1058,22 +1065,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     position: 'relative',
-  },
-  checkmarkContainer: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: colors.primaryColor,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    marginRight: 4,
   },
   saveButtonText: {
     fontSize: 16,
