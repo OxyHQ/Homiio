@@ -156,6 +156,7 @@ export interface AgencyProfile {
 
 export interface Profile {
   id: string;
+  _id?: string;
   oxyUserId: string;
   profileType: 'personal' | 'roommate' | 'agency';
   isPrimary: boolean;
@@ -198,21 +199,20 @@ class ProfileService {
    */
   async getOrCreatePrimaryProfile(): Promise<Profile> {
     const cacheKey = getCacheKey(`${this.baseUrl}/me`);
-    const cached = getCacheEntry<Profile>(cacheKey);
-
-    if (cached) {
-      return cached;
+    
+    // Check cache first
+    const cachedData = getCacheEntry<Profile>(cacheKey);
+    if (cachedData) {
+      return cachedData;
     }
 
-    try {
-      const response = await api.get(`${this.baseUrl}/me`);
-      const profile = response.data.data;
-      setCacheEntry(cacheKey, profile, 300000); // 5 minute cache
-      return profile;
-    } catch (error) {
-      console.error('Error getting primary profile:', error);
-      throw error;
-    }
+    const response = await api.get(`${this.baseUrl}/me`);
+    const profile = response.data;
+    
+    // Cache the result
+    setCacheEntry(cacheKey, profile, 10 * 60 * 1000); // Cache for 10 minutes
+    
+    return profile;
   }
 
   /**
@@ -286,19 +286,32 @@ class ProfileService {
   }
 
   /**
-   * Update primary profile trust score (no profile ID needed)
+   * Update primary profile trust score
    */
   async updatePrimaryTrustScore(factor: string, value: number): Promise<Profile> {
-    try {
-      const response = await api.patch(`${this.baseUrl}/me/trust-score`, {
-        factor,
-        value,
-      });
-      return response.data.data;
-    } catch (error) {
-      console.error('Error updating primary trust score:', error);
-      throw error;
-    }
+    const response = await api.patch(`${this.baseUrl}/me/trust-score`, {
+      factor,
+      value
+    });
+    
+    // Update cache
+    const cacheKey = getCacheKey(`${this.baseUrl}/me`);
+    setCacheEntry(cacheKey, response.data.data);
+    
+    return response.data.data;
+  }
+
+  /**
+   * Recalculate primary profile trust score
+   */
+  async recalculatePrimaryTrustScore(): Promise<{ profile: Profile; trustScore: any }> {
+    const response = await api.post(`${this.baseUrl}/me/trust-score/recalculate`);
+    
+    // Update cache
+    const cacheKey = getCacheKey(`${this.baseUrl}/me`);
+    setCacheEntry(cacheKey, response.data.data.profile);
+    
+    return response.data.data;
   }
 
   /**

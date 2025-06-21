@@ -1,7 +1,69 @@
 const { Profile } = require("../models");
 const { successResponse, errorResponse } = require("../utils/helpers");
 
+// Simple in-memory cache for profile data
+const profileCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 class ProfileController {
+  constructor() {
+    // Bind methods to preserve 'this' context
+    this.getOrCreatePrimaryProfile = this.getOrCreatePrimaryProfile.bind(this);
+    this.getUserProfiles = this.getUserProfiles.bind(this);
+    this.getProfileByType = this.getProfileByType.bind(this);
+    this.createProfile = this.createProfile.bind(this);
+    this.updateProfile = this.updateProfile.bind(this);
+    this.deleteProfile = this.deleteProfile.bind(this);
+    this.getAgencyMemberships = this.getAgencyMemberships.bind(this);
+    this.addAgencyMember = this.addAgencyMember.bind(this);
+    this.removeAgencyMember = this.removeAgencyMember.bind(this);
+    this.updatePrimaryProfile = this.updatePrimaryProfile.bind(this);
+    this.updatePrimaryTrustScore = this.updatePrimaryTrustScore.bind(this);
+    this.updateTrustScore = this.updateTrustScore.bind(this);
+    this.getTrustScore = this.getTrustScore.bind(this);
+    this.recalculatePrimaryTrustScore = this.recalculatePrimaryTrustScore.bind(this);
+  }
+
+  /**
+   * Get cache key for profile
+   */
+  getCacheKey(oxyUserId, type = 'primary') {
+    return `${oxyUserId}:${type}`;
+  }
+
+  /**
+   * Get cached profile data
+   */
+  getCachedProfile(oxyUserId, type = 'primary') {
+    const key = this.getCacheKey(oxyUserId, type);
+    const cached = profileCache.get(key);
+    
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.data;
+    }
+    
+    return null;
+  }
+
+  /**
+   * Set cached profile data
+   */
+  setCachedProfile(oxyUserId, data, type = 'primary') {
+    const key = this.getCacheKey(oxyUserId, type);
+    profileCache.set(key, {
+      data,
+      timestamp: Date.now()
+    });
+  }
+
+  /**
+   * Clear cached profile data
+   */
+  clearCachedProfile(oxyUserId, type = 'primary') {
+    const key = this.getCacheKey(oxyUserId, type);
+    profileCache.delete(key);
+  }
+
   /**
    * Get or create user's primary profile
    */
@@ -15,40 +77,57 @@ class ProfileController {
         );
       }
 
-      // Try to find existing primary profile
-      let profile = await Profile.findPrimaryByOxyUserId(oxyUserId);
+      // Check cache first
+      let profile = this.getCachedProfile(oxyUserId, 'primary');
       
       if (!profile) {
-        // Create a new personal profile as primary
-        profile = new Profile({
-          oxyUserId,
-          profileType: "personal",
-          isPrimary: true,
-          personalProfile: {
-            preferences: {},
-            verification: {},
-            trustScore: {
-              score: 50,
-              factors: []
-            },
-            settings: {
-              notifications: {
-                email: true,
-                push: true,
-                sms: false
-              },
-              privacy: {
-                profileVisibility: "public",
-                showContactInfo: true,
-                showIncome: false
-              },
-              language: "en",
-              timezone: "UTC"
-            }
-          }
-        });
+        // Try to find existing primary profile with minimal fields for faster query
+        profile = await Profile.findPrimaryByOxyUserId(oxyUserId, 'oxyUserId profileType isPrimary isActive createdAt updatedAt');
         
-        await profile.save();
+        if (!profile) {
+          // Create a new personal profile as primary
+          const newProfile = new Profile({
+            oxyUserId,
+            profileType: "personal",
+            isPrimary: true,
+            personalProfile: {
+              preferences: {},
+              verification: {},
+              trustScore: {
+                score: 50,
+                factors: []
+              },
+              settings: {
+                notifications: {
+                  email: true,
+                  push: true,
+                  sms: false
+                },
+                privacy: {
+                  profileVisibility: "public",
+                  showContactInfo: true,
+                  showIncome: false
+                },
+                language: "en",
+                timezone: "UTC"
+              }
+            }
+          });
+          
+          await newProfile.save();
+          
+          // Fetch the complete profile after creation
+          profile = await Profile.findById(newProfile._id);
+        } else {
+          // If profile exists, fetch complete data only if needed
+          const needsFullData = req.query.full === 'true' || req.query.details === 'true';
+          if (needsFullData) {
+            profile = await Profile.findById(profile._id);
+          }
+        }
+        
+        // Cache the result
+        this.setCachedProfile(oxyUserId, profile, 'primary');
       }
 
       res.json(
@@ -73,7 +152,14 @@ class ProfileController {
         );
       }
 
-      const profiles = await Profile.findByOxyUserId(oxyUserId);
+      console.log('getUserProfiles - oxyUserId:', oxyUserId);
+
+      // Use field selection for better performance
+      const selectFields = '_id oxyUserId profileType isPrimary isActive createdAt updatedAt';
+      const profiles = await Profile.findByOxyUserId(oxyUserId, selectFields);
+      
+      console.log('getUserProfiles - profiles found:', profiles?.length || 0);
+      console.log('getUserProfiles - profiles:', profiles);
       
       res.json(
         successResponse(profiles, "Profiles retrieved successfully")
@@ -197,6 +283,12 @@ class ProfileController {
       }
 
       const profile = new Profile(profileData);
+      
+      // Calculate initial trust score
+      if (profileType === "personal") {
+        profile.calculateTrustScore();
+      }
+      
       await profile.save();
 
       res.status(201).json(
@@ -231,40 +323,30 @@ class ProfileController {
         );
       }
 
-      // Ensure user owns this profile or is a member of the agency
       if (profile.oxyUserId !== oxyUserId) {
-        if (profile.profileType === "agency") {
-          const isMember = profile.agencyProfile.members.some(m => m.oxyUserId === oxyUserId);
-          if (!isMember) {
-            return res.status(403).json(
-              errorResponse("Access denied", "ACCESS_DENIED")
-            );
-          }
-        } else {
-          return res.status(403).json(
-            errorResponse("Access denied", "ACCESS_DENIED")
-          );
-        }
+        return res.status(403).json(
+          errorResponse("Access denied", "ACCESS_DENIED")
+        );
       }
 
       // Update profile data
-      if (updateData.personalProfile) {
-        profile.personalProfile = { ...profile.personalProfile, ...updateData.personalProfile };
-      }
-      if (updateData.roommateProfile) {
-        profile.roommateProfile = { ...profile.roommateProfile, ...updateData.roommateProfile };
-      }
-      if (updateData.agencyProfile) {
-        profile.agencyProfile = { ...profile.agencyProfile, ...updateData.agencyProfile };
-      }
-      if (updateData.isPrimary !== undefined) {
-        profile.isPrimary = updateData.isPrimary;
-      }
-      if (updateData.isActive !== undefined) {
-        profile.isActive = updateData.isActive;
+      Object.keys(updateData).forEach(key => {
+        if (key === "personalProfile" || key === "roommateProfile" || key === "agencyProfile") {
+          profile[key] = { ...profile[key], ...updateData[key] };
+        } else {
+          profile[key] = updateData[key];
+        }
+      });
+
+      // Recalculate trust score for personal profiles
+      if (profile.profileType === "personal") {
+        profile.calculateTrustScore();
       }
 
       await profile.save();
+
+      // Clear cache after update
+      this.clearCachedProfile(oxyUserId, 'primary');
 
       res.json(
         successResponse(profile, "Profile updated successfully")
@@ -463,8 +545,12 @@ class ProfileController {
         );
       }
 
-      // Find the primary profile for this user
-      const profile = await Profile.findPrimaryByOxyUserId(oxyUserId);
+      // Find the primary profile for this user (non-lean for updates)
+      const profile = await Profile.findOne({ 
+        oxyUserId, 
+        isPrimary: true, 
+        isActive: true 
+      });
       
       if (!profile) {
         return res.status(404).json(
@@ -502,7 +588,15 @@ class ProfileController {
         profile.isActive = updateData.isActive;
       }
 
+      // Recalculate trust score for personal profiles
+      if (profile.profileType === "personal") {
+        profile.calculateTrustScore();
+      }
+
       await profile.save();
+
+      // Clear cache after update
+      this.clearCachedProfile(oxyUserId, 'primary');
 
       res.json(
         successResponse(profile, "Primary profile updated successfully")
@@ -527,8 +621,12 @@ class ProfileController {
         );
       }
 
-      // Find the primary profile for this user
-      const profile = await Profile.findPrimaryByOxyUserId(oxyUserId);
+      // Find the primary profile for this user (non-lean for updates)
+      const profile = await Profile.findOne({ 
+        oxyUserId, 
+        isPrimary: true, 
+        isActive: true 
+      });
       
       if (!profile) {
         return res.status(404).json(
@@ -595,6 +693,95 @@ class ProfileController {
       );
     } catch (error) {
       console.error("Error updating trust score:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Get trust score only (optimized for performance)
+   */
+  async getTrustScore(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      
+      if (!oxyUserId) {
+        return res.status(401).json(
+          errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
+        );
+      }
+
+      // Check cache first
+      const cached = this.getCachedProfile(oxyUserId, 'trustScore');
+      if (cached) {
+        return res.json(successResponse(cached, "Trust score retrieved successfully"));
+      }
+
+      // Get only the trust score data
+      const profile = await Profile.findPrimaryByOxyUserId(
+        oxyUserId, 
+        'personalProfile.trustScore profileType'
+      );
+      
+      if (!profile || profile.profileType !== 'personal') {
+        return res.status(404).json(
+          errorResponse("Personal profile not found", "PROFILE_NOT_FOUND")
+        );
+      }
+
+      const trustScore = profile.personalProfile?.trustScore || { score: 0, factors: [] };
+      
+      // Cache the result
+      this.setCachedProfile(oxyUserId, trustScore, 'trustScore');
+
+      res.json(
+        successResponse(trustScore, "Trust score retrieved successfully")
+      );
+    } catch (error) {
+      console.error("Error getting trust score:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Recalculate trust score for primary profile
+   */
+  async recalculatePrimaryTrustScore(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      
+      if (!oxyUserId) {
+        return res.status(401).json(
+          errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
+        );
+      }
+
+      // Find the primary profile for this user
+      const profile = await Profile.findPrimaryByOxyUserId(oxyUserId);
+      
+      if (!profile) {
+        return res.status(404).json(
+          errorResponse("Primary profile not found", "PROFILE_NOT_FOUND")
+        );
+      }
+
+      if (profile.profileType !== "personal") {
+        return res.status(400).json(
+          errorResponse("Can only recalculate trust score for personal profiles", "INVALID_PROFILE_TYPE")
+        );
+      }
+
+      // Calculate trust score
+      const trustScoreData = profile.calculateTrustScore();
+      await profile.save();
+
+      res.json(
+        successResponse({
+          profile,
+          trustScore: trustScoreData
+        }, "Trust score recalculated successfully")
+      );
+    } catch (error) {
+      console.error("Error recalculating primary trust score:", error);
       next(error);
     }
   }

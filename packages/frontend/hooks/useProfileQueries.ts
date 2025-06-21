@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useOxy } from '@oxyhq/services';
 import profileService, { 
   Profile, 
   CreateProfileData, 
@@ -18,37 +19,65 @@ export const profileKeys = {
 
 // Hook to get or create primary profile
 export function usePrimaryProfile() {
+  const { user } = useOxy();
+  
+  console.log('usePrimaryProfile - user:', user ? 'authenticated' : 'not authenticated');
+  
   return useQuery<Profile>({
     queryKey: profileKeys.primary(),
     queryFn: () => profileService.getOrCreatePrimaryProfile(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: !!user, // Only run when user is authenticated
+    staleTime: 5 * 60 * 1000, // 5 minutes - reduce stale time for better updates
+    gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache longer
+    refetchOnWindowFocus: true, // Refetch on window focus to get latest data
+    refetchOnMount: true, // Refetch on mount to ensure fresh data
   });
 }
 
 // Hook to get all user profiles
 export function useUserProfiles() {
+  const { user } = useOxy();
+  
+  console.log('useUserProfiles - user:', user ? 'authenticated' : 'not authenticated');
+  
   return useQuery<Profile[]>({
     queryKey: profileKeys.userProfiles(),
     queryFn: () => profileService.getUserProfiles(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: !!user, // Only run when user is authenticated
+    staleTime: 5 * 60 * 1000, // 5 minutes - reduce stale time
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnWindowFocus: true, // Refetch on window focus
+    refetchOnMount: true, // Refetch on mount
   });
 }
 
 // Hook to get profile by type
 export function useProfileByType(profileType: 'personal' | 'roommate' | 'agency') {
+  const { user } = useOxy();
+  
   return useQuery<Profile>({
     queryKey: profileKeys.byType(profileType),
     queryFn: () => profileService.getProfileByType(profileType),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: !!user, // Only run when user is authenticated
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 }
 
 // Hook to get agency memberships
 export function useAgencyMemberships() {
+  const { user } = useOxy();
+  
   return useQuery<Profile[]>({
     queryKey: profileKeys.agencyMemberships(),
     queryFn: () => profileService.getAgencyMemberships(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: !!user, // Only run when user is authenticated
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 }
 
@@ -76,14 +105,10 @@ export function useUpdatePrimaryProfile() {
   return useMutation({
     mutationFn: (updateData: UpdateProfileData) => profileService.updatePrimaryProfile(updateData),
     onSuccess: (data: Profile) => {
-      // Update the cache directly instead of invalidating to avoid auth issues
-      queryClient.setQueryData(profileKeys.primary(), data);
-      queryClient.setQueryData(profileKeys.all, (oldData: Profile[] | undefined) => {
-        if (!oldData) return [data];
-        return oldData.map(profile => 
-          profile.id === data.id ? data : profile
-        );
-      });
+      // Invalidate and refetch profile queries to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: profileKeys.primary() });
+      queryClient.invalidateQueries({ queryKey: profileKeys.userProfiles() });
+      queryClient.invalidateQueries({ queryKey: profileKeys.all });
       toast.success('Profile updated successfully');
     },
     onError: (error: any) => {
@@ -107,6 +132,25 @@ export function useUpdatePrimaryTrustScore() {
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to update trust score');
+    },
+  });
+}
+
+// Hook to recalculate primary profile trust score
+export function useRecalculatePrimaryTrustScore() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => profileService.recalculatePrimaryTrustScore(),
+    onSuccess: (data: { profile: Profile; trustScore: any }) => {
+      // Invalidate and refetch profile queries to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: profileKeys.primary() });
+      queryClient.invalidateQueries({ queryKey: profileKeys.userProfiles() });
+      queryClient.invalidateQueries({ queryKey: profileKeys.all });
+      toast.success('Trust score recalculated successfully');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to recalculate trust score');
     },
   });
 }

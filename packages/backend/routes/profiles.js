@@ -6,9 +6,13 @@
 const express = require("express");
 const profileController = require("../controllers/profileController");
 const { validation } = require("../middlewares");
+const performanceMonitor = require("../middlewares/performance");
 
 module.exports = function (authenticateToken) {
   const router = express.Router();
+
+  // Performance monitoring for all profile routes
+  router.use(performanceMonitor);
 
   // Protected routes (all profile routes require authentication)
   router.use(authenticateToken);
@@ -32,6 +36,8 @@ module.exports = function (authenticateToken) {
   // Trust score routes
   router.patch("/:profileId/trust-score", profileController.updateTrustScore);
   router.patch("/me/trust-score", profileController.updatePrimaryTrustScore);
+  router.post("/me/trust-score/recalculate", profileController.recalculatePrimaryTrustScore);
+  router.get("/me/trust-score", profileController.getTrustScore);
 
   return router;
 }; 

@@ -11,6 +11,7 @@ import { Avatar } from '@oxyhq/services/ui';
 import { usePrimaryProfile, useUserProfiles, useDeleteProfile } from '@/hooks/useProfileQueries';
 import { TrustScore } from '@/components/TrustScore';
 import { Profile } from '@/services/profileService';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function ProfileScreen() {
     const { t } = useTranslation();
@@ -20,6 +21,14 @@ export default function ProfileScreen() {
     const { data: allProfiles, isLoading: profilesLoading } = useUserProfiles();
     const deleteProfile = useDeleteProfile();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const queryClient = useQueryClient();
+
+    console.log('ProfileScreen - user:', user ? 'authenticated' : 'not authenticated');
+    console.log('ProfileScreen - profileError:', profileError);
+    console.log('ProfileScreen - primaryProfile:', primaryProfile);
+    console.log('ProfileScreen - allProfiles:', allProfiles);
+    console.log('ProfileScreen - profileLoading:', profileLoading);
+    console.log('ProfileScreen - profilesLoading:', profilesLoading);
 
     const handleLogout = async () => {
         Alert.alert(
@@ -85,6 +94,16 @@ export default function ProfileScreen() {
                 break;
             default:
                 break;
+        }
+    };
+
+    const handleRefresh = async () => {
+        try {
+            console.log('Manually refreshing profile data...');
+            await queryClient.invalidateQueries({ queryKey: ['profiles'] });
+            console.log('Profile data refreshed successfully');
+        } catch (error) {
+            console.error('Error refreshing profile data:', error);
         }
     };
 
@@ -172,24 +191,47 @@ export default function ProfileScreen() {
                         </View>
                     )}
 
-                    <TouchableOpacity
-                        style={styles.editProfileButton}
-                        onPress={() => handleProfileAction('edit')}
-                    >
-                        <Text style={styles.editProfileText}>{t("profile.editProfile")}</Text>
-                    </TouchableOpacity>
+                    <View style={styles.editProfileButtonContainer}>
+                        <TouchableOpacity
+                            style={styles.editProfileButton}
+                            onPress={() => handleProfileAction('edit')}
+                        >
+                            <Text style={styles.editProfileText}>{t("profile.editProfile")}</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.editProfileButton, styles.refreshButton]}
+                            onPress={handleRefresh}
+                        >
+                            <Text style={styles.editProfileText}>Refresh Data</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* Profile Management Section */}
-                {allProfiles && allProfiles.length > 0 && (
-                    <View style={styles.profileManagementSection}>
-                        <Text style={styles.sectionTitle}>Profile Management</Text>
-                        <Text style={styles.sectionSubtitle}>
-                            Manage your different profile types
-                        </Text>
+                <View style={styles.profileManagementSection}>
+                    <Text style={styles.sectionTitle}>Profile Management</Text>
+                    <Text style={styles.sectionSubtitle}>
+                        Manage your different profile types
+                    </Text>
 
-                        {allProfiles.map((profile: Profile) => (
-                            <View key={profile.id} style={styles.profileCard}>
+                    {/* Debug Info */}
+                    <View style={styles.debugInfo}>
+                        <Text style={styles.debugText}>Primary Profile: {primaryProfile ? 'Found' : 'Not Found'}</Text>
+                        <Text style={styles.debugText}>All Profiles Count: {allProfiles?.length || 0}</Text>
+                        <Text style={styles.debugText}>Profile Loading: {profileLoading ? 'Yes' : 'No'}</Text>
+                        <Text style={styles.debugText}>Profiles Loading: {profilesLoading ? 'Yes' : 'No'}</Text>
+                        {primaryProfile && (
+                            <Text style={styles.debugText}>Primary Profile ID: {primaryProfile.id || primaryProfile._id}</Text>
+                        )}
+                        {allProfiles && allProfiles.length > 0 && (
+                            <Text style={styles.debugText}>First Profile ID: {allProfiles[0].id || allProfiles[0]._id}</Text>
+                        )}
+                    </View>
+
+                    {allProfiles && allProfiles.length > 0 ? (
+                        allProfiles.map((profile: Profile) => (
+                            <View key={profile.id || profile._id || `profile-${profile.profileType}-${profile.createdAt}`} style={styles.profileCard}>
                                 <View style={styles.profileCardHeader}>
                                     <IconButton
                                         name={getProfileTypeIcon(profile.profileType)}
@@ -208,14 +250,24 @@ export default function ProfileScreen() {
                                     <View style={styles.profileCardActions}>
                                         <TouchableOpacity
                                             style={styles.profileActionButton}
-                                            onPress={() => handleProfileAction('edit', profile.id)}
+                                            onPress={() => {
+                                                const profileId = profile.id || profile._id;
+                                                if (profileId) {
+                                                    handleProfileAction('edit', profileId);
+                                                }
+                                            }}
                                         >
                                             <Text style={styles.profileActionText}>Edit</Text>
                                         </TouchableOpacity>
                                         {!profile.isPrimary && (
                                             <TouchableOpacity
                                                 style={[styles.profileActionButton, styles.deleteButton]}
-                                                onPress={() => handleDeleteProfile(profile.id, profile.profileType)}
+                                                onPress={() => {
+                                                    const profileId = profile.id || profile._id;
+                                                    if (profileId) {
+                                                        handleDeleteProfile(profileId, profile.profileType);
+                                                    }
+                                                }}
                                             >
                                                 <Text style={[styles.profileActionText, styles.deleteButtonText]}>
                                                     Delete
@@ -225,16 +277,27 @@ export default function ProfileScreen() {
                                     </View>
                                 </View>
                             </View>
-                        ))}
+                        ))
+                    ) : (
+                        <View style={styles.noProfilesContainer}>
+                            <Text style={styles.noProfilesText}>
+                                {profilesLoading ? 'Loading profiles...' : 'No profiles found'}
+                            </Text>
+                            {primaryProfile && (
+                                <Text style={styles.noProfilesSubtext}>
+                                    Primary profile exists but not in list. This might be a data sync issue.
+                                </Text>
+                            )}
+                        </View>
+                    )}
 
-                        <TouchableOpacity
-                            style={styles.createProfileButton}
-                            onPress={() => handleProfileAction('create')}
-                        >
-                            <Text style={styles.createProfileText}>+ Create New Profile</Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
+                    <TouchableOpacity
+                        style={styles.createProfileButton}
+                        onPress={() => handleProfileAction('create')}
+                    >
+                        <Text style={styles.createProfileText}>+ Create New Profile</Text>
+                    </TouchableOpacity>
+                </View>
 
                 {/* Profile Sections */}
                 <View style={styles.sectionsContainer}>
@@ -335,6 +398,10 @@ const styles = StyleSheet.create({
         color: colors.COLOR_BLACK_LIGHT_5,
         marginTop: 4,
     },
+    editProfileButtonContainer: {
+        flexDirection: 'row',
+        gap: 8,
+    },
     editProfileButton: {
         paddingHorizontal: 20,
         paddingVertical: 10,
@@ -345,6 +412,9 @@ const styles = StyleSheet.create({
         color: colors.primaryLight,
         fontSize: 16,
         fontWeight: '600',
+    },
+    refreshButton: {
+        backgroundColor: colors.primaryLight_1,
     },
     profileManagementSection: {
         padding: 16,
@@ -459,5 +529,31 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         color: colors.chatUnreadBadge,
+    },
+    debugInfo: {
+        marginBottom: 16,
+    },
+    debugText: {
+        fontSize: 12,
+        color: colors.COLOR_BLACK_LIGHT_5,
+        marginBottom: 4,
+    },
+    noProfilesContainer: {
+        padding: 20,
+        alignItems: 'center',
+        backgroundColor: colors.primaryLight_1,
+        borderRadius: 8,
+        marginBottom: 12,
+    },
+    noProfilesText: {
+        fontSize: 16,
+        color: colors.COLOR_BLACK_LIGHT_5,
+        marginBottom: 4,
+        textAlign: 'center',
+    },
+    noProfilesSubtext: {
+        fontSize: 12,
+        color: colors.COLOR_BLACK_LIGHT_5,
+        textAlign: 'center',
     },
 }); 

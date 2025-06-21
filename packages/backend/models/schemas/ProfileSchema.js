@@ -461,6 +461,9 @@ const profileSchema = new mongoose.Schema({
 profileSchema.index({ oxyUserId: 1, profileType: 1 });
 profileSchema.index({ oxyUserId: 1, isPrimary: 1 });
 profileSchema.index({ "agencyProfile.members.oxyUserId": 1 });
+profileSchema.index({ oxyUserId: 1, isActive: 1 });
+profileSchema.index({ createdAt: -1 });
+profileSchema.index({ updatedAt: -1 });
 
 // Virtual for verification status
 profileSchema.virtual("isVerified").get(function() {
@@ -486,28 +489,374 @@ profileSchema.pre("save", async function(next) {
 });
 
 // Static methods
-profileSchema.statics.findByOxyUserId = function(oxyUserId) {
-  return this.find({ oxyUserId });
+profileSchema.statics.findPrimaryByOxyUserId = function(oxyUserId, select = null) {
+  const query = this.findOne({ 
+    oxyUserId, 
+    isPrimary: true, 
+    isActive: true 
+  });
+  
+  if (select) {
+    query.select(select);
+  }
+  
+  return query.lean();
 };
 
-profileSchema.statics.findPrimaryByOxyUserId = function(oxyUserId) {
-  return this.findOne({ oxyUserId, isPrimary: true });
+profileSchema.statics.findByOxyUserId = function(oxyUserId, select = null) {
+  const query = this.find({ 
+    oxyUserId, 
+    isActive: true 
+  }).sort({ isPrimary: -1, createdAt: -1 });
+  
+  if (select) {
+    query.select(select);
+  }
+  
+  return query.lean();
 };
 
 profileSchema.statics.findByOxyUserIdAndType = function(oxyUserId, profileType) {
-  return this.findOne({ oxyUserId, profileType });
+  return this.findOne({ 
+    oxyUserId, 
+    profileType, 
+    isActive: true 
+  }).lean();
 };
 
-profileSchema.statics.findAgencyMemberships = function(oxyUserId) {
-  return this.find({
+profileSchema.statics.findPrimaryByOxyUserIdAndUpdate = function(oxyUserId, updateData) {
+  return this.findOneAndUpdate(
+    { oxyUserId, isPrimary: true, isActive: true },
+    updateData,
+    { new: true, runValidators: true }
+  );
+};
+
+profileSchema.statics.findByOxyUserIdAndUpdate = function(oxyUserId, profileId, updateData) {
+  return this.findOneAndUpdate(
+    { oxyUserId, _id: profileId, isActive: true },
+    updateData,
+    { new: true, runValidators: true }
+  );
+};
+
+profileSchema.statics.findAgencyMemberships = function(oxyUserId, select = null) {
+  const query = this.find({
     profileType: "agency",
     "agencyProfile.members.oxyUserId": oxyUserId,
   });
+  if (select) {
+    query.select(select);
+  }
+  return query.lean(); // Use lean() for better performance when not modifying
 };
 
 // Instance methods
+profileSchema.methods.calculateTrustScore = function(forceRecalculate = false) {
+  // Check if trust score is already calculated and recent (within 1 hour)
+  if (!forceRecalculate && 
+      this.personalProfile?.trustScore?.lastCalculated && 
+      Date.now() - new Date(this.personalProfile.trustScore.lastCalculated).getTime() < 60 * 60 * 1000) {
+    return {
+      score: this.personalProfile.trustScore.score,
+      factors: this.personalProfile.trustScore.factors,
+      totalScore: this.personalProfile.trustScore.totalScore,
+      maxScore: this.personalProfile.trustScore.maxScore
+    };
+  }
+
+  let totalScore = 0;
+  let maxScore = 0;
+  const factors = [];
+
+  // Personal Profile Scoring
+  if (this.personalProfile) {
+    const personal = this.personalProfile;
+    
+    // Basic Information (20 points)
+    if (personal.basicInfo) {
+      const basicMax = 20;
+      let basicScore = 0;
+      
+      if (personal.basicInfo.firstName) basicScore += 2;
+      if (personal.basicInfo.lastName) basicScore += 2;
+      if (personal.basicInfo.dateOfBirth) basicScore += 3;
+      if (personal.basicInfo.phoneNumber) basicScore += 3;
+      if (personal.basicInfo.emergencyContact) basicScore += 3;
+      if (personal.basicInfo.nationality) basicScore += 2;
+      if (personal.basicInfo.languages && personal.basicInfo.languages.length > 0) basicScore += 2;
+      if (personal.basicInfo.bio && personal.basicInfo.bio.length > 10) basicScore += 3;
+      
+      totalScore += basicScore;
+      maxScore += basicMax;
+      factors.push({
+        type: "basic_info",
+        value: basicScore,
+        maxValue: basicMax,
+        label: "Basic Information"
+      });
+    }
+
+    // Employment Information (25 points)
+    if (personal.employment) {
+      const employmentMax = 25;
+      let employmentScore = 0;
+      
+      if (personal.employment.employmentStatus) employmentScore += 5;
+      if (personal.employment.employerName) employmentScore += 5;
+      if (personal.employment.jobTitle) employmentScore += 3;
+      if (personal.employment.employmentStartDate) employmentScore += 3;
+      if (personal.employment.monthlyIncome) employmentScore += 5;
+      if (personal.employment.employmentType) employmentScore += 2;
+      if (personal.employment.employerPhone) employmentScore += 2;
+      
+      totalScore += employmentScore;
+      maxScore += employmentMax;
+      factors.push({
+        type: "employment",
+        value: employmentScore,
+        maxValue: employmentMax,
+        label: "Employment Information"
+      });
+    }
+
+    // References (20 points)
+    if (personal.references && personal.references.length > 0) {
+      const referencesMax = 20;
+      let referencesScore = 0;
+      
+      personal.references.forEach(ref => {
+        if (ref.name) referencesScore += 2;
+        if (ref.relationship) referencesScore += 1;
+        if (ref.phone) referencesScore += 2;
+        if (ref.email) referencesScore += 1;
+        if (ref.verified) referencesScore += 1;
+      });
+      
+      referencesScore = Math.min(referencesScore, referencesMax);
+      totalScore += referencesScore;
+      maxScore += referencesMax;
+      factors.push({
+        type: "references",
+        value: referencesScore,
+        maxValue: referencesMax,
+        label: "References"
+      });
+    }
+
+    // Rental History (20 points)
+    if (personal.rentalHistory && personal.rentalHistory.length > 0) {
+      const rentalMax = 20;
+      let rentalScore = 0;
+      
+      personal.rentalHistory.forEach(rental => {
+        if (rental.address) rentalScore += 3;
+        if (rental.startDate) rentalScore += 2;
+        if (rental.endDate) rentalScore += 2;
+        if (rental.reasonForLeaving) rentalScore += 2;
+        if (rental.landlordContact?.name) rentalScore += 2;
+        if (rental.landlordContact?.phone) rentalScore += 2;
+        if (rental.landlordContact?.email) rentalScore += 2;
+        if (rental.verified) rentalScore += 2;
+      });
+      
+      rentalScore = Math.min(rentalScore, rentalMax);
+      totalScore += rentalScore;
+      maxScore += rentalMax;
+      factors.push({
+        type: "rental_history",
+        value: rentalScore,
+        maxValue: rentalMax,
+        label: "Rental History"
+      });
+    }
+
+    // Verification Status (15 points)
+    if (personal.verification) {
+      const verificationMax = 15;
+      let verificationScore = 0;
+      
+      if (personal.verification.identity) verificationScore += 5;
+      if (personal.verification.income) verificationScore += 5;
+      if (personal.verification.background) verificationScore += 3;
+      if (personal.verification.rentalHistory) verificationScore += 2;
+      
+      totalScore += verificationScore;
+      maxScore += verificationMax;
+      factors.push({
+        type: "verification",
+        value: verificationScore,
+        maxValue: verificationMax,
+        label: "Verification Status"
+      });
+    }
+  }
+
+  // Roommate Profile Scoring
+  if (this.roommateProfile) {
+    const roommate = this.roommateProfile;
+    
+    // Preferences (15 points)
+    if (roommate.preferences) {
+      const preferencesMax = 15;
+      let preferencesScore = 0;
+      
+      if (roommate.preferences.lifestyle) preferencesScore += 3;
+      if (roommate.preferences.cleanliness) preferencesScore += 2;
+      if (roommate.preferences.noiseLevel) preferencesScore += 2;
+      if (roommate.preferences.smoking) preferencesScore += 1;
+      if (roommate.preferences.pets) preferencesScore += 2;
+      if (roommate.preferences.visitors) preferencesScore += 2;
+      if (roommate.preferences.budget) preferencesScore += 3;
+      
+      totalScore += preferencesScore;
+      maxScore += preferencesMax;
+      factors.push({
+        type: "roommate_preferences",
+        value: preferencesScore,
+        maxValue: preferencesMax,
+        label: "Roommate Preferences"
+      });
+    }
+
+    // Compatibility (10 points)
+    if (roommate.compatibility) {
+      const compatibilityMax = 10;
+      let compatibilityScore = 0;
+      
+      if (roommate.compatibility.schedule) compatibilityScore += 2;
+      if (roommate.compatibility.interests && roommate.compatibility.interests.length > 0) compatibilityScore += 3;
+      if (roommate.compatibility.communicationStyle) compatibilityScore += 2;
+      if (roommate.compatibility.sharedResponsibilities) compatibilityScore += 3;
+      
+      totalScore += compatibilityScore;
+      maxScore += compatibilityMax;
+      factors.push({
+        type: "roommate_compatibility",
+        value: compatibilityScore,
+        maxValue: compatibilityMax,
+        label: "Roommate Compatibility"
+      });
+    }
+  }
+
+  // Agency Profile Scoring
+  if (this.agencyProfile) {
+    const agency = this.agencyProfile;
+    
+    // Business Information (20 points)
+    if (agency.businessInfo) {
+      const businessMax = 20;
+      let businessScore = 0;
+      
+      if (agency.businessInfo.businessName) businessScore += 3;
+      if (agency.businessInfo.businessType) businessScore += 2;
+      if (agency.businessInfo.licenseNumber) businessScore += 5;
+      if (agency.businessInfo.taxId) businessScore += 3;
+      if (agency.businessInfo.website) businessScore += 2;
+      if (agency.businessInfo.businessPhone) businessScore += 2;
+      if (agency.businessInfo.businessEmail) businessScore += 2;
+      if (agency.businessInfo.businessAddress) businessScore += 1;
+      
+      totalScore += businessScore;
+      maxScore += businessMax;
+      factors.push({
+        type: "agency_business",
+        value: businessScore,
+        maxValue: businessMax,
+        label: "Business Information"
+      });
+    }
+
+    // Verification (15 points)
+    if (agency.verification) {
+      const agencyVerificationMax = 15;
+      let agencyVerificationScore = 0;
+      
+      if (agency.verification.businessLicense) agencyVerificationScore += 5;
+      if (agency.verification.insurance) agencyVerificationScore += 5;
+      if (agency.verification.bonding) agencyVerificationScore += 3;
+      if (agency.verification.backgroundCheck) agencyVerificationScore += 2;
+      
+      totalScore += agencyVerificationScore;
+      maxScore += agencyVerificationMax;
+      factors.push({
+        type: "agency_verification",
+        value: agencyVerificationScore,
+        maxValue: agencyVerificationMax,
+        label: "Agency Verification"
+      });
+    }
+
+    // Team Members (10 points)
+    if (agency.members && agency.members.length > 0) {
+      const membersMax = 10;
+      let membersScore = 0;
+      
+      membersScore = Math.min(agency.members.length * 2, membersMax);
+      
+      totalScore += membersScore;
+      maxScore += membersMax;
+      factors.push({
+        type: "agency_members",
+        value: membersScore,
+        maxValue: membersMax,
+        label: "Team Members"
+      });
+    }
+  }
+
+  // Calculate final score as percentage
+  const finalScore = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+
+  // Update the trust score in the profile
+  if (this.personalProfile) {
+    this.personalProfile.trustScore = {
+      score: finalScore,
+      factors: factors,
+      totalScore: totalScore,
+      maxScore: maxScore,
+      lastCalculated: new Date()
+    };
+  } else if (this.profileType === 'personal') {
+    // Initialize personalProfile if it doesn't exist but this is a personal profile
+    this.personalProfile = {
+      trustScore: {
+        score: finalScore,
+        factors: factors,
+        totalScore: totalScore,
+        maxScore: maxScore,
+        lastCalculated: new Date()
+      }
+    };
+  }
+
+  return {
+    score: finalScore,
+    factors: factors,
+    totalScore: totalScore,
+    maxScore: maxScore
+  };
+};
+
 profileSchema.methods.updateTrustScore = function(factor, value) {
   if (this.personalProfile) {
+    // Initialize trustScore if it doesn't exist
+    if (!this.personalProfile.trustScore) {
+      this.personalProfile.trustScore = {
+        score: 0,
+        factors: [],
+        totalScore: 0,
+        maxScore: 0,
+        lastCalculated: new Date()
+      };
+    }
+    
+    // Initialize factors array if it doesn't exist
+    if (!this.personalProfile.trustScore.factors) {
+      this.personalProfile.trustScore.factors = [];
+    }
+    
     const existingFactor = this.personalProfile.trustScore.factors.find(f => f.type === factor);
     
     if (existingFactor) {

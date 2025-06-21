@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/colors';
 import { useRouter } from 'expo-router';
 import { IconButton } from '@/components/IconButton';
+import { TrustScore } from '@/components/TrustScore';
 import { usePrimaryProfile, useUpdatePrimaryProfile } from '@/hooks/useProfileQueries';
 import { UpdateProfileData } from '@/services/profileService';
 
@@ -65,15 +66,15 @@ export default function ProfileEditScreen() {
     const [references, setReferences] = useState<Array<{
         name: string;
         relationship: 'landlord' | 'employer' | 'personal' | 'other';
-        phone: string;
-        email: string;
+        phone?: string;
+        email?: string;
     }>>([]);
 
     const [rentalHistory, setRentalHistory] = useState<Array<{
         address: string;
         startDate: string;
-        endDate: string;
-        monthlyRent: string;
+        endDate?: string;
+        monthlyRent?: string;
         reasonForLeaving: 'lease_ended' | 'bought_home' | 'job_relocation' | 'family_reasons' | 'upgrade' | 'other';
         landlordContact: {
             name: string;
@@ -135,14 +136,19 @@ export default function ProfileEditScreen() {
             });
 
             // Update references
-            setReferences(profile.references || []);
+            setReferences(profile.references?.map(ref => ({
+                name: ref.name,
+                relationship: ref.relationship,
+                phone: ref.phone || '',
+                email: ref.email || '',
+            })) || []);
 
             // Update rental history
             setRentalHistory(profile.rentalHistory?.map(history => ({
                 address: history.address,
                 startDate: new Date(history.startDate).toISOString().split('T')[0],
-                endDate: history.endDate ? new Date(history.endDate).toISOString().split('T')[0] : '',
-                monthlyRent: history.monthlyRent?.toString() || '',
+                endDate: history.endDate ? new Date(history.endDate).toISOString().split('T')[0] : undefined,
+                monthlyRent: history.monthlyRent?.toString() || undefined,
                 reasonForLeaving: history.reasonForLeaving || 'lease_ended',
                 landlordContact: {
                     name: history.landlordContact?.name || '',
@@ -155,7 +161,26 @@ export default function ProfileEditScreen() {
         }
     }, [primaryProfile]);
 
-    const handleSave = async () => {
+    // Memoize trust score data to prevent unnecessary re-renders
+    const trustScoreData = useMemo(() => {
+        if (!primaryProfile?.personalProfile?.trustScore) {
+            return { score: 0, factors: [] };
+        }
+
+        const trustScore = primaryProfile.personalProfile.trustScore;
+        return {
+            score: trustScore.score || 0,
+            factors: trustScore.factors?.map(factor => ({
+                type: factor.type,
+                value: factor.value,
+                maxValue: 20, // Default max value, should come from backend
+                label: factor.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            })) || []
+        };
+    }, [primaryProfile?.personalProfile?.trustScore]);
+
+    // Memoize the handleSave function to prevent unnecessary re-renders
+    const handleSave = useCallback(async () => {
         if (!primaryProfile) {
             Alert.alert('Error', 'No profile found to update.');
             return;
@@ -168,7 +193,7 @@ export default function ProfileEditScreen() {
                     personalInfo: {
                         ...personalInfo,
                         annualIncome: personalInfo.annualIncome ? parseInt(personalInfo.annualIncome) : undefined,
-                        moveInDate: personalInfo.moveInDate ? new Date(personalInfo.moveInDate) : undefined,
+                        moveInDate: personalInfo.moveInDate || undefined,
                     },
                     preferences: {
                         ...preferences,
@@ -176,12 +201,23 @@ export default function ProfileEditScreen() {
                         minBedrooms: preferences.minBedrooms ? parseInt(preferences.minBedrooms) : undefined,
                         minBathrooms: preferences.minBathrooms ? parseInt(preferences.minBathrooms) : undefined,
                     },
-                    references: references.filter(ref => ref.name.trim()),
+                    references: references.filter(ref => ref.name.trim()).map(ref => ({
+                        name: ref.name,
+                        relationship: ref.relationship,
+                        phone: ref.phone,
+                        email: ref.email,
+                    })),
                     rentalHistory: rentalHistory.filter(history => history.address.trim()).map(history => ({
-                        ...history,
-                        startDate: new Date(history.startDate),
-                        endDate: history.endDate ? new Date(history.endDate) : undefined,
+                        address: history.address,
+                        startDate: history.startDate,
+                        endDate: history.endDate,
                         monthlyRent: history.monthlyRent ? parseInt(history.monthlyRent) : undefined,
+                        reasonForLeaving: history.reasonForLeaving,
+                        landlordContact: {
+                            name: history.landlordContact.name,
+                            phone: history.landlordContact.phone,
+                            email: history.landlordContact.email,
+                        },
                     })),
                     settings,
                 },
@@ -199,11 +235,15 @@ export default function ProfileEditScreen() {
             setHasUnsavedChanges(false);
         } catch (error) {
             console.error('Error updating profile:', error);
-            Alert.alert('Error', 'Failed to update profile. Please try again.');
+            Alert.alert(
+                'Error',
+                'Failed to update profile. Please try again.',
+                [{ text: 'OK' }]
+            );
         } finally {
             setIsSaving(false);
         }
-    };
+    }, [primaryProfile, personalInfo, preferences, references, rentalHistory, settings, updateProfileMutation]);
 
     // Track changes
     const updatePersonalInfo = (updates: Partial<typeof personalInfo>) => {
@@ -765,6 +805,19 @@ export default function ProfileEditScreen() {
                     </View>
                 );
 
+            case 'trust-score':
+                return (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Trust Score</Text>
+                        <TrustScore
+                            score={trustScoreData.score}
+                            size="large"
+                            showDetails={true}
+                            factors={trustScoreData.factors}
+                        />
+                    </View>
+                );
+
             case 'settings':
                 return (
                     <View style={styles.section}>
@@ -992,6 +1045,7 @@ export default function ProfileEditScreen() {
                     { key: 'preferences', label: 'Preferences' },
                     { key: 'references', label: 'References' },
                     { key: 'rental-history', label: 'History' },
+                    { key: 'trust-score', label: 'Trust Score' },
                     { key: 'settings', label: 'Settings' },
                 ].map((tab) => (
                     <TouchableOpacity

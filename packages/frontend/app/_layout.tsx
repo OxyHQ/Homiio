@@ -68,6 +68,9 @@ function OxyServicesInitializer() {
   const { oxyServices, activeSessionId } = useOxy();
 
   useEffect(() => {
+    console.log('OxyServicesInitializer - oxyServices:', oxyServices ? 'available' : 'not available');
+    console.log('OxyServicesInitializer - activeSessionId:', activeSessionId);
+
     if (oxyServices && activeSessionId) {
       console.log('Setting OxyServices for API calls');
       setOxyServices(oxyServices, activeSessionId);

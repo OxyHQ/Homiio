@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
@@ -6,7 +6,7 @@ import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
 import { useOxy } from '@oxyhq/services';
 import { usePrimaryProfile } from '@/hooks/useProfileQueries';
-import { TrustScore } from '../TrustScore';
+import { TrustScoreCompact } from '../TrustScoreCompact';
 
 export function TrustScoreWidget() {
     const { isAuthenticated } = useOxy();
@@ -14,29 +14,45 @@ export function TrustScoreWidget() {
     const router = useRouter();
     const { data: profile, isLoading, error } = usePrimaryProfile();
 
+    // Memoize expensive calculations
+    const trustScoreData = useMemo(() => {
+        if (!profile?.personalProfile?.trustScore) {
+            return null;
+        }
+
+        const { trustScore } = profile.personalProfile;
+
+        const getTrustLevel = (score: number) => {
+            if (score >= 90) return 'Excellent';
+            if (score >= 70) return 'Good';
+            if (score >= 50) return 'Average';
+            if (score >= 30) return 'Fair';
+            return 'Needs Improvement';
+        };
+
+        const getTrustColor = (score: number) => {
+            if (score >= 90) return '#4CAF50';
+            if (score >= 70) return '#8BC34A';
+            if (score >= 50) return '#FFC107';
+            if (score >= 30) return '#FF9800';
+            return '#F44336';
+        };
+
+        return {
+            score: trustScore.score,
+            level: getTrustLevel(trustScore.score),
+            color: getTrustColor(trustScore.score),
+            factors: trustScore.factors?.slice(0, 2) || []
+        };
+    }, [profile?.personalProfile?.trustScore]);
+
+    const handlePress = useMemo(() => () => {
+        router.push('/profile/trust-score');
+    }, [router]);
+
     if (!isAuthenticated) {
         return null; // Don't show the widget if the user is not authenticated
     }
-
-    const getTrustLevel = (score: number) => {
-        if (score >= 90) return 'Excellent';
-        if (score >= 70) return 'Good';
-        if (score >= 50) return 'Average';
-        if (score >= 30) return 'Fair';
-        return 'Needs Improvement';
-    };
-
-    const getTrustColor = (score: number) => {
-        if (score >= 90) return '#4CAF50';
-        if (score >= 70) return '#8BC34A';
-        if (score >= 50) return '#FFC107';
-        if (score >= 30) return '#FF9800';
-        return '#F44336';
-    };
-
-    const handlePress = () => {
-        router.push('/profile/trust-score');
-    };
 
     const renderContent = () => {
         if (isLoading) {
@@ -52,7 +68,7 @@ export function TrustScoreWidget() {
             return (
                 <View style={styles.errorContainer}>
                     <Text style={styles.errorText}>Unable to load trust score</Text>
-                    <TouchableOpacity style={styles.retryButton} onPress={() => router.push('/profile/trust-score')}>
+                    <TouchableOpacity style={styles.retryButton} onPress={handlePress}>
                         <Text style={styles.retryButtonText}>View Details</Text>
                     </TouchableOpacity>
                 </View>
@@ -70,24 +86,31 @@ export function TrustScoreWidget() {
             );
         }
 
-        const { trustScore } = profile.personalProfile;
-        const trustLevel = getTrustLevel(trustScore.score);
-        const trustColor = getTrustColor(trustScore.score);
+        if (!trustScoreData) {
+            return (
+                <View style={styles.noProfileContainer}>
+                    <Text style={styles.noProfileText}>No trust score data</Text>
+                    <TouchableOpacity style={styles.setupButton} onPress={handlePress}>
+                        <Text style={styles.setupButtonText}>View Details</Text>
+                    </TouchableOpacity>
+                </View>
+            );
+        }
 
         return (
             <View style={styles.trustScoreContent}>
-                <TrustScore
-                    score={trustScore.score}
+                <TrustScoreCompact
+                    score={trustScoreData.score}
                     size="large"
                     showLabel={false}
                 />
 
-                <Text style={[styles.trustScoreText, { color: trustColor }]}>
-                    Your trust score is {trustLevel}
+                <Text style={[styles.trustScoreText, { color: trustScoreData.color }]}>
+                    Your trust score is {trustScoreData.level}
                 </Text>
 
                 <View style={styles.factorsPreview}>
-                    {trustScore.factors.slice(0, 2).map((factor, index) => (
+                    {trustScoreData.factors.map((factor, index) => (
                         <View key={index} style={styles.factorPreview}>
                             <Text style={styles.factorLabel}>
                                 {factor.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
@@ -98,7 +121,7 @@ export function TrustScoreWidget() {
                                         styles.factorProgressFill,
                                         {
                                             width: `${factor.value}%`,
-                                            backgroundColor: trustColor
+                                            backgroundColor: trustScoreData.color
                                         }
                                     ]}
                                 />

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { View, StyleSheet, Platform, ActivityIndicator, Text } from 'react-native';
+import { View, StyleSheet, Platform, ActivityIndicator, Text, TouchableOpacity } from 'react-native';
 import { colors } from '@/styles/colors';
 import { Property } from '@/services/propertyService';
 
@@ -52,66 +52,109 @@ const WebPropertiesMap: React.FC<PropertiesMapProps> = ({
     useEffect(() => {
         if (!mapRef.current) return;
 
-        // Load Leaflet CSS
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-        document.head.appendChild(link);
+        let linkElement: HTMLLinkElement | null = null;
+        let scriptElement: HTMLScriptElement | null = null;
 
-        // Load Leaflet JS
-        const script = document.createElement('script');
-        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-        script.onload = () => {
-            initializeMap();
+        const loadMap = async () => {
+            try {
+                // Check if Leaflet is already loaded
+                if ((window as any).L) {
+                    initializeMap();
+                    return;
+                }
+
+                // Load Leaflet CSS
+                linkElement = document.createElement('link');
+                linkElement.rel = 'stylesheet';
+                linkElement.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                document.head.appendChild(linkElement);
+
+                // Load Leaflet JS
+                scriptElement = document.createElement('script');
+                scriptElement.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+
+                scriptElement.onload = () => {
+                    setTimeout(() => {
+                        initializeMap();
+                    }, 100); // Small delay to ensure everything is loaded
+                };
+
+                scriptElement.onerror = () => {
+                    setError('Failed to load map library');
+                    setLoading(false);
+                };
+
+                document.head.appendChild(scriptElement);
+            } catch (err) {
+                console.error('Error loading map:', err);
+                setError('Failed to initialize map');
+                setLoading(false);
+            }
         };
-        script.onerror = () => {
-            setError('Failed to load map library');
-            setLoading(false);
-        };
-        document.head.appendChild(script);
+
+        loadMap();
 
         return () => {
             // Cleanup
-            if (document.head.contains(link)) document.head.removeChild(link);
-            if (document.head.contains(script)) document.head.removeChild(script);
+            if (linkElement && document.head.contains(linkElement)) {
+                document.head.removeChild(linkElement);
+            }
+            if (scriptElement && document.head.contains(scriptElement)) {
+                document.head.removeChild(scriptElement);
+            }
         };
     }, []);
 
     const initializeMap = () => {
-        if (!mapRef.current || !(window as any).L) return;
+        try {
+            if (!mapRef.current || !(window as any).L) {
+                console.error('Map container or Leaflet not available');
+                setError('Map initialization failed');
+                setLoading(false);
+                return;
+            }
 
-        const L = (window as any).L;
+            const L = (window as any).L;
 
-        // Initialize map
-        const mapInstance = L.map(mapRef.current, {
-            attributionControl: false,
-            zoomControl: true,
-        }).setView([mapCenter.lat, mapCenter.lng], zoom);
+            // Initialize map
+            const mapInstance = L.map(mapRef.current, {
+                attributionControl: false,
+                zoomControl: true,
+            }).setView([mapCenter.lat, mapCenter.lng], zoom);
 
-        // Add OpenStreetMap tiles
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance);
+            // Add OpenStreetMap tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(mapInstance);
 
-        setMap(mapInstance);
+            setMap(mapInstance);
 
-        // Add properties as markers
-        addPropertyMarkers(mapInstance);
+            // Add properties as markers
+            addPropertyMarkers(mapInstance);
 
-        setLoading(false);
+            setLoading(false);
+        } catch (err) {
+            console.error('Error initializing map:', err);
+            setError('Failed to initialize map');
+            setLoading(false);
+        }
     };
 
     const addPropertyMarkers = (mapInstance: any) => {
-        const newMarkers: any[] = [];
-        const L = (window as any).L;
+        try {
+            const newMarkers: any[] = [];
+            const L = (window as any).L;
 
-        properties.forEach((property) => {
-            if (property.address?.coordinates?.lat && property.address?.coordinates?.lng) {
-                const lat = property.address.coordinates.lat;
-                const lng = property.address.coordinates.lng;
+            properties.forEach((property) => {
+                if (property.address?.coordinates?.lat && property.address?.coordinates?.lng) {
+                    const lat = property.address.coordinates.lat;
+                    const lng = property.address.coordinates.lng;
 
-                // Create custom marker icon
-                const markerIcon = L.divIcon({
-                    className: 'property-marker',
-                    html: `
+                    // Create custom marker icon
+                    const markerIcon = L.divIcon({
+                        className: 'property-marker',
+                        html: `
             <div style="
               background-color: ${selectedPropertyId === property._id ? '#ff6b6b' : '#4CAF50'};
               color: white;
@@ -130,14 +173,14 @@ const WebPropertiesMap: React.FC<PropertiesMapProps> = ({
               ${property.type === 'apartment' ? 'A' : property.type === 'house' ? 'H' : property.type === 'room' ? 'R' : 'S'}
             </div>
           `,
-                    iconSize: [30, 30],
-                    iconAnchor: [15, 15],
-                });
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 15],
+                    });
 
-                const marker = L.marker([lat, lng], { icon: markerIcon }).addTo(mapInstance);
+                    const marker = L.marker([lat, lng], { icon: markerIcon }).addTo(mapInstance);
 
-                // Create popup content
-                const popupContent = `
+                    // Create popup content
+                    const popupContent = `
           <div style="padding: 8px; min-width: 200px;">
             <h3 style="margin: 0 0 8px 0; font-size: 16px; color: #333;">${property.title}</h3>
             <p style="margin: 0 0 8px 0; font-size: 12px; color: #666;">${property.location}</p>
@@ -167,54 +210,65 @@ const WebPropertiesMap: React.FC<PropertiesMapProps> = ({
           </div>
         `;
 
-                marker.bindPopup(popupContent);
+                    marker.bindPopup(popupContent);
 
-                // Add click handlers
-                marker.on('click', () => {
-                    if (onPropertySelect) {
-                        onPropertySelect(property);
-                    }
-                });
+                    // Add click handlers
+                    marker.on('click', () => {
+                        if (onPropertySelect) {
+                            onPropertySelect(property);
+                        }
+                    });
 
-                newMarkers.push(marker);
-            }
-        });
+                    newMarkers.push(marker);
+                }
+            });
 
-        setMarkers(newMarkers);
+            setMarkers(newMarkers);
 
-        // Add global functions for popup buttons
-        (window as any).selectProperty = (propertyId: string) => {
-            const property = properties.find(p => p._id === propertyId);
-            if (property && onPropertySelect) {
-                onPropertySelect(property);
-            }
-        };
+            // Add global functions for popup buttons
+            (window as any).selectProperty = (propertyId: string) => {
+                const property = properties.find(p => p._id === propertyId);
+                if (property && onPropertySelect) {
+                    onPropertySelect(property);
+                }
+            };
 
-        (window as any).viewProperty = (propertyId: string) => {
-            const property = properties.find(p => p._id === propertyId);
-            if (property && onPropertyPress) {
-                onPropertyPress(property);
-            }
-        };
+            (window as any).viewProperty = (propertyId: string) => {
+                const property = properties.find(p => p._id === propertyId);
+                if (property && onPropertyPress) {
+                    onPropertyPress(property);
+                }
+            };
+        } catch (err) {
+            console.error('Error adding markers:', err);
+        }
     };
 
     // Update markers when properties change
     useEffect(() => {
         if (map) {
-            // Remove existing markers
-            markers.forEach(marker => {
-                map.removeLayer(marker);
-            });
+            try {
+                // Remove existing markers
+                markers.forEach(marker => {
+                    map.removeLayer(marker);
+                });
 
-            // Add new markers
-            addPropertyMarkers(map);
+                // Add new markers
+                addPropertyMarkers(map);
+            } catch (err) {
+                console.error('Error updating markers:', err);
+            }
         }
     }, [properties, selectedPropertyId]);
 
     // Update map center when center prop changes
     useEffect(() => {
         if (map && center) {
-            map.setView([center.lat, center.lng], zoom);
+            try {
+                map.setView([center.lat, center.lng], zoom);
+            } catch (err) {
+                console.error('Error updating map center:', err);
+            }
         }
     }, [center, zoom]);
 
@@ -223,6 +277,14 @@ const WebPropertiesMap: React.FC<PropertiesMapProps> = ({
             <View style={[styles.container, { height }, styles.errorContainer]}>
                 <Text style={styles.errorText}>Failed to load map</Text>
                 <Text style={styles.errorSubtext}>{error}</Text>
+                <TouchableOpacity style={styles.retryButton} onPress={() => {
+                    setError(null);
+                    setLoading(true);
+                    // Force reload
+                    window.location.reload();
+                }}>
+                    <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
             </View>
         );
     }
@@ -475,6 +537,12 @@ const MobilePropertiesMap: React.FC<PropertiesMapProps> = (props) => {
             <View style={[styles.container, { height: props.height }, styles.errorContainer]}>
                 <Text style={styles.errorText}>Failed to load map</Text>
                 <Text style={styles.errorSubtext}>{error}</Text>
+                <TouchableOpacity style={styles.retryButton} onPress={() => {
+                    setError(null);
+                    setLoading(true);
+                }}>
+                    <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
             </View>
         );
     }
@@ -545,7 +613,7 @@ const styles = StyleSheet.create({
     errorContainer: {
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: colors.primaryLight,
+        backgroundColor: colors.primaryLight_1,
     },
     errorText: {
         fontSize: 16,
@@ -557,5 +625,17 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: colors.primaryDark_1,
         textAlign: 'center',
+        marginBottom: 16,
+    },
+    retryButton: {
+        backgroundColor: colors.primaryColor,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 6,
+    },
+    retryButtonText: {
+        color: 'white',
+        fontWeight: '600',
+        fontSize: 14,
     },
 }); 

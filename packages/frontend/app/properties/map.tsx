@@ -9,6 +9,8 @@ import {
     ActivityIndicator,
     RefreshControl,
     Dimensions,
+    Alert,
+    Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -19,6 +21,8 @@ import { PropertyCard } from '@/components/PropertyCard';
 import { useProperties } from '@/hooks/usePropertyQueries';
 import { Property, PropertyFilters } from '@/services/propertyService';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
+import { SearchBar } from '@/components/SearchBar';
+import { Button } from '@/components/Button';
 
 interface MapProperty extends Property {
     title: string;
@@ -48,7 +52,7 @@ export default function PropertiesMapScreen() {
     const [showFilters, setShowFilters] = useState(false);
     const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
     const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
-    const [mapCenter, setMapCenter] = useState({ lat: 40.7128, lng: -74.0060 }); // Default to NYC
+    const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
 
     // Data fetching
     const {
@@ -70,26 +74,27 @@ export default function PropertiesMapScreen() {
             location: `${property.address.street}, ${property.address.city}, ${property.address.state}`,
         }));
 
-    // Update map center based on properties
+    // Auto-center map on first load
     useEffect(() => {
-        if (mapProperties.length > 0) {
-            const validProperties = mapProperties.filter(p =>
-                p.address.coordinates?.lat && p.address.coordinates?.lng
+        if (properties.length > 0 && !mapCenter) {
+            const validProperties = properties.filter(p =>
+                p.address?.coordinates?.lat && p.address?.coordinates?.lng
             );
 
             if (validProperties.length > 0) {
-                const avgLat = validProperties.reduce((sum, p) => sum + (p.address.coordinates?.lat || 0), 0) / validProperties.length;
-                const avgLng = validProperties.reduce((sum, p) => sum + (p.address.coordinates?.lng || 0), 0) / validProperties.length;
+                const avgLat = validProperties.reduce((sum, p) => sum + (p.address.coordinates!.lat), 0) / validProperties.length;
+                const avgLng = validProperties.reduce((sum, p) => sum + (p.address.coordinates!.lng), 0) / validProperties.length;
                 setMapCenter({ lat: avgLat, lng: avgLng });
             }
         }
-    }, [mapProperties]);
+    }, [properties, mapCenter]);
 
     // Handle search
-    const handleSearch = useCallback(() => {
+    const handleSearch = useCallback((query: string) => {
+        setSearchQuery(query);
         const newFilters: PropertyFilters = {
             ...filters,
-            search: searchQuery.trim() || undefined,
+            search: query.trim() || undefined,
             type: selectedTypes.length > 0 ? selectedTypes.join(',') : undefined,
             page: 1, // Reset to first page on new search
         };
@@ -217,6 +222,23 @@ export default function PropertiesMapScreen() {
         </View>
     );
 
+    // Show error state
+    if (error) {
+        return (
+            <View style={styles.container}>
+                <View style={styles.errorContainer}>
+                    <Text style={styles.errorTitle}>Failed to load properties</Text>
+                    <Text style={styles.errorMessage}>
+                        {error.message || 'An error occurred while loading the properties map.'}
+                    </Text>
+                    <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+                        <Text style={styles.retryButtonText}>Try Again</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        );
+    }
+
     return (
         <SafeAreaView style={styles.container}>
             {/* Header */}
@@ -232,25 +254,12 @@ export default function PropertiesMapScreen() {
 
             {/* Search Bar */}
             <View style={styles.searchContainer}>
-                <View style={styles.searchInputContainer}>
-                    <Text style={styles.searchIcon}>🔍</Text>
-                    <TextInput
-                        style={styles.searchInput}
-                        placeholder={t('Search properties...')}
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        onSubmitEditing={handleSearch}
-                        returnKeyType="search"
-                    />
-                    {searchQuery.length > 0 && (
-                        <TouchableOpacity onPress={() => setSearchQuery('')}>
-                            <Text style={styles.clearIcon}>✕</Text>
-                        </TouchableOpacity>
-                    )}
-                </View>
-                <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-                    <Text style={styles.searchButtonText}>{t('Search')}</Text>
-                </TouchableOpacity>
+                <SearchBar
+                    placeholder="Search properties..."
+                    value={searchQuery}
+                    onChangeText={handleSearch}
+                    style={styles.searchBar}
+                />
             </View>
 
             {/* View Mode Toggle */}
@@ -294,8 +303,6 @@ export default function PropertiesMapScreen() {
                     <ActivityIndicator size="large" color={colors.primaryColor} />
                     <Text style={styles.loadingText}>{t('Loading properties...')}</Text>
                 </View>
-            ) : error && !properties.length ? (
-                renderErrorState()
             ) : properties.length === 0 ? (
                 renderEmptyState()
             ) : viewMode === 'map' ? (
@@ -384,6 +391,40 @@ export default function PropertiesMapScreen() {
                     }
                 />
             )}
+
+            {/* Selected Property Info */}
+            {selectedProperty && (
+                <View style={styles.selectedPropertyInfo}>
+                    <View style={styles.selectedPropertyContent}>
+                        <Text style={styles.selectedPropertyTitle}>
+                            {selectedProperty.title || `${selectedProperty.type} in ${selectedProperty.location}`}
+                        </Text>
+                        <Text style={styles.selectedPropertyLocation}>
+                            📍 {selectedProperty.location || 'Unknown location'}
+                        </Text>
+                        <Text style={styles.selectedPropertyPrice}>
+                            ${selectedProperty.rent.amount}/{selectedProperty.rent.paymentFrequency}
+                        </Text>
+                    </View>
+                    <TouchableOpacity
+                        style={styles.viewPropertyButton}
+                        onPress={() => handlePropertyPress(selectedProperty)}
+                    >
+                        <Text style={styles.viewPropertyButtonText}>View Property</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
+
+            {/* Debug Info (only in development) */}
+            {__DEV__ && (
+                <View style={styles.debugContainer}>
+                    <Text style={styles.debugText}>
+                        Properties: {properties.length} |
+                        Map Center: {mapCenter ? `${mapCenter.lat.toFixed(4)}, ${mapCenter.lng.toFixed(4)}` : 'Not set'} |
+                        Platform: {Platform.OS}
+                    </Text>
+                </View>
+            )}
         </SafeAreaView>
     );
 }
@@ -424,47 +465,12 @@ const styles = StyleSheet.create({
         color: colors.primaryDark,
     },
     searchContainer: {
-        flexDirection: 'row',
         paddingHorizontal: 16,
         paddingVertical: 12,
-        gap: 12,
+        backgroundColor: colors.background,
     },
-    searchInputContainer: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
+    searchBar: {
         backgroundColor: colors.primaryLight_1,
-        borderRadius: 8,
-        paddingHorizontal: 12,
-    },
-    searchInput: {
-        flex: 1,
-        paddingVertical: 12,
-        paddingHorizontal: 8,
-        fontSize: 16,
-        color: colors.primaryDark,
-    },
-    searchIcon: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: colors.primaryDark,
-    },
-    clearIcon: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: colors.primaryColor,
-    },
-    searchButton: {
-        backgroundColor: colors.primaryColor,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderRadius: 8,
-        justifyContent: 'center',
-    },
-    searchButtonText: {
-        color: 'white',
-        fontWeight: '600',
-        fontSize: 16,
     },
     viewModeToggle: {
         flexDirection: 'row',
@@ -754,5 +760,72 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: '600',
         fontSize: 16,
+    },
+    selectedPropertyInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 16,
+        backgroundColor: colors.primaryLight,
+        borderTopWidth: 1,
+        borderTopColor: colors.primaryLight_1,
+    },
+    selectedPropertyContent: {
+        flex: 1,
+    },
+    selectedPropertyTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: colors.primaryDark,
+        marginBottom: 4,
+    },
+    selectedPropertyLocation: {
+        fontSize: 14,
+        color: colors.primaryDark_1,
+        marginBottom: 4,
+    },
+    selectedPropertyPrice: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: colors.primaryColor,
+    },
+    viewPropertyButton: {
+        backgroundColor: colors.primaryColor,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 6,
+    },
+    viewPropertyButtonText: {
+        color: 'white',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 32,
+    },
+    errorTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: colors.primaryDark,
+        marginBottom: 8,
+        textAlign: 'center',
+    },
+    errorMessage: {
+        fontSize: 16,
+        color: colors.primaryDark_1,
+        textAlign: 'center',
+        marginBottom: 24,
+    },
+    debugContainer: {
+        padding: 8,
+        backgroundColor: colors.primaryLight_1,
+    },
+    debugText: {
+        fontSize: 12,
+        color: colors.primaryDark_1,
+        textAlign: 'center',
     },
 }); 

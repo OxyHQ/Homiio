@@ -1,116 +1,105 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { colors } from '@/styles/colors';
-import { usePrimaryProfile } from '@/hooks/useProfileQueries';
-import { TrustScore } from './TrustScore';
 
 type TrustScoreCompactProps = {
+    score: number;
     size?: 'small' | 'medium' | 'large';
     showLabel?: boolean;
-    onPress?: () => void;
-    profileId?: string; // Optional: if you want to show a specific profile's score
+    showPercentage?: boolean;
 };
 
 export function TrustScoreCompact({
+    score,
     size = 'medium',
     showLabel = true,
-    onPress,
-    profileId,
+    showPercentage = false,
 }: TrustScoreCompactProps) {
-    const { data: profile, isLoading } = usePrimaryProfile();
+    // Memoize expensive calculations
+    const { color, trustLevel, sizeStyle } = useMemo(() => {
+        const getColor = (score: number) => {
+            if (score >= 90) return '#4CAF50';
+            if (score >= 70) return '#8BC34A';
+            if (score >= 50) return '#FFC107';
+            if (score >= 30) return '#FF9800';
+            return '#F44336';
+        };
 
-    if (isLoading) {
-        return (
-            <View style={styles.loadingContainer}>
-                <View style={[
-                    styles.loadingCircle,
-                    {
-                        width: size === 'small' ? 24 : size === 'medium' ? 32 : 48,
-                        height: size === 'small' ? 24 : size === 'medium' ? 32 : 48
-                    }
-                ]} />
+        const getTrustLevel = (score: number) => {
+            if (score >= 90) return 'Excellent';
+            if (score >= 70) return 'Good';
+            if (score >= 50) return 'Average';
+            if (score >= 30) return 'Fair';
+            return 'Needs Improvement';
+        };
+
+        const sizeStyles = {
+            small: {
+                container: { height: 24, width: 24 },
+                innerCircle: { height: 20, width: 20 },
+                fontSize: 10,
+                labelSize: 10,
+            },
+            medium: {
+                container: { height: 32, width: 32 },
+                innerCircle: { height: 26, width: 26 },
+                fontSize: 14,
+                labelSize: 12,
+            },
+            large: {
+                container: { height: 48, width: 48 },
+                innerCircle: { height: 40, width: 40 },
+                fontSize: 20,
+                labelSize: 14,
+            },
+        };
+
+        return {
+            color: getColor(score),
+            trustLevel: getTrustLevel(score),
+            sizeStyle: sizeStyles[size],
+        };
+    }, [score, size]);
+
+    return (
+        <View style={styles.wrapper}>
+            <View style={[styles.container, sizeStyle.container, { borderColor: color }]}>
+                <View style={[styles.innerCircle, sizeStyle.innerCircle, { backgroundColor: color }]}>
+                    <Text style={[styles.scoreText, { fontSize: sizeStyle.fontSize }]}>
+                        {showPercentage ? `${score}%` : score}
+                    </Text>
+                </View>
             </View>
-        );
-    }
-
-    if (!profile?.personalProfile) {
-        return null;
-    }
-
-    const { trustScore } = profile.personalProfile;
-    const score = trustScore.score;
-
-    const getTrustLevel = (score: number) => {
-        if (score >= 90) return 'Excellent';
-        if (score >= 70) return 'Good';
-        if (score >= 50) return 'Average';
-        if (score >= 30) return 'Fair';
-        return 'Poor';
-    };
-
-    const getTrustColor = (score: number) => {
-        if (score >= 90) return '#4CAF50';
-        if (score >= 70) return '#8BC34A';
-        if (score >= 50) return '#FFC107';
-        if (score >= 30) return '#FF9800';
-        return '#F44336';
-    };
-
-    const trustLevel = getTrustLevel(score);
-    const trustColor = getTrustColor(score);
-
-    const getLabelSize = () => {
-        switch (size) {
-            case 'small': return 10;
-            case 'medium': return 12;
-            case 'large': return 14;
-            default: return 12;
-        }
-    };
-
-    const content = (
-        <View style={styles.container}>
-            <TrustScore
-                score={score}
-                size={size}
-                showLabel={false}
-            />
             {showLabel && (
-                <Text style={[styles.label, { color: trustColor, fontSize: getLabelSize() }]}>
+                <Text style={[styles.label, { fontSize: sizeStyle.labelSize, color }]}>
                     {trustLevel}
                 </Text>
             )}
         </View>
     );
-
-    if (onPress) {
-        return (
-            <TouchableOpacity onPress={onPress} style={styles.touchable}>
-                {content}
-            </TouchableOpacity>
-        );
-    }
-
-    return content;
 }
 
 const styles = StyleSheet.create({
+    wrapper: {
+        alignItems: 'center',
+    },
     container: {
-        alignItems: 'center',
-    },
-    loadingContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    loadingCircle: {
+        borderWidth: 2,
         borderRadius: 50,
-        backgroundColor: colors.COLOR_BLACK_LIGHT_6,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    innerCircle: {
+        borderRadius: 50,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    scoreText: {
+        color: 'white',
+        fontWeight: 'bold',
     },
     label: {
         fontWeight: '600',
         marginTop: 4,
-    },
-    touchable: {
-        alignItems: 'center',
     },
 }); 
