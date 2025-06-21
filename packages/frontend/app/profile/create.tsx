@@ -25,6 +25,7 @@ export default function ProfileCreateScreen() {
             employeeCount: '',
             specialties: [] as string[],
         },
+        legalCompanyName: '',
     });
 
     const profileTypes = [
@@ -74,6 +75,7 @@ export default function ProfileCreateScreen() {
                         yearEstablished: formData.businessDetails.yearEstablished ?
                             parseInt(formData.businessDetails.yearEstablished) : undefined,
                     },
+                    legalCompanyName: formData.legalCompanyName,
                 };
             }
 
@@ -292,6 +294,16 @@ export default function ProfileCreateScreen() {
                                     </TouchableOpacity>
                                 ))}
                             </View>
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Legal Company Name *</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={formData.legalCompanyName}
+                                onChangeText={(text) => setFormData(prev => ({ ...prev, legalCompanyName: text }))}
+                                placeholder="Enter your legal company name"
+                            />
                         </View>
                     </View>
                 )}
