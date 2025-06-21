@@ -16,6 +16,8 @@ import { Compose } from '@/assets/icons/compose-icon';
 import { Ionicons } from '@expo/vector-icons';
 import { OxySignInButton, useOxy } from '@oxyhq/services';
 
+const IconComponent = Ionicons as any;
+
 const WindowHeight = Dimensions.get('window').height;
 
 export function SideBar() {
@@ -34,12 +36,6 @@ export function SideBar() {
             route: '/',
         },
         {
-            title: t("Properties"),
-            icon: <Search color={colors.COLOR_BLACK} />,
-            iconActive: <SearchActive />,
-            route: '/properties',
-        },
-        {
             title: t("Saved"),
             icon: <Bookmark color={colors.COLOR_BLACK} />,
             iconActive: <BookmarkActive />,
@@ -47,26 +43,26 @@ export function SideBar() {
         },
         {
             title: t("Contracts"),
-            icon: <View><Ionicons name="document-text-outline" size={24} color={colors.COLOR_BLACK} /></View>,
-            iconActive: <View><Ionicons name="document-text" size={24} color={colors.primaryColor} /></View>,
+            icon: <View><IconComponent name="document-text-outline" size={24} color={colors.COLOR_BLACK} /></View>,
+            iconActive: <View><IconComponent name="document-text" size={24} color={colors.primaryColor} /></View>,
             route: '/contracts',
         },
         {
             title: t("Verification"),
-            icon: <View><Ionicons name="shield-checkmark-outline" size={24} color={colors.COLOR_BLACK} /></View>,
-            iconActive: <View><Ionicons name="shield-checkmark" size={24} color={colors.primaryColor} /></View>,
+            icon: <View><IconComponent name="shield-checkmark-outline" size={24} color={colors.COLOR_BLACK} /></View>,
+            iconActive: <View><IconComponent name="shield-checkmark" size={24} color={colors.primaryColor} /></View>,
             route: '/verification',
         },
         {
             title: t("Payments"),
-            icon: <View><Ionicons name="card-outline" size={24} color={colors.COLOR_BLACK} /></View>,
-            iconActive: <View><Ionicons name="card" size={24} color={colors.primaryColor} /></View>,
+            icon: <View><IconComponent name="card-outline" size={24} color={colors.COLOR_BLACK} /></View>,
+            iconActive: <View><IconComponent name="card" size={24} color={colors.primaryColor} /></View>,
             route: '/payments',
         },
         {
             title: t("Community"),
-            icon: <View><Ionicons name="people-outline" size={24} color={colors.COLOR_BLACK} /></View>,
-            iconActive: <View><Ionicons name="people" size={24} color={colors.primaryColor} /></View>,
+            icon: <View><IconComponent name="people-outline" size={24} color={colors.COLOR_BLACK} /></View>,
+            iconActive: <View><IconComponent name="people" size={24} color={colors.primaryColor} /></View>,
             route: '/community',
         },
         {
@@ -77,8 +73,8 @@ export function SideBar() {
         },
         {
             title: t("Monitoring"),
-            icon: <View><Ionicons name="pulse-outline" size={24} color={colors.COLOR_BLACK} /></View>,
-            iconActive: <View><Ionicons name="pulse" size={24} color={colors.primaryColor} /></View>,
+            icon: <View><IconComponent name="pulse-outline" size={24} color={colors.COLOR_BLACK} /></View>,
+            iconActive: <View><IconComponent name="pulse" size={24} color={colors.primaryColor} /></View>,
             route: '/monitoring',
         },
         {
