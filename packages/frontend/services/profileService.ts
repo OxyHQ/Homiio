@@ -203,11 +203,15 @@ class ProfileService {
     // Check cache first
     const cachedData = getCacheEntry<Profile>(cacheKey);
     if (cachedData) {
+      console.log('ProfileService: Returning cached profile data');
       return cachedData;
     }
 
+    console.log('ProfileService: Fetching fresh profile data from server');
     const response = await api.get(`${this.baseUrl}/me`);
-    const profile = response.data;
+    const profile = response.data.data;
+    
+    console.log('ProfileService: Received profile data:', profile);
     
     // Cache the result
     setCacheEntry(cacheKey, profile, 10 * 60 * 1000); // Cache for 10 minutes
@@ -277,16 +281,19 @@ class ProfileService {
    */
   async updatePrimaryProfile(updateData: UpdateProfileData): Promise<Profile> {
     try {
+      console.log('ProfileService: Updating primary profile with data:', updateData);
+      
       const response = await api.put(`${this.baseUrl}/me`, updateData);
       const updatedProfile = response.data.data;
 
-      // Update cached primary profile data so edits are reflected immediately
-      const cacheKey = getCacheKey(`${this.baseUrl}/me`);
-      setCacheEntry(cacheKey, updatedProfile);
+      console.log('ProfileService: Received updated profile from server:', updatedProfile);
 
-      // Invalidate cached list of user profiles
+      // Clear all related caches to ensure fresh data
+      console.log('ProfileService: Clearing all related caches');
+      clearCache(`${this.baseUrl}/me`);
       clearCache(`${this.baseUrl}/me/all`);
       clearCache(`${this.baseUrl}/${updatedProfile.id}`);
+      clearCache(`${this.baseUrl}/${updatedProfile._id}`);
 
       return updatedProfile;
     } catch (error) {

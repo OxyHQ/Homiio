@@ -180,7 +180,21 @@ const personalProfileSchema = new mongoose.Schema({
     factors: [{
       type: {
         type: String,
-        enum: ["verification", "reviews", "payment_history", "communication", "rental_history"],
+        enum: [
+          "verification", 
+          "reviews", 
+          "payment_history", 
+          "communication", 
+          "rental_history",
+          "basic_info",
+          "employment",
+          "references",
+          "roommate_preferences",
+          "roommate_compatibility",
+          "agency_business",
+          "agency_verification",
+          "agency_members"
+        ],
       },
       value: {
         type: Number,

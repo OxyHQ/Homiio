@@ -12,11 +12,20 @@ import { UpdateProfileData } from '@/services/profileService';
 export default function ProfileEditScreen() {
     const { t } = useTranslation();
     const router = useRouter();
-    const { data: primaryProfile, isLoading: profileLoading } = usePrimaryProfile();
+    const { data: primaryProfile, isLoading: profileLoading, refetch: refetchProfile } = usePrimaryProfile();
     const updateProfileMutation = useUpdatePrimaryProfile();
     const [isSaving, setIsSaving] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [activeSection, setActiveSection] = useState('personal');
+
+    // Debug logging for component lifecycle
+    useEffect(() => {
+        console.log('ProfileEditScreen: Component mounted');
+    }, []);
+
+    useEffect(() => {
+        console.log('ProfileEditScreen: profileLoading changed to:', profileLoading);
+    }, [profileLoading]);
 
     // Form state
     const [personalInfo, setPersonalInfo] = useState({
@@ -85,11 +94,15 @@ export default function ProfileEditScreen() {
 
     // Update form state when profile data loads
     useEffect(() => {
+        console.log('ProfileEditScreen: primaryProfile changed:', primaryProfile);
+
         if (primaryProfile?.personalProfile) {
             const profile = primaryProfile.personalProfile;
+            console.log('ProfileEditScreen: Updating form state with profile data:', profile);
+            console.log('ProfileEditScreen: personalInfo from profile:', profile.personalInfo);
 
             // Update personal info
-            setPersonalInfo({
+            const newPersonalInfo = {
                 bio: profile.personalInfo?.bio || '',
                 occupation: profile.personalInfo?.occupation || '',
                 employer: profile.personalInfo?.employer || '',
@@ -97,7 +110,10 @@ export default function ProfileEditScreen() {
                 employmentStatus: profile.personalInfo?.employmentStatus || 'employed',
                 moveInDate: profile.personalInfo?.moveInDate ? new Date(profile.personalInfo.moveInDate).toISOString().split('T')[0] : '',
                 leaseDuration: profile.personalInfo?.leaseDuration || 'yearly',
-            });
+            };
+
+            console.log('ProfileEditScreen: Setting personalInfo to:', newPersonalInfo);
+            setPersonalInfo(newPersonalInfo);
 
             // Update preferences
             setPreferences({
@@ -136,15 +152,18 @@ export default function ProfileEditScreen() {
             });
 
             // Update references
-            setReferences(profile.references?.map(ref => ({
+            const newReferences = profile.references?.map(ref => ({
                 name: ref.name,
                 relationship: ref.relationship,
                 phone: ref.phone || '',
                 email: ref.email || '',
-            })) || []);
+            })) || [];
+
+            console.log('ProfileEditScreen: Setting references to:', newReferences);
+            setReferences(newReferences);
 
             // Update rental history
-            setRentalHistory(profile.rentalHistory?.map(history => ({
+            const newRentalHistory = profile.rentalHistory?.map(history => ({
                 address: history.address,
                 startDate: new Date(history.startDate).toISOString().split('T')[0],
                 endDate: history.endDate ? new Date(history.endDate).toISOString().split('T')[0] : undefined,
@@ -155,11 +174,16 @@ export default function ProfileEditScreen() {
                     phone: history.landlordContact?.phone || '',
                     email: history.landlordContact?.email || '',
                 },
-            })) || []);
+            })) || [];
+
+            console.log('ProfileEditScreen: Setting rentalHistory to:', newRentalHistory);
+            setRentalHistory(newRentalHistory);
 
             setHasUnsavedChanges(false);
+        } else {
+            console.log('ProfileEditScreen: No personalProfile found in primaryProfile');
         }
-    }, [primaryProfile]);
+    }, [primaryProfile?.personalProfile]);
 
     // Memoize trust score data to prevent unnecessary re-renders
     const trustScoreData = useMemo(() => {
@@ -327,7 +351,22 @@ export default function ProfileEditScreen() {
         setHasUnsavedChanges(true);
     };
 
+    // Manual refresh function
+    const handleRefresh = async () => {
+        try {
+            console.log('Manually refreshing profile data...');
+            await refetchProfile();
+            console.log('Profile data refreshed successfully');
+        } catch (error) {
+            console.error('Error refreshing profile data:', error);
+        }
+    };
+
     const renderSection = () => {
+        console.log('ProfileEditScreen: Rendering section with personalInfo:', personalInfo);
+        console.log('ProfileEditScreen: Rendering section with references:', references);
+        console.log('ProfileEditScreen: Rendering section with rentalHistory:', rentalHistory);
+
         switch (activeSection) {
             case 'personal':
                 return (
@@ -1023,20 +1062,155 @@ export default function ProfileEditScreen() {
                     Edit Profile
                     {hasUnsavedChanges && <Text style={styles.unsavedIndicator}> *</Text>}
                 </Text>
-                <TouchableOpacity
-                    onPress={handleSave}
-                    style={[
-                        styles.saveButton,
-                        hasUnsavedChanges && styles.saveButtonActive
-                    ]}
-                    disabled={isSaving || !hasUnsavedChanges}
-                >
-                    {isSaving ? (
-                        <ActivityIndicator size="small" color={colors.primaryLight} />
-                    ) : (
-                        <Text style={styles.saveButtonText}>Save</Text>
-                    )}
-                </TouchableOpacity>
+                <View style={styles.headerActions}>
+                    <TouchableOpacity
+                        onPress={() => {
+                            console.log('=== DEBUG INFO ===');
+                            console.log('primaryProfile:', primaryProfile);
+                            console.log('personalInfo state:', personalInfo);
+                            console.log('profileLoading:', profileLoading);
+                            console.log('==================');
+                        }}
+                        style={[styles.headerButton, styles.debugButton]}
+                    >
+                        <IconButton
+                            name="bug-report"
+                            size={20}
+                            color={colors.primaryDark}
+                        />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={async () => {
+                            try {
+                                console.log('Creating test profile data...');
+                                const testData = {
+                                    personalProfile: {
+                                        personalInfo: {
+                                            bio: "Test bio - I am a software developer",
+                                            occupation: "Software Engineer",
+                                            employer: "Tech Company",
+                                            annualIncome: 75000,
+                                            employmentStatus: "employed" as const,
+                                            moveInDate: "2024-06-01",
+                                            leaseDuration: "yearly" as const,
+                                        },
+                                        preferences: {
+                                            propertyTypes: ["apartment", "house"],
+                                            maxRent: 2000,
+                                            minBedrooms: 2,
+                                            minBathrooms: 1,
+                                            preferredAmenities: ["parking", "gym"],
+                                            petFriendly: true,
+                                            smokingAllowed: false,
+                                            furnished: false,
+                                            parkingRequired: true,
+                                            accessibility: false,
+                                        },
+                                        references: [
+                                            {
+                                                name: "John Smith",
+                                                relationship: "landlord" as const,
+                                                phone: "555-123-4567",
+                                                email: "john.smith@email.com",
+                                            },
+                                            {
+                                                name: "Jane Doe",
+                                                relationship: "employer" as const,
+                                                phone: "555-987-6543",
+                                                email: "jane.doe@company.com",
+                                            }
+                                        ],
+                                        rentalHistory: [
+                                            {
+                                                address: "123 Main St, City, State 12345",
+                                                startDate: "2022-01-01",
+                                                endDate: "2023-12-31",
+                                                monthlyRent: 1500,
+                                                reasonForLeaving: "lease_ended" as const,
+                                                landlordContact: {
+                                                    name: "John Smith",
+                                                    phone: "555-123-4567",
+                                                    email: "john.smith@email.com",
+                                                },
+                                            },
+                                            {
+                                                address: "456 Oak Ave, City, State 12345",
+                                                startDate: "2020-06-01",
+                                                endDate: "2021-12-31",
+                                                monthlyRent: 1200,
+                                                reasonForLeaving: "job_relocation" as const,
+                                                landlordContact: {
+                                                    name: "Mary Johnson",
+                                                    phone: "555-456-7890",
+                                                    email: "mary.johnson@email.com",
+                                                },
+                                            }
+                                        ],
+                                        settings: {
+                                            notifications: {
+                                                email: true,
+                                                push: true,
+                                                sms: false,
+                                                propertyAlerts: true,
+                                                viewingReminders: true,
+                                                leaseUpdates: true,
+                                            },
+                                            privacy: {
+                                                profileVisibility: "public" as const,
+                                                showContactInfo: true,
+                                                showIncome: false,
+                                                showRentalHistory: false,
+                                                showReferences: false,
+                                            },
+                                            language: "en",
+                                            timezone: "UTC",
+                                            currency: "USD",
+                                        },
+                                    },
+                                };
+
+                                const result = await updateProfileMutation.mutateAsync(testData);
+                                console.log('Test profile created:', result);
+                                Alert.alert('Success', 'Test profile data created!');
+                            } catch (error) {
+                                console.error('Error creating test profile:', error);
+                                Alert.alert('Error', 'Failed to create test profile');
+                            }
+                        }}
+                        style={[styles.headerButton, styles.testButton]}
+                    >
+                        <IconButton
+                            name="add"
+                            size={20}
+                            color={colors.primaryDark}
+                        />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={handleRefresh}
+                        style={[styles.headerButton, styles.refreshButton]}
+                        disabled={profileLoading}
+                    >
+                        <IconButton
+                            name="refresh"
+                            size={20}
+                            color={colors.primaryDark}
+                        />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={handleSave}
+                        style={[
+                            styles.saveButton,
+                            hasUnsavedChanges && styles.saveButtonActive
+                        ]}
+                        disabled={isSaving || !hasUnsavedChanges}
+                    >
+                        {isSaving ? (
+                            <ActivityIndicator size="small" color={colors.primaryLight} />
+                        ) : (
+                            <Text style={styles.saveButtonText}>Save</Text>
+                        )}
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <View style={styles.tabContainer}>
@@ -1066,7 +1240,10 @@ export default function ProfileEditScreen() {
                 ))}
             </View>
 
-            <ScrollView style={styles.container}>
+            <ScrollView
+                style={styles.container}
+                key={primaryProfile?.personalProfile ? 'profile-loaded' : 'profile-loading'}
+            >
                 {renderSection()}
             </ScrollView>
         </SafeAreaView>
@@ -1307,5 +1484,22 @@ const styles = StyleSheet.create({
         color: colors.primaryColor,
         fontSize: 14,
         fontWeight: '600',
+    },
+    headerActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    headerButton: {
+        padding: 8,
+    },
+    refreshButton: {
+        padding: 8,
+    },
+    debugButton: {
+        padding: 8,
+    },
+    testButton: {
+        padding: 8,
     },
 }); 

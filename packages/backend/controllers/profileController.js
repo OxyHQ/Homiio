@@ -91,7 +91,18 @@ class ProfileController {
             profileType: "personal",
             isPrimary: true,
             personalProfile: {
+              personalInfo: {
+                bio: "",
+                occupation: "",
+                employer: "",
+                annualIncome: null,
+                employmentStatus: "employed",
+                moveInDate: null,
+                leaseDuration: "yearly",
+              },
               preferences: {},
+              references: [],
+              rentalHistory: [],
               verification: {},
               trustScore: {
                 score: 50,
@@ -246,7 +257,18 @@ class ProfileController {
       switch (profileType) {
         case "personal":
           profileData.personalProfile = {
+            personalInfo: {
+              bio: "",
+              occupation: "",
+              employer: "",
+              annualIncome: null,
+              employmentStatus: "employed",
+              moveInDate: null,
+              leaseDuration: "yearly",
+            },
             preferences: data.preferences || {},
+            references: data.references || [],
+            rentalHistory: data.rentalHistory || [],
             verification: data.verification || {},
             trustScore: { score: 50, factors: [] },
             settings: data.settings || {
@@ -755,8 +777,12 @@ class ProfileController {
         );
       }
 
-      // Find the primary profile for this user
-      const profile = await Profile.findPrimaryByOxyUserId(oxyUserId);
+      // Find the primary profile for this user (non-lean for method calls)
+      const profile = await Profile.findOne({ 
+        oxyUserId, 
+        isPrimary: true, 
+        isActive: true 
+      });
       
       if (!profile) {
         return res.status(404).json(

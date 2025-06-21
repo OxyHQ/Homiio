@@ -27,7 +27,7 @@ export function usePrimaryProfile() {
     queryKey: profileKeys.primary(),
     queryFn: () => profileService.getOrCreatePrimaryProfile(),
     enabled: !!user, // Only run when user is authenticated
-    staleTime: 5 * 60 * 1000, // 5 minutes - reduce stale time for better updates
+    staleTime: 1 * 60 * 1000, // 1 minute - reduce stale time for better updates
     gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache longer
     refetchOnWindowFocus: true, // Refetch on window focus to get latest data
     refetchOnMount: true, // Refetch on mount to ensure fresh data
@@ -105,10 +105,14 @@ export function useUpdatePrimaryProfile() {
   return useMutation({
     mutationFn: (updateData: UpdateProfileData) => profileService.updatePrimaryProfile(updateData),
     onSuccess: (data: Profile) => {
-      // Invalidate and refetch profile queries to ensure fresh data
+      // Immediately update the cache with the new data
+      queryClient.setQueryData(profileKeys.primary(), data);
+      
+      // Also invalidate and refetch to ensure we have the latest data from server
       queryClient.invalidateQueries({ queryKey: profileKeys.primary() });
       queryClient.invalidateQueries({ queryKey: profileKeys.userProfiles() });
       queryClient.invalidateQueries({ queryKey: profileKeys.all });
+      
       toast.success('Profile updated successfully');
     },
     onError: (error: any) => {
