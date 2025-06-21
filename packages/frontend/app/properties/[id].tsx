@@ -218,7 +218,7 @@ export default function PropertyDetailPage() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
       // Create a deep link to the property
-      const propertyUrl = `https://homiio.app/properties/${property.id}`;
+      const propertyUrl = `https://homiio.com/properties/${property.id}`;
 
       // Full details for clipboard
       const fullDetails = `🏠 ${property.title}
@@ -248,7 +248,7 @@ ${propertyUrl}`;
       console.error('Error sharing property:', error);
       // Fallback: copy full details to clipboard
       try {
-        const propertyUrl = `https://homiio.app/properties/${property.id}`;
+        const propertyUrl = `https://homiio.com/properties/${property.id}`;
         const fallbackMessage = `🏠 ${property.title}\n\n📍 ${property.location}\n💰 ${property.price}\n🛏️ ${property.bedrooms} Bedrooms\n🚿 ${property.bathrooms} Bathrooms\n📏 ${property.size}m²\n\n${propertyUrl}`;
         await Clipboard.setStringAsync(fallbackMessage);
         toast.success('Property details copied to clipboard!');
