@@ -9,6 +9,7 @@ import { TrustScore } from '@/components/TrustScore';
 import { Header } from '@/components/Header';
 import { useActiveProfile, useUpdateProfile } from '@/hooks/useProfileQueries';
 import { UpdateProfileData } from '@/services/profileService';
+import { storeData, getData } from '@/utils/storage';
 
 export default function ProfileEditScreen() {
     const { t } = useTranslation();
@@ -18,18 +19,46 @@ export default function ProfileEditScreen() {
     const [isSaving, setIsSaving] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [activeSection, setActiveSection] = useState('personal');
+    const [isFormInitialized, setIsFormInitialized] = useState(false);
 
     // Get profile type to determine which UI to show
     const profileType = activeProfile?.profileType || 'personal';
 
-    // Set default active section based on profile type
+    // Load saved tab state on mount
     useEffect(() => {
-        if (profileType === 'agency') {
-            setActiveSection('business');
-        } else {
-            setActiveSection('personal');
-        }
+        const loadSavedTabState = async () => {
+            try {
+                const savedTab = await getData<string>('profile-edit-active-section');
+                if (savedTab && ['personal', 'preferences', 'verification', 'business', 'settings'].includes(savedTab)) {
+                    setActiveSection(savedTab);
+                } else {
+                    // Set default active section based on profile type
+                    if (profileType === 'agency') {
+                        setActiveSection('business');
+                    } else {
+                        setActiveSection('personal');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading saved tab state:', error);
+                // Fallback to default behavior
+                if (profileType === 'agency') {
+                    setActiveSection('business');
+                } else {
+                    setActiveSection('personal');
+                }
+            }
+        };
+        
+        loadSavedTabState();
     }, [profileType]);
+
+    // Save tab state when it changes
+    useEffect(() => {
+        if (isFormInitialized) {
+            storeData('profile-edit-active-section', activeSection);
+        }
+    }, [activeSection, isFormInitialized]);
 
     // Debug logging for component lifecycle
     useEffect(() => {
@@ -147,7 +176,12 @@ export default function ProfileEditScreen() {
 
     // Update form state when profile data loads
     useEffect(() => {
-        console.log('ProfileEditScreen: activeProfile changed:', activeProfile);
+        // Only proceed if we have profile data and haven't initialized yet
+        if (!activeProfile || isFormInitialized) {
+            return;
+        }
+
+        console.log('ProfileEditScreen: Initializing form with profile data:', activeProfile);
 
         if (profileType === 'personal' && activeProfile?.personalProfile) {
             const profile = activeProfile.personalProfile;
@@ -233,6 +267,7 @@ export default function ProfileEditScreen() {
             setRentalHistory(newRentalHistory);
 
             setHasUnsavedChanges(false);
+            setIsFormInitialized(true);
         } else if (profileType === 'agency' && activeProfile?.agencyProfile) {
             const profile = activeProfile.agencyProfile;
             console.log('ProfileEditScreen: Updating agency form state with profile data:', profile);
@@ -257,6 +292,7 @@ export default function ProfileEditScreen() {
             });
 
             setHasUnsavedChanges(false);
+            setIsFormInitialized(true);
         } else if (profileType === 'business' && activeProfile?.businessProfile) {
             const profile = activeProfile.businessProfile;
             console.log('ProfileEditScreen: Updating business form state with profile data:', profile);
@@ -281,8 +317,9 @@ export default function ProfileEditScreen() {
             });
 
             setHasUnsavedChanges(false);
+            setIsFormInitialized(true);
         }
-    }, [activeProfile, profileType]);
+    }, [activeProfile, profileType, isFormInitialized]);
 
     // Memoize trust score data to prevent unnecessary re-renders
     const trustScoreData = useMemo(() => {
@@ -403,23 +440,23 @@ export default function ProfileEditScreen() {
         }
     }, [activeProfile, profileType, personalInfo, preferences, references, rentalHistory, settings, agencyInfo, businessInfo, updateProfileMutation]);
 
-    // Track changes
-    const updatePersonalInfo = (updates: Partial<typeof personalInfo>) => {
+    // Memoized form update functions to prevent unnecessary re-renders
+    const updatePersonalInfo = useCallback((updates: Partial<typeof personalInfo>) => {
         setPersonalInfo(prev => ({ ...prev, ...updates }));
         setHasUnsavedChanges(true);
-    };
+    }, []);
 
-    const updatePreferences = (updates: Partial<typeof preferences>) => {
+    const updatePreferences = useCallback((updates: Partial<typeof preferences>) => {
         setPreferences(prev => ({ ...prev, ...updates }));
         setHasUnsavedChanges(true);
-    };
+    }, []);
 
-    const updateSettings = (updates: Partial<typeof settings>) => {
+    const updateSettings = useCallback((updates: Partial<typeof settings>) => {
         setSettings(prev => ({ ...prev, ...updates }));
         setHasUnsavedChanges(true);
-    };
+    }, []);
 
-    const toggleAmenity = (amenity: string) => {
+    const toggleAmenity = useCallback((amenity: string) => {
         setPreferences(prev => ({
             ...prev,
             preferredAmenities: prev.preferredAmenities.includes(amenity)
@@ -427,9 +464,9 @@ export default function ProfileEditScreen() {
                 : [...prev.preferredAmenities, amenity]
         }));
         setHasUnsavedChanges(true);
-    };
+    }, []);
 
-    const togglePropertyType = (type: string) => {
+    const togglePropertyType = useCallback((type: string) => {
         setPreferences(prev => ({
             ...prev,
             propertyTypes: prev.propertyTypes.includes(type)
@@ -437,9 +474,9 @@ export default function ProfileEditScreen() {
                 : [...prev.propertyTypes, type]
         }));
         setHasUnsavedChanges(true);
-    };
+    }, []);
 
-    const addReference = () => {
+    const addReference = useCallback(() => {
         setReferences(prev => [...prev, {
             name: '',
             relationship: 'personal',
@@ -447,19 +484,19 @@ export default function ProfileEditScreen() {
             email: '',
         }]);
         setHasUnsavedChanges(true);
-    };
+    }, []);
 
-    const updateReference = (index: number, updates: Partial<typeof references[0]>) => {
+    const updateReference = useCallback((index: number, updates: Partial<typeof references[0]>) => {
         setReferences(prev => prev.map((ref, i) => i === index ? { ...ref, ...updates } : ref));
         setHasUnsavedChanges(true);
-    };
+    }, []);
 
-    const removeReference = (index: number) => {
+    const removeReference = useCallback((index: number) => {
         setReferences(prev => prev.filter((_, i) => i !== index));
         setHasUnsavedChanges(true);
-    };
+    }, []);
 
-    const addRentalHistory = () => {
+    const addRentalHistory = useCallback(() => {
         setRentalHistory(prev => [...prev, {
             address: '',
             startDate: '',
@@ -473,29 +510,29 @@ export default function ProfileEditScreen() {
             },
         }]);
         setHasUnsavedChanges(true);
-    };
+    }, []);
 
-    const updateRentalHistory = (index: number, updates: Partial<typeof rentalHistory[0]>) => {
+    const updateRentalHistory = useCallback((index: number, updates: Partial<typeof rentalHistory[0]>) => {
         setRentalHistory(prev => prev.map((history, i) => i === index ? { ...history, ...updates } : history));
         setHasUnsavedChanges(true);
-    };
+    }, []);
 
-    const removeRentalHistory = (index: number) => {
+    const removeRentalHistory = useCallback((index: number) => {
         setRentalHistory(prev => prev.filter((_, i) => i !== index));
         setHasUnsavedChanges(true);
-    };
+    }, []);
 
-    const updateAgencyInfo = (updates: Partial<typeof agencyInfo>) => {
+    const updateAgencyInfo = useCallback((updates: Partial<typeof agencyInfo>) => {
         setAgencyInfo(prev => ({ ...prev, ...updates }));
         setHasUnsavedChanges(true);
-    };
+    }, []);
 
-    const updateBusinessInfo = (updates: Partial<typeof businessInfo>) => {
+    const updateBusinessInfo = useCallback((updates: Partial<typeof businessInfo>) => {
         setBusinessInfo(prev => ({ ...prev, ...updates }));
         setHasUnsavedChanges(true);
-    };
+    }, []);
 
-    const toggleSpecialty = (specialty: string) => {
+    const toggleSpecialty = useCallback((specialty: string) => {
         if (profileType === 'agency') {
             setAgencyInfo(prev => ({
                 ...prev,
@@ -518,9 +555,9 @@ export default function ProfileEditScreen() {
             }));
         }
         setHasUnsavedChanges(true);
-    };
+    }, [profileType]);
 
-    const toggleVerification = (field: keyof typeof agencyInfo.verification) => {
+    const toggleVerification = useCallback((field: keyof typeof agencyInfo.verification) => {
         if (profileType === 'agency') {
             setAgencyInfo(prev => ({
                 ...prev,
@@ -542,10 +579,10 @@ export default function ProfileEditScreen() {
             }));
         }
         setHasUnsavedChanges(true);
-    };
+    }, [profileType]);
 
     // Manual refresh function
-    const handleRefresh = async () => {
+    const handleRefresh = useCallback(async () => {
         try {
             console.log('Manually refreshing profile data...');
             await refetchProfile();
@@ -553,7 +590,7 @@ export default function ProfileEditScreen() {
         } catch (error) {
             console.error('Error refreshing profile data:', error);
         }
-    };
+    }, [refetchProfile]);
 
     const renderSection = () => {
         if (profileType === 'agency') {
@@ -1833,12 +1870,15 @@ export default function ProfileEditScreen() {
         }
     };
 
-    if (profileLoading) {
+    // Show loading while profile is loading or form is not yet initialized
+    if (profileLoading || (!isFormInitialized && activeProfile)) {
         return (
             <SafeAreaView style={{ flex: 1 }} edges={['top']}>
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={colors.primaryColor} />
-                    <Text style={styles.loadingText}>Loading profile...</Text>
+                    <Text style={styles.loadingText}>
+                        {profileLoading ? 'Loading profile...' : 'Preparing form...'}
+                    </Text>
                 </View>
             </SafeAreaView>
         );

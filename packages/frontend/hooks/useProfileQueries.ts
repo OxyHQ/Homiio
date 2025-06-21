@@ -37,10 +37,10 @@ export function usePrimaryProfile() {
       }
     },
     enabled: !!user, // Only run when user is authenticated
-    staleTime: 1 * 60 * 1000, // 1 minute - reduce stale time for better updates
+    staleTime: 10 * 60 * 1000, // 10 minutes - increase stale time to reduce unnecessary fetches  
     gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache longer
-    refetchOnWindowFocus: true, // Refetch on window focus to get latest data
-    refetchOnMount: true, // Refetch on mount to ensure fresh data
+    refetchOnWindowFocus: false, // Reduce aggressive refetching
+    refetchOnMount: false, // Don't refetch on every mount
   });
 }
 
@@ -54,10 +54,10 @@ export function useUserProfiles() {
     queryKey: profileKeys.userProfiles(),
     queryFn: () => profileService.getUserProfiles(),
     enabled: !!user, // Only run when user is authenticated
-    staleTime: 5 * 60 * 1000, // 5 minutes - reduce stale time
+    staleTime: 10 * 60 * 1000, // 10 minutes - increase stale time to reduce unnecessary fetches
     gcTime: 30 * 60 * 1000, // 30 minutes
-    refetchOnWindowFocus: true, // Refetch on window focus
-    refetchOnMount: true, // Refetch on mount
+    refetchOnWindowFocus: false, // Reduce aggressive refetching
+    refetchOnMount: false, // Don't refetch on every mount
   });
 }
 
