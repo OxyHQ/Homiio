@@ -31,32 +31,39 @@ export default function PropertyTypePage() {
 
   // Property type definitions
   const propertyTypes: { [key: string]: PropertyType } = {
-    '1': {
-      id: '1',
+    'apartment': {
+      id: 'apartment',
       name: t('Apartments'),
       description: t('Modern apartments with all amenities'),
       icon: 'business-outline',
       propertiesCount: apiData?.properties?.length || 0,
     },
-    '2': {
-      id: '2',
+    'house': {
+      id: 'house',
       name: t('Houses'),
       description: t('Spacious houses with gardens'),
       icon: 'home-outline',
       propertiesCount: apiData?.properties?.length || 0,
     },
-    '3': {
-      id: '3',
+    'room': {
+      id: 'room',
+      name: t('Rooms'),
+      description: t('Individual rooms in shared spaces'),
+      icon: 'bed-outline',
+      propertiesCount: apiData?.properties?.length || 0,
+    },
+    'studio': {
+      id: 'studio',
+      name: t('Studios'),
+      description: t('Compact studio apartments'),
+      icon: 'home-outline',
+      propertiesCount: apiData?.properties?.length || 0,
+    },
+    'coliving': {
+      id: 'coliving',
       name: t('Co-Living'),
       description: t('Shared spaces for community living'),
       icon: 'people-outline',
-      propertiesCount: apiData?.properties?.length || 0,
-    },
-    '4': {
-      id: '4',
-      name: t('Eco-Friendly'),
-      description: t('Sustainable and energy-efficient properties'),
-      icon: 'leaf-outline',
       propertiesCount: apiData?.properties?.length || 0,
     },
   };
@@ -259,7 +266,35 @@ export default function PropertyTypePage() {
         />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primaryColor} />
-          <Text style={styles.loadingText}>{t("Loading properties...")}</Text>
+          <Text style={styles.loadingText}>
+            {!propertyType ? t("Property type not found") : t("Loading properties...")}
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <Header
+          options={{
+            showBackButton: true,
+            title: t("Error"),
+            titlePosition: 'center',
+          }}
+        />
+        <View style={styles.loadingContainer}>
+          <Ionicons name="alert-circle-outline" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
+          <Text style={styles.loadingText}>
+            {t("Failed to load properties")}
+          </Text>
+          <TouchableOpacity
+            style={styles.resetButton}
+            onPress={() => window.location.reload()}
+          >
+            <Text style={styles.resetButtonText}>{t("Try Again")}</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );

@@ -33,10 +33,11 @@ export default function HomePage() {
   ];
 
   const propertyTypes = [
-    { id: '1', name: 'Apartments', icon: 'business-outline' },
-    { id: '2', name: 'Houses', icon: 'home-outline' },
-    { id: '3', name: 'Co-living', icon: 'people-outline' },
-    { id: '4', name: 'Eco-friendly', icon: 'leaf-outline' },
+    { id: 'apartment', name: 'Apartments', icon: 'business-outline' },
+    { id: 'house', name: 'Houses', icon: 'home-outline' },
+    { id: 'room', name: 'Rooms', icon: 'bed-outline' },
+    { id: 'studio', name: 'Studios', icon: 'home-outline' },
+    { id: 'coliving', name: 'Co-living', icon: 'people-outline' },
   ];
 
   const handleSearch = () => {
