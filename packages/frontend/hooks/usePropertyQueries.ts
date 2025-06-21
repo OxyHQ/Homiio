@@ -76,9 +76,10 @@ export function useCreateProperty() {
 
   return useMutation({
     mutationFn: (data: CreatePropertyData) => propertyService.createProperty(data),
-    onSuccess: () => {
+    onSuccess: (createdProperty: Property) => {
       queryClient.invalidateQueries({ queryKey: propertyKeys.lists() });
       toast.success('Property created successfully');
+      return createdProperty;
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to create property');

@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 
 type TrustScoreProps = {
@@ -33,25 +32,22 @@ export function TrustScore({
 
     const sizeStyles = {
         small: {
-            container: { height: 24, width: 24 },
-            innerCircle: { height: 18, width: 18 },
-            fontSize: 10,
-            labelSize: 10,
-            iconSize: 10,
+            container: { height: 32, width: 32 },
+            innerCircle: { height: 26, width: 26 },
+            fontSize: 12,
+            labelSize: 12,
         },
         medium: {
-            container: { height: 36, width: 36 },
-            innerCircle: { height: 28, width: 28 },
-            fontSize: 14,
-            labelSize: 12,
-            iconSize: 14,
-        },
-        large: {
-            container: { height: 52, width: 52 },
-            innerCircle: { height: 44, width: 44 },
+            container: { height: 48, width: 48 },
+            innerCircle: { height: 40, width: 40 },
             fontSize: 18,
             labelSize: 14,
-            iconSize: 18,
+        },
+        large: {
+            container: { height: 72, width: 72 },
+            innerCircle: { height: 64, width: 64 },
+            fontSize: 28,
+            labelSize: 16,
         },
     };
 
@@ -70,7 +66,6 @@ export function TrustScore({
             </View>
             {showLabel && (
                 <View style={styles.labelContainer}>
-                    <Ionicons name="shield-checkmark" size={sizeStyle.iconSize} color={color} />
                     <Text style={[styles.label, { fontSize: sizeStyle.labelSize, color }]}>
                         {trustLevel}
                     </Text>
@@ -85,7 +80,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     container: {
-        borderWidth: 2,
+        borderWidth: 3,
         borderRadius: 50,
         justifyContent: 'center',
         alignItems: 'center',
@@ -100,12 +95,10 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     labelContainer: {
-        flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 4,
+        marginTop: 6,
     },
     label: {
-        marginLeft: 4,
-        fontWeight: '500',
+        fontWeight: '600',
     },
 }); 

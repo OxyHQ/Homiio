@@ -117,6 +117,27 @@ const sleep = (ms) => {
   return new Promise(resolve => setTimeout(resolve, ms));
 };
 
+/**
+ * Standard API response helpers
+ */
+const successResponse = (data, message = 'Success') => {
+  return {
+    success: true,
+    message,
+    data,
+    timestamp: new Date().toISOString()
+  };
+};
+
+const errorResponse = (message = 'Error occurred', code = 'ERROR') => {
+  return {
+    success: false,
+    message,
+    code,
+    timestamp: new Date().toISOString()
+  };
+};
+
 module.exports = {
   generateId,
   calculateDistance,
@@ -129,5 +150,7 @@ module.exports = {
   isEmpty,
   formatDate,
   randomString,
-  sleep
+  sleep,
+  successResponse,
+  errorResponse
 };

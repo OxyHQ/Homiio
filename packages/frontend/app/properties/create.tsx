@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, ScrollView, TextInput, Alert, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TextInput, Alert, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import * as Location from 'expo-location';
 import { colors } from '@/styles/colors';
 import Button from '@/components/Button';
 import { ThemedText } from '@/components/ThemedText';
@@ -72,11 +73,32 @@ export default function CreatePropertyScreen() {
     setSearchQuery(query);
   };
 
+  // Location state
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [locationPermission, setLocationPermission] = useState<Location.PermissionStatus | null>(null);
+  const [currentCoordinates, setCurrentCoordinates] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
+  const [isWatchingLocation, setIsWatchingLocation] = useState(false);
+  const [locationSubscription, setLocationSubscription] = useState<Location.LocationSubscription | null>(null);
+
   // Ethical pricing validation
   const [pricingValidation, setPricingValidation] = useState<any>(null);
   const [showPricingGuidance, setShowPricingGuidance] = useState(false);
 
   const createPropertyMutation = useCreateProperty();
+
+  // Check location permission on mount
+  useEffect(() => {
+    const checkLocationPermission = async () => {
+      const { status } = await Location.getForegroundPermissionsAsync();
+      setLocationPermission(status);
+    };
+
+    checkLocationPermission();
+  }, []);
 
   // Better address parsing function for OpenStreetMap Nominatim format
   const parseAddress = (fullAddress: string) => {
@@ -133,6 +155,159 @@ export default function CreatePropertyScreen() {
     console.log('Parsed result:', result); // Debug log
     return result;
   };
+
+  // Get current location and reverse geocode
+  const getCurrentLocation = async () => {
+    setIsGettingLocation(true);
+
+    try {
+      // Check location permission
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      setLocationPermission(status);
+
+      if (status !== 'granted') {
+        Alert.alert(
+          'Location Permission Required',
+          'Please enable location access to use this feature.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Get current position
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+        timeInterval: 5000,
+        distanceInterval: 10,
+      });
+
+      const { latitude, longitude } = location.coords;
+
+      // Store current coordinates
+      setCurrentCoordinates({ latitude, longitude });
+      setLocationAccuracy(location.coords.accuracy);
+
+      // Reverse geocode to get address
+      const geocodeResult = await Location.reverseGeocodeAsync({
+        latitude,
+        longitude,
+      });
+
+      if (geocodeResult.length > 0) {
+        const addressInfo = geocodeResult[0];
+
+        // Update form data with location info
+        const newAddress = {
+          street: addressInfo.street ? `${addressInfo.streetNumber || ''} ${addressInfo.street}`.trim() : '',
+          city: addressInfo.city || '',
+          state: addressInfo.region || '',
+          zipCode: addressInfo.postalCode || '',
+          country: addressInfo.country || 'US',
+        };
+
+        setFormData(prev => ({
+          ...prev,
+          address: newAddress,
+        }));
+
+        // Update selected location for map
+        setSelectedLocation({
+          latitude,
+          longitude,
+          address: `${newAddress.street}, ${newAddress.city}, ${newAddress.state}`,
+        });
+
+        // Update search query
+        setSearchQuery(`${newAddress.street}, ${newAddress.city}, ${newAddress.state}`);
+
+        Alert.alert(
+          'Location Found',
+          `Address updated to: ${newAddress.street}, ${newAddress.city}, ${newAddress.state}`,
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert(
+          'Location Error',
+          'Could not find address for your current location. Please try again or enter address manually.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Error getting current location:', error);
+
+      let errorMessage = 'Failed to get your current location. Please check your location settings or enter address manually.';
+
+      if (error instanceof Error) {
+        if (error.message.includes('Location service is disabled')) {
+          errorMessage = 'Location services are disabled. Please enable location services in your device settings.';
+        } else if (error.message.includes('Network')) {
+          errorMessage = 'Network error. Please check your internet connection and try again.';
+        } else if (error.message.includes('Timeout')) {
+          errorMessage = 'Location request timed out. Please try again.';
+        }
+      }
+
+      Alert.alert('Location Error', errorMessage, [{ text: 'OK' }]);
+    } finally {
+      setIsGettingLocation(false);
+    }
+  };
+
+  // Start/stop watching location
+  const toggleLocationWatching = async () => {
+    if (isWatchingLocation) {
+      // Stop watching
+      if (locationSubscription) {
+        locationSubscription.remove();
+        setLocationSubscription(null);
+      }
+      setIsWatchingLocation(false);
+    } else {
+      // Start watching
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Required', 'Location permission is required to watch location.');
+          return;
+        }
+
+        const subscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.High,
+            timeInterval: 10000, // Update every 10 seconds
+            distanceInterval: 10, // Update when moved 10 meters
+          },
+          (location) => {
+            const { latitude, longitude } = location.coords;
+            setCurrentCoordinates({ latitude, longitude });
+            setLocationAccuracy(location.coords.accuracy);
+
+            // Update selected location for map
+            setSelectedLocation(prev => ({
+              latitude,
+              longitude,
+              address: prev?.address || 'Current Location',
+            }));
+          }
+        );
+
+        setLocationSubscription(subscription);
+        setIsWatchingLocation(true);
+      } catch (error) {
+        console.error('Error starting location watching:', error);
+        Alert.alert('Error', 'Failed to start location watching.');
+      }
+    }
+  };
+
+  // Cleanup location subscription on unmount
+  useEffect(() => {
+    return () => {
+      if (locationSubscription) {
+        locationSubscription.remove();
+      }
+    };
+  }, [locationSubscription]);
 
   // Validate pricing when property details change
   useEffect(() => {
@@ -404,13 +579,9 @@ export default function CreatePropertyScreen() {
         } : undefined,
       };
 
-      await createPropertyMutation.mutateAsync(propertyData);
-      Alert.alert('Success', 'Property created successfully!', [
-        {
-          text: 'OK',
-          onPress: () => router.back(),
-        },
-      ]);
+      const createdProperty = await createPropertyMutation.mutateAsync(propertyData);
+      // Navigate directly to the newly created property
+      router.push(`/properties/${createdProperty._id}`);
     } catch (error: any) {
       console.error('Property creation error:', error);
 
@@ -497,6 +668,71 @@ export default function CreatePropertyScreen() {
                 }}
               />
 
+              {/* Use Current Location Button */}
+              <TouchableOpacity
+                style={styles.locationButton}
+                onPress={getCurrentLocation}
+                disabled={isGettingLocation}
+              >
+                {isGettingLocation ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color="white" />
+                    <ThemedText style={styles.locationButtonText}>Getting Location...</ThemedText>
+                  </View>
+                ) : (
+                  <ThemedText style={styles.locationButtonText}>📍 Use Current Location</ThemedText>
+                )}
+              </TouchableOpacity>
+
+              {/* Location Permission Status */}
+              {locationPermission && (
+                <View style={styles.permissionStatus}>
+                  <ThemedText style={[
+                    styles.permissionStatusText,
+                    locationPermission === 'granted' ? styles.permissionGranted : styles.permissionDenied
+                  ]}>
+                    {locationPermission === 'granted'
+                      ? '✅ Location access granted'
+                      : locationPermission === 'denied'
+                        ? '❌ Location access denied'
+                        : '⏳ Location permission pending'
+                    }
+                  </ThemedText>
+                </View>
+              )}
+
+              {/* Current Coordinates Display */}
+              {currentCoordinates && (
+                <View style={styles.coordinatesContainer}>
+                  <ThemedText style={styles.coordinatesTitle}>Current Location:</ThemedText>
+                  <ThemedText style={styles.coordinatesText}>
+                    Lat: {currentCoordinates.latitude.toFixed(6)},
+                    Lng: {currentCoordinates.longitude.toFixed(6)}
+                  </ThemedText>
+                  {locationAccuracy && (
+                    <ThemedText style={styles.accuracyText}>
+                      Accuracy: ±{locationAccuracy.toFixed(1)} meters
+                    </ThemedText>
+                  )}
+
+                  {/* Location Watching Toggle */}
+                  <TouchableOpacity
+                    style={[
+                      styles.watchLocationButton,
+                      isWatchingLocation && styles.watchLocationButtonActive
+                    ]}
+                    onPress={toggleLocationWatching}
+                  >
+                    <ThemedText style={[
+                      styles.watchLocationButtonText,
+                      isWatchingLocation && styles.watchLocationButtonTextActive
+                    ]}>
+                      {isWatchingLocation ? '🛑 Stop Tracking' : '📍 Start Tracking'}
+                    </ThemedText>
+                  </TouchableOpacity>
+                </View>
+              )}
+
               {/* Search Results */}
               {showSearchResults && searchResults.length > 0 && (
                 <View style={styles.searchResults}>
@@ -516,8 +752,8 @@ export default function CreatePropertyScreen() {
             </View>
 
             <PropertyMap
-              latitude={selectedLocation?.latitude}
-              longitude={selectedLocation?.longitude}
+              latitude={selectedLocation?.latitude || currentCoordinates?.latitude}
+              longitude={selectedLocation?.longitude || currentCoordinates?.longitude}
               address={selectedLocation?.address}
               onLocationSelect={handleLocationSelect}
               height={300}
@@ -1140,5 +1376,82 @@ const styles = StyleSheet.create({
   },
   textInputError: {
     borderColor: '#ff6b6b',
+  },
+  locationButton: {
+    marginTop: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: colors.primaryColor,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locationButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+  },
+  permissionStatus: {
+    marginTop: 8,
+    padding: 12,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primaryLight_1,
+    borderRadius: 8,
+  },
+  permissionStatusText: {
+    fontSize: 14,
+    color: colors.primaryDark,
+  },
+  permissionGranted: {
+    color: colors.primaryLight_1,
+  },
+  permissionDenied: {
+    color: '#ff6b6b',
+  },
+  coordinatesContainer: {
+    marginTop: 8,
+    padding: 12,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primaryLight_1,
+    borderRadius: 8,
+  },
+  coordinatesTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: colors.primaryDark,
+    marginBottom: 8,
+  },
+  coordinatesText: {
+    fontSize: 14,
+    color: colors.primaryDark,
+  },
+  accuracyText: {
+    fontSize: 12,
+    color: colors.primaryDark_1,
+  },
+  watchLocationButton: {
+    padding: 8,
+    borderWidth: 1,
+    borderColor: colors.primaryLight_1,
+    borderRadius: 8,
+  },
+  watchLocationButtonActive: {
+    backgroundColor: colors.primaryColor,
+    borderColor: colors.primaryColor,
+  },
+  watchLocationButtonText: {
+    fontSize: 14,
+    color: colors.primaryDark,
+  },
+  watchLocationButtonTextActive: {
+    color: 'white',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
 });

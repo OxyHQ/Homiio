@@ -13,6 +13,7 @@ module.exports = function(authenticateToken) {
   const leaseRoutes = require('./leases')(authenticateToken);
   const notificationRoutes = require('./notifications')(authenticateToken);
   const analyticsRoutes = require('./analytics');
+  const profileRoutes = require('./profiles')(authenticateToken);
 
   const router = express.Router();
 
@@ -24,6 +25,7 @@ module.exports = function(authenticateToken) {
   router.use('/leases', leaseRoutes);
   router.use('/notifications', notificationRoutes);
   router.use('/analytics', analyticsRoutes);
+  router.use('/profiles', profileRoutes);
 
   // Health check route
   router.get('/health', (req, res) => {
