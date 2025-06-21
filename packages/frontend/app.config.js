@@ -26,7 +26,7 @@ return {
         version: VERSION,
         orientation: "portrait",
         icon: "./assets/images/mention-icon.png",
-        scheme: "mention",
+        scheme: "homiio",
         userInterfaceStyle: "automatic",
         newArchEnabled: true,
         ios: {
@@ -51,7 +51,7 @@ return {
                         data: [
                             {
                                 scheme: 'https',
-                                host: 'mention.earth',
+                                host: 'homiio.com',
                             },
                             IS_DEV && {
                                 scheme: 'http',
@@ -170,6 +170,9 @@ return {
             router: {
                 origin: false
             }
+        },
+        experiments: {
+            typedRoutes: true
         },
         owner: "nateisern"
     }

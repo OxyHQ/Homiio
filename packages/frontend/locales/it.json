@@ -93,7 +93,7 @@
   "error.boundary.title": "Ops! Qualcosa è andato storto",
   "error.boundary.message": "Ci scusiamo per l'inconveniente. Riprova.",
   "error.boundary.retry": "Riprova",
-  "notification.welcome.title": "Benvenuto su Mention! ��",
+  "notification.welcome.title": "Benvenuto su Mention! 👋",
   "notification.welcome.body": "Grazie per aver provato la nostra app. Inizia a esplorare ora!",
   "success.signup": "Registrazione completata",
   "action.retry": "Riprova",
@@ -196,6 +196,243 @@
     "sendFeedback": "Invia Feedback",
     "maybeLater": "Forse Dopo",
     "rateNow": "Valuta Ora",
-    "success": "Successo"
+    "success": "Successo",
+    "error": "Errore",
+    "loading": "Caricamento...",
+    "retry": "Riprova",
+    "save": "Salva",
+    "delete": "Elimina",
+    "edit": "Modifica",
+    "close": "Chiudi",
+    "back": "Indietro",
+    "next": "Avanti",
+    "previous": "Precedente",
+    "done": "Fatto",
+    "continue": "Continua",
+    "skip": "Salta",
+    "yes": "Sì",
+    "no": "No",
+    "confirm": "Conferma",
+    "select": "Seleziona",
+    "choose": "Scegli",
+    "upload": "Carica",
+    "download": "Scarica",
+    "share": "Condividi",
+    "copy": "Copia",
+    "paste": "Incolla",
+    "search": "Cerca",
+    "filter": "Filtra",
+    "sort": "Ordina",
+    "refresh": "Aggiorna",
+    "update": "Aggiorna",
+    "create": "Crea",
+    "add": "Aggiungi",
+    "remove": "Rimuovi",
+    "view": "Visualizza",
+    "details": "Dettagli",
+    "more": "Altro",
+    "less": "Meno",
+    "all": "Tutto",
+    "none": "Nessuno",
+    "empty": "Vuoto",
+    "noData": "Nessun dato disponibile",
+    "noResults": "Nessun risultato trovato",
+    "tryAgain": "Riprova",
+    "goBack": "Torna indietro",
+    "goHome": "Vai alla home"
+  },
+  "home": {
+    "hero": {
+      "title": "Trova la tua casa etica",
+      "subtitle": "Affitti trasparenti con accordi equi e proprietà verificate",
+      "searchPlaceholder": "Dove vuoi vivere?",
+      "searchButton": "Cerca"
+    },
+    "trust": {
+      "title": "Abitazioni di cui Puoi Fidarti",
+      "verifiedListings": {
+        "title": "Annunci Verificati",
+        "description": "Tutte le proprietà verificate per autenticità e condizioni"
+      },
+      "fairAgreements": {
+        "title": "Accordi Equi",
+        "description": "Contratti trasparenti senza termini nascosti"
+      },
+      "trustScore": {
+        "title": "Punteggio di Fiducia",
+        "description": "Sistema di reputazione per inquilini e proprietari"
+      }
+    },
+    "cities": {
+      "title": "Città in Evidenza",
+      "properties": "proprietà"
+    },
+    "categories": {
+      "title": "Sfoglia per Categoria",
+      "view": "Visualizza",
+      "types": {
+        "apartments": "Appartamenti",
+        "houses": "Case",
+        "coLiving": "Co-living",
+        "ecoFriendly": "Eco-friendly"
+      }
+    },
+    "horizon": {
+      "title": "Unisciti a Horizon",
+      "description": "Horizon è un'iniziativa globale che offre alloggi equi, assistenza sanitaria e supporto per i viaggi. Ora integrato con Homiio.",
+      "learnMore": "Scopri di Più"
+    },
+    "eco": {
+      "title": "Proprietà Eco-Certificate",
+      "description": "Trova proprietà sostenibili che soddisfano i nostri standard di efficienza energetica e rispetto dell'ambiente",
+      "viewEcoProperties": "Visualizza Proprietà Eco"
+    }
+  },
+  "search": {
+    "title": "Cerca",
+    "searchPlaceholder": "Cerca per posizione, tipo di proprietà...",
+    "searchButton": "Cerca",
+    "recentSearches": "Ricerche Recenti",
+    "popularSearches": "Ricerche Popolari",
+    "propertyTypes": "Tipi di Proprietà",
+    "popularCities": "Città Popolari",
+    "properties": "proprietà",
+    "types": {
+      "apartments": "Appartamenti",
+      "houses": "Case",
+      "rooms": "Camere",
+      "studios": "Monolocali"
+    }
+  },
+  "profile": {
+    "editProfile": "Modifica Profilo",
+    "myProperties": "Le Mie Proprietà",
+    "savedProperties": "Proprietà Salvate",
+    "myContracts": "I Miei Contratti",
+    "trustScore": "Punteggio di Fiducia",
+    "logOut": "Esci"
+  },
+  "notifications": {
+    "title": "Notifiche",
+    "types": {
+      "message": {
+        "title": "Nuovo Messaggio",
+        "description": "Hai un nuovo messaggio dal tuo proprietario"
+      },
+      "contract": {
+        "title": "Aggiornamento Contratto",
+        "description": "Il tuo accordo di affitto è stato aggiornato"
+      },
+      "payment": {
+        "title": "Promemoria Pagamento",
+        "description": "Il tuo pagamento dell'affitto scade tra 3 giorni"
+      }
+    },
+    "timeAgo": {
+      "hours": "ore fa",
+      "days": "giorni fa"
+    }
+  },
+  "properties": {
+    "title": "Proprietà",
+    "filters": "Filtri",
+    "sort": "Ordina",
+    "view": "Visualizza",
+    "save": "Salva",
+    "share": "Condividi",
+    "contact": "Contatta",
+    "bookViewing": "Prenota Visita",
+    "details": {
+      "price": "Prezzo",
+      "location": "Posizione",
+      "bedrooms": "Camere da letto",
+      "bathrooms": "Bagni",
+      "size": "Dimensione",
+      "available": "Disponibile",
+      "description": "Descrizione",
+      "amenities": "Servizi",
+      "photos": "Foto",
+      "map": "Mappa",
+      "contactInfo": "Informazioni di Contatto"
+    },
+    "filters": {
+      "priceRange": "Fascia di Prezzo",
+      "propertyType": "Tipo di Proprietà",
+      "bedrooms": "Camere da letto",
+      "bathrooms": "Bagni",
+      "amenities": "Servizi",
+      "availability": "Disponibilità",
+      "apply": "Applica Filtri",
+      "clear": "Cancella Tutto"
+    }
+  },
+  "payments": {
+    "title": "Pagamenti",
+    "upcoming": "Pagamenti Imminenti",
+    "history": "Cronologia Pagamenti",
+    "dueDate": "Data di Scadenza",
+    "amount": "Importo",
+    "status": {
+      "paid": "Pagato",
+      "pending": "In attesa",
+      "overdue": "Scaduto"
+    },
+    "actions": {
+      "payNow": "Paga Ora",
+      "viewDetails": "Visualizza Dettagli",
+      "downloadReceipt": "Scarica Ricevuta"
+    }
+  },
+  "contracts": {
+    "title": "Contratti",
+    "active": "Contratti Attivi",
+    "expired": "Contratti Scaduti",
+    "draft": "Bozze Contratti",
+    "status": {
+      "active": "Attivo",
+      "expired": "Scaduto",
+      "pending": "In attesa",
+      "draft": "Bozza"
+    },
+    "actions": {
+      "view": "Visualizza",
+      "download": "Scarica",
+      "sign": "Firma",
+      "renew": "Rinnova"
+    }
+  },
+  "roommates": {
+    "title": "Coinquilini",
+    "find": "Trova Coinquilini",
+    "myMatches": "Le Mie Corrispondenze",
+    "preferences": "Preferenze",
+    "profile": "Profilo Coinquilino",
+    "compatibility": "Punteggio Compatibilità",
+    "actions": {
+      "message": "Messaggio",
+      "connect": "Connetti",
+      "viewProfile": "Visualizza Profilo"
+    }
+  },
+  "safety": {
+    "title": "Sicurezza",
+    "fraudReports": "Segnalazioni Frode",
+    "reportIssue": "Segnala Problema",
+    "safetyTips": "Consigli di Sicurezza",
+    "emergencyContacts": "Contatti di Emergenza",
+    "reportTypes": {
+      "fraud": "Frode",
+      "scam": "Truffa",
+      "fakeListing": "Annuncio Falso",
+      "harassment": "Molestie",
+      "other": "Altro"
+    }
+  },
+  "horizon": {
+    "title": "Iniziativa Horizon",
+    "description": "Iniziativa globale per alloggi equi, assistenza sanitaria e supporto per i viaggi",
+    "benefits": "Benefici",
+    "join": "Unisciti a Horizon",
+    "learnMore": "Scopri di Più"
   }
 }

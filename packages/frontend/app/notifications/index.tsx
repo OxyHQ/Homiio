@@ -15,24 +15,24 @@ export default function NotificationsScreen() {
         {
             id: '1',
             type: 'message',
-            title: 'New Message',
-            description: 'You have a new message from your landlord',
+            title: t('notifications.types.message.title'),
+            description: t('notifications.types.message.description'),
             time: '2 hours ago',
             read: false,
         },
         {
             id: '2',
             type: 'contract',
-            title: 'Contract Update',
-            description: 'Your rental agreement has been updated',
+            title: t('notifications.types.contract.title'),
+            description: t('notifications.types.contract.description'),
             time: '1 day ago',
             read: true,
         },
         {
             id: '3',
             type: 'payment',
-            title: 'Payment Reminder',
-            description: 'Your rent payment is due in 3 days',
+            title: t('notifications.types.payment.title'),
+            description: t('notifications.types.payment.description'),
             time: '2 days ago',
             read: true,
         },
@@ -42,7 +42,7 @@ export default function NotificationsScreen() {
         <SafeAreaView style={{ flex: 1 }} edges={['top']}>
             <ScrollView style={styles.container}>
                 <View style={styles.header}>
-                    <Text style={styles.title}>{t("Notifications")}</Text>
+                    <Text style={styles.title}>{t("notifications.title")}</Text>
                     <IconButton
                         name="settings-outline"
                         color={colors.primaryDark}

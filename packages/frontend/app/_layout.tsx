@@ -210,46 +210,43 @@ export default function RootLayout() {
   });
 
   return (
-    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <OxyProvider
-          oxyServices={oxyServices}
-          initialScreen="SignIn"
-          autoPresent={false} // Don't auto-present, we'll control it with the button
-          onClose={() => console.log('Sheet closed')}
-          onAuthenticated={handleAuthenticated}
-          onAuthStateChange={(user) => console.log('Auth state changed:', user?.username || 'logged out')}
-          storageKeyPrefix="oxy_example" // Prefix for stored auth tokens
-          theme="light"
-        >
-          <OxyServicesInitializer />
-          <Provider store={store}>
-            <QueryClientProvider client={queryClient}>
-              <I18nextProvider i18n={i18n}>
-                <MenuProvider>
-                  <ErrorBoundary>
-                    <BottomSheetModalProvider>
-                      <BottomSheetProvider>
-                        <View style={styles.container}>
-                          <SideBar />
-                          <View style={styles.mainContentWrapper}>
-                            <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0, }} />
-                            <Slot />
-                          </View>
-                          <RightBar />
+    <OxyProvider
+      oxyServices={oxyServices}
+      initialScreen="SignIn"
+      autoPresent={false} // Don't auto-present, we'll control it with the button
+      onClose={() => console.log('Sheet closed')}
+      onAuthenticated={handleAuthenticated}
+      onAuthStateChange={(user) => console.log('Auth state changed:', user?.username || 'logged out')}
+      storageKeyPrefix="oxy_example" // Prefix for stored auth tokens
+      theme="light"
+    >
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        <Provider store={store}>
+          <QueryClientProvider client={queryClient}>
+            <I18nextProvider i18n={i18n}>
+              <MenuProvider>
+                <ErrorBoundary>
+                  <BottomSheetModalProvider>
+                    <BottomSheetProvider>
+                      <View style={styles.container}>
+                        <SideBar />
+                        <View style={styles.mainContentWrapper}>
+                          <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0, }} />
+                          <Slot />
                         </View>
-                        <StatusBar style="auto" />
-                        <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
-                        {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
-                      </BottomSheetProvider>
-                    </BottomSheetModalProvider>
-                  </ErrorBoundary>
-                </MenuProvider>
-              </I18nextProvider>
-            </QueryClientProvider>
-          </Provider>
-        </OxyProvider>
-      </GestureHandlerRootView>
-    </SafeAreaProvider>
+                        <RightBar />
+                      </View>
+                      <StatusBar style="auto" />
+                      <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
+                      {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
+                    </BottomSheetProvider>
+                  </BottomSheetModalProvider>
+                </ErrorBoundary>
+              </MenuProvider>
+            </I18nextProvider>
+          </QueryClientProvider>
+        </Provider>
+      </SafeAreaProvider>
+    </OxyProvider >
   );
 }

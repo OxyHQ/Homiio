@@ -14,6 +14,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/colors';
 
+// Type assertion for Ionicons compatibility with React 19
+const IconComponent = Ionicons as any;
+
 export default function SearchScreen() {
     const { t } = useTranslation();
     const router = useRouter();
@@ -38,10 +41,10 @@ export default function SearchScreen() {
 
     // Property types
     const propertyTypes = [
-        { id: 'apartment', label: t('Apartments'), icon: 'business-outline', count: 128 },
-        { id: 'house', label: t('Houses'), icon: 'home-outline', count: 94 },
-        { id: 'room', label: t('Rooms'), icon: 'bed-outline', count: 75 },
-        { id: 'studio', label: t('Studios'), icon: 'square-outline', count: 103 },
+        { id: 'apartment', label: t('search.types.apartments'), icon: 'business-outline', count: 128 },
+        { id: 'house', label: t('search.types.houses'), icon: 'home-outline', count: 94 },
+        { id: 'room', label: t('search.types.rooms'), icon: 'bed-outline', count: 75 },
+        { id: 'studio', label: t('search.types.studios'), icon: 'square-outline', count: 103 },
     ];
 
     // Cities
@@ -80,16 +83,16 @@ export default function SearchScreen() {
         <SafeAreaView style={styles.container} edges={['top']}>
             {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>{t('Search')}</Text>
+                <Text style={styles.headerTitle}>{t('search.title')}</Text>
             </View>
 
             {/* Search Bar */}
             <View style={styles.searchContainer}>
                 <View style={styles.searchBar}>
-                    <Ionicons name="search" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
+                    <IconComponent name="search" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder={t("Search by location, property type...")}
+                        placeholder={t("search.searchPlaceholder")}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
                         onSubmitEditing={handleSearch}
@@ -98,7 +101,7 @@ export default function SearchScreen() {
                     />
                     {searchQuery.length > 0 && (
                         <TouchableOpacity onPress={clearSearch}>
-                            <Ionicons name="close-circle" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
+                            <IconComponent name="close-circle" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
                         </TouchableOpacity>
                     )}
                 </View>
@@ -107,7 +110,7 @@ export default function SearchScreen() {
                     onPress={handleSearch}
                     disabled={!searchQuery.trim()}
                 >
-                    <Text style={styles.searchButtonText}>{t('Search')}</Text>
+                    <Text style={styles.searchButtonText}>{t('search.searchButton')}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -115,7 +118,7 @@ export default function SearchScreen() {
                 {/* Recent Searches */}
                 {recentSearches.length > 0 && (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>{t('Recent Searches')}</Text>
+                        <Text style={styles.sectionTitle}>{t('search.recentSearches')}</Text>
                         <View style={styles.searchTags}>
                             {recentSearches.map((search, index) => (
                                 <TouchableOpacity
@@ -123,7 +126,7 @@ export default function SearchScreen() {
                                     style={styles.searchTag}
                                     onPress={() => handleSearchPress(search)}
                                 >
-                                    <Ionicons name="time-outline" size={16} color={colors.primaryColor} />
+                                    <IconComponent name="time-outline" size={16} color={colors.primaryColor} />
                                     <Text style={styles.searchTagText}>{search}</Text>
                                 </TouchableOpacity>
                             ))}
@@ -133,7 +136,7 @@ export default function SearchScreen() {
 
                 {/* Popular Searches */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>{t('Popular Searches')}</Text>
+                    <Text style={styles.sectionTitle}>{t('search.popularSearches')}</Text>
                     <View style={styles.searchTags}>
                         {popularSearches.map((search, index) => (
                             <TouchableOpacity
@@ -141,7 +144,7 @@ export default function SearchScreen() {
                                 style={styles.searchTag}
                                 onPress={() => handleSearchPress(search)}
                             >
-                                <Ionicons name="trending-up-outline" size={16} color={colors.primaryColor} />
+                                <IconComponent name="trending-up-outline" size={16} color={colors.primaryColor} />
                                 <Text style={styles.searchTagText}>{search}</Text>
                             </TouchableOpacity>
                         ))}
@@ -150,7 +153,7 @@ export default function SearchScreen() {
 
                 {/* Property Types */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>{t('Property Types')}</Text>
+                    <Text style={styles.sectionTitle}>{t('search.propertyTypes')}</Text>
                     <View style={styles.propertyTypesGrid}>
                         {propertyTypes.map((type) => (
                             <TouchableOpacity
@@ -159,10 +162,10 @@ export default function SearchScreen() {
                                 onPress={() => handlePropertyTypePress(type.label.toLowerCase())}
                             >
                                 <View style={styles.propertyTypeIcon}>
-                                    <Ionicons name={type.icon as any} size={24} color={colors.primaryColor} />
+                                    <IconComponent name={type.icon as any} size={24} color={colors.primaryColor} />
                                 </View>
                                 <Text style={styles.propertyTypeLabel}>{type.label}</Text>
-                                <Text style={styles.propertyTypeCount}>{type.count} {t('properties')}</Text>
+                                <Text style={styles.propertyTypeCount}>{type.count} {t('search.properties')}</Text>
                             </TouchableOpacity>
                         ))}
                     </View>
@@ -170,7 +173,7 @@ export default function SearchScreen() {
 
                 {/* Popular Cities */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>{t('Popular Cities')}</Text>
+                    <Text style={styles.sectionTitle}>{t('search.popularCities')}</Text>
                     <View style={styles.citiesList}>
                         {popularCities.map((city) => (
                             <TouchableOpacity
@@ -180,9 +183,9 @@ export default function SearchScreen() {
                             >
                                 <View style={styles.cityInfo}>
                                     <Text style={styles.cityName}>{city.name}</Text>
-                                    <Text style={styles.cityCount}>{city.count} {t('properties')}</Text>
+                                    <Text style={styles.cityCount}>{city.count} {t('search.properties')}</Text>
                                 </View>
-                                <Ionicons name="chevron-forward" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
+                                <IconComponent name="chevron-forward" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
                             </TouchableOpacity>
                         ))}
                     </View>

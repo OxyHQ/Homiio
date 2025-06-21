@@ -9,6 +9,9 @@ import { useDocumentTitle, useSEO } from '@/hooks/useDocumentTitle';
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { Toaster } from '@/lib/sonner';
 
+// Type assertion for Ionicons compatibility with React 19
+const IconComponent = Ionicons as any;
+
 export default function HomePage() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -48,24 +51,24 @@ export default function HomePage() {
         {/* Hero Section */}
         <View style={styles.heroSection}>
           <View style={styles.heroContent}>
-            <Text style={styles.heroTitle}>{t("Find your ethical home")}</Text>
+            <Text style={styles.heroTitle}>{t("home.hero.title")}</Text>
             <Text style={styles.heroSubtitle}>
-              {t("Transparent rentals with fair agreements and verified properties")}
+              {t("home.hero.subtitle")}
             </Text>
 
             <View style={styles.searchContainer}>
               <View style={styles.searchBar}>
-                <Ionicons name="search" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
+                <IconComponent name="search" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
                 <TextInput
                   style={styles.searchInput}
-                  placeholder={t("Where do you want to live?")}
+                  placeholder={t("home.hero.searchPlaceholder")}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
                   onSubmitEditing={handleSearch}
                 />
               </View>
               <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-                <Text style={styles.searchButtonText}>{t("Search")}</Text>
+                <Text style={styles.searchButtonText}>{t("home.hero.searchButton")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -73,35 +76,35 @@ export default function HomePage() {
 
         {/* Trust Features */}
         <View style={styles.trustSection}>
-          <Text style={styles.sectionTitle}>{t("Housing You Can Trust")}</Text>
+          <Text style={styles.sectionTitle}>{t("home.trust.title")}</Text>
           <View style={styles.trustFeatures}>
             <View style={styles.trustFeature}>
               <View style={styles.featureIconCircle}>
-                <Ionicons name="shield-checkmark" size={24} color={colors.primaryColor} />
+                <IconComponent name="shield-checkmark" size={24} color={colors.primaryColor} />
               </View>
-              <Text style={styles.featureTitle}>{t("Verified Listings")}</Text>
+              <Text style={styles.featureTitle}>{t("home.trust.verifiedListings.title")}</Text>
               <Text style={styles.featureDescription}>
-                {t("All properties verified for authenticity and condition")}
+                {t("home.trust.verifiedListings.description")}
               </Text>
             </View>
 
             <View style={styles.trustFeature}>
               <View style={styles.featureIconCircle}>
-                <Ionicons name="document-text" size={24} color={colors.primaryColor} />
+                <IconComponent name="document-text" size={24} color={colors.primaryColor} />
               </View>
-              <Text style={styles.featureTitle}>{t("Fair Agreements")}</Text>
+              <Text style={styles.featureTitle}>{t("home.trust.fairAgreements.title")}</Text>
               <Text style={styles.featureDescription}>
-                {t("Transparent contracts with no hidden terms")}
+                {t("home.trust.fairAgreements.description")}
               </Text>
             </View>
 
             <View style={styles.trustFeature}>
               <View style={styles.featureIconCircle}>
-                <Ionicons name="star" size={24} color={colors.primaryColor} />
+                <IconComponent name="star" size={24} color={colors.primaryColor} />
               </View>
-              <Text style={styles.featureTitle}>{t("Trust Score")}</Text>
+              <Text style={styles.featureTitle}>{t("home.trust.trustScore.title")}</Text>
               <Text style={styles.featureDescription}>
-                {t("Reputation system for both tenants and landlords")}
+                {t("home.trust.trustScore.description")}
               </Text>
             </View>
           </View>
@@ -109,7 +112,7 @@ export default function HomePage() {
 
         {/* Featured Cities */}
         <View style={styles.citiesSection}>
-          <Text style={styles.sectionTitle}>{t("Featured Cities")}</Text>
+          <Text style={styles.sectionTitle}>{t("home.cities.title")}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
             {featuredCities.map((city) => (
               <TouchableOpacity
@@ -120,7 +123,7 @@ export default function HomePage() {
                 <View style={styles.cityImagePlaceholder}>
                   <Text style={styles.cityName}>{city.name}</Text>
                 </View>
-                <Text style={styles.cityCount}>{city.count} {t("properties")}</Text>
+                <Text style={styles.cityCount}>{city.count} {t("home.cities.properties")}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -128,7 +131,7 @@ export default function HomePage() {
 
         {/* Property Types */}
         <View style={styles.typesSection}>
-          <Text style={styles.sectionTitle}>{t("Browse by Category")}</Text>
+          <Text style={styles.sectionTitle}>{t("home.categories.title")}</Text>
           <View style={styles.categoryContainer}>
             {propertyTypes.map((type) => (
               <TouchableOpacity
@@ -137,11 +140,11 @@ export default function HomePage() {
                 onPress={() => router.push(`/properties/type/${type.id}`)}
               >
                 <View style={styles.categoryIconWrap}>
-                  <Ionicons name={type.icon as keyof typeof Ionicons.glyphMap} size={32} color={colors.primaryColor} />
+                  <IconComponent name={type.icon as keyof typeof IconComponent.glyphMap} size={32} color={colors.primaryColor} />
                 </View>
                 <Text style={styles.categoryName}>{type.name}</Text>
                 <View style={styles.categoryBadge}>
-                  <Text style={styles.categoryBadgeText}>{t("View")}</Text>
+                  <Text style={styles.categoryBadgeText}>{t("home.categories.view")}</Text>
                 </View>
               </TouchableOpacity>
             ))}
@@ -151,32 +154,32 @@ export default function HomePage() {
         {/* Horizon Initiative */}
         <View style={styles.horizonSection}>
           <View style={styles.horizonContent}>
-            <Text style={styles.horizonTitle}>{t("Join Horizon")}</Text>
+            <Text style={styles.horizonTitle}>{t("home.horizon.title")}</Text>
             <Text style={styles.horizonDescription}>
-              {t("Horizon is a global initiative offering fair housing, healthcare, and travel support. Now integrated with Homiio.")}
+              {t("home.horizon.description")}
             </Text>
             <TouchableOpacity style={styles.horizonButton} onPress={() => router.push('/horizon')}>
-              <Text style={styles.horizonButtonText}>{t("Learn More")}</Text>
-              <Ionicons name="arrow-forward" size={16} color="#333" style={{ marginLeft: 5 }} />
+              <Text style={styles.horizonButtonText}>{t("home.horizon.learnMore")}</Text>
+              <IconComponent name="arrow-forward" size={16} color="#333" style={{ marginLeft: 5 }} />
             </TouchableOpacity>
           </View>
           <View style={styles.horizonImagePlaceholder}>
-            <Ionicons name="globe-outline" size={50} color="#FFD700" />
+            <IconComponent name="globe-outline" size={50} color="#FFD700" />
           </View>
         </View>
 
         {/* Eco Certification */}
         <View style={styles.ecoSection}>
           <View style={styles.ecoIcon}>
-            <Ionicons name="leaf" size={40} color="green" />
+            <IconComponent name="leaf" size={40} color="green" />
           </View>
           <View style={styles.ecoContent}>
-            <Text style={styles.ecoTitle}>{t("Eco-Certified Properties")}</Text>
+            <Text style={styles.ecoTitle}>{t("home.eco.title")}</Text>
             <Text style={styles.ecoDescription}>
-              {t("Find sustainable properties that meet our energy efficiency and eco-friendly standards")}
+              {t("home.eco.description")}
             </Text>
             <TouchableOpacity style={styles.ecoButton} onPress={() => router.push('/properties/eco')}>
-              <Text style={styles.ecoButtonText}>{t("View Eco Properties")}</Text>
+              <Text style={styles.ecoButtonText}>{t("home.eco.viewEcoProperties")}</Text>
             </TouchableOpacity>
           </View>
         </View>

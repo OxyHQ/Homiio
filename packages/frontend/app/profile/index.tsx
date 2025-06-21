@@ -12,10 +12,10 @@ export default function ProfileScreen() {
     const router = useRouter();
 
     const profileSections = [
-        { id: '1', title: 'My Properties', icon: 'home-outline' as const, route: '/properties/my' },
-        { id: '2', title: 'Saved Properties', icon: 'bookmark-outline' as const, route: '/properties/saved' },
-        { id: '3', title: 'My Contracts', icon: 'document-text-outline' as const, route: '/contracts' },
-        { id: '4', title: 'Trust Score', icon: 'shield-checkmark-outline' as const, route: '/profile/trust-score' },
+        { id: '1', title: 'profile.myProperties', icon: 'home-outline' as const, route: '/properties/my' },
+        { id: '2', title: 'profile.savedProperties', icon: 'bookmark-outline' as const, route: '/properties/saved' },
+        { id: '3', title: 'profile.myContracts', icon: 'document-text-outline' as const, route: '/contracts' },
+        { id: '4', title: 'profile.trustScore', icon: 'shield-checkmark-outline' as const, route: '/profile/trust-score' },
     ];
 
     return (
@@ -41,7 +41,7 @@ export default function ProfileScreen() {
                     <Text style={styles.name}>John Doe</Text>
                     <Text style={styles.email}>john.doe@example.com</Text>
                     <TouchableOpacity style={styles.editProfileButton}>
-                        <Text style={styles.editProfileText}>{t("Edit Profile")}</Text>
+                        <Text style={styles.editProfileText}>{t("profile.editProfile")}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -65,7 +65,7 @@ export default function ProfileScreen() {
                         color={colors.chatUnreadBadge}
                         backgroundColor="transparent"
                     />
-                    <Text style={styles.logoutText}>{t("Log Out")}</Text>
+                    <Text style={styles.logoutText}>{t("profile.logOut")}</Text>
                 </TouchableOpacity>
             </ScrollView>
         </SafeAreaView>
