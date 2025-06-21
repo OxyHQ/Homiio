@@ -100,10 +100,52 @@ class ProfileController {
             console.log(`  - Profile ID: ${p._id}, Type: ${p.profileType}, Primary: ${p.isPrimary}, Active: ${p.isActive}`);
           });
           
-          // Return success with null data instead of 404 error
-          return res.json(
-            successResponse(null, "No primary profile found")
-          );
+          // Check if there's a personal profile (even if not primary)
+          const personalProfile = await Profile.findOne({ oxyUserId, profileType: "personal" });
+          if (personalProfile) {
+            console.log('🔍 Found personal profile, making it primary');
+            personalProfile.isPrimary = true;
+            personalProfile.isActive = true;
+            await personalProfile.save();
+            profile = personalProfile;
+          } else {
+            console.log('🔍 No personal profile found, creating one by default');
+            // Create a default personal profile
+            const defaultPersonalProfile = new Profile({
+              oxyUserId,
+              profileType: "personal",
+              isPrimary: true,
+              isActive: true,
+              personalProfile: {
+                personalInfo: {
+                  bio: "",
+                  occupation: "",
+                  employer: "",
+                  annualIncome: null,
+                  employmentStatus: "employed",
+                  moveInDate: null,
+                  leaseDuration: "yearly",
+                },
+                preferences: {},
+                references: [],
+                rentalHistory: [],
+                verification: {},
+                trustScore: { score: 50, factors: [] },
+                settings: {
+                  notifications: { email: true, push: true, sms: false },
+                  privacy: { profileVisibility: "public", showContactInfo: true, showIncome: false },
+                  language: "en",
+                  timezone: "UTC"
+                }
+              }
+            });
+            
+            // Calculate initial trust score
+            defaultPersonalProfile.calculateTrustScore();
+            await defaultPersonalProfile.save();
+            profile = defaultPersonalProfile;
+            console.log('🔍 Default personal profile created');
+          }
         } else {
           console.log('🔍 Primary profile found:', {
             id: profile._id,
@@ -237,6 +279,19 @@ class ProfileController {
         return res.status(409).json(
           errorResponse("Profile of this type already exists", "PROFILE_ALREADY_EXISTS")
         );
+      }
+
+      // Special handling for personal profiles - only one allowed per user
+      if (profileType === "personal") {
+        const existingPersonalProfile = await Profile.findOne({ 
+          oxyUserId, 
+          profileType: "personal" 
+        });
+        if (existingPersonalProfile) {
+          return res.status(409).json(
+            errorResponse("Personal profile already exists for this user. Only one personal profile is allowed per user.", "PERSONAL_PROFILE_ALREADY_EXISTS")
+          );
+        }
       }
 
       // Check if this is the user's first profile (no primary profile exists)
@@ -433,6 +488,13 @@ class ProfileController {
       if (profile.isPrimary) {
         return res.status(400).json(
           errorResponse("Cannot delete primary profile", "CANNOT_DELETE_PRIMARY")
+        );
+      }
+
+      // Prevent deletion of personal profiles as they are linked to the Oxy account
+      if (profile.profileType === "personal") {
+        return res.status(400).json(
+          errorResponse("Cannot delete personal profile as it is linked to your Oxy account", "CANNOT_DELETE_PERSONAL")
         );
       }
 

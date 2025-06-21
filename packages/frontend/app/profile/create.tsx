@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 // Type assertion for Ionicons compatibility with React 19
 const IconComponent = Ionicons as any;
 
-type ProfileType = 'roommate' | 'agency' | 'business' | 'personal';
+type ProfileType = 'agency' | 'business';
 
 export default function ProfileCreateScreen() {
     const { t } = useTranslation();
@@ -33,18 +33,6 @@ export default function ProfileCreateScreen() {
     });
 
     const profileTypes = [
-        {
-            type: 'personal' as ProfileType,
-            title: 'Personal Profile',
-            description: 'For individual users looking for properties',
-            icon: 'person-outline',
-        },
-        {
-            type: 'roommate' as ProfileType,
-            title: 'Roommate Profile',
-            description: 'For finding roommates and shared housing',
-            icon: 'people-outline',
-        },
         {
             type: 'agency' as ProfileType,
             title: 'Agency Profile',
@@ -73,24 +61,7 @@ export default function ProfileCreateScreen() {
             };
 
             // Add type-specific data
-            if (selectedType === 'personal') {
-                profileData.data = {
-                    preferences: {
-                        propertyTypes: ['apartment', 'house'],
-                        maxRent: 2000,
-                        minBedrooms: 1,
-                        minBathrooms: 1,
-                        petFriendly: true,
-                        smokingAllowed: false
-                    },
-                    settings: {
-                        notifications: { email: true, push: true, sms: false },
-                        privacy: { profileVisibility: 'public', showContactInfo: true, showIncome: false },
-                        language: 'en',
-                        timezone: 'UTC'
-                    }
-                };
-            } else if (selectedType === 'agency') {
+            if (selectedType === 'agency') {
                 profileData.data = {
                     businessType: formData.businessType,
                     description: formData.description,
@@ -162,7 +133,7 @@ export default function ProfileCreateScreen() {
             <ScrollView style={styles.content}>
                 {/* Profile Type Selection */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Choose Profile Type</Text>
+                    <Text style={styles.sectionTitle}>Choose Business Profile Type</Text>
 
                     {profileTypes.map((profileType, index) => (
                         <TouchableOpacity

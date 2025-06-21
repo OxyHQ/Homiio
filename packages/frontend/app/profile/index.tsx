@@ -26,12 +26,8 @@ const IconComponent = Ionicons as any;
 const getProfileDisplayName = (profile: Profile): string => {
     switch (profile.profileType) {
         case 'personal':
-            // Use different names for personal profiles to differentiate them
-            if (profile.isPrimary) {
-                return 'Primary Personal Profile';
-            } else {
-                return 'Secondary Personal Profile';
-            }
+            // Personal profiles are unique and linked to the Oxy account
+            return 'Personal Profile';
         case 'roommate':
             return 'Roommate Profile';
         case 'agency':
@@ -367,7 +363,7 @@ export default function ProfileScreen() {
                             <View style={styles.settingTextContainer}>
                                 <Text style={styles.settingLabel}>Profile Management</Text>
                                 <Text style={styles.settingDescription}>
-                                    Personal profiles are linked to your main Oxy account and cannot be deleted. Business profiles can be managed independently. Inactive profiles are shown and can be reactivated.
+                                    Personal profiles are unique and linked to your Oxy account. You can have multiple business or agency profiles. Inactive profiles are shown and can be reactivated.
                                 </Text>
                             </View>
                         </View>
@@ -407,7 +403,7 @@ export default function ProfileScreen() {
                                             <Text style={styles.settingDescription}>
                                                 Personal Profile
                                                 {getProfileDescription(profile) && ` • ${getProfileDescription(profile)}`}
-                                                {' • Linked to Account'}
+                                                {' • Linked to Oxy Account'}
                                                 {!profile.isActive && ' • Inactive'}
                                             </Text>
                                         </View>
@@ -549,7 +545,7 @@ export default function ProfileScreen() {
                             <IconComponent name="add-circle" size={20} color="#666" style={styles.settingIcon} />
                             <View>
                                 <Text style={styles.settingLabel}>Create New Profile</Text>
-                                <Text style={styles.settingDescription}>Add a new business profile</Text>
+                                <Text style={styles.settingDescription}>Add a new business or agency profile</Text>
                             </View>
                         </View>
                         <IconComponent name="chevron-forward" size={16} color="#ccc" />
