@@ -17,6 +17,9 @@ import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { LogoIcon } from '@/assets/logo';
 
+// Type assertion for Ionicons compatibility with React 19
+const IconComponent = Ionicons as any;
+
 export default function SettingsScreen() {
     const { t } = useTranslation();
     const router = useRouter();
@@ -103,7 +106,7 @@ export default function SettingsScreen() {
                         onPress={() => showBottomSheet?.('AccountSettings')}
                     >
                         <View style={styles.userIcon}>
-                            <Ionicons name="person" size={24} color="#fff" as any />
+                            <IconComponent name="person" size={24} color="#fff" />
                         </View>
                         <View style={styles.settingInfo}>
                             <View>
@@ -111,7 +114,7 @@ export default function SettingsScreen() {
                                 <Text style={styles.settingDescription}>john.doe@example.com</Text>
                             </View>
                         </View>
-                        <Ionicons name="chevron-forward" size={16} color="#ccc" />
+                        <IconComponent name="chevron-forward" size={16} color="#ccc" />
                     </TouchableOpacity>
                 </View>
 
@@ -135,7 +138,7 @@ export default function SettingsScreen() {
                     {/* Build Info */}
                     <View style={styles.settingItem}>
                         <View style={styles.settingInfo}>
-                            <Ionicons name="hammer" size={20} color="#666" style={styles.settingIcon} />
+                            <IconComponent name="hammer" size={20} color="#666" style={styles.settingIcon} />
                             <View>
                                 <Text style={styles.settingLabel}>{t('settings.aboutHomiio.build')}</Text>
                                 <Text style={styles.settingDescription}>
@@ -150,7 +153,7 @@ export default function SettingsScreen() {
                     {/* Platform Info */}
                     <View style={styles.settingItem}>
                         <View style={styles.settingInfo}>
-                            <Ionicons name="phone-portrait" size={20} color="#666" style={styles.settingIcon} />
+                            <IconComponent name="phone-portrait" size={20} color="#666" style={styles.settingIcon} />
                             <View>
                                 <Text style={styles.settingLabel}>{t('settings.aboutHomiio.platform')}</Text>
                                 <Text style={styles.settingDescription}>
@@ -163,7 +166,7 @@ export default function SettingsScreen() {
                     {/* Oxy SDK */}
                     <TouchableOpacity style={styles.settingItem} onPress={() => showBottomSheet?.('AppInfo')}>
                         <View style={styles.settingInfo}>
-                            <Ionicons name="code-slash" size={20} color="#666" style={styles.settingIcon} />
+                            <IconComponent name="code-slash" size={20} color="#666" style={styles.settingIcon} />
                             <View>
                                 <Text style={styles.settingLabel}>{t('settings.aboutHomiio.oxySDK')}</Text>
                                 <Text style={styles.settingDescription}>{Constants.oxyVersion || 'Unknown'}</Text>
@@ -174,7 +177,7 @@ export default function SettingsScreen() {
                     {/* Expo SDK */}
                     <View style={[styles.settingItem, styles.lastSettingItem]}>
                         <View style={styles.settingInfo}>
-                            <Ionicons name="code-slash" size={20} color="#666" style={styles.settingIcon} />
+                            <IconComponent name="code-slash" size={20} color="#666" style={styles.settingIcon} />
                             <View>
                                 <Text style={styles.settingLabel}>{t('settings.aboutHomiio.expoSDK')}</Text>
                                 <Text style={styles.settingDescription}>{Constants.expoVersion || 'Unknown'}</Text>
@@ -198,13 +201,13 @@ export default function SettingsScreen() {
                         }}
                     >
                         <View style={styles.settingInfo}>
-                            <Ionicons name="help-circle" size={20} color="#666" style={styles.settingIcon} />
+                            <IconComponent name="help-circle" size={20} color="#666" style={styles.settingIcon} />
                             <View>
                                 <Text style={styles.settingLabel}>{t('settings.supportFeedback.helpSupport')}</Text>
                                 <Text style={styles.settingDescription}>{t('settings.supportFeedback.helpSupportDesc')}</Text>
                             </View>
                         </View>
-                        <Ionicons name="chevron-forward" size={16} color="#ccc" />
+                        <IconComponent name="chevron-forward" size={16} color="#ccc" />
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -226,13 +229,13 @@ export default function SettingsScreen() {
                         }}
                     >
                         <View style={styles.settingInfo}>
-                            <Ionicons name="chatbubble" size={20} color="#666" style={styles.settingIcon} />
+                            <IconComponent name="chatbubble" size={20} color="#666" style={styles.settingIcon} />
                             <View>
                                 <Text style={styles.settingLabel}>{t('settings.supportFeedback.sendFeedback')}</Text>
                                 <Text style={styles.settingDescription}>{t('settings.supportFeedback.sendFeedbackDesc')}</Text>
                             </View>
                         </View>
-                        <Ionicons name="chevron-forward" size={16} color="#ccc" />
+                        <IconComponent name="chevron-forward" size={16} color="#ccc" />
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -254,13 +257,13 @@ export default function SettingsScreen() {
                         }}
                     >
                         <View style={styles.settingInfo}>
-                            <Ionicons name="star" size={20} color="#666" style={styles.settingIcon} />
+                            <IconComponent name="star" size={20} color="#666" style={styles.settingIcon} />
                             <View>
                                 <Text style={styles.settingLabel}>{t('settings.supportFeedback.rateApp')}</Text>
                                 <Text style={styles.settingDescription}>{t('settings.supportFeedback.rateAppDesc')}</Text>
                             </View>
                         </View>
-                        <Ionicons name="chevron-forward" size={16} color="#ccc" />
+                        <IconComponent name="chevron-forward" size={16} color="#ccc" />
                     </TouchableOpacity>
                 </View>
 
@@ -270,7 +273,7 @@ export default function SettingsScreen() {
 
                     <View style={[styles.settingItem, styles.firstSettingItem]}>
                         <View style={styles.settingInfo}>
-                            <Ionicons name="notifications" size={20} color="#666" style={styles.settingIcon} />
+                            <IconComponent name="notifications" size={20} color="#666" style={styles.settingIcon} />
                             <View>
                                 <Text style={styles.settingLabel}>{t('settings.preferences.notifications')}</Text>
                                 <Text style={styles.settingDescription}>{t('settings.preferences.notificationsDesc')}</Text>
@@ -287,7 +290,7 @@ export default function SettingsScreen() {
 
                     <View style={styles.settingItem}>
                         <View style={styles.settingInfo}>
-                            <Ionicons name="moon" size={20} color="#666" style={styles.settingIcon} />
+                            <IconComponent name="moon" size={20} color="#666" style={styles.settingIcon} />
                             <View>
                                 <Text style={styles.settingLabel}>{t('settings.preferences.darkMode')}</Text>
                                 <Text style={styles.settingDescription}>{t('settings.preferences.darkModeDesc')}</Text>
@@ -304,7 +307,7 @@ export default function SettingsScreen() {
 
                     <View style={styles.settingItem}>
                         <View style={styles.settingInfo}>
-                            <Ionicons name="sync" size={20} color="#666" style={styles.settingIcon} />
+                            <IconComponent name="sync" size={20} color="#666" style={styles.settingIcon} />
                             <View>
                                 <Text style={styles.settingLabel}>{t('settings.preferences.autoSync')}</Text>
                                 <Text style={styles.settingDescription}>{t('settings.preferences.autoSyncDesc')}</Text>
@@ -321,7 +324,7 @@ export default function SettingsScreen() {
 
                     <View style={[styles.settingItem, styles.lastSettingItem]}>
                         <View style={styles.settingInfo}>
-                            <Ionicons name="cloud-offline" size={20} color="#666" style={styles.settingIcon} />
+                            <IconComponent name="cloud-offline" size={20} color="#666" style={styles.settingIcon} />
                             <View>
                                 <Text style={styles.settingLabel}>{t('settings.preferences.offlineMode')}</Text>
                                 <Text style={styles.settingDescription}>{t('settings.preferences.offlineModeDesc')}</Text>
@@ -346,13 +349,13 @@ export default function SettingsScreen() {
                         onPress={() => router.push('/properties/create')}
                     >
                         <View style={styles.settingInfo}>
-                            <Ionicons name="add" size={20} color="#666" style={styles.settingIcon} />
+                            <IconComponent name="add" size={20} color="#666" style={styles.settingIcon} />
                             <View>
                                 <Text style={styles.settingLabel}>{t('settings.quickActions.createProperty')}</Text>
                                 <Text style={styles.settingDescription}>{t('settings.quickActions.createPropertyDesc')}</Text>
                             </View>
                         </View>
-                        <Ionicons name="chevron-forward" size={16} color="#ccc" />
+                        <IconComponent name="chevron-forward" size={16} color="#ccc" />
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -360,13 +363,13 @@ export default function SettingsScreen() {
                         onPress={() => router.push('/search')}
                     >
                         <View style={styles.settingInfo}>
-                            <Ionicons name="search" size={20} color="#666" style={styles.settingIcon} />
+                            <IconComponent name="search" size={20} color="#666" style={styles.settingIcon} />
                             <View>
                                 <Text style={styles.settingLabel}>{t('settings.quickActions.searchProperties')}</Text>
                                 <Text style={styles.settingDescription}>{t('settings.quickActions.searchPropertiesDesc')}</Text>
                             </View>
                         </View>
-                        <Ionicons name="chevron-forward" size={16} color="#ccc" />
+                        <IconComponent name="chevron-forward" size={16} color="#ccc" />
                     </TouchableOpacity>
                 </View>
 
@@ -379,13 +382,13 @@ export default function SettingsScreen() {
                         onPress={handleExportData}
                     >
                         <View style={styles.settingInfo}>
-                            <Ionicons name="download" size={20} color="#666" style={styles.settingIcon} />
+                            <IconComponent name="download" size={20} color="#666" style={styles.settingIcon} />
                             <View>
                                 <Text style={styles.settingLabel}>{t('settings.data.exportData')}</Text>
                                 <Text style={styles.settingDescription}>{t('settings.data.exportDataDesc')}</Text>
                             </View>
                         </View>
-                        <Ionicons name="chevron-forward" size={16} color="#ccc" />
+                        <IconComponent name="chevron-forward" size={16} color="#ccc" />
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -393,13 +396,13 @@ export default function SettingsScreen() {
                         onPress={handleClearCache}
                     >
                         <View style={styles.settingInfo}>
-                            <Ionicons name="trash" size={20} color="#ff4757" style={styles.settingIcon} />
+                            <IconComponent name="trash" size={20} color="#ff4757" style={styles.settingIcon} />
                             <View>
                                 <Text style={[styles.settingLabel, { color: '#ff4757' }]}>{t('settings.data.clearCache')}</Text>
                                 <Text style={styles.settingDescription}>{t('settings.data.clearCacheDesc')}</Text>
                             </View>
                         </View>
-                        <Ionicons name="chevron-forward" size={16} color="#ccc" />
+                        <IconComponent name="chevron-forward" size={16} color="#ccc" />
                     </TouchableOpacity>
                 </View>
 
@@ -410,7 +413,7 @@ export default function SettingsScreen() {
                         onPress={handleSignOut}
                     >
                         <View style={styles.settingInfo}>
-                            <Ionicons name="log-out" size={20} color="#ff4757" style={styles.settingIcon} />
+                            <IconComponent name="log-out" size={20} color="#ff4757" style={styles.settingIcon} />
                             <View>
                                 <Text style={[styles.settingLabel, { color: '#ff4757' }]}>{t('settings.signOut')}</Text>
                                 <Text style={styles.settingDescription}>{t('settings.signOutDesc')}</Text>

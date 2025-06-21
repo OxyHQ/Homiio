@@ -984,9 +984,10 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
   },
   loadingText: {
     opacity: 0.8,

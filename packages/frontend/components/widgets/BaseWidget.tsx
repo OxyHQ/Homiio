@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { colors } from '@/styles/colors';
 
 type BaseWidgetProps = {
-    title: string;
+    title?: string;
     icon?: ReactNode;
     children: ReactNode;
 };
@@ -11,10 +11,12 @@ type BaseWidgetProps = {
 export function BaseWidget({ title, icon, children }: BaseWidgetProps) {
     return (
         <View style={styles.widgetContainer}>
-            <View style={styles.widgetHeader}>
-                <Text style={styles.widgetTitle}>{title}</Text>
-                {icon && <View>{icon}</View>}
-            </View>
+            {title && (
+                <View style={styles.widgetHeader}>
+                    <Text style={styles.widgetTitle}>{title}</Text>
+                    {icon && <View>{icon}</View>}
+                </View>
+            )}
             <View>{children}</View>
         </View>
     );

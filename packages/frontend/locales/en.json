@@ -98,5 +98,77 @@
     "state.please_wait": "Please wait...",
     "file.size_mb": "MB",
     "profile.edit": "Edit profile",
-    "profile.chat": "Chat"
+    "profile.chat": "Chat",
+    "settings": {
+        "title": "Settings",
+        "signOut": "Sign Out",
+        "signOutMessage": "Are you sure you want to sign out?",
+        "signOutDesc": "Sign out of your account",
+        "sections": {
+            "account": "Account",
+            "aboutHomiio": "About Homiio",
+            "supportFeedback": "Support & Feedback",
+            "preferences": "App Preferences",
+            "quickActions": "Quick Actions",
+            "data": "Data Management"
+        },
+        "aboutHomiio": {
+            "appName": "Homiio",
+            "version": "Version {{version}}",
+            "build": "Build",
+            "buildVersion": "Development Build",
+            "platform": "Platform",
+            "oxySDK": "Oxy SDK",
+            "expoSDK": "Expo SDK"
+        },
+        "supportFeedback": {
+            "helpSupport": "Help & Support",
+            "helpSupportDesc": "Get help and contact support",
+            "helpSupportMessage": "Contact our support team for assistance with any issues you may be experiencing.",
+            "sendFeedback": "Send Feedback",
+            "sendFeedbackDesc": "Share your thoughts with us",
+            "sendFeedbackMessage": "We'd love to hear your feedback! Share your thoughts to help us improve Homiio.",
+            "sendFeedbackThankYou": "Thank you for your feedback! We appreciate your input.",
+            "rateApp": "Rate App",
+            "rateAppDesc": "Rate Homiio on the app store",
+            "rateAppMessage": "Enjoying Homiio? Please take a moment to rate us on the app store!",
+            "rateAppThankYou": "Thank you for rating Homiio!"
+        },
+        "preferences": {
+            "notifications": "Notifications",
+            "notificationsDesc": "Manage push notifications",
+            "darkMode": "Dark Mode",
+            "darkModeDesc": "Switch between light and dark themes",
+            "autoSync": "Auto Sync",
+            "autoSyncDesc": "Automatically sync data in the background",
+            "offlineMode": "Offline Mode",
+            "offlineModeDesc": "Use app without internet connection"
+        },
+        "quickActions": {
+            "createProperty": "Create Property",
+            "createPropertyDesc": "Add a new property listing",
+            "searchProperties": "Search Properties",
+            "searchPropertiesDesc": "Find properties in your area"
+        },
+        "data": {
+            "exportData": "Export Data",
+            "exportDataDesc": "Download your data as a file",
+            "exportDataMessage": "This will export all your data including properties, preferences, and settings.",
+            "exportDataSuccess": "Your data has been exported successfully!",
+            "clearCache": "Clear Cache",
+            "clearCacheDesc": "Free up storage space",
+            "clearCacheMessage": "This will clear all cached data. The app may take longer to load next time.",
+            "clearCacheSuccess": "Cache cleared successfully!"
+        }
+    },
+    "common": {
+        "cancel": "Cancel",
+        "ok": "OK",
+        "clear": "Clear",
+        "export": "Export",
+        "sendFeedback": "Send Feedback",
+        "maybeLater": "Maybe Later",
+        "rateNow": "Rate Now",
+        "success": "Success"
+    }
 }

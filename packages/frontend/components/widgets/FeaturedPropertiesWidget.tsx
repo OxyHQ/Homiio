@@ -5,17 +5,18 @@ import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
 import { useProperties } from '@/hooks/usePropertyQueries';
+import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 
 export function FeaturedPropertiesWidget() {
     const { t } = useTranslation();
-    const { data, isLoading, error } = useProperties({ 
+    const { data, isLoading, error } = useProperties({
         limit: 3,
         available: true
     });
 
     if (error) {
         return (
-            <BaseWidget title={t("Featured Properties")}>
+            <BaseWidget>
                 <View style={styles.errorContainer}>
                     <Text style={styles.errorText}>
                         {error?.message || 'Failed to load properties'}
@@ -26,7 +27,7 @@ export function FeaturedPropertiesWidget() {
     }
 
     return (
-        <BaseWidget title={t("Featured Properties")}>
+        <BaseWidget>
             <View>
                 {isLoading ? (
                     <View style={styles.loadingContainer}>
@@ -50,14 +51,23 @@ function FeaturedProperties({ properties }: { properties: any[] }) {
     // Map API data to display format
     const propertyItems = properties.map(property => {
         console.log('Mapping property:', property); // Debug each property
+
+        // Generate title dynamically from property data
+        const generatedTitle = generatePropertyTitle({
+            type: property.type,
+            address: property.address,
+            bedrooms: property.bedrooms,
+            bathrooms: property.bathrooms
+        });
+
         return {
             id: property._id || property.id, // Use _id from MongoDB or fallback to id
-            title: property.title || 'Untitled Property',
+            title: generatedTitle,
             location: `${property.address?.city || 'Unknown'}, ${property.address?.state || 'Unknown'}`,
             price: `$${property.rent?.amount || 0}/${property.rent?.paymentFrequency || 'month'}`,
-            isEcoCertified: property.amenities?.includes('eco-friendly') || 
-                           property.amenities?.includes('green') || 
-                           property.amenities?.includes('solar') || false,
+            isEcoCertified: property.amenities?.includes('eco-friendly') ||
+                property.amenities?.includes('green') ||
+                property.amenities?.includes('solar') || false,
             rating: 4.5 // Default rating since it's not in the API yet
         };
     });
@@ -81,7 +91,7 @@ function FeaturedProperties({ properties }: { properties: any[] }) {
                         </View>
                         <View style={styles.propertyContent}>
                             <View style={styles.propertyHeader}>
-                                <Text style={styles.propertyTitle} numberOfLines={1}>{property.title}</Text>
+                                <Text style={styles.propertyTitle} numberOfLines={2}>{property.title}</Text>
                                 {property.isEcoCertified && (
                                     <Text style={styles.ecoIcon}>🌿</Text>
                                 )}
