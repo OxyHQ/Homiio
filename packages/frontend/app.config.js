@@ -171,9 +171,6 @@ return {
                 origin: false
             }
         },
-        experiments: {
-            typedRoutes: true
-        },
         owner: "nateisern"
     }
 };
