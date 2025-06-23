@@ -61,7 +61,7 @@ export default function ProfileEditScreen() {
                 }
             }
         };
-        
+
         loadSavedTabState();
     }, [profileType]);
 
@@ -208,7 +208,7 @@ export default function ProfileEditScreen() {
         console.log('  - agencyProfile exists:', !!activeProfile?.agencyProfile);
         console.log('  - businessProfile exists:', !!activeProfile?.businessProfile);
         console.log('  - personalProfile data:', activeProfile?.personalProfile);
-        
+
         // Log a few specific fields to see structure
         if (activeProfile?.personalProfile) {
             console.log('  - personalProfile.personalInfo:', activeProfile.personalProfile.personalInfo);
@@ -305,9 +305,10 @@ export default function ProfileEditScreen() {
             // Initialize agency profile form whether or not agencyProfile exists
             const profile = activeProfile?.agencyProfile;
             console.log('ProfileEditScreen: Updating agency form state with profile data:', profile);
-
+            // Defensive: ensure all fields and nested fields are set with defaults if missing
             setAgencyInfo({
                 businessType: profile?.businessType || 'real_estate_agency',
+                legalCompanyName: profile?.legalCompanyName || '',
                 description: profile?.description || '',
                 businessDetails: {
                     licenseNumber: profile?.businessDetails?.licenseNumber || '',
@@ -322,18 +323,36 @@ export default function ProfileEditScreen() {
                     bonding: profile?.verification?.bonding || false,
                     backgroundCheck: profile?.verification?.backgroundCheck || false,
                 },
-                legalCompanyName: profile?.legalCompanyName || '',
             });
-
+            // Log all fields for debugging
+            console.log('AgencyInfo set to:', {
+                businessType: profile?.businessType || 'real_estate_agency',
+                legalCompanyName: profile?.legalCompanyName || '',
+                description: profile?.description || '',
+                businessDetails: {
+                    licenseNumber: profile?.businessDetails?.licenseNumber || '',
+                    taxId: profile?.businessDetails?.taxId || '',
+                    yearEstablished: profile?.businessDetails?.yearEstablished?.toString() || '',
+                    employeeCount: profile?.businessDetails?.employeeCount || '1-10',
+                    specialties: profile?.businessDetails?.specialties || [],
+                },
+                verification: {
+                    businessLicense: profile?.verification?.businessLicense || false,
+                    insurance: profile?.verification?.insurance || false,
+                    bonding: profile?.verification?.bonding || false,
+                    backgroundCheck: profile?.verification?.backgroundCheck || false,
+                },
+            });
             setHasUnsavedChanges(false);
             setIsFormInitialized(true);
         } else if (profileType === 'business') {
             // Initialize business profile form whether or not businessProfile exists
             const profile = activeProfile?.businessProfile;
             console.log('ProfileEditScreen: Updating business form state with profile data:', profile);
-
+            // Defensive: ensure all fields and nested fields are set with defaults if missing
             setBusinessInfo({
                 businessType: profile?.businessType || 'startup',
+                legalCompanyName: profile?.legalCompanyName || '',
                 description: profile?.description || '',
                 businessDetails: {
                     licenseNumber: profile?.businessDetails?.licenseNumber || '',
@@ -348,9 +367,26 @@ export default function ProfileEditScreen() {
                     insurance: profile?.verification?.insurance || false,
                     backgroundCheck: profile?.verification?.backgroundCheck || false,
                 },
-                legalCompanyName: profile?.legalCompanyName || '',
             });
-
+            // Log all fields for debugging
+            console.log('BusinessInfo set to:', {
+                businessType: profile?.businessType || 'startup',
+                legalCompanyName: profile?.legalCompanyName || '',
+                description: profile?.description || '',
+                businessDetails: {
+                    licenseNumber: profile?.businessDetails?.licenseNumber || '',
+                    taxId: profile?.businessDetails?.taxId || '',
+                    yearEstablished: profile?.businessDetails?.yearEstablished?.toString() || '',
+                    employeeCount: profile?.businessDetails?.employeeCount || '1-5',
+                    industry: profile?.businessDetails?.industry || '',
+                    specialties: profile?.businessDetails?.specialties || [],
+                },
+                verification: {
+                    businessLicense: profile?.verification?.businessLicense || false,
+                    insurance: profile?.verification?.insurance || false,
+                    backgroundCheck: profile?.verification?.backgroundCheck || false,
+                },
+            });
             setHasUnsavedChanges(false);
             setIsFormInitialized(true);
         } else {
@@ -1911,7 +1947,7 @@ export default function ProfileEditScreen() {
 
     // Show loading while profile is loading or form is not yet initialized
     const shouldShowLoading = profileLoading || (!isFormInitialized && activeProfile);
-    
+
     // Debug logging
     console.log('ProfileEditScreen render state:', {
         profileLoading,

@@ -167,12 +167,49 @@
         }
     },
     "profile": {
+        "title": "Profile",
         "editProfile": "Edit Profile",
         "myProperties": "My Properties",
         "savedProperties": "Saved Properties",
         "myContracts": "My Contracts",
         "trustScore": "Trust Score",
-        "logOut": "Log Out"
+        "logOut": "Log Out",
+        "loading": "Loading profile...",
+        "signInRequired": "Sign in required",
+        "signInMessage": "Please sign in to view your profile",
+        "createProfile": "Create Profile",
+        "deleteProfile": "Delete Profile",
+        "types": {
+            "personal": "Personal Profile",
+            "agency": "Agency Profile", 
+            "business": "Business Profile"
+        },
+        "sections": {
+            "overview": "Overview",
+            "properties": "My Properties",
+            "contracts": "My Contracts",
+            "trustScore": "Trust Score",
+            "settings": "Settings"
+        },
+        "stats": {
+            "propertiesCount": "Properties",
+            "contractsCount": "Contracts",
+            "trustScore": "Trust Score"
+        },
+        "actions": {
+            "manageProperties": "Manage Properties",
+            "viewContracts": "View Contracts",
+            "editProfile": "Edit Profile",
+            "shareProfile": "Share Profile",
+            "signOut": "Sign Out"
+        },
+        "noProfilesTitle": "No Profiles Found",
+        "noProfilesMessage": "You don't have any profiles yet. Create your first profile to get started!",
+        "errors": {
+            "loadFailed": "Failed to load profiles",
+            "updateFailed": "Failed to update profile",
+            "deleteFailed": "Failed to delete profile"
+        }
     },
     "notifications": {
         "title": "Notifications",
@@ -424,5 +461,175 @@
         "tryAgain": "Try again",
         "goBack": "Go back",
         "goHome": "Go home"
+    },
+    "sindi": {
+        "name": "Sindi",
+        "title": "Sindi",
+        "subtitle": "Housing Justice Advocate with Real-Time Info",
+        "status": {
+            "thinking": "Thinking...",
+            "online": "Online"
+        },
+        "auth": {
+            "required": "Authentication Required",
+            "message": "Please sign in to access Sindi, your AI-powered housing justice advocate"
+        },
+        "welcome": {
+            "title": "Welcome to Sindi",
+            "subtitle": "Your AI-powered housing justice advocate with real-time information access. I'm here to fight for your tenant rights, challenge unfair practices, and provide current legal updates. Together, we can build a more equitable housing system."
+        },
+        "actions": {
+            "title": "Fight for Your Rights",
+            "rentGouging": {
+                "title": "Rent Gouging Check",
+                "prompt": "My rent increased by [amount]%. Is this legal rent gouging? What can I do to fight unfair increases?"
+            },
+            "evictionDefense": {
+                "title": "Illegal Eviction Defense",
+                "prompt": "I received an eviction notice that seems illegal. Help me understand my rights and how to fight back."
+            },
+            "securityDeposit": {
+                "title": "Security Deposit Theft",
+                "prompt": "My landlord is keeping my security deposit without valid reasons. How do I recover my money?"
+            },
+            "unsafeLiving": {
+                "title": "Unsafe Living Conditions",
+                "prompt": "My apartment has serious safety issues. What are my rights and how do I force repairs?"
+            },
+            "discrimination": {
+                "title": "Discrimination Help",
+                "prompt": "I think I'm being discriminated against by my landlord. What are my rights and how do I report this?"
+            },
+            "retaliation": {
+                "title": "Retaliation Protection",
+                "prompt": "My landlord is retaliating because I complained. What protections do I have?"
+            },
+            "leaseReview": {
+                "title": "Lease Review",
+                "prompt": "Can you review my lease for unfair clauses and illegal terms I should challenge?"
+            },
+            "tenantOrganizing": {
+                "title": "Tenant Organizing",
+                "prompt": "How can I organize with other tenants to fight for better conditions and fair treatment?"
+            },
+            "currentLaws": {
+                "title": "Current Laws & Updates",
+                "prompt": "What are the current tenant rights laws and recent legal developments I should know about?"
+            },
+            "catalunya": {
+                "title": "Catalunya Tenant Rights",
+                "prompt": "I'm in Catalunya/Barcelona. What are my tenant rights and how can I connect with local tenant organizations like Sindicat de Llogateres?"
+            }
+        },
+        "housing": {
+            "title": "Find Ethical Housing",
+            "subtitle": "I can search for properties with advanced filters. Try these examples:",
+            "examples": {
+                "cheap": {
+                    "title": "Cheap Apartments",
+                    "prompt": "Find me cheap apartments under $1000 in Barcelona"
+                },
+                "petFriendly": {
+                    "title": "Pet-Friendly Homes",
+                    "prompt": "Show me pet-friendly apartments with parking under $1500"
+                },
+                "furnished": {
+                    "title": "Furnished Studios",
+                    "prompt": "I need furnished studios with wifi under $1200"
+                },
+                "family": {
+                    "title": "Family Homes",
+                    "prompt": "Find 3-bedroom houses with garden under $2000"
+                },
+                "luxury": {
+                    "title": "Luxury Properties",
+                    "prompt": "Show me luxury apartments with gym and pool over $3000"
+                },
+                "shared": {
+                    "title": "Shared Housing",
+                    "prompt": "Find shared rooms or coliving spaces under $800"
+                }
+            },
+            "naturalLanguage": "💡 I understand natural language! Try: \"cheap 2-bedroom apartments in Barcelona with parking\" or \"luxury studios with gym under $2000\""
+        },
+        "features": {
+            "title": "How I fight for housing justice:",
+            "rentIncreases": "• Challenge illegal rent increases and gouging",
+            "evictions": "• Defend against wrongful evictions",
+            "deposits": "• Fight security deposit theft and fraud",
+            "conditions": "• Demand safe, habitable living conditions",
+            "discrimination": "• Combat housing discrimination",
+            "retaliation": "• Protect against landlord retaliation",
+            "leases": "• Expose unfair lease clauses",
+            "organizing": "• Support tenant organizing and solidarity",
+            "updates": "• Provide current legal updates and recent developments",
+            "organizations": "• Connect you with local tenant organizations"
+        },
+        "chat": {
+            "placeholder": "Ask Sindi about your tenant rights...",
+            "you": "You",
+            "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support."
+        },
+        "errors": {
+            "connection": "Connection Error",
+            "connectionMessage": "Please check your connection and try again."
+        }
+    },
+    "sidebar": {
+        "navigation": {
+            "home": "Home",
+            "saved": "Saved",
+            "sindi": "Sindi",
+            "contracts": "Contracts",
+            "profile": "Profile",
+            "payments": "Payments",
+            "roommates": "Roommates",
+            "settings": "Settings"
+        },
+        "actions": {
+            "addProperty": "Add Property",
+            "signUp": "Sign Up",
+            "signIn": "Sign In"
+        },
+        "hero": {
+            "tagline": "Find your ethical home"
+        },
+        "footer": {
+            "brandName": "Homiio - Ethical Housing Platform"
+        }
+    },
+    "saved": {
+        "title": "Saved Properties",
+        "emptyTitle": "No Saved Properties",
+        "emptyDescription": "You haven't saved any properties yet. Start exploring and save properties you love!",
+        "startExploring": "Start Exploring",
+        "unsave": {
+            "title": "Unsave Property",
+            "message": "Are you sure you want to remove \"{{title}}\" from your saved properties?",
+            "confirm": "Unsave",
+            "cancel": "Cancel"
+        },
+        "notes": {
+            "title": "Property Notes",
+            "placeholder": "Add notes about this property...",
+            "save": "Save Notes",
+            "cancel": "Cancel"
+        },
+        "actions": {
+            "addNotes": "Add Notes",
+            "editNotes": "Edit Notes",
+            "unsave": "Unsave",
+            "viewProperty": "View Property"
+        },
+        "errors": {
+            "unsaveFailed": "Failed to unsave property",
+            "updateNotesFailed": "Failed to update notes",
+            "loadFailed": "Error loading saved properties"
+        },
+        "sorting": {
+            "newest": "Newest First",
+            "oldest": "Oldest First",
+            "alphabetical": "Alphabetical"
+        }
     }
 }

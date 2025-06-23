@@ -286,5 +286,175 @@
     "tryAgain": "Intentar de nuevo",
     "goBack": "Volver",
     "goHome": "Ir al inicio"
+  },
+  "sindi": {
+    "name": "Sindi",
+    "title": "Sindi",
+    "subtitle": "Defensor de Justicia Habitacional con Información en Tiempo Real",
+    "status": {
+      "thinking": "Pensando...",
+      "online": "En línea"
+    },
+    "auth": {
+      "required": "Autenticación Requerida",
+      "message": "Por favor, inicia sesión para acceder a Sindi, tu defensor de justicia habitacional impulsado por IA"
+    },
+    "welcome": {
+      "title": "Bienvenido a Sindi",
+      "subtitle": "Tu defensor de justicia habitacional impulsado por IA con acceso a información en tiempo real. Estoy aquí para luchar por tus derechos como inquilino, desafiar prácticas injustas y proporcionar actualizaciones legales actuales. Juntos, podemos construir un sistema de vivienda más equitativo."
+    },
+    "actions": {
+      "title": "Lucha por Tus Derechos",
+      "rentGouging": {
+        "title": "Verificación de Especulación de Alquiler",
+        "prompt": "Mi alquiler aumentó un [cantidad]%. ¿Es especulación legal? ¿Qué puedo hacer para combatir aumentos injustos?"
+      },
+      "evictionDefense": {
+        "title": "Defensa contra Desalojo Ilegal",
+        "prompt": "Recibí un aviso de desalojo que parece ilegal. Ayúdame a entender mis derechos y cómo luchar."
+      },
+      "securityDeposit": {
+        "title": "Robo de Depósito de Garantía",
+        "prompt": "Mi propietario se queda con mi depósito de garantía sin razones válidas. ¿Cómo recupero mi dinero?"
+      },
+      "unsafeLiving": {
+        "title": "Condiciones de Vida Inseguras",
+        "prompt": "Mi apartamento tiene problemas graves de seguridad. ¿Cuáles son mis derechos y cómo fuerzo las reparaciones?"
+      },
+      "discrimination": {
+        "title": "Ayuda contra Discriminación",
+        "prompt": "Creo que estoy siendo discriminado por mi propietario. ¿Cuáles son mis derechos y cómo lo denuncio?"
+      },
+      "retaliation": {
+        "title": "Protección contra Represalias",
+        "prompt": "Mi propietario está tomando represalias porque me quejé. ¿Qué protecciones tengo?"
+      },
+      "leaseReview": {
+        "title": "Revisión de Contrato",
+        "prompt": "¿Puedes revisar mi contrato en busca de cláusulas injustas y términos ilegales que debería impugnar?"
+      },
+      "tenantOrganizing": {
+        "title": "Organización de Inquilinos",
+        "prompt": "¿Cómo puedo organizarme con otros inquilinos para luchar por mejores condiciones y trato justo?"
+      },
+      "currentLaws": {
+        "title": "Leyes Actuales y Actualizaciones",
+        "prompt": "¿Cuáles son las leyes actuales de derechos de inquilinos y desarrollos legales recientes que debería conocer?"
+      },
+      "catalunya": {
+        "title": "Derechos de Inquilinos en Catalunya",
+        "prompt": "Estoy en Catalunya/Barcelona. ¿Cuáles son mis derechos como inquilino y cómo puedo conectarme con organizaciones locales de inquilinos como el Sindicat de Llogateres?"
+      }
+    },
+    "housing": {
+      "title": "Encuentra Vivienda Ética",
+      "subtitle": "Puedo buscar propiedades con filtros avanzados. Prueba estos ejemplos:",
+      "examples": {
+        "cheap": {
+          "title": "Apartamentos Baratos",
+          "prompt": "Encuéntrame apartamentos baratos por debajo de $1000 en Barcelona"
+        },
+        "petFriendly": {
+          "title": "Casas que Admiten Mascotas",
+          "prompt": "Muéstrame apartamentos que admiten mascotas con estacionamiento por debajo de $1500"
+        },
+        "furnished": {
+          "title": "Estudios Amueblados",
+          "prompt": "Necesito estudios amueblados con wifi por debajo de $1200"
+        },
+        "family": {
+          "title": "Casas Familiares",
+          "prompt": "Encuentra casas de 3 habitaciones con jardín por debajo de $2000"
+        },
+        "luxury": {
+          "title": "Propiedades de Lujo",
+          "prompt": "Muéstrame apartamentos de lujo con gimnasio y piscina por encima de $3000"
+        },
+        "shared": {
+          "title": "Vivienda Compartida",
+          "prompt": "Encuentra habitaciones compartidas o espacios de coliving por debajo de $800"
+        }
+      },
+      "naturalLanguage": "💡 ¡Entiendo lenguaje natural! Prueba: \"apartamentos baratos de 2 habitaciones en Barcelona con estacionamiento\" o \"estudios de lujo con gimnasio por debajo de $2000\""
+    },
+    "features": {
+      "title": "Cómo lucho por la justicia habitacional:",
+      "rentIncreases": "• Desafío aumentos ilegales de alquiler y especulación",
+      "evictions": "• Defiendo contra desalojos injustos",
+      "deposits": "• Combato el robo de depósitos de garantía y fraude",
+      "conditions": "• Exijo condiciones de vida seguras y habitables",
+      "discrimination": "• Combato la discriminación habitacional",
+      "retaliation": "• Protejo contra represalias del propietario",
+      "leases": "• Expongo cláusulas injustas en contratos",
+      "organizing": "• Apoyo la organización y solidaridad de inquilinos",
+      "updates": "• Proporciono actualizaciones legales actuales y desarrollos recientes",
+      "organizations": "• Te conecto con organizaciones locales de inquilinos"
+    },
+    "chat": {
+      "placeholder": "Pregúntale a Sindi sobre tus derechos como inquilino...",
+      "you": "Tú",
+      "disclaimer": "Sindi aboga por los derechos de los inquilinos y la justicia habitacional. Para acciones legales, consulta a un abogado calificado. Conéctate con organizaciones locales de inquilinos para apoyo comunitario."
+    },
+    "errors": {
+      "connection": "Error de Conexión",
+      "connectionMessage": "Por favor verifica tu conexión e inténtalo de nuevo."
+    }
+  },
+  "sidebar": {
+    "navigation": {
+      "home": "Inicio",
+      "saved": "Guardados",
+      "sindi": "Sindi",
+      "contracts": "Contratos",
+      "profile": "Perfil",
+      "payments": "Pagos",
+      "roommates": "Compañeros de Cuarto",
+      "settings": "Configuración"
+    },
+    "actions": {
+      "addProperty": "Agregar Propiedad",
+      "signUp": "Registrarse",
+      "signIn": "Iniciar Sesión"
+    },
+    "hero": {
+      "tagline": "Encuentra tu hogar ético"
+    },
+    "footer": {
+      "brandName": "Homiio - Plataforma de Vivienda Ética"
+    }
+  },
+  "saved": {
+    "title": "Propiedades Guardadas",
+    "emptyTitle": "No Hay Propiedades Guardadas",
+    "emptyDescription": "Aún no has guardado ninguna propiedad. ¡Comienza a explorar y guarda las propiedades que te gusten!",
+    "startExploring": "Comenzar a Explorar",
+    "unsave": {
+      "title": "Quitar de Guardados",
+      "message": "¿Estás seguro de que quieres eliminar \"{{title}}\" de tus propiedades guardadas?",
+      "confirm": "Quitar",
+      "cancel": "Cancelar"
+    },
+    "notes": {
+      "title": "Notas de la Propiedad",
+      "placeholder": "Agregar notas sobre esta propiedad...",
+      "save": "Guardar Notas",
+      "cancel": "Cancelar"
+    },
+    "actions": {
+      "addNotes": "Agregar Notas",
+      "editNotes": "Editar Notas",
+      "unsave": "Quitar de Guardados",
+      "viewProperty": "Ver Propiedad"
+    },
+    "errors": {
+      "unsaveFailed": "Error al quitar de guardados",
+      "updateNotesFailed": "Error al actualizar notas",
+      "loadFailed": "Error al cargar propiedades guardadas"
+    },
+    "sorting": {
+      "newest": "Más Recientes Primero",
+      "oldest": "Más Antiguos Primero",
+      "alphabetical": "Alfabético"
+    }
   }
 }

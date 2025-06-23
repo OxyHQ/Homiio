@@ -16,6 +16,7 @@ import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { LogoIcon } from '@/assets/logo';
+import i18n from 'i18next';
 
 // Type assertion for Ionicons compatibility with React 19
 const IconComponent = Ionicons as any;
@@ -106,7 +107,7 @@ export default function SettingsScreen() {
                         onPress={() => showBottomSheet?.('AccountSettings')}
                     >
                         <View style={styles.userIcon}>
-                            <Ionicons name="person" size={24} color="#fff" />
+                            <IconComponent name="person" size={24} color="#fff" />
                         </View>
                         <View style={styles.settingInfo}>
                             <View>
@@ -116,7 +117,7 @@ export default function SettingsScreen() {
                                 <Text style={styles.settingDescription}>{user.username}</Text>
                             </View>
                         </View>
-                        <Ionicons name="chevron-forward" size={16} color="#ccc" />
+                        <IconComponent name="chevron-forward" size={16} color="#ccc" />
                     </TouchableOpacity>
                 </View>
 
@@ -273,7 +274,22 @@ export default function SettingsScreen() {
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>{t('settings.sections.preferences')}</Text>
 
-                    <View style={[styles.settingItem, styles.firstSettingItem]}>
+                    {/* Language Selection */}
+                    <TouchableOpacity
+                        style={[styles.settingItem, styles.firstSettingItem]}
+                        onPress={() => router.push('/settings/language')}
+                    >
+                        <View style={styles.settingInfo}>
+                            <IconComponent name="language" size={20} color="#666" style={styles.settingIcon} />
+                            <View>
+                                <Text style={styles.settingLabel}>{t('Language')}</Text>
+                                <Text style={styles.settingDescription}>{t('Select your preferred language')}</Text>
+                            </View>
+                        </View>
+                        <IconComponent name="chevron-forward" size={16} color="#ccc" />
+                    </TouchableOpacity>
+
+                    <View style={styles.settingItem}>
                         <View style={styles.settingInfo}>
                             <IconComponent name="notifications" size={20} color="#666" style={styles.settingIcon} />
                             <View>

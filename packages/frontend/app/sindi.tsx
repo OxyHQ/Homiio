@@ -12,22 +12,24 @@ import { SindiIcon } from '@/assets/icons';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { Header } from '@/components/Header';
+import { useTranslation } from 'react-i18next';
 
 export default function sindi() {
   const { oxyServices, activeSessionId } = useOxy();
   const router = useRouter();
+  const { t } = useTranslation();
 
   // Check if user is authenticated
   if (!oxyServices || !activeSessionId) {
     return (
       <ThemedView style={styles.container} lightColor="transparent" darkColor="transparent">
-        <Header options={{ title: 'Sindi', showBackButton: true }} />
+        <Header options={{ title: t('sindi.title'), showBackButton: true }} />
         <View style={styles.authRequiredContainer}>
           <View style={styles.authRequiredContent}>
             <Text style={styles.authRequiredIcon}>🔒</Text>
-            <ThemedText style={styles.authRequiredTitle}>Authentication Required</ThemedText>
+            <ThemedText style={styles.authRequiredTitle}>{t('sindi.auth.required')}</ThemedText>
             <ThemedText style={styles.authRequiredSubtitle}>
-              Please sign in to access Sindi, your AI-powered housing justice advocate
+              {t('sindi.auth.message')}
             </ThemedText>
           </View>
         </View>
@@ -72,25 +74,25 @@ export default function sindi() {
   });
 
   const quickActions = [
-    { title: 'Rent Gouging Check', icon: 'trending-up', prompt: 'My rent increased by [amount]%. Is this legal rent gouging? What can I do to fight unfair increases?' },
-    { title: 'Illegal Eviction Defense', icon: 'warning', prompt: 'I received an eviction notice that seems illegal. Help me understand my rights and how to fight back.' },
-    { title: 'Security Deposit Theft', icon: 'card', prompt: 'My landlord is keeping my security deposit without valid reasons. How do I recover my money?' },
-    { title: 'Unsafe Living Conditions', icon: 'construct', prompt: 'My apartment has serious safety issues. What are my rights and how do I force repairs?' },
-    { title: 'Discrimination Help', icon: 'shield-checkmark', prompt: 'I think I\'m being discriminated against by my landlord. What are my rights and how do I report this?' },
-    { title: 'Retaliation Protection', icon: 'alert-circle', prompt: 'My landlord is retaliating because I complained. What protections do I have?' },
-    { title: 'Lease Review', icon: 'document-text', prompt: 'Can you review my lease for unfair clauses and illegal terms I should challenge?' },
-    { title: 'Tenant Organizing', icon: 'people', prompt: 'How can I organize with other tenants to fight for better conditions and fair treatment?' },
-    { title: 'Current Laws & Updates', icon: 'globe', prompt: 'What are the current tenant rights laws and recent legal developments I should know about?' },
-    { title: 'Catalunya Tenant Rights', icon: 'location', prompt: 'I\'m in Catalunya/Barcelona. What are my tenant rights and how can I connect with local tenant organizations like Sindicat de Llogateres?' },
+    { title: t('sindi.actions.rentGouging.title'), icon: 'trending-up', prompt: t('sindi.actions.rentGouging.prompt') },
+    { title: t('sindi.actions.evictionDefense.title'), icon: 'warning', prompt: t('sindi.actions.evictionDefense.prompt') },
+    { title: t('sindi.actions.securityDeposit.title'), icon: 'card', prompt: t('sindi.actions.securityDeposit.prompt') },
+    { title: t('sindi.actions.unsafeLiving.title'), icon: 'construct', prompt: t('sindi.actions.unsafeLiving.prompt') },
+    { title: t('sindi.actions.discrimination.title'), icon: 'shield-checkmark', prompt: t('sindi.actions.discrimination.prompt') },
+    { title: t('sindi.actions.retaliation.title'), icon: 'alert-circle', prompt: t('sindi.actions.retaliation.prompt') },
+    { title: t('sindi.actions.leaseReview.title'), icon: 'document-text', prompt: t('sindi.actions.leaseReview.prompt') },
+    { title: t('sindi.actions.tenantOrganizing.title'), icon: 'people', prompt: t('sindi.actions.tenantOrganizing.prompt') },
+    { title: t('sindi.actions.currentLaws.title'), icon: 'globe', prompt: t('sindi.actions.currentLaws.prompt') },
+    { title: t('sindi.actions.catalunya.title'), icon: 'location', prompt: t('sindi.actions.catalunya.prompt') },
   ];
 
   const propertySearchExamples = [
-    { title: 'Cheap Apartments', icon: 'cash', prompt: 'Find me cheap apartments under $1000 in Barcelona' },
-    { title: 'Pet-Friendly Homes', icon: 'paw', prompt: 'Show me pet-friendly apartments with parking under $1500' },
-    { title: 'Furnished Studios', icon: 'bed', prompt: 'I need furnished studios with wifi under $1200' },
-    { title: 'Family Homes', icon: 'home', prompt: 'Find 3-bedroom houses with garden under $2000' },
-    { title: 'Luxury Properties', icon: 'diamond', prompt: 'Show me luxury apartments with gym and pool over $3000' },
-    { title: 'Shared Housing', icon: 'people', prompt: 'Find shared rooms or coliving spaces under $800' },
+    { title: t('sindi.housing.examples.cheap.title'), icon: 'cash', prompt: t('sindi.housing.examples.cheap.prompt') },
+    { title: t('sindi.housing.examples.petFriendly.title'), icon: 'paw', prompt: t('sindi.housing.examples.petFriendly.prompt') },
+    { title: t('sindi.housing.examples.furnished.title'), icon: 'bed', prompt: t('sindi.housing.examples.furnished.prompt') },
+    { title: t('sindi.housing.examples.family.title'), icon: 'home', prompt: t('sindi.housing.examples.family.prompt') },
+    { title: t('sindi.housing.examples.luxury.title'), icon: 'diamond', prompt: t('sindi.housing.examples.luxury.prompt') },
+    { title: t('sindi.housing.examples.shared.title'), icon: 'people', prompt: t('sindi.housing.examples.shared.prompt') },
   ];
 
   const handleQuickAction = (prompt: string) => {
@@ -103,8 +105,8 @@ export default function sindi() {
     <SafeAreaView style={styles.container}>
       <View style={styles.errorContainer}>
         <Ionicons name="alert-circle" size={48} color={colors.primaryColor} />
-        <Text style={styles.errorText}>Connection Error</Text>
-        <Text style={styles.errorSubtext}>Please check your connection and try again.</Text>
+        <Text style={styles.errorText}>{t('sindi.errors.connection')}</Text>
+        <Text style={styles.errorSubtext}>{t('sindi.errors.connectionMessage')}</Text>
       </View>
     </SafeAreaView>
   );
@@ -128,13 +130,13 @@ export default function sindi() {
               <SindiIcon size={24} color="white" />
             </View>
             <View style={styles.headerText}>
-              <Text style={styles.title}>Sindi</Text>
-              <Text style={styles.subtitle}>Housing Justice Advocate with Real-Time Info</Text>
+              <Text style={styles.title}>{t('sindi.title')}</Text>
+              <Text style={styles.subtitle}>{t('sindi.subtitle')}</Text>
             </View>
           </View>
           <View style={styles.statusIndicator}>
             <View style={[styles.statusDot, { backgroundColor: isLoading ? '#FFD700' : '#4CAF50' }]} />
-            <Text style={styles.statusText}>{isLoading ? 'Thinking...' : 'Online'}</Text>
+            <Text style={styles.statusText}>{isLoading ? t('sindi.status.thinking') : t('sindi.status.online')}</Text>
           </View>
         </View>
       </View>
@@ -149,15 +151,14 @@ export default function sindi() {
           <View style={styles.welcomeContainer}>
             <View style={styles.welcomeHeader}>
               <SindiIcon size={48} color={colors.primaryColor} />
-              <Text style={styles.welcomeTitle}>Welcome to Sindi</Text>
+              <Text style={styles.welcomeTitle}>{t('sindi.welcome.title')}</Text>
               <Text style={styles.welcomeSubtitle}>
-                Your AI-powered housing justice advocate with real-time information access. I'm here to fight for your tenant rights,
-                challenge unfair practices, and provide current legal updates. Together, we can build a more equitable housing system.
+                {t('sindi.welcome.subtitle')}
               </Text>
             </View>
 
             <View style={styles.quickActionsContainer}>
-              <Text style={styles.quickActionsTitle}>Fight for Your Rights</Text>
+              <Text style={styles.quickActionsTitle}>{t('sindi.actions.title')}</Text>
               <View style={styles.quickActionsGrid}>
                 {quickActions.map((action, index) => (
                   <TouchableOpacity
@@ -173,9 +174,9 @@ export default function sindi() {
             </View>
 
             <View style={styles.propertySearchContainer}>
-              <Text style={styles.propertySearchTitle}>Find Ethical Housing</Text>
+              <Text style={styles.propertySearchTitle}>{t('sindi.housing.title')}</Text>
               <Text style={styles.propertySearchSubtitle}>
-                I can search for properties with advanced filters. Try these examples:
+                {t('sindi.housing.subtitle')}
               </Text>
               <View style={styles.propertySearchGrid}>
                 {propertySearchExamples.map((example, index) => (
@@ -190,23 +191,23 @@ export default function sindi() {
                 ))}
               </View>
               <Text style={styles.propertySearchNote}>
-                💡 I understand natural language! Try: "cheap 2-bedroom apartments in Barcelona with parking" or "luxury studios with gym under $2000"
+                {t('sindi.housing.naturalLanguage')}
               </Text>
             </View>
 
             <View style={styles.featuresContainer}>
-              <Text style={styles.featuresTitle}>How I fight for housing justice:</Text>
+              <Text style={styles.featuresTitle}>{t('sindi.features.title')}</Text>
               <View style={styles.featureList}>
-                <Text style={styles.featureItem}>• Challenge illegal rent increases and gouging</Text>
-                <Text style={styles.featureItem}>• Defend against wrongful evictions</Text>
-                <Text style={styles.featureItem}>• Fight security deposit theft and fraud</Text>
-                <Text style={styles.featureItem}>• Demand safe, habitable living conditions</Text>
-                <Text style={styles.featureItem}>• Combat housing discrimination</Text>
-                <Text style={styles.featureItem}>• Protect against landlord retaliation</Text>
-                <Text style={styles.featureItem}>• Expose unfair lease clauses</Text>
-                <Text style={styles.featureItem}>• Support tenant organizing and solidarity</Text>
-                <Text style={styles.featureItem}>• Provide current legal updates and recent developments</Text>
-                <Text style={styles.featureItem}>• Connect you with local tenant organizations</Text>
+                <Text style={styles.featureItem}>{t('sindi.features.rentIncreases')}</Text>
+                <Text style={styles.featureItem}>{t('sindi.features.evictions')}</Text>
+                <Text style={styles.featureItem}>{t('sindi.features.deposits')}</Text>
+                <Text style={styles.featureItem}>{t('sindi.features.conditions')}</Text>
+                <Text style={styles.featureItem}>{t('sindi.features.discrimination')}</Text>
+                <Text style={styles.featureItem}>{t('sindi.features.retaliation')}</Text>
+                <Text style={styles.featureItem}>{t('sindi.features.leases')}</Text>
+                <Text style={styles.featureItem}>{t('sindi.features.organizing')}</Text>
+                <Text style={styles.featureItem}>{t('sindi.features.updates')}</Text>
+                <Text style={styles.featureItem}>{t('sindi.features.organizations')}</Text>
               </View>
             </View>
           </View>
@@ -283,7 +284,7 @@ export default function sindi() {
                 }
               </View>
               <Text style={styles.messageTime}>
-                {m.role === 'user' ? 'You' : 'Sindi'} • {new Date().toLocaleTimeString()}
+                {m.role === 'user' ? t('sindi.chat.you') : t('sindi.name')} • {new Date().toLocaleTimeString()}
               </Text>
             </View>
           ))
@@ -296,7 +297,7 @@ export default function sindi() {
           <View style={styles.inputWrapper}>
             <TextInput
               style={styles.textInput}
-              placeholder="Ask Sindi about your tenant rights..."
+              placeholder={t('sindi.chat.placeholder')}
               value={input}
               onChangeText={(text) => handleInputChange({
                 target: { value: text }
@@ -318,8 +319,7 @@ export default function sindi() {
             </TouchableOpacity>
           </View>
           <Text style={styles.disclaimer}>
-            Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney.
-            Connect with local tenant organizations for community support.
+            {t('sindi.chat.disclaimer')}
           </Text>
         </View>
       </View>

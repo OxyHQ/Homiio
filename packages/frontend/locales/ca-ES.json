@@ -424,5 +424,175 @@
         "tryAgain": "Provar de nou",
         "goBack": "Tornar",
         "goHome": "Anar a l'inici"
+    },
+    "sindi": {
+        "name": "Sindi",
+        "title": "Sindi",
+        "subtitle": "Defensor de Justícia Habitacional amb Informació en Temps Real",
+        "status": {
+            "thinking": "Pensant...",
+            "online": "En línia"
+        },
+        "auth": {
+            "required": "Autenticació Requerida",
+            "message": "Si us plau, inicieu sessió per accedir a Sindi, el vostre defensor de justícia habitacional impulsat per IA"
+        },
+        "welcome": {
+            "title": "Benvingut a Sindi",
+            "subtitle": "El vostre defensor de justícia habitacional impulsat per IA amb accés a informació en temps real. Estic aquí per lluitar pels vostres drets com a llogater, desafiar pràctiques injustes i proporcionar actualitzacions legals actuals. Junts, podem construir un sistema d'habitatge més equitatiu."
+        },
+        "actions": {
+            "title": "Lluiteu pels Vostres Drets",
+            "rentGouging": {
+                "title": "Verificació d'Especulació d'Lloguer",
+                "prompt": "El meu lloguer va augmentar un [quantitat]%. És especulació legal? Què puc fer per combatre augments injustos?"
+            },
+            "evictionDefense": {
+                "title": "Defensa contra Desnonament Il·legal",
+                "prompt": "Vaig rebre un avís de desnonament que sembla il·legal. Ajudeu-me a entendre els meus drets i com lluitar."
+            },
+            "securityDeposit": {
+                "title": "Robatori de Dipòsit de Garantia",
+                "prompt": "El meu propietari es queda amb el meu dipòsit de garantia sense raons vàlides. Com recupero els meus diners?"
+            },
+            "unsafeLiving": {
+                "title": "Condicions de Vida Insegures",
+                "prompt": "El meu apartament té problemes greus de seguretat. Quins són els meus drets i com forço les reparacions?"
+            },
+            "discrimination": {
+                "title": "Ajuda contra Discriminació",
+                "prompt": "Crec que estic sent discriminat pel meu propietari. Quins són els meus drets i com ho denuncio?"
+            },
+            "retaliation": {
+                "title": "Protecció contra Represàlies",
+                "prompt": "El meu propietari està prenent represàlies perquè em vaig queixar. Quines proteccions tinc?"
+            },
+            "leaseReview": {
+                "title": "Revisió de Contracte",
+                "prompt": "Podeu revisar el meu contracte en cerca de clàusules injustes i termes il·legals que hauria d'impugnar?"
+            },
+            "tenantOrganizing": {
+                "title": "Organització de Llogaters",
+                "prompt": "Com puc organitzar-me amb altres llogaters per lluitar per millors condicions i tracte just?"
+            },
+            "currentLaws": {
+                "title": "Lleis Actuals i Actualitzacions",
+                "prompt": "Quines són les lleis actuals de drets de llogaters i desenvolupaments legals recents que hauria de conèixer?"
+            },
+            "catalunya": {
+                "title": "Drets de Llogaters a Catalunya",
+                "prompt": "Estic a Catalunya/Barcelona. Quins són els meus drets com a llogater i com puc connectar-me amb organitzacions locals de llogaters com el Sindicat de Llogateres?"
+            }
+        },
+        "housing": {
+            "title": "Trobeu Habitatge Ètic",
+            "subtitle": "Puc cercar propietats amb filtres avançats. Proveu aquests exemples:",
+            "examples": {
+                "cheap": {
+                    "title": "Apartaments Barats",
+                    "prompt": "Trobeu-me apartaments barats per sota de $1000 a Barcelona"
+                },
+                "petFriendly": {
+                    "title": "Cases que Admeten Mascotes",
+                    "prompt": "Mostreu-me apartaments que admeten mascotes amb aparcament per sota de $1500"
+                },
+                "furnished": {
+                    "title": "Estudis Amoblats",
+                    "prompt": "Necessito estudis amoblats amb wifi per sota de $1200"
+                },
+                "family": {
+                    "title": "Cases Familiars",
+                    "prompt": "Trobeu cases de 3 habitacions amb jardí per sota de $2000"
+                },
+                "luxury": {
+                    "title": "Propietats de Luxe",
+                    "prompt": "Mostreu-me apartaments de luxe amb gimnàs i piscina per sobre de $3000"
+                },
+                "shared": {
+                    "title": "Habitatge Compartit",
+                    "prompt": "Trobeu habitacions compartides o espais de coliving per sota de $800"
+                }
+            },
+            "naturalLanguage": "💡 Entenc llenguatge natural! Proveu: \"apartaments barats de 2 habitacions a Barcelona amb aparcament\" o \"estudis de luxe amb gimnàs per sota de $2000\""
+        },
+        "features": {
+            "title": "Com lluito per la justícia habitacional:",
+            "rentIncreases": "• Desafio augments il·legals de lloguer i especulació",
+            "evictions": "• Defenso contra desnonaments injustos",
+            "deposits": "• Combato el robatori de dipòsits de garantia i frau",
+            "conditions": "• Exigeixo condicions de vida segures i habitables",
+            "discrimination": "• Combato la discriminació habitacional",
+            "retaliation": "• Protegeixo contra represàlies del propietari",
+            "leases": "• Exposo clàusules injustes en contractes",
+            "organizing": "• Recolzo l'organització i solidaritat de llogaters",
+            "updates": "• Proporciono actualitzacions legals actuals i desenvolupaments recents",
+            "organizations": "• Us connecto amb organitzacions locals de llogaters"
+        },
+        "chat": {
+            "placeholder": "Pregunteu a Sindi sobre els vostres drets com a llogater...",
+            "you": "Vosaltres",
+            "disclaimer": "Sindi advoca pels drets dels llogaters i la justícia habitacional. Per a accions legals, consulteu un advocat qualificat. Connecteu-vos amb organitzacions locals de llogaters per suport comunitari."
+        },
+        "errors": {
+            "connection": "Error de Connexió",
+            "connectionMessage": "Si us plau, verifiqueu la vostra connexió i intenteu-ho de nou."
+        }
+    },
+    "sidebar": {
+        "navigation": {
+            "home": "Inici",
+            "saved": "Desats",
+            "sindi": "Sindi",
+            "contracts": "Contractes",
+            "profile": "Perfil",
+            "payments": "Pagaments",
+            "roommates": "Companys de Pis",
+            "settings": "Configuració"
+        },
+        "actions": {
+            "addProperty": "Afegir Propietat",
+            "signUp": "Registrar-se",
+            "signIn": "Iniciar Sessió"
+        },
+        "hero": {
+            "tagline": "Trobeu la vostra llar ètica"
+        },
+        "footer": {
+            "brandName": "Homiio - Plataforma d'Habitatge Ètic"
+        }
+    },
+    "saved": {
+        "title": "Propietats Desades",
+        "emptyTitle": "Cap Propietat Desada",
+        "emptyDescription": "Encara no heu desat cap propietat. Comenceu a explorar i deseu les propietats que us agradin!",
+        "startExploring": "Començar a Explorar",
+        "unsave": {
+            "title": "Treure de Desades",
+            "message": "Esteu segur que voleu eliminar \"{{title}}\" de les vostres propietats desades?",
+            "confirm": "Treure",
+            "cancel": "Cancel·lar"
+        },
+        "notes": {
+            "title": "Notes de la Propietat",
+            "placeholder": "Afegir notes sobre aquesta propietat...",
+            "save": "Desar Notes",
+            "cancel": "Cancel·lar"
+        },
+        "actions": {
+            "addNotes": "Afegir Notes",
+            "editNotes": "Editar Notes",
+            "unsave": "Treure de Desades",
+            "viewProperty": "Veure Propietat"
+        },
+        "errors": {
+            "unsaveFailed": "Error en treure de desades",
+            "updateNotesFailed": "Error en actualitzar notes",
+            "loadFailed": "Error en carregar propietats desades"
+        },
+        "sorting": {
+            "newest": "Més Recents Primer",
+            "oldest": "Més Antics Primer",
+            "alphabetical": "Alfabètic"
+        }
     }
 }

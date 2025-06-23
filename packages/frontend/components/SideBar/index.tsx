@@ -31,49 +31,49 @@ export function SideBar() {
 
     const sideBarData: { title: string; icon: React.ReactNode, iconActive: React.ReactNode, route: string }[] = [
         {
-            title: 'Home',
+            title: t("sidebar.navigation.home"),
             icon: <Home color={colors.COLOR_BLACK} />,
             iconActive: <HomeActive />,
             route: '/',
         },
         {
-            title: t("Saved"),
+            title: t("sidebar.navigation.saved"),
             icon: <Bookmark color={colors.COLOR_BLACK} />,
             iconActive: <BookmarkActive />,
             route: '/saved',
         },
         {
-            title: 'Sindi',
+            title: t("sidebar.navigation.sindi"),
             icon: <SindiIcon size={24} color={colors.COLOR_BLACK} />,
             iconActive: <SindiIcon size={24} color={colors.primaryColor} />,
             route: '/sindi',
         },
         {
-            title: t("Contracts"),
+            title: t("sidebar.navigation.contracts"),
             icon: <View><IconComponent name="document-text-outline" size={24} color={colors.COLOR_BLACK} /></View>,
             iconActive: <View><IconComponent name="document-text" size={24} color={colors.primaryColor} /></View>,
             route: '/contracts',
         },
         {
-            title: t("Profile"),
+            title: t("sidebar.navigation.profile"),
             icon: <View><IconComponent name="person-outline" size={24} color={colors.COLOR_BLACK} /></View>,
             iconActive: <View><IconComponent name="person" size={24} color={colors.primaryColor} /></View>,
             route: '/profile',
         },
         {
-            title: t("Payments"),
+            title: t("sidebar.navigation.payments"),
             icon: <View><IconComponent name="card-outline" size={24} color={colors.COLOR_BLACK} /></View>,
             iconActive: <View><IconComponent name="card" size={24} color={colors.primaryColor} /></View>,
             route: '/payments',
         },
         {
-            title: t("Roommates"),
+            title: t("sidebar.navigation.roommates"),
             icon: <Hashtag color={colors.COLOR_BLACK} />,
             iconActive: <HashtagActive />,
             route: '/roommates',
         },
         {
-            title: t("Settings"),
+            title: t("sidebar.navigation.settings"),
             icon: <Gear color={colors.COLOR_BLACK} />,
             iconActive: <GearActive />,
             route: '/settings',
@@ -126,7 +126,7 @@ export function SideBar() {
                                         maxWidth: 200,
                                         lineHeight: 30,
                                     }}
-                                >{t("Find your ethical home")}</Text>
+                                >{t("sidebar.hero.tagline")}</Text>
                             )}
                             {!isAuthenticated && (
                                 <View
@@ -148,7 +148,7 @@ export function SideBar() {
                                         }}
                                         onPress={() => showBottomSheet?.('SignUp')}
                                     >
-                                        <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>{t("Sign Up")}</Text>
+                                        <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>{t("sidebar.actions.signUp")}</Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity
                                         style={{
@@ -161,7 +161,7 @@ export function SideBar() {
                                         }}
                                         onPress={() => showBottomSheet?.('SignIn')}
                                     >
-                                        <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>{t("Sign In")}</Text>
+                                        <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>{t("sidebar.actions.signIn")}</Text>
                                     </TouchableOpacity>
                                 </View>
                             )}
@@ -189,7 +189,7 @@ export function SideBar() {
                                             fontWeight: 'bold',
                                             textAlign: 'center'
                                         }}>
-                                            Add Property
+                                            {t("sidebar.actions.addProperty")}
                                         </Text>
                                     ) : null
                                 }
@@ -217,7 +217,7 @@ export function SideBar() {
                 <View style={{ flex: 1, }}></View>
                 <View style={{ flexDirection: 'column', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
                     <OxySignInButton />
-                    <Text>Homio - Ethical Housing Platform</Text>
+                    <Text>{t("sidebar.footer.brandName")}</Text>
                 </View>
             </View>
         )

@@ -447,5 +447,175 @@
     "benefits": "Benefici",
     "join": "Unisciti a Horizon",
     "learnMore": "Scopri di Più"
+  },
+  "sindi": {
+    "name": "Sindi",
+    "title": "Sindi",
+    "subtitle": "Difensore della Giustizia Abitativa con Informazioni in Tempo Reale",
+    "status": {
+      "thinking": "Pensando...",
+      "online": "Online"
+    },
+    "auth": {
+      "required": "Autenticazione Richiesta",
+      "message": "Accedi per utilizzare Sindi, il tuo difensore della giustizia abitativa alimentato dall'IA"
+    },
+    "welcome": {
+      "title": "Benvenuto in Sindi",
+      "subtitle": "Il tuo difensore della giustizia abitativa alimentato dall'IA con accesso a informazioni in tempo reale. Sono qui per lottare per i tuoi diritti come inquilino, sfidare pratiche ingiuste e fornire aggiornamenti legali attuali. Insieme, possiamo costruire un sistema abitativo più equo."
+    },
+    "actions": {
+      "title": "Lotta per i Tuoi Diritti",
+      "rentGouging": {
+        "title": "Controllo Speculazione Affitti",
+        "prompt": "Il mio affitto è aumentato del [percentuale]%. È speculazione legale? Cosa posso fare per combattere aumenti ingiusti?"
+      },
+      "evictionDefense": {
+        "title": "Difesa da Sfratto Illegale",
+        "prompt": "Ho ricevuto un avviso di sfratto che sembra illegale. Aiutami a capire i miei diritti e come lottare."
+      },
+      "securityDeposit": {
+        "title": "Furto Cauzione",
+        "prompt": "Il mio proprietario tiene la mia cauzione senza motivi validi. Come recupero i miei soldi?"
+      },
+      "unsafeLiving": {
+        "title": "Condizioni Abitative Pericolose",
+        "prompt": "Il mio appartamento ha seri problemi di sicurezza. Quali sono i miei diritti e come forzare le riparazioni?"
+      },
+      "discrimination": {
+        "title": "Aiuto Discriminazione",
+        "prompt": "Penso di essere discriminato dal mio proprietario. Quali sono i miei diritti e come denunciarlo?"
+      },
+      "retaliation": {
+        "title": "Protezione Ritorsioni",
+        "prompt": "Il mio proprietario sta facendo ritorsioni perché mi sono lamentato. Che protezioni ho?"
+      },
+      "leaseReview": {
+        "title": "Revisione Contratto",
+        "prompt": "Puoi rivedere il mio contratto per clausole ingiuste e termini illegali che dovrei contestare?"
+      },
+      "tenantOrganizing": {
+        "title": "Organizzazione Inquilini",
+        "prompt": "Come posso organizzarmi con altri inquilini per lottare per migliori condizioni e trattamento giusto?"
+      },
+      "currentLaws": {
+        "title": "Leggi Attuali e Aggiornamenti",
+        "prompt": "Quali sono le leggi attuali sui diritti degli inquilini e sviluppi legali recenti che dovrei conoscere?"
+      },
+      "catalunya": {
+        "title": "Diritti Inquilini Catalunya",
+        "prompt": "Sono in Catalunya/Barcellona. Quali sono i miei diritti come inquilino e come posso connettermi con organizzazioni locali come il Sindicat de Llogateres?"
+      }
+    },
+    "housing": {
+      "title": "Trova Alloggi Etici",
+      "subtitle": "Posso cercare proprietà con filtri avanzati. Prova questi esempi:",
+      "examples": {
+        "cheap": {
+          "title": "Appartamenti Economici",
+          "prompt": "Trovami appartamenti economici sotto i $1000 a Barcellona"
+        },
+        "petFriendly": {
+          "title": "Case Pet-Friendly",
+          "prompt": "Mostrami appartamenti che accettano animali con parcheggio sotto i $1500"
+        },
+        "furnished": {
+          "title": "Monolocali Arredati",
+          "prompt": "Ho bisogno di monolocali arredati con wifi sotto i $1200"
+        },
+        "family": {
+          "title": "Case Familiari",
+          "prompt": "Trova case con 3 camere da letto e giardino sotto i $2000"
+        },
+        "luxury": {
+          "title": "Proprietà di Lusso",
+          "prompt": "Mostrami appartamenti di lusso con palestra e piscina sopra i $3000"
+        },
+        "shared": {
+          "title": "Alloggi Condivisi",
+          "prompt": "Trova stanze condivise o spazi di coliving sotto gli $800"
+        }
+      },
+      "naturalLanguage": "💡 Capisco il linguaggio naturale! Prova: \"appartamenti economici con 2 camere a Barcellona con parcheggio\" o \"monolocali di lusso con palestra sotto i $2000\""
+    },
+    "features": {
+      "title": "Come lotto per la giustizia abitativa:",
+      "rentIncreases": "• Sfido aumenti illegali di affitto e speculazione",
+      "evictions": "• Difendo contro sfratti ingiusti",
+      "deposits": "• Combatto furto di cauzioni e frodi",
+      "conditions": "• Esigo condizioni abitative sicure e vivibili",
+      "discrimination": "• Combatto discriminazione abitativa",
+      "retaliation": "• Proteggo contro ritorsioni del proprietario",
+      "leases": "• Espongo clausole ingiuste nei contratti",
+      "organizing": "• Supporto organizzazione e solidarietà inquilini",
+      "updates": "• Fornisco aggiornamenti legali attuali e sviluppi recenti",
+      "organizations": "• Ti connetto con organizzazioni locali di inquilini"
+    },
+    "chat": {
+      "placeholder": "Chiedi a Sindi sui tuoi diritti come inquilino...",
+      "you": "Tu",
+      "disclaimer": "Sindi difende i diritti degli inquilini e la giustizia abitativa. Per azioni legali, consulta un avvocato qualificato. Connettiti con organizzazioni locali di inquilini per supporto comunitario."
+    },
+    "errors": {
+      "connection": "Errore di Connessione",
+      "connectionMessage": "Controlla la tua connessione e riprova."
+    }
+  },
+  "sidebar": {
+    "navigation": {
+      "home": "Home",
+      "saved": "Salvati",
+      "sindi": "Sindi",
+      "contracts": "Contratti",
+      "profile": "Profilo",
+      "payments": "Pagamenti",
+      "roommates": "Coinquilini",
+      "settings": "Impostazioni"
+    },
+    "actions": {
+      "addProperty": "Aggiungi Proprietà",
+      "signUp": "Registrati",
+      "signIn": "Accedi"
+    },
+    "hero": {
+      "tagline": "Trova la tua casa etica"
+    },
+    "footer": {
+      "brandName": "Homiio - Piattaforma Abitativa Etica"
+    }
+  },
+  "saved": {
+    "title": "Proprietà Salvate",
+    "emptyTitle": "Nessuna Proprietà Salvata",
+    "emptyDescription": "Non hai ancora salvato nessuna proprietà. Inizia a esplorare e salva le proprietà che ami!",
+    "startExploring": "Inizia a Esplorare",
+    "unsave": {
+      "title": "Rimuovi dai Salvati",
+      "message": "Sei sicuro di voler rimuovere \"{{title}}\" dalle tue proprietà salvate?",
+      "confirm": "Rimuovi",
+      "cancel": "Annulla"
+    },
+    "notes": {
+      "title": "Note Proprietà",
+      "placeholder": "Aggiungi note su questa proprietà...",
+      "save": "Salva Note",
+      "cancel": "Annulla"
+    },
+    "actions": {
+      "addNotes": "Aggiungi Note",
+      "editNotes": "Modifica Note",
+      "unsave": "Rimuovi dai Salvati",
+      "viewProperty": "Visualizza Proprietà"
+    },
+    "errors": {
+      "unsaveFailed": "Errore nel rimuovere dai salvati",
+      "updateNotesFailed": "Errore nell'aggiornare le note",
+      "loadFailed": "Errore nel caricare le proprietà salvate"
+    },
+    "sorting": {
+      "newest": "Prima i Più Recenti",
+      "oldest": "Prima i Più Vecchi",
+      "alphabetical": "Alfabetico"
+    }
   }
 }

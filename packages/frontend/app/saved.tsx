@@ -3,6 +3,7 @@ import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert, TextInput, M
 import { useSavedProperties, useUnsaveProperty, useUpdateSavedPropertyNotes } from '@/hooks/useUserQueries';
 import { useOxy } from '@oxyhq/services';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { PropertyCard } from '@/components/PropertyCard';
@@ -23,6 +24,7 @@ interface SavedProperty extends Property {
 }
 
 export default function SavedPropertiesScreen() {
+    const { t } = useTranslation();
     const { oxyServices, activeSessionId } = useOxy();
     const { data: savedProperties = [], isLoading, error, refetch } = useSavedProperties();
     const unsaveProperty = useUnsaveProperty();
@@ -30,8 +32,8 @@ export default function SavedPropertiesScreen() {
 
     // Set enhanced SEO for saved properties page
     useSEO({
-        title: 'Saved Properties',
-        description: 'View and manage your saved properties. Add notes, organize your favorites, and keep track of properties you love.',
+        title: t('saved.title'),
+        description: t('saved.emptyDescription'),
         keywords: 'saved properties, property favorites, housing bookmarks, property notes, real estate favorites',
         type: 'website'
     });
@@ -42,12 +44,12 @@ export default function SavedPropertiesScreen() {
 
     const handleUnsaveProperty = (property: SavedProperty) => {
         Alert.alert(
-            'Unsave Property',
-            `Are you sure you want to remove "${getPropertyTitle(property)}" from your saved properties?`,
+            t('saved.unsave.title'),
+            t('saved.unsave.message', { title: getPropertyTitle(property) }),
             [
-                { text: 'Cancel', style: 'cancel' },
+                { text: t('saved.unsave.cancel'), style: 'cancel' },
                 {
-                    text: 'Unsave',
+                    text: t('saved.unsave.confirm'),
                     style: 'destructive',
                     onPress: () => {
                         unsaveProperty.mutate(property._id, {
@@ -55,7 +57,7 @@ export default function SavedPropertiesScreen() {
                                 console.log('Property unsaved successfully');
                             },
                             onError: (error) => {
-                                Alert.alert('Error', error.message || 'Failed to unsave property');
+                                Alert.alert('Error', error.message || t('saved.errors.unsaveFailed'));
                             },
                         });
                     },
