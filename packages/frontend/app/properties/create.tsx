@@ -8,8 +8,10 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { PropertyMap } from '@/components/PropertyMap';
 import { Header } from '@/components/Header';
-import { useCreateProperty } from '@/hooks/usePropertyQueries';
 import { CreatePropertyData } from '@/services/propertyService';
+import { useDispatch, useSelector } from 'react-redux';
+import { createProperty } from '@/store/reducers/propertyReducer';
+import type { RootState, AppDispatch } from '@/store/store';
 import { useOxy } from '@oxyhq/services';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { calculateEthicalRent, validateEthicalPricing, getPricingGuidance } from '@/utils/ethicalPricing';
@@ -91,7 +93,8 @@ export default function CreatePropertyScreen() {
   const [pricingValidation, setPricingValidation] = useState<any>(null);
   const [showPricingGuidance, setShowPricingGuidance] = useState(false);
 
-  const createPropertyMutation = useCreateProperty();
+  const dispatch = useDispatch<AppDispatch>();
+  const isLoading = useSelector((state: RootState) => state.properties.isLoading);
 
   // Check location permission on mount
   useEffect(() => {
@@ -582,9 +585,13 @@ export default function CreatePropertyScreen() {
         } : undefined,
       };
 
-      const createdProperty = await createPropertyMutation.mutateAsync(propertyData);
-      // Navigate directly to the newly created property
-      router.push(`/properties/${createdProperty._id}`);
+      const resultAction = await dispatch(createProperty(propertyData));
+      if (createProperty.fulfilled.match(resultAction)) {
+        const createdProperty = resultAction.payload;
+        router.push(`/properties/${createdProperty._id}`);
+      } else {
+        throw resultAction.error;
+      }
     } catch (error: any) {
       console.error('Property creation error:', error);
 
@@ -1129,11 +1136,11 @@ export default function CreatePropertyScreen() {
 
           <TouchableOpacity
             onPress={handleSubmit}
-            disabled={createPropertyMutation.isPending}
-            style={[styles.submitButton, createPropertyMutation.isPending && styles.submitButtonDisabled]}
+            disabled={isLoading}
+            style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
             activeOpacity={0.8}
           >
-            {createPropertyMutation.isPending ? (
+            {isLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color="white" />
                 <ThemedText style={[styles.submitButtonText, { marginLeft: 8 }]}>
