@@ -1,7 +1,12 @@
-import React, { createContext, useState, ReactNode, useRef, useCallback } from 'react';
-import { StyleSheet, ScrollView, View } from 'react-native';
+import React, { createContext, ReactNode, useRef, useCallback, useEffect } from 'react';
+import { StyleSheet } from 'react-native';
 import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop, BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
-import CustomBackground from '@/components/BottomSheet/CustomBackground';
+import { useDispatch, useSelector } from 'react-redux';
+import type { RootState, AppDispatch } from '@/store/store';
+import {
+    openBottomSheet as openBottomSheetAction,
+    setBottomSheetContent as setBottomSheetContentAction,
+} from '@/store/reducers/bottomSheetReducer';
 
 interface BottomSheetContextProps {
     openBottomSheet: (isOpen: boolean) => void;
@@ -16,7 +21,9 @@ export const BottomSheetContext = createContext<BottomSheetContextProps>({
 });
 
 export const BottomSheetProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [bottomSheetContent, setBottomSheetContent] = useState<ReactNode>(null);
+    const dispatch = useDispatch<AppDispatch>();
+    const bottomSheetContent = useSelector((state: RootState) => state.bottomSheet.content);
+    const isOpen = useSelector((state: RootState) => state.bottomSheet.isOpen);
     const bottomSheetModalRef = useRef<BottomSheetModal>(null);
 
     const renderBackdrop = useCallback(
@@ -31,13 +38,21 @@ export const BottomSheetProvider: React.FC<{ children: ReactNode }> = ({ childre
         []
     );
 
-    const openBottomSheet = (isOpen: boolean) => {
+    const openBottomSheet = (open: boolean) => {
+        dispatch(openBottomSheetAction(open));
+    };
+
+    const setBottomSheetContent = (content: ReactNode) => {
+        dispatch(setBottomSheetContentAction(content));
+    };
+
+    useEffect(() => {
         if (isOpen) {
             bottomSheetModalRef.current?.present();
         } else {
             bottomSheetModalRef.current?.dismiss();
         }
-    };
+    }, [isOpen]);
 
     return (
         <BottomSheetContext.Provider value={{ openBottomSheet, setBottomSheetContent, bottomSheetRef: bottomSheetModalRef }}>
