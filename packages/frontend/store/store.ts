@@ -1,10 +1,14 @@
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import trendsReducer from "./reducers/trendsReducer";
 import analyticsReducer from "./reducers/analyticsReducer";
+import profileReducer from "./reducers/profileReducer";
+import bottomSheetReducer from "./reducers/bottomSheetReducer";
 
 const rootReducer = combineReducers({
   trends: trendsReducer,
   analytics: analyticsReducer,
+  profile: profileReducer,
+  bottomSheet: bottomSheetReducer,
 });
 
 export const store = configureStore({
