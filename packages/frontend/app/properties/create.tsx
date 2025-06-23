@@ -585,7 +585,7 @@ export default function CreatePropertyScreen() {
         } : undefined,
       };
 
-      const resultAction = await dispatch(createProperty(propertyData));
+      const resultAction = await dispatch(createProperty({ data: propertyData, oxyServices, activeSessionId }));
       if (createProperty.fulfilled.match(resultAction)) {
         const createdProperty = resultAction.payload;
         router.push(`/properties/${createdProperty._id}`);
@@ -593,12 +593,12 @@ export default function CreatePropertyScreen() {
         throw resultAction.error;
       }
     } catch (error: any) {
-      console.error('Property creation error:', error);
+      console.error('Property creation error:', error, JSON.stringify(error));
 
       let errorMessage = 'Failed to create property. Please try again.';
 
       // Handle OxyServices authentication errors specifically
-      if (error.message && error.message.includes('Authentication')) {
+      if (typeof error.message === 'string' && error.message.includes('Authentication')) {
         errorMessage = 'Authentication failed. Please sign in again.';
       } else if (error.status === 401) {
         errorMessage = 'Authentication required. Please sign in with Oxy.';
@@ -606,8 +606,10 @@ export default function CreatePropertyScreen() {
         errorMessage = error.response.data.message;
       } else if (error.response?.data?.error) {
         errorMessage = error.response.data.error;
-      } else if (error.message) {
+      } else if (typeof error.message === 'string') {
         errorMessage = error.message;
+      } else {
+        errorMessage = JSON.stringify(error);
       }
 
       Alert.alert('Error', errorMessage);

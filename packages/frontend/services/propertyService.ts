@@ -133,8 +133,8 @@ class PropertyService {
     return response.data.data || response.data.property;
   }
 
-  async createProperty(data: CreatePropertyData): Promise<Property> {
-    const response = await api.post(this.baseUrl, data);
+  async createProperty(data: CreatePropertyData, oxyServices: any, activeSessionId: string): Promise<Property> {
+    const response = await api.post(this.baseUrl, data, { oxyServices, activeSessionId });
     return response.data.data; // Backend returns { success, message, data }
   }
 

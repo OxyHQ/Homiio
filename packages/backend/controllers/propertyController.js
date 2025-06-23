@@ -29,13 +29,20 @@ class PropertyController {
         );
       }
       if (!req.body.profileId) {
-        return next(
-          new AppError(
-            "Profile ID is required",
-            400,
-            "PROFILE_ID_REQUIRED",
-          ),
-        );
+        // Try to fetch the active profile for the current user
+        const Profile = require('../models').Profile;
+        let activeProfile = await Profile.findPrimaryByOxyUserId(req.userId);
+        if (!activeProfile) {
+          // Auto-create a personal profile for the user
+          activeProfile = await Profile.create({
+            oxyUserId: req.userId,
+            profileType: 'personal',
+            isPrimary: true,
+            isActive: true,
+            personalProfile: {}
+          });
+        }
+        req.body.profileId = activeProfile._id;
       }
       const propertyData = {
         ...req.body,
@@ -95,13 +102,19 @@ class PropertyController {
   async createPropertyDev(req, res, next) {
     try {
       if (!req.body.profileId) {
-        return next(
-          new AppError(
-            "Profile ID is required",
-            400,
-            "PROFILE_ID_REQUIRED",
-          ),
-        );
+        // Try to fetch the active profile for the current user
+        const Profile = require('../models').Profile;
+        const activeProfile = await Profile.findPrimaryByOxyUserId(req.userId);
+        if (!activeProfile) {
+          return next(
+            new AppError(
+              "Profile ID is required",
+              400,
+              "PROFILE_ID_REQUIRED",
+            ),
+          );
+        }
+        req.body.profileId = activeProfile._id;
       }
       const propertyData = {
         ...req.body,

@@ -33,8 +33,10 @@ export const fetchProperty = createAsyncThunk(
 
 export const createProperty = createAsyncThunk(
   'properties/createProperty',
-  async (data: CreatePropertyData) => {
-    const property = await propertyService.createProperty(data);
+  async (
+    { data, oxyServices, activeSessionId }: { data: CreatePropertyData, oxyServices: any, activeSessionId: string }
+  ) => {
+    const property = await propertyService.createProperty(data, oxyServices, activeSessionId);
     return property;
   },
 );
