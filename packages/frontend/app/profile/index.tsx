@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { toast } from 'sonner';
-import { useUserProfiles, useUpdateProfile } from '@/hooks/useProfileQueries';
+import { useProfileRedux } from '@/hooks/useProfileQueries';
 import type { Profile } from '@/services/profileService';
 
 // Type assertion for Ionicons compatibility with React 19
@@ -74,8 +74,15 @@ export default function ProfileScreen() {
     const { t } = useTranslation();
     const router = useRouter();
     const { user, logout } = useOxy();
-    const { data: profiles, isLoading, error, refetch } = useUserProfiles();
-    const updateProfileMutation = useUpdateProfile();
+    const {
+        allProfiles: profiles,
+        isLoading,
+        error,
+        refetchProfiles,
+        updateProfile,
+        deleteProfile,
+        activateProfile
+    } = useProfileRedux();
 
     const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
     const [isSwitching, setIsSwitching] = useState(false);
@@ -129,22 +136,16 @@ export default function ProfileScreen() {
                         setIsSwitching(true);
 
                         try {
-                            // Simply activate the target profile - backend will handle deactivating others
-                            await updateProfileMutation.mutateAsync({
-                                profileId: finalProfileId,
-                                updateData: { isActive: true }
-                            });
+                            // Use Redux action to activate the profile
+                            await activateProfile(finalProfileId);
 
                             // Update local state immediately
                             setActiveProfileId(finalProfileId);
                             toast.success(`Switched to ${profileName}`);
 
-                            // Refetch profiles to update the active state
-                            await refetch();
-
-                        } catch (error) {
+                        } catch (error: any) {
                             console.error('Profile switch failed:', error);
-                            toast.error('Failed to switch profile');
+                            toast.error(error.message || 'Failed to switch profile');
                         } finally {
                             setIsSwitching(false);
                         }
@@ -179,12 +180,11 @@ export default function ProfileScreen() {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            // Implementation for profile deletion would go here
+                            await deleteProfile(profileId);
                             toast.success(`Profile "${profileName}" deleted`);
-                            await refetch();
-                        } catch (error) {
+                        } catch (error: any) {
                             console.error('Profile deletion failed:', error);
-                            toast.error('Failed to delete profile');
+                            toast.error(error.message || 'Failed to delete profile');
                         }
                     },
                 },
@@ -243,7 +243,7 @@ export default function ProfileScreen() {
                     <IconComponent name="alert-circle" size={48} color="#ff4757" />
                     <Text style={styles.errorTitle}>Failed to load profiles</Text>
                     <Text style={styles.errorMessage}>Please try again later</Text>
-                    <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+                    <TouchableOpacity style={styles.retryButton} onPress={() => refetchProfiles()}>
                         <Text style={styles.retryButtonText}>Retry</Text>
                     </TouchableOpacity>
                 </View>

@@ -7,15 +7,19 @@ import { useRouter } from 'expo-router';
 import { IconButton } from '@/components/IconButton';
 import { TrustScore } from '@/components/TrustScore';
 import { Header } from '@/components/Header';
-import { useActiveProfile, useUpdateProfile } from '@/hooks/useProfileQueries';
+import { useProfileRedux } from '@/hooks/useProfileQueries';
 import { UpdateProfileData } from '@/services/profileService';
 import { storeData, getData } from '@/utils/storage';
 
 export default function ProfileEditScreen() {
     const { t } = useTranslation();
     const router = useRouter();
-    const { data: activeProfile, isLoading: profileLoading, refetch: refetchProfile } = useActiveProfile();
-    const updateProfileMutation = useUpdateProfile();
+    const {
+        primaryProfile: activeProfile,
+        isLoading: profileLoading,
+        refetchProfiles,
+        updateProfile
+    } = useProfileRedux();
     const [isSaving, setIsSaving] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [activeSection, setActiveSection] = useState('personal');
@@ -500,10 +504,7 @@ export default function ProfileEditScreen() {
                 };
             }
 
-            await updateProfileMutation.mutateAsync({
-                profileId,
-                updateData
-            });
+            await updateProfile(profileId, updateData);
 
             setHasUnsavedChanges(false);
             Alert.alert('Success', 'Profile updated successfully!');
@@ -513,7 +514,7 @@ export default function ProfileEditScreen() {
         } finally {
             setIsSaving(false);
         }
-    }, [activeProfile, profileType, personalInfo, preferences, references, rentalHistory, settings, agencyInfo, businessInfo, updateProfileMutation]);
+    }, [activeProfile, profileType, personalInfo, preferences, references, rentalHistory, settings, agencyInfo, businessInfo, updateProfile]);
 
     // Memoized form update functions to prevent unnecessary re-renders
     const updatePersonalInfo = useCallback((updates: Partial<typeof personalInfo>) => {
@@ -660,12 +661,12 @@ export default function ProfileEditScreen() {
     const handleRefresh = useCallback(async () => {
         try {
             console.log('Manually refreshing profile data...');
-            await refetchProfile();
+            await refetchProfiles();
             console.log('Profile data refreshed successfully');
         } catch (error) {
             console.error('Error refreshing profile data:', error);
         }
-    }, [refetchProfile]);
+    }, [refetchProfiles]);
 
     const renderSection = () => {
         if (profileType === 'agency') {

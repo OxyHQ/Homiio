@@ -1,21 +1,26 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { useProfile, usePersonalProfile, useAgencyProfiles } from '@/context/ProfileContext';
-import { useCreateProfile, useUpdateProfile, useDeleteProfile } from '@/hooks/useProfileQueries';
+import { useProfileRedux } from '@/hooks/useProfileQueries';
 import { useOxy } from '@oxyhq/services';
 import type { CreateProfileData, UpdateProfileData } from '@/services/profileService';
 
 export function ProfileManager() {
     const { oxyServices, activeSessionId } = useOxy();
-    const { primaryProfile, allProfiles, isLoading, error } = useProfile();
-    const personalProfile = usePersonalProfile();
-    const agencyProfiles = useAgencyProfiles();
-
-    const createProfileMutation = useCreateProfile();
-    const updateProfileMutation = useUpdateProfile();
-    const deleteProfileMutation = useDeleteProfile();
+    const {
+        primaryProfile,
+        allProfiles,
+        isLoading,
+        error,
+        createProfile,
+        updateProfile,
+        deleteProfile
+    } = useProfileRedux();
 
     const [selectedProfileType, setSelectedProfileType] = useState<'personal' | 'agency'>('personal');
+
+    // Get personal and agency profiles from allProfiles
+    const personalProfile = allProfiles.find(p => p.profileType === 'personal');
+    const agencyProfiles = allProfiles.filter(p => p.profileType === 'agency');
 
     if (!oxyServices || !activeSessionId) {
         return (
@@ -39,7 +44,7 @@ export function ProfileManager() {
         return (
             <View style={styles.container}>
                 <Text style={styles.title}>Profile Manager</Text>
-                <Text style={styles.message}>Error loading profiles: {error.message}</Text>
+                <Text style={styles.message}>Error loading profiles: {error}</Text>
             </View>
         );
     }
@@ -84,19 +89,19 @@ export function ProfileManager() {
                     break;
             }
 
-            await createProfileMutation.mutateAsync(profileData);
+            await createProfile(profileData);
             Alert.alert('Success', `${profileType} profile created successfully!`);
-        } catch (error) {
-            Alert.alert('Error', `Failed to create ${profileType} profile: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        } catch (error: any) {
+            Alert.alert('Error', `Failed to create ${profileType} profile: ${error.message || 'Unknown error'}`);
         }
     };
 
     const handleUpdateProfile = async (profileId: string, updateData: UpdateProfileData) => {
         try {
-            await updateProfileMutation.mutateAsync({ profileId, updateData });
+            await updateProfile(profileId, updateData);
             Alert.alert('Success', 'Profile updated successfully!');
-        } catch (error) {
-            Alert.alert('Error', `Failed to update profile: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        } catch (error: any) {
+            Alert.alert('Error', `Failed to update profile: ${error.message || 'Unknown error'}`);
         }
     };
 
@@ -111,10 +116,10 @@ export function ProfileManager() {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            await deleteProfileMutation.mutateAsync(profileId);
+                            await deleteProfile(profileId);
                             Alert.alert('Success', 'Profile deleted successfully!');
-                        } catch (error) {
-                            Alert.alert('Error', `Failed to delete profile: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                        } catch (error: any) {
+                            Alert.alert('Error', `Failed to delete profile: ${error.message || 'Unknown error'}`);
                         }
                     }
                 }
@@ -172,10 +177,9 @@ export function ProfileManager() {
                     <TouchableOpacity
                         style={styles.button}
                         onPress={() => handleCreateProfile('personal')}
-                        disabled={createProfileMutation.isPending}
                     >
                         <Text style={styles.buttonText}>
-                            {createProfileMutation.isPending ? 'Creating...' : 'Create Personal Profile'}
+                            Create Personal Profile
                         </Text>
                     </TouchableOpacity>
                 )}
@@ -184,10 +188,9 @@ export function ProfileManager() {
                     <TouchableOpacity
                         style={styles.button}
                         onPress={() => handleCreateProfile('agency')}
-                        disabled={createProfileMutation.isPending}
                     >
                         <Text style={styles.buttonText}>
-                            {createProfileMutation.isPending ? 'Creating...' : 'Create Agency Profile'}
+                            Create Agency Profile
                         </Text>
                     </TouchableOpacity>
                 )}
@@ -207,10 +210,9 @@ export function ProfileManager() {
                                     });
                                 }
                             }}
-                            disabled={updateProfileMutation.isPending}
                         >
                             <Text style={styles.buttonText}>
-                                {updateProfileMutation.isPending ? 'Updating...' : 'Toggle Profile Active Status'}
+                                Toggle Profile Active Status
                             </Text>
                         </TouchableOpacity>
                     )}
@@ -228,10 +230,9 @@ export function ProfileManager() {
                                     handleDeleteProfile(profile.id);
                                 }
                             }}
-                            disabled={deleteProfileMutation.isPending}
                         >
                             <Text style={styles.buttonText}>
-                                {deleteProfileMutation.isPending ? 'Deleting...' : 'Delete Profile'}
+                                Delete Profile
                             </Text>
                         </TouchableOpacity>
                     )}

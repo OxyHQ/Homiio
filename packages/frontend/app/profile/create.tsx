@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/colors';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useCreateProfile } from '@/hooks/useProfileQueries';
+import { useProfileRedux } from '@/hooks/useProfileQueries';
 import { toast } from 'sonner';
 
 // Type assertion for Ionicons compatibility with React 19
@@ -16,7 +16,7 @@ type ProfileType = 'agency' | 'business' | 'cooperative';
 export default function ProfileCreateScreen() {
     const { t } = useTranslation();
     const router = useRouter();
-    const createProfile = useCreateProfile();
+    const { createProfile, isLoading } = useProfileRedux();
     const [isCreating, setIsCreating] = useState(false);
     const [selectedType, setSelectedType] = useState<ProfileType | null>(null);
     const [formData, setFormData] = useState({
@@ -97,11 +97,11 @@ export default function ProfileCreateScreen() {
                 };
             }
 
-            await createProfile.mutateAsync(profileData);
+            await createProfile(profileData);
             toast.success(`${profileTypes.find(p => p.type === selectedType)?.title} created successfully!`);
             router.back();
-        } catch (error) {
-            toast.error('Failed to create profile. Please try again.');
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to create profile. Please try again.');
         } finally {
             setIsCreating(false);
         }

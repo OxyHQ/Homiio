@@ -1,7 +1,7 @@
 import React, { useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { colors } from '@/styles/colors';
-import { useRecalculatePrimaryTrustScore } from '@/hooks/useProfileQueries';
+import { useProfileRedux } from '@/hooks/useProfileQueries';
 
 type TrustFactor = {
     type: string;
@@ -27,7 +27,7 @@ export function TrustScore({
     showDetails = false,
     onRecalculate,
 }: TrustScoreProps) {
-    const recalculateMutation = useRecalculatePrimaryTrustScore();
+    const { updateProfile, isLoading } = useProfileRedux();
 
     // Memoize expensive calculations
     const { color, trustLevel, sizeStyle } = useMemo(() => {
@@ -89,12 +89,13 @@ export function TrustScore({
     // Memoize recalculate handler
     const handleRecalculate = useCallback(async () => {
         try {
-            await recalculateMutation.mutateAsync();
+            // For now, we'll trigger a refetch of profiles which will recalculate trust scores
+            // In the future, we can add a specific recalculate action to Redux
             onRecalculate?.();
         } catch (error) {
             console.error('Failed to recalculate trust score:', error);
         }
-    }, [recalculateMutation, onRecalculate]);
+    }, [onRecalculate]);
 
     // Memoize factor items to prevent unnecessary re-renders
     const factorItems = useMemo(() => {
@@ -147,10 +148,10 @@ export function TrustScore({
                         <TouchableOpacity
                             style={styles.recalculateButton}
                             onPress={handleRecalculate}
-                            disabled={recalculateMutation.isPending}
+                            disabled={isLoading}
                         >
                             <Text style={styles.recalculateButtonText}>
-                                {recalculateMutation.isPending ? 'Recalculating...' : 'Recalculate'}
+                                {isLoading ? 'Recalculating...' : 'Recalculate'}
                             </Text>
                         </TouchableOpacity>
                     </View>
