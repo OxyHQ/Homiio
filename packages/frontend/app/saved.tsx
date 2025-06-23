@@ -94,7 +94,7 @@ export default function SavedPropertiesScreen() {
     };
 
     const renderPropertyItem = ({ item }: { item: SavedProperty }) => (
-        <TouchableOpacity onPress={() => handlePropertyPress(item)} style={styles.cardContainer}>
+        <View style={styles.cardContainer}>
             <PropertyCard
                 id={item._id}
                 title={getPropertyTitle(item)}
@@ -105,6 +105,7 @@ export default function SavedPropertiesScreen() {
                 bedrooms={item.bedrooms || 0}
                 bathrooms={item.bathrooms || 0}
                 size={item.squareFootage || 0}
+                onPress={() => handlePropertyPress(item)}
             />
             <View style={styles.cardFooter}>
                 <View style={styles.notesSection}>
@@ -128,7 +129,7 @@ export default function SavedPropertiesScreen() {
                     />
                 </View>
             </View>
-        </TouchableOpacity>
+        </View>
     );
 
     const renderEmptyState = () => (
