@@ -9,10 +9,31 @@ import Markdown from 'react-native-markdown-display';
 import { useRouter } from 'expo-router';
 import { PropertyCard } from '@/components/PropertyCard';
 import { SindiIcon } from '@/assets/icons';
+import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import { Header } from '@/components/Header';
 
 export default function sindi() {
   const { oxyServices, activeSessionId } = useOxy();
   const router = useRouter();
+
+  // Check if user is authenticated
+  if (!oxyServices || !activeSessionId) {
+    return (
+      <ThemedView style={styles.container} lightColor="transparent" darkColor="transparent">
+        <Header options={{ title: 'Sindi', showBackButton: true }} />
+        <View style={styles.authRequiredContainer}>
+          <View style={styles.authRequiredContent}>
+            <Text style={styles.authRequiredIcon}>🔒</Text>
+            <ThemedText style={styles.authRequiredTitle}>Authentication Required</ThemedText>
+            <ThemedText style={styles.authRequiredSubtitle}>
+              Please sign in to access Sindi, your AI-powered housing justice advocate
+            </ThemedText>
+          </View>
+        </View>
+      </ThemedView>
+    );
+  }
 
   // Create a custom fetch function that includes authentication
   const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
@@ -709,5 +730,28 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  authRequiredContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  authRequiredContent: {
+    alignItems: 'center',
+  },
+  authRequiredIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  authRequiredTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  authRequiredSubtitle: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    textAlign: 'center',
   },
 });

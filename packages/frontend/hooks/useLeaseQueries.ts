@@ -32,7 +32,7 @@ export function useUserLeases(filters?: any) {
 
       try {
         console.log(`Fetching user leases for profile ${activeProfile.id} with OxyServices authentication`);
-        const response = await leaseService.getLeases({ ...filters, profileId: activeProfile.id });
+        const response = await leaseService.getLeases({ ...filters, profileId: activeProfile.id }, oxyServices, activeSessionId);
         console.log(`Successfully fetched ${response.leases.length} leases for profile ${activeProfile.id}`);
         return response;
       } catch (error) {
@@ -60,7 +60,7 @@ export function useActiveLeases() {
 
       try {
         console.log(`Fetching active leases for profile ${activeProfile.id} with OxyServices authentication`);
-        const leases = await leaseService.getActiveLeases();
+        const leases = await leaseService.getActiveLeases(oxyServices, activeSessionId);
         // Filter leases by current profile (as tenant or landlord)
         const profileLeases = leases.filter(lease => 
           lease.tenantId === activeProfile.id || lease.landlordId === activeProfile.id
@@ -92,7 +92,7 @@ export function usePendingSignatureLeases() {
 
       try {
         console.log(`Fetching pending signature leases for profile ${activeProfile.id} with OxyServices authentication`);
-        const leases = await leaseService.getPendingSignatureLeases();
+        const leases = await leaseService.getPendingSignatureLeases(oxyServices, activeSessionId);
         // Filter leases by current profile (as tenant or landlord)
         const profileLeases = leases.filter(lease => 
           lease.tenantId === activeProfile.id || lease.landlordId === activeProfile.id
@@ -143,7 +143,7 @@ export function useLease(leaseId: string) {
 
       try {
         console.log(`Fetching lease ${leaseId} with OxyServices authentication`);
-        const lease = await leaseService.getLease(leaseId);
+        const lease = await leaseService.getLease(leaseId, oxyServices, activeSessionId);
         console.log(`Successfully fetched lease ${leaseId}`);
         return lease;
       } catch (error) {
@@ -175,7 +175,7 @@ export function useCreateLease() {
           ...leaseData,
           profileId: activeProfile.id,
         };
-        const lease = await leaseService.createLease(leaseWithProfile);
+        const lease = await leaseService.createLease(leaseWithProfile, oxyServices, activeSessionId);
         console.log('Successfully created lease:', lease);
         return lease;
       } catch (error) {
@@ -210,7 +210,7 @@ export function useUpdateLease() {
 
       try {
         console.log(`Updating lease ${leaseId} with OxyServices authentication`);
-        const lease = await leaseService.updateLease(leaseId, data);
+        const lease = await leaseService.updateLease(leaseId, data, oxyServices, activeSessionId);
         console.log(`Successfully updated lease ${leaseId}`);
         return lease;
       } catch (error) {
@@ -246,7 +246,7 @@ export function useDeleteLease() {
 
       try {
         console.log(`Deleting lease ${leaseId} with OxyServices authentication`);
-        await leaseService.deleteLease(leaseId);
+        await leaseService.deleteLease(leaseId, oxyServices, activeSessionId);
         console.log(`Successfully deleted lease ${leaseId}`);
       } catch (error) {
         console.error(`Error deleting lease ${leaseId}:`, error);

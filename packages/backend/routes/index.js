@@ -15,6 +15,7 @@ module.exports = function(authenticateToken) {
   const analyticsRoutes = require('./analytics');
   const profileRoutes = require('./profiles')(authenticateToken);
   const aiRoutes = require('./ai')(authenticateToken);
+  const roommateRoutes = require('./roommates')(authenticateToken);
 
   const router = express.Router();
 
@@ -28,6 +29,7 @@ module.exports = function(authenticateToken) {
   router.use('/analytics', analyticsRoutes);
   router.use('/profiles', profileRoutes);
   router.use('/ai', aiRoutes);
+  router.use('/roommates', roommateRoutes);
 
   // Health check route
   router.get('/health', (req, res) => {

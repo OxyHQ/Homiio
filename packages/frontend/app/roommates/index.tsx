@@ -8,127 +8,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/colors';
 import { RoommateMatch, LifestylePreference } from '@/components/RoommateMatch';
 import Slider from '@react-native-community/slider';
-
-type RoommateProfile = {
-    id: string;
-    name: string;
-    age: number;
-    occupation: string;
-    bio: string;
-    imageUrl: string;
-    matchPercentage: number;
-    trustScore: number;
-    lifestylePreferences: LifestylePreference[];
-    interests: string[];
-    location: string;
-    budget: {
-        min: number;
-        max: number;
-        currency: string;
-    };
-    moveInDate: string;
-    duration: string;
-    lastActive: string;
-};
-
-// Sample roommate profiles for demonstration
-const sampleRoommates: RoommateProfile[] = [
-    {
-        id: '1',
-        name: 'Sofia Martinez',
-        age: 27,
-        occupation: 'UX Designer',
-        bio: 'Creative professional looking for a peaceful home where I can work remotely part of the week. Love cooking and hiking on weekends.',
-        imageUrl: 'https://randomuser.me/api/portraits/women/33.jpg',
-        matchPercentage: 92,
-        trustScore: 4.8,
-        lifestylePreferences: [
-            'non_smoker', 'pets', 'quiet', 'social'
-        ],
-        interests: ['Design', 'Cooking', 'Hiking', 'Photography'],
-        location: 'Gracia, Barcelona',
-        budget: { min: 600, max: 800, currency: '⊜' },
-        moveInDate: '2023-07-01',
-        duration: '12+ months',
-        lastActive: '2 hours ago',
-    },
-    {
-        id: '2',
-        name: 'Lucas Dubois',
-        age: 31,
-        occupation: 'Software Engineer',
-        bio: 'Tech enthusiast working for a global company. Looking for a well-located apartment with good internet connection. Clean and organized.',
-        imageUrl: 'https://randomuser.me/api/portraits/men/44.jpg',
-        matchPercentage: 87,
-        trustScore: 4.9,
-        lifestylePreferences: [
-            'non_smoker', 'clean', 'quiet'
-        ],
-        interests: ['Programming', 'Gaming', 'Cycling', 'Science'],
-        location: 'Poblenou, Barcelona',
-        budget: { min: 700, max: 900, currency: '⊜' },
-        moveInDate: '2023-06-15',
-        duration: '12+ months',
-        lastActive: '1 day ago',
-    },
-    {
-        id: '3',
-        name: 'Mia Johnson',
-        age: 24,
-        occupation: 'Postgraduate Student',
-        bio: 'Environmental science student looking for eco-conscious roommates. Vegan, love to garden and participate in community projects.',
-        imageUrl: 'https://randomuser.me/api/portraits/women/66.jpg',
-        matchPercentage: 82,
-        trustScore: 4.5,
-        lifestylePreferences: [
-            'non_smoker', 'pets', 'social', 'vegan'
-        ],
-        interests: ['Environment', 'Gardening', 'Yoga', 'Reading'],
-        location: 'Eixample, Barcelona',
-        budget: { min: 500, max: 650, currency: '⊜' },
-        moveInDate: '2023-08-01',
-        duration: '6+ months',
-        lastActive: '3 hours ago',
-    },
-    {
-        id: '4',
-        name: 'Javier Torres',
-        age: 29,
-        occupation: 'Marketing Specialist',
-        bio: 'Local Barcelonian who can show you the best spots in the city. Work in digital marketing and enjoy a good balance of social life and quiet time.',
-        imageUrl: 'https://randomuser.me/api/portraits/men/11.jpg',
-        matchPercentage: 79,
-        trustScore: 4.7,
-        lifestylePreferences: [
-            'smoker', 'pets', 'social', 'night_owl'
-        ],
-        interests: ['Music', 'Travel', 'Cooking', 'Nightlife'],
-        location: 'El Born, Barcelona',
-        budget: { min: 650, max: 850, currency: '⊜' },
-        moveInDate: '2023-06-01',
-        duration: '12+ months',
-        lastActive: '5 hours ago',
-    },
-    {
-        id: '5',
-        name: 'Emma Rossi',
-        age: 26,
-        occupation: 'Language Teacher',
-        bio: 'Italian teacher who recently moved to Barcelona. Love languages, cooking Italian food, and exploring new cultures. Looking for a friendly home environment.',
-        imageUrl: 'https://randomuser.me/api/portraits/women/19.jpg',
-        matchPercentage: 85,
-        trustScore: 4.6,
-        lifestylePreferences: [
-            'non_smoker', 'pets', 'quiet', 'creative'
-        ],
-        interests: ['Languages', 'Cooking', 'Travel', 'Art'],
-        location: 'Sant Antoni, Barcelona',
-        budget: { min: 600, max: 750, currency: '⊜' },
-        moveInDate: '2023-07-15',
-        duration: '12+ months',
-        lastActive: '1 day ago',
-    },
-];
+import { useRoommateProfiles, useHasRoommateMatching, useToggleRoommateMatching, useSendRoommateRequest } from '@/hooks/useRoommateQueries';
+import { roommateService } from '@/services/roommateService';
+import type { Profile } from '@/services/profileService';
 
 type FilterOptions = {
     minMatchPercentage: number;
@@ -141,10 +23,14 @@ type FilterOptions = {
 export default function RoommatesScreen() {
     const { t } = useTranslation();
     const router = useRouter();
-    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [showFilters, setShowFilters] = useState(false);
-    const [roommates, setRoommates] = useState<RoommateProfile[]>([]);
+
+    // Get roommate data
+    const { data: roommateData, isLoading: roommatesLoading } = useRoommateProfiles();
+    const { hasRoommateMatching, activeProfile } = useHasRoommateMatching();
+    const toggleRoommateMatching = useToggleRoommateMatching();
+    const sendRoommateRequest = useSendRoommateRequest();
 
     // Filtering options
     const [filters, setFilters] = useState<FilterOptions>({
@@ -161,15 +47,34 @@ export default function RoommatesScreen() {
         'Travel', 'Photography', 'Hiking', 'Yoga', 'Design', 'Technology'
     ];
 
-    useEffect(() => {
-        // Simulate loading data
-        const timer = setTimeout(() => {
-            setRoommates(sampleRoommates);
-            setLoading(false);
-        }, 1500);
+    // Convert profiles to roommate display format
+    const roommates = roommateData?.profiles.map(profile => {
+        const displayInfo = roommateService.getProfileDisplayInfo(profile);
+        const matchPercentage = activeProfile ? roommateService.calculateMatchPercentage(activeProfile, profile) : 0;
 
-        return () => clearTimeout(timer);
-    }, []);
+        return {
+            id: profile.id,
+            profileId: profile.id,
+            name: displayInfo.name,
+            age: displayInfo.age,
+            occupation: displayInfo.occupation,
+            bio: displayInfo.bio,
+            imageUrl: 'https://randomuser.me/api/portraits/lego/1.jpg', // Default avatar
+            matchPercentage,
+            trustScore: displayInfo.trustScore,
+            lifestylePreferences: roommateService.getRoommatePreferencesFromProfile(profile)?.lifestyle ?
+                Object.entries(roommateService.getRoommatePreferencesFromProfile(profile)!.lifestyle!).map(([key, value]) => value) : [],
+            interests: [], // Would need to be added to profile
+            location: displayInfo.location,
+            budget: displayInfo.budget,
+            moveInDate: displayInfo.moveInDate,
+            duration: displayInfo.duration,
+            lastActive: profile.updatedAt,
+            isVerified: displayInfo.isVerified,
+            hasReferences: displayInfo.hasReferences,
+            rentalHistory: displayInfo.rentalHistory,
+        };
+    }) || [];
 
     // Apply filters to roommate list
     const filteredRoommates = roommates.filter(roommate => {
@@ -184,12 +89,12 @@ export default function RoommatesScreen() {
         }
 
         // Pets preference filter
-        if (filters.withPets && !roommate.lifestylePreferences.includes('pets')) {
+        if (filters.withPets && !roommate.lifestylePreferences.includes('yes')) {
             return false;
         }
 
         // Smoking preference filter
-        if (filters.nonSmoking && !roommate.lifestylePreferences.includes('non_smoker')) {
+        if (filters.nonSmoking && !roommate.lifestylePreferences.includes('no')) {
             return false;
         }
 
@@ -228,11 +133,19 @@ export default function RoommatesScreen() {
     };
 
     const handleCreateProfile = () => {
-        router.push('/roommates/create-profile');
+        router.push('/profile/edit');
     };
 
     const handlePreferences = () => {
         router.push('/roommates/preferences');
+    };
+
+    const handleToggleRoommateMatching = () => {
+        toggleRoommateMatching.mutate(!hasRoommateMatching);
+    };
+
+    const handleSendRequest = (roommateId: string) => {
+        sendRoommateRequest.mutate({ profileId: roommateId });
     };
 
     const toggleInterestFilter = (interest: string) => {
@@ -263,7 +176,7 @@ export default function RoommatesScreen() {
         });
     };
 
-    if (loading) {
+    if (roommatesLoading) {
         return (
             <SafeAreaView style={styles.container} edges={['top']}>
                 <Header
@@ -294,23 +207,48 @@ export default function RoommatesScreen() {
                 }}
             />
 
-            <View style={styles.profileBanner}>
-                <View style={styles.profileIconContainer}>
-                    <Ionicons name="people" size={24} color="white" />
+            {!hasRoommateMatching && (
+                <View style={styles.profileBanner}>
+                    <View style={styles.profileIconContainer}>
+                        <Ionicons name="people" size={24} color="white" />
+                    </View>
+                    <View style={styles.profileContent}>
+                        <Text style={styles.profileTitle}>{t("Enable Roommate Matching")}</Text>
+                        <Text style={styles.profileDescription}>
+                            {t("Turn on roommate matching to find compatible roommates and let others find you.")}
+                        </Text>
+                    </View>
+                    <TouchableOpacity
+                        style={styles.profileButton}
+                        onPress={handleToggleRoommateMatching}
+                        disabled={toggleRoommateMatching.isPending}
+                    >
+                        <Text style={styles.profileButtonText}>
+                            {toggleRoommateMatching.isPending ? t("Enabling...") : t("Enable")}
+                        </Text>
+                    </TouchableOpacity>
                 </View>
-                <View style={styles.profileContent}>
-                    <Text style={styles.profileTitle}>{t("Complete Your Profile")}</Text>
-                    <Text style={styles.profileDescription}>
-                        {t("Add more details to improve your matches and help others find you.")}
-                    </Text>
+            )}
+
+            {hasRoommateMatching && (
+                <View style={styles.profileBanner}>
+                    <View style={styles.profileIconContainer}>
+                        <Ionicons name="checkmark-circle" size={24} color="white" />
+                    </View>
+                    <View style={styles.profileContent}>
+                        <Text style={styles.profileTitle}>{t("Roommate Matching Active")}</Text>
+                        <Text style={styles.profileDescription}>
+                            {t("You're visible to other roommates. Update your preferences to improve matches.")}
+                        </Text>
+                    </View>
+                    <TouchableOpacity
+                        style={styles.profileButton}
+                        onPress={handleCreateProfile}
+                    >
+                        <Text style={styles.profileButtonText}>{t("Update")}</Text>
+                    </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                    style={styles.profileButton}
-                    onPress={handleCreateProfile}
-                >
-                    <Text style={styles.profileButtonText}>{t("Update")}</Text>
-                </TouchableOpacity>
-            </View>
+            )}
 
             <View style={styles.searchContainer}>
                 <View style={styles.searchInputContainer}>
@@ -407,84 +345,61 @@ export default function RoommatesScreen() {
                             ]}>
                                 {filters.nonSmoking && <Ionicons name="checkmark" size={16} color="white" />}
                             </View>
-                            <Text style={styles.checkboxLabel}>{t("Non-smoker")}</Text>
+                            <Text style={styles.checkboxLabel}>{t("Non-smoking")}</Text>
                         </TouchableOpacity>
                     </View>
 
-                    <Text style={styles.interestsLabel}>{t("Interests")}</Text>
-                    <View style={styles.interestTagsContainer}>
-                        {allInterests.map(interest => (
-                            <TouchableOpacity
-                                key={interest}
-                                style={[
-                                    styles.interestTag,
-                                    filters.interests.includes(interest) && styles.interestTagSelected
-                                ]}
-                                onPress={() => toggleInterestFilter(interest)}
-                            >
-                                <Text style={[
-                                    styles.interestTagText,
-                                    filters.interests.includes(interest) && styles.interestTagTextSelected
-                                ]}>
-                                    {interest}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
+                    <View style={styles.interestsSection}>
+                        <Text style={styles.interestsTitle}>{t("Interests")}</Text>
+                        <View style={styles.interestsGrid}>
+                            {allInterests.map(interest => (
+                                <TouchableOpacity
+                                    key={interest}
+                                    style={[
+                                        styles.interestChip,
+                                        filters.interests.includes(interest) && styles.interestChipSelected
+                                    ]}
+                                    onPress={() => toggleInterestFilter(interest)}
+                                >
+                                    <Text style={[
+                                        styles.interestChipText,
+                                        filters.interests.includes(interest) && styles.interestChipTextSelected
+                                    ]}>
+                                        {interest}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
                     </View>
                 </View>
             )}
 
-            <ScrollView style={styles.scrollView}>
+            <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.scrollContent}
+            >
                 {sortedRoommates.length === 0 ? (
                     <View style={styles.emptyContainer}>
                         <Ionicons name="people-outline" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
                         <Text style={styles.emptyText}>{t("No roommates found")}</Text>
                         <Text style={styles.emptySubtext}>
-                            {t("Try adjusting your filters or search criteria to find more potential roommates.")}
+                            {searchQuery || filters.interests.length > 0 ?
+                                t("Try adjusting your search or filters") :
+                                t("No roommates available in your area yet")}
                         </Text>
-                        <TouchableOpacity
-                            style={styles.emptyButton}
-                            onPress={resetFilters}
-                        >
-                            <Text style={styles.emptyButtonText}>{t("Reset Filters")}</Text>
-                        </TouchableOpacity>
                     </View>
                 ) : (
-                    <View style={styles.roommatesContainer}>
-                        <Text style={styles.resultCount}>
-                            {sortedRoommates.length} {sortedRoommates.length === 1 ? t("roommate") : t("roommates")} {t("found")}
-                        </Text>
-
-                        {sortedRoommates.map((roommate) => (
-                            <RoommateMatch
-                                key={roommate.id}
-                                id={roommate.id}
-                                name={roommate.name}
-                                age={roommate.age}
-                                occupation={roommate.occupation}
-                                bio={roommate.bio}
-                                imageUrl={roommate.imageUrl}
-                                matchPercentage={roommate.matchPercentage}
-                                trustScore={roommate.trustScore}
-                                lifestylePreferences={roommate.lifestylePreferences}
-                                interests={roommate.interests}
-                                onViewProfilePress={() => handleRoommateDetails(roommate.id)}
-                                onMessagePress={() => handleMessage(roommate.id)}
-                            />
-                        ))}
-                    </View>
+                    sortedRoommates.map((roommate) => (
+                        <RoommateMatch
+                            key={roommate.id}
+                            {...roommate}
+                            onPress={() => handleRoommateDetails(roommate.id)}
+                            onMessage={() => handleMessage(roommate.id)}
+                            onSendRequest={() => handleSendRequest(roommate.id)}
+                        />
+                    ))
                 )}
             </ScrollView>
-
-            <View style={styles.createProfileButton}>
-                <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={handleCreateProfile}
-                >
-                    <Ionicons name="person-add" size={20} color="white" />
-                    <Text style={styles.actionButtonText}>{t("Create/Edit Your Profile")}</Text>
-                </TouchableOpacity>
-            </View>
         </SafeAreaView>
     );
 }
@@ -644,16 +559,20 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: colors.primaryDark,
     },
-    interestsLabel: {
-        fontSize: 14,
+    interestsSection: {
+        marginBottom: 16,
+    },
+    interestsTitle: {
+        fontSize: 16,
+        fontWeight: '600',
         color: colors.primaryDark_1,
         marginBottom: 8,
     },
-    interestTagsContainer: {
+    interestsGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
     },
-    interestTag: {
+    interestChip: {
         backgroundColor: 'rgba(0, 0, 0, 0.05)',
         paddingVertical: 6,
         paddingHorizontal: 12,
@@ -661,27 +580,22 @@ const styles = StyleSheet.create({
         marginRight: 8,
         marginBottom: 8,
     },
-    interestTagSelected: {
+    interestChipSelected: {
         backgroundColor: colors.primaryColor,
     },
-    interestTagText: {
+    interestChipText: {
         fontSize: 12,
         color: colors.primaryDark_1,
     },
-    interestTagTextSelected: {
+    interestChipTextSelected: {
         color: 'white',
     },
     scrollView: {
         flex: 1,
     },
-    roommatesContainer: {
+    scrollContent: {
         paddingHorizontal: 16,
         paddingBottom: 100,
-    },
-    resultCount: {
-        fontSize: 14,
-        color: colors.primaryDark_1,
-        marginBottom: 16,
     },
     emptyContainer: {
         flex: 1,
@@ -702,41 +616,5 @@ const styles = StyleSheet.create({
         color: colors.primaryDark_1,
         textAlign: 'center',
         marginBottom: 24,
-    },
-    emptyButton: {
-        backgroundColor: colors.primaryColor,
-        paddingVertical: 12,
-        paddingHorizontal: 24,
-        borderRadius: 24,
-    },
-    emptyButtonText: {
-        color: 'white',
-        fontWeight: '600',
-    },
-    createProfileButton: {
-        position: 'absolute',
-        bottom: 16,
-        left: 16,
-        right: 16,
-    },
-    actionButton: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: colors.primaryColor,
-        paddingVertical: 12,
-        paddingHorizontal: 24,
-        borderRadius: 24,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 4,
-    },
-    actionButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: '600',
-        marginLeft: 8,
     },
 }); 
