@@ -504,10 +504,6 @@
                     "title": "Cases Familiars",
                     "prompt": "Trobeu cases de 3 habitacions amb jardí per sota de $2000"
                 },
-                "luxury": {
-                    "title": "Propietats de Luxe",
-                    "prompt": "Mostreu-me apartaments de luxe amb gimnàs i piscina per sobre de $3000"
-                },
                 "shared": {
                     "title": "Habitatge Compartit",
                     "prompt": "Trobeu habitacions compartides o espais de coliving per sota de $800"

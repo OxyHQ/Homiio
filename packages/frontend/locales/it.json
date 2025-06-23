@@ -527,16 +527,12 @@
           "title": "Case Familiari",
           "prompt": "Trova case con 3 camere da letto e giardino sotto i $2000"
         },
-        "luxury": {
-          "title": "Proprietà di Lusso",
-          "prompt": "Mostrami appartamenti di lusso con palestra e piscina sopra i $3000"
-        },
         "shared": {
           "title": "Alloggi Condivisi",
           "prompt": "Trova stanze condivise o spazi di coliving sotto gli $800"
         }
       },
-      "naturalLanguage": "💡 Capisco il linguaggio naturale! Prova: \"appartamenti economici con 2 camere a Barcellona con parcheggio\" o \"monolocali di lusso con palestra sotto i $2000\""
+      "naturalLanguage": "💡 Capisco il linguaggio naturale! Prova: \"appartamenti economici con 2 camere a Barcellona con parcheggio\""
     },
     "features": {
       "title": "Come lotto per la giustizia abitativa:",

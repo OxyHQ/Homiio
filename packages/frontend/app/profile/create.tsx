@@ -281,7 +281,7 @@ export default function ProfileCreateScreen() {
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>Specialties</Text>
                             <View style={styles.checkboxGroup}>
-                                {['residential', 'commercial', 'luxury', 'investment', 'rental', 'new_construction'].map((specialty) => (
+                                {['residential', 'commercial', 'investment', 'rental', 'new_construction'].map((specialty) => (
                                     <TouchableOpacity
                                         key={specialty}
                                         style={[

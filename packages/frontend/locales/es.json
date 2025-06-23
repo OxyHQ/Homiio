@@ -366,16 +366,12 @@
           "title": "Casas Familiares",
           "prompt": "Encuentra casas de 3 habitaciones con jardín por debajo de $2000"
         },
-        "luxury": {
-          "title": "Propiedades de Lujo",
-          "prompt": "Muéstrame apartamentos de lujo con gimnasio y piscina por encima de $3000"
-        },
         "shared": {
           "title": "Vivienda Compartida",
           "prompt": "Encuentra habitaciones compartidas o espacios de coliving por debajo de $800"
         }
       },
-      "naturalLanguage": "💡 ¡Entiendo lenguaje natural! Prueba: \"apartamentos baratos de 2 habitaciones en Barcelona con estacionamiento\" o \"estudios de lujo con gimnasio por debajo de $2000\""
+      "naturalLanguage": "💡 ¡Entiendo lenguaje natural! Prueba: \"apartamentos baratos de 2 habitaciones en Barcelona con estacionamiento\""
     },
     "features": {
       "title": "Cómo lucho por la justicia habitacional:",

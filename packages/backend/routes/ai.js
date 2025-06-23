@@ -182,11 +182,6 @@ module.exports = function(authenticateToken) {
       filters.budgetFriendly = true;
     }
     
-    // Luxury indicators
-    if (lowerQuery.includes('luxury') || lowerQuery.includes('premium') || lowerQuery.includes('high end') || lowerQuery.includes('lujo')) {
-      filters.luxury = true;
-    }
-    
     console.log('Parsed filters:', filters);
     return filters;
   }
@@ -246,8 +241,7 @@ module.exports = function(authenticateToken) {
       }
       
       if (filters.luxury && properties.length > 0) {
-        // Sort by price (highest first) for luxury searches
-        properties.sort((a, b) => (b.rent?.amount || 0) - (a.rent?.amount || 0));
+        // REMOVED: properties.sort((a, b) => (b.rent?.amount || 0) - (a.rent?.amount || 0));
       }
       
       console.log(`Found ${properties.length} properties after filtering`);

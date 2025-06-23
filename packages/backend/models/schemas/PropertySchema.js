@@ -147,6 +147,11 @@ const propertySchema = new mongoose.Schema({
     type: String,
     required: [true, 'Owner ID is required']
   },
+  profileId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Profile',
+    required: [true, 'Profile ID is required']
+  },
   description: {
     type: String,
     trim: true,

@@ -181,7 +181,7 @@
         "deleteProfile": "Delete Profile",
         "types": {
             "personal": "Personal Profile",
-            "agency": "Agency Profile", 
+            "agency": "Agency Profile",
             "business": "Business Profile"
         },
         "sections": {
@@ -541,16 +541,12 @@
                     "title": "Family Homes",
                     "prompt": "Find 3-bedroom houses with garden under $2000"
                 },
-                "luxury": {
-                    "title": "Luxury Properties",
-                    "prompt": "Show me luxury apartments with gym and pool over $3000"
-                },
                 "shared": {
                     "title": "Shared Housing",
                     "prompt": "Find shared rooms or coliving spaces under $800"
                 }
             },
-            "naturalLanguage": "💡 I understand natural language! Try: \"cheap 2-bedroom apartments in Barcelona with parking\" or \"luxury studios with gym under $2000\""
+            "naturalLanguage": "💡 I understand natural language! Try: \"cheap 2-bedroom apartments in Barcelona with parking\""
         },
         "features": {
             "title": "How I fight for housing justice:",

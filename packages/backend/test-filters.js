@@ -100,11 +100,6 @@ function parsePropertyFilters(query) {
     filters.budgetFriendly = true;
   }
   
-  // Luxury indicators
-  if (lowerQuery.includes('luxury') || lowerQuery.includes('premium') || lowerQuery.includes('high end') || lowerQuery.includes('lujo')) {
-    filters.luxury = true;
-  }
-  
   return filters;
 }
 

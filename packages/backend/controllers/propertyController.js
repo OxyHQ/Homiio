@@ -28,10 +28,19 @@ class PropertyController {
           ),
         );
       }
-
+      if (!req.body.profileId) {
+        return next(
+          new AppError(
+            "Profile ID is required",
+            400,
+            "PROFILE_ID_REQUIRED",
+          ),
+        );
+      }
       const propertyData = {
         ...req.body,
         ownerId: req.userId,
+        profileId: req.body.profileId,
       };
 
       // Handle location data - map to address coordinates
@@ -85,9 +94,19 @@ class PropertyController {
    */
   async createPropertyDev(req, res, next) {
     try {
+      if (!req.body.profileId) {
+        return next(
+          new AppError(
+            "Profile ID is required",
+            400,
+            "PROFILE_ID_REQUIRED",
+          ),
+        );
+      }
       const propertyData = {
         ...req.body,
-        ownerId: req.userId || "dev_user_" + Date.now(), // Use provided userId or generate one
+        ownerId: req.userId || "dev_user_" + Date.now(),
+        profileId: req.body.profileId,
       };
 
       logger.info("Creating property with data (dev mode)", { propertyData });
