@@ -18,33 +18,13 @@ const initialState: RecentlyViewedState = {
 export const fetchRecentlyViewedProperties = createAsyncThunk(
   'recentlyViewed/fetchProperties',
   async ({ oxyServices, activeSessionId }: { oxyServices: any, activeSessionId: string }) => {
+    console.log('Redux: Fetching recently viewed properties');
     try {
       const response = await userApi.getRecentProperties(oxyServices, activeSessionId);
+      console.log('Redux: Successfully fetched recently viewed properties:', response.data?.length || 0);
       return response.data || [];
     } catch (error) {
-      console.error('Error fetching recently viewed properties:', error);
-      throw error;
-    }
-  }
-);
-
-// Async thunk to track property view
-export const trackPropertyView = createAsyncThunk(
-  'recentlyViewed/trackView',
-  async ({ 
-    propertyId, 
-    oxyServices, 
-    activeSessionId 
-  }: { 
-    propertyId: string, 
-    oxyServices: any, 
-    activeSessionId: string 
-  }) => {
-    try {
-      await userApi.trackPropertyView(propertyId, oxyServices, activeSessionId);
-      return propertyId;
-    } catch (error) {
-      console.error('Error tracking property view:', error);
+      console.error('Redux: Error fetching recently viewed properties:', error);
       throw error;
     }
   }
@@ -91,16 +71,6 @@ const recentlyViewedSlice = createSlice({
       .addCase(fetchRecentlyViewedProperties.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.error.message || 'Failed to fetch recently viewed properties';
-      })
-      .addCase(trackPropertyView.fulfilled, (state, action: PayloadAction<string>) => {
-        // Property view was tracked successfully
-        // The backend will handle updating the recently viewed list
-        // We don't need to update the local state here as it will be refreshed
-        // when the user navigates back to a screen that shows recently viewed
-      })
-      .addCase(trackPropertyView.rejected, (state, action) => {
-        // Log error but don't update state as this is not critical
-        console.error('Failed to track property view:', action.error.message);
       });
   },
 });

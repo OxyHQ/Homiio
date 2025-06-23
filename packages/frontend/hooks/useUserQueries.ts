@@ -5,40 +5,9 @@ import { useOxy } from '@oxyhq/services';
 import { toast } from 'sonner';
 
 export const userKeys = {
-  recentProperties: () => ['user', 'recent-properties'] as const,
   savedProperties: () => ['user', 'saved-properties'] as const,
   userProperties: () => ['user', 'properties'] as const,
 };
-
-// OxyServices-based recently viewed properties hook
-export function useRecentlyViewedProperties() {
-  const { oxyServices, activeSessionId } = useOxy();
-  
-  return useQuery<Property[]>({
-    queryKey: userKeys.recentProperties(),
-    queryFn: async () => {
-      // Check if OxyServices is available
-      if (!oxyServices || !activeSessionId) {
-        console.log('OxyServices not available - returning empty array');
-        return [];
-      }
-
-      try {
-        console.log('Fetching recent properties with OxyServices authentication');
-        
-        const response = await userApi.getRecentProperties(oxyServices, activeSessionId);
-        const properties = response.data || [];
-        console.log(`Successfully fetched ${properties.length} recent properties`);
-        return properties;
-      } catch (error) {
-        console.error('Error fetching recent properties:', error);
-        return [];
-      }
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: !!(oxyServices && activeSessionId), // Only run when authenticated
-  });
-}
 
 // OxyServices-based saved properties hook
 export function useSavedProperties() {
@@ -93,9 +62,8 @@ export function useTrackPropertyView() {
       }
     },
     onSuccess: () => {
-      // Invalidate the recently viewed properties cache to trigger a refresh
-      queryClient.invalidateQueries({ queryKey: userKeys.recentProperties() });
-      console.log('Invalidated recently viewed properties cache');
+      // Note: We no longer invalidate recently viewed cache here since we're using Redux
+      console.log('Property view tracked successfully');
     },
   });
 }

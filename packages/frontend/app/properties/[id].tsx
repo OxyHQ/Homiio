@@ -20,7 +20,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchLandlordProfileById } from '@/store/reducers/profileReducer';
-import { trackPropertyView } from '@/store/reducers/recentlyViewedReducer';
+import { fetchRecentlyViewedProperties } from '@/store/reducers/recentlyViewedReducer';
 import type { RootState, AppDispatch } from '@/store/store';
 
 type PropertyDetail = {
@@ -65,6 +65,9 @@ export default function PropertyDetailPage() {
   const landlordProfileId = apiProperty?.profileId;
   const landlordProfile = useSelector((state: RootState) => state.profile.landlordProfile);
   const landlordLoading = useSelector((state: RootState) => state.profile.landlordProfileLoading);
+
+  // Get current user's primary profile for tracking
+  const primaryProfile = useSelector((state: RootState) => state.profile.primaryProfile);
 
   // Normalize landlordProfileId to string if it's an object (MongoDB $oid)
   let normalizedLandlordProfileId: string | undefined = undefined;
@@ -144,8 +147,13 @@ export default function PropertyDetailPage() {
   // Track property view when component mounts
   useEffect(() => {
     if (apiProperty && !hasViewedRef.current && oxyServices && activeSessionId) {
-      dispatch(trackPropertyView({ propertyId: apiProperty._id, oxyServices, activeSessionId }));
+      console.log('PropertyDetailPage: Property view will be tracked by backend when property is fetched');
       hasViewedRef.current = true;
+
+      // Refresh the recently viewed list after a short delay to include this property
+      setTimeout(() => {
+        dispatch(fetchRecentlyViewedProperties({ oxyServices, activeSessionId }));
+      }, 1000);
     }
   }, [apiProperty, oxyServices, activeSessionId, dispatch]);
 
@@ -249,7 +257,7 @@ export default function PropertyDetailPage() {
       const propertyUrl = `https://homiio.com/properties/${property.id}`;
 
       // Full details for clipboard
-      const fullDetails = `🏠 ${property.title}
+      const fullDetails = `�� ${property.title}
 
 📍 ${property.location}
 💰 ${property.price}

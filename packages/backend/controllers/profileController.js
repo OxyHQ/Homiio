@@ -916,7 +916,12 @@ class ProfileController {
    */
   async getProfileById(req, res, next) {
     try {
-      const { profileId } = req.params;
+      let { profileId } = req.params;
+      // If the param is 'me', use the authenticated user's profile ID
+      if (profileId === 'me') {
+        // Try to get the user's profile ID from req.user or req.userId
+        profileId = req.user?.profileId || req.userId || req.user?._id;
+      }
       const profile = await Profile.findById(profileId);
       if (!profile) {
         return res.status(404).json(errorResponse("Profile not found", "PROFILE_NOT_FOUND"));

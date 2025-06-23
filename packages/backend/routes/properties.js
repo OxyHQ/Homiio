@@ -10,30 +10,14 @@ const { validation, asyncHandler } = require('../middlewares');
 module.exports = function(authenticateToken) {
   const router = express.Router();
 
-  // Optional authentication middleware for public routes that can benefit from auth
-  const optionalAuth = (req, res, next) => {
-    // Try to authenticate, but don't fail if no token provided
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      // If token is provided, try to authenticate
-      authenticateToken(req, res, (err) => {
-        // Continue even if authentication fails
-        next();
-      });
-    } else {
-      // No token provided, continue as guest
-      next();
-    }
-  };
-
   // Public routes (no authentication required)
   router.get('/', asyncHandler(propertyController.getProperties));
   router.get('/search', asyncHandler(propertyController.searchProperties));
   
-  // Property viewing with optional authentication (for recently viewed tracking)
+  // Property viewing with authentication (for recently viewed tracking)
   router.get('/:propertyId', 
     validation.validateId('propertyId'), 
-    optionalAuth,
+    authenticateToken,
     asyncHandler(propertyController.getPropertyById)
   );
 
@@ -56,7 +40,7 @@ module.exports = function(authenticateToken) {
   );
 
   // User's properties
-  router.get('/my/properties', asyncHandler(propertyController.getMyProperties));
+  router.get('/my/properties', authenticateToken, asyncHandler(propertyController.getMyProperties));
 
   // Energy monitoring
   router.get('/:propertyId/energy', 

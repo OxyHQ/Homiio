@@ -129,8 +129,11 @@ class PropertyService {
     };
   }
 
-  async getProperty(id: string): Promise<Property> {
-    const response = await api.get(`${this.baseUrl}/${id}`);
+  async getProperty(id: string, oxyServices?: any, activeSessionId?: string): Promise<Property> {
+    const response = await api.get(`${this.baseUrl}/${id}`, {
+      oxyServices,
+      activeSessionId,
+    });
     return response.data.data || response.data.property;
   }
 

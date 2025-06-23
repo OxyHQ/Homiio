@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, SafeAreaView, RefreshControl, Text, TouchableOpacity, Platform, Animated, Dimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
@@ -12,6 +12,10 @@ import Button from '@/components/Button';
 import { Property } from '@/services/propertyService';
 import { Ionicons } from '@expo/vector-icons';
 import { useSavedProperties, useSaveProperty, useUnsaveProperty } from '@/hooks/useUserQueries';
+import { useOxy } from '@oxyhq/services';
+import { useDispatch } from 'react-redux';
+import { fetchRecentlyViewedProperties } from '@/store/reducers/recentlyViewedReducer';
+import type { AppDispatch } from '@/store/store';
 
 const screenWidth = Dimensions.get('window').width;
 const isMobile = screenWidth < 600;
@@ -20,6 +24,8 @@ const IconComponent = Ionicons as any;
 export default function PropertiesScreen() {
     const { t } = useTranslation();
     const router = useRouter();
+    const { oxyServices, activeSessionId } = useOxy();
+    const dispatch = useDispatch<AppDispatch>();
     const [refreshing, setRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [filters, setFilters] = useState({ page: 1, limit: 20 });
@@ -35,6 +41,13 @@ export default function PropertiesScreen() {
     const unsaveProperty = useUnsaveProperty();
     const { data: savedProperties = [] } = useSavedProperties();
     const [optimisticSaved, setOptimisticSaved] = useState<{ [id: string]: boolean }>({});
+
+    // Refresh recently viewed list when screen loads
+    useEffect(() => {
+        if (oxyServices && activeSessionId) {
+            dispatch(fetchRecentlyViewedProperties({ oxyServices, activeSessionId }));
+        }
+    }, [oxyServices, activeSessionId, dispatch]);
 
     const getPropertyId = (property: Property) => property._id || property.id || '';
     const isPropertySaved = (property: Property) => {

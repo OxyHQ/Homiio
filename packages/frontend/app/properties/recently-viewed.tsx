@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, SafeAreaView, RefreshControl, Text, TouchableOpacity, Platform, Animated, Dimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
@@ -13,6 +13,10 @@ import { Property } from '@/services/propertyService';
 import { Ionicons } from '@expo/vector-icons';
 import { useSavedProperties, useSaveProperty, useUnsaveProperty } from '@/hooks/useUserQueries';
 import { getPropertyTitle } from '@/utils/propertyUtils';
+import { useOxy } from '@oxyhq/services';
+import { useDispatch } from 'react-redux';
+import { fetchRecentlyViewedProperties } from '@/store/reducers/recentlyViewedReducer';
+import type { AppDispatch } from '@/store/store';
 
 const screenWidth = Dimensions.get('window').width;
 const isMobile = screenWidth < 600;
@@ -21,12 +25,21 @@ const IconComponent = Ionicons as any;
 export default function RecentlyViewedScreen() {
     const { t } = useTranslation();
     const router = useRouter();
+    const { oxyServices, activeSessionId } = useOxy();
+    const dispatch = useDispatch<AppDispatch>();
     const [refreshing, setRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState<'list' | 'grid'>(isMobile ? 'grid' : 'list');
     const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
     const { properties: recentProperties, isLoading, error, refetch, clear } = useRecentlyViewed();
+
+    // Refresh recently viewed list when screen loads
+    useEffect(() => {
+        if (oxyServices && activeSessionId) {
+            dispatch(fetchRecentlyViewedProperties({ oxyServices, activeSessionId }));
+        }
+    }, [oxyServices, activeSessionId, dispatch]);
 
     // Filter properties based on search query
     const filteredProperties = React.useMemo(() => {

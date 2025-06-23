@@ -11,7 +11,7 @@ import { Toaster } from '@/lib/sonner';
 
 // Import real data hooks
 import { useProperties } from '@/hooks/usePropertyQueries';
-import { useRecentlyViewedProperties } from '@/hooks/useUserQueries';
+import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useOxy } from '@oxyhq/services';
 
 // Import components
@@ -49,7 +49,8 @@ export default function HomePage() {
     status: 'available'
   });
 
-  const { data: recentProperties, isLoading: recentLoading, refetch: refetchRecent } = useRecentlyViewedProperties();
+  // Use Redux-based recently viewed hook
+  const { properties: recentProperties, isLoading: recentLoading, refetch: refetchRecent } = useRecentlyViewed();
 
   // Memoized data processing
   const featuredProperties = useMemo(() => {
@@ -190,12 +191,10 @@ export default function HomePage() {
           </View>
         </View>
 
-        {/* Recently Viewed Properties (if authenticated) */}
-        {isAuthenticated && (
-          <View style={styles.recentSection}>
-            <RecentlyViewedWidget />
-          </View>
-        )}
+        {/* Recently Viewed Properties */}
+        <View style={styles.recentSection}>
+          <RecentlyViewedWidget />
+        </View>
 
         {/* Featured Properties */}
         <View style={styles.featuredSection}>

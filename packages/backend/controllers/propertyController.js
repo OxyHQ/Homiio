@@ -11,6 +11,7 @@ const {
   successResponse,
   paginationResponse,
 } = require("../middlewares/errorHandler");
+const { Profile } = require("../models");
 
 class PropertyController {
   /**
@@ -246,57 +247,54 @@ class PropertyController {
   async getPropertyById(req, res, next) {
     try {
       const { propertyId } = req.params;
-
-      // Fetch from database
-      const property = await PropertyModel.findById(propertyId)
-        .populate("rooms", "name type status availability")
-        .lean();
-
+      console.log('[getPropertyById] Called for propertyId:', propertyId);
+      const property = await PropertyModel.findById(propertyId).lean();
       if (!property) {
-        return next(
-          new AppError("Property not found", 404, "PROPERTY_NOT_FOUND"),
-        );
+        return next(new AppError('Property not found', 404, 'NOT_FOUND'));
       }
 
       // Increment view count
       await PropertyModel.findByIdAndUpdate(propertyId, { $inc: { views: 1 } });
 
       // Update user's recently viewed list if authenticated (async, non-blocking)
+      console.log('[getPropertyById] req.userId:', req.userId);
+      console.log('[getPropertyById] req.user:', req.user);
       if (req.userId && (req.user?.id || req.user?._id)) {
         const oxyUserId = req.user.id || req.user._id;
-        console.log(`Authenticated user ${req.userId} (Oxy ID: ${oxyUserId}) viewing property ${propertyId}`);
+        console.log(`[getPropertyById] Authenticated user ${req.userId} (Oxy ID: ${oxyUserId}) viewing property ${propertyId}`);
         
-        // Track recently viewed property using OxyServices user ID
-        RecentlyViewedModel.findOneAndUpdate(
-          { oxyUserId, propertyId },
-          { 
-            oxyUserId, 
-            propertyId, 
-            viewedAt: new Date() 
-          },
-          { 
-            upsert: true, 
-            new: true 
+        // Get the current active profile for this Oxy user
+        try {
+          const activeProfile = await Profile.findPrimaryByOxyUserId(oxyUserId);
+          if (activeProfile) {
+            console.log(`[getPropertyById] Found active profile: ${activeProfile._id} for Oxy user ${oxyUserId}`);
+            
+            // Track recently viewed property using Oxy user ID
+            RecentlyViewedModel.findOneAndUpdate(
+              { oxyUserId, propertyId },
+              { oxyUserId, propertyId, viewedAt: new Date() },
+              { upsert: true, new: true }
+            )
+            .then(() => {
+              console.log(`[getPropertyById] Successfully tracked property ${propertyId} for Oxy user ${oxyUserId} with profile ${activeProfile._id}`);
+            })
+            .catch((err) => {
+              console.error('[getPropertyById] Failed to track recently viewed property', {
+                oxyUserId,
+                propertyId,
+                profileId: activeProfile._id,
+                error: err.message,
+              });
+            });
+          } else {
+            console.log(`[getPropertyById] No active profile found for Oxy user ${oxyUserId}`);
           }
-        )
-        .then(() => {
-          console.log(`Successfully tracked property ${propertyId} for Oxy user ${oxyUserId}`);
-        })
-        .catch((err) => {
-          console.error("Failed to track recently viewed property", {
-            oxyUserId,
-            propertyId,
-            error: err.message,
-          });
-          logger.warn("Failed to track recently viewed property", {
-            oxyUserId,
-            propertyId,
-            error: err.message,
-          });
-        });
+        } catch (profileError) {
+          console.error('[getPropertyById] Error finding active profile:', profileError);
+        }
       } else {
         // Guest user - this is expected behavior, not an error
-        console.log(`Guest user viewing property ${propertyId} - recently viewed tracking requires authentication`);
+        console.log(`[getPropertyById] Guest user viewing property ${propertyId} - recently viewed tracking requires authentication`);
       }
 
       // Get energy data if monitoring is enabled
@@ -305,7 +303,7 @@ class PropertyController {
         try {
           energyData = await energyService.getEnergyStats(propertyId);
         } catch (error) {
-          logger.warn("Failed to get energy data for property", {
+          logger.warn('Failed to get energy data for property', {
             propertyId,
             error: error.message,
           });
@@ -318,10 +316,10 @@ class PropertyController {
         energyData,
       };
 
-      res.json(successResponse(response, "Property retrieved successfully"));
+      res.json(successResponse(response, 'Property retrieved successfully'));
     } catch (error) {
-      if (error.name === "CastError") {
-        return next(new AppError("Invalid property ID", 400, "INVALID_ID"));
+      if (error.name === 'CastError') {
+        return next(new AppError('Invalid property ID', 400, 'INVALID_ID'));
       }
       next(error);
     }

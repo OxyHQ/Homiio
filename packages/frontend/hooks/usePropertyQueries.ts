@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { propertyService, Property, CreatePropertyData, PropertyFilters } from '@/services/propertyService';
 import { roomService, Room, CreateRoomData, RoomFilters } from '@/services/roomService';
+import { useOxy } from '@oxyhq/services';
 import { toast } from 'sonner';
 
 // Property Query Keys
@@ -37,9 +38,11 @@ export function useProperties(filters?: PropertyFilters) {
 }
 
 export function useProperty(id: string) {
+  const { oxyServices, activeSessionId } = useOxy();
+  
   return useQuery({
     queryKey: propertyKeys.detail(id),
-    queryFn: () => propertyService.getProperty(id),
+    queryFn: () => propertyService.getProperty(id, oxyServices, activeSessionId),
     enabled: !!id,
   });
 }
