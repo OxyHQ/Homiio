@@ -1,7 +1,14 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 import { useOxy } from '@oxyhq/services';
-import { usePrimaryProfile, useUserProfiles } from '@/hooks/useProfileQueries';
+import { useDispatch, useSelector } from 'react-redux';
 import type { Profile } from '@/services/profileService';
+import {
+    fetchPrimaryProfile,
+    fetchUserProfiles,
+    setPrimaryProfile as setPrimaryProfileAction,
+    setAllProfiles as setAllProfilesAction,
+} from '@/store/reducers/profileReducer';
+import type { RootState, AppDispatch } from '@/store/store';
 
 interface ProfileContextType {
     primaryProfile: Profile | null;
@@ -16,51 +23,30 @@ const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
     const { oxyServices, activeSessionId } = useOxy();
-    const [primaryProfile, setPrimaryProfile] = useState<Profile | null>(null);
-    const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
+    const dispatch = useDispatch<AppDispatch>();
 
-    // Get primary profile
-    const {
-        data: primaryProfileData,
-        isLoading: isPrimaryLoading,
-        error: primaryError,
-        refetch: refetchPrimary
-    } = usePrimaryProfile();
-
-    // Get all user profiles
-    const {
-        data: allProfilesData,
-        isLoading: isAllProfilesLoading,
-        error: allProfilesError,
-        refetch: refetchAllProfiles
-    } = useUserProfiles();
-
-    // Update state when data changes
-    useEffect(() => {
-        setPrimaryProfile(primaryProfileData ?? null);
-    }, [primaryProfileData]);
+    const primaryProfile = useSelector((state: RootState) => state.profile.primaryProfile);
+    const allProfiles = useSelector((state: RootState) => state.profile.allProfiles);
+    const isLoading = useSelector((state: RootState) => state.profile.isLoading);
+    const error = useSelector((state: RootState) => state.profile.error) as Error | null;
 
     useEffect(() => {
-        if (allProfilesData) {
-            setAllProfiles(allProfilesData);
+        if (oxyServices && activeSessionId) {
+            dispatch(fetchPrimaryProfile({ oxyServices, activeSessionId }));
+            dispatch(fetchUserProfiles({ oxyServices, activeSessionId }));
+        } else {
+            dispatch(setPrimaryProfileAction(null));
+            dispatch(setAllProfilesAction([]));
         }
-    }, [allProfilesData]);
+    }, [oxyServices, activeSessionId, dispatch]);
 
-    // Reset state when user logs out
-    useEffect(() => {
-        if (!oxyServices || !activeSessionId) {
-            setPrimaryProfile(null);
-            setAllProfiles([]);
-        }
-    }, [oxyServices, activeSessionId]);
-
-    const isLoading = isPrimaryLoading || isAllProfilesLoading;
-    const error = primaryError || allProfilesError;
     const hasPrimaryProfile = !!primaryProfile;
 
     const refetch = () => {
-        refetchPrimary();
-        refetchAllProfiles();
+        if (oxyServices && activeSessionId) {
+            dispatch(fetchPrimaryProfile({ oxyServices, activeSessionId }));
+            dispatch(fetchUserProfiles({ oxyServices, activeSessionId }));
+        }
     };
 
     const value: ProfileContextType = {

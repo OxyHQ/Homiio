@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useState, useContext } from "react";
+import React, { useEffect, useState } from "react";
 import { ScrollView, Keyboard, LogBox, Platform } from "react-native";
 import * as SplashScreen from 'expo-splash-screen';
 import { Provider } from 'react-redux';
@@ -29,15 +29,13 @@ import esES from "@/locales/es.json";
 import caES from "@/locales/ca-ES.json";
 import { View, StyleSheet, } from 'react-native';
 import { BottomBar } from "@/components/BottomBar";
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { initialWindowMetrics } from 'react-native-safe-area-context';
 import { MenuProvider } from 'react-native-popup-menu';
-import { BottomSheetModal, BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import WebSplashScreen from "@/components/WebSplashScreen";
 import LoadingTopSpinner from "@/components/LoadingTopSpinner";
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { BottomSheetProvider } from '@/context/BottomSheetContext';
-import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { ProfileProvider } from '@/context/ProfileContext';
 import { OxyLogo, OxyProvider, OxyServices, OxySignInButton, useOxy } from '@oxyhq/services';
 import { generateWebsiteStructuredData, injectStructuredData } from '@/utils/structuredData';
@@ -110,16 +108,7 @@ export default function RootLayout() {
     "Phudu": require("@/assets/fonts/Phudu-VariableFont_wght.ttf"),
   });
 
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const bottomSheetContext = useContext(BottomSheetContext);
 
-  const handleSheetChanges = useCallback((index: number) => {
-    console.log('handleSheetChanges', index);
-  }, []);
-
-  const openBottomSheet = () => {
-    bottomSheetRef.current?.expand();
-  };
 
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
