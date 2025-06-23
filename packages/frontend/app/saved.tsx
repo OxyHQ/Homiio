@@ -14,13 +14,12 @@ import { colors } from '@/styles/colors';
 import type { Property } from '@/services/propertyService';
 import { useSEO } from '@/hooks/useDocumentTitle';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
-import { getPropertyImageSource } from '@/utils/propertyUtils';
+import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 
 interface SavedProperty extends Property {
     savedAt: string;
     notes?: string;
     savedPropertyId: string;
-    title: string;
 }
 
 export default function SavedPropertiesScreen() {
@@ -44,7 +43,7 @@ export default function SavedPropertiesScreen() {
     const handleUnsaveProperty = (property: SavedProperty) => {
         Alert.alert(
             'Unsave Property',
-            `Are you sure you want to remove "${property.title}" from your saved properties?`,
+            `Are you sure you want to remove "${getPropertyTitle(property)}" from your saved properties?`,
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
@@ -98,7 +97,7 @@ export default function SavedPropertiesScreen() {
         <TouchableOpacity onPress={() => handlePropertyPress(item)} style={styles.cardContainer}>
             <PropertyCard
                 id={item._id}
-                title={item.title}
+                title={getPropertyTitle(item)}
                 location={`${item.address.city}, ${item.address.state}`}
                 price={item.rent.amount}
                 type={item.type === 'room' ? 'apartment' : item.type === 'studio' ? 'apartment' : item.type === 'house' ? 'house' : 'apartment'}
@@ -229,7 +228,7 @@ export default function SavedPropertiesScreen() {
                     <View style={styles.modalContent}>
                         <ThemedText style={styles.modalTitle}>Edit Notes</ThemedText>
                         <ThemedText style={styles.modalSubtitle}>
-                            Add a personal note for "{selectedProperty?.title}"
+                            Add a personal note for "{selectedProperty ? getPropertyTitle(selectedProperty) : ''}"
                         </ThemedText>
                         <TextInput
                             style={styles.notesInput}

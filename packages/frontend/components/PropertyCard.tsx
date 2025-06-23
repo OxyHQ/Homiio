@@ -94,7 +94,7 @@ export function PropertyCard({
             <View style={styles.content}>
                 <View style={styles.header}>
                     <View style={styles.titleContainer}>
-                        <Text style={styles.title} numberOfLines={1}>{title}</Text>
+                        <Text style={styles.title} numberOfLines={2}>{title}</Text>
                         <IconButton
                             name={getPropertyTypeIcon(type)}
                             size={16}
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     },
     titleContainer: {
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         flex: 1,
         marginRight: 8,
     },
