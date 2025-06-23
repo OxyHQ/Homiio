@@ -6,6 +6,9 @@
 const express = require('express');
 const { openai } = require('@ai-sdk/openai');
 const { streamText } = require('ai');
+const { PassThrough } = require('stream');
+const User = require('../models/User'); // Ensure correct path
+const Profile = require('../models/schemas/ProfileSchema');
 
 module.exports = function(authenticateToken) {
   const router = express.Router();
@@ -263,6 +266,7 @@ module.exports = function(authenticateToken) {
   router.post('/stream', authenticateToken, async (req, res) => {
     try {
       const { messages } = req.body;
+      const user = req.user;
       
       console.log('Starting AI stream with messages:', messages);
 
@@ -359,6 +363,7 @@ You have access to real-time web search, prioritizing:
 - Provide practical, actionable information
 - Stay up-to-date with current housing laws and market conditions through web search
 - For Catalunya-specific queries, prioritize Sindicat de Llogateres resources
+- **Always prefer short, concise answers unless the user explicitly asks for more detail.**
 
 ## Property Search Examples
 When users ask for properties, you can understand natural language requests like:
@@ -443,10 +448,12 @@ Remember: You're here to empower tenants and promote ethical housing practices. 
         messages: enhancedMessages,
       });
 
-      console.log('Stream created, piping to response');
-      
-      // Official way to stream text to the client in Express
-      result.pipeDataStreamToResponse(res);
+      // Only handle streaming to the client. No buffering or chat history logic here.
+      if (typeof result.pipeDataStreamToResponse === 'function') {
+        result.pipeDataStreamToResponse(res);
+      } else {
+        res.status(501).json({ error: 'Streaming not supported by this SDK.' });
+      }
     } catch (error) {
       console.error('AI streaming error:', error);
       console.error('Error stack:', error.stack);
@@ -468,6 +475,70 @@ Remember: You're here to empower tenants and promote ethical housing practices. 
       features: ['text-streaming', 'web-search'],
       timestamp: new Date().toISOString()
     });
+  });
+
+  // Get Sindi chat history for the authenticated user
+  router.get('/history', authenticateToken, async (req, res) => {
+    try {
+      const user = req.user;
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+      // Return most recent first
+      const history = (user.chatHistory || []).slice().reverse();
+      res.json({ success: true, history });
+    } catch (error) {
+      console.error('Failed to get chat history:', error);
+      res.status(500).json({ error: 'Failed to get chat history' });
+    }
+  });
+
+  // Clear Sindi chat history for the authenticated user
+  router.delete('/history', authenticateToken, async (req, res) => {
+    try {
+      const user = req.user;
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+      user.chatHistory = [];
+      await user.save();
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to clear chat history:', error);
+      res.status(500).json({ error: 'Failed to clear chat history' });
+    }
+  });
+
+  // Save Sindi chat history for the authenticated user (on personal profile)
+  router.post('/history', authenticateToken, async (req, res) => {
+    try {
+      // Get userId from req.user
+      const userId = req.user?.oxyUserId || req.user?._id || req.user?.id;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+      // Find the personal profile for this user
+      const profile = await Profile.findOne({ oxyUserId: userId, profileType: 'personal' });
+      if (!profile) return res.status(404).json({ error: 'Personal profile not found' });
+
+      const { userMessage, assistantMessage } = req.body;
+      if (!userMessage || !assistantMessage) return res.status(400).json({ error: 'Missing userMessage or assistantMessage' });
+
+      profile.chatHistory = profile.chatHistory || [];
+      profile.chatHistory.push({
+        role: 'user',
+        content: userMessage,
+        timestamp: new Date(),
+      });
+      profile.chatHistory.push({
+        role: 'assistant',
+        content: assistantMessage,
+        timestamp: new Date(),
+      });
+      if (profile.chatHistory.length > 100) {
+        profile.chatHistory = profile.chatHistory.slice(-100);
+      }
+      await profile.save();
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to save chat history:', error);
+      res.status(500).json({ error: 'Failed to save chat history' });
+    }
   });
 
   return router;

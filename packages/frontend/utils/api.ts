@@ -516,6 +516,41 @@ export const healthApi = {
   },
 };
 
+/**
+ * Sindi chat history API functions
+ */
+export const sindiApi = {
+  // Get Sindi chat history (authenticated)
+  async getSindiChatHistory(oxyServices: OxyServices, activeSessionId: string): Promise<{ history: any[] }> {
+    const response = await api.get<{ history: any[] }>('/api/ai/history', {
+      oxyServices,
+      activeSessionId,
+    });
+    return response.data;
+  },
+
+  // Clear Sindi chat history (authenticated)
+  async clearSindiChatHistory(oxyServices: OxyServices, activeSessionId: string): Promise<{ success: boolean }> {
+    const response = await api.delete<{ success: boolean }>('/api/ai/history', {
+      oxyServices,
+      activeSessionId,
+    });
+    return response.data;
+  },
+
+  // Save Sindi chat history (user/assistant message pair)
+  async saveSindiChatHistory(userMessage: string, assistantMessage: string, oxyServices: OxyServices, activeSessionId: string): Promise<{ success: boolean }> {
+    const response = await api.post<{ success: boolean }>('/api/ai/history', {
+      userMessage,
+      assistantMessage,
+    }, {
+      oxyServices,
+      activeSessionId,
+    });
+    return response.data;
+  },
+};
+
 // Export the API configuration for external use
 export { API_CONFIG };
 
@@ -527,4 +562,5 @@ export default {
   health: healthApi,
   config: API_CONFIG,
   user: userApi,
+  sindi: sindiApi,
 };

@@ -366,6 +366,24 @@ const personalProfileSchema = new mongoose.Schema({
       default: "USD",
     },
   },
+  // Sindi chat history
+  chatHistory: [
+    {
+      role: {
+        type: String,
+        enum: ['user', 'assistant', 'system'],
+        required: true,
+      },
+      content: {
+        type: String,
+        required: true,
+      },
+      timestamp: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+  ],
 }, { _id: false });
 
 // Agency Profile Schema - app-specific business data

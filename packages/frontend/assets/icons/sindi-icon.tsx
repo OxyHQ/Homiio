@@ -5,7 +5,7 @@ import { IconProps } from './types';
 
 export const SindiIcon: React.FC<IconProps> = ({
     size = 24,
-    color = '#292D32'
+    color = '#5baaff'
 }) => {
     return (
         <View style={{ width: size, height: size }}>

@@ -302,6 +302,24 @@ const userSchema = new mongoose.Schema(
         },
       ],
     },
+    // Sindi chat history
+    chatHistory: [
+      {
+        role: {
+          type: String,
+          enum: ['user', 'assistant', 'system'],
+          required: true,
+        },
+        content: {
+          type: String,
+          required: true,
+        },
+        timestamp: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

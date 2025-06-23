@@ -530,7 +530,7 @@
         },
         "chat": {
             "placeholder": "Pregunteu a Sindi sobre els vostres drets com a llogater...",
-            "you": "Vosaltres",
+            "you": "Tu",
             "disclaimer": "Sindi advoca pels drets dels llogaters i la justícia habitacional. Per a accions legals, consulteu un advocat qualificat. Connecteu-vos amb organitzacions locals de llogaters per suport comunitari."
         },
         "errors": {

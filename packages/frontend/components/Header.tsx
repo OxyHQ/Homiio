@@ -69,7 +69,7 @@ export const Header: React.FC<Props> = ({ options }) => {
                 {titlePosition === 'left' && (
                     <View>
                         {options?.title && (
-                            <Text style={[styles.topRowText, options?.subtitle && { fontSize: 14 }]}>
+                            <Text style={[styles.topRowText, { fontFamily: 'Phudu' }, options?.subtitle && { fontSize: 14 }]}>
                                 {options.title}
                             </Text>
                         )}
@@ -81,7 +81,7 @@ export const Header: React.FC<Props> = ({ options }) => {
             {titlePosition === 'center' && (
                 <View style={styles.centerContainer}>
                     {options?.title && (
-                        <Text style={[styles.topRowText, options?.subtitle && { fontSize: 14 }]}>
+                        <Text style={[styles.topRowText, { fontFamily: 'Phudu' }, options?.subtitle && { fontSize: 14 }]}>
                             {options.title}
                         </Text>
                     )}
@@ -120,8 +120,8 @@ const styles = StyleSheet.create({
         top: 0,
         backgroundColor: colors.primaryLight,
         zIndex: 100,
-        borderTopEndRadius: 35,
-        borderTopStartRadius: 35,
+        borderTopLeftRadius: 35,
+        borderTopRightRadius: 35,
     } as ViewStyle,
     topRowText: {
         fontSize: 20,

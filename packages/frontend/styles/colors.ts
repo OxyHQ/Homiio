@@ -60,4 +60,5 @@ export const colors = {
     offline: '#718096',
     busy: '#FF3B30',
     away: '#FFCC00',
+    sindiColor: '#175fac',
 } as const;
