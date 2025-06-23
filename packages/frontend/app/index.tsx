@@ -11,14 +11,11 @@ import { Toaster } from '@/lib/sonner';
 
 // Import real data hooks
 import { useProperties } from '@/hooks/usePropertyQueries';
-import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useOxy } from '@oxyhq/services';
 
 // Import components
 import { PropertyCard } from '@/components/PropertyCard';
 import { RecentlyViewedWidget } from '@/components/widgets/RecentlyViewedWidget';
-import { TrustScoreWidget } from '@/components/widgets/TrustScoreWidget';
-import { EcoCertificationWidget } from '@/components/widgets/EcoCertificationWidget';
 import { FeaturedPropertiesWidget } from '@/components/widgets/FeaturedPropertiesWidget';
 
 // Import utils
@@ -48,9 +45,6 @@ export default function HomePage() {
     limit: 8,
     status: 'available'
   });
-
-  // Use Redux-based recently viewed hook
-  const { properties: recentProperties, isLoading: recentLoading, refetch: refetchRecent } = useRecentlyViewed();
 
   // Memoized data processing
   const featuredProperties = useMemo(() => {
@@ -108,10 +102,7 @@ export default function HomePage() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await Promise.all([
-        refetchProperties(),
-        refetchRecent()
-      ]);
+      await refetchProperties();
     } catch (error) {
       console.error('Error refreshing data:', error);
     } finally {
@@ -189,11 +180,6 @@ export default function HomePage() {
               </Text>
             </View>
           </View>
-        </View>
-
-        {/* Recently Viewed Properties */}
-        <View style={styles.recentSection}>
-          <RecentlyViewedWidget />
         </View>
 
         {/* Featured Properties */}
@@ -278,18 +264,6 @@ export default function HomePage() {
               </TouchableOpacity>
             ))}
           </View>
-        </View>
-
-        {/* Trust Score Widget (if authenticated) */}
-        {isAuthenticated && (
-          <View style={styles.widgetSection}>
-            <TrustScoreWidget />
-          </View>
-        )}
-
-        {/* Eco Certification Widget */}
-        <View style={styles.widgetSection}>
-          <EcoCertificationWidget />
         </View>
 
         {/* Horizon Initiative */}
@@ -460,10 +434,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.COLOR_BLACK_LIGHT_3,
   },
-  recentSection: {
-    paddingHorizontal: 20,
-    marginTop: 20,
-  },
   featuredSection: {
     padding: 20,
   },
@@ -568,10 +538,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 12,
     fontWeight: '600',
-  },
-  widgetSection: {
-    paddingHorizontal: 20,
-    marginTop: 20,
   },
   horizonSection: {
     backgroundColor: colors.primaryLight,
