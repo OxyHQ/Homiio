@@ -7,100 +7,64 @@ import { Header } from '@/components/Header';
 import { ContractCard, ContractStatus } from '@/components/ContractCard';
 import { colors } from '@/styles/colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useUserLeases, useHasRentalProperties } from '@/hooks/useLeaseQueries';
+import type { Lease } from '@/services/leaseService';
 
-type Contract = {
-  id: string;
-  title: string;
-  propertyId: string;
-  propertyName: string;
-  startDate: string;
-  endDate: string;
-  status: ContractStatus;
-  landlordName: string;
-  tenantName: string;
-  monthlyRent: number;
-  currency?: string;
-};
-
-// Sample data for demonstration
-const sampleContracts: Contract[] = [
-  {
-    id: '1',
-    title: 'Apartment Rental Agreement',
-    propertyId: 'prop1',
-    propertyName: 'Modern Studio in Barcelona',
-    startDate: '2023-01-01',
-    endDate: '2023-12-31',
-    status: 'active',
-    landlordName: 'Maria Garcia',
-    tenantName: 'John Smith',
-    monthlyRent: 850,
-    currency: '⊜',
-  },
-  {
-    id: '2',
-    title: 'Co-living Space Agreement',
-    propertyId: 'prop2',
-    propertyName: 'Shared Apartment in Berlin',
-    startDate: '2023-02-15',
-    endDate: '2023-08-15',
-    status: 'pending',
-    landlordName: 'Klaus Schmidt',
-    tenantName: 'John Smith',
-    monthlyRent: 600,
-    currency: '⊜',
-  },
-  {
-    id: '3',
-    title: 'House Rental Agreement',
-    propertyId: 'prop3',
-    propertyName: 'Family Home in Stockholm',
-    startDate: '2022-05-01',
-    endDate: '2023-05-01',
-    status: 'expired',
-    landlordName: 'Erik Johansson',
-    tenantName: 'John Smith',
-    monthlyRent: 1200,
-    currency: '⊜',
-  },
-  {
-    id: '4',
-    title: 'Eco-Apartment Agreement',
-    propertyId: 'prop4',
-    propertyName: 'Sustainable Living in Amsterdam',
-    startDate: '2023-03-01',
-    endDate: '2024-03-01',
-    status: 'active',
-    landlordName: 'Jan de Vries',
-    tenantName: 'John Smith',
-    monthlyRent: 950,
-    currency: '⊜',
-  },
-  {
-    id: '5',
-    title: 'Studio Agreement - Draft',
-    propertyId: 'prop5',
-    propertyName: 'Studio in Madrid',
-    startDate: '2023-06-01',
-    endDate: '2024-06-01',
-    status: 'draft',
-    landlordName: 'Carlos Rodriguez',
-    tenantName: 'John Smith',
-    monthlyRent: 750,
-    currency: '⊜',
-  },
-];
-
-type FilterOptions = 'all' | 'active' | 'pending' | 'expired' | 'draft';
+type FilterOptions = 'all' | 'active' | 'pending_signature' | 'expired' | 'draft';
 
 export default function ContractsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<FilterOptions>('all');
 
+  // Get user's leases and check if they have rental properties
+  const { data: leasesData, isLoading: leasesLoading } = useUserLeases();
+  const { hasRentalProperties, isLoading: hasPropertiesLoading } = useHasRentalProperties();
+
+  // If user has no rental properties, show empty state
+  if (!hasPropertiesLoading && !hasRentalProperties) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <Header
+          options={{
+            title: t("Rental Contracts"),
+            titlePosition: 'center',
+          }}
+        />
+        <View style={styles.emptyContainer}>
+          <Ionicons name="document-text-outline" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
+          <Text style={styles.emptyText}>{t("No rental contracts")}</Text>
+          <Text style={styles.emptySubtext}>
+            {t("You don't have any rental properties yet. Start by browsing available properties or listing your own.")}
+          </Text>
+          <TouchableOpacity
+            style={styles.emptyButton}
+            onPress={() => router.push('/')}
+          >
+            <Text style={styles.emptyButtonText}>{t("Browse Properties")}</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Convert lease data to contract format for the ContractCard component
+  const contracts = leasesData?.leases.map((lease: Lease) => ({
+    id: lease.id,
+    title: lease.property?.title || `Lease for ${lease.property?.address?.street || 'Property'}`,
+    propertyId: lease.propertyId,
+    propertyName: lease.property?.title || `${lease.property?.address?.street}, ${lease.property?.address?.city}`,
+    startDate: lease.startDate,
+    endDate: lease.endDate,
+    status: lease.status as ContractStatus,
+    landlordName: lease.landlord ? `${lease.landlord.firstName} ${lease.landlord.lastName}` : 'Unknown',
+    tenantName: lease.tenant ? `${lease.tenant.firstName} ${lease.tenant.lastName}` : 'Unknown',
+    monthlyRent: lease.rent.amount,
+    currency: lease.rent.currency,
+  })) || [];
+
   // Filter contracts based on the selected filter
-  const filteredContracts = sampleContracts.filter((contract) => {
+  const filteredContracts = contracts.filter((contract) => {
     if (filter === 'all') return true;
     return contract.status === filter;
   });
@@ -142,12 +106,12 @@ export default function ContractsScreen() {
     </TouchableOpacity>
   );
 
-  if (loading) {
+  if (leasesLoading || hasPropertiesLoading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <Header
           options={{
-            title: t("Contracts"),
+            title: t("Rental Contracts"),
             titlePosition: 'center',
           }}
         />
@@ -176,7 +140,7 @@ export default function ContractsScreen() {
       <View style={styles.filterContainer}>
         {renderFilterButton(t('All'), 'all')}
         {renderFilterButton(t('Active'), 'active')}
-        {renderFilterButton(t('Pending'), 'pending')}
+        {renderFilterButton(t('Pending'), 'pending_signature')}
         {renderFilterButton(t('Expired'), 'expired')}
         {renderFilterButton(t('Drafts'), 'draft')}
       </View>

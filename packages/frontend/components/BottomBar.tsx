@@ -5,12 +5,14 @@ import React from 'react';
 import Avatar from './Avatar';
 import { useOxy } from '@oxyhq/services';
 import { SindiIcon } from '@/assets/icons';
+import { useHasRentalProperties } from '@/hooks/useLeaseQueries';
 
 export const BottomBar = () => {
     const router = useRouter();
     const [activeRoute, setActiveRoute] = React.useState('/');
     const pathname = usePathname();
     const { showBottomSheet, hideBottomSheet } = useOxy();
+    const { hasRentalProperties, isLoading } = useHasRentalProperties();
 
     const handlePress = (route: '/' | '/properties' | '/saved' | '/sindi' | '/contracts' | '/profile') => {
         setActiveRoute(route);
@@ -61,9 +63,12 @@ export const BottomBar = () => {
             <Pressable onPress={() => handlePress('/sindi')} style={[styles.tab, activeRoute === '/sindi' && styles.active]}>
                 <SindiIcon size={28} color={activeRoute === '/sindi' ? "#4E67EB" : "#000"} />
             </Pressable>
-            <Pressable onPress={() => handlePress('/contracts')} style={[styles.tab, activeRoute === '/contracts' && styles.active]}>
-                <Ionicons name={activeRoute === '/contracts' ? "document-text" : "document-text-outline"} size={28} color={activeRoute === '/contracts' ? "#4E67EB" : "#000"} />
-            </Pressable>
+            {/* Only show contracts tab if user has rental properties */}
+            {hasRentalProperties && (
+                <Pressable onPress={() => handlePress('/contracts')} style={[styles.tab, activeRoute === '/contracts' && styles.active]}>
+                    <Ionicons name={activeRoute === '/contracts' ? "document-text" : "document-text-outline"} size={28} color={activeRoute === '/contracts' ? "#4E67EB" : "#000"} />
+                </Pressable>
+            )}
             <View style={styles.tab}>
                 <Avatar onPress={() => showBottomSheet?.('SignIn')} />
             </View>
