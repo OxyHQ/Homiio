@@ -17,6 +17,9 @@ module.exports = function (authenticateToken) {
   // Protected routes (all profile routes require authentication)
   router.use(authenticateToken);
 
+  // Get profile by ID
+  router.get('/:profileId', asyncHandler(profileController.getProfileById));
+
   // Primary profile routes
   router.get("/me", asyncHandler(profileController.getOrCreatePrimaryProfile));
   router.get("/me/all", asyncHandler(profileController.getUserProfiles));

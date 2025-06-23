@@ -3,15 +3,18 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
-import { useRecentlyViewedProperties } from '@/hooks/useUserQueries';
+import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { BaseWidget } from './BaseWidget';
 import { PropertyCard } from '@/components/PropertyCard';
 import { colors } from '@/styles/colors';
 import type { Property } from '@/services/propertyService';
 
+// Type assertion for Ionicons compatibility with React 19
+const IconComponent = Ionicons as any;
+
 export function RecentlyViewedWidget() {
     const { t } = useTranslation();
-    const { data: recentProperties = [], isLoading, error } = useRecentlyViewedProperties();
+    const { properties: recentProperties, isLoading, error } = useRecentlyViewed();
 
     const navigateToProperty = (property: Property) => {
         router.push(`/properties/${property._id || property.id}`);
@@ -20,9 +23,9 @@ export function RecentlyViewedWidget() {
     if (error) {
         return (
             <BaseWidget title={t("Recently Viewed")}
-                icon={<Ionicons name="time-outline" size={22} color={colors.primaryColor} />}>
+                icon={<IconComponent name="time-outline" size={22} color={colors.primaryColor} />}>
                 <View style={styles.errorContainer}>
-                    <Text style={styles.errorText}>{error.message || 'Failed to load properties'}</Text>
+                    <Text style={styles.errorText}>{error || 'Failed to load properties'}</Text>
                 </View>
             </BaseWidget>
         );
@@ -31,7 +34,7 @@ export function RecentlyViewedWidget() {
     return (
         <BaseWidget
             title={t("Recently Viewed")}
-            icon={<Ionicons name="time-outline" size={22} color={colors.primaryColor} />}
+            icon={<IconComponent name="time-outline" size={22} color={colors.primaryColor} />}
         >
             <ScrollView
                 horizontal
@@ -45,7 +48,7 @@ export function RecentlyViewedWidget() {
                     </View>
                 ) : recentProperties.length === 0 ? (
                     <View style={styles.emptyContainer}>
-                        <Ionicons name="time-outline" size={32} color={colors.COLOR_BLACK_LIGHT_4} />
+                        <IconComponent name="time-outline" size={32} color={colors.COLOR_BLACK_LIGHT_4} />
                         <Text style={styles.emptyText}>No recently viewed properties</Text>
                         <Text style={styles.emptySubtext}>Start browsing to see your recent activity here</Text>
                     </View>
@@ -64,10 +67,10 @@ export function RecentlyViewedWidget() {
 
                 <TouchableOpacity
                     style={styles.viewAllButton}
-                    onPress={() => router.push('/properties')}
+                    onPress={() => router.push('/properties/recently-viewed')}
                 >
                     <Text style={styles.viewAllText}>View All</Text>
-                    <Ionicons name="chevron-forward" size={16} color={colors.primaryColor} />
+                    <IconComponent name="chevron-forward" size={16} color={colors.primaryColor} />
                 </TouchableOpacity>
             </ScrollView>
         </BaseWidget>

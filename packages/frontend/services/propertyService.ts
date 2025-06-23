@@ -3,6 +3,7 @@ import api from '@/utils/api';
 export interface Property {
   _id: string; // MongoDB ObjectId
   id?: string; // Optional fallback
+  profileId?: string; // Add profileId for landlord info
   address: {
     street: string;
     city: string;

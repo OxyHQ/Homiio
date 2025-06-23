@@ -23,6 +23,7 @@ class ProfileController {
     this.getTrustScore = this.getTrustScore.bind(this);
     this.recalculatePrimaryTrustScore = this.recalculatePrimaryTrustScore.bind(this);
     this.activateProfile = this.activateProfile.bind(this);
+    this.getProfileById = this.getProfileById.bind(this);
   }
 
   /**
@@ -190,7 +191,7 @@ class ProfileController {
         );
       }
 
-      if (!["personal", "agency", "business"].includes(profileType)) {
+      if (!["personal", "agency", "business", "cooperative"].includes(profileType)) {
         return res.status(400).json(
           errorResponse("Invalid profile type", "INVALID_PROFILE_TYPE")
         );
@@ -227,7 +228,7 @@ class ProfileController {
         );
       }
 
-      if (!["personal", "agency", "business"].includes(profileType)) {
+      if (!["personal", "agency", "business", "cooperative"].includes(profileType)) {
         return res.status(400).json(
           errorResponse("Invalid profile type", "INVALID_PROFILE_TYPE")
         );
@@ -320,6 +321,17 @@ class ProfileController {
             businessDetails: data.businessDetails || {},
             verification: data.verification || {},
             ratings: { average: 0, count: 0 }
+          };
+          break;
+        case "cooperative":
+          profileData.cooperativeProfile = {
+            legalName: data.legalName || "",
+            description: data.description || "",
+            members: [{
+              oxyUserId,
+              role: "owner",
+              addedAt: new Date()
+            }]
           };
           break;
       }
@@ -895,6 +907,22 @@ class ProfileController {
       );
     } catch (error) {
       console.error("Error activating profile:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Get profile by ID
+   */
+  async getProfileById(req, res, next) {
+    try {
+      const { profileId } = req.params;
+      const profile = await Profile.findById(profileId);
+      if (!profile) {
+        return res.status(404).json(errorResponse("Profile not found", "PROFILE_NOT_FOUND"));
+      }
+      res.json(successResponse(profile, "Profile retrieved successfully"));
+    } catch (error) {
       next(error);
     }
   }

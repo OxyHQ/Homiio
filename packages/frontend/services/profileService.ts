@@ -177,22 +177,33 @@ export interface BusinessProfile {
   };
 }
 
+export interface CooperativeProfile {
+  legalName: string;
+  description?: string;
+  members: Array<{
+    oxyUserId: string;
+    role: 'owner' | 'admin' | 'member';
+    addedAt: string;
+  }>;
+}
+
 export interface Profile {
   id: string;
   _id?: string;
   oxyUserId: string;
-  profileType: 'personal' | 'agency' | 'business';
+  profileType: 'personal' | 'agency' | 'business' | 'cooperative';
   isPrimary: boolean;
   isActive: boolean;
   personalProfile?: PersonalProfile;
   agencyProfile?: AgencyProfile;
   businessProfile?: BusinessProfile;
+  cooperativeProfile?: CooperativeProfile;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface CreateProfileData {
-  profileType: 'personal' | 'agency' | 'business';
+  profileType: 'personal' | 'agency' | 'business' | 'cooperative';
   data: {
     preferences?: PersonalProfile['preferences'];
     verification?: PersonalProfile['verification'];
@@ -201,6 +212,7 @@ export interface CreateProfileData {
     description?: string;
     businessDetails?: AgencyProfile['businessDetails'] | BusinessProfile['businessDetails'];
     legalCompanyName?: string;
+    legalName?: string;
   };
 }
 
@@ -436,6 +448,22 @@ class ProfileService {
       return response.data.data;
     } catch (error) {
       console.error('Error updating trust score:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get profile by ID
+   */
+  async getProfileById(profileId: string, oxyServices?: OxyServices, activeSessionId?: string): Promise<Profile> {
+    try {
+      const response = await api.get(`${this.baseUrl}/${profileId}`, {
+        oxyServices,
+        activeSessionId,
+      });
+      return response.data.data;
+    } catch (error) {
+      console.error('Error getting profile by ID:', error);
       throw error;
     }
   }

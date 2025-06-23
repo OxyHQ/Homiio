@@ -328,4 +328,21 @@ export function useActiveProfile() {
     },
     profiles // Also return all profiles in case they're needed
   };
+}
+
+// Hook to get profile by ID
+export function useProfileById(profileId: string | undefined | null) {
+  const { oxyServices, activeSessionId } = useOxy();
+  return useQuery<Profile | null>({
+    queryKey: profileKeys.byId(profileId || ''),
+    queryFn: async () => {
+      if (!profileId) return null;
+      return await profileService.getProfileById(profileId, oxyServices, activeSessionId || undefined);
+    },
+    enabled: !!profileId && !!oxyServices && !!activeSessionId,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
 } 

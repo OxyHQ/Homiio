@@ -4,6 +4,7 @@ import analyticsReducer from "./reducers/analyticsReducer";
 import profileReducer from "./reducers/profileReducer";
 import bottomSheetReducer from "./reducers/bottomSheetReducer";
 import propertyReducer from "./reducers/propertyReducer";
+import recentlyViewedReducer from "./reducers/recentlyViewedReducer";
 
 const rootReducer = combineReducers({
   trends: trendsReducer,
@@ -11,6 +12,7 @@ const rootReducer = combineReducers({
   profile: profileReducer,
   bottomSheet: bottomSheetReducer,
   properties: propertyReducer,
+  recentlyViewed: recentlyViewedReducer,
 });
 
 export const store = configureStore({

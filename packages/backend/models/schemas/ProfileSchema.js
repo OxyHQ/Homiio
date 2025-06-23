@@ -569,7 +569,7 @@ const profileSchema = new mongoose.Schema({
   },
   profileType: {
     type: String,
-    enum: ['personal', 'agency', 'business'],
+    enum: ['personal', 'agency', 'business', 'cooperative'],
     required: true,
   },
   isPrimary: {
@@ -588,6 +588,15 @@ const profileSchema = new mongoose.Schema({
   },
   businessProfile: {
     type: businessProfileSchema,
+  },
+  cooperativeProfile: {
+    legalName: { type: String, trim: true, maxlength: 200 },
+    description: { type: String, trim: true, maxlength: 1000 },
+    members: [{
+      oxyUserId: String,
+      role: { type: String, enum: ['owner', 'admin', 'member'] },
+      addedAt: { type: Date, default: Date.now }
+    }]
   },
 }, {
   timestamps: true,

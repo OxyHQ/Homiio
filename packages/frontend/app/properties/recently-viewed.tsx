@@ -2,34 +2,45 @@ import React, { useState } from 'react';
 import { View, StyleSheet, SafeAreaView, RefreshControl, Text, TouchableOpacity, Platform, Animated, Dimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
+import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { colors } from '@/styles/colors';
 import { Header } from '@/components/Header';
 import { PropertyList } from '@/components/PropertyList';
 import LoadingTopSpinner from '@/components/LoadingTopSpinner';
-import { useProperties } from '@/hooks/usePropertyQueries';
 import { SearchBar } from '@/components/SearchBar';
 import Button from '@/components/Button';
 import { Property } from '@/services/propertyService';
 import { Ionicons } from '@expo/vector-icons';
 import { useSavedProperties, useSaveProperty, useUnsaveProperty } from '@/hooks/useUserQueries';
+import { getPropertyTitle } from '@/utils/propertyUtils';
 
 const screenWidth = Dimensions.get('window').width;
 const isMobile = screenWidth < 600;
 const IconComponent = Ionicons as any;
 
-export default function PropertiesScreen() {
+export default function RecentlyViewedScreen() {
     const { t } = useTranslation();
     const router = useRouter();
     const [refreshing, setRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [filters, setFilters] = useState({ page: 1, limit: 20 });
     const [viewMode, setViewMode] = useState<'list' | 'grid'>(isMobile ? 'grid' : 'list');
-    const [showFilters, setShowFilters] = useState(false);
     const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
-    const { data, isLoading, error, refetch } = useProperties({ ...filters, search: searchQuery || undefined });
-    const properties = data?.properties || [];
-    const total = data?.total || 0;
+    const { properties: recentProperties, isLoading, error, refetch, clear } = useRecentlyViewed();
+
+    // Filter properties based on search query
+    const filteredProperties = React.useMemo(() => {
+        if (!searchQuery.trim()) return recentProperties;
+
+        const query = searchQuery.toLowerCase();
+        return recentProperties.filter(property => {
+            const title = getPropertyTitle(property).toLowerCase();
+            const location = `${property.address.city}, ${property.address.state}`.toLowerCase();
+            const description = property.description?.toLowerCase() || '';
+
+            return title.includes(query) || location.includes(query) || description.includes(query);
+        });
+    }, [recentProperties, searchQuery]);
 
     const saveProperty = useSaveProperty();
     const unsaveProperty = useUnsaveProperty();
@@ -72,10 +83,10 @@ export default function PropertiesScreen() {
 
     // Memoize properties with isFavorite injected
     const propertiesWithFavorite = React.useMemo(() =>
-        properties.map((property) => ({
+        filteredProperties.map((property) => ({
             ...property,
             isFavorite: isPropertySaved(property),
-        })), [properties, optimisticSaved, savedProperties]);
+        })), [filteredProperties, optimisticSaved, savedProperties]);
 
     React.useEffect(() => {
         Animated.timing(fadeAnim, {
@@ -83,7 +94,7 @@ export default function PropertiesScreen() {
             duration: 400,
             useNativeDriver: true,
         }).start();
-    }, [properties]);
+    }, [filteredProperties]);
 
     const handleRefresh = async () => {
         setRefreshing(true);
@@ -97,20 +108,19 @@ export default function PropertiesScreen() {
 
     const handleSearch = (query: string) => {
         setSearchQuery(query);
-        setFilters((prev) => ({ ...prev, page: 1 }));
     };
 
-    const handleAddProperty = () => {
-        router.push('/properties/create');
+    const handleClearHistory = () => {
+        clear();
     };
 
     const renderEmptyState = () => (
         <View style={styles.emptyState}>
-            <IconComponent name="home-outline" size={64} color={colors.COLOR_BLACK_LIGHT_4} />
-            <Text style={styles.emptyTitle}>{t('No Properties Found')}</Text>
-            <Text style={styles.emptyDescription}>{t('Try adjusting your search criteria or filters.')}</Text>
-            <Button onPress={handleAddProperty} style={styles.createButton}>
-                {t('Create Property')}
+            <IconComponent name="time-outline" size={64} color={colors.COLOR_BLACK_LIGHT_4} />
+            <Text style={styles.emptyTitle}>{t('No Recently Viewed Properties')}</Text>
+            <Text style={styles.emptyDescription}>{t('Start browsing properties to see your recent activity here.')}</Text>
+            <Button onPress={() => router.push('/properties')} style={styles.browseButton}>
+                {t('Browse Properties')}
             </Button>
         </View>
     );
@@ -118,8 +128,8 @@ export default function PropertiesScreen() {
     const renderErrorState = () => (
         <View style={styles.errorState}>
             <IconComponent name="alert-circle-outline" size={64} color="#ff4757" />
-            <Text style={styles.errorTitle}>{t('Error Loading Properties')}</Text>
-            <Text style={styles.errorDescription}>{error?.message || t('Please try again.')}</Text>
+            <Text style={styles.errorTitle}>{t('Error Loading Recently Viewed')}</Text>
+            <Text style={styles.errorDescription}>{error || t('Please try again.')}</Text>
             <Button onPress={handleRefresh} style={styles.retryButton}>
                 {t('Retry')}
             </Button>
@@ -144,46 +154,30 @@ export default function PropertiesScreen() {
         </View>
     );
 
-    // Filter button
-    const renderFilterButton = () => (
-        <TouchableOpacity style={styles.filterButton} onPress={() => setShowFilters(!showFilters)}>
-            <IconComponent name="options-outline" size={22} color={colors.primaryColor} />
-        </TouchableOpacity>
-    );
-
-    // Recently viewed button
-    const renderRecentlyViewedButton = () => (
-        <TouchableOpacity style={styles.recentlyViewedButton} onPress={() => router.push('/properties/recently-viewed')}>
-            <IconComponent name="time-outline" size={22} color={colors.primaryColor} />
-        </TouchableOpacity>
-    );
-
-    // Floating action button
-    const renderFAB = () => (
-        <TouchableOpacity style={styles.fab} onPress={handleAddProperty}>
-            <IconComponent name="add" size={32} color={colors.primaryLight} />
-        </TouchableOpacity>
-    );
-
     return (
         <SafeAreaView style={styles.container}>
-            <Header options={{ title: t('Properties'), titlePosition: 'left' }} />
+            <Header options={{ title: t('Recently Viewed'), titlePosition: 'left' }} />
             <View style={styles.topBar}>
                 <View style={styles.searchBarContainer}>
                     <SearchBar hideFilterIcon={true} />
                 </View>
-                {renderFilterButton()}
-                {renderRecentlyViewedButton()}
+                {recentProperties.length > 0 && (
+                    <TouchableOpacity style={styles.clearButton} onPress={handleClearHistory}>
+                        <IconComponent name="trash-outline" size={20} color="#ff4757" />
+                    </TouchableOpacity>
+                )}
                 {renderViewModeToggle()}
             </View>
             <View style={styles.resultCountBar}>
-                <Text style={styles.resultCountText}>{t('Results')}: {total}</Text>
+                <Text style={styles.resultCountText}>
+                    {t('Results')}: {filteredProperties.length} {searchQuery && `(${t('filtered')})`}
+                </Text>
             </View>
-            {isLoading && !properties.length ? (
+            {isLoading && !recentProperties.length ? (
                 <LoadingTopSpinner showLoading={true} />
             ) : error ? (
                 renderErrorState()
-            ) : properties.length === 0 ? (
+            ) : filteredProperties.length === 0 ? (
                 renderEmptyState()
             ) : (
                 <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
@@ -199,7 +193,6 @@ export default function PropertiesScreen() {
                     />
                 </Animated.View>
             )}
-            {renderFAB()}
         </SafeAreaView>
     );
 }
@@ -220,21 +213,13 @@ const styles = StyleSheet.create({
     searchBarContainer: {
         flex: 1,
     },
-    filterButton: {
+    clearButton: {
         marginLeft: 8,
         backgroundColor: colors.primaryLight_1,
         borderRadius: 100,
         padding: 8,
         borderWidth: 1,
-        borderColor: colors.primaryColor,
-    },
-    recentlyViewedButton: {
-        marginLeft: 8,
-        backgroundColor: colors.primaryLight_1,
-        borderRadius: 100,
-        padding: 8,
-        borderWidth: 1,
-        borderColor: colors.primaryColor,
+        borderColor: '#ff4757',
     },
     viewModeToggle: {
         flexDirection: 'row',
@@ -288,7 +273,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         textAlign: 'center',
     },
-    createButton: {
+    browseButton: {
         marginTop: 12,
         alignSelf: 'center',
     },
@@ -315,21 +300,4 @@ const styles = StyleSheet.create({
         marginTop: 12,
         alignSelf: 'center',
     },
-    fab: {
-        position: 'absolute',
-        right: 24,
-        bottom: 32,
-        backgroundColor: colors.primaryColor,
-        borderRadius: 32,
-        width: 56,
-        height: 56,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 6,
-        zIndex: 100,
-    },
-});
+}); 

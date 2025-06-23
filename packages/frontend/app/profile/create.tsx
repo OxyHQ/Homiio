@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 // Type assertion for Ionicons compatibility with React 19
 const IconComponent = Ionicons as any;
 
-type ProfileType = 'agency' | 'business';
+type ProfileType = 'agency' | 'business' | 'cooperative';
 
 export default function ProfileCreateScreen() {
     const { t } = useTranslation();
@@ -30,6 +30,7 @@ export default function ProfileCreateScreen() {
             specialties: [] as string[],
         },
         legalCompanyName: '',
+        legalName: '',
     });
 
     const profileTypes = [
@@ -44,6 +45,12 @@ export default function ProfileCreateScreen() {
             title: 'Business Profile',
             description: 'For small businesses and freelancers',
             icon: 'briefcase-outline',
+        },
+        {
+            type: 'cooperative' as ProfileType,
+            title: 'Cooperative Profile',
+            description: 'For housing or member-owned cooperatives',
+            icon: 'people-outline',
         },
     ];
 
@@ -82,6 +89,11 @@ export default function ProfileCreateScreen() {
                             parseInt(formData.businessDetails.yearEstablished) : undefined,
                     },
                     legalCompanyName: formData.legalCompanyName,
+                };
+            } else if (selectedType === 'cooperative') {
+                profileData.data = {
+                    legalName: formData.legalName,
+                    description: formData.description,
                 };
             }
 
@@ -449,6 +461,32 @@ export default function ProfileCreateScreen() {
                                 value={formData.legalCompanyName}
                                 onChangeText={(text) => setFormData(prev => ({ ...prev, legalCompanyName: text }))}
                                 placeholder="Enter your legal company name"
+                            />
+                        </View>
+                    </View>
+                )}
+
+                {/* Cooperative-specific form */}
+                {selectedType === 'cooperative' && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Cooperative Information</Text>
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Legal Name *</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={formData.legalName}
+                                onChangeText={text => setFormData(prev => ({ ...prev, legalName: text }))}
+                                placeholder="Cooperative Legal Name"
+                            />
+                        </View>
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Description</Text>
+                            <TextInput
+                                style={[styles.input, { height: 80 }]}
+                                value={formData.description}
+                                onChangeText={text => setFormData(prev => ({ ...prev, description: text }))}
+                                placeholder="Describe the cooperative"
+                                multiline
                             />
                         </View>
                     </View>

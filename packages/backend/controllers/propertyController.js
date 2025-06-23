@@ -314,6 +314,7 @@ class PropertyController {
 
       const response = {
         ...property,
+        profileId: property.profileId,
         energyData,
       };
 

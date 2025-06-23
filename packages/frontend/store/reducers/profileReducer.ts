@@ -7,6 +7,9 @@ interface ProfileState {
   allProfiles: Profile[];
   isLoading: boolean;
   error: string | null;
+  landlordProfile: Profile | null;
+  landlordProfileLoading: boolean;
+  landlordProfileError: string | null;
 }
 
 const initialState: ProfileState = {
@@ -14,6 +17,9 @@ const initialState: ProfileState = {
   allProfiles: [],
   isLoading: false,
   error: null,
+  landlordProfile: null,
+  landlordProfileLoading: false,
+  landlordProfileError: null,
 };
 
 export const fetchPrimaryProfile = createAsyncThunk(
@@ -33,6 +39,16 @@ export const fetchUserProfiles = createAsyncThunk(
   ) => {
     const profiles = await profileService.getUserProfiles(oxyServices, activeSessionId);
     return profiles;
+  },
+);
+
+export const fetchLandlordProfileById = createAsyncThunk(
+  'profile/fetchLandlordProfileById',
+  async (
+    { profileId, oxyServices, activeSessionId }: { profileId: string, oxyServices?: OxyServices; activeSessionId?: string },
+  ) => {
+    const profile = await profileService.getProfileById(profileId, oxyServices, activeSessionId);
+    return profile;
   },
 );
 
@@ -72,6 +88,20 @@ const profileSlice = createSlice({
       .addCase(fetchUserProfiles.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.error.message || 'Failed to fetch profiles';
+      })
+      .addCase(fetchLandlordProfileById.pending, (state) => {
+        state.landlordProfileLoading = true;
+        state.landlordProfileError = null;
+        state.landlordProfile = null;
+      })
+      .addCase(fetchLandlordProfileById.fulfilled, (state, action) => {
+        state.landlordProfileLoading = false;
+        state.landlordProfile = action.payload;
+      })
+      .addCase(fetchLandlordProfileById.rejected, (state, action) => {
+        state.landlordProfileLoading = false;
+        state.landlordProfileError = action.error.message || 'Failed to fetch landlord profile';
+        state.landlordProfile = null;
       });
   },
 });

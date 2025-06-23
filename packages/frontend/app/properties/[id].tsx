@@ -8,7 +8,7 @@ import { Header } from '@/components/Header';
 import { PropertyMap } from '@/components/PropertyMap';
 import { ThemedText } from '@/components/ThemedText';
 import { useProperty } from '@/hooks/usePropertyQueries';
-import { useTrackPropertyView, useSaveProperty, useUnsaveProperty, useSavedProperties } from '@/hooks/useUserQueries';
+import { useSaveProperty, useUnsaveProperty, useSavedProperties } from '@/hooks/useUserQueries';
 import { useOxy } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
 import { toast } from 'sonner';
@@ -18,6 +18,10 @@ import * as Clipboard from 'expo-clipboard';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchLandlordProfileById } from '@/store/reducers/profileReducer';
+import { trackPropertyView } from '@/store/reducers/recentlyViewedReducer';
+import type { RootState, AppDispatch } from '@/store/store';
 
 type PropertyDetail = {
   id: string;
@@ -48,7 +52,6 @@ export default function PropertyDetailPage() {
   const { id } = useLocalSearchParams();
   const { oxyServices, activeSessionId } = useOxy();
   const { data: apiProperty, isLoading, error } = useProperty(id as string);
-  const trackPropertyView = useTrackPropertyView();
   const saveProperty = useSaveProperty();
   const unsaveProperty = useUnsaveProperty();
   const { data: savedProperties = [] } = useSavedProperties();
@@ -56,6 +59,28 @@ export default function PropertyDetailPage() {
   const [landlordVerified, setLandlordVerified] = useState(true);
   const [localSaveStatus, setLocalSaveStatus] = useState<boolean | null>(null);
   const hasViewedRef = useRef(false);
+
+  // Redux: fetch landlord profile by profileId
+  const dispatch = useDispatch<AppDispatch>();
+  const landlordProfileId = apiProperty?.profileId;
+  const landlordProfile = useSelector((state: RootState) => state.profile.landlordProfile);
+  const landlordLoading = useSelector((state: RootState) => state.profile.landlordProfileLoading);
+
+  // Normalize landlordProfileId to string if it's an object (MongoDB $oid)
+  let normalizedLandlordProfileId: string | undefined = undefined;
+  if (landlordProfileId) {
+    if (typeof landlordProfileId === 'object' && landlordProfileId.$oid) {
+      normalizedLandlordProfileId = landlordProfileId.$oid;
+    } else if (typeof landlordProfileId === 'string') {
+      normalizedLandlordProfileId = landlordProfileId;
+    }
+  }
+
+  useEffect(() => {
+    if (normalizedLandlordProfileId) {
+      dispatch(fetchLandlordProfileById({ profileId: normalizedLandlordProfileId, oxyServices, activeSessionId }));
+    }
+  }, [normalizedLandlordProfileId, oxyServices, activeSessionId, dispatch]);
 
   // Debug logging
   useEffect(() => {
@@ -118,11 +143,11 @@ export default function PropertyDetailPage() {
 
   // Track property view when component mounts
   useEffect(() => {
-    if (apiProperty && !hasViewedRef.current) {
-      trackPropertyView.mutate(apiProperty._id);
+    if (apiProperty && !hasViewedRef.current && oxyServices && activeSessionId) {
+      dispatch(trackPropertyView({ propertyId: apiProperty._id, oxyServices, activeSessionId }));
       hasViewedRef.current = true;
     }
-  }, [apiProperty, trackPropertyView]);
+  }, [apiProperty, oxyServices, activeSessionId, dispatch]);
 
   // Reset local save status when saved properties data changes
   useEffect(() => {
@@ -385,7 +410,12 @@ ${propertyUrl}`;
 
       {/* Enhanced Header Section */}
       <View style={styles.enhancedHeader}>
-        <Text style={styles.headerTitle} numberOfLines={2}>{property.title}</Text>
+        <Text style={styles.headerTitle} numberOfLines={2}>{generatePropertyTitle({
+          type: property.type,
+          address: property.address,
+          bedrooms: property.bedrooms,
+          bathrooms: property.bathrooms
+        })}</Text>
         <View style={styles.headerLocation}>
           <Text style={styles.headerLocationText}>{property.location}</Text>
         </View>
@@ -567,23 +597,63 @@ ${propertyUrl}`;
           <View style={styles.landlordCard}>
             <View style={styles.landlordHeader}>
               <View style={styles.landlordAvatar}>
-                <Text style={styles.landlordInitial}>S</Text>
+                <Text style={styles.landlordInitial}>
+                  {landlordProfile?.profileType === 'personal'
+                    ? landlordProfile?.personalProfile?.personalInfo?.bio?.charAt(0)
+                    || landlordProfile?.oxyUserId?.charAt(0)
+                    || '?'
+                    : landlordProfile?.profileType === 'agency'
+                      ? landlordProfile?.agencyProfile?.legalCompanyName?.charAt(0)
+                      || landlordProfile?.oxyUserId?.charAt(0)
+                      || '?'
+                      : landlordProfile?.profileType === 'business'
+                        ? landlordProfile?.businessProfile?.legalCompanyName?.charAt(0)
+                        || landlordProfile?.oxyUserId?.charAt(0)
+                        || '?'
+                        : landlordProfile?.profileType === 'cooperative'
+                          ? landlordProfile?.cooperativeProfile?.legalName?.charAt(0)
+                          || landlordProfile?.oxyUserId?.charAt(0)
+                          || '?'
+                          : landlordProfile?.oxyUserId?.charAt(0) || '?'}
+                </Text>
               </View>
               <View style={styles.landlordInfo}>
                 <View style={styles.landlordNameRow}>
-                  <Text style={styles.landlordName}>Sarah Johnson</Text>
-                  <View style={styles.verifiedBadge}>
-                    <Text style={styles.verifiedText}>✓</Text>
-                  </View>
+                  <Text style={styles.landlordName}>
+                    {landlordProfile?.profileType === 'personal'
+                      ? landlordProfile?.personalProfile?.personalInfo?.bio
+                      || landlordProfile?.oxyUserId
+                      || '?'
+                      : landlordProfile?.profileType === 'agency'
+                        ? landlordProfile?.agencyProfile?.legalCompanyName
+                        || landlordProfile?.oxyUserId
+                        || '?'
+                        : landlordProfile?.profileType === 'business'
+                          ? landlordProfile?.businessProfile?.legalCompanyName
+                          || landlordProfile?.oxyUserId
+                          || '?'
+                          : landlordProfile?.profileType === 'cooperative'
+                            ? landlordProfile?.cooperativeProfile?.legalName
+                            || landlordProfile?.oxyUserId
+                            || '?'
+                            : landlordProfile?.oxyUserId || '?'}
+                  </Text>
+                  {landlordProfile?.isActive && (
+                    <View style={styles.verifiedBadge}>
+                      <Text style={styles.verifiedText}>✓</Text>
+                    </View>
+                  )}
                 </View>
-                <Text style={styles.landlordRating}>★ 4.8 • Responds within 2 hours</Text>
+                <Text style={styles.landlordRating}>
+                  {landlordProfile?.personalProfile?.trustScore?.score ? `Trust Score: ${landlordProfile.personalProfile.trustScore.score}` : ''}
+                </Text>
               </View>
             </View>
             <View style={styles.landlordActions}>
-              <TouchableOpacity style={styles.messageButton} onPress={handleContact}>
+              <TouchableOpacity style={styles.messageButton} onPress={handleContact} disabled={!landlordProfile}>
                 <Text style={styles.messageButtonText}>{t("Message")}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.callButton} onPress={handleContact}>
+              <TouchableOpacity style={styles.callButton} onPress={handleContact} disabled={!landlordProfile}>
                 <Text style={styles.callButtonText}>{t("Call")}</Text>
               </TouchableOpacity>
             </View>
