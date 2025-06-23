@@ -464,8 +464,11 @@ class PropertyController {
         type, 
         minRent, 
         maxRent, 
+        city,
         bedrooms, 
-        bathrooms, 
+        bathrooms,
+        amenities,
+        available,
         page = 1, 
         limit = 10 
       } = req.query;
@@ -481,6 +484,11 @@ class PropertyController {
       // Filter by property type
       if (type) {
         searchQuery.type = type;
+      }
+
+      // Filter by city/location
+      if (city) {
+        searchQuery['address.city'] = new RegExp(city, 'i');
       }
 
       // Filter by rent range
@@ -500,8 +508,21 @@ class PropertyController {
         searchQuery.bathrooms = parseInt(bathrooms);
       }
 
-      // Only show available properties
-      searchQuery['availability.isAvailable'] = true;
+      // Filter by amenities
+      if (amenities) {
+        const amenityList = amenities.split(',').map(a => a.trim());
+        searchQuery.amenities = { $in: amenityList };
+      }
+
+      // Filter by availability
+      if (available !== undefined) {
+        searchQuery['availability.isAvailable'] = available === 'true';
+      } else {
+        // Default to available properties
+        searchQuery['availability.isAvailable'] = true;
+      }
+      
+      // Only show active properties
       searchQuery.status = 'active';
 
       // Execute search

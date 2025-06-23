@@ -120,7 +120,7 @@ async function startServer() {
     app.listen(port, () => {
       console.log(`🚀 Homio Backend running on port ${port}`);
       console.log(`Environment: ${config.environment}`);
-      console.log('Features: Property & Room Management, Energy Monitoring');
+      console.log('Features: Property & Room Management, Energy Monitoring, AI Streaming');
       console.log('Available endpoints:');
       console.log('  GET  /health - Health check (public)');
       console.log('  GET  /api/health - API health check');
@@ -132,6 +132,9 @@ async function startServer() {
       console.log('  GET  /api/properties/:id/rooms/:roomId/stats - Room statistics (authenticated)');
       console.log('  GET  /api/analytics - User analytics (authenticated)');
       console.log('  POST /api/test - Test endpoint (authenticated)');
+      console.log('  POST /api/ai/stream - AI text streaming (authenticated)');
+      console.log('  POST /api/ai/chat - AI chat completion (authenticated)');
+      console.log('  GET  /api/ai/health - AI service health check');
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error.message);

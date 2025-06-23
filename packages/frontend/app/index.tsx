@@ -43,35 +43,6 @@ export default function HomePage() {
     type: 'website'
   });
 
-  // Helper function to map Property to PropertyCard props
-  const mapPropertyToCardProps = (property: any) => {
-    const title = generatePropertyTitle({
-      type: property.type,
-      address: property.address,
-      bedrooms: property.bedrooms,
-      bathrooms: property.bathrooms
-    });
-
-    const location = `${property.address?.city || 'Unknown'}, ${property.address?.state || ''}`;
-
-    return {
-      id: property._id || property.id,
-      title,
-      location,
-      price: property.rent?.amount || 0,
-      currency: property.rent?.currency || '$',
-      type: property.type as any,
-      imageSource: getPropertyImageSource(property.images),
-      bedrooms: property.bedrooms || 0,
-      bathrooms: property.bathrooms || 0,
-      size: property.squareFootage || 0,
-      sizeUnit: 'm²',
-      isFavorite: false,
-      isVerified: property.amenities?.includes('verified') || false,
-      onPress: () => router.push(`/properties/${property._id || property.id}`),
-    };
-  };
-
   // Fetch real data
   const { data: propertiesData, isLoading: propertiesLoading, refetch: refetchProperties } = useProperties({
     limit: 8,
@@ -244,7 +215,18 @@ export default function HomePage() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
               {featuredProperties.map((property) => (
                 <View key={property._id || property.id} style={styles.propertyCardContainer}>
-                  <PropertyCard {...mapPropertyToCardProps(property)} />
+                  <PropertyCard
+                    property={property}
+                    variant="featured"
+                    onPress={() => router.push(`/properties/${property._id || property.id}`)}
+                    badgeContent={
+                      property.amenities?.includes('verified') && (
+                        <View style={styles.verifiedBadge}>
+                          <Text style={styles.verifiedBadgeText}>VERIFIED</Text>
+                        </View>
+                      )
+                    }
+                  />
                 </View>
               ))}
             </ScrollView>
@@ -663,5 +645,17 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_3,
     marginTop: 4,
     textAlign: 'center',
+  },
+  verifiedBadge: {
+    backgroundColor: colors.primaryColor,
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 15,
+    marginTop: 5,
+  },
+  verifiedBadgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

@@ -122,7 +122,7 @@ export default function SearchScreen() {
 
     const renderPropertyItem = ({ item }: { item: Property }) => (
         <PropertyCard
-            {...item}
+            property={item}
             onPress={() => router.push(`/properties/${item._id || item.id}`)}
         />
     );

@@ -290,17 +290,42 @@ export function useUpdateTrustScore() {
   });
 }
 
-// Hook to get the currently active profile
+// Hook to get the currently active profile with full data
 export function useActiveProfile() {
-  const { data: profiles, isLoading, error, refetch } = useUserProfiles();
+  const { data: profiles, isLoading: profilesLoading, error: profilesError } = useUserProfiles();
   
-  const activeProfile = profiles?.find(p => p.isActive);
+  // Find the active profile from the profiles list (this gives us basic info)
+  const activeProfileBasic = profiles?.find(p => p.isActive) || profiles?.[0] || null;
+  
+  // Get the full profile data by type if we have an active profile
+  const profileType = activeProfileBasic?.profileType as 'personal' | 'agency' | 'business' || 'personal';
+  const { data: fullProfile, isLoading: fullProfileLoading, error: fullProfileError } = useProfileByType(profileType);
+  
+  // Use the full profile if available and matches the active profile, otherwise fall back to basic profile
+  const activeProfile = (activeProfileBasic && fullProfile && fullProfile.id === activeProfileBasic.id) 
+    ? fullProfile 
+    : activeProfileBasic;
+  
+  // Debug logging
+  console.log('useActiveProfile:', {
+    profilesCount: profiles?.length || 0,
+    hasActiveProfile: !!activeProfile,
+    activeProfileId: activeProfile?.id,
+    activeProfileType: activeProfile?.profileType,
+    hasFullData: !!(activeProfile as any)?.personalProfile || !!(activeProfile as any)?.agencyProfile || !!(activeProfile as any)?.businessProfile,
+    fullProfileId: fullProfile?.id,
+    profilesMatch: fullProfile?.id === activeProfileBasic?.id,
+    allProfiles: profiles?.map(p => ({ id: p.id, type: p.profileType, isActive: p.isActive, isPrimary: p.isPrimary }))
+  });
   
   return {
-    data: activeProfile || null,
-    isLoading,
-    error,
-    refetch,
+    data: activeProfile,
+    isLoading: profilesLoading || (activeProfileBasic ? fullProfileLoading : false),
+    error: profilesError || fullProfileError,
+    refetch: () => {
+      // We don't have direct access to refetch from useUserProfiles here, 
+      // but the queries will automatically refetch when needed
+    },
     profiles // Also return all profiles in case they're needed
   };
 } 

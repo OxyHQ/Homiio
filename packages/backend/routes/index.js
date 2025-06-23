@@ -14,6 +14,7 @@ module.exports = function(authenticateToken) {
   const notificationRoutes = require('./notifications')(authenticateToken);
   const analyticsRoutes = require('./analytics');
   const profileRoutes = require('./profiles')(authenticateToken);
+  const aiRoutes = require('./ai')(authenticateToken);
 
   const router = express.Router();
 
@@ -26,6 +27,7 @@ module.exports = function(authenticateToken) {
   router.use('/notifications', notificationRoutes);
   router.use('/analytics', analyticsRoutes);
   router.use('/profiles', profileRoutes);
+  router.use('/ai', aiRoutes);
 
   // Health check route
   router.get('/health', (req, res) => {

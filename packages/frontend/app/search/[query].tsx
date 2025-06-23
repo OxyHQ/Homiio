@@ -100,34 +100,6 @@ export default function SearchResultsScreen() {
         router.push(`/properties/${property._id || property.id}`);
     };
 
-    // Convert Property to PropertyCard props
-    const convertPropertyToCardProps = (property: Property) => {
-        // Generate title dynamically from property data
-        const generatedTitle = generatePropertyTitle({
-            type: property.type,
-            address: property.address,
-            bedrooms: property.bedrooms,
-            bathrooms: property.bathrooms
-        });
-
-        return {
-            id: property._id || property.id || '',
-            title: generatedTitle,
-            location: `${property.address.city}, ${property.address.state}`,
-            price: property.rent.amount,
-            currency: property.rent.currency,
-            type: property.type as any,
-            imageSource: getPropertyImageSource(property.images),
-            bedrooms: property.bedrooms || 0,
-            bathrooms: property.bathrooms || 0,
-            size: property.squareFootage || 0,
-            sizeUnit: 'm²',
-            isFavorite: false,
-            isVerified: true,
-            onPress: () => handlePropertyPress(property),
-        };
-    };
-
     // Handle filter changes
     const handleFilterChange = (key: keyof SearchFilters, value: any) => {
         setFilters(prev => ({
@@ -328,7 +300,8 @@ export default function SearchResultsScreen() {
                     keyExtractor={(item) => item._id || item.id || Math.random().toString()}
                     renderItem={({ item }) => (
                         <PropertyCard
-                            {...convertPropertyToCardProps(item)}
+                            property={item}
+                            onPress={() => handlePropertyPress(item)}
                         />
                     )}
                     contentContainerStyle={styles.resultsList}

@@ -491,13 +491,13 @@ export default function ProfileScreen() {
 
                     <TouchableOpacity
                         style={[styles.settingItem, styles.firstSettingItem]}
-                        onPress={() => router.push('/profile/create')}
+                        onPress={() => router.push('/profile/edit')}
                     >
                         <View style={styles.settingInfo}>
-                            <IconComponent name="add-circle" size={20} color="#666" style={styles.settingIcon} />
+                            <IconComponent name="create" size={20} color="#666" style={styles.settingIcon} />
                             <View>
-                                <Text style={styles.settingLabel}>Create New Profile</Text>
-                                <Text style={styles.settingDescription}>Add a new business or agency profile</Text>
+                                <Text style={styles.settingLabel}>Edit Current Profile</Text>
+                                <Text style={styles.settingDescription}>Modify profile information</Text>
                             </View>
                         </View>
                         <IconComponent name="chevron-forward" size={16} color="#ccc" />
@@ -505,13 +505,13 @@ export default function ProfileScreen() {
 
                     <TouchableOpacity
                         style={[styles.settingItem, styles.lastSettingItem]}
-                        onPress={() => router.push('/profile/edit')}
+                        onPress={() => router.push('/profile/create')}
                     >
                         <View style={styles.settingInfo}>
-                            <IconComponent name="create" size={20} color="#666" style={styles.settingIcon} />
+                            <IconComponent name="add-circle" size={20} color="#666" style={styles.settingIcon} />
                             <View>
-                                <Text style={styles.settingLabel}>Edit Profiles</Text>
-                                <Text style={styles.settingDescription}>Modify profile information</Text>
+                                <Text style={styles.settingLabel}>Create New Profile</Text>
+                                <Text style={styles.settingDescription}>Add a new business or agency profile</Text>
                             </View>
                         </View>
                         <IconComponent name="chevron-forward" size={16} color="#ccc" />

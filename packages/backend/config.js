@@ -10,6 +10,13 @@ const config = {
       : 'http://localhost:3001',
   },
   
+  // OpenAI Configuration
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY,
+    organization: process.env.OPENAI_ORG_ID,
+    model: process.env.OPENAI_MODEL || 'gpt-4o',
+  },
+  
   // Database Configuration
   database: {
     url: process.env.MONGODB_URI || process.env.DATABASE_URL || 'mongodb://localhost:27017/homiio',

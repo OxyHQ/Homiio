@@ -186,16 +186,7 @@ export default function PropertiesMapScreen() {
     // Render property list item
     const renderPropertyItem = ({ item }: { item: Property }) => (
         <PropertyCard
-            id={item._id || item.id || ''}
-            title={generatePropertyTitle(item)}
-            location={`${item.address.street}, ${item.address.city}, ${item.address.state}`}
-            price={item.rent.amount}
-            currency="$"
-            type={item.type as any}
-            imageSource={getPropertyImageSource(item.images)}
-            bedrooms={item.bedrooms || 0}
-            bathrooms={item.bathrooms || 0}
-            size={item.squareFootage || 0}
+            property={item}
             onPress={() => handlePropertyPress(item)}
         />
     );
@@ -323,16 +314,7 @@ export default function PropertiesMapScreen() {
                     {selectedProperty && (
                         <View style={styles.selectedPropertyContainer}>
                             <PropertyCard
-                                id={selectedProperty._id || selectedProperty.id || ''}
-                                title={generatePropertyTitle(selectedProperty)}
-                                location={`${selectedProperty.address.street}, ${selectedProperty.address.city}, ${selectedProperty.address.state}`}
-                                price={selectedProperty.rent.amount}
-                                currency="$"
-                                type={selectedProperty.type as any}
-                                imageSource={getPropertyImageSource(selectedProperty.images)}
-                                bedrooms={selectedProperty.bedrooms || 0}
-                                bathrooms={selectedProperty.bathrooms || 0}
-                                size={selectedProperty.squareFootage || 0}
+                                property={selectedProperty}
                                 onPress={() => handlePropertyPress(selectedProperty)}
                             />
                             <TouchableOpacity

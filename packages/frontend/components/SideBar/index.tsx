@@ -15,6 +15,7 @@ import { Search, SearchActive } from '@/assets/icons/search-icon';
 import { Compose } from '@/assets/icons/compose-icon';
 import { Ionicons } from '@expo/vector-icons';
 import { OxySignInButton, useOxy } from '@oxyhq/services';
+import { SindiIcon } from '@/assets/icons';
 
 const IconComponent = Ionicons as any;
 
@@ -40,6 +41,12 @@ export function SideBar() {
             icon: <Bookmark color={colors.COLOR_BLACK} />,
             iconActive: <BookmarkActive />,
             route: '/saved',
+        },
+        {
+            title: 'Sindi',
+            icon: <SindiIcon size={24} color={colors.COLOR_BLACK} />,
+            iconActive: <SindiIcon size={24} color={colors.primaryColor} />,
+            route: '/sindi',
         },
         {
             title: t("Contracts"),

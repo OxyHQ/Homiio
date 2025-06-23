@@ -34,6 +34,7 @@ export default function ProfileEditScreen() {
 
     // Get profile type to determine which UI to show
     const profileType = activeProfile?.profileType || 'personal';
+    console.log('ProfileEditScreen: Determined profileType:', profileType, 'from activeProfile.profileType:', activeProfile?.profileType);
 
     // Load saved tab state on mount
     useEffect(() => {
@@ -187,27 +188,48 @@ export default function ProfileEditScreen() {
 
     // Update form state when profile data loads
     useEffect(() => {
-        // Only proceed if we have profile data and haven't initialized yet
-        if (!activeProfile || isFormInitialized) {
+        // Skip if form is already initialized
+        if (isFormInitialized) {
+            return;
+        }
+
+        // If there's no active profile, initialize with defaults
+        if (!activeProfile) {
+            console.log('ProfileEditScreen: No active profile found, initializing with defaults');
+            setIsFormInitialized(true);
             return;
         }
 
         console.log('ProfileEditScreen: Initializing form with profile data:', activeProfile);
+        console.log('ProfileEditScreen: profileType:', profileType);
+        console.log('ProfileEditScreen: activeProfile structure:');
+        console.log('  - profileType:', activeProfile?.profileType);
+        console.log('  - personalProfile exists:', !!activeProfile?.personalProfile);
+        console.log('  - agencyProfile exists:', !!activeProfile?.agencyProfile);
+        console.log('  - businessProfile exists:', !!activeProfile?.businessProfile);
+        console.log('  - personalProfile data:', activeProfile?.personalProfile);
+        
+        // Log a few specific fields to see structure
+        if (activeProfile?.personalProfile) {
+            console.log('  - personalProfile.personalInfo:', activeProfile.personalProfile.personalInfo);
+            console.log('  - personalProfile.preferences:', activeProfile.personalProfile.preferences);
+        }
 
-        if (profileType === 'personal' && activeProfile?.personalProfile) {
-            const profile = activeProfile.personalProfile;
+        if (profileType === 'personal') {
+            // Initialize personal profile form whether or not personalProfile exists
+            const profile = activeProfile?.personalProfile;
             console.log('ProfileEditScreen: Updating form state with profile data:', profile);
-            console.log('ProfileEditScreen: personalInfo from profile:', profile.personalInfo);
+            console.log('ProfileEditScreen: personalInfo from profile:', profile?.personalInfo);
 
             // Update personal info
             const newPersonalInfo = {
-                bio: profile.personalInfo?.bio || '',
-                occupation: profile.personalInfo?.occupation || '',
-                employer: profile.personalInfo?.employer || '',
-                annualIncome: profile.personalInfo?.annualIncome?.toString() || '',
-                employmentStatus: profile.personalInfo?.employmentStatus || 'employed',
-                moveInDate: profile.personalInfo?.moveInDate ? new Date(profile.personalInfo.moveInDate).toISOString().split('T')[0] : '',
-                leaseDuration: profile.personalInfo?.leaseDuration || 'yearly',
+                bio: profile?.personalInfo?.bio || '',
+                occupation: profile?.personalInfo?.occupation || '',
+                employer: profile?.personalInfo?.employer || '',
+                annualIncome: profile?.personalInfo?.annualIncome?.toString() || '',
+                employmentStatus: profile?.personalInfo?.employmentStatus || 'employed',
+                moveInDate: profile?.personalInfo?.moveInDate ? new Date(profile.personalInfo.moveInDate).toISOString().split('T')[0] : '',
+                leaseDuration: profile?.personalInfo?.leaseDuration || 'yearly',
             };
 
             console.log('ProfileEditScreen: Setting personalInfo to:', newPersonalInfo);
@@ -215,42 +237,42 @@ export default function ProfileEditScreen() {
 
             // Update preferences
             setPreferences({
-                propertyTypes: profile.preferences?.propertyTypes || [],
-                maxRent: profile.preferences?.maxRent?.toString() || '',
-                minBedrooms: profile.preferences?.minBedrooms?.toString() || '',
-                minBathrooms: profile.preferences?.minBathrooms?.toString() || '',
-                preferredAmenities: profile.preferences?.preferredAmenities || [],
-                petFriendly: profile.preferences?.petFriendly || false,
-                smokingAllowed: profile.preferences?.smokingAllowed || false,
-                furnished: profile.preferences?.furnished || false,
-                parkingRequired: profile.preferences?.parkingRequired || false,
-                accessibility: profile.preferences?.accessibility || false,
+                propertyTypes: profile?.preferences?.propertyTypes || [],
+                maxRent: profile?.preferences?.maxRent?.toString() || '',
+                minBedrooms: profile?.preferences?.minBedrooms?.toString() || '',
+                minBathrooms: profile?.preferences?.minBathrooms?.toString() || '',
+                preferredAmenities: profile?.preferences?.preferredAmenities || [],
+                petFriendly: profile?.preferences?.petFriendly || false,
+                smokingAllowed: profile?.preferences?.smokingAllowed || false,
+                furnished: profile?.preferences?.furnished || false,
+                parkingRequired: profile?.preferences?.parkingRequired || false,
+                accessibility: profile?.preferences?.accessibility || false,
             });
 
             // Update settings
             setSettings({
                 notifications: {
-                    email: profile.settings?.notifications?.email ?? true,
-                    push: profile.settings?.notifications?.push ?? true,
-                    sms: profile.settings?.notifications?.sms ?? false,
-                    propertyAlerts: profile.settings?.notifications?.propertyAlerts ?? true,
-                    viewingReminders: profile.settings?.notifications?.viewingReminders ?? true,
-                    leaseUpdates: profile.settings?.notifications?.leaseUpdates ?? true,
+                    email: profile?.settings?.notifications?.email ?? true,
+                    push: profile?.settings?.notifications?.push ?? true,
+                    sms: profile?.settings?.notifications?.sms ?? false,
+                    propertyAlerts: profile?.settings?.notifications?.propertyAlerts ?? true,
+                    viewingReminders: profile?.settings?.notifications?.viewingReminders ?? true,
+                    leaseUpdates: profile?.settings?.notifications?.leaseUpdates ?? true,
                 },
                 privacy: {
-                    profileVisibility: profile.settings?.privacy?.profileVisibility || 'public',
-                    showContactInfo: profile.settings?.privacy?.showContactInfo ?? true,
-                    showIncome: profile.settings?.privacy?.showIncome ?? false,
-                    showRentalHistory: profile.settings?.privacy?.showRentalHistory ?? false,
-                    showReferences: profile.settings?.privacy?.showReferences ?? false,
+                    profileVisibility: profile?.settings?.privacy?.profileVisibility || 'public',
+                    showContactInfo: profile?.settings?.privacy?.showContactInfo ?? true,
+                    showIncome: profile?.settings?.privacy?.showIncome ?? false,
+                    showRentalHistory: profile?.settings?.privacy?.showRentalHistory ?? false,
+                    showReferences: profile?.settings?.privacy?.showReferences ?? false,
                 },
-                language: profile.settings?.language || 'en',
-                timezone: profile.settings?.timezone || 'UTC',
-                currency: profile.settings?.currency || 'USD',
+                language: profile?.settings?.language || 'en',
+                timezone: profile?.settings?.timezone || 'UTC',
+                currency: profile?.settings?.currency || 'USD',
             });
 
             // Update references
-            const newReferences = profile.references?.map(ref => ({
+            const newReferences = profile?.references?.map(ref => ({
                 name: ref.name,
                 relationship: ref.relationship,
                 phone: ref.phone || '',
@@ -261,7 +283,7 @@ export default function ProfileEditScreen() {
             setReferences(newReferences);
 
             // Update rental history
-            const newRentalHistory = profile.rentalHistory?.map(history => ({
+            const newRentalHistory = profile?.rentalHistory?.map(history => ({
                 address: history.address,
                 startDate: new Date(history.startDate).toISOString().split('T')[0],
                 endDate: history.endDate ? new Date(history.endDate).toISOString().split('T')[0] : undefined,
@@ -279,55 +301,61 @@ export default function ProfileEditScreen() {
 
             setHasUnsavedChanges(false);
             setIsFormInitialized(true);
-        } else if (profileType === 'agency' && activeProfile?.agencyProfile) {
-            const profile = activeProfile.agencyProfile;
+        } else if (profileType === 'agency') {
+            // Initialize agency profile form whether or not agencyProfile exists
+            const profile = activeProfile?.agencyProfile;
             console.log('ProfileEditScreen: Updating agency form state with profile data:', profile);
 
             setAgencyInfo({
-                businessType: profile.businessType || 'real_estate_agency',
-                description: profile.description || '',
+                businessType: profile?.businessType || 'real_estate_agency',
+                description: profile?.description || '',
                 businessDetails: {
-                    licenseNumber: profile.businessDetails?.licenseNumber || '',
-                    taxId: profile.businessDetails?.taxId || '',
-                    yearEstablished: profile.businessDetails?.yearEstablished?.toString() || '',
-                    employeeCount: profile.businessDetails?.employeeCount || '1-10',
-                    specialties: profile.businessDetails?.specialties || [],
+                    licenseNumber: profile?.businessDetails?.licenseNumber || '',
+                    taxId: profile?.businessDetails?.taxId || '',
+                    yearEstablished: profile?.businessDetails?.yearEstablished?.toString() || '',
+                    employeeCount: profile?.businessDetails?.employeeCount || '1-10',
+                    specialties: profile?.businessDetails?.specialties || [],
                 },
                 verification: {
-                    businessLicense: profile.verification?.businessLicense || false,
-                    insurance: profile.verification?.insurance || false,
-                    bonding: profile.verification?.bonding || false,
-                    backgroundCheck: profile.verification?.backgroundCheck || false,
+                    businessLicense: profile?.verification?.businessLicense || false,
+                    insurance: profile?.verification?.insurance || false,
+                    bonding: profile?.verification?.bonding || false,
+                    backgroundCheck: profile?.verification?.backgroundCheck || false,
                 },
-                legalCompanyName: profile.legalCompanyName || '',
+                legalCompanyName: profile?.legalCompanyName || '',
             });
 
             setHasUnsavedChanges(false);
             setIsFormInitialized(true);
-        } else if (profileType === 'business' && activeProfile?.businessProfile) {
-            const profile = activeProfile.businessProfile;
+        } else if (profileType === 'business') {
+            // Initialize business profile form whether or not businessProfile exists
+            const profile = activeProfile?.businessProfile;
             console.log('ProfileEditScreen: Updating business form state with profile data:', profile);
 
             setBusinessInfo({
-                businessType: profile.businessType || 'startup',
-                description: profile.description || '',
+                businessType: profile?.businessType || 'startup',
+                description: profile?.description || '',
                 businessDetails: {
-                    licenseNumber: profile.businessDetails?.licenseNumber || '',
-                    taxId: profile.businessDetails?.taxId || '',
-                    yearEstablished: profile.businessDetails?.yearEstablished?.toString() || '',
-                    employeeCount: profile.businessDetails?.employeeCount || '1-5',
-                    industry: profile.businessDetails?.industry || '',
-                    specialties: profile.businessDetails?.specialties || [],
+                    licenseNumber: profile?.businessDetails?.licenseNumber || '',
+                    taxId: profile?.businessDetails?.taxId || '',
+                    yearEstablished: profile?.businessDetails?.yearEstablished?.toString() || '',
+                    employeeCount: profile?.businessDetails?.employeeCount || '1-5',
+                    industry: profile?.businessDetails?.industry || '',
+                    specialties: profile?.businessDetails?.specialties || [],
                 },
                 verification: {
-                    businessLicense: profile.verification?.businessLicense || false,
-                    insurance: profile.verification?.insurance || false,
-                    backgroundCheck: profile.verification?.backgroundCheck || false,
+                    businessLicense: profile?.verification?.businessLicense || false,
+                    insurance: profile?.verification?.insurance || false,
+                    backgroundCheck: profile?.verification?.backgroundCheck || false,
                 },
-                legalCompanyName: profile.legalCompanyName || '',
+                legalCompanyName: profile?.legalCompanyName || '',
             });
 
             setHasUnsavedChanges(false);
+            setIsFormInitialized(true);
+        } else {
+            // Unknown profile type or no profile - initialize with defaults
+            console.log('ProfileEditScreen: Unknown profile type or no profile data, initializing with defaults');
             setIsFormInitialized(true);
         }
     }, [activeProfile, profileType, isFormInitialized]);
@@ -1882,13 +1910,24 @@ export default function ProfileEditScreen() {
     };
 
     // Show loading while profile is loading or form is not yet initialized
-    if (profileLoading || (!isFormInitialized && activeProfile)) {
+    const shouldShowLoading = profileLoading || (!isFormInitialized && activeProfile);
+    
+    // Debug logging
+    console.log('ProfileEditScreen render state:', {
+        profileLoading,
+        isFormInitialized,
+        hasActiveProfile: !!activeProfile,
+        profileType,
+        shouldShowLoading
+    });
+
+    if (shouldShowLoading) {
         return (
             <SafeAreaView style={{ flex: 1 }} edges={['top']}>
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={colors.primaryColor} />
                     <Text style={styles.loadingText}>
-                        {profileLoading ? 'Loading profile...' : 'Preparing form...'}
+                        {profileLoading ? 'Loading profile...' : !isFormInitialized ? 'Preparing form...' : 'Loading...'}
                     </Text>
                 </View>
             </SafeAreaView>

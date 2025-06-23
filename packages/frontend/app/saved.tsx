@@ -96,39 +96,34 @@ export default function SavedPropertiesScreen() {
     const renderPropertyItem = ({ item }: { item: SavedProperty }) => (
         <View style={styles.cardContainer}>
             <PropertyCard
-                id={item._id}
-                title={getPropertyTitle(item)}
-                location={`${item.address.city}, ${item.address.state}`}
-                price={item.rent.amount}
-                type={item.type === 'room' ? 'apartment' : item.type === 'studio' ? 'apartment' : item.type === 'house' ? 'house' : 'apartment'}
-                imageSource={getPropertyImageSource(item.images)}
-                bedrooms={item.bedrooms || 0}
-                bathrooms={item.bathrooms || 0}
-                size={item.squareFootage || 0}
+                property={item}
+                variant="saved"
                 onPress={() => handlePropertyPress(item)}
+                footerContent={
+                    <View style={styles.cardFooter}>
+                        <View style={styles.notesSection}>
+                            <ThemedText style={styles.notesLabel}>My Notes:</ThemedText>
+                            <ThemedText style={styles.notesText} numberOfLines={2}>
+                                {item.notes || 'No notes yet. Tap to add some.'}
+                            </ThemedText>
+                        </View>
+                        <View style={styles.cardActions}>
+                            <IconButton
+                                name="create-outline"
+                                size={22}
+                                color={colors.primaryColor}
+                                onPress={() => handleEditNotes(item)}
+                            />
+                            <IconButton
+                                name="bookmark"
+                                size={22}
+                                color={colors.chatUnreadBadge}
+                                onPress={() => handleUnsaveProperty(item)}
+                            />
+                        </View>
+                    </View>
+                }
             />
-            <View style={styles.cardFooter}>
-                <View style={styles.notesSection}>
-                    <ThemedText style={styles.notesLabel}>My Notes:</ThemedText>
-                    <ThemedText style={styles.notesText} numberOfLines={2}>
-                        {item.notes || 'No notes yet. Tap to add some.'}
-                    </ThemedText>
-                </View>
-                <View style={styles.cardActions}>
-                    <IconButton
-                        name="create-outline"
-                        size={22}
-                        color={colors.primaryColor}
-                        onPress={() => handleEditNotes(item)}
-                    />
-                    <IconButton
-                        name="bookmark"
-                        size={22}
-                        color={colors.chatUnreadBadge}
-                        onPress={() => handleUnsaveProperty(item)}
-                    />
-                </View>
-            </View>
         </View>
     );
 

@@ -1,53 +1,20 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, ActivityIndicator } from 'react-native';
-import { useTranslation } from 'react-i18next';
-import { useRouter } from 'expo-router';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '@/styles/colors';
-import { BaseWidget } from './BaseWidget';
+import { useTranslation } from 'react-i18next';
+import { router } from 'expo-router';
 import { useRecentlyViewedProperties } from '@/hooks/useUserQueries';
-import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
-import { getPropertyImageSource } from '@/utils/propertyUtils';
-
-interface PropertyItem {
-    id: string;
-    title: string;
-    location: string;
-    price: string;
-    imageSource: any; // Can be string URL or imported image source
-    isEcoCertified?: boolean;
-}
+import { BaseWidget } from './BaseWidget';
+import { PropertyCard } from '@/components/PropertyCard';
+import { colors } from '@/styles/colors';
+import type { Property } from '@/services/propertyService';
 
 export function RecentlyViewedWidget() {
     const { t } = useTranslation();
-    const router = useRouter();
+    const { data: recentProperties = [], isLoading, error } = useRecentlyViewedProperties();
 
-    const { data, isLoading, error } = useRecentlyViewedProperties();
-
-    const recentProperties: PropertyItem[] = (data || []).map((property) => {
-        // Generate title dynamically from property data
-        const generatedTitle = generatePropertyTitle({
-            type: property.type,
-            address: property.address,
-            bedrooms: property.bedrooms,
-            bathrooms: property.bathrooms
-        });
-
-        return {
-            id: (property._id || property.id) as string,
-            title: generatedTitle,
-            location: `${property.address?.city || 'Unknown'}, ${property.address?.state || ''}`,
-            price: `$${property.rent?.amount || 0}/${property.rent?.paymentFrequency || 'month'}`,
-            imageSource: getPropertyImageSource(property.images),
-            isEcoCertified:
-                property.amenities?.includes('eco-friendly') ||
-                property.amenities?.includes('green') ||
-                property.amenities?.includes('solar') || false,
-        };
-    });
-
-    const navigateToProperty = (propertyId: string) => {
-        router.push(`/properties/${propertyId}`);
+    const navigateToProperty = (property: Property) => {
+        router.push(`/properties/${property._id || property.id}`);
     };
 
     if (error) {
@@ -83,35 +50,16 @@ export function RecentlyViewedWidget() {
                         <Text style={styles.emptySubtext}>Start browsing to see your recent activity here</Text>
                     </View>
                 ) : recentProperties.map((property) => (
-                    <TouchableOpacity
-                        key={property.id}
-                        style={styles.propertyCard}
-                        onPress={() => navigateToProperty(property.id)}
-                    >
-                        <Image
-                            source={property.imageSource}
-                            style={styles.propertyImage}
+                    <View key={property._id || property.id} style={styles.propertyCard}>
+                        <PropertyCard
+                            property={property}
+                            variant="compact"
+                            onPress={() => navigateToProperty(property)}
+                            showFeatures={false}
+                            showTypeIcon={false}
+                            style={styles.compactCard}
                         />
-
-                        <View style={styles.propertyInfo}>
-                            <View style={styles.propertyHeader}>
-                                <Text style={styles.propertyTitle} numberOfLines={1}>
-                                    {property.title}
-                                </Text>
-                                {property.isEcoCertified && (
-                                    <Ionicons name="leaf" size={14} color="green" />
-                                )}
-                            </View>
-
-                            <Text style={styles.propertyLocation} numberOfLines={1}>
-                                {property.location}
-                            </Text>
-
-                            <Text style={styles.propertyPrice}>
-                                {property.price}
-                            </Text>
-                        </View>
-                    </TouchableOpacity>
+                    </View>
                 ))}
 
                 <TouchableOpacity
@@ -145,35 +93,9 @@ const styles = StyleSheet.create({
         elevation: 2,
         overflow: 'hidden',
     },
-    propertyImage: {
+    compactCard: {
         width: '100%',
-        height: 90,
-        backgroundColor: '#e1e1e1',
-    },
-    propertyInfo: {
-        padding: 8,
-    },
-    propertyHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 4,
-    },
-    propertyTitle: {
-        fontSize: 13,
-        fontWeight: '600',
-        flex: 1,
-        marginRight: 4,
-    },
-    propertyLocation: {
-        fontSize: 11,
-        color: colors.COLOR_BLACK_LIGHT_4,
-        marginBottom: 4,
-    },
-    propertyPrice: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: colors.primaryColor,
+        height: '100%',
     },
     viewAllButton: {
         width: 80,

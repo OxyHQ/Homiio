@@ -1,22 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, FlatList, ViewStyle } from 'react-native';
-import { PropertyCard, PropertyType } from './PropertyCard';
-
-export type Property = {
-    id: string;
-    title: string;
-    location: string;
-    price: number;
-    currency?: string;
-    type: PropertyType;
-    imageUrl: string;
-    bedrooms: number;
-    bathrooms: number;
-    size: number;
-    sizeUnit?: string;
-    isFavorite?: boolean;
-    isVerified?: boolean;
-};
+import { PropertyCard } from './PropertyCard';
+import { Property } from '@/services/propertyService';
 
 type PropertyListProps = {
     properties: Property[];
@@ -27,6 +12,7 @@ type PropertyListProps = {
     style?: ViewStyle;
     contentContainerStyle?: ViewStyle;
     ItemSeparatorComponent?: React.ComponentType<any>;
+    variant?: 'default' | 'compact' | 'featured' | 'saved';
 };
 
 export function PropertyList({
@@ -38,6 +24,7 @@ export function PropertyList({
     style,
     contentContainerStyle,
     ItemSeparatorComponent,
+    variant = 'default',
 }: PropertyListProps) {
     const renderItem = ({ item }: { item: Property }) => {
         const cardStyle = {
@@ -48,7 +35,8 @@ export function PropertyList({
 
         return (
             <PropertyCard
-                {...item}
+                property={item}
+                variant={variant}
                 onPress={() => onPropertyPress?.(item)}
                 onFavoritePress={() => onFavoritePress?.(item)}
                 style={cardStyle}
@@ -60,7 +48,7 @@ export function PropertyList({
         <FlatList
             data={properties}
             renderItem={renderItem}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => item._id || item.id || ''}
             numColumns={horizontal ? 1 : numColumns}
             horizontal={horizontal}
             showsHorizontalScrollIndicator={false}
