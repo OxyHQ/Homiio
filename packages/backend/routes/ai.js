@@ -21,7 +21,13 @@ module.exports = function(authenticateToken) {
                                query.toLowerCase().includes('barcelona') || 
                                query.toLowerCase().includes('catalan') ||
                                query.toLowerCase().includes('lloguer') ||
-                               query.toLowerCase().includes('sindicat');
+                               query.toLowerCase().includes('sindicat') ||
+                               query.toLowerCase().includes('girona') ||
+                               query.toLowerCase().includes('tarragona') ||
+                               query.toLowerCase().includes('lleida') ||
+                               query.toLowerCase().includes('valencia') ||  // Valencia also has Catalan speakers
+                               query.toLowerCase().includes('habitatge') || // housing in Catalan
+                               query.toLowerCase().includes('propietat'); // property in Catalan
 
       // For Catalunya-related queries, prioritize Sindicat de Llogateres
       if (isCatalunyaQuery) {
@@ -394,7 +400,9 @@ Remember: You're here to empower tenants and promote ethical housing practices. 
 
       // Check if the user is asking for property search
       const propertySearchKeywords = [
-        'find property', 'available property', 'search property', 'rental', 'apartment', 'house', 'room', 'flat', 'pisos', 'lloguer', 'property near', 'property in', 'available home', 'buscar piso', 'buscar lloguer', 'find home', 'property listings', 'property for rent', 'pisos en alquiler', 'casas en alquiler', 'habitación', 'room for rent', 'studio', 'shared flat', 'shared house'
+        'find property', 'available property', 'search property', 'rental', 'apartment', 'house', 'room', 'flat', 'pisos', 'lloguer', 'property near', 'property in', 'available home', 'buscar piso', 'buscar lloguer', 'find home', 'property listings', 'property for rent', 'pisos en alquiler', 'casas en alquiler', 'habitación', 'room for rent', 'studio', 'shared flat', 'shared house',
+        // Catalan terms
+        'cercar propietat', 'propietat disponible', 'lloguer disponible', 'apartament', 'casa', 'habitació', 'pis', 'propietat a prop', 'propietat a', 'trobat llar', 'llistats de propietats', 'propietat de lloguer', 'pisos de lloguer', 'cases de lloguer'
       ];
       const isPropertySearch = propertySearchKeywords.some(keyword => lastMessage.content.toLowerCase().includes(keyword));
       let propertyResults = null;

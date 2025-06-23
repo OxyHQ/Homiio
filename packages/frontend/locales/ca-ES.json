@@ -1,0 +1,428 @@
+{
+    "Home": "Inici",
+    "Search": "Cercar",
+    "Notifications": "Notificacions",
+    "Messages": "Missatges",
+    "New Post": "Nova Publicació",
+    "What's happening?": "Què està passant?",
+    "Post": "Publicar",
+    "Save": "Guardar",
+    "Settings": "Configuració",
+    "Language": "Idioma",
+    "Primary Color": "Color Principal",
+    "Apply Settings": "Aplicar Configuració",
+    "Welcome to Mention! 👋": "Benvingut a Mention! 👋",
+    "Thanks for trying out our app. Start exploring now!": "Gràcies per provar la nostra aplicació. Comença a explorar ara!",
+    "This screen doesn't exist.": "Aquesta pantalla no existeix.",
+    "Go to home screen!": "Vés a la pantalla d'inici!",
+    "Hey, how are you?": "Hola, com estàs?",
+    "Let's catch up soon!": "Posem-nos al dia aviat!",
+    "liked your Post": "ha donat m'agrada a la teva publicació",
+    "reposted your Post": "ha republicat la teva publicació",
+    "This is a sample post": "Aquesta és una publicació d'exemple",
+    "Another example post": "Una altra publicació d'exemple",
+    "Customize your view": "Personalitza la teva vista",
+    "These settings affect all the Mention accounts on this device.": "Aquesta configuració afecta tots els comptes de Mention en aquest dispositiu.",
+    "Account": "Compte",
+    "Manage your account settings": "Gestiona la configuració del teu compte",
+    "Notification preferences": "Preferències de notificacions",
+    "Privacy and security settings": "Configuració de privacitat i seguretat",
+    "Appearance": "Aparença",
+    "Theme, font size, colors": "Tema, mida de lletra, colors",
+    "Help & Support": "Ajuda i Suport",
+    "Get help and support": "Obtenir ajuda i suport",
+    "About": "Sobre",
+    "About this app": "Sobre aquesta aplicació",
+    "Battery": "Bateria",
+    "Loading...": "Carregant...",
+    "Trends for you": "Tendències per a tu",
+    "Show more": "Mostrar més",
+    "posts": "publicacions",
+    "File Manager": "Gestor d'Arxius",
+    "Filter files by name": "Filtrar arxius per nom",
+    "Filter files by date (MM/DD/YYYY)": "Filtrar arxius per data (DD/MM/AAAA)",
+    "Filter files by type (e.g., image, video)": "Filtrar arxius per tipus (p. ex., imatge, vídeo)",
+    "Who to follow": "A qui seguir",
+    "Search...": "Cercar...",
+    "No results found for": "No s'han trobat resultats per",
+    "Follow": "Seguir",
+    "Following": "Seguint",
+    "Explore": "Explorar",
+    "Chat": "Xat",
+    "Bookmarks": "Marcadors",
+    "Feeds": "Feeds",
+    "Lists": "Llistes",
+    "Videos": "Vídeos",
+    "Sign Up": "Registrar-se",
+    "Sign In": "Iniciar Sessió",
+    "Join the conversation": "Uneix-te a la conversa",
+    "error.socket.not_connected": "No connectat al servidor de xat",
+    "error.message.send_timeout": "Temps d'espera per enviar missatge. Torna-ho a provar.",
+    "error.message.edit_timeout": "Temps d'espera per editar. Torna-ho a provar.",
+    "error.message.delete_timeout": "Temps d'espera per eliminar. Torna-ho a provar.",
+    "error.signup.missing_fields": "Si us plau, omple tots els camps",
+    "error.signup.failed": "Error en el registre:",
+    "error.boundary.title": "Ups! Alguna cosa ha anat malament",
+    "error.boundary.message": "Ens disculpem per les molèsties. Si us plau, torna-ho a provar.",
+    "error.boundary.retry": "Tornar a provar",
+    "error.file_selection": "Error processant els arxius seleccionats. Si us plau, torna-ho a provar.",
+    "error.login_required": "Si us plau, inicia sessió per gestionar arxius",
+    "error.load_notifications": "Error carregant notificacions",
+    "error.fetch_trends": "Error carregant tendències",
+    "error.signup.password_mismatch": "Les contrasenyes no coincideixen",
+    "error.validation.token_expired": "El token ha caducat",
+    "error.validation.token_invalid": "El format del token no és vàlid",
+    "error.validation.token_signature": "La signatura del token no és vàlida",
+    "error.auth.invalid_token": "Token d'autenticació invàlid",
+    "error.chat.forward_failed": "No s'ha pogut reenviar el missatge",
+    "error.chat.delete_failed": "No s'ha pogut eliminar el missatge",
+    "error.chat.send_failed": "Error enviant missatge",
+    "error.chat.load_failed": "Error carregant missatges",
+    "error.data.fetch_failed": "Error obtenint dades: {{message}}",
+    "error.users.fetch_failed": "Error obtenint usuaris: {{message}}",
+    "notification.welcome.title": "Benvingut a Mention! 👋",
+    "notification.welcome.body": "Gràcies per provar la nostra aplicació. Comença a explorar ara!",
+    "success.signup": "Registre exitós",
+    "action.retry": "Tornar a provar",
+    "status.loading": "Carregant...",
+    "state.loading": "Carregant...",
+    "state.no_results": "Sense resultats",
+    "state.empty_state": "Res a mostrar",
+    "state.not_connected": "No connectat",
+    "state.session_expired": "Sessió caducada",
+    "state.no_session": "Si us plau, inicia sessió",
+    "state.retrying": "Tornant a provar...",
+    "state.uploading": "Pujant...",
+    "state.downloading": "Descarregant...",
+    "state.processing": "Processant...",
+    "state.please_wait": "Si us plau, espera...",
+    "file.size_mb": "MB",
+    "profile.edit": "Editar perfil",
+    "profile.chat": "Xat",
+    "home": {
+        "hero": {
+            "title": "Troba la teva llar ètica",
+            "subtitle": "Lloguers transparents amb acords justos i propietats verificades",
+            "searchPlaceholder": "On vols viure?",
+            "searchButton": "Cercar"
+        },
+        "trust": {
+            "title": "Habitatge en Què Pots Confiar",
+            "verifiedListings": {
+                "title": "Llistats Verificats",
+                "description": "Totes les propietats verificades per autenticitat i condició"
+            },
+            "fairAgreements": {
+                "title": "Acords Justos",
+                "description": "Contractes transparents sense termes ocults"
+            },
+            "trustScore": {
+                "title": "Puntuació de Confiança",
+                "description": "Sistema de reputació tant per llogaters com per propietaris"
+            }
+        },
+        "cities": {
+            "title": "Ciutats Destacades",
+            "properties": "propietats"
+        },
+        "categories": {
+            "title": "Navegar per Categoria",
+            "view": "Veure",
+            "types": {
+                "apartments": "Apartaments",
+                "houses": "Cases",
+                "coLiving": "Convivència",
+                "ecoFriendly": "Ecològic"
+            }
+        },
+        "horizon": {
+            "title": "Uneix-te a Horizon",
+            "description": "Horizon és una iniciativa global que ofereix habitatge just, assistència sanitària i suport de viatge. Ara integrat amb Homiio.",
+            "learnMore": "Saber Més"
+        },
+        "eco": {
+            "title": "Propietats Eco-Certificades",
+            "description": "Troba propietats sostenibles que compleixen els nostres estàndards d'eficiència energètica i ecològics",
+            "viewEcoProperties": "Veure Propietats Ecològiques"
+        },
+        "featured": {
+            "title": "Propietats Destacades"
+        },
+        "viewAll": "Veure Tot"
+    },
+    "search": {
+        "title": "Cercar",
+        "searchPlaceholder": "Cercar per ubicació, tipus de propietat...",
+        "searchButton": "Cercar",
+        "recentSearches": "Cerques Recents",
+        "popularSearches": "Cerques Populars",
+        "propertyTypes": "Tipus de Propietats",
+        "popularCities": "Ciutats Populars",
+        "properties": "propietats",
+        "types": {
+            "apartments": "Apartaments",
+            "houses": "Cases",
+            "rooms": "Habitacions",
+            "studios": "Estudis"
+        }
+    },
+    "profile": {
+        "editProfile": "Editar Perfil",
+        "myProperties": "Les Meves Propietats",
+        "savedProperties": "Propietats Guardades",
+        "myContracts": "Els Meus Contractes",
+        "trustScore": "Puntuació de Confiança",
+        "logOut": "Tancar Sessió"
+    },
+    "notifications": {
+        "title": "Notificacions",
+        "types": {
+            "message": {
+                "title": "Nou Missatge",
+                "description": "Tens un nou missatge del teu propietari"
+            },
+            "contract": {
+                "title": "Actualització de Contracte",
+                "description": "El teu acord de lloguer ha estat actualitzat"
+            },
+            "payment": {
+                "title": "Recordatori de Pagament",
+                "description": "El teu pagament de lloguer vence en 3 dies"
+            }
+        },
+        "timeAgo": {
+            "hours": "hores enrere",
+            "days": "dies enrere"
+        }
+    },
+    "properties": {
+        "title": "Propietats",
+        "filters": "Filtres",
+        "sort": "Ordenar",
+        "view": "Veure",
+        "save": "Guardar",
+        "share": "Compartir",
+        "contact": "Contactar",
+        "bookViewing": "Reservar Visita",
+        "my": {
+            "title": "Les Meves Propietats",
+            "edit": "Editar",
+            "delete": "Eliminar",
+            "deleteTitle": "Eliminar Propietat",
+            "deleteMessage": "Estàs segur que vols eliminar \"{{title}}\"? Aquesta acció no es pot desfer.",
+            "deleteSuccess": "Propietat eliminada amb èxit",
+            "emptyTitle": "Encara No Hi Ha Propietats",
+            "emptyDescription": "Encara no has creat cap propietat. Comença afegint la teva primera llista de propietat.",
+            "createFirst": "Crear La Teva Primera Propietat",
+            "errorTitle": "Error Carregant Propietats",
+            "errorDescription": "Hi ha hagut un error carregant les teves propietats. Si us plau, torna-ho a provar."
+        },
+        "details": {
+            "price": "Preu",
+            "location": "Ubicació",
+            "bedrooms": "Habitacions",
+            "bathrooms": "Banys",
+            "size": "Mida",
+            "available": "Disponible",
+            "description": "Descripció",
+            "amenities": "Comoditats",
+            "photos": "Fotos",
+            "map": "Mapa",
+            "contactInfo": "Informació de Contacte"
+        },
+        "filters": {
+            "priceRange": "Rang de Preus",
+            "propertyType": "Tipus de Propietat",
+            "bedrooms": "Habitacions",
+            "bathrooms": "Banys",
+            "amenities": "Comoditats",
+            "availability": "Disponibilitat",
+            "apply": "Aplicar Filtres",
+            "clear": "Netejar Tot"
+        }
+    },
+    "payments": {
+        "title": "Pagaments",
+        "upcoming": "Pagaments Propers",
+        "history": "Historial de Pagaments",
+        "dueDate": "Data de Venciment",
+        "amount": "Import",
+        "status": {
+            "paid": "Pagat",
+            "pending": "Pendent",
+            "overdue": "Vençut"
+        },
+        "actions": {
+            "payNow": "Pagar Ara",
+            "viewDetails": "Veure Detalls",
+            "downloadReceipt": "Descarregar Rebut"
+        }
+    },
+    "contracts": {
+        "title": "Contractes",
+        "active": "Contractes Actius",
+        "expired": "Contractes Vençuts",
+        "draft": "Esborranys de Contractes",
+        "status": {
+            "active": "Actiu",
+            "expired": "Vençut",
+            "pending": "Pendent",
+            "draft": "Esborrany"
+        },
+        "actions": {
+            "view": "Veure",
+            "download": "Descarregar",
+            "sign": "Signar",
+            "renew": "Renovar"
+        }
+    },
+    "roommates": {
+        "title": "Companys de Pis",
+        "find": "Trobar Companys de Pis",
+        "myMatches": "Les Meves Coincidències",
+        "preferences": "Preferències",
+        "profile": "Perfil de Company de Pis",
+        "compatibility": "Puntuació de Compatibilitat",
+        "actions": {
+            "message": "Missatge",
+            "connect": "Connectar",
+            "viewProfile": "Veure Perfil"
+        }
+    },
+    "safety": {
+        "title": "Seguretat",
+        "fraudReports": "Informes de Frau",
+        "reportIssue": "Informar Problema",
+        "safetyTips": "Consells de Seguretat",
+        "emergencyContacts": "Contactes d'Emergència",
+        "reportTypes": {
+            "fraud": "Frau",
+            "scam": "Estafa",
+            "fakeListing": "Llistat Fals",
+            "harassment": "Assetjament",
+            "other": "Altres"
+        }
+    },
+    "horizon": {
+        "title": "Iniciativa Horizon",
+        "description": "Iniciativa global per a habitatge just, assistència sanitària i suport de viatge",
+        "benefits": "Beneficis",
+        "join": "Uneix-te a Horizon",
+        "learnMore": "Saber Més"
+    },
+    "settings": {
+        "title": "Configuració",
+        "signOut": "Tancar Sessió",
+        "signOutMessage": "Estàs segur que vols tancar sessió?",
+        "signOutDesc": "Tancar sessió del teu compte",
+        "sections": {
+            "account": "Compte",
+            "aboutHomiio": "Sobre Homiio",
+            "supportFeedback": "Suport i Comentaris",
+            "preferences": "Preferències de l'App",
+            "quickActions": "Accions Ràpides",
+            "data": "Gestió de Dades"
+        },
+        "aboutHomiio": {
+            "appName": "Homiio",
+            "version": "Versió {{version}}",
+            "build": "Compilació",
+            "buildVersion": "Compilació de Desenvolupament",
+            "platform": "Plataforma",
+            "oxySDK": "SDK d'Oxy",
+            "expoSDK": "SDK d'Expo"
+        },
+        "supportFeedback": {
+            "helpSupport": "Ajuda i Suport",
+            "helpSupportDesc": "Obtenir ajuda i contactar suport",
+            "helpSupportMessage": "Contacta el nostre equip de suport per obtenir ajuda amb qualsevol problema que puguis estar experimentant.",
+            "sendFeedback": "Enviar Comentaris",
+            "sendFeedbackDesc": "Comparteix els teus pensaments amb nosaltres",
+            "sendFeedbackMessage": "Ens encantaria sentir els teus comentaris! Comparteix els teus pensaments per ajudar-nos a millorar Homiio.",
+            "sendFeedbackThankYou": "Gràcies pels teus comentaris! Apreiem la teva opinió.",
+            "rateApp": "Valorar App",
+            "rateAppDesc": "Valora Homiio a la botiga d'aplicacions",
+            "rateAppMessage": "T'està agradant Homiio? Si us plau, pren un moment per valorar-nos a la botiga d'aplicacions!",
+            "rateAppThankYou": "Gràcies per valorar Homiio!"
+        },
+        "preferences": {
+            "notifications": "Notificacions",
+            "notificationsDesc": "Gestionar notificacions push",
+            "darkMode": "Mode Fosc",
+            "darkModeDesc": "Canviar entre temes clar i fosc",
+            "autoSync": "Sincronització Automàtica",
+            "autoSyncDesc": "Sincronitzar dades automàticament en segon pla",
+            "offlineMode": "Mode Sense Connexió",
+            "offlineModeDesc": "Usar l'aplicació sense connexió a internet"
+        },
+        "quickActions": {
+            "createProperty": "Crear Propietat",
+            "createPropertyDesc": "Afegir una nova llista de propietat",
+            "searchProperties": "Cercar Propietats",
+            "searchPropertiesDesc": "Trobar propietats a la teva àrea"
+        },
+        "data": {
+            "exportData": "Exportar Dades",
+            "exportDataDesc": "Descarregar les teves dades com a arxiu",
+            "exportDataMessage": "Això exportarà totes les teves dades incloent propietats, preferències i configuració.",
+            "exportDataSuccess": "Les teves dades han estat exportades amb èxit!",
+            "clearCache": "Netejar Memòria Cau",
+            "clearCacheDesc": "Alliberar espai d'emmagatzematge",
+            "clearCacheMessage": "Això netejrarà totes les dades en memòria cau. L'aplicació pot trigar més a carregar la propera vegada.",
+            "clearCacheSuccess": "Memòria cau netejada amb èxit!"
+        }
+    },
+    "common": {
+        "cancel": "Cancel·lar",
+        "ok": "D'acord",
+        "clear": "Netejar",
+        "export": "Exportar",
+        "sendFeedback": "Enviar Comentaris",
+        "maybeLater": "Potser Més Tard",
+        "rateNow": "Valorar Ara",
+        "success": "Èxit",
+        "error": "Error",
+        "loading": "Carregant...",
+        "retry": "Tornar a provar",
+        "save": "Guardar",
+        "delete": "Eliminar",
+        "edit": "Editar",
+        "close": "Tancar",
+        "back": "Enrere",
+        "next": "Següent",
+        "previous": "Anterior",
+        "done": "Fet",
+        "continue": "Continuar",
+        "skip": "Saltar",
+        "yes": "Sí",
+        "no": "No",
+        "confirm": "Confirmar",
+        "select": "Seleccionar",
+        "choose": "Triar",
+        "upload": "Pujar",
+        "download": "Descarregar",
+        "share": "Compartir",
+        "copy": "Copiar",
+        "paste": "Enganxar",
+        "search": "Cercar",
+        "filter": "Filtrar",
+        "sort": "Ordenar",
+        "refresh": "Actualitzar",
+        "update": "Actualitzar",
+        "create": "Crear",
+        "add": "Afegir",
+        "remove": "Eliminar",
+        "view": "Veure",
+        "details": "Detalls",
+        "more": "Més",
+        "less": "Menys",
+        "all": "Tot",
+        "none": "Cap",
+        "empty": "Buit",
+        "noData": "No hi ha dades disponibles",
+        "noResults": "No s'han trobat resultats",
+        "tryAgain": "Provar de nou",
+        "goBack": "Tornar",
+        "goHome": "Anar a l'inici"
+    }
+}
