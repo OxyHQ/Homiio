@@ -1,12 +1,13 @@
 import React from 'react';
-import { View, StyleSheet, FlatList, ViewStyle } from 'react-native';
+import { View, StyleSheet, FlatList, ViewStyle, Dimensions } from 'react-native';
 import { PropertyCard } from './PropertyCard';
 import { Property } from '@/services/propertyService';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 type PropertyListProps = {
     properties: Property[];
     onPropertyPress?: (property: Property) => void;
-    onFavoritePress?: (property: Property) => void;
     numColumns?: number;
     horizontal?: boolean;
     style?: ViewStyle;
@@ -18,7 +19,6 @@ type PropertyListProps = {
 export function PropertyList({
     properties,
     onPropertyPress,
-    onFavoritePress,
     numColumns = 1,
     horizontal = false,
     style,
@@ -27,9 +27,13 @@ export function PropertyList({
     variant = 'default',
 }: PropertyListProps) {
     const renderItem = ({ item }: { item: Property }) => {
+        const isGrid = numColumns > 1;
         const cardStyle = {
             ...styles.card,
-            ...(numColumns > 1 ? { flex: 1 / numColumns } : {}),
+            ...(isGrid ? {
+                width: (screenWidth - 48) / numColumns, // Account for padding and gaps
+                marginHorizontal: 4,
+            } : {}),
             ...(horizontal ? styles.horizontalCard : {}),
         };
 
@@ -38,7 +42,6 @@ export function PropertyList({
                 property={item}
                 variant={variant}
                 onPress={() => onPropertyPress?.(item)}
-                onFavoritePress={() => onFavoritePress?.(item)}
                 style={cardStyle}
             />
         );
@@ -59,6 +62,7 @@ export function PropertyList({
                 contentContainerStyle,
             ]}
             ItemSeparatorComponent={ItemSeparatorComponent}
+            columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
         />
     );
 }
@@ -66,13 +70,16 @@ export function PropertyList({
 const styles = StyleSheet.create({
     contentContainer: {
         padding: 16,
-        gap: 16,
+    },
+    columnWrapper: {
+        justifyContent: 'space-between',
+        marginBottom: 8,
     },
     card: {
-        marginHorizontal: 8,
-        marginBottom: 16,
+        marginBottom: 12,
     },
     horizontalCard: {
-        width: 300,
+        width: 280,
+        marginRight: 12,
     },
 }); 

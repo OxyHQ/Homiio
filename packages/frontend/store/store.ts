@@ -6,6 +6,7 @@ import bottomSheetReducer from "./reducers/bottomSheetReducer";
 import propertyReducer from "./reducers/propertyReducer";
 import recentlyViewedReducer from "./reducers/recentlyViewedReducer";
 import trustScoreReducer from "./reducers/trustScoreReducer";
+import favoritesReducer from "./reducers/favoritesReducer";
 
 const rootReducer = combineReducers({
   trends: trendsReducer,
@@ -15,6 +16,7 @@ const rootReducer = combineReducers({
   properties: propertyReducer,
   recentlyViewed: recentlyViewedReducer,
   trustScore: trustScoreReducer,
+  favorites: favoritesReducer,
 });
 
 export const store = configureStore({

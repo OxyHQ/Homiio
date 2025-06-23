@@ -1,9 +1,11 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, ViewStyle, Dimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { IconButton } from './IconButton';
 import { Property } from '@/services/propertyService';
 import { getPropertyTitle, getPropertyImageSource } from '@/utils/propertyUtils';
+import { useFavorites } from '@/hooks/useFavorites';
 
 export type PropertyType = 'apartment' | 'house' | 'coliving' | 'eco';
 
@@ -23,6 +25,8 @@ type PropertyCardProps = {
     bathrooms?: number;
     size?: number;
     sizeUnit?: string;
+    rating?: number;
+    reviewCount?: number;
 
     // Display options
     variant?: PropertyCardVariant;
@@ -32,14 +36,13 @@ type PropertyCardProps = {
     showFeatures?: boolean;
     showPrice?: boolean;
     showLocation?: boolean;
+    showRating?: boolean;
 
     // State
-    isFavorite?: boolean;
     isVerified?: boolean;
 
     // Actions
     onPress?: () => void;
-    onFavoritePress?: () => void;
     onLongPress?: () => void;
 
     // Styling
@@ -53,6 +56,8 @@ type PropertyCardProps = {
     badgeContent?: React.ReactNode;
     overlayContent?: React.ReactNode;
 };
+
+const { width: screenWidth } = Dimensions.get('window');
 
 const getPropertyTypeIcon = (type: PropertyType) => {
     switch (type) {
@@ -78,30 +83,34 @@ const getVariantStyles = (variant: PropertyCardVariant) => {
                 locationLines: 1,
                 showFeatures: false,
                 showTypeIcon: false,
+                showRating: false,
             };
         case 'featured':
             return {
-                imageHeight: 250,
+                imageHeight: 200,
                 titleLines: 2,
                 locationLines: 1,
                 showFeatures: true,
                 showTypeIcon: true,
+                showRating: true,
             };
         case 'saved':
             return {
-                imageHeight: 200,
+                imageHeight: 160,
                 titleLines: 2,
                 locationLines: 1,
                 showFeatures: true,
                 showTypeIcon: true,
+                showRating: true,
             };
         default:
             return {
-                imageHeight: 200,
+                imageHeight: 160,
                 titleLines: 2,
                 locationLines: 1,
                 showFeatures: true,
                 showTypeIcon: true,
+                showRating: true,
             };
     }
 };
@@ -113,13 +122,15 @@ export function PropertyCard({
     title,
     location,
     price,
-    currency = '⊜',
+    currency = '$',
     type,
     imageSource,
     bedrooms,
     bathrooms,
     size,
     sizeUnit = 'm²',
+    rating,
+    reviewCount,
 
     // Display options
     variant = 'default',
@@ -129,14 +140,13 @@ export function PropertyCard({
     showFeatures = true,
     showPrice = true,
     showLocation = true,
+    showRating = true,
 
     // State
-    isFavorite = false,
     isVerified = false,
 
     // Actions
     onPress,
-    onFavoritePress,
     onLongPress,
 
     // Styling
@@ -150,6 +160,8 @@ export function PropertyCard({
     badgeContent,
     overlayContent,
 }: PropertyCardProps) {
+    const { isFavorite, toggleFavoriteProperty } = useFavorites();
+
     // Use property object if provided, otherwise use individual props
     const propertyData = property ? {
         id: property._id || property.id,
@@ -163,6 +175,8 @@ export function PropertyCard({
         bathrooms: property.bathrooms || 0,
         size: property.squareFootage || 0,
         isVerified: false,
+        rating: 4.5, // Default rating since Property interface doesn't have this
+        reviewCount: 12, // Default review count since Property interface doesn't have this
     } : {
         id,
         title,
@@ -175,10 +189,13 @@ export function PropertyCard({
         bathrooms,
         size,
         isVerified,
+        rating,
+        reviewCount,
     };
 
     const isEco = Boolean(property && typeof property === 'object' && 'ecoCertified' in property && property.ecoCertified);
     const isFeatured = variant === 'featured' || Boolean(property && typeof property === 'object' && 'isFeatured' in property && property.isFeatured);
+    const isPropertyFavorite = isFavorite(propertyData.id || '');
 
     // Get variant-specific styles
     const variantStyles = getVariantStyles(variant);
@@ -187,6 +204,13 @@ export function PropertyCard({
     const finalLocationLines = locationLines || variantStyles.locationLines;
     const shouldShowFeatures = showFeatures && variantStyles.showFeatures;
     const shouldShowTypeIcon = showTypeIcon && variantStyles.showTypeIcon;
+    const shouldShowRating = showRating && variantStyles.showRating;
+
+    const handleFavoritePress = () => {
+        if (propertyData.id) {
+            toggleFavoriteProperty(propertyData.id);
+        }
+    };
 
     return (
         <TouchableOpacity
@@ -197,7 +221,7 @@ export function PropertyCard({
             ]}
             onPress={onPress}
             onLongPress={onLongPress}
-            activeOpacity={0.85}
+            activeOpacity={0.9}
         >
             <View style={[
                 styles.imageContainer,
@@ -214,53 +238,56 @@ export function PropertyCard({
                 {showFavoriteButton && (
                     <TouchableOpacity
                         style={styles.favoriteButton}
-                        onPress={onFavoritePress}
-                        accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Save to favorites'}
+                        onPress={handleFavoritePress}
+                        accessibilityLabel={isPropertyFavorite ? 'Remove from favorites' : 'Save to favorites'}
                         accessibilityRole="button"
                     >
-                        <IconButton
-                            name={isFavorite ? 'heart' : 'heart-outline'}
-                            color={isFavorite ? colors.chatUnreadBadge : colors.primaryColor}
-                            backgroundColor={isFavorite ? '#fff' : 'rgba(255,255,255,0.85)'}
-                            size={28}
-                            style={styles.favoriteIcon}
-                        />
+                        <View style={[
+                            styles.favoriteIconContainer,
+                            isPropertyFavorite ? styles.favoriteIconActive : styles.favoriteIconInactive
+                        ]}>
+                            <Ionicons
+                                name={isPropertyFavorite ? 'heart' : 'heart-outline'}
+                                size={24}
+                                color={isPropertyFavorite ? '#fff' : '#222'}
+                            />
+                        </View>
                     </TouchableOpacity>
                 )}
 
                 {/* Eco Badge */}
-                {isEco ? (
+                {isEco && (
                     <View style={styles.ecoBadge}>
                         <IconButton
                             name="leaf-outline"
                             color="#4CAF50"
                             backgroundColor="#e8f5e9"
-                            size={18}
-                        />
-                    </View>
-                ) : null}
-
-                {/* Verified Badge */}
-                {showVerifiedBadge && (isVerified || propertyData.isVerified) ? (
-                    <View style={styles.verifiedBadge}>
-                        <IconButton
-                            name="shield-checkmark"
-                            color={colors.primaryLight}
-                            backgroundColor={colors.primaryColor}
                             size={16}
                         />
                     </View>
-                ) : null}
+                )}
+
+                {/* Verified Badge */}
+                {showVerifiedBadge && (isVerified || propertyData.isVerified) && (
+                    <View style={styles.verifiedBadge}>
+                        <IconButton
+                            name="shield-checkmark"
+                            color="#fff"
+                            backgroundColor={colors.primaryColor}
+                            size={14}
+                        />
+                    </View>
+                )}
 
                 {/* Custom Badge Content */}
-                {badgeContent ? (
+                {badgeContent && (
                     <View style={styles.customBadge}>{badgeContent as React.ReactNode}</View>
-                ) : null}
+                )}
 
                 {/* Overlay Content */}
-                {overlayContent ? (
+                {overlayContent && (
                     <View style={styles.overlay}>{overlayContent as React.ReactNode}</View>
-                ) : null}
+                )}
             </View>
 
             <View style={[
@@ -281,7 +308,7 @@ export function PropertyCard({
                         {shouldShowTypeIcon && propertyData.type && (
                             <IconButton
                                 name={getPropertyTypeIcon(propertyData.type)}
-                                size={16}
+                                size={14}
                                 color={colors.primaryDark_1}
                                 backgroundColor="transparent"
                                 style={styles.typeIcon}
@@ -311,44 +338,58 @@ export function PropertyCard({
                     </Text>
                 )}
 
+                {/* Rating */}
+                {shouldShowRating && propertyData.rating && (
+                    <View style={styles.ratingContainer}>
+                        <IconButton
+                            name="star"
+                            size={14}
+                            color="#FFD700"
+                            backgroundColor="transparent"
+                        />
+                        <Text style={styles.ratingText}>
+                            {propertyData.rating.toFixed(1)}
+                        </Text>
+                        {propertyData.reviewCount && (
+                            <Text style={styles.reviewCount}>
+                                ({propertyData.reviewCount})
+                            </Text>
+                        )}
+                    </View>
+                )}
+
                 {/* Features */}
                 {shouldShowFeatures && (
                     <View style={styles.features}>
                         <View style={styles.feature}>
-                            <IconButton
-                                name="bed-outline"
-                                size={16}
-                                color={colors.primaryDark_1}
-                                backgroundColor="transparent"
-                            />
-                            <Text style={styles.featureText}>{propertyData.bedrooms}</Text>
+                            <Text style={styles.featureText}>
+                                {propertyData.bedrooms} bed{propertyData.bedrooms !== 1 ? 's' : ''}
+                            </Text>
                         </View>
+                        <Text style={styles.featureSeparator}>•</Text>
                         <View style={styles.feature}>
-                            <IconButton
-                                name="water-outline"
-                                size={16}
-                                color={colors.primaryDark_1}
-                                backgroundColor="transparent"
-                            />
-                            <Text style={styles.featureText}>{propertyData.bathrooms}</Text>
+                            <Text style={styles.featureText}>
+                                {propertyData.bathrooms} bath{propertyData.bathrooms !== 1 ? 's' : ''}
+                            </Text>
                         </View>
-                        <View style={styles.feature}>
-                            <IconButton
-                                name="resize-outline"
-                                size={16}
-                                color={colors.primaryDark_1}
-                                backgroundColor="transparent"
-                            />
-                            <Text style={styles.featureText}>{propertyData.size} {sizeUnit}</Text>
-                        </View>
+                        {propertyData.size && propertyData.size > 0 && (
+                            <>
+                                <Text style={styles.featureSeparator}>•</Text>
+                                <View style={styles.feature}>
+                                    <Text style={styles.featureText}>
+                                        {propertyData.size} {sizeUnit}
+                                    </Text>
+                                </View>
+                            </>
+                        )}
                     </View>
                 )}
             </View>
 
             {/* Footer Content */}
-            {footerContent ? (
+            {footerContent && (
                 <View style={styles.footer}>{footerContent as React.ReactNode}</View>
-            ) : null}
+            )}
         </TouchableOpacity>
     );
 }
@@ -356,155 +397,185 @@ export function PropertyCard({
 const styles = StyleSheet.create({
     container: {
         backgroundColor: colors.primaryLight,
-        borderRadius: 16,
+        borderRadius: 12,
         overflow: 'hidden',
-        shadowColor: colors.primaryDark,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
         shadowRadius: 8,
-        elevation: 4,
-        marginBottom: 8,
+        elevation: 3,
+        marginBottom: 12,
+        width: '100%',
+        maxWidth: 350,
     },
     featuredCard: {
-        borderWidth: 2,
-        borderColor: colors.primaryColor,
-        shadowOpacity: 0.18,
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
+        shadowOpacity: 0.12,
         shadowRadius: 12,
-        elevation: 8,
+        elevation: 6,
     },
     imageContainer: {
         position: 'relative',
-        height: 200,
-        backgroundColor: '#f4f4f4',
+        height: 160,
+        backgroundColor: '#f8f8f8',
     },
     featuredImageContainer: {
-        height: 260,
+        height: 200,
     },
     image: {
         width: '100%',
         height: '100%',
-        borderTopLeftRadius: 16,
-        borderTopRightRadius: 16,
     },
     favoriteButton: {
         position: 'absolute',
-        top: 10,
-        right: 10,
+        top: 8,
+        right: 8,
         zIndex: 2,
     },
-    favoriteIcon: {
+    favoriteIconContainer: {
+        borderRadius: 18,
+        padding: 3,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.18,
+        shadowOpacity: 0.15,
         shadowRadius: 4,
-        elevation: 2,
+        elevation: 3,
+    },
+    favoriteIconActive: {
+        backgroundColor: '#FF385C',
+    },
+    favoriteIconInactive: {
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
     },
     ecoBadge: {
         position: 'absolute',
-        top: 10,
-        left: 10,
+        top: 8,
+        left: 8,
         zIndex: 2,
         backgroundColor: '#e8f5e9',
-        borderRadius: 12,
-        padding: 2,
+        borderRadius: 14,
+        padding: 3,
     },
     verifiedBadge: {
         position: 'absolute',
-        top: 10,
-        left: 38,
+        top: 8,
+        left: 36,
         zIndex: 2,
     },
     content: {
-        padding: 16,
-    },
-    compactContent: {
         padding: 10,
     },
+    compactContent: {
+        padding: 6,
+    },
     featuredContent: {
-        padding: 20,
+        padding: 14,
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
-        marginBottom: 4,
+        marginBottom: 3,
     },
     titleContainer: {
         flexDirection: 'row',
         alignItems: 'flex-start',
         flex: 1,
-        marginRight: 8,
+        marginRight: 6,
     },
     title: {
-        fontSize: 18,
+        fontSize: 14,
         fontWeight: '600',
         color: colors.primaryDark,
         flex: 1,
+        lineHeight: 18,
     },
     compactTitle: {
-        fontSize: 15,
+        fontSize: 12,
         fontWeight: '500',
     },
     featuredTitle: {
-        fontSize: 22,
+        fontSize: 16,
         fontWeight: '700',
     },
     typeIcon: {
-        marginLeft: 8,
+        marginLeft: 4,
     },
     price: {
-        fontSize: 18,
+        fontSize: 14,
         fontWeight: '600',
-        color: colors.primaryColor,
+        color: colors.primaryDark,
     },
     compactPrice: {
-        fontSize: 15,
+        fontSize: 12,
     },
     featuredPrice: {
-        fontSize: 22,
+        fontSize: 16,
     },
     priceUnit: {
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: '400',
         color: colors.primaryDark_1,
     },
     location: {
-        fontSize: 14,
+        fontSize: 12,
         color: colors.primaryDark_1,
-        marginBottom: 12,
+        marginBottom: 6,
+        lineHeight: 16,
     },
     compactLocation: {
-        fontSize: 12,
-        marginBottom: 8,
+        fontSize: 11,
+        marginBottom: 4,
     },
     featuredLocation: {
-        fontSize: 16,
-        marginBottom: 16,
+        fontSize: 14,
+        marginBottom: 10,
+    },
+    ratingContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 6,
+    },
+    ratingText: {
+        fontSize: 12,
+        fontWeight: '500',
+        color: colors.primaryDark,
+        marginLeft: 3,
+    },
+    reviewCount: {
+        fontSize: 12,
+        color: colors.primaryDark_1,
+        marginLeft: 3,
     },
     features: {
         flexDirection: 'row',
-        justifyContent: 'flex-start',
-        gap: 16,
+        alignItems: 'center',
+        flexWrap: 'wrap',
     },
     feature: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
     },
     featureText: {
-        fontSize: 14,
+        fontSize: 12,
         color: colors.primaryDark_1,
     },
+    featureSeparator: {
+        fontSize: 12,
+        color: colors.primaryDark_1,
+        marginHorizontal: 4,
+    },
     footer: {
-        marginTop: 16,
-        paddingTop: 12,
+        marginTop: 10,
+        paddingTop: 10,
         borderTopWidth: 1,
-        borderTopColor: colors.primaryDark_1,
+        borderTopColor: '#f0f0f0',
     },
     customBadge: {
         position: 'absolute',
-        top: 8,
-        right: 8,
+        top: 6,
+        right: 6,
         zIndex: 1,
     },
     overlay: {

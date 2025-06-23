@@ -8,7 +8,6 @@ import { Header } from '@/components/Header';
 import { PropertyMap } from '@/components/PropertyMap';
 import { ThemedText } from '@/components/ThemedText';
 import { useProperty } from '@/hooks/usePropertyQueries';
-import { useSaveProperty, useUnsaveProperty, useSavedProperties } from '@/hooks/useUserQueries';
 import { useOxy } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
 import { toast } from 'sonner';
@@ -21,6 +20,7 @@ import { getPropertyImageSource } from '@/utils/propertyUtils';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchLandlordProfileById } from '@/store/reducers/profileReducer';
 import { fetchRecentlyViewedProperties, addPropertyToRecentlyViewed } from '@/store/reducers/recentlyViewedReducer';
+import { useFavorites } from '@/hooks/useFavorites';
 import type { RootState, AppDispatch } from '@/store/store';
 
 type PropertyDetail = {
@@ -52,13 +52,12 @@ export default function PropertyDetailPage() {
   const { id } = useLocalSearchParams();
   const { oxyServices, activeSessionId } = useOxy();
   const { data: apiProperty, isLoading, error } = useProperty(id as string);
-  const saveProperty = useSaveProperty();
-  const unsaveProperty = useUnsaveProperty();
-  const { data: savedProperties = [] } = useSavedProperties();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [landlordVerified, setLandlordVerified] = useState(true);
-  const [localSaveStatus, setLocalSaveStatus] = useState<boolean | null>(null);
   const hasViewedRef = useRef(false);
+
+  // Redux favorites
+  const { isFavorite, toggleFavoriteProperty } = useFavorites();
 
   // Redux: fetch landlord profile by profileId
   const dispatch = useDispatch<AppDispatch>();
@@ -72,8 +71,8 @@ export default function PropertyDetailPage() {
   // Normalize landlordProfileId to string if it's an object (MongoDB $oid)
   let normalizedLandlordProfileId: string | undefined = undefined;
   if (landlordProfileId) {
-    if (typeof landlordProfileId === 'object' && landlordProfileId.$oid) {
-      normalizedLandlordProfileId = landlordProfileId.$oid;
+    if (typeof landlordProfileId === 'object' && landlordProfileId && '$oid' in landlordProfileId) {
+      normalizedLandlordProfileId = (landlordProfileId as any).$oid;
     } else if (typeof landlordProfileId === 'string') {
       normalizedLandlordProfileId = landlordProfileId;
     }
@@ -160,14 +159,6 @@ export default function PropertyDetailPage() {
     }
   }, [apiProperty, oxyServices, activeSessionId, dispatch]);
 
-  // Reset local save status when saved properties data changes
-  useEffect(() => {
-    if (property && savedProperties.length >= 0) {
-      const isSaved = savedProperties.some(p => p._id === property.id || p.id === property.id);
-      setLocalSaveStatus(isSaved);
-    }
-  }, [property, savedProperties]);
-
   const handleContact = () => {
     // In a real app, this would open a chat with the landlord
     router.push(`/chat/${property?.id}`);
@@ -184,70 +175,27 @@ export default function PropertyDetailPage() {
   };
 
   const handleSave = () => {
-    if (property && oxyServices && activeSessionId) {
+    if (property) {
       // Add haptic feedback
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-      console.log('=== SAVE BUTTON DEBUG ===');
-      console.log('Property ID:', property.id);
-      console.log('Property object:', property);
-      console.log('Saved properties count:', savedProperties.length);
-      console.log('Saved properties:', savedProperties);
-      console.log('Saved properties IDs:', savedProperties.map(p => ({ _id: p._id, id: p.id, title: p.title })));
+      // Toggle favorite using Redux
+      toggleFavoriteProperty(property.id);
 
-      const isSaved = savedProperties.some(p => p._id === property.id || p.id === property.id);
-      console.log('Is property saved?', isSaved);
-      console.log('Property ID comparison:', savedProperties.map(p => ({
-        savedId: p._id,
-        savedIdAlt: p.id,
-        propertyId: property.id,
-        matches: p._id === property.id || p.id === property.id
-      })));
-
-      // Update local state immediately for instant UI feedback
-      setLocalSaveStatus(!isSaved);
-
-      if (isSaved) {
-        console.log('Unsaving property:', property.id);
-        unsaveProperty.mutate(property.id, {
-          onError: () => {
-            // Revert local state on error
-            setLocalSaveStatus(isSaved);
-          }
-        });
+      // Show toast feedback
+      const isCurrentlyFavorite = isFavorite(property.id);
+      if (isCurrentlyFavorite) {
+        toast.success('Removed from favorites');
       } else {
-        console.log('Saving property:', property.id);
-        saveProperty.mutate({ propertyId: property.id }, {
-          onError: () => {
-            // Revert local state on error
-            setLocalSaveStatus(isSaved);
-          }
-        });
+        toast.success('Added to favorites');
       }
-    } else {
-      console.log('Cannot save: property, oxyServices, or activeSessionId missing');
-      console.log('Property:', property);
-      console.log('OxyServices:', !!oxyServices);
-      console.log('ActiveSessionId:', !!activeSessionId);
     }
   };
 
   const isPropertySaved = useMemo(() => {
-    // Use local state if available (for immediate feedback)
-    if (localSaveStatus !== null) {
-      return localSaveStatus;
-    }
-
-    if (!property || !savedProperties.length) return false;
-
-    console.log('=== IS PROPERTY SAVED DEBUG ===');
-    console.log('Property ID:', property.id);
-    console.log('Saved properties:', savedProperties.map(p => ({ _id: p._id, id: p.id, title: p.title })));
-
-    const saved = savedProperties.some(p => p._id === property.id || p.id === property.id);
-    console.log('Is property saved result:', saved);
-    return saved;
-  }, [property, savedProperties, localSaveStatus]);
+    if (!property) return false;
+    return isFavorite(property.id);
+  }, [property, isFavorite]);
 
   const handleShare = async () => {
     if (!property) return;
@@ -260,7 +208,7 @@ export default function PropertyDetailPage() {
       const propertyUrl = `https://homiio.com/properties/${property.id}`;
 
       // Full details for clipboard
-      const fullDetails = `�� ${property.title}
+      const fullDetails = `🏠 ${property.title}
 
 📍 ${property.location}
 💰 ${property.price}
@@ -401,19 +349,14 @@ ${propertyUrl}`;
             <TouchableOpacity
               key="save"
               onPress={handleSave}
-              disabled={saveProperty.isPending || unsaveProperty.isPending}
               activeOpacity={0.7}
               style={styles.headerButton}
             >
-              {(saveProperty.isPending || unsaveProperty.isPending) ? (
-                <ActivityIndicator size="small" color={isPropertySaved ? colors.primaryColor : colors.COLOR_BLACK} />
-              ) : (
-                <IconComponent
-                  name={isPropertySaved ? "bookmark" : "bookmark-outline"}
-                  size={24}
-                  color={isPropertySaved ? colors.primaryColor : '#333333'}
-                />
-              )}
+              <IconComponent
+                name={isPropertySaved ? "heart" : "heart-outline"}
+                size={24}
+                color={isPropertySaved ? "#FF385C" : colors.COLOR_BLACK}
+              />
             </TouchableOpacity>,
           ],
         }}
@@ -421,12 +364,7 @@ ${propertyUrl}`;
 
       {/* Enhanced Header Section */}
       <View style={styles.enhancedHeader}>
-        <Text style={styles.headerTitle} numberOfLines={2}>{generatePropertyTitle({
-          type: property.type,
-          address: property.address,
-          bedrooms: property.bedrooms,
-          bathrooms: property.bathrooms
-        })}</Text>
+        <Text style={styles.headerTitle} numberOfLines={2}>{property.title}</Text>
         <View style={styles.headerLocation}>
           <Text style={styles.headerLocationText}>{property.location}</Text>
         </View>
@@ -493,37 +431,26 @@ ${propertyUrl}`;
           <TouchableOpacity
             style={[
               styles.saveButton,
-              isPropertySaved ? styles.savedButton : styles.unsavedButton,
-              (saveProperty.isPending || unsaveProperty.isPending) && styles.loadingButton
+              isPropertySaved ? styles.savedButton : styles.unsavedButton
             ]}
             onPress={handleSave}
-            disabled={saveProperty.isPending || unsaveProperty.isPending}
             activeOpacity={0.8}
           >
-            {(saveProperty.isPending || unsaveProperty.isPending) ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color={isPropertySaved ? colors.primaryColor : 'white'} />
-                <Text style={[styles.saveButtonText, styles.loadingText, { marginLeft: 12 }]}>
-                  {isPropertySaved ? 'Removing...' : 'Saving...'}
-                </Text>
+            <View style={styles.saveButtonContent}>
+              <View style={styles.iconContainer}>
+                <IconComponent
+                  name={isPropertySaved ? "heart" : "heart-outline"}
+                  size={22}
+                  color={isPropertySaved ? "#FF385C" : 'white'}
+                />
               </View>
-            ) : (
-              <View style={styles.saveButtonContent}>
-                <View style={styles.iconContainer}>
-                  <IconComponent
-                    name={isPropertySaved ? "bookmark" : "bookmark-outline"}
-                    size={22}
-                    color={isPropertySaved ? colors.primaryColor : 'white'}
-                  />
-                </View>
-                <Text style={[
-                  styles.saveButtonText,
-                  isPropertySaved ? styles.savedButtonText : styles.unsavedButtonText
-                ]}>
-                  {isPropertySaved ? 'Saved to Favorites' : 'Save to Favorites'}
-                </Text>
-              </View>
-            )}
+              <Text style={[
+                styles.saveButtonText,
+                isPropertySaved ? styles.savedButtonText : styles.unsavedButtonText
+              ]}>
+                {isPropertySaved ? 'Saved to Favorites' : 'Save to Favorites'}
+              </Text>
+            </View>
           </TouchableOpacity>
 
           {/* Eco Rating */}

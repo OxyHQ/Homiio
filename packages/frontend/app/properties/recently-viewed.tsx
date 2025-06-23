@@ -11,7 +11,6 @@ import { SearchBar } from '@/components/SearchBar';
 import Button from '@/components/Button';
 import { Property } from '@/services/propertyService';
 import { Ionicons } from '@expo/vector-icons';
-import { useSavedProperties, useSaveProperty, useUnsaveProperty } from '@/hooks/useUserQueries';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { useOxy } from '@oxyhq/services';
 import { useDispatch } from 'react-redux';
@@ -47,52 +46,6 @@ export default function RecentlyViewedScreen() {
             return title.includes(query) || location.includes(query) || description.includes(query);
         });
     }, [recentProperties, searchQuery]);
-
-    const saveProperty = useSaveProperty();
-    const unsaveProperty = useUnsaveProperty();
-    const { data: savedProperties = [] } = useSavedProperties();
-    const [optimisticSaved, setOptimisticSaved] = useState<{ [id: string]: boolean }>({});
-
-    const getPropertyId = (property: Property) => property._id || property.id || '';
-    const isPropertySaved = (property: Property) => {
-        const id = getPropertyId(property);
-        if (!id) return false;
-        if (optimisticSaved[id]) return true;
-        return savedProperties.some(p => getPropertyId(p) === id);
-    };
-
-    const handleFavoritePress = (property: Property) => {
-        const id = getPropertyId(property);
-        if (!id) return;
-        const currentlySaved = isPropertySaved(property);
-        setOptimisticSaved(prev => ({ ...prev, [id]: !currentlySaved }));
-        if (currentlySaved) {
-            unsaveProperty.mutate(id, {
-                onError: () => setOptimisticSaved(prev => ({ ...prev, [id]: true })),
-                onSettled: () => setOptimisticSaved(prev => {
-                    const copy = { ...prev };
-                    delete copy[id];
-                    return copy;
-                })
-            });
-        } else {
-            saveProperty.mutate({ propertyId: id }, {
-                onError: () => setOptimisticSaved(prev => ({ ...prev, [id]: false })),
-                onSettled: () => setOptimisticSaved(prev => {
-                    const copy = { ...prev };
-                    delete copy[id];
-                    return copy;
-                })
-            });
-        }
-    };
-
-    // Memoize properties with isFavorite injected
-    const propertiesWithFavorite = React.useMemo(() =>
-        filteredProperties.map((property) => ({
-            ...property,
-            isFavorite: isPropertySaved(property),
-        })), [filteredProperties, optimisticSaved, savedProperties]);
 
     React.useEffect(() => {
         Animated.timing(fadeAnim, {
@@ -189,9 +142,8 @@ export default function RecentlyViewedScreen() {
                 <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
                     <PropertyList
                         key={viewMode}
-                        properties={propertiesWithFavorite}
+                        properties={filteredProperties}
                         onPropertyPress={handlePropertyPress}
-                        onFavoritePress={handleFavoritePress}
                         style={styles.list}
                         contentContainerStyle={styles.listContent}
                         numColumns={viewMode === 'grid' ? 2 : 1}
