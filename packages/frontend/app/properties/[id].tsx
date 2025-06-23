@@ -20,7 +20,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchLandlordProfileById } from '@/store/reducers/profileReducer';
-import { fetchRecentlyViewedProperties } from '@/store/reducers/recentlyViewedReducer';
+import { fetchRecentlyViewedProperties, addPropertyToRecentlyViewed } from '@/store/reducers/recentlyViewedReducer';
 import type { RootState, AppDispatch } from '@/store/store';
 
 type PropertyDetail = {
@@ -150,10 +150,13 @@ export default function PropertyDetailPage() {
       console.log('PropertyDetailPage: Property view will be tracked by backend when property is fetched');
       hasViewedRef.current = true;
 
-      // Refresh the recently viewed list after a short delay to include this property
-      setTimeout(() => {
-        dispatch(fetchRecentlyViewedProperties({ oxyServices, activeSessionId }));
-      }, 1000);
+      // Add property to Redux state immediately for instant UI update
+      if (apiProperty) {
+        dispatch(addPropertyToRecentlyViewed(apiProperty));
+      }
+
+      // Also refresh from backend to ensure consistency
+      dispatch(fetchRecentlyViewedProperties({ oxyServices, activeSessionId }));
     }
   }, [apiProperty, oxyServices, activeSessionId, dispatch]);
 

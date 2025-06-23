@@ -52,6 +52,68 @@ export const fetchLandlordProfileById = createAsyncThunk(
   },
 );
 
+export const createProfile = createAsyncThunk(
+  'profile/createProfile',
+  async (
+    { profileData, oxyServices, activeSessionId }: { 
+      profileData: any; 
+      oxyServices?: OxyServices; 
+      activeSessionId?: string; 
+    },
+  ) => {
+    // Check if trying to create a personal profile
+    if (profileData.profileType === 'personal') {
+      throw new Error('Personal profiles cannot be created manually. They are created automatically when you first access the system.');
+    }
+    
+    const profile = await profileService.createProfile(profileData, oxyServices, activeSessionId);
+    return profile;
+  },
+);
+
+export const updateProfile = createAsyncThunk(
+  'profile/updateProfile',
+  async (
+    { profileId, updateData, oxyServices, activeSessionId }: { 
+      profileId: string; 
+      updateData: any; 
+      oxyServices?: OxyServices; 
+      activeSessionId?: string; 
+    },
+  ) => {
+    const profile = await profileService.updateProfile(profileId, updateData, oxyServices, activeSessionId);
+    return profile;
+  },
+);
+
+export const deleteProfile = createAsyncThunk(
+  'profile/deleteProfile',
+  async (
+    { profileId, oxyServices, activeSessionId }: { 
+      profileId: string; 
+      oxyServices?: OxyServices; 
+      activeSessionId?: string; 
+    },
+  ) => {
+    await profileService.deleteProfile(profileId, oxyServices, activeSessionId);
+    return profileId; // Return the deleted profile ID
+  },
+);
+
+export const activateProfile = createAsyncThunk(
+  'profile/activateProfile',
+  async (
+    { profileId, oxyServices, activeSessionId }: { 
+      profileId: string; 
+      oxyServices?: OxyServices; 
+      activeSessionId?: string; 
+    },
+  ) => {
+    const profile = await profileService.updateProfile(profileId, { isActive: true }, oxyServices, activeSessionId);
+    return profile;
+  },
+);
+
 const profileSlice = createSlice({
   name: 'profile',
   initialState,
@@ -102,6 +164,93 @@ const profileSlice = createSlice({
         state.landlordProfileLoading = false;
         state.landlordProfileError = action.error.message || 'Failed to fetch landlord profile';
         state.landlordProfile = null;
+      })
+      // Create profile
+      .addCase(createProfile.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(createProfile.fulfilled, (state, action) => {
+        state.isLoading = false;
+        // Add the new profile to allProfiles
+        state.allProfiles.push(action.payload);
+        // If this is the first profile, set it as primary
+        if (state.allProfiles.length === 1) {
+          state.primaryProfile = action.payload;
+        }
+      })
+      .addCase(createProfile.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message || 'Failed to create profile';
+      })
+      // Update profile
+      .addCase(updateProfile.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(updateProfile.fulfilled, (state, action) => {
+        state.isLoading = false;
+        const updatedProfile = action.payload;
+        
+        // Update in allProfiles
+        const index = state.allProfiles.findIndex(p => p.id === updatedProfile.id || p._id === updatedProfile._id);
+        if (index !== -1) {
+          state.allProfiles[index] = updatedProfile;
+        }
+        
+        // Update primary profile if it's the same
+        if (state.primaryProfile && (state.primaryProfile.id === updatedProfile.id || state.primaryProfile._id === updatedProfile._id)) {
+          state.primaryProfile = updatedProfile;
+        }
+      })
+      .addCase(updateProfile.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message || 'Failed to update profile';
+      })
+      // Delete profile
+      .addCase(deleteProfile.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(deleteProfile.fulfilled, (state, action) => {
+        state.isLoading = false;
+        const deletedProfileId = action.payload;
+        
+        // Remove from allProfiles
+        state.allProfiles = state.allProfiles.filter(p => (p.id !== deletedProfileId && p._id !== deletedProfileId));
+        
+        // If primary profile was deleted, set the first remaining profile as primary
+        if (state.primaryProfile && (state.primaryProfile.id === deletedProfileId || state.primaryProfile._id === deletedProfileId)) {
+          state.primaryProfile = state.allProfiles.length > 0 ? state.allProfiles[0] : null;
+        }
+      })
+      .addCase(deleteProfile.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message || 'Failed to delete profile';
+      })
+      // Activate profile
+      .addCase(activateProfile.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(activateProfile.fulfilled, (state, action) => {
+        state.isLoading = false;
+        const activatedProfile = action.payload;
+        
+        // Update all profiles to set isActive correctly
+        state.allProfiles = state.allProfiles.map(profile => ({
+          ...profile,
+          isActive: (profile.id === activatedProfile.id || profile._id === activatedProfile._id)
+        }));
+        
+        // Update primary profile if it's the same
+        if (state.primaryProfile && (state.primaryProfile.id === activatedProfile.id || state.primaryProfile._id === activatedProfile._id)) {
+          state.primaryProfile = activatedProfile;
+        }
+      })
+      .addCase(activateProfile.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message || 'Failed to activate profile';
       });
   },
 });

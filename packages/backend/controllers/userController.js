@@ -281,13 +281,11 @@ class UserController {
    */
   async getRecentProperties(req, res, next) {
     try {
-      const userId = req.userId;
       const oxyUserId = req.user?.id || req.user?._id;
-      
-      console.log(`Getting recent properties for user ${userId} (Oxy ID: ${oxyUserId})`);
+      console.log(`Getting recent properties for Oxy user ${oxyUserId}`);
 
       // Check if user is authenticated
-      if (!userId || !oxyUserId) {
+      if (!req.userId || !oxyUserId) {
         console.log('No userId or oxyUserId provided - authentication required');
         return res.status(401).json({
           success: false,
@@ -296,15 +294,32 @@ class UserController {
         });
       }
 
-      // Get recently viewed properties for this Oxy user
-      const recentlyViewed = await RecentlyViewedModel.find({ oxyUserId })
+      // Get the active profile for this Oxy user
+      const Profile = require('../models').Profile;
+      const activeProfile = await Profile.findPrimaryByOxyUserId(oxyUserId);
+      
+      if (!activeProfile) {
+        console.log(`No active profile found for Oxy user ${oxyUserId}`);
+        return res.json(
+          successResponse(
+            [],
+            "No recently viewed properties found",
+          ),
+        );
+      }
+
+      const profileId = activeProfile._id;
+      console.log(`Found active profile ${profileId} for Oxy user ${oxyUserId}`);
+
+      // Get recently viewed properties for this profile
+      const recentlyViewed = await RecentlyViewedModel.find({ profileId })
         .sort({ viewedAt: -1 })
         .limit(10)
         .populate('propertyId')
         .lean();
 
       if (!recentlyViewed || recentlyViewed.length === 0) {
-        console.log(`No recent properties found for Oxy user ${oxyUserId}`);
+        console.log(`No recent properties found for profileId ${profileId}`);
         return res.json(
           successResponse(
             [],
@@ -318,7 +333,7 @@ class UserController {
         .map(item => item.propertyId)
         .filter(Boolean); // Remove any null properties
 
-      console.log(`Found ${properties.length} recent properties for Oxy user ${oxyUserId}`);
+      console.log(`Found ${properties.length} recent properties for profileId ${profileId}`);
 
       res.json(
         successResponse(

@@ -1,85 +1,39 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
 import { useOxy } from '@oxyhq/services';
-import { usePrimaryProfile } from '@/hooks/useProfileQueries';
 import { TrustScoreCompact } from '../TrustScoreCompact';
+import { useTrustScore } from '@/hooks/useTrustScore';
+import { useActiveProfile } from '@/hooks/useProfileQueries';
 
 export function TrustScoreWidget() {
     const { isAuthenticated } = useOxy();
     const { t } = useTranslation();
     const router = useRouter();
-    const { data: profile, isLoading, error } = usePrimaryProfile();
+    const { data: activeProfile } = useActiveProfile();
 
-    // Get profile type to determine which UI to show
-    const profileType = profile?.profileType || 'personal';
+    // Get the current profile ID
+    const currentProfileId = activeProfile?.id || activeProfile?._id;
 
-    // Memoize expensive calculations
-    const trustScoreData = useMemo(() => {
-        if (profileType === 'personal' && profile?.personalProfile?.trustScore) {
-            const { trustScore } = profile.personalProfile;
+    const {
+        trustScoreData,
+        loading: isLoading,
+        error,
+        profileType,
+        setCurrentProfileId,
+        fetchTrustScoreData
+    } = useTrustScore(currentProfileId);
 
-            const getTrustLevel = (score: number) => {
-                if (score >= 90) return 'Excellent';
-                if (score >= 70) return 'Good';
-                if (score >= 50) return 'Average';
-                if (score >= 30) return 'Fair';
-                return 'Needs Improvement';
-            };
-
-            const getTrustColor = (score: number) => {
-                if (score >= 90) return '#4CAF50';
-                if (score >= 70) return '#8BC34A';
-                if (score >= 50) return '#FFC107';
-                if (score >= 30) return '#FF9800';
-                return '#F44336';
-            };
-
-            return {
-                type: 'personal' as const,
-                score: trustScore.score,
-                level: getTrustLevel(trustScore.score),
-                color: getTrustColor(trustScore.score),
-                factors: trustScore.factors?.slice(0, 2) || []
-            };
-        } else if (profileType === 'agency' && profile?.agencyProfile) {
-            const { agencyProfile } = profile;
-            const verificationCount = Object.values(agencyProfile.verification || {}).filter(Boolean).length;
-            const totalVerifications = 4; // businessLicense, insurance, bonding, backgroundCheck
-            const verificationPercentage = (verificationCount / totalVerifications) * 100;
-
-            const getVerificationLevel = (percentage: number) => {
-                if (percentage >= 100) return 'Fully Verified';
-                if (percentage >= 75) return 'Mostly Verified';
-                if (percentage >= 50) return 'Partially Verified';
-                if (percentage >= 25) return 'Minimally Verified';
-                return 'Not Verified';
-            };
-
-            const getVerificationColor = (percentage: number) => {
-                if (percentage >= 100) return '#4CAF50';
-                if (percentage >= 75) return '#8BC34A';
-                if (percentage >= 50) return '#FFC107';
-                if (percentage >= 25) return '#FF9800';
-                return '#F44336';
-            };
-
-            return {
-                type: 'agency' as const,
-                percentage: verificationPercentage,
-                level: getVerificationLevel(verificationPercentage),
-                color: getVerificationColor(verificationPercentage),
-                verificationCount,
-                totalVerifications,
-                verifications: agencyProfile.verification || {}
-            };
+    // Set the profile ID and fetch trust score when active profile changes
+    useEffect(() => {
+        if (currentProfileId) {
+            setCurrentProfileId(currentProfileId);
+            fetchTrustScoreData(currentProfileId);
         }
-
-        return null;
-    }, [profile, profileType]);
+    }, [currentProfileId, setCurrentProfileId, fetchTrustScoreData]);
 
     const handlePress = useMemo(() => () => {
         if (profileType === 'agency') {
@@ -113,17 +67,6 @@ export function TrustScoreWidget() {
                     </Text>
                     <TouchableOpacity style={styles.retryButton} onPress={handlePress}>
                         <Text style={styles.retryButtonText}>View Details</Text>
-                    </TouchableOpacity>
-                </View>
-            );
-        }
-
-        if (!profile) {
-            return (
-                <View style={styles.noProfileContainer}>
-                    <Text style={styles.noProfileText}>No profile found</Text>
-                    <TouchableOpacity style={styles.setupButton} onPress={() => router.push('/profile')}>
-                        <Text style={styles.setupButtonText}>Setup Profile</Text>
                     </TouchableOpacity>
                 </View>
             );
@@ -180,7 +123,7 @@ export function TrustScoreWidget() {
             );
         }
 
-        // Personal profile rendering (existing logic)
+        // Personal profile rendering
         return (
             <View style={styles.trustScoreContent}>
                 <TrustScoreCompact

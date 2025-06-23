@@ -6,169 +6,83 @@ import profileService, {
   UpdateProfileData 
 } from '@/services/profileService';
 import { toast } from 'sonner';
+import { useDispatch, useSelector } from 'react-redux';
+import type { AppDispatch, RootState } from '@/store/store';
+import { useCallback } from 'react';
+import { 
+  createProfile as createProfileAction, 
+  updateProfile as updateProfileAction, 
+  deleteProfile as deleteProfileAction, 
+  activateProfile as activateProfileAction,
+  fetchUserProfiles,
+  fetchPrimaryProfile
+} from '@/store/reducers/profileReducer';
 
 // Query keys
-export const profileKeys = {
+const profileKeys = {
   all: ['profiles'] as const,
-  primary: () => [...profileKeys.all, 'primary'] as const,
-  userProfiles: () => [...profileKeys.all, 'user'] as const,
+  lists: () => [...profileKeys.all, 'list'] as const,
+  list: (filters: string) => [...profileKeys.lists(), { filters }] as const,
+  details: () => [...profileKeys.all, 'detail'] as const,
+  detail: (id: string) => [...profileKeys.details(), id] as const,
   byType: (type: string) => [...profileKeys.all, 'type', type] as const,
-  agencyMemberships: () => [...profileKeys.all, 'agency-memberships'] as const,
   byId: (id: string) => [...profileKeys.all, 'id', id] as const,
 };
 
-// Hook to get or create primary profile
-export function usePrimaryProfile() {
-  const { user, oxyServices, activeSessionId } = useOxy();
-  
-  console.log('usePrimaryProfile - user:', user ? 'authenticated' : 'not authenticated');
-  
-  return useQuery<Profile | null>({
-    queryKey: profileKeys.primary(),
-    queryFn: async () => {
-      try {
-        const profile = await profileService.getOrCreatePrimaryProfile(oxyServices, activeSessionId || undefined);
-        // The backend now returns null when no profile exists, so we can return it directly
-        return profile;
-      } catch (error: any) {
-        // Handle any other errors that might still occur
-        console.error('Error fetching primary profile:', error);
-        throw error;
-      }
-    },
-    enabled: !!user && !!oxyServices && !!activeSessionId, // Only run when user is authenticated
-    staleTime: 10 * 60 * 1000, // 10 minutes - increase stale time to reduce unnecessary fetches  
-    gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache longer
-    refetchOnWindowFocus: false, // Reduce aggressive refetching
-    refetchOnMount: false, // Don't refetch on every mount
-  });
-}
-
-// Hook to get all user profiles
+// Hook to get user profiles
 export function useUserProfiles() {
-  const { oxyServices, activeSessionId, user } = useOxy();
-  
-  console.log('useUserProfiles - user:', user ? 'authenticated' : 'not authenticated');
-  
+  const { oxyServices, activeSessionId } = useOxy();
   return useQuery<Profile[]>({
-    queryKey: profileKeys.userProfiles(),
-    queryFn: () => profileService.getUserProfiles(oxyServices, activeSessionId || undefined),
-    enabled: !!user && !!oxyServices && !!activeSessionId, // Only run when user is authenticated
-    staleTime: 10 * 60 * 1000, // 10 minutes - increase stale time to reduce unnecessary fetches
-    gcTime: 30 * 60 * 1000, // 30 minutes
-    refetchOnWindowFocus: false, // Reduce aggressive refetching
-    refetchOnMount: true, // Don't refetch on every mount
+    queryKey: profileKeys.lists(),
+    queryFn: async () => {
+      return await profileService.getUserProfiles(oxyServices, activeSessionId || undefined);
+    },
+    enabled: !!oxyServices && !!activeSessionId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 }
 
 // Hook to get profile by type
 export function useProfileByType(profileType: 'personal' | 'agency' | 'business') {
-  const { user, oxyServices, activeSessionId } = useOxy();
-  
+  const { oxyServices, activeSessionId } = useOxy();
   return useQuery<Profile>({
     queryKey: profileKeys.byType(profileType),
-    queryFn: () => profileService.getProfileByType(profileType, oxyServices, activeSessionId || undefined),
-    enabled: !!user && !!oxyServices && !!activeSessionId, // Only run when user is authenticated
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes
+    queryFn: async () => {
+      return await profileService.getProfileByType(profileType, oxyServices, activeSessionId || undefined);
+    },
+    enabled: !!oxyServices && !!activeSessionId && !!profileType,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   });
 }
 
-// Hook to get agency memberships
-export function useAgencyMemberships() {
-  const { user, oxyServices, activeSessionId } = useOxy();
-  
-  return useQuery<Profile[]>({
-    queryKey: profileKeys.agencyMemberships(),
-    queryFn: () => profileService.getAgencyMemberships(oxyServices, activeSessionId || undefined),
-    enabled: !!user && !!oxyServices && !!activeSessionId, // Only run when user is authenticated
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-  });
-}
-
-// Hook to create a new profile
+// Hook to create a profile
 export function useCreateProfile() {
   const queryClient = useQueryClient();
   const { oxyServices, activeSessionId } = useOxy();
-
-  return useMutation({
-    mutationFn: (profileData: CreateProfileData) => profileService.createProfile(profileData, oxyServices, activeSessionId || undefined),
+  
+  return useMutation<Profile, Error, CreateProfileData>({
+    mutationFn: async (profileData: CreateProfileData) => {
+      // Check if trying to create a personal profile
+      if (profileData.profileType === 'personal') {
+        throw new Error('Personal profiles cannot be created manually. They are created automatically when you first access the system.');
+      }
+      
+      return await profileService.createProfile(profileData, oxyServices, activeSessionId || undefined);
+    },
     onSuccess: () => {
-      // Invalidate and refetch profile queries
-      queryClient.invalidateQueries({ queryKey: profileKeys.all });
+      // Invalidate and refetch profiles
+      queryClient.invalidateQueries({ queryKey: profileKeys.lists() });
       toast.success('Profile created successfully');
     },
-    onError: (error: any) => {
+    onError: (error) => {
+      console.error('Error creating profile:', error);
       toast.error(error.message || 'Failed to create profile');
-    },
-  });
-}
-
-// Hook to update primary profile (no profile ID needed)
-export function useUpdatePrimaryProfile() {
-  const queryClient = useQueryClient();
-  const { oxyServices, activeSessionId } = useOxy();
-
-  return useMutation({
-    mutationFn: (updateData: UpdateProfileData) => profileService.updatePrimaryProfile(updateData, oxyServices, activeSessionId || undefined),
-    onSuccess: (data: Profile) => {
-      // Immediately update the cache with the new data
-      queryClient.setQueryData(profileKeys.primary(), data);
-      
-      // Also invalidate and refetch to ensure we have the latest data from server
-      queryClient.invalidateQueries({ queryKey: profileKeys.primary() });
-      queryClient.invalidateQueries({ queryKey: profileKeys.userProfiles() });
-      queryClient.invalidateQueries({ queryKey: profileKeys.all });
-      
-      toast.success('Profile updated successfully');
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to update profile');
-    },
-  });
-}
-
-// Hook to update primary profile trust score (no profile ID needed)
-export function useUpdatePrimaryTrustScore() {
-  const queryClient = useQueryClient();
-  const { oxyServices, activeSessionId } = useOxy();
-
-  return useMutation({
-    mutationFn: ({ factor, value }: { factor: string; value: number }) =>
-      profileService.updatePrimaryTrustScore(factor, value, oxyServices, activeSessionId || undefined),
-    onSuccess: (data: Profile) => {
-      // Invalidate and refetch profile queries
-      queryClient.invalidateQueries({ queryKey: profileKeys.all });
-      queryClient.invalidateQueries({ queryKey: profileKeys.primary() });
-      toast.success('Trust score updated successfully');
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to update trust score');
-    },
-  });
-}
-
-// Hook to recalculate primary profile trust score
-export function useRecalculatePrimaryTrustScore() {
-  const queryClient = useQueryClient();
-  const { oxyServices, activeSessionId } = useOxy();
-
-  return useMutation({
-    mutationFn: () => profileService.recalculatePrimaryTrustScore(oxyServices, activeSessionId || undefined),
-    onSuccess: (data: { profile: Profile; trustScore: any }) => {
-      // Invalidate and refetch profile queries to ensure fresh data
-      queryClient.invalidateQueries({ queryKey: profileKeys.primary() });
-      queryClient.invalidateQueries({ queryKey: profileKeys.userProfiles() });
-      queryClient.invalidateQueries({ queryKey: profileKeys.all });
-      toast.success('Trust score recalculated successfully');
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to recalculate trust score');
     },
   });
 }
@@ -177,17 +91,19 @@ export function useRecalculatePrimaryTrustScore() {
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
   const { oxyServices, activeSessionId } = useOxy();
-
-  return useMutation({
-    mutationFn: ({ profileId, updateData }: { profileId: string; updateData: UpdateProfileData }) =>
-      profileService.updateProfile(profileId, updateData, oxyServices, activeSessionId || undefined),
-    onSuccess: (data: Profile, variables: { profileId: string; updateData: UpdateProfileData }) => {
-      // Invalidate and refetch profile queries
-      queryClient.invalidateQueries({ queryKey: profileKeys.all });
-      queryClient.invalidateQueries({ queryKey: profileKeys.byId(variables.profileId) });
+  
+  return useMutation<Profile, Error, { profileId: string; updateData: UpdateProfileData }>({
+    mutationFn: async ({ profileId, updateData }) => {
+      return await profileService.updateProfile(profileId, updateData, oxyServices, activeSessionId || undefined);
+    },
+    onSuccess: (updatedProfile) => {
+      // Update the specific profile in cache
+      queryClient.setQueryData(profileKeys.detail(updatedProfile.id || updatedProfile._id || ''), updatedProfile);
+      queryClient.invalidateQueries({ queryKey: profileKeys.lists() });
       toast.success('Profile updated successfully');
     },
-    onError: (error: any) => {
+    onError: (error) => {
+      console.error('Error updating profile:', error);
       toast.error(error.message || 'Failed to update profile');
     },
   });
@@ -197,95 +113,19 @@ export function useUpdateProfile() {
 export function useDeleteProfile() {
   const queryClient = useQueryClient();
   const { oxyServices, activeSessionId } = useOxy();
-
-  return useMutation({
-    mutationFn: (profileId: string) => profileService.deleteProfile(profileId, oxyServices, activeSessionId || undefined),
+  
+  return useMutation<void, Error, string>({
+    mutationFn: async (profileId: string) => {
+      return await profileService.deleteProfile(profileId, oxyServices, activeSessionId || undefined);
+    },
     onSuccess: () => {
-      // Invalidate and refetch profile queries
-      queryClient.invalidateQueries({ queryKey: profileKeys.all });
+      // Invalidate and refetch profiles
+      queryClient.invalidateQueries({ queryKey: profileKeys.lists() });
       toast.success('Profile deleted successfully');
     },
-    onError: (error: any) => {
+    onError: (error) => {
+      console.error('Error deleting profile:', error);
       toast.error(error.message || 'Failed to delete profile');
-    },
-  });
-}
-
-// Hook to add agency member
-export function useAddAgencyMember() {
-  const queryClient = useQueryClient();
-  const { oxyServices, activeSessionId } = useOxy();
-
-  return useMutation({
-    mutationFn: ({ 
-      profileId, 
-      memberOxyUserId, 
-      role 
-    }: { 
-      profileId: string; 
-      memberOxyUserId: string; 
-      role: 'owner' | 'admin' | 'agent' | 'viewer' 
-    }) => profileService.addAgencyMember(profileId, memberOxyUserId, role, oxyServices, activeSessionId || undefined),
-    onSuccess: (data: Profile, variables: { profileId: string; memberOxyUserId: string; role: 'owner' | 'admin' | 'agent' | 'viewer' }) => {
-      // Invalidate and refetch profile queries
-      queryClient.invalidateQueries({ queryKey: profileKeys.all });
-      queryClient.invalidateQueries({ queryKey: profileKeys.byId(variables.profileId) });
-      toast.success('Agency member added successfully');
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to add agency member');
-    },
-  });
-}
-
-// Hook to remove agency member
-export function useRemoveAgencyMember() {
-  const queryClient = useQueryClient();
-  const { oxyServices, activeSessionId } = useOxy();
-
-  return useMutation({
-    mutationFn: ({ 
-      profileId, 
-      memberOxyUserId 
-    }: { 
-      profileId: string; 
-      memberOxyUserId: string; 
-    }) => profileService.removeAgencyMember(profileId, memberOxyUserId, oxyServices, activeSessionId || undefined),
-    onSuccess: (data: Profile, variables: { profileId: string; memberOxyUserId: string }) => {
-      // Invalidate and refetch profile queries
-      queryClient.invalidateQueries({ queryKey: profileKeys.all });
-      queryClient.invalidateQueries({ queryKey: profileKeys.byId(variables.profileId) });
-      toast.success('Agency member removed successfully');
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to remove agency member');
-    },
-  });
-}
-
-// Hook to update trust score
-export function useUpdateTrustScore() {
-  const queryClient = useQueryClient();
-  const { oxyServices, activeSessionId } = useOxy();
-
-  return useMutation({
-    mutationFn: ({ 
-      profileId, 
-      factor, 
-      value 
-    }: { 
-      profileId: string; 
-      factor: string; 
-      value: number; 
-    }) => profileService.updateTrustScore(profileId, factor, value, oxyServices, activeSessionId || undefined),
-    onSuccess: (data: Profile, variables: { profileId: string; factor: string; value: number }) => {
-      // Invalidate and refetch profile queries
-      queryClient.invalidateQueries({ queryKey: profileKeys.all });
-      queryClient.invalidateQueries({ queryKey: profileKeys.byId(variables.profileId) });
-      toast.success('Trust score updated successfully');
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to update trust score');
     },
   });
 }
@@ -345,4 +185,88 @@ export function useProfileById(profileId: string | undefined | null) {
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   });
+}
+
+// Hook to use Redux for profile management
+export function useProfileRedux() {
+  const dispatch = useDispatch<AppDispatch>();
+  const { oxyServices, activeSessionId } = useOxy();
+  
+  const { 
+    primaryProfile, 
+    allProfiles, 
+    isLoading, 
+    error 
+  } = useSelector((state: RootState) => state.profile);
+
+  const createProfile = useCallback(async (profileData: any): Promise<Profile> => {
+    if (!oxyServices || !activeSessionId) {
+      throw new Error('Authentication required');
+    }
+    
+    return await dispatch(createProfileAction({ 
+      profileData, 
+      oxyServices, 
+      activeSessionId 
+    })).unwrap();
+  }, [dispatch, oxyServices, activeSessionId]);
+
+  const updateProfile = useCallback(async (profileId: string, updateData: any): Promise<Profile> => {
+    if (!oxyServices || !activeSessionId) {
+      throw new Error('Authentication required');
+    }
+    
+    return await dispatch(updateProfileAction({ 
+      profileId, 
+      updateData, 
+      oxyServices, 
+      activeSessionId 
+    })).unwrap();
+  }, [dispatch, oxyServices, activeSessionId]);
+
+  const deleteProfile = useCallback(async (profileId: string): Promise<string> => {
+    if (!oxyServices || !activeSessionId) {
+      throw new Error('Authentication required');
+    }
+    
+    return await dispatch(deleteProfileAction({ 
+      profileId, 
+      oxyServices, 
+      activeSessionId 
+    })).unwrap();
+  }, [dispatch, oxyServices, activeSessionId]);
+
+  const activateProfile = useCallback(async (profileId: string): Promise<Profile> => {
+    if (!oxyServices || !activeSessionId) {
+      throw new Error('Authentication required');
+    }
+    
+    return await dispatch(activateProfileAction({ 
+      profileId, 
+      oxyServices, 
+      activeSessionId 
+    })).unwrap();
+  }, [dispatch, oxyServices, activeSessionId]);
+
+  const refetchProfiles = useCallback((): void => {
+    if (oxyServices && activeSessionId) {
+      dispatch(fetchUserProfiles({ oxyServices, activeSessionId }));
+      dispatch(fetchPrimaryProfile({ oxyServices, activeSessionId }));
+    }
+  }, [dispatch, oxyServices, activeSessionId]);
+
+  return {
+    // State
+    primaryProfile,
+    allProfiles,
+    isLoading,
+    error,
+    
+    // Actions
+    createProfile,
+    updateProfile,
+    deleteProfile,
+    activateProfile,
+    refetchProfiles,
+  };
 } 

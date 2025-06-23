@@ -1,12 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { colors } from '@/styles/colors';
-import { usePrimaryProfile, useUpdateTrustScore } from '@/hooks/useProfileQueries';
+import { useTrustScore } from '@/hooks/useTrustScore';
+import { useActiveProfile } from '@/hooks/useProfileQueries';
 import { TrustScore } from './TrustScore';
 
 export function TrustScoreManager() {
-    const { data: profile, isLoading, error } = usePrimaryProfile();
-    const updateTrustScore = useUpdateTrustScore();
+    const { data: activeProfile } = useActiveProfile();
+    const currentProfileId = activeProfile?.id || activeProfile?._id;
+
+    const {
+        trustScoreData,
+        loading: isLoading,
+        error,
+        updateTrustScoreData,
+        recalculateTrustScoreData,
+        setCurrentProfileId,
+        fetchTrustScoreData
+    } = useTrustScore(currentProfileId);
+
+    // Set the profile ID and fetch trust score when active profile changes
+    useEffect(() => {
+        if (currentProfileId) {
+            setCurrentProfileId(currentProfileId);
+            fetchTrustScoreData(currentProfileId);
+        }
+    }, [currentProfileId, setCurrentProfileId, fetchTrustScoreData]);
+
     const [selectedFactor, setSelectedFactor] = useState<string | null>(null);
 
     if (isLoading) {
@@ -25,16 +45,15 @@ export function TrustScoreManager() {
         );
     }
 
-    if (!profile?.personalProfile) {
+    if (!trustScoreData || trustScoreData.type !== 'personal') {
         return (
             <View style={styles.container}>
-                <Text style={styles.errorText}>No personal profile found</Text>
+                <Text style={styles.errorText}>No personal trust score data found</Text>
             </View>
         );
     }
 
-    const { trustScore } = profile.personalProfile;
-    const factors = trustScore.factors;
+    const factors = trustScoreData.factors;
 
     const getFactorLabel = (factorType: string) => {
         const labels: Record<string, string> = {
@@ -59,17 +78,10 @@ export function TrustScoreManager() {
     };
 
     const handleUpdateFactor = async (factorType: string, currentValue: number) => {
-        if (!profile?.id) return;
-
         const newValue = Math.min(currentValue + 10, 100);
 
         try {
-            await updateTrustScore.mutateAsync({
-                profileId: profile.id,
-                factor: factorType,
-                value: newValue
-            });
-
+            updateTrustScoreData(factorType, newValue);
             Alert.alert(
                 'Success',
                 `${getFactorLabel(factorType)} updated to ${newValue}/100`
@@ -85,7 +97,7 @@ export function TrustScoreManager() {
 
         Alert.alert(
             getFactorLabel(factorType),
-            `${getFactorDescription(factorType)}\n\nCurrent Score: ${factor.value}/100\nLast Updated: ${new Date(factor.updatedAt).toLocaleDateString()}`,
+            `${getFactorDescription(factorType)}\n\nCurrent Score: ${factor.value}/100`,
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
@@ -107,12 +119,12 @@ export function TrustScoreManager() {
 
             <View style={styles.scoreSection}>
                 <TrustScore
-                    score={trustScore.score}
+                    score={trustScoreData.score}
                     size="large"
                     showLabel={true}
                 />
                 <Text style={styles.scoreDescription}>
-                    Your overall trust score is {trustScore.score}/100
+                    Your overall trust score is {trustScoreData.score}/100
                 </Text>
             </View>
 
@@ -152,10 +164,6 @@ export function TrustScoreManager() {
 
                         <Text style={styles.factorDescription}>
                             {getFactorDescription(factor.type)}
-                        </Text>
-
-                        <Text style={styles.lastUpdated}>
-                            Last updated: {new Date(factor.updatedAt).toLocaleDateString()}
                         </Text>
                     </TouchableOpacity>
                 ))}
@@ -282,11 +290,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: colors.COLOR_BLACK_LIGHT_5,
         marginBottom: 4,
-    },
-    lastUpdated: {
-        fontSize: 12,
-        color: colors.COLOR_BLACK_LIGHT_5,
-        fontStyle: 'italic',
     },
     tipsSection: {
         padding: 20,

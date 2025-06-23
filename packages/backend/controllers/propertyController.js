@@ -256,9 +256,7 @@ class PropertyController {
       // Increment view count
       await PropertyModel.findByIdAndUpdate(propertyId, { $inc: { views: 1 } });
 
-      // Update user's recently viewed list if authenticated (async, non-blocking)
-      console.log('[getPropertyById] req.userId:', req.userId);
-      console.log('[getPropertyById] req.user:', req.user);
+      // Update recently viewed list if authenticated
       if (req.userId && (req.user?.id || req.user?._id)) {
         const oxyUserId = req.user.id || req.user._id;
         console.log(`[getPropertyById] Authenticated user ${req.userId} (Oxy ID: ${oxyUserId}) viewing property ${propertyId}`);
@@ -267,22 +265,22 @@ class PropertyController {
         try {
           const activeProfile = await Profile.findPrimaryByOxyUserId(oxyUserId);
           if (activeProfile) {
-            console.log(`[getPropertyById] Found active profile: ${activeProfile._id} for Oxy user ${oxyUserId}`);
+            const profileId = activeProfile._id;
+            console.log(`[getPropertyById] Found active profile: ${profileId} for Oxy user ${oxyUserId}`);
             
-            // Track recently viewed property using Oxy user ID
+            // Track recently viewed property using profile ID
             RecentlyViewedModel.findOneAndUpdate(
-              { oxyUserId, propertyId },
-              { oxyUserId, propertyId, viewedAt: new Date() },
+              { profileId, propertyId },
+              { profileId, propertyId, viewedAt: new Date() },
               { upsert: true, new: true }
             )
             .then(() => {
-              console.log(`[getPropertyById] Successfully tracked property ${propertyId} for Oxy user ${oxyUserId} with profile ${activeProfile._id}`);
+              console.log(`[getPropertyById] Successfully tracked property ${propertyId} for profile ${profileId}`);
             })
             .catch((err) => {
               console.error('[getPropertyById] Failed to track recently viewed property', {
-                oxyUserId,
+                profileId,
                 propertyId,
-                profileId: activeProfile._id,
                 error: err.message,
               });
             });
@@ -310,13 +308,7 @@ class PropertyController {
         }
       }
 
-      const response = {
-        ...property,
-        profileId: property.profileId,
-        energyData,
-      };
-
-      res.json(successResponse(response, 'Property retrieved successfully'));
+      res.json(successResponse({ ...property, energyData }, 'Property retrieved successfully'));
     } catch (error) {
       if (error.name === 'CastError') {
         return next(new AppError('Invalid property ID', 400, 'INVALID_ID'));

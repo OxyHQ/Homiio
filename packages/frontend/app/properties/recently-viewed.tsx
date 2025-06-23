@@ -34,13 +34,6 @@ export default function RecentlyViewedScreen() {
 
     const { properties: recentProperties, isLoading, error, refetch, clear } = useRecentlyViewed();
 
-    // Refresh recently viewed list when screen loads
-    useEffect(() => {
-        if (oxyServices && activeSessionId) {
-            dispatch(fetchRecentlyViewedProperties({ oxyServices, activeSessionId }));
-        }
-    }, [oxyServices, activeSessionId, dispatch]);
-
     // Filter properties based on search query
     const filteredProperties = React.useMemo(() => {
         if (!searchQuery.trim()) return recentProperties;
