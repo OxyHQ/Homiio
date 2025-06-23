@@ -1,8 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { userService } from '@/services/userService';
+import { userApi } from '@/utils/api';
 import type { Property } from '@/services/propertyService';
 import { useOxy } from '@oxyhq/services';
-import { API_URL } from '@/config';
 import { toast } from 'sonner';
 
 export const userKeys = {
@@ -27,32 +26,8 @@ export function useRecentlyViewedProperties() {
       try {
         console.log('Fetching recent properties with OxyServices authentication');
         
-        // Get the token from OxyServices
-        const tokenData = await oxyServices.getTokenBySession(activeSessionId);
-        
-        if (!tokenData) {
-          console.log('No token available from OxyServices');
-          return [];
-        }
-
-        // Make authenticated request
-        const response = await fetch(`${API_URL}/api/users/me/recent-properties`, {
-          headers: {
-            'Authorization': `Bearer ${tokenData.accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            console.log('Authentication failed for recent properties');
-            return [];
-          }
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        const properties = data.data || [];
+        const response = await userApi.getRecentProperties(oxyServices, activeSessionId);
+        const properties = response.data || [];
         console.log(`Successfully fetched ${properties.length} recent properties`);
         return properties;
       } catch (error) {
@@ -83,36 +58,8 @@ export function useSavedProperties() {
       try {
         console.log('Fetching saved properties with OxyServices authentication');
         
-        // Get the token from OxyServices
-        const tokenData = await oxyServices.getTokenBySession(activeSessionId);
-        
-        if (!tokenData) {
-          console.log('No token available from OxyServices');
-          return [];
-        }
-
-        console.log('Got token from OxyServices, making API request');
-
-        // Make authenticated request
-        const response = await fetch(`${API_URL}/api/users/me/saved-properties`, {
-          headers: {
-            'Authorization': `Bearer ${tokenData.accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        console.log('Saved properties API response status:', response.status);
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            console.log('Authentication failed for saved properties');
-            return [];
-          }
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        const properties = data.data || [];
+        const response = await userApi.getSavedProperties(oxyServices, activeSessionId);
+        const properties = response.data || [];
         console.log(`Successfully fetched ${properties.length} saved properties:`, properties);
         return properties;
       } catch (error) {
@@ -139,27 +86,7 @@ export function useTrackPropertyView() {
       }
 
       try {
-        // Get the token from OxyServices
-        const tokenData = await oxyServices.getTokenBySession(activeSessionId);
-        
-        if (!tokenData) {
-          console.log('No token available from OxyServices - skipping property view tracking');
-          return;
-        }
-
-        // Make a request to view the property (this will trigger the backend to track it)
-        const response = await fetch(`${API_URL}/api/properties/${propertyId}`, {
-          headers: {
-            'Authorization': `Bearer ${tokenData.accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          console.log('Failed to track property view:', response.status);
-          return;
-        }
-
+        await userApi.trackPropertyView(propertyId, oxyServices, activeSessionId);
         console.log(`Successfully tracked view for property ${propertyId}`);
       } catch (error) {
         console.error('Error tracking property view:', error);
@@ -187,34 +114,14 @@ export function useSaveProperty() {
         throw new Error('OxyServices not available');
       }
 
-      // Get the token from OxyServices
-      const tokenData = await oxyServices.getTokenBySession(activeSessionId);
-      
-      if (!tokenData) {
-        throw new Error('No token available from OxyServices');
+      try {
+        const response = await userApi.saveProperty(propertyId, notes, oxyServices, activeSessionId);
+        console.log('Save property success:', response);
+        return response.data;
+      } catch (error) {
+        console.error('Save property error:', error);
+        throw error;
       }
-
-      // Make authenticated request to save property
-      const response = await fetch(`${API_URL}/api/users/me/saved-properties`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${tokenData.accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ propertyId, notes }),
-      });
-
-      console.log('Save property response status:', response.status);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Save property error:', errorData);
-        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      console.log('Save property success:', data);
-      return data.data;
     },
     onMutate: async ({ propertyId, notes }) => {
       // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
@@ -298,33 +205,14 @@ export function useUnsaveProperty() {
         throw new Error('OxyServices not available');
       }
 
-      // Get the token from OxyServices
-      const tokenData = await oxyServices.getTokenBySession(activeSessionId);
-      
-      if (!tokenData) {
-        throw new Error('No token available from OxyServices');
+      try {
+        const response = await userApi.unsaveProperty(propertyId, oxyServices, activeSessionId);
+        console.log('Unsave property success:', response);
+        return response.data;
+      } catch (error) {
+        console.error('Unsave property error:', error);
+        throw error;
       }
-
-      // Make authenticated request to unsave property
-      const response = await fetch(`${API_URL}/api/users/me/saved-properties/${propertyId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${tokenData.accessToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      console.log('Unsave property response status:', response.status);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Unsave property error:', errorData);
-        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      console.log('Unsave property success:', data);
-      return data.data;
     },
     onMutate: async (propertyId) => {
       // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
@@ -384,30 +272,13 @@ export function useUpdateSavedPropertyNotes() {
         throw new Error('OxyServices not available');
       }
 
-      // Get the token from OxyServices
-      const tokenData = await oxyServices.getTokenBySession(activeSessionId);
-      
-      if (!tokenData) {
-        throw new Error('No token available from OxyServices');
+      try {
+        const response = await userApi.updateSavedPropertyNotes(propertyId, notes, oxyServices, activeSessionId);
+        return response.data;
+      } catch (error) {
+        console.error('Update saved property notes error:', error);
+        throw error;
       }
-
-      // Make authenticated request to update notes
-      const response = await fetch(`${API_URL}/api/users/me/saved-properties/${propertyId}/notes`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${tokenData.accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ notes }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      return data.data;
     },
     onSuccess: () => {
       // Invalidate the saved properties cache to trigger a refresh
@@ -438,36 +309,14 @@ export function useUserProperties() {
       try {
         console.log('Fetching user properties with OxyServices authentication');
         
-        // Get the token from OxyServices
-        const tokenData = await oxyServices.getTokenBySession(activeSessionId);
+        const response = await userApi.getUserProperties(1, 10, oxyServices, activeSessionId);
         
-        if (!tokenData) {
-          console.log('No token available from OxyServices');
-          return { properties: [], total: 0, page: 1, totalPages: 1 };
-        }
-
-        // Make authenticated request
-        const response = await fetch(`${API_URL}/api/users/me/properties`, {
-          headers: {
-            'Authorization': `Bearer ${tokenData.accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            console.log('Authentication failed for user properties');
-            return { properties: [], total: 0, page: 1, totalPages: 1 };
-          }
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const data = await response.json();
+        // The API response should contain the properties and pagination info in the data field
         const result = {
-          properties: data.data || [],
-          total: data.pagination?.total || 0,
-          page: data.pagination?.page || 1,
-          totalPages: data.pagination?.totalPages || 1,
+          properties: response.data?.properties || response.data || [],
+          total: response.data?.total || 0,
+          page: response.data?.page || 1,
+          totalPages: response.data?.totalPages || 1,
         };
         console.log(`Successfully fetched ${result.properties.length} user properties`);
         return result;

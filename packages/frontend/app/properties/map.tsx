@@ -21,6 +21,7 @@ import { PropertyCard } from '@/components/PropertyCard';
 import { useProperties } from '@/hooks/usePropertyQueries';
 import { Property, PropertyFilters } from '@/services/propertyService';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
+import { getPropertyImageSource } from '@/utils/propertyUtils';
 import { SearchBar } from '@/components/SearchBar';
 import { Button } from '@/components/Button';
 
@@ -191,7 +192,7 @@ export default function PropertiesMapScreen() {
             price={item.rent.amount}
             currency="$"
             type={item.type as any}
-            imageUrl={item.images?.[0] || ''}
+            imageSource={getPropertyImageSource(item.images)}
             bedrooms={item.bedrooms || 0}
             bathrooms={item.bathrooms || 0}
             size={item.squareFootage || 0}
@@ -328,7 +329,7 @@ export default function PropertiesMapScreen() {
                                 price={selectedProperty.rent.amount}
                                 currency="$"
                                 type={selectedProperty.type as any}
-                                imageUrl={selectedProperty.images?.[0] || ''}
+                                imageSource={getPropertyImageSource(selectedProperty.images)}
                                 bedrooms={selectedProperty.bedrooms || 0}
                                 bathrooms={selectedProperty.bathrooms || 0}
                                 size={selectedProperty.squareFootage || 0}

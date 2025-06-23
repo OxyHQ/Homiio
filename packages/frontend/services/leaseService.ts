@@ -1,4 +1,4 @@
-import api, { getCacheKey, setCacheEntry, getCacheEntry } from '@/utils/api';
+import api, { API_CONFIG, ApiError } from '@/utils/api';
 
 export interface Lease {
   id: string;
@@ -153,46 +153,23 @@ class LeaseService {
     page: number;
     totalPages: number;
   }> {
-    const cacheKey = getCacheKey(this.baseUrl, filters);
-    const cached = getCacheEntry<any>(cacheKey);
-    
-    if (cached) {
-      return cached;
-    }
-
     const response = await api.get(this.baseUrl, { params: filters });
-    setCacheEntry(cacheKey, response.data);
     return response.data;
   }
 
   async getLease(leaseId: string): Promise<Lease> {
-    const cacheKey = getCacheKey(`${this.baseUrl}/${leaseId}`);
-    const cached = getCacheEntry<Lease>(cacheKey);
-    
-    if (cached) {
-      return cached;
-    }
-
     const response = await api.get(`${this.baseUrl}/${leaseId}`);
-    setCacheEntry(cacheKey, response.data.data);
     return response.data.data;
   }
 
   async createLease(data: CreateLeaseData): Promise<Lease> {
     const response = await api.post(this.baseUrl, data);
-    
-    // Clear leases cache
-    this.clearLeasesCache();
-    
     return response.data.data;
   }
 
   async updateLease(leaseId: string, data: Partial<CreateLeaseData>): Promise<Lease> {
     const response = await api.put(`${this.baseUrl}/${leaseId}`, data);
     
-    // Clear related caches
-    this.clearLeaseCache(leaseId);
-    this.clearLeasesCache();
     
     return response.data.data;
   }
@@ -200,9 +177,6 @@ class LeaseService {
   async deleteLease(leaseId: string): Promise<void> {
     await api.delete(`${this.baseUrl}/${leaseId}`);
     
-    // Clear related caches
-    this.clearLeaseCache(leaseId);
-    this.clearLeasesCache();
   }
 
   async signLease(leaseId: string, signature: string, acceptTerms: boolean): Promise<Lease> {
@@ -211,9 +185,6 @@ class LeaseService {
       acceptTerms
     });
     
-    // Clear lease cache to refresh status
-    this.clearLeaseCache(leaseId);
-    this.clearLeasesCache();
     
     return response.data.data;
   }
@@ -225,9 +196,6 @@ class LeaseService {
       notice
     });
     
-    // Clear lease cache
-    this.clearLeaseCache(leaseId);
-    this.clearLeasesCache();
   }
 
   async renewLease(leaseId: string, data: {
@@ -237,9 +205,6 @@ class LeaseService {
   }): Promise<Lease> {
     const response = await api.post(`${this.baseUrl}/${leaseId}/renew`, data);
     
-    // Clear related caches
-    this.clearLeaseCache(leaseId);
-    this.clearLeasesCache();
     
     return response.data.data;
   }
@@ -254,37 +219,17 @@ class LeaseService {
     page: number;
     totalPages: number;
   }> {
-    const cacheKey = getCacheKey(`${this.baseUrl}/${leaseId}/payments`, filters);
-    const cached = getCacheEntry<any>(cacheKey);
-    
-    if (cached) {
-      return cached;
-    }
-
     const response = await api.get(`${this.baseUrl}/${leaseId}/payments`, { params: filters });
-    setCacheEntry(cacheKey, response.data, 300000); // 5 minute cache
     return response.data;
   }
 
   async createPayment(leaseId: string, data: CreatePaymentData): Promise<Payment> {
     const response = await api.post(`${this.baseUrl}/${leaseId}/payments`, data);
-    
-    // Clear payments cache
-    this.clearLeasePaymentsCache(leaseId);
-    
     return response.data.data;
   }
 
   async getLeaseDocuments(leaseId: string): Promise<LeaseDocument[]> {
-    const cacheKey = getCacheKey(`${this.baseUrl}/${leaseId}/documents`);
-    const cached = getCacheEntry<LeaseDocument[]>(cacheKey);
-    
-    if (cached) {
-      return cached;
-    }
-
     const response = await api.get(`${this.baseUrl}/${leaseId}/documents`);
-    setCacheEntry(cacheKey, response.data.data);
     return response.data.data;
   }
 
@@ -296,16 +241,22 @@ class LeaseService {
       formData.append('description', description);
     }
 
-    const response = await api.post(`${this.baseUrl}/${leaseId}/documents`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+    const response = await fetch(`${API_CONFIG.baseURL}${this.baseUrl}/${leaseId}/documents`, {
+      method: 'POST',
+      body: formData,
     });
     
-    // Clear documents cache
-    this.clearLeaseDocumentsCache(leaseId);
+    const data = await response.json();
     
-    return response.data.data;
+    if (!response.ok) {
+      throw new ApiError(
+        data.message || data.error || `HTTP ${response.status}`,
+        response.status,
+        data
+      );
+    }
+    
+    return data.data;
   }
 
   // Utility methods
@@ -337,27 +288,6 @@ class LeaseService {
       console.error('Failed to get upcoming payments:', error);
       return [];
     }
-  }
-
-  // Cache management
-  private clearLeaseCache(leaseId: string) {
-    const { clearCache } = require('@/utils/api');
-    clearCache(`${this.baseUrl}/${leaseId}`);
-  }
-
-  private clearLeasesCache() {
-    const { clearCache } = require('@/utils/api');
-    clearCache(this.baseUrl);
-  }
-
-  private clearLeasePaymentsCache(leaseId: string) {
-    const { clearCache } = require('@/utils/api');
-    clearCache(`${this.baseUrl}/${leaseId}/payments`);
-  }
-
-  private clearLeaseDocumentsCache(leaseId: string) {
-    const { clearCache } = require('@/utils/api');
-    clearCache(`${this.baseUrl}/${leaseId}/documents`);
   }
 }
 

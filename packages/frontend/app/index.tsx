@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ImageBackground, TextInput, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, ActivityIndicator, RefreshControl } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
@@ -9,6 +9,22 @@ import { useDocumentTitle, useSEO } from '@/hooks/useDocumentTitle';
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { Toaster } from '@/lib/sonner';
 
+// Import real data hooks
+import { useProperties } from '@/hooks/usePropertyQueries';
+import { useRecentlyViewedProperties } from '@/hooks/useUserQueries';
+import { useOxy } from '@oxyhq/services';
+
+// Import components
+import { PropertyCard } from '@/components/PropertyCard';
+import { RecentlyViewedWidget } from '@/components/widgets/RecentlyViewedWidget';
+import { TrustScoreWidget } from '@/components/widgets/TrustScoreWidget';
+import { EcoCertificationWidget } from '@/components/widgets/EcoCertificationWidget';
+import { FeaturedPropertiesWidget } from '@/components/widgets/FeaturedPropertiesWidget';
+
+// Import utils
+import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
+import { getPropertyImageSource } from '@/utils/propertyUtils';
+
 // Type assertion for Ionicons compatibility with React 19
 const IconComponent = Ionicons as any;
 
@@ -16,6 +32,8 @@ export default function HomePage() {
   const { t } = useTranslation();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const { oxyServices, activeSessionId } = useOxy();
 
   // Set enhanced SEO for home page
   useSEO({
@@ -25,20 +43,89 @@ export default function HomePage() {
     type: 'website'
   });
 
-  const featuredCities = [
-    { id: '1', name: 'Barcelona', count: 128 },
-    { id: '2', name: 'Berlin', count: 94 },
-    { id: '3', name: 'Stockholm', count: 75 },
-    { id: '4', name: 'Amsterdam', count: 103 },
-  ];
+  // Helper function to map Property to PropertyCard props
+  const mapPropertyToCardProps = (property: any) => {
+    const title = generatePropertyTitle({
+      type: property.type,
+      address: property.address,
+      bedrooms: property.bedrooms,
+      bathrooms: property.bathrooms
+    });
+
+    const location = `${property.address?.city || 'Unknown'}, ${property.address?.state || ''}`;
+
+    return {
+      id: property._id || property.id,
+      title,
+      location,
+      price: property.rent?.amount || 0,
+      currency: property.rent?.currency || '$',
+      type: property.type as any,
+      imageSource: getPropertyImageSource(property.images),
+      bedrooms: property.bedrooms || 0,
+      bathrooms: property.bathrooms || 0,
+      size: property.squareFootage || 0,
+      sizeUnit: 'm²',
+      isFavorite: false,
+      isVerified: property.amenities?.includes('verified') || false,
+      onPress: () => router.push(`/properties/${property._id || property.id}`),
+    };
+  };
+
+  // Fetch real data
+  const { data: propertiesData, isLoading: propertiesLoading, refetch: refetchProperties } = useProperties({
+    limit: 8,
+    status: 'available'
+  });
+
+  const { data: recentProperties, isLoading: recentLoading, refetch: refetchRecent } = useRecentlyViewedProperties();
+
+  // Memoized data processing
+  const featuredProperties = useMemo(() => {
+    if (!propertiesData?.properties) return [];
+    return propertiesData.properties.slice(0, 4);
+  }, [propertiesData]);
 
   const propertyTypes = [
-    { id: 'apartment', name: 'Apartments', icon: 'business-outline' },
-    { id: 'house', name: 'Houses', icon: 'home-outline' },
-    { id: 'room', name: 'Rooms', icon: 'bed-outline' },
-    { id: 'studio', name: 'Studios', icon: 'home-outline' },
-    { id: 'coliving', name: 'Co-living', icon: 'people-outline' },
+    { id: 'apartment', name: 'Apartments', icon: 'business-outline', count: 0 },
+    { id: 'house', name: 'Houses', icon: 'home-outline', count: 0 },
+    { id: 'room', name: 'Rooms', icon: 'bed-outline', count: 0 },
+    { id: 'studio', name: 'Studios', icon: 'home-outline', count: 0 },
+    { id: 'coliving', name: 'Co-living', icon: 'people-outline', count: 0 },
   ];
+
+  // Calculate property type counts
+  const propertyTypeCounts = useMemo(() => {
+    if (!propertiesData?.properties) return propertyTypes;
+
+    const counts = propertiesData.properties.reduce((acc, property) => {
+      acc[property.type] = (acc[property.type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return propertyTypes.map(type => ({
+      ...type,
+      count: counts[type.id] || 0
+    }));
+  }, [propertiesData, propertyTypes]);
+
+  // Get top cities from real data
+  const topCities = useMemo(() => {
+    if (!propertiesData?.properties) return [];
+
+    const cityCounts = propertiesData.properties.reduce((acc, property) => {
+      const city = property.address?.city;
+      if (city) {
+        acc[city] = (acc[city] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(cityCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 4)
+      .map(([city, count]) => ({ id: city, name: city, count }));
+  }, [propertiesData]);
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -46,9 +133,30 @@ export default function HomePage() {
     }
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        refetchProperties(),
+        refetchRecent()
+      ]);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const isAuthenticated = !!(oxyServices && activeSessionId);
+
   return (
     <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-      <ScrollView style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {/* Hero Section */}
         <View style={styles.heroSection}>
           <View style={styles.heroContent}>
@@ -111,11 +219,49 @@ export default function HomePage() {
           </View>
         </View>
 
-        {/* Featured Cities */}
+        {/* Recently Viewed Properties (if authenticated) */}
+        {isAuthenticated && (
+          <View style={styles.recentSection}>
+            <RecentlyViewedWidget />
+          </View>
+        )}
+
+        {/* Featured Properties */}
+        <View style={styles.featuredSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{t("home.featured.title")}</Text>
+            <TouchableOpacity onPress={() => router.push('/properties')}>
+              <Text style={styles.viewAllText}>{t("home.viewAll")}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {propertiesLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primaryColor} />
+              <Text style={styles.loadingText}>Loading properties...</Text>
+            </View>
+          ) : featuredProperties.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+              {featuredProperties.map((property) => (
+                <View key={property._id || property.id} style={styles.propertyCardContainer}>
+                  <PropertyCard {...mapPropertyToCardProps(property)} />
+                </View>
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <IconComponent name="home-outline" size={48} color={colors.COLOR_BLACK_LIGHT_4} />
+              <Text style={styles.emptyText}>No properties available</Text>
+              <Text style={styles.emptySubtext}>Check back later for new listings</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Top Cities */}
         <View style={styles.citiesSection}>
           <Text style={styles.sectionTitle}>{t("home.cities.title")}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-            {featuredCities.map((city) => (
+            {topCities.map((city) => (
               <TouchableOpacity
                 key={city.id}
                 style={styles.cityCard}
@@ -134,7 +280,7 @@ export default function HomePage() {
         <View style={styles.typesSection}>
           <Text style={styles.sectionTitle}>{t("home.categories.title")}</Text>
           <View style={styles.categoryContainer}>
-            {propertyTypes.map((type) => (
+            {propertyTypeCounts.map((type) => (
               <TouchableOpacity
                 key={type.id}
                 style={styles.categoryCard}
@@ -144,12 +290,25 @@ export default function HomePage() {
                   <IconComponent name={type.icon as keyof typeof IconComponent.glyphMap} size={32} color={colors.primaryColor} />
                 </View>
                 <Text style={styles.categoryName}>{type.name}</Text>
+                <Text style={styles.categoryCount}>{type.count} available</Text>
                 <View style={styles.categoryBadge}>
                   <Text style={styles.categoryBadgeText}>{t("home.categories.view")}</Text>
                 </View>
               </TouchableOpacity>
             ))}
           </View>
+        </View>
+
+        {/* Trust Score Widget (if authenticated) */}
+        {isAuthenticated && (
+          <View style={styles.widgetSection}>
+            <TrustScoreWidget />
+          </View>
+        )}
+
+        {/* Eco Certification Widget */}
+        <View style={styles.widgetSection}>
+          <EcoCertificationWidget />
         </View>
 
         {/* Horizon Initiative */}
@@ -169,19 +328,34 @@ export default function HomePage() {
           </View>
         </View>
 
-        {/* Eco Certification */}
-        <View style={styles.ecoSection}>
-          <View style={styles.ecoIcon}>
-            <IconComponent name="leaf" size={40} color="green" />
-          </View>
-          <View style={styles.ecoContent}>
-            <Text style={styles.ecoTitle}>{t("home.eco.title")}</Text>
-            <Text style={styles.ecoDescription}>
-              {t("home.eco.description")}
-            </Text>
-            <TouchableOpacity style={styles.ecoButton} onPress={() => router.push('/properties/eco')}>
-              <Text style={styles.ecoButtonText}>{t("home.eco.viewEcoProperties")}</Text>
-            </TouchableOpacity>
+        {/* Stats Section */}
+        <View style={styles.statsSection}>
+          <Text style={styles.sectionTitle}>Platform Statistics</Text>
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <IconComponent name="home" size={24} color={colors.primaryColor} />
+              <Text style={styles.statNumber}>{propertiesData?.total || 0}</Text>
+              <Text style={styles.statLabel}>Total Properties</Text>
+            </View>
+            <View style={styles.statCard}>
+              <IconComponent name="people" size={24} color={colors.primaryColor} />
+              <Text style={styles.statNumber}>{propertiesData?.properties?.filter(p => p.status === 'available').length || 0}</Text>
+              <Text style={styles.statLabel}>Available Now</Text>
+            </View>
+            <View style={styles.statCard}>
+              <IconComponent name="leaf" size={24} color="green" />
+              <Text style={styles.statNumber}>
+                {propertiesData?.properties?.filter(p =>
+                  p.amenities?.some(a => a.includes('eco') || a.includes('green') || a.includes('solar'))
+                ).length || 0}
+              </Text>
+              <Text style={styles.statLabel}>Eco-Friendly</Text>
+            </View>
+            <View style={styles.statCard}>
+              <IconComponent name="star" size={24} color="#FFD700" />
+              <Text style={styles.statNumber}>{topCities.length}</Text>
+              <Text style={styles.statLabel}>Cities Covered</Text>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -261,6 +435,17 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     color: colors.COLOR_BLACK,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  viewAllText: {
+    color: colors.primaryColor,
+    fontWeight: '600',
+    fontSize: 16,
+  },
   trustSection: {
     padding: 20,
     marginTop: 20,
@@ -294,11 +479,45 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.COLOR_BLACK_LIGHT_3,
   },
-  citiesSection: {
+  recentSection: {
+    paddingHorizontal: 20,
+    marginTop: 20,
+  },
+  featuredSection: {
     padding: 20,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.COLOR_BLACK_LIGHT_3,
+    marginTop: 10,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK_LIGHT_4,
+    marginTop: 5,
   },
   horizontalScroll: {
     flexDirection: 'row',
+  },
+  propertyCardContainer: {
+    marginRight: 15,
+    width: 280,
+  },
+  citiesSection: {
+    padding: 20,
   },
   cityCard: {
     width: 150,
@@ -332,7 +551,7 @@ const styles = StyleSheet.create({
   categoryCard: {
     width: '49%',
     backgroundColor: colors.primaryLight,
-    padding: 10,
+    padding: 15,
     borderRadius: 35,
     alignItems: 'center',
     borderWidth: 1,
@@ -350,20 +569,28 @@ const styles = StyleSheet.create({
   categoryName: {
     fontWeight: '600',
     fontSize: 16,
-    marginBottom: 8,
+    marginBottom: 4,
     color: colors.COLOR_BLACK,
+  },
+  categoryCount: {
+    fontSize: 12,
+    color: colors.COLOR_BLACK_LIGHT_3,
+    marginBottom: 8,
   },
   categoryBadge: {
     backgroundColor: colors.primaryColor,
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 15,
-    marginTop: 10,
   },
   categoryBadgeText: {
     color: 'white',
     fontSize: 12,
     fontWeight: '600',
+  },
+  widgetSection: {
+    paddingHorizontal: 20,
+    marginTop: 20,
   },
   horizonSection: {
     backgroundColor: colors.primaryLight,
@@ -403,40 +630,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  ecoSection: {
-    flexDirection: 'row',
-    backgroundColor: '#e7f4e4',
+  statsSection: {
     padding: 20,
-    margin: 20,
-    marginTop: 0,
-    borderRadius: 35,
+    marginTop: 20,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  statCard: {
+    width: '48%',
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 12,
     alignItems: 'center',
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  ecoIcon: {
-    marginRight: 15,
-  },
-  ecoContent: {
-    flex: 1,
-  },
-  ecoTitle: {
-    fontSize: 18,
+  statNumber: {
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 5,
-    color: '#2e7d32',
+    color: colors.primaryColor,
+    marginTop: 8,
   },
-  ecoDescription: {
-    marginBottom: 10,
-    lineHeight: 20,
-  },
-  ecoButton: {
-    backgroundColor: 'green',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-  },
-  ecoButtonText: {
-    color: 'white',
-    fontWeight: '600',
+  statLabel: {
+    fontSize: 12,
+    color: colors.COLOR_BLACK_LIGHT_3,
+    marginTop: 4,
+    textAlign: 'center',
   },
 });

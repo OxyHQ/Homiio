@@ -5,7 +5,7 @@
 
 const express = require('express');
 const { notificationController } = require('../controllers');
-const { validation } = require('../middlewares');
+const { validation, asyncHandler } = require('../middlewares');
 
 module.exports = function(authenticateToken) {
   const router = express.Router();
@@ -14,27 +14,27 @@ module.exports = function(authenticateToken) {
   router.use(authenticateToken);
 
   // Notification management
-  router.get('/', notificationController.getNotifications);
+  router.get('/', asyncHandler(notificationController.getNotifications));
   router.get('/:notificationId', 
     validation.validateId('notificationId'),
-    notificationController.getNotificationById
+    asyncHandler(notificationController.getNotificationById)
   );
   router.patch('/:notificationId/read', 
     validation.validateId('notificationId'),
-    notificationController.markAsRead
+    asyncHandler(notificationController.markAsRead)
   );
   router.delete('/:notificationId', 
     validation.validateId('notificationId'),
-    notificationController.deleteNotification
+    asyncHandler(notificationController.deleteNotification)
   );
 
   // Bulk operations
-  router.patch('/read-all', notificationController.markAllAsRead);
-  router.delete('/clear-all', notificationController.clearAllNotifications);
+  router.patch('/read-all', asyncHandler(notificationController.markAllAsRead));
+  router.delete('/clear-all', asyncHandler(notificationController.clearAllNotifications));
 
   // Notification preferences
-  router.get('/preferences/settings', notificationController.getNotificationSettings);
-  router.put('/preferences/settings', notificationController.updateNotificationSettings);
+  router.get('/preferences/settings', asyncHandler(notificationController.getNotificationSettings));
+  router.put('/preferences/settings', asyncHandler(notificationController.updateNotificationSettings));
 
   return router;
 };

@@ -1,4 +1,4 @@
-import api, { getCacheKey, setCacheEntry, getCacheEntry } from '@/utils/api';
+import api from '@/utils/api';
 
 export interface Notification {
   id: string;
@@ -73,79 +73,38 @@ class NotificationService {
     page: number;
     totalPages: number;
   }> {
-    const cacheKey = getCacheKey(this.baseUrl, filters);
-    const cached = getCacheEntry<any>(cacheKey);
-    
-    if (cached) {
-      return cached;
-    }
-
     const response = await api.get(this.baseUrl, { params: filters });
-    setCacheEntry(cacheKey, response.data, 60000); // 1 minute cache for notifications
     return response.data;
   }
 
   async getNotification(notificationId: string): Promise<Notification> {
-    const cacheKey = getCacheKey(`${this.baseUrl}/${notificationId}`);
-    const cached = getCacheEntry<Notification>(cacheKey);
-    
-    if (cached) {
-      return cached;
-    }
-
     const response = await api.get(`${this.baseUrl}/${notificationId}`);
-    setCacheEntry(cacheKey, response.data.data);
     return response.data.data;
   }
 
   async markAsRead(notificationId: string): Promise<void> {
     await api.patch(`${this.baseUrl}/${notificationId}/read`);
-    
-    // Clear notifications cache to refresh read status
-    this.clearNotificationsCache();
   }
 
   async deleteNotification(notificationId: string): Promise<void> {
     await api.delete(`${this.baseUrl}/${notificationId}`);
-    
-    // Clear related caches
-    this.clearNotificationCache(notificationId);
-    this.clearNotificationsCache();
   }
 
   async markAllAsRead(): Promise<void> {
     await api.patch(`${this.baseUrl}/read-all`);
-    
-    // Clear notifications cache
-    this.clearNotificationsCache();
   }
 
   async clearAllNotifications(): Promise<void> {
     await api.delete(`${this.baseUrl}/clear-all`);
-    
-    // Clear notifications cache
-    this.clearNotificationsCache();
   }
 
   async getNotificationSettings(): Promise<NotificationSettings> {
-    const cacheKey = getCacheKey(`${this.baseUrl}/preferences/settings`);
-    const cached = getCacheEntry<NotificationSettings>(cacheKey);
-    
-    if (cached) {
-      return cached;
-    }
-
     const response = await api.get(`${this.baseUrl}/preferences/settings`);
-    setCacheEntry(cacheKey, response.data.data, 300000); // 5 minute cache
     return response.data.data;
   }
 
   async updateNotificationSettings(settings: Partial<NotificationSettings>): Promise<NotificationSettings> {
     const response = await api.put(`${this.baseUrl}/preferences/settings`, settings);
-    
-    // Clear settings cache
-    this.clearNotificationSettingsCache();
-    
     return response.data.data;
   }
 
@@ -178,22 +137,6 @@ class NotificationService {
       console.error('Failed to get high priority notifications:', error);
       return [];
     }
-  }
-
-  // Cache management
-  private clearNotificationCache(notificationId: string) {
-    const { clearCache } = require('@/utils/api');
-    clearCache(`${this.baseUrl}/${notificationId}`);
-  }
-
-  private clearNotificationsCache() {
-    const { clearCache } = require('@/utils/api');
-    clearCache(this.baseUrl);
-  }
-
-  private clearNotificationSettingsCache() {
-    const { clearCache } = require('@/utils/api');
-    clearCache(`${this.baseUrl}/preferences/settings`);
   }
 }
 

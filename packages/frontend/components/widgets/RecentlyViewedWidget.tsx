@@ -7,13 +7,14 @@ import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
 import { useRecentlyViewedProperties } from '@/hooks/useUserQueries';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
+import { getPropertyImageSource } from '@/utils/propertyUtils';
 
 interface PropertyItem {
     id: string;
     title: string;
     location: string;
     price: string;
-    imageUrl: string;
+    imageSource: any; // Can be string URL or imported image source
     isEcoCertified?: boolean;
 }
 
@@ -37,7 +38,7 @@ export function RecentlyViewedWidget() {
             title: generatedTitle,
             location: `${property.address?.city || 'Unknown'}, ${property.address?.state || ''}`,
             price: `$${property.rent?.amount || 0}/${property.rent?.paymentFrequency || 'month'}`,
-            imageUrl: property.images?.[0] || 'https://via.placeholder.com/80',
+            imageSource: getPropertyImageSource(property.images),
             isEcoCertified:
                 property.amenities?.includes('eco-friendly') ||
                 property.amenities?.includes('green') ||
@@ -88,7 +89,7 @@ export function RecentlyViewedWidget() {
                         onPress={() => navigateToProperty(property.id)}
                     >
                         <Image
-                            source={{ uri: property.imageUrl }}
+                            source={property.imageSource}
                             style={styles.propertyImage}
                         />
 

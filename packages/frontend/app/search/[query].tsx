@@ -19,6 +19,7 @@ import { PropertyCard } from '@/components/PropertyCard';
 import { useSearchProperties } from '@/hooks/usePropertyQueries';
 import { Property, PropertyFilters } from '@/services/propertyService';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
+import { getPropertyImageSource } from '@/utils/propertyUtils';
 
 interface SearchFilters {
     type?: string;
@@ -116,7 +117,7 @@ export default function SearchResultsScreen() {
             price: property.rent.amount,
             currency: property.rent.currency,
             type: property.type as any,
-            imageUrl: property.images?.[0] || 'https://via.placeholder.com/300x200',
+            imageSource: getPropertyImageSource(property.images),
             bedrooms: property.bedrooms || 0,
             bathrooms: property.bathrooms || 0,
             size: property.squareFootage || 0,

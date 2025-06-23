@@ -1,4 +1,4 @@
-import { postData } from '@/utils/api';
+import { api } from '@/utils/api';
 
 interface TestPayload {
   title: string;
@@ -6,6 +6,7 @@ interface TestPayload {
 }
 
 export const runTest = async (payload: TestPayload) => {
-  return postData('/api/test', payload);
+  const response = await api.post('/api/test', payload);
+  return response.data;
 };
 

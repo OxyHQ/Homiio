@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
 import { useProperties } from '@/hooks/usePropertyQueries';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
+import { getPropertyImageSource } from '@/utils/propertyUtils';
 import { Ionicons } from '@expo/vector-icons';
 
 const IconComponent = Ionicons as any;
@@ -68,6 +69,7 @@ function FeaturedProperties({ properties }: { properties: any[] }) {
             title: generatedTitle,
             location: `${property.address?.city || 'Unknown'}, ${property.address?.state || 'Unknown'}`,
             price: `$${property.rent?.amount || 0}/${property.rent?.paymentFrequency || 'month'}`,
+            imageSource: getPropertyImageSource(property.images),
             isEcoCertified: property.amenities?.includes('eco-friendly') ||
                 property.amenities?.includes('green') ||
                 property.amenities?.includes('solar') || false,
@@ -89,9 +91,10 @@ function FeaturedProperties({ properties }: { properties: any[] }) {
             {propertyItems.map((property) => (
                 <Link href={`/properties/${property.id}`} key={property.id} asChild>
                     <TouchableOpacity style={styles.propertyItem}>
-                        <View style={styles.propertyImagePlaceholder}>
-                            <Text style={styles.propertyImageText}>Property Image</Text>
-                        </View>
+                        <Image
+                            source={property.imageSource}
+                            style={styles.propertyImage}
+                        />
                         <View style={styles.propertyContent}>
                             <View style={styles.propertyHeader}>
                                 <Text style={styles.propertyTitle} numberOfLines={2}>{property.title}</Text>
@@ -159,17 +162,10 @@ const styles = StyleSheet.create({
         borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
         paddingBottom: 15,
     },
-    propertyImagePlaceholder: {
+    propertyImage: {
         width: 80,
         height: 80,
-        backgroundColor: '#e1e1e1',
         borderRadius: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    propertyImageText: {
-        color: '#666',
-        fontSize: 12,
     },
     propertyContent: {
         flex: 1,

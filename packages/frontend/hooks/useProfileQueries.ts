@@ -19,7 +19,7 @@ export const profileKeys = {
 
 // Hook to get or create primary profile
 export function usePrimaryProfile() {
-  const { user } = useOxy();
+  const { user, oxyServices, activeSessionId } = useOxy();
   
   console.log('usePrimaryProfile - user:', user ? 'authenticated' : 'not authenticated');
   
@@ -27,7 +27,7 @@ export function usePrimaryProfile() {
     queryKey: profileKeys.primary(),
     queryFn: async () => {
       try {
-        const profile = await profileService.getOrCreatePrimaryProfile();
+        const profile = await profileService.getOrCreatePrimaryProfile(oxyServices, activeSessionId || undefined);
         // The backend now returns null when no profile exists, so we can return it directly
         return profile;
       } catch (error: any) {
@@ -36,7 +36,7 @@ export function usePrimaryProfile() {
         throw error;
       }
     },
-    enabled: !!user, // Only run when user is authenticated
+    enabled: !!user && !!oxyServices && !!activeSessionId, // Only run when user is authenticated
     staleTime: 10 * 60 * 1000, // 10 minutes - increase stale time to reduce unnecessary fetches  
     gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache longer
     refetchOnWindowFocus: false, // Reduce aggressive refetching
@@ -46,29 +46,29 @@ export function usePrimaryProfile() {
 
 // Hook to get all user profiles
 export function useUserProfiles() {
-  const { user } = useOxy();
+  const { oxyServices, activeSessionId, user } = useOxy();
   
   console.log('useUserProfiles - user:', user ? 'authenticated' : 'not authenticated');
   
   return useQuery<Profile[]>({
     queryKey: profileKeys.userProfiles(),
-    queryFn: () => profileService.getUserProfiles(),
-    enabled: !!user, // Only run when user is authenticated
+    queryFn: () => profileService.getUserProfiles(oxyServices, activeSessionId || undefined),
+    enabled: !!user && !!oxyServices && !!activeSessionId, // Only run when user is authenticated
     staleTime: 10 * 60 * 1000, // 10 minutes - increase stale time to reduce unnecessary fetches
     gcTime: 30 * 60 * 1000, // 30 minutes
     refetchOnWindowFocus: false, // Reduce aggressive refetching
-    refetchOnMount: false, // Don't refetch on every mount
+    refetchOnMount: true, // Don't refetch on every mount
   });
 }
 
 // Hook to get profile by type
 export function useProfileByType(profileType: 'personal' | 'agency' | 'business') {
-  const { user } = useOxy();
+  const { user, oxyServices, activeSessionId } = useOxy();
   
   return useQuery<Profile>({
     queryKey: profileKeys.byType(profileType),
-    queryFn: () => profileService.getProfileByType(profileType),
-    enabled: !!user, // Only run when user is authenticated
+    queryFn: () => profileService.getProfileByType(profileType, oxyServices, activeSessionId || undefined),
+    enabled: !!user && !!oxyServices && !!activeSessionId, // Only run when user is authenticated
     staleTime: 10 * 60 * 1000, // 10 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
     refetchOnWindowFocus: false,
@@ -78,12 +78,12 @@ export function useProfileByType(profileType: 'personal' | 'agency' | 'business'
 
 // Hook to get agency memberships
 export function useAgencyMemberships() {
-  const { user } = useOxy();
+  const { user, oxyServices, activeSessionId } = useOxy();
   
   return useQuery<Profile[]>({
     queryKey: profileKeys.agencyMemberships(),
-    queryFn: () => profileService.getAgencyMemberships(),
-    enabled: !!user, // Only run when user is authenticated
+    queryFn: () => profileService.getAgencyMemberships(oxyServices, activeSessionId || undefined),
+    enabled: !!user && !!oxyServices && !!activeSessionId, // Only run when user is authenticated
     staleTime: 10 * 60 * 1000, // 10 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
     refetchOnWindowFocus: false,
@@ -94,9 +94,10 @@ export function useAgencyMemberships() {
 // Hook to create a new profile
 export function useCreateProfile() {
   const queryClient = useQueryClient();
+  const { oxyServices, activeSessionId } = useOxy();
 
   return useMutation({
-    mutationFn: (profileData: CreateProfileData) => profileService.createProfile(profileData),
+    mutationFn: (profileData: CreateProfileData) => profileService.createProfile(profileData, oxyServices, activeSessionId || undefined),
     onSuccess: () => {
       // Invalidate and refetch profile queries
       queryClient.invalidateQueries({ queryKey: profileKeys.all });
@@ -111,9 +112,10 @@ export function useCreateProfile() {
 // Hook to update primary profile (no profile ID needed)
 export function useUpdatePrimaryProfile() {
   const queryClient = useQueryClient();
+  const { oxyServices, activeSessionId } = useOxy();
 
   return useMutation({
-    mutationFn: (updateData: UpdateProfileData) => profileService.updatePrimaryProfile(updateData),
+    mutationFn: (updateData: UpdateProfileData) => profileService.updatePrimaryProfile(updateData, oxyServices, activeSessionId || undefined),
     onSuccess: (data: Profile) => {
       // Immediately update the cache with the new data
       queryClient.setQueryData(profileKeys.primary(), data);
@@ -134,10 +136,11 @@ export function useUpdatePrimaryProfile() {
 // Hook to update primary profile trust score (no profile ID needed)
 export function useUpdatePrimaryTrustScore() {
   const queryClient = useQueryClient();
+  const { oxyServices, activeSessionId } = useOxy();
 
   return useMutation({
     mutationFn: ({ factor, value }: { factor: string; value: number }) =>
-      profileService.updatePrimaryTrustScore(factor, value),
+      profileService.updatePrimaryTrustScore(factor, value, oxyServices, activeSessionId || undefined),
     onSuccess: (data: Profile) => {
       // Invalidate and refetch profile queries
       queryClient.invalidateQueries({ queryKey: profileKeys.all });
@@ -153,9 +156,10 @@ export function useUpdatePrimaryTrustScore() {
 // Hook to recalculate primary profile trust score
 export function useRecalculatePrimaryTrustScore() {
   const queryClient = useQueryClient();
+  const { oxyServices, activeSessionId } = useOxy();
 
   return useMutation({
-    mutationFn: () => profileService.recalculatePrimaryTrustScore(),
+    mutationFn: () => profileService.recalculatePrimaryTrustScore(oxyServices, activeSessionId || undefined),
     onSuccess: (data: { profile: Profile; trustScore: any }) => {
       // Invalidate and refetch profile queries to ensure fresh data
       queryClient.invalidateQueries({ queryKey: profileKeys.primary() });
@@ -172,10 +176,11 @@ export function useRecalculatePrimaryTrustScore() {
 // Hook to update a profile
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
+  const { oxyServices, activeSessionId } = useOxy();
 
   return useMutation({
     mutationFn: ({ profileId, updateData }: { profileId: string; updateData: UpdateProfileData }) =>
-      profileService.updateProfile(profileId, updateData),
+      profileService.updateProfile(profileId, updateData, oxyServices, activeSessionId || undefined),
     onSuccess: (data: Profile, variables: { profileId: string; updateData: UpdateProfileData }) => {
       // Invalidate and refetch profile queries
       queryClient.invalidateQueries({ queryKey: profileKeys.all });
@@ -191,9 +196,10 @@ export function useUpdateProfile() {
 // Hook to delete a profile
 export function useDeleteProfile() {
   const queryClient = useQueryClient();
+  const { oxyServices, activeSessionId } = useOxy();
 
   return useMutation({
-    mutationFn: (profileId: string) => profileService.deleteProfile(profileId),
+    mutationFn: (profileId: string) => profileService.deleteProfile(profileId, oxyServices, activeSessionId || undefined),
     onSuccess: () => {
       // Invalidate and refetch profile queries
       queryClient.invalidateQueries({ queryKey: profileKeys.all });
@@ -208,6 +214,7 @@ export function useDeleteProfile() {
 // Hook to add agency member
 export function useAddAgencyMember() {
   const queryClient = useQueryClient();
+  const { oxyServices, activeSessionId } = useOxy();
 
   return useMutation({
     mutationFn: ({ 
@@ -218,7 +225,7 @@ export function useAddAgencyMember() {
       profileId: string; 
       memberOxyUserId: string; 
       role: 'owner' | 'admin' | 'agent' | 'viewer' 
-    }) => profileService.addAgencyMember(profileId, memberOxyUserId, role),
+    }) => profileService.addAgencyMember(profileId, memberOxyUserId, role, oxyServices, activeSessionId || undefined),
     onSuccess: (data: Profile, variables: { profileId: string; memberOxyUserId: string; role: 'owner' | 'admin' | 'agent' | 'viewer' }) => {
       // Invalidate and refetch profile queries
       queryClient.invalidateQueries({ queryKey: profileKeys.all });
@@ -234,6 +241,7 @@ export function useAddAgencyMember() {
 // Hook to remove agency member
 export function useRemoveAgencyMember() {
   const queryClient = useQueryClient();
+  const { oxyServices, activeSessionId } = useOxy();
 
   return useMutation({
     mutationFn: ({ 
@@ -242,7 +250,7 @@ export function useRemoveAgencyMember() {
     }: { 
       profileId: string; 
       memberOxyUserId: string; 
-    }) => profileService.removeAgencyMember(profileId, memberOxyUserId),
+    }) => profileService.removeAgencyMember(profileId, memberOxyUserId, oxyServices, activeSessionId || undefined),
     onSuccess: (data: Profile, variables: { profileId: string; memberOxyUserId: string }) => {
       // Invalidate and refetch profile queries
       queryClient.invalidateQueries({ queryKey: profileKeys.all });
@@ -258,6 +266,7 @@ export function useRemoveAgencyMember() {
 // Hook to update trust score
 export function useUpdateTrustScore() {
   const queryClient = useQueryClient();
+  const { oxyServices, activeSessionId } = useOxy();
 
   return useMutation({
     mutationFn: ({ 
@@ -268,7 +277,7 @@ export function useUpdateTrustScore() {
       profileId: string; 
       factor: string; 
       value: number; 
-    }) => profileService.updateTrustScore(profileId, factor, value),
+    }) => profileService.updateTrustScore(profileId, factor, value, oxyServices, activeSessionId || undefined),
     onSuccess: (data: Profile, variables: { profileId: string; factor: string; value: number }) => {
       // Invalidate and refetch profile queries
       queryClient.invalidateQueries({ queryKey: profileKeys.all });

@@ -22,6 +22,7 @@ import { useUserProperties } from '@/hooks/useUserQueries';
 import { useOxy } from '@oxyhq/services';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { getPropertyImageSource } from '@/utils/propertyUtils';
 
 // Type assertion for Ionicons compatibility with React 19
 const IconComponent = Ionicons as any;
@@ -94,7 +95,7 @@ export default function MyPropertiesScreen() {
                     price={price}
                     currency={currency}
                     type={item.type || 'apartment'}
-                    imageUrl={item.images?.[0] || 'https://via.placeholder.com/300x200?text=Property'}
+                    imageSource={getPropertyImageSource(item.images)}
                     bedrooms={item.bedrooms || 0}
                     bathrooms={item.bathrooms || 0}
                     size={item.squareFootage || 0}

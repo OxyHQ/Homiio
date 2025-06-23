@@ -22,6 +22,7 @@ class ProfileController {
     this.updateTrustScore = this.updateTrustScore.bind(this);
     this.getTrustScore = this.getTrustScore.bind(this);
     this.recalculatePrimaryTrustScore = this.recalculatePrimaryTrustScore.bind(this);
+    this.activateProfile = this.activateProfile.bind(this);
   }
 
   /**
@@ -375,34 +376,27 @@ class ProfileController {
 
       // If activating this profile, deactivate all others for this user
       if (updateData.isActive === true) {
-        // Find all other profiles for this user and deactivate them
-        const otherProfiles = await Profile.find({ 
-          oxyUserId, 
-          _id: { $ne: profile._id } 
+        // Use the new activateProfile method for better consistency
+        await Profile.activateProfile(oxyUserId, profile._id);
+        // Update the profile object to reflect the changes
+        profile.isActive = true;
+      } else {
+        // Update profile data
+        Object.keys(updateData).forEach(key => {
+          if (key === "personalProfile" || key === "agencyProfile" || key === "businessProfile") {
+            profile[key] = { ...profile[key], ...updateData[key] };
+          } else {
+            profile[key] = updateData[key];
+          }
         });
-        
-        // Deactivate each profile individually to ensure data consistency
-        for (const otherProfile of otherProfiles) {
-          otherProfile.isActive = false;
-          await otherProfile.save();
+
+        // Recalculate trust score for personal profiles
+        if (profile.profileType === "personal") {
+          profile.calculateTrustScore();
         }
+
+        await profile.save();
       }
-
-      // Update profile data
-      Object.keys(updateData).forEach(key => {
-        if (key === "personalProfile" || key === "agencyProfile" || key === "businessProfile") {
-          profile[key] = { ...profile[key], ...updateData[key] };
-        } else {
-          profile[key] = updateData[key];
-        }
-      });
-
-      // Recalculate trust score for personal profiles
-      if (profile.profileType === "personal") {
-        profile.calculateTrustScore();
-      }
-
-      await profile.save();
 
       // Clear cache after update
       this.clearCachedProfile(oxyUserId, 'primary');
@@ -626,55 +620,44 @@ class ProfileController {
 
       // If activating this profile, deactivate all others for this user
       if (updateData.isActive === true) {
-        // Find all other profiles for this user and deactivate them
-        const otherProfiles = await Profile.find({ 
-          oxyUserId, 
-          _id: { $ne: profile._id } 
-        });
-        
-        // Deactivate each profile individually to ensure data consistency
-        for (const otherProfile of otherProfiles) {
-          otherProfile.isActive = false;
-          await otherProfile.save();
+        // Use the new activateProfile method for better consistency
+        await Profile.activateProfile(oxyUserId, profile._id);
+        // Update the profile object to reflect the changes
+        profile.isActive = true;
+      } else {
+        // Update the profile
+        if (updateData.personalProfile) {
+          profile.personalProfile = {
+            ...profile.personalProfile,
+            ...updateData.personalProfile
+          };
         }
-      }
 
-      // Update the profile
-      if (updateData.personalProfile) {
-        profile.personalProfile = {
-          ...profile.personalProfile,
-          ...updateData.personalProfile
-        };
-      }
+        if (updateData.agencyProfile) {
+          profile.agencyProfile = {
+            ...profile.agencyProfile,
+            ...updateData.agencyProfile
+          };
+        }
 
-      if (updateData.agencyProfile) {
-        profile.agencyProfile = {
-          ...profile.agencyProfile,
-          ...updateData.agencyProfile
-        };
-      }
+        if (updateData.businessProfile) {
+          profile.businessProfile = {
+            ...profile.businessProfile,
+            ...updateData.businessProfile
+          };
+        }
 
-      if (updateData.businessProfile) {
-        profile.businessProfile = {
-          ...profile.businessProfile,
-          ...updateData.businessProfile
-        };
-      }
+        if (updateData.isPrimary !== undefined) {
+          profile.isPrimary = updateData.isPrimary;
+        }
 
-      if (updateData.isPrimary !== undefined) {
-        profile.isPrimary = updateData.isPrimary;
-      }
+        // Recalculate trust score for personal profiles
+        if (profile.profileType === "personal") {
+          profile.calculateTrustScore();
+        }
 
-      if (updateData.isActive !== undefined) {
-        profile.isActive = updateData.isActive;
+        await profile.save();
       }
-
-      // Recalculate trust score for personal profiles
-      if (profile.profileType === "personal") {
-        profile.calculateTrustScore();
-      }
-
-      await profile.save();
 
       // Clear cache after update
       this.clearCachedProfile(oxyUserId, 'primary');
@@ -867,6 +850,51 @@ class ProfileController {
       );
     } catch (error) {
       console.error("Error recalculating primary trust score:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Activate a specific profile
+   */
+  async activateProfile(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      const { profileId } = req.params;
+      
+      if (!oxyUserId) {
+        return res.status(401).json(
+          errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
+        );
+      }
+
+      const profile = await Profile.findById(profileId);
+      
+      if (!profile) {
+        return res.status(404).json(
+          errorResponse("Profile not found", "PROFILE_NOT_FOUND")
+        );
+      }
+
+      if (profile.oxyUserId !== oxyUserId) {
+        return res.status(403).json(
+          errorResponse("Access denied", "ACCESS_DENIED")
+        );
+      }
+
+      if (profile.isPrimary) {
+        return res.status(400).json(
+          errorResponse("Cannot activate primary profile", "CANNOT_ACTIVATE_PRIMARY")
+        );
+      }
+
+      await Profile.activateProfile(oxyUserId, profile._id);
+
+      res.json(
+        successResponse(profile, "Profile activated successfully")
+      );
+    } catch (error) {
+      console.error("Error activating profile:", error);
       next(error);
     }
   }

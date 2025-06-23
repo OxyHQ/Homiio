@@ -8,7 +8,6 @@ const config = {
     baseURL: process.env.NODE_ENV === 'production' 
       ? process.env.OXY_API_URL || 'https://api.oxy.so'
       : 'http://localhost:3001',
-    apiKey: process.env.OXY_API_KEY,
   },
   
   // Database Configuration

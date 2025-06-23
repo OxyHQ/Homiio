@@ -1,5 +1,6 @@
 import { generatePropertyTitle } from './propertyTitleGenerator';
 import { Property } from '@/services/propertyService';
+import propertyPlaceholder from '@/assets/images/property_placeholder.jpg';
 
 /**
  * Get the title for a property, generating it dynamically if needed
@@ -22,4 +23,28 @@ export function getPropertyTitle(property: Property): string {
  */
 export function getPropertyDisplayTitle(property: Property): string {
   return getPropertyTitle(property);
+}
+
+/**
+ * Get the image source for a property, falling back to placeholder if no image is available
+ * This function can be used directly in Image source prop
+ * @param property - Property object or images array
+ * @returns The property image source (string URL or imported image)
+ */
+export function getPropertyImageSource(property: Property | string[] | undefined): any {
+  if (!property) {
+    return propertyPlaceholder;
+  }
+  
+  // If property is an array of images
+  if (Array.isArray(property)) {
+    return property[0] ? { uri: property[0] } : propertyPlaceholder;
+  }
+  
+  // If property is a Property object
+  if (property.images && property.images.length > 0) {
+    return { uri: property.images[0] };
+  }
+  
+  return propertyPlaceholder;
 } 

@@ -12,7 +12,7 @@ type PropertyCardProps = {
     price: number;
     currency?: string;
     type: PropertyType;
-    imageUrl: string;
+    imageSource: any; // Can be string URL or imported image source
     bedrooms: number;
     bathrooms: number;
     size: number;
@@ -45,7 +45,7 @@ export function PropertyCard({
     price,
     currency = '⊜',
     type,
-    imageUrl,
+    imageSource,
     bedrooms,
     bathrooms,
     size,
@@ -64,7 +64,7 @@ export function PropertyCard({
         >
             <View style={styles.imageContainer}>
                 <Image
-                    source={{ uri: imageUrl }}
+                    source={imageSource}
                     style={styles.image}
                     resizeMode="cover"
                 />

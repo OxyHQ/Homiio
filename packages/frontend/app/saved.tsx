@@ -13,6 +13,8 @@ import { IconButton } from '@/components/IconButton';
 import { colors } from '@/styles/colors';
 import type { Property } from '@/services/propertyService';
 import { useSEO } from '@/hooks/useDocumentTitle';
+import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
+import { getPropertyImageSource } from '@/utils/propertyUtils';
 
 interface SavedProperty extends Property {
     savedAt: string;
@@ -100,7 +102,7 @@ export default function SavedPropertiesScreen() {
                 location={`${item.address.city}, ${item.address.state}`}
                 price={item.rent.amount}
                 type={item.type === 'room' ? 'apartment' : item.type === 'studio' ? 'apartment' : item.type === 'house' ? 'house' : 'apartment'}
-                imageUrl={item.images?.[0] || ''}
+                imageSource={getPropertyImageSource(item.images)}
                 bedrooms={item.bedrooms || 0}
                 bathrooms={item.bathrooms || 0}
                 size={item.squareFootage || 0}

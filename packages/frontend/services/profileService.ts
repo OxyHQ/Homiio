@@ -1,4 +1,5 @@
-import api, { getCacheKey, setCacheEntry, getCacheEntry, clearCache } from '@/utils/api';
+import { api } from '@/utils/api';
+import { OxyServices } from '@oxyhq/services';
 
 export interface PersonalProfile {
   personalInfo?: {
@@ -217,24 +218,15 @@ class ProfileService {
   /**
    * Get or create user's primary profile
    */
-  async getOrCreatePrimaryProfile(): Promise<Profile | null> {
-    const cacheKey = getCacheKey(`${this.baseUrl}/me`);
-    
-    // Check cache first
-    const cachedData = getCacheEntry<Profile | null>(cacheKey);
-    if (cachedData) {
-      console.log('ProfileService: Returning cached profile data');
-      return cachedData;
-    }
-
-    console.log('ProfileService: Fetching fresh profile data from server');
-    const response = await api.get(`${this.baseUrl}/me`);
+  async getOrCreatePrimaryProfile(oxyServices?: OxyServices, activeSessionId?: string): Promise<Profile | null> {
+    console.log('ProfileService: Fetching profile data from server');
+    const response = await api.get(`${this.baseUrl}/me`, {
+      oxyServices,
+      activeSessionId,
+    });
     const profile = response.data.data; // This can now be null
     
     console.log('ProfileService: Received profile data:', profile);
-    
-    // Cache the result (including null)
-    setCacheEntry(cacheKey, profile, 10 * 60 * 1000); // Cache for 10 minutes
     
     return profile;
   }
@@ -242,18 +234,13 @@ class ProfileService {
   /**
    * Get all profiles for the current user
    */
-  async getUserProfiles(): Promise<Profile[]> {
-    const cacheKey = getCacheKey(`${this.baseUrl}/me/all`);
-    const cached = getCacheEntry<Profile[]>(cacheKey);
-
-    if (cached) {
-      return cached;
-    }
-
+  async getUserProfiles(oxyServices?: OxyServices, activeSessionId?: string): Promise<Profile[]> {
     try {
-      const response = await api.get(`${this.baseUrl}/me/all`);
+      const response = await api.get(`${this.baseUrl}/me/all`, {
+        oxyServices,
+        activeSessionId,
+      });
       const profiles = response.data.data;
-      setCacheEntry(cacheKey, profiles, 300000);
       return profiles;
     } catch (error) {
       console.error('Error getting user profiles:', error);
@@ -264,18 +251,13 @@ class ProfileService {
   /**
    * Get profile by type
    */
-  async getProfileByType(profileType: 'personal' | 'agency' | 'business'): Promise<Profile> {
-    const cacheKey = getCacheKey(`${this.baseUrl}/me/${profileType}`);
-    const cached = getCacheEntry<Profile>(cacheKey);
-
-    if (cached) {
-      return cached;
-    }
-
+  async getProfileByType(profileType: 'personal' | 'agency' | 'business', oxyServices?: OxyServices, activeSessionId?: string): Promise<Profile> {
     try {
-      const response = await api.get(`${this.baseUrl}/me/${profileType}`);
+      const response = await api.get(`${this.baseUrl}/me/${profileType}`, {
+        oxyServices,
+        activeSessionId,
+      });
       const profile = response.data.data;
-      setCacheEntry(cacheKey, profile, 300000);
       return profile;
     } catch (error) {
       console.error('Error getting profile by type:', error);
@@ -286,9 +268,12 @@ class ProfileService {
   /**
    * Create a new profile
    */
-  async createProfile(profileData: CreateProfileData): Promise<Profile> {
+  async createProfile(profileData: CreateProfileData, oxyServices?: OxyServices, activeSessionId?: string): Promise<Profile> {
     try {
-      const response = await api.post(`${this.baseUrl}`, profileData);
+      const response = await api.post(`${this.baseUrl}`, profileData, {
+        oxyServices,
+        activeSessionId,
+      });
       return response.data.data;
     } catch (error) {
       console.error('Error creating profile:', error);
@@ -299,21 +284,17 @@ class ProfileService {
   /**
    * Update primary profile (no profile ID needed)
    */
-  async updatePrimaryProfile(updateData: UpdateProfileData): Promise<Profile> {
+  async updatePrimaryProfile(updateData: UpdateProfileData, oxyServices?: OxyServices, activeSessionId?: string): Promise<Profile> {
     try {
       console.log('ProfileService: Updating primary profile with data:', updateData);
       
-      const response = await api.put(`${this.baseUrl}/me`, updateData);
+      const response = await api.put(`${this.baseUrl}/me`, updateData, {
+        oxyServices,
+        activeSessionId,
+      });
       const updatedProfile = response.data.data;
 
       console.log('ProfileService: Received updated profile from server:', updatedProfile);
-
-      // Clear all related caches to ensure fresh data
-      console.log('ProfileService: Clearing all related caches');
-      clearCache(`${this.baseUrl}/me`);
-      clearCache(`${this.baseUrl}/me/all`);
-      clearCache(`${this.baseUrl}/${updatedProfile.id}`);
-      clearCache(`${this.baseUrl}/${updatedProfile._id}`);
 
       return updatedProfile;
     } catch (error) {
@@ -325,15 +306,14 @@ class ProfileService {
   /**
    * Update primary profile trust score
    */
-  async updatePrimaryTrustScore(factor: string, value: number): Promise<Profile> {
+  async updatePrimaryTrustScore(factor: string, value: number, oxyServices?: OxyServices, activeSessionId?: string): Promise<Profile> {
     const response = await api.patch(`${this.baseUrl}/me/trust-score`, {
       factor,
       value
+    }, {
+      oxyServices,
+      activeSessionId,
     });
-    
-    // Update cache
-    const cacheKey = getCacheKey(`${this.baseUrl}/me`);
-    setCacheEntry(cacheKey, response.data.data);
     
     return response.data.data;
   }
@@ -341,12 +321,11 @@ class ProfileService {
   /**
    * Recalculate primary profile trust score
    */
-  async recalculatePrimaryTrustScore(): Promise<{ profile: Profile; trustScore: any }> {
-    const response = await api.post(`${this.baseUrl}/me/trust-score/recalculate`);
-    
-    // Update cache
-    const cacheKey = getCacheKey(`${this.baseUrl}/me`);
-    setCacheEntry(cacheKey, response.data.data.profile);
+  async recalculatePrimaryTrustScore(oxyServices?: OxyServices, activeSessionId?: string): Promise<{ profile: Profile; trustScore: any }> {
+    const response = await api.post(`${this.baseUrl}/me/trust-score/recalculate`, undefined, {
+      oxyServices,
+      activeSessionId,
+    });
     
     return response.data.data;
   }
@@ -354,24 +333,19 @@ class ProfileService {
   /**
    * Update profile
    */
-  async updateProfile(profileId: string, updateData: UpdateProfileData): Promise<Profile> {
+  async updateProfile(profileId: string, updateData: UpdateProfileData, oxyServices?: OxyServices, activeSessionId?: string): Promise<Profile> {
     try {
       console.log('ProfileService.updateProfile called with:', { profileId, updateData });
       console.log('Making API call to:', `${this.baseUrl}/${profileId}`);
       
-      const response = await api.put(`${this.baseUrl}/${profileId}`, updateData);
+      const response = await api.put(`${this.baseUrl}/${profileId}`, updateData, {
+        oxyServices,
+        activeSessionId,
+      });
       console.log('ProfileService.updateProfile API response:', response);
       
       const updatedProfile = response.data.data;
       console.log('ProfileService.updateProfile updated profile:', updatedProfile);
-
-      // If this profile was fetched earlier, update or invalidate cache
-      const cacheKey = getCacheKey(`${this.baseUrl}/${profileId}`);
-      setCacheEntry(cacheKey, updatedProfile);
-
-      // Also clear related caches so next fetch gets fresh data
-      clearCache(`${this.baseUrl}/me`);
-      clearCache(`${this.baseUrl}/me/all`);
 
       return updatedProfile;
     } catch (error) {
@@ -383,9 +357,12 @@ class ProfileService {
   /**
    * Delete profile
    */
-  async deleteProfile(profileId: string): Promise<void> {
+  async deleteProfile(profileId: string, oxyServices?: OxyServices, activeSessionId?: string): Promise<void> {
     try {
-      await api.delete(`${this.baseUrl}/${profileId}`);
+      await api.delete(`${this.baseUrl}/${profileId}`, {
+        oxyServices,
+        activeSessionId,
+      });
     } catch (error) {
       console.error('Error deleting profile:', error);
       throw error;
@@ -395,18 +372,13 @@ class ProfileService {
   /**
    * Get agency memberships for the current user
    */
-  async getAgencyMemberships(): Promise<Profile[]> {
-    const cacheKey = getCacheKey(`${this.baseUrl}/me/agency-memberships`);
-    const cached = getCacheEntry<Profile[]>(cacheKey);
-
-    if (cached) {
-      return cached;
-    }
-
+  async getAgencyMemberships(oxyServices?: OxyServices, activeSessionId?: string): Promise<Profile[]> {
     try {
-      const response = await api.get(`${this.baseUrl}/me/agency-memberships`);
+      const response = await api.get(`${this.baseUrl}/me/agency-memberships`, {
+        oxyServices,
+        activeSessionId,
+      });
       const memberships = response.data.data;
-      setCacheEntry(cacheKey, memberships, 300000);
       return memberships;
     } catch (error) {
       console.error('Error getting agency memberships:', error);
@@ -417,11 +389,14 @@ class ProfileService {
   /**
    * Add member to agency profile
    */
-  async addAgencyMember(profileId: string, memberOxyUserId: string, role: 'owner' | 'admin' | 'agent' | 'viewer'): Promise<Profile> {
+  async addAgencyMember(profileId: string, memberOxyUserId: string, role: 'owner' | 'admin' | 'agent' | 'viewer', oxyServices?: OxyServices, activeSessionId?: string): Promise<Profile> {
     try {
       const response = await api.post(`${this.baseUrl}/${profileId}/members`, {
         memberOxyUserId,
         role,
+      }, {
+        oxyServices,
+        activeSessionId,
       });
       return response.data.data;
     } catch (error) {
@@ -433,9 +408,12 @@ class ProfileService {
   /**
    * Remove member from agency profile
    */
-  async removeAgencyMember(profileId: string, memberOxyUserId: string): Promise<Profile> {
+  async removeAgencyMember(profileId: string, memberOxyUserId: string, oxyServices?: OxyServices, activeSessionId?: string): Promise<Profile> {
     try {
-      const response = await api.delete(`${this.baseUrl}/${profileId}/members/${memberOxyUserId}`);
+      const response = await api.delete(`${this.baseUrl}/${profileId}/members/${memberOxyUserId}`, {
+        oxyServices,
+        activeSessionId,
+      });
       return response.data.data;
     } catch (error) {
       console.error('Error removing agency member:', error);
@@ -446,11 +424,14 @@ class ProfileService {
   /**
    * Update trust score
    */
-  async updateTrustScore(profileId: string, factor: string, value: number): Promise<Profile> {
+  async updateTrustScore(profileId: string, factor: string, value: number, oxyServices?: OxyServices, activeSessionId?: string): Promise<Profile> {
     try {
       const response = await api.patch(`${this.baseUrl}/${profileId}/trust-score`, {
         factor,
         value,
+      }, {
+        oxyServices,
+        activeSessionId,
       });
       return response.data.data;
     } catch (error) {

@@ -5,7 +5,7 @@
 
 const express = require('express');
 const { deviceController } = require('../controllers');
-const { validation } = require('../middlewares');
+const { validation, asyncHandler } = require('../middlewares');
 
 module.exports = function(authenticateToken) {
   const router = express.Router();
@@ -14,52 +14,52 @@ module.exports = function(authenticateToken) {
   router.use(authenticateToken);
 
   // Device CRUD operations
-  router.get('/', deviceController.getDevices);
-  router.post('/', validation.validateDevice, deviceController.createDevice);
+  router.get('/', asyncHandler(deviceController.getDevices));
+  router.post('/', validation.validateDevice, asyncHandler(deviceController.createDevice));
   router.get('/:deviceId', 
     validation.validateId('deviceId'),
-    deviceController.getDeviceById
+    asyncHandler(deviceController.getDeviceById)
   );
   router.put('/:deviceId', 
     validation.validateId('deviceId'),
     validation.validateDevice,
-    deviceController.updateDevice
+    asyncHandler(deviceController.updateDevice)
   );
   router.delete('/:deviceId', 
     validation.validateId('deviceId'),
-    deviceController.deleteDevice
+    asyncHandler(deviceController.deleteDevice)
   );
 
   // Device data and monitoring
   router.get('/:deviceId/data', 
     validation.validateId('deviceId'),
     validation.validateDateRange,
-    deviceController.getDeviceData
+    asyncHandler(deviceController.getDeviceData)
   );
   router.post('/:deviceId/data', 
     validation.validateId('deviceId'),
     validation.validateEnergyData,
-    deviceController.submitDeviceData
+    asyncHandler(deviceController.submitDeviceData)
   );
 
   // Device configuration
   router.get('/:deviceId/config', 
     validation.validateId('deviceId'),
-    deviceController.getDeviceConfig
+    asyncHandler(deviceController.getDeviceConfig)
   );
   router.put('/:deviceId/config', 
     validation.validateId('deviceId'),
-    deviceController.updateDeviceConfig
+    asyncHandler(deviceController.updateDeviceConfig)
   );
 
   // Device status and health
   router.get('/:deviceId/status', 
     validation.validateId('deviceId'),
-    deviceController.getDeviceStatus
+    asyncHandler(deviceController.getDeviceStatus)
   );
   router.post('/:deviceId/ping', 
     validation.validateId('deviceId'),
-    deviceController.pingDevice
+    asyncHandler(deviceController.pingDevice)
   );
 
   return router;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/styles/colors';
@@ -9,6 +9,7 @@ import { Header } from '@/components/Header';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { useProperties } from '@/hooks/usePropertyQueries';
 import { Property } from '@/services/propertyService';
+import { getPropertyImageSource } from '@/utils/propertyUtils';
 
 type PropertyType = {
   id: string;
@@ -188,21 +189,23 @@ export default function PropertyTypePage() {
         style={styles.propertyCard}
         onPress={() => router.push(`/properties/${item._id || item.id}`)}
       >
-        <View style={styles.propertyImagePlaceholder}>
-          <Ionicons name={propertyType?.icon as any} size={40} color={colors.COLOR_BLACK_LIGHT_3} />
+        <Image
+          source={getPropertyImageSource(item.images)}
+          style={styles.propertyImage}
+          resizeMode="cover"
+        />
 
-          {item.status === 'available' && (
-            <View style={styles.verifiedBadge}>
-              <Ionicons name="shield-checkmark" size={14} color="white" />
-            </View>
-          )}
+        {item.status === 'available' && (
+          <View style={styles.verifiedBadge}>
+            <Ionicons name="shield-checkmark" size={14} color="white" />
+          </View>
+        )}
 
-          {isEcoCertified && (
-            <View style={styles.ecoBadge}>
-              <Ionicons name="leaf" size={14} color="white" />
-            </View>
-          )}
-        </View>
+        {isEcoCertified && (
+          <View style={styles.ecoBadge}>
+            <Ionicons name="leaf" size={14} color="white" />
+          </View>
+        )}
 
         <View style={styles.propertyContent}>
           <Text style={styles.propertyTitle} numberOfLines={1}>{generatedTitle}</Text>
@@ -469,12 +472,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  propertyImagePlaceholder: {
+  propertyImage: {
+    width: '100%',
     height: 150,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
   },
   verifiedBadge: {
     position: 'absolute',

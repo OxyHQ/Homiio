@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Platform, TextInput, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Platform, TextInput, Modal, Image } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/styles/colors';
@@ -17,6 +17,7 @@ import * as Sharing from 'expo-sharing';
 import * as Clipboard from 'expo-clipboard';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { getPropertyImageSource } from '@/utils/propertyUtils';
 
 type PropertyDetail = {
   id: string;
@@ -407,17 +408,21 @@ ${propertyUrl}`;
           <View style={styles.imageGrid}>
             {/* Left Column */}
             <View style={styles.mainImageContainer}>
-              <View style={styles.imagePlaceholder}>
-                <Text style={styles.imagePlaceholderText}>Main Photo</Text>
-              </View>
+              <Image
+                source={getPropertyImageSource(property.images)}
+                style={styles.mainImage}
+                resizeMode="cover"
+              />
             </View>
 
             {/* Right Column */}
             <View style={styles.rightColumn}>
               <View style={styles.sideImageContainer}>
-                <View style={styles.imagePlaceholder}>
-                  <Text style={styles.imagePlaceholderText}>Photo 2</Text>
-                </View>
+                <Image
+                  source={getPropertyImageSource(property.images.length > 1 ? property.images.slice(1) : property.images)}
+                  style={styles.sideImage}
+                  resizeMode="cover"
+                />
               </View>
               <View style={styles.mapPreviewContainer}>
                 <PropertyMap
@@ -1204,18 +1209,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
   },
-  imagePlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imagePlaceholderText: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
   mapOverlay: {
     position: 'absolute',
     top: 8,
@@ -1347,5 +1340,15 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  mainImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+  },
+  sideImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
   },
 });

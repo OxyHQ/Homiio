@@ -10,5 +10,6 @@ const logging = require('./logging');
 module.exports = {
   validation,
   errorHandler,
-  logging
+  logging,
+  asyncHandler: errorHandler.asyncHandler
 };

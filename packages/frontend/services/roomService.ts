@@ -1,4 +1,4 @@
-import api, { getCacheKey, setCacheEntry, getCacheEntry } from '@/utils/api';
+import api from '@/utils/api';
 
 export interface Room {
   id: string;
@@ -69,29 +69,13 @@ class RoomService {
     totalPages: number;
   }> {
     const url = `${this.baseUrl}/${propertyId}/rooms`;
-    const cacheKey = getCacheKey(url, filters);
-    const cached = getCacheEntry<any>(cacheKey);
-    
-    if (cached) {
-      return cached;
-    }
-
     const response = await api.get(url, { params: filters });
-    setCacheEntry(cacheKey, response.data);
     return response.data;
   }
 
   async getRoom(propertyId: string, roomId: string): Promise<Room> {
     const url = `${this.baseUrl}/${propertyId}/rooms/${roomId}`;
-    const cacheKey = getCacheKey(url);
-    const cached = getCacheEntry<Room>(cacheKey);
-    
-    if (cached) {
-      return cached;
-    }
-
     const response = await api.get(url);
-    setCacheEntry(cacheKey, response.data.room);
     return response.data.room;
   }
 
@@ -131,15 +115,7 @@ class RoomService {
   }> {
     const url = `${this.baseUrl}/${propertyId}/rooms/search`;
     const params = { ...filters, search: query };
-    const cacheKey = getCacheKey(url, params);
-    const cached = getCacheEntry<any>(cacheKey);
-    
-    if (cached) {
-      return cached;
-    }
-
     const response = await api.get(url, { params });
-    setCacheEntry(cacheKey, response.data, 60000); // 1 minute cache for search
     return response.data;
   }
 
@@ -151,29 +127,13 @@ class RoomService {
     energyConsumption: number;
   }> {
     const url = `${this.baseUrl}/${propertyId}/rooms/${roomId}/stats`;
-    const cacheKey = getCacheKey(url);
-    const cached = getCacheEntry<any>(cacheKey);
-    
-    if (cached) {
-      return cached;
-    }
-
     const response = await api.get(url);
-    setCacheEntry(cacheKey, response.data.stats, 300000); // 5 minute cache
     return response.data.stats;
   }
 
   async getRoomEnergyStats(propertyId: string, roomId: string, period: 'day' | 'week' | 'month' = 'day'): Promise<any> {
     const url = `${this.baseUrl}/${propertyId}/rooms/${roomId}/energy`;
-    const cacheKey = getCacheKey(url, { period });
-    const cached = getCacheEntry<any>(cacheKey);
-    
-    if (cached) {
-      return cached;
-    }
-
     const response = await api.get(url, { params: { period } });
-    setCacheEntry(cacheKey, response.data, 60000); // 1 minute cache
     return response.data;
   }
 

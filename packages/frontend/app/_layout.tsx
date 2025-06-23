@@ -40,7 +40,6 @@ import { BottomSheetProvider } from '@/context/BottomSheetContext';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { ProfileProvider } from '@/context/ProfileContext';
 import { OxyLogo, OxyProvider, OxyServices, OxySignInButton, useOxy } from '@oxyhq/services';
-import { setOxyServices } from '@/utils/api';
 import { generateWebsiteStructuredData, injectStructuredData } from '@/utils/structuredData';
 
 import "../styles/global.css";
@@ -62,23 +61,6 @@ i18n.use(initReactI18next).init({
 }).catch(error => {
   console.error("Failed to initialize i18n:", error);
 });
-
-// Component to set OxyServices instance for API calls
-function OxyServicesInitializer() {
-  const { oxyServices, activeSessionId } = useOxy();
-
-  useEffect(() => {
-    console.log('OxyServicesInitializer - oxyServices:', oxyServices ? 'available' : 'not available');
-    console.log('OxyServicesInitializer - activeSessionId:', activeSessionId);
-
-    if (oxyServices && activeSessionId) {
-      console.log('Setting OxyServices for API calls');
-      setOxyServices(oxyServices, activeSessionId);
-    }
-  }, [oxyServices, activeSessionId]);
-
-  return null;
-}
 
 export default function RootLayout() {
   const [appIsReady, setAppIsReady] = useState(false);
@@ -103,7 +85,7 @@ export default function RootLayout() {
 
   // Initialize OxyServices
   const oxyServices = new OxyServices({
-    baseURL: 'https://api.oxy.so',
+    baseURL: 'http://localhost:3001',
   });
 
   // Handle user authentication - no hooks here
@@ -234,7 +216,6 @@ export default function RootLayout() {
                   <BottomSheetModalProvider>
                     <BottomSheetProvider>
                       <ProfileProvider>
-                        <OxyServicesInitializer />
                         <View style={styles.container}>
                           <SideBar />
                           <View style={styles.mainContentWrapper}>
@@ -255,6 +236,6 @@ export default function RootLayout() {
           </QueryClientProvider>
         </Provider>
       </SafeAreaProvider>
-    </OxyProvider >
+    </OxyProvider>
   );
 }

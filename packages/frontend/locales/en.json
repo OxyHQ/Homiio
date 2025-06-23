@@ -144,7 +144,11 @@
             "title": "Eco-Certified Properties",
             "description": "Find sustainable properties that meet our energy efficiency and eco-friendly standards",
             "viewEcoProperties": "View Eco Properties"
-        }
+        },
+        "featured": {
+            "title": "Featured Properties"
+        },
+        "viewAll": "View All"
     },
     "search": {
         "title": "Search",

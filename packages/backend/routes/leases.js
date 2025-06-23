@@ -5,7 +5,7 @@
 
 const express = require('express');
 const { leaseController } = require('../controllers');
-const { validation } = require('../middlewares');
+const { validation, asyncHandler } = require('../middlewares');
 
 module.exports = function(authenticateToken) {
   const router = express.Router();
@@ -14,56 +14,56 @@ module.exports = function(authenticateToken) {
   router.use(authenticateToken);
 
   // Lease CRUD operations
-  router.get('/', leaseController.getLeases);
-  router.post('/', validation.validateLease, leaseController.createLease);
+  router.get('/', asyncHandler(leaseController.getLeases));
+  router.post('/', validation.validateLease, asyncHandler(leaseController.createLease));
   router.get('/:leaseId', 
     validation.validateId('leaseId'),
-    leaseController.getLeaseById
+    asyncHandler(leaseController.getLeaseById)
   );
   router.put('/:leaseId', 
     validation.validateId('leaseId'),
     validation.validateLease,
-    leaseController.updateLease
+    asyncHandler(leaseController.updateLease)
   );
   router.delete('/:leaseId', 
     validation.validateId('leaseId'),
-    leaseController.deleteLease
+    asyncHandler(leaseController.deleteLease)
   );
 
   // Lease lifecycle management
   router.post('/:leaseId/sign', 
     validation.validateId('leaseId'),
-    leaseController.signLease
+    asyncHandler(leaseController.signLease)
   );
   router.post('/:leaseId/terminate', 
     validation.validateId('leaseId'),
-    leaseController.terminateLease
+    asyncHandler(leaseController.terminateLease)
   );
   router.post('/:leaseId/renew', 
     validation.validateId('leaseId'),
-    leaseController.renewLease
+    asyncHandler(leaseController.renewLease)
   );
 
   // Lease payments
   router.get('/:leaseId/payments', 
     validation.validateId('leaseId'),
-    leaseController.getLeasePayments
+    asyncHandler(leaseController.getLeasePayments)
   );
   router.post('/:leaseId/payments', 
     validation.validateId('leaseId'),
     validation.validatePayment,
-    leaseController.createPayment
+    asyncHandler(leaseController.createPayment)
   );
 
   // Lease documents
   router.get('/:leaseId/documents', 
     validation.validateId('leaseId'),
-    leaseController.getLeaseDocuments
+    asyncHandler(leaseController.getLeaseDocuments)
   );
   router.post('/:leaseId/documents', 
     validation.validateId('leaseId'),
     validation.validateFileUpload,
-    leaseController.uploadLeaseDocument
+    asyncHandler(leaseController.uploadLeaseDocument)
   );
 
   return router;

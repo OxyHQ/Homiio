@@ -1,4 +1,4 @@
-import api, { getCacheKey, setCacheEntry, getCacheEntry } from '@/utils/api';
+import api from '@/utils/api';
 
 export interface Device {
   id: string;
@@ -117,37 +117,17 @@ class DeviceService {
     page: number;
     totalPages: number;
   }> {
-    const cacheKey = getCacheKey(this.baseUrl, filters);
-    const cached = getCacheEntry<any>(cacheKey);
-    
-    if (cached) {
-      return cached;
-    }
-
     const response = await api.get(this.baseUrl, { params: filters });
-    setCacheEntry(cacheKey, response.data);
     return response.data;
   }
 
   async getDevice(deviceId: string): Promise<Device> {
-    const cacheKey = getCacheKey(`${this.baseUrl}/${deviceId}`);
-    const cached = getCacheEntry<Device>(cacheKey);
-    
-    if (cached) {
-      return cached;
-    }
-
     const response = await api.get(`${this.baseUrl}/${deviceId}`);
-    setCacheEntry(cacheKey, response.data.data);
     return response.data.data;
   }
 
   async createDevice(data: CreateDeviceData): Promise<Device> {
     const response = await api.post(this.baseUrl, data);
-    
-    // Clear devices cache
-    this.clearDevicesCache();
-    
     return response.data.data;
   }
 
@@ -175,15 +155,7 @@ class DeviceService {
     period?: 'hour' | 'day' | 'week' | 'month';
     metric?: string;
   }): Promise<any> {
-    const cacheKey = getCacheKey(`${this.baseUrl}/${deviceId}/data`, options);
-    const cached = getCacheEntry<any>(cacheKey);
-    
-    if (cached) {
-      return cached;
-    }
-
     const response = await api.get(`${this.baseUrl}/${deviceId}/data`, { params: options });
-    setCacheEntry(cacheKey, response.data.data, 60000); // 1 minute cache
     return response.data.data;
   }
 
@@ -192,23 +164,12 @@ class DeviceService {
   }
 
   async getDeviceConfig(deviceId: string): Promise<Device['configuration']> {
-    const cacheKey = getCacheKey(`${this.baseUrl}/${deviceId}/config`);
-    const cached = getCacheEntry<Device['configuration']>(cacheKey);
-    
-    if (cached) {
-      return cached;
-    }
-
     const response = await api.get(`${this.baseUrl}/${deviceId}/config`);
-    setCacheEntry(cacheKey, response.data.data, 300000); // 5 minute cache
     return response.data.data;
   }
 
   async updateDeviceConfig(deviceId: string, config: Partial<Device['configuration']>): Promise<void> {
     await api.put(`${this.baseUrl}/${deviceId}/config`, config);
-    
-    // Clear config cache
-    this.clearDeviceConfigCache(deviceId);
   }
 
   async getDeviceStatus(deviceId: string): Promise<DeviceStatus> {
@@ -230,10 +191,6 @@ class DeviceService {
     clearCache(this.baseUrl);
   }
 
-  private clearDeviceConfigCache(deviceId: string) {
-    const { clearCache } = require('@/utils/api');
-    clearCache(`${this.baseUrl}/${deviceId}/config`);
-  }
 }
 
 export const deviceService = new DeviceService();

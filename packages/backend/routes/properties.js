@@ -5,7 +5,7 @@
 
 const express = require('express');
 const { propertyController } = require('../controllers');
-const { validation } = require('../middlewares');
+const { validation, asyncHandler } = require('../middlewares');
 
 module.exports = function(authenticateToken) {
   const router = express.Router();
@@ -27,51 +27,51 @@ module.exports = function(authenticateToken) {
   };
 
   // Public routes (no authentication required)
-  router.get('/', propertyController.getProperties);
-  router.get('/search', propertyController.searchProperties);
+  router.get('/', asyncHandler(propertyController.getProperties));
+  router.get('/search', asyncHandler(propertyController.searchProperties));
   
   // Property viewing with optional authentication (for recently viewed tracking)
   router.get('/:propertyId', 
     validation.validateId('propertyId'), 
     optionalAuth,
-    propertyController.getPropertyById
+    asyncHandler(propertyController.getPropertyById)
   );
 
   // Property CRUD operations (require authentication)
-  router.post('/', authenticateToken, validation.validateProperty, propertyController.createProperty);
+  router.post('/', authenticateToken, validation.validateProperty, asyncHandler(propertyController.createProperty));
 
   // Development/testing route without authentication (remove in production)
-  router.post('/dev', validation.validateProperty, propertyController.createPropertyDev);
+  router.post('/dev', validation.validateProperty, asyncHandler(propertyController.createPropertyDev));
 
   router.put('/:propertyId', 
     authenticateToken,
     validation.validateId('propertyId'),
     validation.validateProperty,
-    propertyController.updateProperty
+    asyncHandler(propertyController.updateProperty)
   );
   router.delete('/:propertyId', 
     authenticateToken,
     validation.validateId('propertyId'),
-    propertyController.deleteProperty
+    asyncHandler(propertyController.deleteProperty)
   );
 
   // User's properties
-  router.get('/my/properties', propertyController.getMyProperties);
+  router.get('/my/properties', asyncHandler(propertyController.getMyProperties));
 
   // Energy monitoring
   router.get('/:propertyId/energy', 
     validation.validateId('propertyId'),
     validation.validateDateRange,
-    propertyController.getPropertyEnergyData
+    asyncHandler(propertyController.getPropertyEnergyData)
   );
   router.post('/:propertyId/energy/configure',
     validation.validateId('propertyId'),
-    propertyController.configureEnergyMonitoring
+    asyncHandler(propertyController.configureEnergyMonitoring)
   );
 
   router.get('/:propertyId/stats',
     validation.validateId('propertyId'),
-    propertyController.getPropertyStats
+    asyncHandler(propertyController.getPropertyStats)
   );
 
   return router;

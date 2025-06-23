@@ -9,6 +9,7 @@ import { Header } from '@/components/Header';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { useProperties } from '@/hooks/usePropertyQueries';
 import { Property } from '@/services/propertyService';
+import { getPropertyImageSource } from '@/utils/propertyUtils';
 
 type City = {
   id: string;
@@ -181,19 +182,21 @@ export default function CityPropertiesPage() {
       style={styles.propertyCard}
       onPress={() => router.push(`/properties/${item.id}`)}
     >
-      <View style={styles.propertyImagePlaceholder}>
-        <Text style={styles.placeholderText}>{item.neighborhood}</Text>
-        {item.isVerified && (
-          <View style={styles.verifiedBadge}>
-            <Ionicons name="shield-checkmark" size={14} color="white" />
-          </View>
-        )}
-        {item.isEcoCertified && (
-          <View style={styles.ecoBadge}>
-            <Ionicons name="leaf" size={14} color="white" />
-          </View>
-        )}
-      </View>
+      <Image
+        source={getPropertyImageSource(item.images)}
+        style={styles.propertyImage}
+        resizeMode="cover"
+      />
+      {item.isVerified && (
+        <View style={styles.verifiedBadge}>
+          <Ionicons name="shield-checkmark" size={14} color="white" />
+        </View>
+      )}
+      {item.isEcoCertified && (
+        <View style={styles.ecoBadge}>
+          <Ionicons name="leaf" size={14} color="white" />
+        </View>
+      )}
 
       <View style={styles.propertyContent}>
         <Text style={styles.propertyTitle} numberOfLines={1}>{item.title}</Text>
@@ -516,35 +519,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  propertyImagePlaceholder: {
+  propertyImage: {
+    width: '100%',
     height: 150,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  placeholderText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  verifiedBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: colors.primaryColor,
-    borderRadius: 20,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  ecoBadge: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    backgroundColor: 'green',
-    borderRadius: 20,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
   },
   propertyContent: {
     padding: 15,
@@ -593,6 +572,24 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontSize: 14,
     color: colors.COLOR_BLACK,
+  },
+  verifiedBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: colors.primaryColor,
+    borderRadius: 20,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  ecoBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: 'green',
+    borderRadius: 20,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
   },
   emptyContainer: {
     padding: 20,

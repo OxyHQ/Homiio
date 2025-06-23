@@ -579,7 +579,8 @@ const profileSchema = new mongoose.Schema({
 profileSchema.index({ oxyUserId: 1, profileType: 1 });
 profileSchema.index({ oxyUserId: 1, isPrimary: 1 });
 profileSchema.index({ "agencyProfile.members.oxyUserId": 1 });
-profileSchema.index({ oxyUserId: 1, isActive: 1 });
+// Unique compound index to ensure only one active profile per user
+profileSchema.index({ oxyUserId: 1, isActive: 1 }, { unique: true, partialFilterExpression: { isActive: true } });
 profileSchema.index({ createdAt: -1 });
 profileSchema.index({ updatedAt: -1 });
 
@@ -603,6 +604,16 @@ profileSchema.pre("save", async function(next) {
       { isPrimary: false }
     );
   }
+  
+  // Ensure only one active profile per user
+  if (this.isActive) {
+    // Deactivate all other profiles for the same user
+    await this.constructor.updateMany(
+      { oxyUserId: this.oxyUserId, _id: { $ne: this._id } },
+      { isActive: false }
+    );
+  }
+  
   next();
 });
 
@@ -665,6 +676,33 @@ profileSchema.statics.findAgencyMemberships = function(oxyUserId, select = null)
     query.select(select);
   }
   return query.lean(); // Use lean() for better performance when not modifying
+};
+
+// Static method to safely activate a profile
+profileSchema.statics.activateProfile = async function(oxyUserId, profileId) {
+  const session = await this.startSession();
+  try {
+    await session.withTransaction(async () => {
+      // First, deactivate all profiles for this user
+      await this.updateMany(
+        { oxyUserId },
+        { isActive: false },
+        { session }
+      );
+      
+      // Then activate the specified profile
+      await this.findByIdAndUpdate(
+        profileId,
+        { isActive: true },
+        { session, new: true, runValidators: true }
+      );
+    });
+    
+    // Return the activated profile
+    return await this.findById(profileId);
+  } finally {
+    await session.endSession();
+  }
 };
 
 // Instance methods

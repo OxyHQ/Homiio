@@ -60,22 +60,10 @@ export function SideBar() {
             route: '/payments',
         },
         {
-            title: t("Community"),
-            icon: <View><IconComponent name="people-outline" size={24} color={colors.COLOR_BLACK} /></View>,
-            iconActive: <View><IconComponent name="people" size={24} color={colors.primaryColor} /></View>,
-            route: '/community',
-        },
-        {
-            title: t("Co-living"),
+            title: t("Roommates"),
             icon: <Hashtag color={colors.COLOR_BLACK} />,
             iconActive: <HashtagActive />,
-            route: '/coliving',
-        },
-        {
-            title: t("Monitoring"),
-            icon: <View><IconComponent name="pulse-outline" size={24} color={colors.COLOR_BLACK} /></View>,
-            iconActive: <View><IconComponent name="pulse" size={24} color={colors.primaryColor} /></View>,
-            route: '/monitoring',
+            route: '/roommates',
         },
         {
             title: t("Settings"),
