@@ -86,7 +86,7 @@ export default function RootLayout() {
   // Initialize OxyServices
   const oxyServices = new OxyServices({
     baseURL: process.env.NODE_ENV === 'production'
-      ? 'https://api.homiio.com'
+      ? 'https://api.oxy.so'
       : 'http://localhost:3001',
   });
 
