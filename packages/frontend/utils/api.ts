@@ -314,12 +314,60 @@ export const api = {
  * All functions require authentication via OxyServices
  */
 export const profileApi = {
-  // Get user profile (authenticated)
+  // Get user profile (authenticated) - creates personal profile if it doesn't exist
   async getUserProfile(oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse<UserProfile>> {
-    const response = await api.get<ApiResponse<UserProfile>>(API_CONFIG.endpoints.profile, {
-      oxyServices,
-      activeSessionId,
-    });
+    try {
+      const response = await api.get<ApiResponse<UserProfile>>(API_CONFIG.endpoints.profile, {
+        oxyServices,
+        activeSessionId,
+      });
+      return response.data;
+    } catch (error) {
+      // If profile doesn't exist (404), create a new personal profile
+      if (error instanceof ApiError && error.status === 404) {
+        try {
+          // Get user info from token to create basic profile
+          const tokenData = await oxyServices.getTokenBySession(activeSessionId);
+          if (!tokenData) {
+            throw new ApiError('No authentication token found', 401);
+          }
+
+          // Create basic personal profile with minimal required data
+          const basicProfileData = {
+            // The backend should extract user info from the authenticated token
+            // We're just sending a flag to indicate this is a personal profile creation
+            isPersonalProfile: true,
+          };
+
+          const createResponse = await api.post<ApiResponse<UserProfile>>(
+            API_CONFIG.endpoints.profile, 
+            basicProfileData,
+            {
+              oxyServices,
+              activeSessionId,
+            }
+          );
+          return createResponse.data;
+        } catch (createError) {
+          console.error('Failed to create personal profile:', createError);
+          throw createError;
+        }
+      }
+      // Re-throw other errors
+      throw error;
+    }
+  },
+
+  // Create personal profile (authenticated)
+  async createPersonalProfile(oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse<UserProfile>> {
+    const response = await api.post<ApiResponse<UserProfile>>(
+      API_CONFIG.endpoints.profile, 
+      { isPersonalProfile: true },
+      {
+        oxyServices,
+        activeSessionId,
+      }
+    );
     return response.data;
   },
 
