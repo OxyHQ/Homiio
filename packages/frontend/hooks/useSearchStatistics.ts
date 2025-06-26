@@ -1,6 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { useOxy } from '@oxyhq/services';
 import { api } from '@/utils/api';
+import { useDispatch, useSelector } from 'react-redux';
+import type { AppDispatch, RootState } from '@/store/store';
+import { setLoading, setData, setError } from '@/store/reducers/searchStatisticsReducer';
 
 interface SearchStatistics {
   recentSearches: string[];
@@ -11,10 +14,14 @@ interface SearchStatistics {
 
 export const useSearchStatistics = () => {
   const { oxyServices, activeSessionId } = useOxy();
+  const dispatch = useDispatch<AppDispatch>();
+  
+  // Get search statistics from Redux store
+  const { data, loading, error } = useSelector((state: RootState) => state.searchStatistics);
 
-  return useQuery({
-    queryKey: ['searchStatistics', activeSessionId],
-    queryFn: async (): Promise<SearchStatistics> => {
+  useEffect(() => {
+    const fetchStatistics = async () => {
+      dispatch(setLoading(true));
       try {
         // For authenticated users, get their personal search statistics
         if (oxyServices && activeSessionId) {
@@ -22,16 +29,17 @@ export const useSearchStatistics = () => {
             oxyServices,
             activeSessionId,
           });
-          return response.data;
+          // Dispatch to Redux store
+          dispatch(setData(response.data));
+        } else {
+          // For unauthenticated users, get general statistics
+          const response = await api.get<SearchStatistics>('/api/search/statistics/public');
+          dispatch(setData(response.data));
         }
-        
-        // For unauthenticated users, get general statistics
-        const response = await api.get<SearchStatistics>('/api/search/statistics/public');
-        return response.data;
       } catch (error) {
         console.error('Failed to fetch search statistics:', error);
         // Return fallback data if API fails
-        return {
+        const fallbackData = {
           recentSearches: [],
           popularSearches: [
             'Barcelona apartments',
@@ -56,9 +64,16 @@ export const useSearchStatistics = () => {
             Paris: 89,
           },
         };
+        dispatch(setData(fallbackData));
       }
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-  });
+    };
+
+    fetchStatistics();
+  }, [oxyServices, activeSessionId, dispatch]);
+
+  return {
+    data,
+    loading,
+    error,
+  };
 }; 

@@ -1,4 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
+import { useDispatch } from 'react-redux';
+import type { AppDispatch } from '@/store/store';
 import { leaseService } from '@/services/leaseService';
 import { useOxy } from '@oxyhq/services';
 import { useActiveProfile } from '@/hooks/useProfileQueries';
@@ -17,252 +19,248 @@ export const leaseKeys = {
   profileLeases: (profileId: string) => ['leases', 'profile', profileId] as const,
 };
 
-// Hook to get user's leases based on current profile
-export function useUserLeases(filters?: any) {
+// Hook to get user leases
+export function useUserLeases() {
+  const dispatch = useDispatch<AppDispatch>();
   const { oxyServices, activeSessionId } = useOxy();
-  const { data: activeProfile, isLoading: profileLoading } = useActiveProfile();
+  const { data: activeProfile } = useActiveProfile();
   
-  return useQuery<{ leases: Lease[]; total: number; page: number; totalPages: number }>({
-    queryKey: leaseKeys.list({ ...filters, profileId: activeProfile?.id }),
-    queryFn: async () => {
-      if (!oxyServices || !activeSessionId || !activeProfile?.id) {
-        console.log('OxyServices or active profile not available - returning empty leases');
-        return { leases: [], total: 0, page: 1, totalPages: 1 };
-      }
+  const fetchUserLeases = useCallback(async () => {
+    if (!oxyServices || !activeSessionId || !activeProfile) {
+      return { leases: [], total: 0, page: 1, totalPages: 1 };
+    }
 
-      try {
-        console.log(`Fetching user leases for profile ${activeProfile.id} with OxyServices authentication`);
-        const response = await leaseService.getLeases({ ...filters, profileId: activeProfile.id }, oxyServices, activeSessionId);
-        console.log(`Successfully fetched ${response.leases.length} leases for profile ${activeProfile.id}`);
-        return response;
-      } catch (error) {
-        console.error('Error fetching user leases:', error);
-        return { leases: [], total: 0, page: 1, totalPages: 1 };
-      }
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: !!(oxyServices && activeSessionId && activeProfile?.id && !profileLoading),
-  });
-}
+    try {
+      console.log('Fetching user leases with OxyServices authentication');
+      const response = await leaseService.getLeases({}, oxyServices, activeSessionId);
+      console.log(`Successfully fetched ${response.leases.length} user leases`);
+      return response;
+    } catch (error) {
+      console.error('Error fetching user leases:', error);
+      return { leases: [], total: 0, page: 1, totalPages: 1 };
+    }
+  }, [oxyServices, activeSessionId, activeProfile]);
 
-// Hook to get active leases based on current profile
-export function useActiveLeases() {
-  const { oxyServices, activeSessionId } = useOxy();
-  const { data: activeProfile, isLoading: profileLoading } = useActiveProfile();
-  
-  return useQuery<Lease[]>({
-    queryKey: leaseKeys.activeLeases(),
-    queryFn: async () => {
-      if (!oxyServices || !activeSessionId || !activeProfile?.id) {
-        console.log('OxyServices or active profile not available - returning empty active leases');
-        return [];
-      }
-
-      try {
-        console.log(`Fetching active leases for profile ${activeProfile.id} with OxyServices authentication`);
-        const leases = await leaseService.getActiveLeases(oxyServices, activeSessionId);
-        // Filter leases by current profile (as tenant or landlord)
-        const profileLeases = leases.filter(lease => 
-          lease.tenantId === activeProfile.id || lease.landlordId === activeProfile.id
-        );
-        console.log(`Successfully fetched ${profileLeases.length} active leases for profile ${activeProfile.id}`);
-        return profileLeases;
-      } catch (error) {
-        console.error('Error fetching active leases:', error);
-        return [];
-      }
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: !!(oxyServices && activeSessionId && activeProfile?.id && !profileLoading),
-  });
-}
-
-// Hook to get pending signature leases based on current profile
-export function usePendingSignatureLeases() {
-  const { oxyServices, activeSessionId } = useOxy();
-  const { data: activeProfile, isLoading: profileLoading } = useActiveProfile();
-  
-  return useQuery<Lease[]>({
-    queryKey: leaseKeys.pendingLeases(),
-    queryFn: async () => {
-      if (!oxyServices || !activeSessionId || !activeProfile?.id) {
-        console.log('OxyServices or active profile not available - returning empty pending leases');
-        return [];
-      }
-
-      try {
-        console.log(`Fetching pending signature leases for profile ${activeProfile.id} with OxyServices authentication`);
-        const leases = await leaseService.getPendingSignatureLeases(oxyServices, activeSessionId);
-        // Filter leases by current profile (as tenant or landlord)
-        const profileLeases = leases.filter(lease => 
-          lease.tenantId === activeProfile.id || lease.landlordId === activeProfile.id
-        );
-        console.log(`Successfully fetched ${profileLeases.length} pending signature leases for profile ${activeProfile.id}`);
-        return profileLeases;
-      } catch (error) {
-        console.error('Error fetching pending signature leases:', error);
-        return [];
-      }
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: !!(oxyServices && activeSessionId && activeProfile?.id && !profileLoading),
-  });
-}
-
-// Hook to check if user has any rental properties (as tenant or landlord) based on current profile
-export function useHasRentalProperties() {
-  const { data: activeLeases, isLoading: activeLoading } = useActiveLeases();
-  const { data: pendingLeases, isLoading: pendingLoading } = usePendingSignatureLeases();
-  const { data: activeProfile, isLoading: profileLoading } = useActiveProfile();
-  
-  const hasActiveLeases = activeLeases && activeLeases.length > 0;
-  const hasPendingLeases = pendingLeases && pendingLeases.length > 0;
-  const hasAnyLeases = hasActiveLeases || hasPendingLeases;
-  
   return {
-    hasRentalProperties: hasAnyLeases,
-    hasActiveLeases,
-    hasPendingLeases,
-    activeLeasesCount: activeLeases?.length || 0,
-    pendingLeasesCount: pendingLeases?.length || 0,
-    isLoading: activeLoading || pendingLoading || profileLoading,
-    activeProfileId: activeProfile?.id,
+    data: { leases: [], total: 0, page: 1, totalPages: 1 },
+    isLoading: false,
+    error: null,
+    refetch: fetchUserLeases,
   };
 }
 
-// Hook to get a specific lease
-export function useLease(leaseId: string) {
-  const { oxyServices, activeSessionId } = useOxy();
-  
-  return useQuery<Lease>({
-    queryKey: leaseKeys.detail(leaseId),
-    queryFn: async () => {
-      if (!oxyServices || !activeSessionId) {
-        throw new Error('OxyServices not available');
-      }
-
-      try {
-        console.log(`Fetching lease ${leaseId} with OxyServices authentication`);
-        const lease = await leaseService.getLease(leaseId, oxyServices, activeSessionId);
-        console.log(`Successfully fetched lease ${leaseId}`);
-        return lease;
-      } catch (error) {
-        console.error(`Error fetching lease ${leaseId}:`, error);
-        throw error;
-      }
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: !!(oxyServices && activeSessionId && leaseId),
-  });
-}
-
-// Hook to create a new lease
-export function useCreateLease() {
-  const queryClient = useQueryClient();
+// Hook to get active leases
+export function useActiveLeases() {
+  const dispatch = useDispatch<AppDispatch>();
   const { oxyServices, activeSessionId } = useOxy();
   const { data: activeProfile } = useActiveProfile();
+  
+  const fetchActiveLeases = useCallback(async () => {
+    if (!oxyServices || !activeSessionId || !activeProfile) {
+      return [];
+    }
 
-  return useMutation({
-    mutationFn: async (leaseData: any) => {
-      if (!oxyServices || !activeSessionId || !activeProfile?.id) {
-        throw new Error('OxyServices or active profile not available');
-      }
+    try {
+      console.log('Fetching active leases with OxyServices authentication');
+      const leases = await leaseService.getActiveLeases(oxyServices, activeSessionId);
+      console.log(`Successfully fetched ${leases.length} active leases`);
+      return leases;
+    } catch (error) {
+      console.error('Error fetching active leases:', error);
+      return [];
+    }
+  }, [oxyServices, activeSessionId, activeProfile]);
 
-      try {
-        console.log(`Creating new lease for profile ${activeProfile.id} with OxyServices authentication`);
-        // Ensure the lease is associated with the current profile
-        const leaseWithProfile = {
-          ...leaseData,
-          profileId: activeProfile.id,
-        };
-        const lease = await leaseService.createLease(leaseWithProfile, oxyServices, activeSessionId);
-        console.log('Successfully created lease:', lease);
-        return lease;
-      } catch (error) {
-        console.error('Error creating lease:', error);
-        throw error;
-      }
-    },
-    onSuccess: () => {
-      // Invalidate all lease queries to refresh the data
-      queryClient.invalidateQueries({ queryKey: leaseKeys.all() });
+  return {
+    data: [],
+    isLoading: false,
+    error: null,
+    refetch: fetchActiveLeases,
+  };
+}
+
+// Hook to get pending leases
+export function usePendingLeases() {
+  const dispatch = useDispatch<AppDispatch>();
+  const { oxyServices, activeSessionId } = useOxy();
+  const { data: activeProfile } = useActiveProfile();
+  
+  const fetchPendingLeases = useCallback(async () => {
+    if (!oxyServices || !activeSessionId || !activeProfile) {
+      return [];
+    }
+
+    try {
+      console.log('Fetching pending leases with OxyServices authentication');
+      const leases = await leaseService.getPendingSignatureLeases(oxyServices, activeSessionId);
+      console.log(`Successfully fetched ${leases.length} pending leases`);
+      return leases;
+    } catch (error) {
+      console.error('Error fetching pending leases:', error);
+      return [];
+    }
+  }, [oxyServices, activeSessionId, activeProfile]);
+
+  return {
+    data: [],
+    isLoading: false,
+    error: null,
+    refetch: fetchPendingLeases,
+  };
+}
+
+// Hook to get lease by ID
+export function useLeaseById(leaseId: string | undefined | null) {
+  const dispatch = useDispatch<AppDispatch>();
+  const { oxyServices, activeSessionId } = useOxy();
+  
+  const fetchLease = useCallback(async () => {
+    if (!leaseId || !oxyServices || !activeSessionId) {
+      return null;
+    }
+
+    try {
+      console.log(`Fetching lease ${leaseId} with OxyServices authentication`);
+      const lease = await leaseService.getLease(leaseId, oxyServices, activeSessionId);
+      console.log('Successfully fetched lease:', lease);
+      return lease;
+    } catch (error) {
+      console.error('Error fetching lease:', error);
+      return null;
+    }
+  }, [leaseId, oxyServices, activeSessionId]);
+
+  return {
+    data: null,
+    isLoading: false,
+    error: null,
+    refetch: fetchLease,
+  };
+}
+
+// Hook to create a lease
+export function useCreateLease() {
+  const dispatch = useDispatch<AppDispatch>();
+  const { oxyServices, activeSessionId } = useOxy();
+
+  const createLease = useCallback(async (leaseData: any) => {
+    if (!oxyServices || !activeSessionId) {
+      throw new Error('OxyServices not available');
+    }
+
+    try {
+      console.log('Creating lease with OxyServices authentication');
+      const lease = await leaseService.createLease(leaseData, oxyServices, activeSessionId);
+      console.log('Successfully created lease:', lease);
+      
       toast.success('Lease created successfully!');
-    },
-    onError: (error: any) => {
-      console.error('Create lease mutation error:', error);
+      return lease;
+    } catch (error: any) {
+      console.error('Error creating lease:', error);
       toast.error('Failed to create lease', {
         description: error.message || 'Please try again.',
       });
-    },
-  });
+      throw error;
+    }
+  }, [oxyServices, activeSessionId]);
+
+  return {
+    createLease,
+    isLoading: false,
+  };
 }
 
 // Hook to update a lease
 export function useUpdateLease() {
-  const queryClient = useQueryClient();
+  const dispatch = useDispatch<AppDispatch>();
   const { oxyServices, activeSessionId } = useOxy();
 
-  return useMutation({
-    mutationFn: async ({ leaseId, data }: { leaseId: string; data: any }) => {
-      if (!oxyServices || !activeSessionId) {
-        throw new Error('OxyServices not available');
-      }
+  const updateLease = useCallback(async ({ leaseId, updateData }: { leaseId: string; updateData: any }) => {
+    if (!oxyServices || !activeSessionId) {
+      throw new Error('OxyServices not available');
+    }
 
-      try {
-        console.log(`Updating lease ${leaseId} with OxyServices authentication`);
-        const lease = await leaseService.updateLease(leaseId, data, oxyServices, activeSessionId);
-        console.log(`Successfully updated lease ${leaseId}`);
-        return lease;
-      } catch (error) {
-        console.error(`Error updating lease ${leaseId}:`, error);
-        throw error;
-      }
-    },
-    onSuccess: (data, variables) => {
-      // Invalidate specific lease and all lease lists
-      queryClient.invalidateQueries({ queryKey: leaseKeys.detail(variables.leaseId) });
-      queryClient.invalidateQueries({ queryKey: leaseKeys.lists() });
+    try {
+      console.log(`Updating lease ${leaseId} with OxyServices authentication`);
+      const lease = await leaseService.updateLease(leaseId, updateData, oxyServices, activeSessionId);
+      console.log('Successfully updated lease:', lease);
+      
       toast.success('Lease updated successfully!');
-    },
-    onError: (error: any) => {
-      console.error('Update lease mutation error:', error);
+      return lease;
+    } catch (error: any) {
+      console.error('Error updating lease:', error);
       toast.error('Failed to update lease', {
         description: error.message || 'Please try again.',
       });
-    },
-  });
+      throw error;
+    }
+  }, [oxyServices, activeSessionId]);
+
+  return {
+    updateLease,
+    isLoading: false,
+  };
 }
 
 // Hook to delete a lease
 export function useDeleteLease() {
-  const queryClient = useQueryClient();
+  const dispatch = useDispatch<AppDispatch>();
   const { oxyServices, activeSessionId } = useOxy();
 
-  return useMutation({
-    mutationFn: async (leaseId: string) => {
-      if (!oxyServices || !activeSessionId) {
-        throw new Error('OxyServices not available');
-      }
+  const deleteLease = useCallback(async (leaseId: string) => {
+    if (!oxyServices || !activeSessionId) {
+      throw new Error('OxyServices not available');
+    }
 
-      try {
-        console.log(`Deleting lease ${leaseId} with OxyServices authentication`);
-        await leaseService.deleteLease(leaseId, oxyServices, activeSessionId);
-        console.log(`Successfully deleted lease ${leaseId}`);
-      } catch (error) {
-        console.error(`Error deleting lease ${leaseId}:`, error);
-        throw error;
-      }
-    },
-    onSuccess: () => {
-      // Invalidate all lease queries to refresh the data
-      queryClient.invalidateQueries({ queryKey: leaseKeys.all() });
+    try {
+      console.log(`Deleting lease ${leaseId} with OxyServices authentication`);
+      await leaseService.deleteLease(leaseId, oxyServices, activeSessionId);
+      console.log(`Successfully deleted lease ${leaseId}`);
+      
       toast.success('Lease deleted successfully!');
-    },
-    onError: (error: any) => {
-      console.error('Delete lease mutation error:', error);
+    } catch (error: any) {
+      console.error('Error deleting lease:', error);
       toast.error('Failed to delete lease', {
         description: error.message || 'Please try again.',
       });
-    },
-  });
+      throw error;
+    }
+  }, [oxyServices, activeSessionId]);
+
+  return {
+    deleteLease,
+    isLoading: false,
+  };
+}
+
+// Hook to sign a lease
+export function useSignLease() {
+  const dispatch = useDispatch<AppDispatch>();
+  const { oxyServices, activeSessionId } = useOxy();
+
+  const signLease = useCallback(async (leaseId: string, signature: string, acceptTerms: boolean) => {
+    if (!oxyServices || !activeSessionId) {
+      throw new Error('OxyServices not available');
+    }
+
+    try {
+      console.log(`Signing lease ${leaseId} with OxyServices authentication`);
+      const lease = await leaseService.signLease(leaseId, signature, acceptTerms, oxyServices, activeSessionId);
+      console.log(`Successfully signed lease ${leaseId}`);
+      
+      toast.success('Lease signed successfully!');
+      return lease;
+    } catch (error: any) {
+      console.error('Error signing lease:', error);
+      toast.error('Failed to sign lease', {
+        description: error.message || 'Please try again.',
+      });
+      throw error;
+    }
+  }, [oxyServices, activeSessionId]);
+
+  return {
+    signLease,
+    isLoading: false,
+  };
 } 

@@ -5,9 +5,7 @@ import { Provider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from "expo-font";
 import { Slot } from 'expo-router';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import store from '@/store/store';
-import { queryClient } from '@/lib/reactQuery';
 import { useMediaQuery } from 'react-responsive'
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
@@ -218,31 +216,29 @@ export default function RootLayout() {
     >
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <Provider store={store}>
-          <QueryClientProvider client={queryClient}>
-            <I18nextProvider i18n={i18n}>
-              <MenuProvider>
-                <ErrorBoundary>
-                  <BottomSheetModalProvider>
-                    <BottomSheetProvider>
-                      <ProfileProvider>
-                        <View style={styles.container}>
-                          <SideBar />
-                          <View style={styles.mainContentWrapper}>
-                            <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0, }} />
-                            <Slot />
-                          </View>
-                          <RightBar />
+          <I18nextProvider i18n={i18n}>
+            <MenuProvider>
+              <ErrorBoundary>
+                <BottomSheetModalProvider>
+                  <BottomSheetProvider>
+                    <ProfileProvider>
+                      <View style={styles.container}>
+                        <SideBar />
+                        <View style={styles.mainContentWrapper}>
+                          <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0, }} />
+                          <Slot />
                         </View>
-                        <StatusBar style="auto" />
-                        <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
-                        {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
-                      </ProfileProvider>
-                    </BottomSheetProvider>
-                  </BottomSheetModalProvider>
-                </ErrorBoundary>
-              </MenuProvider>
-            </I18nextProvider>
-          </QueryClientProvider>
+                        <RightBar />
+                      </View>
+                      <StatusBar style="auto" />
+                      <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
+                      {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
+                    </ProfileProvider>
+                  </BottomSheetProvider>
+                </BottomSheetModalProvider>
+              </ErrorBoundary>
+            </MenuProvider>
+          </I18nextProvider>
         </Provider>
       </SafeAreaProvider>
     </OxyProvider>
