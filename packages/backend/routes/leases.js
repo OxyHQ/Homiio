@@ -7,11 +7,8 @@ const express = require('express');
 const { leaseController } = require('../controllers');
 const { validation, asyncHandler } = require('../middlewares');
 
-module.exports = function(authenticateToken) {
+module.exports = function() {
   const router = express.Router();
-
-  // Protected routes (authentication required)
-  router.use(authenticateToken);
 
   // Lease CRUD operations
   router.get('/', asyncHandler(leaseController.getLeases));

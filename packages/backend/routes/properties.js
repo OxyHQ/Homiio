@@ -3,60 +3,29 @@
  * API routes for property management
  */
 
-const express = require('express');
-const { propertyController } = require('../controllers');
-const { validation, asyncHandler } = require('../middlewares');
+const express = require("express");
+const propertyController = require("../controllers/propertyController");
+const { validation, asyncHandler } = require("../middlewares");
+const performanceMonitor = require("../middlewares/performance");
 
-module.exports = function(authenticateToken) {
+module.exports = function () {
   const router = express.Router();
 
-  // Public routes (no authentication required)
-  router.get('/', asyncHandler(propertyController.getProperties));
-  router.get('/search', asyncHandler(propertyController.searchProperties));
-  
-  // Property viewing with authentication (for recently viewed tracking)
-  router.get('/:propertyId', 
-    validation.validateId('propertyId'), 
-    authenticateToken,
-    asyncHandler(propertyController.getPropertyById)
-  );
+  // Performance monitoring for all property routes
+  router.use(performanceMonitor);
 
-  // Property CRUD operations (require authentication)
-  router.post('/', authenticateToken, validation.validateProperty, asyncHandler(propertyController.createProperty));
+  // Protected routes (authentication required)
+  router.post("/", validation.validateProperty, asyncHandler(propertyController.createProperty));
+  router.post("/dev", validation.validateProperty, asyncHandler(propertyController.createPropertyDev));
+  router.put("/:propertyId", validation.validateProperty, asyncHandler(propertyController.updateProperty));
+  router.delete("/:propertyId", asyncHandler(propertyController.deleteProperty));
 
-  // Development/testing route without authentication (remove in production)
-  router.post('/dev', validation.validateProperty, asyncHandler(propertyController.createPropertyDev));
+  // Property-specific authenticated routes
+  router.get("/:propertyId/energy", asyncHandler(propertyController.getPropertyEnergyData));
+  router.post("/:propertyId/energy/configure", asyncHandler(propertyController.configureEnergyMonitoring));
 
-  router.put('/:propertyId', 
-    authenticateToken,
-    validation.validateId('propertyId'),
-    validation.validateProperty,
-    asyncHandler(propertyController.updateProperty)
-  );
-  router.delete('/:propertyId', 
-    authenticateToken,
-    validation.validateId('propertyId'),
-    asyncHandler(propertyController.deleteProperty)
-  );
-
-  // User's properties
-  router.get('/my/properties', authenticateToken, asyncHandler(propertyController.getMyProperties));
-
-  // Energy monitoring
-  router.get('/:propertyId/energy', 
-    validation.validateId('propertyId'),
-    validation.validateDateRange,
-    asyncHandler(propertyController.getPropertyEnergyData)
-  );
-  router.post('/:propertyId/energy/configure',
-    validation.validateId('propertyId'),
-    asyncHandler(propertyController.configureEnergyMonitoring)
-  );
-
-  router.get('/:propertyId/stats',
-    validation.validateId('propertyId'),
-    asyncHandler(propertyController.getPropertyStats)
-  );
+  // User's properties (requires authentication)
+  router.get("/me/list", asyncHandler(propertyController.getMyProperties));
 
   return router;
 };

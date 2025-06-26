@@ -4,7 +4,7 @@
  */
 
 const { Property, PropertyModel, RecentlyViewedModel } = require("../models");
-const { energyService } = require("../services");
+const { energyService, telegramService } = require("../services");
 const { logger, businessLogger } = require("../middlewares/logging");
 const {
   AppError,
@@ -32,7 +32,7 @@ class PropertyController {
       if (!req.body.profileId) {
         // Try to fetch the active profile for the current user
         const Profile = require('../models').Profile;
-        let activeProfile = await Profile.findPrimaryByOxyUserId(req.userId);
+        let activeProfile = await Profile.findActiveByOxyUserId(req.userId);
         if (!activeProfile) {
           // Auto-create a personal profile for the user
           activeProfile = await Profile.create({
@@ -47,7 +47,6 @@ class PropertyController {
       }
       const propertyData = {
         ...req.body,
-        ownerId: req.userId,
         profileId: req.body.profileId,
       };
 
@@ -70,7 +69,16 @@ class PropertyController {
       const property = new PropertyModel(propertyData);
       const savedProperty = await property.save();
 
-      businessLogger.propertyCreated(savedProperty._id, savedProperty.ownerId);
+      businessLogger.propertyCreated(savedProperty._id, savedProperty.profileId);
+
+      // Send Telegram notification for new property (non-blocking)
+      telegramService.sendPropertyNotification(savedProperty)
+        .catch(error => {
+          logger.warn('Failed to send Telegram notification for new property', {
+            propertyId: savedProperty._id,
+            error: error.message
+          });
+        });
 
       res
         .status(201)
@@ -105,7 +113,7 @@ class PropertyController {
       if (!req.body.profileId) {
         // Try to fetch the active profile for the current user
         const Profile = require('../models').Profile;
-        const activeProfile = await Profile.findPrimaryByOxyUserId(req.userId);
+        const activeProfile = await Profile.findActiveByOxyUserId(req.userId);
         if (!activeProfile) {
           return next(
             new AppError(
@@ -119,7 +127,6 @@ class PropertyController {
       }
       const propertyData = {
         ...req.body,
-        ownerId: req.userId || "dev_user_" + Date.now(),
         profileId: req.body.profileId,
       };
 
@@ -129,7 +136,16 @@ class PropertyController {
       const property = new PropertyModel(propertyData);
       const savedProperty = await property.save();
 
-      businessLogger.propertyCreated(savedProperty._id, savedProperty.ownerId);
+      businessLogger.propertyCreated(savedProperty._id, savedProperty.profileId);
+
+      // Send Telegram notification for new property (non-blocking)
+      telegramService.sendPropertyNotification(savedProperty)
+        .catch(error => {
+          logger.warn('Failed to send Telegram notification for new property (dev mode)', {
+            propertyId: savedProperty._id,
+            error: error.message
+          });
+        });
 
       res
         .status(201)
@@ -225,14 +241,9 @@ class PropertyController {
       res.json(
         paginationResponse(
           properties,
-          {
-            page: pageNumber,
-            limit: limitNumber,
-            total,
-            totalPages,
-            hasNext: pageNumber < totalPages,
-            hasPrev: pageNumber > 1,
-          },
+          pageNumber,
+          limitNumber,
+          total,
           "Properties retrieved successfully",
         ),
       );
@@ -263,7 +274,7 @@ class PropertyController {
         
         // Get the current active profile for this Oxy user
         try {
-          const activeProfile = await Profile.findPrimaryByOxyUserId(oxyUserId);
+          const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
           if (activeProfile) {
             const profileId = activeProfile._id;
             console.log(`[getPropertyById] Found active profile: ${profileId} for Oxy user ${oxyUserId}`);
@@ -396,29 +407,39 @@ class PropertyController {
   }
 
   /**
-   * Get properties owned by current user
+   * Get user's properties
    */
   async getMyProperties(req, res, next) {
     try {
       const { page = 1, limit = 10 } = req.query;
-      const ownerId = req.userId;
+      const oxyUserId = req.userId;
 
-      // In a real implementation, query database for user's properties
-      // const { properties, total } = await PropertyModel.findByOwner(ownerId, { page, limit });
+      // Get the active profile for the current user
+      const Profile = require('../models').Profile;
+      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      
+      if (!activeProfile) {
+        return res.json(
+          paginationResponse(
+            [],
+            parseInt(page),
+            parseInt(limit),
+            0,
+            "No profile found for user",
+          ),
+        );
+      }
 
-      const mockProperties = [
-        new Property({
-          id: "prop_1",
-          ownerId: ownerId,
-          title: "My Downtown Apartment",
-          type: "apartment",
-          rent: { amount: 3500, currency: "USD" },
-          status: "active",
-        }),
-      ];
-
-      const properties = mockProperties.map((p) => p.toJSON());
-      const total = mockProperties.length;
+      // Query database for user's properties using profileId
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+      const [properties, total] = await Promise.all([
+        PropertyModel.find({ profileId: activeProfile._id, status: { $ne: 'archived' } })
+          .skip(skip)
+          .limit(parseInt(limit))
+          .sort({ createdAt: -1 })
+          .lean(),
+        PropertyModel.countDocuments({ profileId: activeProfile._id, status: { $ne: 'archived' } })
+      ]);
 
       res.json(
         paginationResponse(

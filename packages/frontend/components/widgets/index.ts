@@ -3,6 +3,7 @@ export * from './TrustScoreWidget';
 export * from './FeaturedPropertiesWidget';
 export * from './EcoCertificationWidget';
 export * from './HorizonInitiativeWidget';
+export * from './FavoritesWidget';
 export * from './WidgetManager';
 
 // Trust Score components

@@ -9,11 +9,12 @@ const API_CONFIG = {
     health: '/api/health',
     profile: '/api/profile',
     data: '/api/data',
-    users: {
-      recentProperties: '/api/users/me/recent-properties',
-      savedProperties: '/api/users/me/saved-properties',
-      propertyViews: '/api/users/me/property-views',
-      properties: '/api/users/me/properties',
+    users: undefined,
+    profiles: {
+      recentProperties: '/api/profiles/me/recent-properties',
+      savedProperties: '/api/profiles/me/saved-properties',
+      propertyViews: '/api/profiles/me/property-views',
+      properties: '/api/profiles/me/properties',
     },
   },
 };
@@ -412,7 +413,7 @@ export const dataApi = {
 export const userApi = {
   // Get recently viewed properties (authenticated)
   async getRecentProperties(oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.get<ApiResponse>(API_CONFIG.endpoints.users.recentProperties, {
+    const response = await api.get<ApiResponse>(API_CONFIG.endpoints.profiles.recentProperties, {
       oxyServices,
       activeSessionId,
     });
@@ -421,7 +422,7 @@ export const userApi = {
 
   // Get saved properties (authenticated)
   async getSavedProperties(oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.get<ApiResponse>(API_CONFIG.endpoints.users.savedProperties, {
+    const response = await api.get<ApiResponse>(API_CONFIG.endpoints.profiles.savedProperties, {
       oxyServices,
       activeSessionId,
     });
@@ -430,7 +431,7 @@ export const userApi = {
 
   // Track property view (authenticated)
   async trackPropertyView(propertyId: string, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.post<ApiResponse>(API_CONFIG.endpoints.users.propertyViews, { propertyId }, {
+    const response = await api.post<ApiResponse>(API_CONFIG.endpoints.profiles.propertyViews, { propertyId }, {
       oxyServices,
       activeSessionId,
     });
@@ -439,7 +440,7 @@ export const userApi = {
 
   // Save a property (authenticated)
   async saveProperty(propertyId: string, notes: string | undefined, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.post<ApiResponse>(API_CONFIG.endpoints.users.savedProperties, { propertyId, notes }, {
+    const response = await api.post<ApiResponse>(API_CONFIG.endpoints.profiles.savedProperties, { propertyId, notes }, {
       oxyServices,
       activeSessionId,
     });
@@ -448,7 +449,7 @@ export const userApi = {
 
   // Unsave a property (authenticated)
   async unsaveProperty(propertyId: string, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.delete<ApiResponse>(`${API_CONFIG.endpoints.users.savedProperties}/${propertyId}`, {
+    const response = await api.delete<ApiResponse>(`${API_CONFIG.endpoints.profiles.savedProperties}/${propertyId}`, {
       oxyServices,
       activeSessionId,
     });
@@ -457,7 +458,7 @@ export const userApi = {
 
   // Update saved property notes (authenticated)
   async updateSavedPropertyNotes(propertyId: string, notes: string, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.patch<ApiResponse>(`${API_CONFIG.endpoints.users.savedProperties}/${propertyId}/notes`, { notes }, {
+    const response = await api.patch<ApiResponse>(`${API_CONFIG.endpoints.profiles.savedProperties}/${propertyId}/notes`, { notes }, {
       oxyServices,
       activeSessionId,
     });
@@ -466,7 +467,7 @@ export const userApi = {
 
   // Get user properties (authenticated)
   async getUserProperties(page: number = 1, limit: number = 10, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.get<ApiResponse>(`${API_CONFIG.endpoints.users.properties}?page=${page}&limit=${limit}`, {
+    const response = await api.get<ApiResponse>(`${API_CONFIG.endpoints.profiles.properties}?page=${page}&limit=${limit}`, {
       oxyServices,
       activeSessionId,
     });

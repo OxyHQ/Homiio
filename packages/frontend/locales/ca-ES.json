@@ -504,6 +504,10 @@
                     "title": "Cases Familiars",
                     "prompt": "Trobeu cases de 3 habitacions amb jardí per sota de $2000"
                 },
+                "luxury": {
+                    "title": "Propietats de Luxe",
+                    "prompt": "Mostreu-me apartaments de luxe amb gimnàs i piscina per sobre de $3000"
+                },
                 "shared": {
                     "title": "Habitatge Compartit",
                     "prompt": "Trobeu habitacions compartides o espais de coliving per sota de $800"
@@ -526,7 +530,7 @@
         },
         "chat": {
             "placeholder": "Pregunteu a Sindi sobre els vostres drets com a llogater...",
-            "you": "Tu",
+            "you": "Vosaltres",
             "disclaimer": "Sindi advoca pels drets dels llogaters i la justícia habitacional. Per a accions legals, consulteu un advocat qualificat. Connecteu-vos amb organitzacions locals de llogaters per suport comunitari."
         },
         "errors": {

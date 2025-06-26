@@ -6,6 +6,7 @@ import { IconButton } from './IconButton';
 import { Property } from '@/services/propertyService';
 import { getPropertyTitle, getPropertyImageSource } from '@/utils/propertyUtils';
 import { useFavorites } from '@/hooks/useFavorites';
+import FavoriteButton from './FavoriteButton';
 
 export type PropertyType = 'apartment' | 'house' | 'coliving' | 'eco';
 
@@ -160,7 +161,7 @@ export function PropertyCard({
     badgeContent,
     overlayContent,
 }: PropertyCardProps) {
-    const { isFavorite, toggleFavoriteProperty } = useFavorites();
+    const { isFavorite, toggleFavorite } = useFavorites();
 
     // Use property object if provided, otherwise use individual props
     const propertyData = property ? {
@@ -208,7 +209,7 @@ export function PropertyCard({
 
     const handleFavoritePress = () => {
         if (propertyData.id) {
-            toggleFavoriteProperty(propertyData.id);
+            toggleFavorite(propertyData.id || '');
         }
     };
 
@@ -236,23 +237,14 @@ export function PropertyCard({
 
                 {/* Favorite Button */}
                 {showFavoriteButton && (
-                    <TouchableOpacity
+                    <FavoriteButton
+                        propertyId={propertyData.id || ''}
+                        size={24}
+                        color="#222"
+                        activeColor="#EF4444"
+                        variant="heart"
                         style={styles.favoriteButton}
-                        onPress={handleFavoritePress}
-                        accessibilityLabel={isPropertyFavorite ? 'Remove from favorites' : 'Save to favorites'}
-                        accessibilityRole="button"
-                    >
-                        <View style={[
-                            styles.favoriteIconContainer,
-                            isPropertyFavorite ? styles.favoriteIconActive : styles.favoriteIconInactive
-                        ]}>
-                            <Ionicons
-                                name={isPropertyFavorite ? 'heart' : 'heart-outline'}
-                                size={24}
-                                color={isPropertyFavorite ? '#fff' : '#222'}
-                            />
-                        </View>
-                    </TouchableOpacity>
+                    />
                 )}
 
                 {/* Eco Badge */}
@@ -432,21 +424,6 @@ const styles = StyleSheet.create({
         top: 8,
         right: 8,
         zIndex: 2,
-    },
-    favoriteIconContainer: {
-        borderRadius: 18,
-        padding: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    favoriteIconActive: {
-        backgroundColor: '#FF385C',
-    },
-    favoriteIconInactive: {
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
     },
     ecoBadge: {
         position: 'absolute',

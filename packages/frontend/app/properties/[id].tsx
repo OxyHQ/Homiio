@@ -57,7 +57,7 @@ export default function PropertyDetailPage() {
   const hasViewedRef = useRef(false);
 
   // Redux favorites
-  const { isFavorite, toggleFavoriteProperty } = useFavorites();
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   // Redux: fetch landlord profile by profileId
   const dispatch = useDispatch<AppDispatch>();
@@ -173,29 +173,6 @@ export default function PropertyDetailPage() {
     // In a real app, this would navigate to a rental application form
     router.push(`/properties/${property?.id}/apply`);
   };
-
-  const handleSave = () => {
-    if (property) {
-      // Add haptic feedback
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-      // Toggle favorite using Redux
-      toggleFavoriteProperty(property.id);
-
-      // Show toast feedback
-      const isCurrentlyFavorite = isFavorite(property.id);
-      if (isCurrentlyFavorite) {
-        toast.success('Removed from favorites');
-      } else {
-        toast.success('Added to favorites');
-      }
-    }
-  };
-
-  const isPropertySaved = useMemo(() => {
-    if (!property) return false;
-    return isFavorite(property.id);
-  }, [property, isFavorite]);
 
   const handleShare = async () => {
     if (!property) return;
@@ -335,6 +312,8 @@ ${propertyUrl}`;
     );
   }
 
+  const isPropertyFavorite = isFavorite(property.id);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <Header
@@ -348,14 +327,14 @@ ${propertyUrl}`;
             </TouchableOpacity>,
             <TouchableOpacity
               key="save"
-              onPress={handleSave}
+              onPress={() => toggleFavorite(property.id || '', property)}
               activeOpacity={0.7}
               style={styles.headerButton}
             >
               <IconComponent
-                name={isPropertySaved ? "heart" : "heart-outline"}
+                name={isPropertyFavorite ? "bookmark" : "bookmark-outline"}
                 size={24}
-                color={isPropertySaved ? "#FF385C" : colors.COLOR_BLACK}
+                color={isPropertyFavorite ? colors.primaryColor : '#ccc'}
               />
             </TouchableOpacity>,
           ],
@@ -426,32 +405,6 @@ ${propertyUrl}`;
             <Text style={styles.priceLabel}>{t("Monthly Rent")}</Text>
             <Text style={styles.priceValue}>{property.price}</Text>
           </View>
-
-          {/* Save/Unsave Button */}
-          <TouchableOpacity
-            style={[
-              styles.saveButton,
-              isPropertySaved ? styles.savedButton : styles.unsavedButton
-            ]}
-            onPress={handleSave}
-            activeOpacity={0.8}
-          >
-            <View style={styles.saveButtonContent}>
-              <View style={styles.iconContainer}>
-                <IconComponent
-                  name={isPropertySaved ? "heart" : "heart-outline"}
-                  size={22}
-                  color={isPropertySaved ? "#FF385C" : 'white'}
-                />
-              </View>
-              <Text style={[
-                styles.saveButtonText,
-                isPropertySaved ? styles.savedButtonText : styles.unsavedButtonText
-              ]}>
-                {isPropertySaved ? 'Saved to Favorites' : 'Save to Favorites'}
-              </Text>
-            </View>
-          </TouchableOpacity>
 
           {/* Eco Rating */}
           {property.isEcoCertified && (

@@ -8,7 +8,7 @@ import profileService, {
 import { toast } from 'sonner';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '@/store/store';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { 
   createProfile as createProfileAction, 
   updateProfile as updateProfileAction, 
@@ -198,6 +198,14 @@ export function useProfileRedux() {
     isLoading, 
     error 
   } = useSelector((state: RootState) => state.profile);
+
+  // Auto-fetch profiles when component mounts and user is authenticated
+  useEffect(() => {
+    if (oxyServices && activeSessionId && allProfiles.length === 0 && !isLoading) {
+      dispatch(fetchUserProfiles({ oxyServices, activeSessionId }));
+      dispatch(fetchPrimaryProfile({ oxyServices, activeSessionId }));
+    }
+  }, [oxyServices, activeSessionId, allProfiles.length, isLoading, dispatch]);
 
   const createProfile = useCallback(async (profileData: any): Promise<Profile> => {
     if (!oxyServices || !activeSessionId) {

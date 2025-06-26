@@ -143,10 +143,6 @@ const energyMonitoringSchema = new mongoose.Schema({
 }, { _id: false });
 
 const propertySchema = new mongoose.Schema({
-  ownerId: {
-    type: String,
-    required: [true, 'Owner ID is required']
-  },
   profileId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Profile',
@@ -282,7 +278,7 @@ const propertySchema = new mongoose.Schema({
 });
 
 // Indexes for better query performance
-propertySchema.index({ ownerId: 1, status: 1 });
+propertySchema.index({ profileId: 1, status: 1 });
 propertySchema.index({ 'address.city': 1, 'address.state': 1 });
 propertySchema.index({ type: 1, 'availability.isAvailable': 1 });
 propertySchema.index({ 'rent.amount': 1 });
@@ -332,8 +328,8 @@ propertySchema.pre('save', function(next) {
 });
 
 // Static methods
-propertySchema.statics.findByOwner = function(ownerId, options = {}) {
-  return this.find({ ownerId, status: { $ne: 'archived' } }, null, options);
+propertySchema.statics.findByProfile = function(profileId, options = {}) {
+  return this.find({ profileId, status: { $ne: 'archived' } }, null, options);
 };
 
 propertySchema.statics.findAvailable = function(filters = {}) {

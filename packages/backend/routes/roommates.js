@@ -5,33 +5,34 @@
 
 const express = require('express');
 const roommateController = require('../controllers/roommateController');
+const { asyncHandler } = require('../middlewares');
 
-module.exports = function(authenticateToken) {
+module.exports = function() {
   const router = express.Router();
 
   // Get all roommate profiles
-  router.get('/', authenticateToken, roommateController.getRoommateProfiles);
+  router.get('/', asyncHandler(roommateController.getRoommateProfiles));
 
   // Get current user's roommate preferences
-  router.get('/preferences', authenticateToken, roommateController.getMyRoommatePreferences);
+  router.get('/preferences', asyncHandler(roommateController.getMyRoommatePreferences));
 
   // Update roommate preferences
-  router.put('/preferences', authenticateToken, roommateController.updateRoommatePreferences);
+  router.put('/preferences', asyncHandler(roommateController.updateRoommatePreferences));
 
   // Toggle roommate matching
-  router.patch('/toggle', authenticateToken, roommateController.toggleRoommateMatching);
+  router.patch('/toggle', asyncHandler(roommateController.toggleRoommateMatching));
 
   // Get roommate requests
-  router.get('/requests', authenticateToken, roommateController.getRoommateRequests);
+  router.get('/requests', asyncHandler(roommateController.getRoommateRequests));
 
   // Send roommate request
-  router.post('/:profileId/request', authenticateToken, roommateController.sendRoommateRequest);
+  router.post('/:profileId/request', asyncHandler(roommateController.sendRoommateRequest));
 
   // Accept roommate request
-  router.post('/requests/:requestId/accept', authenticateToken, roommateController.acceptRoommateRequest);
+  router.post('/requests/:requestId/accept', asyncHandler(roommateController.acceptRoommateRequest));
 
   // Decline roommate request
-  router.post('/requests/:requestId/decline', authenticateToken, roommateController.declineRoommateRequest);
+  router.post('/requests/:requestId/decline', asyncHandler(roommateController.declineRoommateRequest));
 
   return router;
 }; 

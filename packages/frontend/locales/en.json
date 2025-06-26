@@ -276,6 +276,18 @@
             "availability": "Availability",
             "apply": "Apply Filters",
             "clear": "Clear All"
+        },
+        "titles": {
+            "forRent": "for rent in",
+            "locationNotSpecified": "Location not specified",
+            "types": {
+                "apartment": "Apartment",
+                "house": "House",
+                "room": "Room",
+                "studio": "Studio",
+                "duplex": "Duplex",
+                "penthouse": "Penthouse"
+            }
         }
     },
     "payments": {
@@ -541,12 +553,16 @@
                     "title": "Family Homes",
                     "prompt": "Find 3-bedroom houses with garden under $2000"
                 },
+                "luxury": {
+                    "title": "Luxury Properties",
+                    "prompt": "Show me luxury apartments with gym and pool over $3000"
+                },
                 "shared": {
                     "title": "Shared Housing",
                     "prompt": "Find shared rooms or coliving spaces under $800"
                 }
             },
-            "naturalLanguage": "💡 I understand natural language! Try: \"cheap 2-bedroom apartments in Barcelona with parking\""
+            "naturalLanguage": "💡 I understand natural language! Try: \"cheap 2-bedroom apartments in Barcelona with parking\" or \"luxury studios with gym under $2000\""
         },
         "features": {
             "title": "How I fight for housing justice:",

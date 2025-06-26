@@ -17,6 +17,28 @@ const config = {
     model: process.env.OPENAI_MODEL || 'gpt-4o',
   },
   
+  // Telegram Bot Configuration
+  telegram: {
+    botToken: process.env.TELEGRAM_BOT_TOKEN,
+    enabled: process.env.TELEGRAM_NOTIFICATIONS_ENABLED === 'true',
+    // Default group (Spanish)
+    defaultGroup: {
+      id: process.env.TELEGRAM_GROUP_DEFAULT || '-1002750613848',
+      language: 'es', // Spanish as default
+      name: 'Homiio España'
+    },
+    // Group configurations with language settings
+    groups: {
+      // Current Spanish group
+      [process.env.TELEGRAM_GROUP_DEFAULT || '-1002750613848']: { 
+        language: 'es', 
+        name: 'Homiio España' 
+      },
+      // Future groups can be added here
+      // [process.env.TELEGRAM_GROUP_US]: { language: 'en', name: 'Homiio US' }
+    }
+  },
+  
   // Database Configuration
   database: {
     url: process.env.MONGODB_URI || process.env.DATABASE_URL || 'mongodb://localhost:27017/homiio',

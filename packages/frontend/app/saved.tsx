@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert, TextInput, Modal } from 'react-native';
-import { useSavedProperties, useUnsaveProperty, useUpdateSavedPropertyNotes } from '@/hooks/useUserQueries';
 import { useOxy } from '@oxyhq/services';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -14,23 +13,36 @@ import { IconButton } from '@/components/IconButton';
 import { colors } from '@/styles/colors';
 import type { Property } from '@/services/propertyService';
 import { useSEO } from '@/hooks/useDocumentTitle';
-import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
-import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
+import { getPropertyTitle } from '@/utils/propertyUtils';
+import useSavedProperties from '@/hooks/useSavedPropertiesRedux';
+import { useFavorites } from '@/hooks/useFavorites';
 
-interface SavedProperty extends Property {
-    savedAt: string;
+interface SavedPropertyWithNotes extends Property {
     notes?: string;
-    savedPropertyId: string;
+    savedAt?: string;
 }
 
 export default function SavedPropertiesScreen() {
     const { t } = useTranslation();
     const { oxyServices, activeSessionId } = useOxy();
-    const { data: savedProperties = [], isLoading, error, refetch } = useSavedProperties();
-    const unsaveProperty = useUnsaveProperty();
-    const updateNotes = useUpdateSavedPropertyNotes();
 
-    // Set enhanced SEO for saved properties page
+    // Use Redux-based saved properties hook
+    const {
+        properties: savedProperties = [],
+        isLoading,
+        isSaving,
+        error,
+        loadProperties,
+        updateNotes,
+        clearError
+    } = useSavedProperties();
+
+    // Use the same favorites hook that works on property cards
+    const { toggleFavorite, isSaving: favoritesIsSaving } = useFavorites();
+
+
+
+    // Enhanced SEO for saved properties page
     useSEO({
         title: t('saved.title'),
         description: t('saved.emptyDescription'),
@@ -38,104 +50,121 @@ export default function SavedPropertiesScreen() {
         type: 'website'
     });
 
-    const [selectedProperty, setSelectedProperty] = useState<SavedProperty | null>(null);
+    const [selectedProperty, setSelectedProperty] = useState<SavedPropertyWithNotes | null>(null);
     const [notesModalVisible, setNotesModalVisible] = useState(false);
     const [notesText, setNotesText] = useState('');
 
-    const handleUnsaveProperty = (property: SavedProperty) => {
-        Alert.alert(
-            t('saved.unsave.title'),
-            t('saved.unsave.message', { title: getPropertyTitle(property) }),
-            [
-                { text: t('saved.unsave.cancel'), style: 'cancel' },
-                {
-                    text: t('saved.unsave.confirm'),
-                    style: 'destructive',
-                    onPress: () => {
-                        unsaveProperty.mutate(property._id, {
-                            onSuccess: () => {
-                                console.log('Property unsaved successfully');
-                            },
-                            onError: (error) => {
-                                Alert.alert('Error', error.message || t('saved.errors.unsaveFailed'));
-                            },
-                        });
-                    },
-                },
-            ]
-        );
-    };
+    const handleUnsaveProperty = useCallback(async (property: SavedPropertyWithNotes) => {
+        const propertyId = property._id || property.id || '';
 
-    const handleEditNotes = (property: SavedProperty) => {
+        if (!propertyId) {
+            Alert.alert('Error', 'Unable to unsave property - missing ID.');
+            return;
+        }
+
+        try {
+            await toggleFavorite(propertyId);
+        } catch (error) {
+            Alert.alert(
+                'Error',
+                `Failed to unsave property. ${error instanceof Error ? error.message : 'Please try again.'}`
+            );
+        }
+    }, [toggleFavorite]);
+
+    const handleEditNotes = useCallback((property: SavedPropertyWithNotes) => {
         setSelectedProperty(property);
         setNotesText(property.notes || '');
         setNotesModalVisible(true);
-    };
+    }, []);
 
-    const handleSaveNotes = () => {
+    const handleSaveNotes = useCallback(async () => {
         if (!selectedProperty) return;
 
-        updateNotes.mutate(
-            { propertyId: selectedProperty._id, notes: notesText },
-            {
-                onSuccess: () => {
-                    setNotesModalVisible(false);
-                    setSelectedProperty(null);
-                    setNotesText('');
-                    console.log('Notes updated successfully');
-                },
-                onError: (error) => {
-                    Alert.alert('Error', error.message || 'Failed to update notes');
-                },
-            }
-        );
-    };
+        const propertyId = selectedProperty._id || selectedProperty.id || '';
+        if (!propertyId) {
+            Alert.alert('Error', 'Unable to update notes - missing property ID.');
+            return;
+        }
 
-    const handlePropertyPress = (property: SavedProperty) => {
-        router.push(`/properties/${property._id}`);
-    };
+        try {
+            await updateNotes(propertyId, notesText);
+            setNotesModalVisible(false);
+            setSelectedProperty(null);
+            setNotesText('');
+        } catch (error) {
+            Alert.alert('Error', 'Failed to update notes. Please try again.');
+        }
+    }, [selectedProperty, notesText, updateNotes]);
 
-    const renderPropertyItem = ({ item }: { item: SavedProperty }) => (
-        <View style={styles.cardContainer}>
-            <PropertyCard
-                property={item}
-                variant="saved"
-                onPress={() => handlePropertyPress(item)}
-                footerContent={
-                    <View style={styles.cardFooter}>
-                        <View style={styles.notesSection}>
-                            <ThemedText style={styles.notesLabel}>My Notes:</ThemedText>
-                            <ThemedText style={styles.notesText} numberOfLines={2}>
-                                {item.notes || 'No notes yet. Tap to add some.'}
-                            </ThemedText>
+    const handlePropertyPress = useCallback((property: SavedPropertyWithNotes) => {
+        const propertyId = property._id || property.id || '';
+        if (propertyId) {
+            router.push(`/properties/${propertyId}`);
+        }
+    }, [router]);
+
+    const handleRefresh = useCallback(async () => {
+        clearError();
+        await loadProperties();
+    }, [clearError, loadProperties]);
+
+    const renderPropertyItem = useCallback(({ item }: { item: SavedPropertyWithNotes }) => {
+        const isProcessing = isSaving || favoritesIsSaving;
+
+        return (
+            <View style={[styles.cardContainer, isProcessing && styles.cardLoading]}>
+                <PropertyCard
+                    property={item as any}
+                    variant="saved"
+                    onPress={() => !isProcessing && handlePropertyPress(item)}
+                    footerContent={
+                        <View style={styles.cardFooter}>
+                            <View style={styles.notesSection}>
+                                <ThemedText style={styles.notesLabel}>My Notes:</ThemedText>
+                                <ThemedText style={styles.notesText} numberOfLines={2}>
+                                    {item.notes || 'No notes yet. Tap to add some.'}
+                                </ThemedText>
+                            </View>
+                            <View style={styles.cardActions}>
+                                <IconButton
+                                    name="create-outline"
+                                    size={22}
+                                    color={isProcessing ? colors.COLOR_BLACK_LIGHT_4 : colors.primaryColor}
+                                    onPress={() => !isProcessing && handleEditNotes(item)}
+                                />
+                                <Button
+                                    onPress={() => !isProcessing && handleUnsaveProperty(item)}
+                                    style={isProcessing ? styles.saveButtonDisabled : styles.saveButton}
+                                    disabled={isProcessing}
+                                >
+                                    {isProcessing ? 'Processing...' : 'Unsave'}
+                                </Button>
+                            </View>
                         </View>
-                        <View style={styles.cardActions}>
-                            <IconButton
-                                name="create-outline"
-                                size={22}
-                                color={colors.primaryColor}
-                                onPress={() => handleEditNotes(item)}
-                            />
-                            <IconButton
-                                name="bookmark"
-                                size={22}
-                                color={colors.chatUnreadBadge}
-                                onPress={() => handleUnsaveProperty(item)}
-                            />
-                        </View>
+                    }
+                />
+                {isProcessing && (
+                    <View style={styles.loadingOverlay}>
+                        <ThemedText style={styles.loadingText}>
+                            Processing...
+                        </ThemedText>
                     </View>
-                }
-            />
-        </View>
-    );
+                )}
+            </View>
+        );
+    }, [isSaving, favoritesIsSaving, handlePropertyPress, handleEditNotes, handleUnsaveProperty]);
 
-    const renderEmptyState = () => (
+    const keyExtractor = useCallback((item: SavedPropertyWithNotes) =>
+        item._id || item.id || Math.random().toString(), []);
+
+    const renderEmptyState = useCallback(() => (
         <View style={styles.emptyStateContainer}>
             <View style={styles.emptyStateContent}>
                 <Text style={styles.emptyStateIcon}>🔖</Text>
                 <ThemedText style={styles.emptyStateTitle}>No Saved Properties Yet</ThemedText>
                 <ThemedText style={styles.emptyStateSubtitle}>
-                    Tap the bookmark icon on any property to save it here for later.
+                    Save properties you love by tapping the bookmark icon. They'll appear here for easy access.
                 </ThemedText>
                 <Button
                     onPress={() => router.push('/properties')}
@@ -145,9 +174,9 @@ export default function SavedPropertiesScreen() {
                 </Button>
             </View>
         </View>
-    );
+    ), [router]);
 
-    const renderAuthRequired = () => (
+    const renderAuthRequired = useCallback(() => (
         <View style={styles.emptyStateContainer}>
             <View style={styles.emptyStateContent}>
                 <Text style={styles.emptyStateIcon}>🔒</Text>
@@ -157,7 +186,7 @@ export default function SavedPropertiesScreen() {
                 </ThemedText>
             </View>
         </View>
-    );
+    ), []);
 
     if (!oxyServices || !activeSessionId) {
         return (
@@ -181,20 +210,22 @@ export default function SavedPropertiesScreen() {
                             size={20}
                             color={colors.primaryColor}
                             backgroundColor="transparent"
-                            onPress={() => refetch()}
+                            onPress={handleRefresh}
                         />
                     ]
                 }}
             />
 
+            {/* Show loading spinner when initially loading or when global save/unsave operations are happening */}
             {isLoading && <LoadingTopSpinner showLoading={true} />}
 
             {error && (
                 <View style={styles.errorContainer}>
                     <ThemedText style={styles.errorText}>
                         Failed to load saved properties. Please try again.
+                        {error && ` Error: ${error}`}
                     </ThemedText>
-                    <Button onPress={() => refetch()}>
+                    <Button onPress={handleRefresh}>
                         Retry
                     </Button>
                 </View>
@@ -202,12 +233,14 @@ export default function SavedPropertiesScreen() {
 
             {!isLoading && !error && (
                 <FlatList
-                    data={savedProperties as SavedProperty[]}
+                    data={savedProperties as SavedPropertyWithNotes[]}
                     renderItem={renderPropertyItem}
-                    keyExtractor={(item) => item._id}
+                    keyExtractor={keyExtractor}
                     contentContainerStyle={styles.listContainer}
                     showsVerticalScrollIndicator={false}
                     ListEmptyComponent={renderEmptyState}
+                    refreshing={isLoading}
+                    onRefresh={handleRefresh}
                 />
             )}
 
@@ -226,7 +259,7 @@ export default function SavedPropertiesScreen() {
                     <View style={styles.modalContent}>
                         <ThemedText style={styles.modalTitle}>Edit Notes</ThemedText>
                         <ThemedText style={styles.modalSubtitle}>
-                            Add a personal note for "{selectedProperty ? getPropertyTitle(selectedProperty) : ''}"
+                            Add a personal note for "{selectedProperty ? getPropertyTitle(selectedProperty as any) : ''}"
                         </ThemedText>
                         <TextInput
                             style={styles.notesInput}
@@ -384,5 +417,26 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: '600',
         textAlign: 'center',
+    },
+    cardLoading: {
+        opacity: 0.5,
+    },
+    loadingOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    loadingText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: 'white',
+    },
+    saveButtonDisabled: {
+        backgroundColor: colors.COLOR_BLACK_LIGHT_4,
     },
 }); 

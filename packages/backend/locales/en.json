@@ -1,0 +1,35 @@
+{
+    "telegram": {
+        "forRent": "for rent in",
+        "rent": "Rent",
+        "available": "Available",
+        "details": "Details",
+        "bedrooms": "Bedrooms",
+        "bathrooms": "Bathrooms",
+        "type": "Type",
+        "size": "Size",
+        "amenities": "Amenities",
+        "description": "Description",
+        "immediately": "Immediately",
+        "noneListedAmenities": "None listed",
+        "noDescriptionProvided": "No description provided",
+        "locationNotSpecified": "Location not specified",
+        "viewPropertyDetails": "🏠 View Property Details",
+        "visitHomiio": "🏠 Visit Homiio",
+        "testMessage": "🤖 Test message from Homiio Property Bot",
+        "propertyTypes": {
+            "apartment": "Apartment",
+            "house": "House",
+            "room": "Room",
+            "studio": "Studio"
+        },
+        "paymentFrequency": {
+            "monthly": "monthly",
+            "weekly": "weekly",
+            "daily": "daily"
+        },
+        "hashtags": {
+            "newProperty": "#NewProperty"
+        }
+    }
+}

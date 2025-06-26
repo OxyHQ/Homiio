@@ -5,24 +5,23 @@
 
 const express = require('express');
 
-module.exports = function(authenticateToken) {
-  const userRoutes = require('./users')(authenticateToken);
-  const propertyRoutes = require('./properties')(authenticateToken);
-  const roomRoutes = require('./rooms');
-  const deviceRoutes = require('./devices')(authenticateToken);
-  const leaseRoutes = require('./leases')(authenticateToken);
-  const notificationRoutes = require('./notifications')(authenticateToken);
-  const analyticsRoutes = require('./analytics');
-  const profileRoutes = require('./profiles')(authenticateToken);
-  const aiRoutes = require('./ai')(authenticateToken);
-  const roommateRoutes = require('./roommates')(authenticateToken);
+module.exports = function() {
+  const propertyRoutes = require('./properties')();
+  const roomRoutes = require('./rooms')();
+  const deviceRoutes = require('./devices')();
+  const leaseRoutes = require('./leases')();
+  const notificationRoutes = require('./notifications')();
+  const analyticsRoutes = require('./analytics')();
+  const profileRoutes = require('./profiles')();
+  const aiRoutes = require('./ai')();
+  const roommateRoutes = require('./roommates')();
+  const telegramRoutes = require('./telegram')();
 
   const router = express.Router();
 
-  // Mount route modules
-  router.use('/users', userRoutes);
+  // Protected routes (authentication handled globally in server.js)
   router.use('/properties', propertyRoutes);
-  router.use('/properties/:propertyId/rooms', roomRoutes);
+  router.use('/rooms', roomRoutes);
   router.use('/devices', deviceRoutes);
   router.use('/leases', leaseRoutes);
   router.use('/notifications', notificationRoutes);
@@ -30,6 +29,7 @@ module.exports = function(authenticateToken) {
   router.use('/profiles', profileRoutes);
   router.use('/ai', aiRoutes);
   router.use('/roommates', roommateRoutes);
+  router.use('/telegram', telegramRoutes);
 
   // Health check route
   router.get('/health', (req, res) => {

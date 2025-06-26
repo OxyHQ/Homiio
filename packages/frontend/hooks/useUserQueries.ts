@@ -28,16 +28,38 @@ export function useSavedProperties() {
         console.log('Fetching saved properties with OxyServices authentication');
         
         const response = await userApi.getSavedProperties(oxyServices, activeSessionId);
+        console.log('Raw API response:', response);
+        
+        // The API returns { success, message, data: [properties] }
+        // So we need to access response.data (not response.data.data)
         const properties = response.data || [];
         console.log(`Successfully fetched ${properties.length} saved properties:`, properties);
+        
+        // Validate the response structure
+        if (!Array.isArray(properties)) {
+          console.warn('Expected array but received:', typeof properties, properties);
+          return [];
+        }
+        
         return properties;
       } catch (error) {
         console.error('Error fetching saved properties:', error);
+        // Log more details about the error
+        if (error && typeof error === 'object' && 'response' in error) {
+          const httpError = error as any; // Cast to access response properties
+          console.error('Error response status:', httpError.response?.status);
+          console.error('Error response data:', httpError.response?.data);
+        }
         return [];
       }
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
     enabled: !!(oxyServices && activeSessionId), // Only run when authenticated
+    retry: 2, // Limit retries
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+    refetchOnWindowFocus: false, // Prevent unnecessary refetches
+    refetchOnMount: true, // Only refetch on mount
   });
 }
 

@@ -1,11 +1,11 @@
 const express = require('express');
-const { auth } = require('../middlewares');
+const { asyncHandler } = require('../middlewares');
 const { analyticsController } = require('../controllers');
 
-const router = express.Router();
+module.exports = function() {
+  const router = express.Router();
 
-router.get('/', (req, res, next) =>
-  analyticsController.getAnalytics(req, res, next)
-);
+  router.get('/', asyncHandler(analyticsController.getAnalytics));
 
-module.exports = router;
+  return router;
+};

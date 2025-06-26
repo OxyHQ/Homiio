@@ -73,9 +73,12 @@ const webAlert = (
 export default function ProfileScreen() {
     const { t } = useTranslation();
     const router = useRouter();
-    const { user, logout } = useOxy();
+    const { user, logout, oxyServices, activeSessionId } = useOxy();
+
+    // Use Redux hooks consistently
     const {
         allProfiles: profiles,
+        primaryProfile,
         isLoading,
         error,
         refetchProfiles,
@@ -86,6 +89,9 @@ export default function ProfileScreen() {
 
     const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
     const [isSwitching, setIsSwitching] = useState(false);
+
+    // Check if user has a primary profile
+    const hasPrimaryProfile = !!primaryProfile;
 
     useEffect(() => {
         if (profiles && profiles.length > 0) {

@@ -18,7 +18,15 @@ export function FeaturedPropertiesWidget() {
         available: true
     });
 
+    // Basic monitoring log
+    console.log('FeaturedPropertiesWidget:', {
+        isLoading,
+        propertiesCount: data?.properties?.length || 0,
+        hasError: !!error
+    });
+
     if (error) {
+        console.error('FeaturedPropertiesWidget Error:', error);
         return (
             <BaseWidget title={t("Featured Properties")}>
                 <View style={styles.errorContainer}>

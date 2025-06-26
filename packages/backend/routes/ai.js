@@ -7,10 +7,9 @@ const express = require('express');
 const { openai } = require('@ai-sdk/openai');
 const { streamText } = require('ai');
 const { PassThrough } = require('stream');
-const User = require('../models/User'); // Ensure correct path
 const Profile = require('../models/schemas/ProfileSchema');
 
-module.exports = function(authenticateToken) {
+module.exports = function() {
   const router = express.Router();
 
   /**
@@ -257,10 +256,9 @@ module.exports = function(authenticateToken) {
    * Stream text generation using OpenAI GPT-4o with web search capability
    * Uses official AI SDK Express streaming pattern
    */
-  router.post('/stream', authenticateToken, async (req, res) => {
+  router.post('/stream', async (req, res) => {
     try {
       const { messages } = req.body;
-      const user = req.user;
       
       console.log('Starting AI stream with messages:', messages);
 
@@ -472,7 +470,7 @@ Remember: You're here to empower tenants and promote ethical housing practices. 
   });
 
   // Get Sindi chat history for the authenticated user
-  router.get('/history', authenticateToken, async (req, res) => {
+  router.get('/history', async (req, res) => {
     try {
       const user = req.user;
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
@@ -486,7 +484,7 @@ Remember: You're here to empower tenants and promote ethical housing practices. 
   });
 
   // Clear Sindi chat history for the authenticated user
-  router.delete('/history', authenticateToken, async (req, res) => {
+  router.delete('/history', async (req, res) => {
     try {
       const user = req.user;
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
@@ -500,7 +498,7 @@ Remember: You're here to empower tenants and promote ethical housing practices. 
   });
 
   // Save Sindi chat history for the authenticated user (on personal profile)
-  router.post('/history', authenticateToken, async (req, res) => {
+  router.post('/history', async (req, res) => {
     try {
       // Get userId from req.user
       const userId = req.user?.oxyUserId || req.user?._id || req.user?.id;

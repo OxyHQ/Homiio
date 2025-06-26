@@ -5,43 +5,29 @@
 
 const express = require("express");
 const profileController = require("../controllers/profileController");
-const { validation, asyncHandler } = require("../middlewares");
+const { asyncHandler } = require("../middlewares");
 const performanceMonitor = require("../middlewares/performance");
 
-module.exports = function (authenticateToken) {
+module.exports = function () {
   const router = express.Router();
 
   // Performance monitoring for all profile routes
   router.use(performanceMonitor);
 
-  // Protected routes (all profile routes require authentication)
-  router.use(authenticateToken);
-
-  // Get profile by ID
-  router.get('/:profileId', asyncHandler(profileController.getProfileById));
-
-  // Primary profile routes
-  router.get("/me", asyncHandler(profileController.getOrCreatePrimaryProfile));
+  // Profile routes
+  router.get("/me", asyncHandler(profileController.getOrCreateActiveProfile));
   router.get("/me/all", asyncHandler(profileController.getUserProfiles));
+  router.get("/me/recent-properties", asyncHandler(profileController.getRecentProperties));
+  router.get("/me/saved-properties", asyncHandler(profileController.getSavedProperties));
+  router.post("/me/save-property", asyncHandler(profileController.saveProperty));
+  router.delete("/me/saved-properties/:propertyId", asyncHandler(profileController.unsaveProperty));
+  router.put("/me/saved-properties/:propertyId/notes", asyncHandler(profileController.updateSavedPropertyNotes));
   router.get("/me/:profileType", asyncHandler(profileController.getProfileByType));
-  router.put("/me", asyncHandler(profileController.updatePrimaryProfile));
-
-  // Profile management
+  router.get("/:profileId", asyncHandler(profileController.getProfileById));
   router.post("/", asyncHandler(profileController.createProfile));
   router.put("/:profileId", asyncHandler(profileController.updateProfile));
-  router.patch("/:profileId/activate", asyncHandler(profileController.activateProfile));
   router.delete("/:profileId", asyncHandler(profileController.deleteProfile));
-
-  // Agency-specific routes
-  router.get("/me/agency-memberships", asyncHandler(profileController.getAgencyMemberships));
-  router.post("/:profileId/members", asyncHandler(profileController.addAgencyMember));
-  router.delete("/:profileId/members/:memberOxyUserId", asyncHandler(profileController.removeAgencyMember));
-
-  // Trust score routes
-  router.patch("/:profileId/trust-score", asyncHandler(profileController.updateTrustScore));
-  router.patch("/me/trust-score", asyncHandler(profileController.updatePrimaryTrustScore));
-  router.post("/me/trust-score/recalculate", asyncHandler(profileController.recalculatePrimaryTrustScore));
-  router.get("/me/trust-score", asyncHandler(profileController.getTrustScore));
+  router.post("/:profileId/activate", asyncHandler(profileController.activateProfile));
 
   return router;
 }; 

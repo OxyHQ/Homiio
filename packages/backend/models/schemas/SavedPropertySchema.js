@@ -1,8 +1,9 @@
 const mongoose = require('mongoose');
 
 const savedPropertySchema = new mongoose.Schema({
-  oxyUserId: {
-    type: String,
+  profileId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Profile',
     required: true,
     index: true,
   },
@@ -23,10 +24,10 @@ const savedPropertySchema = new mongoose.Schema({
   timestamps: true,
 });
 
-// Compound index to ensure unique oxyUserId + propertyId combinations
-savedPropertySchema.index({ oxyUserId: 1, propertyId: 1 }, { unique: true });
+// Compound index to ensure unique profileId + propertyId combinations
+savedPropertySchema.index({ profileId: 1, propertyId: 1 }, { unique: true });
 
-// Index for efficient queries by oxyUserId and savedAt
-savedPropertySchema.index({ oxyUserId: 1, savedAt: -1 });
+// Index for efficient queries by profileId and savedAt
+savedPropertySchema.index({ profileId: 1, savedAt: -1 });
 
 module.exports = mongoose.model('SavedProperty', savedPropertySchema); 

@@ -8,7 +8,7 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 class ProfileController {
   constructor() {
     // Bind methods to preserve 'this' context
-    this.getOrCreatePrimaryProfile = this.getOrCreatePrimaryProfile.bind(this);
+    this.getOrCreateActiveProfile = this.getOrCreateActiveProfile.bind(this);
     this.getUserProfiles = this.getUserProfiles.bind(this);
     this.getProfileByType = this.getProfileByType.bind(this);
     this.createProfile = this.createProfile.bind(this);
@@ -17,26 +17,34 @@ class ProfileController {
     this.getAgencyMemberships = this.getAgencyMemberships.bind(this);
     this.addAgencyMember = this.addAgencyMember.bind(this);
     this.removeAgencyMember = this.removeAgencyMember.bind(this);
-    this.updatePrimaryProfile = this.updatePrimaryProfile.bind(this);
-    this.updatePrimaryTrustScore = this.updatePrimaryTrustScore.bind(this);
+    this.updateActiveProfile = this.updateActiveProfile.bind(this);
+    this.updateActiveTrustScore = this.updateActiveTrustScore.bind(this);
     this.updateTrustScore = this.updateTrustScore.bind(this);
     this.getTrustScore = this.getTrustScore.bind(this);
-    this.recalculatePrimaryTrustScore = this.recalculatePrimaryTrustScore.bind(this);
+    this.recalculateActiveTrustScore = this.recalculateActiveTrustScore.bind(this);
     this.activateProfile = this.activateProfile.bind(this);
     this.getProfileById = this.getProfileById.bind(this);
+    this.test = this.test.bind(this);
+    this.getProfileProperties = this.getProfileProperties.bind(this);
+    this.getRecentProperties = this.getRecentProperties.bind(this);
+    this.getSavedProperties = this.getSavedProperties.bind(this);
+    this.saveProperty = this.saveProperty.bind(this);
+    this.unsaveProperty = this.unsaveProperty.bind(this);
+    this.updateSavedPropertyNotes = this.updateSavedPropertyNotes.bind(this);
+    this.trackPropertyView = this.trackPropertyView.bind(this);
   }
 
   /**
    * Get cache key for profile
    */
-  getCacheKey(oxyUserId, type = 'primary') {
+  getCacheKey(oxyUserId, type = 'active') {
     return `${oxyUserId}:${type}`;
   }
 
   /**
    * Get cached profile data
    */
-  getCachedProfile(oxyUserId, type = 'primary') {
+  getCachedProfile(oxyUserId, type = 'active') {
     const key = this.getCacheKey(oxyUserId, type);
     const cached = profileCache.get(key);
     
@@ -50,7 +58,7 @@ class ProfileController {
   /**
    * Set cached profile data
    */
-  setCachedProfile(oxyUserId, data, type = 'primary') {
+  setCachedProfile(oxyUserId, data, type = 'active') {
     const key = this.getCacheKey(oxyUserId, type);
     profileCache.set(key, {
       data,
@@ -61,15 +69,35 @@ class ProfileController {
   /**
    * Clear cached profile data
    */
-  clearCachedProfile(oxyUserId, type = 'primary') {
+  clearCachedProfile(oxyUserId, type = 'active') {
     const key = this.getCacheKey(oxyUserId, type);
     profileCache.delete(key);
   }
 
   /**
-   * Get or create user's primary profile
+   * Test endpoint to check if the controller is working
    */
-  async getOrCreatePrimaryProfile(req, res, next) {
+  async test(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      
+      res.json({
+        success: true,
+        message: 'Profile controller is working',
+        oxyUserId,
+        hasUser: !!req.user,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error in test endpoint:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Get or create user's active profile
+   */
+  async getOrCreateActiveProfile(req, res, next) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       
@@ -80,18 +108,19 @@ class ProfileController {
       }
 
       // Check cache first
-      let profile = this.getCachedProfile(oxyUserId, 'primary');
+      let profile = this.getCachedProfile(oxyUserId, 'active');
       
       if (!profile) {
-        // Try to find existing primary profile
-        profile = await Profile.findPrimaryByOxyUserId(oxyUserId);
+        // Try to find existing active profile
+        profile = await Profile.findActiveByOxyUserId(oxyUserId);
         
         if (!profile) {
-          // Check if there's a personal profile (even if not primary)
+          // Check if there's a personal profile (even if not active)
           const personalProfile = await Profile.findOne({ oxyUserId, profileType: "personal" });
+          
           if (personalProfile) {
-            // Make personal profile primary but don't change active status
-            personalProfile.isPrimary = true;
+            // Make personal profile active but don't change active status
+            personalProfile.isActive = true;
             await personalProfile.save();
             profile = personalProfile;
           } else {
@@ -99,8 +128,8 @@ class ProfileController {
             const defaultPersonalProfile = new Profile({
               oxyUserId,
               profileType: "personal",
-              isPrimary: true,
               isActive: true,
+              isPrimary: true, // First profile is always primary
               personalProfile: {
                 personalInfo: {
                   bio: "",
@@ -139,14 +168,14 @@ class ProfileController {
         }
         
         // Cache the result
-        this.setCachedProfile(oxyUserId, profile, 'primary');
+        this.setCachedProfile(oxyUserId, profile, 'active');
       }
 
       res.json(
         successResponse(profile, "Profile retrieved successfully")
       );
     } catch (error) {
-      console.error("Error getting primary profile:", error);
+      console.error("Error getting active profile:", error);
       next(error);
     }
   }
@@ -164,9 +193,8 @@ class ProfileController {
         );
       }
 
-      // Use field selection for better performance
-      const selectFields = '_id oxyUserId profileType isPrimary isActive createdAt updatedAt';
-      const profiles = await Profile.findByOxyUserId(oxyUserId, selectFields);
+      // Get profiles with basic fields only, but ensure toJSON transform works
+      const profiles = await Profile.findByOxyUserId(oxyUserId, '_id oxyUserId profileType isActive createdAt updatedAt');
       
       res.json(
         successResponse(profiles, "Profiles retrieved successfully")
@@ -260,15 +288,14 @@ class ProfileController {
         );
       }
 
-      // Check if this is the user's first profile (no primary profile exists)
-      const existingPrimaryProfile = await Profile.findPrimaryByOxyUserId(oxyUserId);
-      const isFirstProfile = !existingPrimaryProfile;
+      // Check if this is the user's first profile (no active profile exists)
+      const existingActiveProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const isFirstProfile = !existingActiveProfile;
 
       // Create profile based on type
       const profileData = {
         oxyUserId,
         profileType,
-        isPrimary: isFirstProfile, // Set as primary if it's the first profile
         isActive: true
       };
 
@@ -346,7 +373,7 @@ class ProfileController {
       await profile.save();
 
       // Clear cache after creating new profile
-      this.clearCachedProfile(oxyUserId, 'primary');
+      this.clearCachedProfile(oxyUserId, 'active');
 
       res.status(201).json(
         successResponse(profile, "Profile created successfully")
@@ -411,7 +438,7 @@ class ProfileController {
       }
 
       // Clear cache after update
-      this.clearCachedProfile(oxyUserId, 'primary');
+      this.clearCachedProfile(oxyUserId, 'active');
 
       res.json(
         successResponse(profile, "Profile updated successfully")
@@ -450,9 +477,9 @@ class ProfileController {
         );
       }
 
-      if (profile.isPrimary) {
+      if (profile.isActive) {
         return res.status(400).json(
-          errorResponse("Cannot delete primary profile", "CANNOT_DELETE_PRIMARY")
+          errorResponse("Cannot delete active profile", "CANNOT_DELETE_ACTIVE")
         );
       }
 
@@ -604,9 +631,9 @@ class ProfileController {
   }
 
   /**
-   * Update primary profile (no profile ID needed)
+   * Update active profile (no profile ID needed)
    */
-  async updatePrimaryProfile(req, res, next) {
+  async updateActiveProfile(req, res, next) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const updateData = req.body;
@@ -617,16 +644,15 @@ class ProfileController {
         );
       }
 
-      // Find the primary profile for this user (non-lean for updates)
+      // Find the active profile for this user (non-lean for updates)
       const profile = await Profile.findOne({ 
         oxyUserId, 
-        isPrimary: true, 
         isActive: true 
       });
       
       if (!profile) {
         return res.status(404).json(
-          errorResponse("Primary profile not found", "PROFILE_NOT_FOUND")
+          errorResponse("Active profile not found", "PROFILE_NOT_FOUND")
         );
       }
 
@@ -659,10 +685,6 @@ class ProfileController {
           };
         }
 
-        if (updateData.isPrimary !== undefined) {
-          profile.isPrimary = updateData.isPrimary;
-        }
-
         // Recalculate trust score for personal profiles
         if (profile.profileType === "personal") {
           profile.calculateTrustScore();
@@ -672,21 +694,21 @@ class ProfileController {
       }
 
       // Clear cache after update
-      this.clearCachedProfile(oxyUserId, 'primary');
+      this.clearCachedProfile(oxyUserId, 'active');
 
       res.json(
-        successResponse(profile, "Primary profile updated successfully")
+        successResponse(profile, "Active profile updated successfully")
       );
     } catch (error) {
-      console.error("Error updating primary profile:", error);
+      console.error("Error updating active profile:", error);
       next(error);
     }
   }
 
   /**
-   * Update primary profile trust score (no profile ID needed)
+   * Update active profile trust score (no profile ID needed)
    */
-  async updatePrimaryTrustScore(req, res, next) {
+  async updateActiveTrustScore(req, res, next) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { factor, value } = req.body;
@@ -697,16 +719,15 @@ class ProfileController {
         );
       }
 
-      // Find the primary profile for this user (non-lean for updates)
+      // Find the active profile for this user (non-lean for updates)
       const profile = await Profile.findOne({ 
         oxyUserId, 
-        isPrimary: true, 
         isActive: true 
       });
       
       if (!profile) {
         return res.status(404).json(
-          errorResponse("Primary profile not found", "PROFILE_NOT_FOUND")
+          errorResponse("Active profile not found", "PROFILE_NOT_FOUND")
         );
       }
 
@@ -722,7 +743,7 @@ class ProfileController {
         successResponse(profile, "Trust score updated successfully")
       );
     } catch (error) {
-      console.error("Error updating primary trust score:", error);
+      console.error("Error updating active trust score:", error);
       next(error);
     }
   }
@@ -793,7 +814,7 @@ class ProfileController {
       }
 
       // Get only the trust score data
-      const profile = await Profile.findPrimaryByOxyUserId(
+      const profile = await Profile.findActiveByOxyUserId(
         oxyUserId, 
         'personalProfile.trustScore profileType'
       );
@@ -819,9 +840,9 @@ class ProfileController {
   }
 
   /**
-   * Recalculate trust score for primary profile
+   * Recalculate trust score for active profile
    */
-  async recalculatePrimaryTrustScore(req, res, next) {
+  async recalculateActiveTrustScore(req, res, next) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       
@@ -831,16 +852,15 @@ class ProfileController {
         );
       }
 
-      // Find the primary profile for this user (non-lean for method calls)
+      // Find the active profile for this user (non-lean for method calls)
       const profile = await Profile.findOne({ 
         oxyUserId, 
-        isPrimary: true, 
         isActive: true 
       });
       
       if (!profile) {
         return res.status(404).json(
-          errorResponse("Primary profile not found", "PROFILE_NOT_FOUND")
+          errorResponse("Active profile not found", "PROFILE_NOT_FOUND")
         );
       }
 
@@ -861,7 +881,7 @@ class ProfileController {
         }, "Trust score recalculated successfully")
       );
     } catch (error) {
-      console.error("Error recalculating primary trust score:", error);
+      console.error("Error recalculating active trust score:", error);
       next(error);
     }
   }
@@ -894,9 +914,9 @@ class ProfileController {
         );
       }
 
-      if (profile.isPrimary) {
+      if (profile.isActive) {
         return res.status(400).json(
-          errorResponse("Cannot activate primary profile", "CANNOT_ACTIVATE_PRIMARY")
+          errorResponse("Cannot activate active profile", "CANNOT_ACTIVATE_ACTIVE")
         );
       }
 
@@ -916,18 +936,564 @@ class ProfileController {
    */
   async getProfileById(req, res, next) {
     try {
-      let { profileId } = req.params;
-      // If the param is 'me', use the authenticated user's profile ID
-      if (profileId === 'me') {
-        // Try to get the user's profile ID from req.user or req.userId
-        profileId = req.user?.profileId || req.userId || req.user?._id;
+      const { profileId } = req.params;
+      
+      if (!profileId) {
+        return res.status(400).json(
+          errorResponse("Profile ID is required", "PROFILE_ID_REQUIRED")
+        );
       }
+
       const profile = await Profile.findById(profileId);
+      
       if (!profile) {
-        return res.status(404).json(errorResponse("Profile not found", "PROFILE_NOT_FOUND"));
+        return res.status(404).json(
+          errorResponse("Profile not found", "PROFILE_NOT_FOUND")
+        );
       }
-      res.json(successResponse(profile, "Profile retrieved successfully"));
+
+      res.json(
+        successResponse(profile, "Profile retrieved successfully")
+      );
     } catch (error) {
+      console.error("Error getting profile by ID:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Get properties for the current user's profile
+   */
+  async getProfileProperties(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      const { page = 1, limit = 10 } = req.query;
+      
+      if (!oxyUserId) {
+        return res.status(401).json(
+          errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
+        );
+      }
+
+      // Get the active profile for the current user
+      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      
+      if (!activeProfile) {
+        return res.json(
+          successResponse({
+            properties: [],
+            total: 0,
+            page: parseInt(page),
+            totalPages: 0
+          }, "No profile found for user")
+        );
+      }
+
+      // Import PropertyModel
+      const { PropertyModel } = require('../models');
+      
+      // Query database for user's properties using profileId
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+      const [properties, total] = await Promise.all([
+        PropertyModel.find({ profileId: activeProfile._id, status: { $ne: 'archived' } })
+          .skip(skip)
+          .limit(parseInt(limit))
+          .sort({ createdAt: -1 })
+          .lean(),
+        PropertyModel.countDocuments({ profileId: activeProfile._id, status: { $ne: 'archived' } })
+      ]);
+
+      const totalPages = Math.ceil(total / parseInt(limit));
+
+      res.json(
+        successResponse({
+          properties,
+          total,
+          page: parseInt(page),
+          totalPages
+        }, "Properties retrieved successfully")
+      );
+    } catch (error) {
+      console.error("Error getting profile properties:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Get recently viewed properties for the current user's profile
+   */
+  async getRecentProperties(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      const { limit = 10 } = req.query;
+      
+      if (!oxyUserId) {
+        return res.status(401).json(
+          errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
+        );
+      }
+
+      // Get the active profile for the current user
+      let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      
+      if (!activeProfile) {
+        console.log(`No active profile found for user ${oxyUserId}, creating default personal profile`);
+        // Create a default personal profile if none exists
+        const defaultPersonalProfile = new Profile({
+          oxyUserId,
+          profileType: "personal",
+          isActive: true,
+          isPrimary: true, // First profile is always primary
+          personalProfile: {
+            personalInfo: {
+              bio: "",
+              occupation: "",
+              employer: "",
+              annualIncome: null,
+              employmentStatus: "employed",
+              moveInDate: null,
+              leaseDuration: "yearly",
+            },
+            preferences: {},
+            references: [],
+            rentalHistory: [],
+            verification: {},
+            trustScore: { score: 50, factors: [] },
+            settings: {
+              notifications: { email: true, push: true, sms: false },
+              privacy: { profileVisibility: "public", showContactInfo: true, showIncome: false },
+              language: "en",
+              timezone: "UTC"
+            }
+          }
+        });
+        
+        // Calculate initial trust score
+        defaultPersonalProfile.calculateTrustScore();
+        await defaultPersonalProfile.save();
+        activeProfile = defaultPersonalProfile;
+      }
+
+      // Import RecentlyViewedModel
+      const { RecentlyViewedModel } = require('../models');
+      
+      // Get recently viewed properties
+      const recentViews = await RecentlyViewedModel.find({ profileId: activeProfile._id })
+        .sort({ viewedAt: -1 })
+        .limit(parseInt(limit))
+        .populate('propertyId')
+        .lean();
+
+      const properties = recentViews.map(view => ({
+        ...view.propertyId,
+        viewedAt: view.viewedAt
+      })).filter(item => item._id); // Filter out any null properties
+
+      res.json(
+        successResponse(properties, "Recent properties retrieved successfully")
+      );
+    } catch (error) {
+      console.error("Error getting recent properties:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Get saved properties for the current user's profile
+   */
+  async getSavedProperties(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      
+      console.log('[getSavedProperties] Called with:', {
+        hasUser: !!req.user,
+        oxyUserId,
+        userObject: req.user ? { id: req.user.id, _id: req.user._id } : null
+      });
+      
+      if (!oxyUserId) {
+        console.log('[getSavedProperties] No oxyUserId found, returning 401');
+        return res.status(401).json(
+          errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
+        );
+      }
+
+      // Get the active profile for the current user
+      let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      
+      console.log('[getSavedProperties] Active profile search result:', {
+        found: !!activeProfile,
+        profileId: activeProfile?._id,
+        profileType: activeProfile?.profileType
+      });
+      
+      if (!activeProfile) {
+        console.log(`[getSavedProperties] No active profile found for user ${oxyUserId}, creating default personal profile`);
+        // Create a default personal profile if none exists
+        const defaultPersonalProfile = new Profile({
+          oxyUserId,
+          profileType: "personal",
+          isActive: true,
+          isPrimary: true, // First profile is always primary
+          personalProfile: {
+            personalInfo: {
+              bio: "",
+              occupation: "",
+              employer: "",
+              annualIncome: null,
+              employmentStatus: "employed",
+              moveInDate: null,
+              leaseDuration: "yearly",
+            },
+            preferences: {},
+            references: [],
+            rentalHistory: [],
+            verification: {},
+            trustScore: { score: 50, factors: [] },
+            settings: {
+              notifications: { email: true, push: true, sms: false },
+              privacy: { profileVisibility: "public", showContactInfo: true, showIncome: false },
+              language: "en",
+              timezone: "UTC"
+            }
+          }
+        });
+        
+        // Calculate initial trust score
+        defaultPersonalProfile.calculateTrustScore();
+        await defaultPersonalProfile.save();
+        activeProfile = defaultPersonalProfile;
+        
+        console.log('[getSavedProperties] Created new profile:', {
+          profileId: activeProfile._id,
+          profileType: activeProfile.profileType
+        });
+      }
+
+      // Import SavedPropertyModel
+      const { SavedPropertyModel } = require('../models');
+      
+      console.log('[getSavedProperties] Querying SavedPropertyModel with profileId:', activeProfile._id);
+      
+      // Get saved properties
+      const savedProperties = await SavedPropertyModel.find({ profileId: activeProfile._id })
+        .sort({ savedAt: -1 })
+        .populate('propertyId')
+        .lean();
+
+      console.log('[getSavedProperties] SavedPropertyModel query result:', {
+        count: savedProperties.length,
+        firstItem: savedProperties[0] ? {
+          id: savedProperties[0]._id,
+          propertyId: savedProperties[0].propertyId,
+          hasPropertyId: !!savedProperties[0].propertyId,
+          savedAt: savedProperties[0].savedAt
+        } : null
+      });
+
+      const properties = savedProperties.map(saved => ({
+        ...saved.propertyId,
+        savedAt: saved.savedAt,
+        notes: saved.notes
+      })).filter(item => item._id); // Filter out any null properties
+
+      console.log('[getSavedProperties] Mapped and filtered properties:', {
+        originalCount: savedProperties.length,
+        finalCount: properties.length,
+        firstProperty: properties[0] ? {
+          id: properties[0]._id,
+          title: properties[0].title || 'No title',
+          savedAt: properties[0].savedAt
+        } : null
+      });
+
+      const response = successResponse(properties, "Saved properties retrieved successfully");
+      
+      console.log('[getSavedProperties] Final response:', {
+        success: response.success,
+        message: response.message,
+        dataType: typeof response.data,
+        dataLength: Array.isArray(response.data) ? response.data.length : 'not array',
+        responseSize: JSON.stringify(response).length
+      });
+
+      res.json(response);
+    } catch (error) {
+      console.error("Error getting saved properties:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Save a property for the current user's profile
+   */
+  async saveProperty(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      const { propertyId, notes } = req.body;
+      
+      console.log('saveProperty called:', { oxyUserId, propertyId, notes });
+      
+      if (!oxyUserId) {
+        return res.status(401).json(
+          errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
+        );
+      }
+
+      if (!propertyId) {
+        return res.status(400).json(
+          errorResponse("Property ID is required", "PROPERTY_ID_REQUIRED")
+        );
+      }
+
+      // Get the active profile for the current user
+      let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      
+      if (!activeProfile) {
+        console.log('No active profile found, creating one...');
+        // Create a default personal profile if none exists
+        const defaultPersonalProfile = new Profile({
+          oxyUserId,
+          profileType: "personal",
+          isActive: true,
+          isPrimary: true, // First profile is always primary
+          personalProfile: {
+            personalInfo: {
+              bio: "",
+              occupation: "",
+              employer: "",
+              annualIncome: null,
+              employmentStatus: "employed",
+              moveInDate: null,
+              leaseDuration: "yearly",
+            },
+            preferences: {},
+            references: [],
+            rentalHistory: [],
+            verification: {},
+            trustScore: { score: 50, factors: [] },
+            settings: {
+              notifications: { email: true, push: true, sms: false },
+              privacy: { profileVisibility: "public", showContactInfo: true, showIncome: false },
+              language: "en",
+              timezone: "UTC"
+            }
+          }
+        });
+        
+        // Calculate initial trust score
+        defaultPersonalProfile.calculateTrustScore();
+        await defaultPersonalProfile.save();
+        activeProfile = defaultPersonalProfile;
+      }
+
+      // Import SavedPropertyModel
+      const { SavedPropertyModel } = require('../models');
+      
+      // Check if property is already saved
+      const existingSave = await SavedPropertyModel.findOne({ 
+        profileId: activeProfile._id, 
+        propertyId 
+      });
+
+      if (existingSave) {
+        // Update existing save with new notes if provided
+        if (notes !== undefined) {
+          existingSave.notes = notes;
+          await existingSave.save();
+        }
+        
+        return res.json(
+          successResponse(existingSave, "Property already saved")
+        );
+      }
+
+      // Create new saved property
+      const savedProperty = new SavedPropertyModel({
+        profileId: activeProfile._id,
+        propertyId,
+        notes: notes || '',
+        savedAt: new Date()
+      });
+
+      await savedProperty.save();
+
+      res.json(
+        successResponse(savedProperty, "Property saved successfully")
+      );
+    } catch (error) {
+      console.error("Error saving property:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Unsave a property for the current user's profile
+   */
+  async unsaveProperty(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      const { propertyId } = req.params;
+      
+      if (!oxyUserId) {
+        return res.status(401).json(
+          errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
+        );
+      }
+
+      if (!propertyId) {
+        return res.status(400).json(
+          errorResponse("Property ID is required", "PROPERTY_ID_REQUIRED")
+        );
+      }
+
+      // Get the active profile for the current user
+      let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      
+      if (!activeProfile) {
+        // If no active profile exists, there can't be any saved properties
+        return res.status(404).json(
+          errorResponse("Saved property not found", "SAVED_PROPERTY_NOT_FOUND")
+        );
+      }
+
+      // Import SavedPropertyModel
+      const { SavedPropertyModel } = require('../models');
+      
+      // Remove saved property
+      const result = await SavedPropertyModel.deleteOne({ 
+        profileId: activeProfile._id, 
+        propertyId 
+      });
+
+      if (result.deletedCount === 0) {
+        return res.status(404).json(
+          errorResponse("Saved property not found", "SAVED_PROPERTY_NOT_FOUND")
+        );
+      }
+
+      res.json(
+        successResponse(null, "Property unsaved successfully")
+      );
+    } catch (error) {
+      console.error("Error unsaving property:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Update saved property notes for the current user's profile
+   */
+  async updateSavedPropertyNotes(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      const { propertyId } = req.params;
+      const { notes } = req.body;
+      
+      if (!oxyUserId) {
+        return res.status(401).json(
+          errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
+        );
+      }
+
+      if (!propertyId) {
+        return res.status(400).json(
+          errorResponse("Property ID is required", "PROPERTY_ID_REQUIRED")
+        );
+      }
+
+      // Get the active profile for the current user
+      let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      
+      if (!activeProfile) {
+        // If no active profile exists, there can't be any saved properties
+        return res.status(404).json(
+          errorResponse("Saved property not found", "SAVED_PROPERTY_NOT_FOUND")
+        );
+      }
+
+      // Import SavedPropertyModel
+      const { SavedPropertyModel } = require('../models');
+      
+      // Update saved property notes
+      const savedProperty = await SavedPropertyModel.findOneAndUpdate(
+        { profileId: activeProfile._id, propertyId },
+        { notes: notes || '' },
+        { new: true }
+      );
+
+      if (!savedProperty) {
+        return res.status(404).json(
+          errorResponse("Saved property not found", "SAVED_PROPERTY_NOT_FOUND")
+        );
+      }
+
+      res.json(
+        successResponse(savedProperty, "Property notes updated successfully")
+      );
+    } catch (error) {
+      console.error("Error updating saved property notes:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Track property view for the current user's profile
+   */
+  async trackPropertyView(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      const { propertyId } = req.body;
+      
+      if (!oxyUserId) {
+        return res.status(401).json(
+          errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
+        );
+      }
+
+      if (!propertyId) {
+        return res.status(400).json(
+          errorResponse("Property ID is required", "PROPERTY_ID_REQUIRED")
+        );
+      }
+
+      // Get the active profile for the current user
+      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      
+      if (!activeProfile) {
+        return res.status(404).json(
+          errorResponse("Profile not found", "PROFILE_NOT_FOUND")
+        );
+      }
+
+      // Import RecentlyViewedModel
+      const { RecentlyViewedModel } = require('../models');
+      
+      // Check if view already exists
+      const existingView = await RecentlyViewedModel.findOne({ 
+        profileId: activeProfile._id, 
+        propertyId 
+      });
+
+      if (existingView) {
+        // Update existing view timestamp
+        existingView.viewedAt = new Date();
+        await existingView.save();
+      } else {
+        // Create new view record
+        const propertyView = new RecentlyViewedModel({
+          profileId: activeProfile._id,
+          propertyId,
+          viewedAt: new Date()
+        });
+        await propertyView.save();
+      }
+
+      res.json(
+        successResponse(null, "Property view tracked successfully")
+      );
+    } catch (error) {
+      console.error("Error tracking property view:", error);
       next(error);
     }
   }

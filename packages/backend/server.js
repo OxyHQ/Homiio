@@ -10,7 +10,8 @@ const { version } = require('./package.json');
 // Import our modules
 const config = require('./config');
 const routes = require('./routes');
-const { errorHandler, logging } = require('./middlewares');
+const logging = require('./middlewares/logging');
+const { notFound, errorHandler } = require('./middlewares/errorHandler');
 const database = require('./database/connection');
 
 // Initialize database connection
@@ -46,6 +47,14 @@ const authenticateToken = oxyServices.createAuthenticateTokenMiddleware({
   }  
 });
 
+// Custom middleware to extract Oxy user ID
+const extractOxyUserId = (req, res, next) => {
+  if (req.user) {
+    req.userId = req.user.id || req.user._id;
+  }
+  next();
+};
+
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
@@ -78,8 +87,27 @@ app.get('/health', async (req, res) => {
   });
 });
 
-// Mount API routes with authentication middleware
-app.use('/api', routes(authenticateToken));
+// Mount public API routes (no authentication required)
+const publicRoutes = require('./routes/public');
+app.use('/api', publicRoutes());
+
+// Mount authenticated API routes
+app.use('/api', authenticateToken, extractOxyUserId, routes());
+
+// Temporary test route without authentication to verify route mounting
+app.get('/api/test-routes', (req, res) => {
+  res.json({
+    message: 'Routes are mounted correctly',
+    timestamp: new Date().toISOString(),
+    availableRoutes: [
+      'GET /api/health',
+      'GET /api/profiles/me',
+      'POST /api/profiles/me/save-property',
+      'DELETE /api/profiles/me/saved-properties/:propertyId',
+      'PUT /api/profiles/me/saved-properties/:propertyId/notes'
+    ]
+  });
+});
 
 // Test endpoint (authenticated)
 app.post('/api/test', authenticateToken, async (req, res) => {
@@ -105,8 +133,8 @@ app.post('/api/test', authenticateToken, async (req, res) => {
 
 // Error handling middleware
 app.use(logging.errorLogger);
-app.use(errorHandler.notFound);
-app.use(errorHandler.errorHandler);
+app.use(notFound);
+app.use(errorHandler);
 
 const port = config.port;
 

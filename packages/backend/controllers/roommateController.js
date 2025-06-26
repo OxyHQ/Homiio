@@ -3,7 +3,6 @@
  * Handles roommate matching operations
  */
 
-const User = require('../models/User');
 const Profile = require('../models').Profile;
 
 // Get all roommate profiles (profiles with roommate matching enabled)
@@ -106,7 +105,8 @@ const getMyRoommatePreferences = async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const profile = await Profile.findPrimaryByOxyUserId(oxyUserId);
+    // Get user's active profile
+    const profile = await Profile.findActiveByOxyUserId(oxyUserId);
     
     if (!profile?.personalProfile?.settings?.roommate?.preferences) {
       return res.json({ data: null });
@@ -129,7 +129,8 @@ const updateRoommatePreferences = async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const profile = await Profile.findPrimaryByOxyUserId(oxyUserId);
+    // Get user's active profile
+    const profile = await Profile.findActiveByOxyUserId(oxyUserId);
     
     if (!profile) {
       return res.status(404).json({ error: 'Profile not found' });
@@ -171,8 +172,8 @@ const toggleRoommateMatching = async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    // Find the user's primary profile
-    const profile = await Profile.findPrimaryByOxyUserId(oxyUserId);
+    // Get user's active profile
+    const profile = await Profile.findActiveByOxyUserId(oxyUserId);
     
     if (!profile) {
       return res.status(404).json({ error: 'Profile not found' });

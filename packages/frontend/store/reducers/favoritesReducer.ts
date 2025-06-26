@@ -3,13 +3,17 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 interface FavoritesState {
   favoriteIds: string[];
   isLoading: boolean;
+  isSaving: boolean;
   error: string | null;
+  lastSynced: number | null;
 }
 
 const initialState: FavoritesState = {
   favoriteIds: [],
   isLoading: false,
+  isSaving: false,
   error: null,
+  lastSynced: null,
 };
 
 const favoritesSlice = createSlice({
@@ -41,6 +45,25 @@ const favoritesSlice = createSlice({
     clearFavorites: (state) => {
       state.favoriteIds = [];
     },
+    setLoading: (state, action: PayloadAction<boolean>) => {
+      state.isLoading = action.payload;
+    },
+    setSaving: (state, action: PayloadAction<boolean>) => {
+      state.isSaving = action.payload;
+    },
+    setError: (state, action: PayloadAction<string | null>) => {
+      state.error = action.payload;
+    },
+    setLastSynced: (state, action: PayloadAction<number>) => {
+      state.lastSynced = action.payload;
+    },
+    resetFavorites: (state) => {
+      state.favoriteIds = [];
+      state.isLoading = false;
+      state.isSaving = false;
+      state.error = null;
+      state.lastSynced = null;
+    },
   },
 });
 
@@ -50,6 +73,11 @@ export const {
   toggleFavorite,
   setFavorites,
   clearFavorites,
+  setLoading,
+  setSaving,
+  setError,
+  setLastSynced,
+  resetFavorites,
 } = favoritesSlice.actions;
 
 export default favoritesSlice.reducer; 

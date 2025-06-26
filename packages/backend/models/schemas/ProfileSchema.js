@@ -572,13 +572,13 @@ const profileSchema = new mongoose.Schema({
     enum: ['personal', 'agency', 'business', 'cooperative'],
     required: true,
   },
-  isPrimary: {
-    type: Boolean,
-    default: false,
-  },
   isActive: {
     type: Boolean,
     default: true,
+  },
+  isPrimary: {
+    type: Boolean,
+    default: false,
   },
   personalProfile: {
     type: personalProfileSchema,
@@ -604,7 +604,6 @@ const profileSchema = new mongoose.Schema({
 
 // Indexes
 profileSchema.index({ oxyUserId: 1, profileType: 1 });
-profileSchema.index({ oxyUserId: 1, isPrimary: 1 });
 profileSchema.index({ "agencyProfile.members.oxyUserId": 1 });
 // Unique compound index to ensure only one active profile per user
 profileSchema.index({ oxyUserId: 1, isActive: 1 }, { unique: true, partialFilterExpression: { isActive: true } });
@@ -622,16 +621,8 @@ profileSchema.virtual("isVerified").get(function() {
   return false;
 });
 
-// Pre-save middleware to ensure only one primary profile per user
+// Pre-save middleware to ensure only one active profile per user
 profileSchema.pre("save", async function(next) {
-  if (this.isPrimary) {
-    // Remove primary flag from other profiles of the same user
-    await this.constructor.updateMany(
-      { oxyUserId: this.oxyUserId, _id: { $ne: this._id } },
-      { isPrimary: false }
-    );
-  }
-  
   // Ensure only one active profile per user
   if (this.isActive) {
     // Deactivate all other profiles for the same user
@@ -645,10 +636,9 @@ profileSchema.pre("save", async function(next) {
 });
 
 // Static methods
-profileSchema.statics.findPrimaryByOxyUserId = function(oxyUserId, select = null) {
+profileSchema.statics.findActiveByOxyUserId = function(oxyUserId, select = null) {
   const query = this.findOne({ 
     oxyUserId, 
-    isPrimary: true, 
     isActive: true 
   });
   
@@ -656,31 +646,33 @@ profileSchema.statics.findPrimaryByOxyUserId = function(oxyUserId, select = null
     query.select(select);
   }
   
-  return query.lean();
+  // Don't use lean() to preserve toJSON transform
+  return query;
 };
 
 profileSchema.statics.findByOxyUserId = function(oxyUserId, select = null) {
   const query = this.find({ 
     oxyUserId
-  }).sort({ isPrimary: -1, createdAt: -1 });
+  }).sort({ isActive: -1, createdAt: -1 });
   
   if (select) {
     query.select(select);
   }
   
-  return query.lean();
+  // Don't use lean() to preserve toJSON transform
+  return query;
 };
 
 profileSchema.statics.findByOxyUserIdAndType = function(oxyUserId, profileType) {
   return this.findOne({ 
     oxyUserId, 
     profileType
-  }).lean();
+  }); // Remove .lean() to preserve toJSON transform
 };
 
-profileSchema.statics.findPrimaryByOxyUserIdAndUpdate = function(oxyUserId, updateData) {
+profileSchema.statics.findActiveByOxyUserIdAndUpdate = function(oxyUserId, updateData) {
   return this.findOneAndUpdate(
-    { oxyUserId, isPrimary: true, isActive: true },
+    { oxyUserId, isActive: true },
     updateData,
     { new: true, runValidators: true }
   );
@@ -688,7 +680,7 @@ profileSchema.statics.findPrimaryByOxyUserIdAndUpdate = function(oxyUserId, upda
 
 profileSchema.statics.findByOxyUserIdAndUpdate = function(oxyUserId, profileId, updateData) {
   return this.findOneAndUpdate(
-    { oxyUserId, _id: profileId, isActive: true },
+    { oxyUserId, _id: profileId },
     updateData,
     { new: true, runValidators: true }
   );
@@ -702,7 +694,8 @@ profileSchema.statics.findAgencyMemberships = function(oxyUserId, select = null)
   if (select) {
     query.select(select);
   }
-  return query.lean(); // Use lean() for better performance when not modifying
+  // Don't use lean() to preserve toJSON transform
+  return query;
 };
 
 // Static method to safely activate a profile

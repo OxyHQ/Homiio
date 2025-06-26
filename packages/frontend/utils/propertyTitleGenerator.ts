@@ -1,7 +1,9 @@
 /**
  * Property Title Generator
- * Automatically generates property titles based on property details
+ * Automatically generates property titles based on property details with i18n support
  */
+
+import i18next from 'i18next';
 
 export interface PropertyData {
   type?: 'apartment' | 'house' | 'room' | 'studio' | 'duplex' | 'penthouse';
@@ -17,107 +19,74 @@ export interface PropertyData {
 }
 
 /**
- * Generate a property title based on property data
+ * Helper function to remove property numbers for privacy
+ * @param street - Street address
+ * @returns Street address without property numbers
+ */
+function removePropertyNumber(street: string): string {
+  if (!street) return '';
+  // Remove numbers, commas and extra spaces from street for privacy
+  // Examples: "Calle de Vicente Blasco Ibáñez, 6" -> "Calle de Vicente Blasco Ibáñez"
+  return street.replace(/,?\s*\d+.*$/, '').trim();
+}
+
+/**
+ * Generate a property title based on property data with dynamic localization
+ * Format: "{PropertyType} for rent in {Street}, {City}, {State}"
  * @param propertyData - Property data object
- * @returns Generated title
+ * @returns Generated title with privacy protection
  */
 export function generatePropertyTitle(propertyData: PropertyData): string {
   const {
     type = 'apartment',
     address = {},
-    bedrooms = 0,
-    bathrooms = 0
   } = propertyData;
 
-  // Extract address components
-  const street = address.street || '';
-  const city = address.city || '';
-  const state = address.state || '';
-  const zipCode = address.zipCode || '';
+  // Get current language from i18next
+  const currentLanguage = i18next.language || 'en';
 
-  // Clean and format street address
-  let streetAddress = street.trim();
+  // Get translated property type
+  const propertyType = i18next.t(`properties.titles.types.${type}`) || i18next.t(`properties.titles.types.apartment`);
   
-  // Extract street number if present
-  const streetNumberMatch = streetAddress.match(/(\d+)/);
-  const streetNumber = streetNumberMatch ? streetNumberMatch[1] : '';
-  
-  // Remove street number from street name for cleaner formatting
-  if (streetNumber) {
-    streetAddress = streetAddress.replace(/\d+/, '').trim();
-  }
+  // Get "for rent in" text in current language
+  const forRentText = i18next.t('properties.titles.forRent');
 
-  // Determine property type label
-  let typeLabel = '';
-  switch (type.toLowerCase()) {
-    case 'room':
-      typeLabel = 'Room for rent';
-      break;
-    case 'studio':
-      typeLabel = 'Studio flat for rent';
-      break;
-    case 'apartment':
-      typeLabel = bedrooms > 1 ? 'Apartment for rent' : 'Studio for rent';
-      break;
-    case 'house':
-      typeLabel = bedrooms > 1 ? 'House for rent' : 'Cottage for rent';
-      break;
-    case 'duplex':
-      typeLabel = 'Duplex for rent';
-      break;
-    case 'penthouse':
-      typeLabel = 'Penthouse for rent';
-      break;
-    default:
-      typeLabel = 'Property for rent';
-  }
-
-  // Build location string
+  // Build location string (without property numbers for privacy)
   let location = '';
-  
-  // If we have a street name, use it
-  if (streetAddress) {
-    location = streetAddress;
-    if (streetNumber) {
-      location += `, ${streetNumber}`;
+  if (address.street && address.city) {
+    const streetWithoutNumber = removePropertyNumber(address.street);
+    location = `${streetWithoutNumber}, ${address.city}`;
+    if (address.state) {
+      location += `, ${address.state}`;
     }
-  } else if (city) {
-    // Fallback to city if no street
-    location = city;
+  } else if (address.city) {
+    location = address.city;
+    if (address.state) {
+      location += `, ${address.state}`;
+    }
   } else {
-    // Final fallback
-    location = 'Location TBD';
+    location = address.state || i18next.t('properties.titles.locationNotSpecified');
   }
 
-  // Add city if different from street location
-  if (city && city.toLowerCase() !== location.toLowerCase()) {
-    location += `, ${city}`;
-  }
-
-  // Add state if available and different from city
-  if (state && state.toLowerCase() !== city.toLowerCase()) {
-    location += `, ${state}`;
-  }
-
-  // Generate the final title
-  const title = `${typeLabel} in ${location}`;
+  // Generate the final title: "PropertyType for rent in Location"
+  const title = `${propertyType} ${forRentText} ${location}`;
 
   // Ensure title doesn't exceed maximum length (200 characters)
   if (title.length > 200) {
     // Truncate location if title is too long
-    const maxLocationLength = 200 - typeLabel.length - 4; // 4 for " in "
-    const truncatedLocation = location.substring(0, maxLocationLength);
-    return `${typeLabel} in ${truncatedLocation}`;
+    const maxLocationLength = 200 - propertyType.length - forRentText.length - 2; // 2 for spaces
+    const truncatedLocation = location.substring(0, maxLocationLength).trim();
+    return `${propertyType} ${forRentText} ${truncatedLocation}`;
   }
 
   return title;
 }
 
 /**
- * Generate a property title with additional details
+ * Generate a property title with additional details (bedroom/bathroom info)
  * @param propertyData - Property data object
  * @param includeDetails - Whether to include bedroom/bathroom details
- * @returns Generated title
+ * @returns Generated title with optional details
  */
 export function generateDetailedPropertyTitle(
   propertyData: PropertyData, 
@@ -131,14 +100,20 @@ export function generateDetailedPropertyTitle(
 
   const { bedrooms = 0, bathrooms = 0 } = propertyData;
   
-  // Add bedroom/bathroom details for multi-bedroom properties
-  if (bedrooms > 1) {
+  // Add bedroom/bathroom details for properties with multiple rooms
+  if (bedrooms > 0 || bathrooms > 0) {
     const details = [];
     if (bedrooms > 0) {
-      details.push(`${bedrooms} bed${bedrooms > 1 ? 's' : ''}`);
+      const bedroomText = bedrooms === 1 ? 
+        i18next.t('properties.details.bedrooms').slice(0, -1) : // Remove 's' for singular
+        i18next.t('properties.details.bedrooms');
+      details.push(`${bedrooms} ${bedroomText.toLowerCase()}`);
     }
     if (bathrooms > 0) {
-      details.push(`${bathrooms} bath${bathrooms > 1 ? 's' : ''}`);
+      const bathroomText = bathrooms === 1 ? 
+        i18next.t('properties.details.bathrooms').slice(0, -1) : // Remove 's' for singular  
+        i18next.t('properties.details.bathrooms');
+      details.push(`${bathrooms} ${bathroomText.toLowerCase()}`);
     }
     
     if (details.length > 0) {

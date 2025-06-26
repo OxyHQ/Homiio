@@ -51,17 +51,20 @@ const leaseSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Room'
   },
-  landlordId: {
-    type: String,
-    required: [true, 'Landlord ID is required']
+  landlordProfileId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Profile',
+    required: [true, 'Landlord profile ID is required']
   },
-  tenantId: {
-    type: String,
-    required: [true, 'Tenant ID is required']
+  tenantProfileId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Profile',
+    required: [true, 'Tenant profile ID is required']
   },
   coTenants: [{
-    userId: {
-      type: String,
+    profileId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Profile',
       required: true
     },
     role: {
@@ -317,8 +320,8 @@ const leaseSchema = new mongoose.Schema({
 
 // Indexes
 leaseSchema.index({ propertyId: 1, status: 1 });
-leaseSchema.index({ landlordId: 1, status: 1 });
-leaseSchema.index({ tenantId: 1, status: 1 });
+leaseSchema.index({ landlordProfileId: 1, status: 1 });
+leaseSchema.index({ tenantProfileId: 1, status: 1 });
 leaseSchema.index({ 'leaseTerms.startDate': 1, 'leaseTerms.endDate': 1 });
 leaseSchema.index({ 'paymentSchedule.dueDate': 1, 'paymentSchedule.status': 1 });
 
@@ -385,12 +388,12 @@ leaseSchema.statics.findByProperty = function(propertyId, options = {}) {
   return this.find({ propertyId }, null, options);
 };
 
-leaseSchema.statics.findByTenant = function(tenantId, options = {}) {
-  return this.find({ tenantId }, null, options);
+leaseSchema.statics.findByTenant = function(tenantProfileId, options = {}) {
+  return this.find({ tenantProfileId }, null, options);
 };
 
-leaseSchema.statics.findByLandlord = function(landlordId, options = {}) {
-  return this.find({ landlordId }, null, options);
+leaseSchema.statics.findByLandlord = function(landlordProfileId, options = {}) {
+  return this.find({ landlordProfileId }, null, options);
 };
 
 leaseSchema.statics.findActive = function() {

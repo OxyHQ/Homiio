@@ -4,7 +4,6 @@
  */
 
 // Original class-based models (for backward compatibility)
-const User = require('./User');
 const Property = require('./Property');
 const Room = require('./Room');
 const Lease = require('./Lease');
@@ -15,7 +14,6 @@ const Device = require('./Device');
 // Mongoose schemas (new database models)
 const PropertyModel = require('./schemas/PropertySchema');
 const RoomModel = require('./schemas/RoomSchema');
-const UserModel = require('./schemas/UserSchema');
 const LeaseModel = require('./schemas/LeaseSchema');
 const EnergyDataModel = require('./schemas/EnergyDataSchema');
 const RecentlyViewedModel = require('./schemas/RecentlyViewedSchema');
@@ -24,7 +22,6 @@ const Profile = require('./schemas/ProfileSchema');
 
 module.exports = {
   // Class-based models (legacy)
-  User,
   Property,
   Room,
   Lease,
@@ -35,7 +32,6 @@ module.exports = {
   // Mongoose models (new)
   PropertyModel,
   RoomModel,
-  UserModel,
   LeaseModel,
   EnergyDataModel,
   RecentlyViewedModel,
