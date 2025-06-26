@@ -7,7 +7,7 @@ import { Header } from '@/components/Header';
 import { PropertyList } from '@/components/PropertyList';
 import LoadingTopSpinner from '@/components/LoadingTopSpinner';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import { useProperties } from '@/hooks/usePropertyQueries';
+import { useProperties } from '@/hooks';
 import { SearchBar } from '@/components/SearchBar';
 import Button from '@/components/Button';
 import { Property } from '@/services/propertyService';
@@ -35,9 +35,8 @@ export default function PropertiesScreen() {
     const [showFilters, setShowFilters] = useState(false);
     const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
-    const { data, isLoading, error, refetch } = useProperties({ ...filters, search: searchQuery || undefined });
-    const properties = data?.properties || [];
-    const total = data?.total || 0;
+    const { properties, loading: isLoading, error, loadProperties, pagination } = useProperties();
+    const total = pagination.total || 0;
 
     const { properties: savedProperties = [] } = useSavedProperties();
     const { isFavorite, toggleFavorite } = useFavorites();
@@ -78,7 +77,7 @@ export default function PropertiesScreen() {
 
     const handleRefresh = async () => {
         setRefreshing(true);
-        await refetch();
+        await loadProperties({ ...filters, search: searchQuery || undefined });
         setRefreshing(false);
     };
 
@@ -110,7 +109,7 @@ export default function PropertiesScreen() {
         <View style={styles.errorState}>
             <IconComponent name="alert-circle-outline" size={64} color="#ff4757" />
             <Text style={styles.errorTitle}>{t('Error Loading Properties')}</Text>
-            <Text style={styles.errorDescription}>{error?.message || t('Please try again.')}</Text>
+            <Text style={styles.errorDescription}>{error || t('Please try again.')}</Text>
             <Button onPress={handleRefresh} style={styles.retryButton}>
                 {t('Retry')}
             </Button>

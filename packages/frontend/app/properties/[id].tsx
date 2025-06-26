@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
 import { PropertyMap } from '@/components/PropertyMap';
 import { ThemedText } from '@/components/ThemedText';
-import { useProperty } from '@/hooks/usePropertyQueries';
+import { useProperty } from '@/hooks';
 import { useOxy } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
 import { toast } from 'sonner';
@@ -54,7 +54,7 @@ export default function PropertyDetailPage() {
     const router = useRouter();
     const { id } = useLocalSearchParams();
     const { oxyServices, activeSessionId } = useOxy();
-    const { data: apiProperty, isLoading, error } = useProperty(id as string);
+    const { property: apiProperty, loading: isLoading, error, loadProperty } = useProperty(id as string);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [landlordVerified, setLandlordVerified] = useState(true);
     const hasViewedRef = useRef(false);
@@ -93,7 +93,7 @@ export default function PropertyDetailPage() {
             id,
             apiProperty: !!apiProperty,
             isLoading,
-            error: error?.message,
+            error: error,
             oxyServices: !!oxyServices,
             activeSessionId: !!activeSessionId
         });
@@ -181,6 +181,13 @@ export default function PropertyDetailPage() {
             dispatch(addPropertyToRecentlyViewed(apiProperty));
         }
     }, [apiProperty, oxyServices, activeSessionId, dispatch]);
+
+    // Load property on component mount
+    React.useEffect(() => {
+        if (id) {
+            loadProperty();
+        }
+    }, [id, loadProperty]);
 
     const handleContact = () => {
         // In a real app, this would open a chat with the landlord

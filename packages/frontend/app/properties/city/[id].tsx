@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
-import { useProperties } from '@/hooks/usePropertyQueries';
+import { useProperties } from '@/hooks';
 import { Property } from '@/services/propertyService';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 
@@ -31,9 +31,14 @@ export default function CityPropertiesPage() {
   const [loading, setLoading] = useState(true);
 
   // Use real API data instead of mock data
-  const { data: apiData, isLoading, error } = useProperties({
-    city: id as string
-  });
+  const { properties: apiProperties, loading: isLoading, error, loadProperties } = useProperties();
+
+  // Load properties on component mount
+  React.useEffect(() => {
+    loadProperties({
+      search: id as string // Use search instead of city since PropertyFilters doesn't have city
+    });
+  }, [loadProperties, id]);
 
   // City data definitions
   const cities: { [key: string]: City } = {
@@ -42,7 +47,7 @@ export default function CityPropertiesPage() {
       name: 'Barcelona',
       country: 'Spain',
       description: t('Cosmopolitan city with stunning architecture and vibrant culture'),
-      propertiesCount: apiData?.properties?.length || 0,
+      propertiesCount: apiProperties?.length || 0,
       averagePrice: '⊜1,200',
       popularNeighborhoods: ['Eixample', 'Gràcia', 'Sant Martí', 'Sants-Montjuïc', 'Sarrià-Sant Gervasi'],
     },
@@ -51,7 +56,7 @@ export default function CityPropertiesPage() {
       name: 'Berlin',
       country: 'Germany',
       description: t('Creative capital with rich history and diverse neighborhoods'),
-      propertiesCount: apiData?.properties?.length || 0,
+      propertiesCount: apiProperties?.length || 0,
       averagePrice: '⊜1,100',
       popularNeighborhoods: ['Kreuzberg', 'Neukölln', 'Mitte', 'Friedrichshain', 'Prenzlauer Berg'],
     },
@@ -60,7 +65,7 @@ export default function CityPropertiesPage() {
       name: 'Amsterdam',
       country: 'Netherlands',
       description: t('Charming canals and bike-friendly city with international appeal'),
-      propertiesCount: apiData?.properties?.length || 0,
+      propertiesCount: apiProperties?.length || 0,
       averagePrice: '⊜1,400',
       popularNeighborhoods: ['Jordaan', 'De Pijp', 'Oud-West', 'Centrum', 'Oost'],
     },
@@ -69,7 +74,7 @@ export default function CityPropertiesPage() {
       name: 'Stockholm',
       country: 'Sweden',
       description: t('Scandinavian beauty with islands and modern sustainability'),
-      propertiesCount: apiData?.properties?.length || 0,
+      propertiesCount: apiProperties?.length || 0,
       averagePrice: '⊜1,300',
       popularNeighborhoods: ['Södermalm', 'Östermalm', 'Vasastan', 'Kungsholmen', 'Norrmalm'],
     },
@@ -79,11 +84,11 @@ export default function CityPropertiesPage() {
 
   // Update properties when API data changes
   useEffect(() => {
-    if (apiData?.properties) {
-      setProperties(apiData.properties);
+    if (apiProperties) {
+      setProperties(apiProperties);
       setLoading(false);
     }
-  }, [apiData]);
+  }, [apiProperties]);
 
   const filterOptions = [
     { id: 'verified', label: t('Verified'), icon: 'shield-checkmark' },

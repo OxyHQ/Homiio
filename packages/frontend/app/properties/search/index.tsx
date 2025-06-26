@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/colors';
 import { PropertyCard } from '@/components/PropertyCard';
-import { useSearchProperties } from '@/hooks/usePropertyQueries';
+import { useSearchProperties } from '@/hooks';
 import { Property, PropertyFilters } from '@/services/propertyService';
 
 interface SearchFilters extends PropertyFilters {
@@ -64,15 +64,10 @@ export default function SearchScreen() {
     const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
 
     // Use the search hook
-    const {
-        data: searchData,
-        isLoading,
-        error,
-        refetch,
-    } = useSearchProperties(searchQuery, filters);
+    const { searchResults, loading, error, search, clearSearchResults } = useSearchProperties();
 
-    const properties = searchData?.properties || [];
-    const totalResults = searchData?.total || 0;
+    const properties = searchResults?.properties || [];
+    const totalResults = searchResults?.total || 0;
 
     const handleSearch = useCallback(() => {
         if (searchQuery.trim()) {
@@ -287,7 +282,7 @@ export default function SearchScreen() {
             <Ionicons name="alert-circle-outline" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
             <Text style={styles.emptyTitle}>{t('Search Error')}</Text>
             <Text style={styles.emptySubtitle}>{t('Something went wrong. Please try again.')}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+            <TouchableOpacity style={styles.retryButton} onPress={() => search(searchQuery, filters)}>
                 <Text style={styles.retryButtonText}>{t('Retry')}</Text>
             </TouchableOpacity>
         </View>
@@ -339,7 +334,7 @@ export default function SearchScreen() {
             {searchQuery && (
                 <View style={styles.resultsHeader}>
                     <Text style={styles.resultsCount}>
-                        {isLoading
+                        {loading
                             ? t('Searching...')
                             : t('{{count}} properties found', { count: totalResults })}
                     </Text>
@@ -360,13 +355,13 @@ export default function SearchScreen() {
                     contentContainerStyle={styles.listContainer}
                     refreshControl={
                         <RefreshControl
-                            refreshing={isLoading && properties.length === 0}
-                            onRefresh={refetch}
+                            refreshing={loading && properties.length === 0}
+                            onRefresh={() => search(searchQuery, filters)}
                             colors={[colors.primaryColor]}
                         />
                     }
                     ListEmptyComponent={
-                        isLoading && properties.length === 0 ? (
+                        loading && properties.length === 0 ? (
                             <View style={styles.loadingContainer}>
                                 <ActivityIndicator size="large" color={colors.primaryColor} />
                                 <Text style={styles.loadingText}>{t('Searching properties...')}</Text>
@@ -378,7 +373,7 @@ export default function SearchScreen() {
                     onEndReached={handleLoadMore}
                     onEndReachedThreshold={0.1}
                     ListFooterComponent={
-                        isLoading && properties.length > 0 ? (
+                        loading && properties.length > 0 ? (
                             <View style={styles.loadingMoreContainer}>
                                 <ActivityIndicator size="small" color={colors.primaryColor} />
                                 <Text style={styles.loadingMoreText}>{t('Loading more...')}</Text>

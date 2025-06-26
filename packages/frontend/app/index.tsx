@@ -12,7 +12,7 @@ import { Toaster } from '@/lib/sonner';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // Import real data hooks
-import { useProperties } from '@/hooks/usePropertyQueries';
+import { useProperties } from '@/hooks';
 import { useOxy } from '@oxyhq/services';
 
 // Import components
@@ -44,16 +44,21 @@ export default function HomePage() {
   });
 
   // Fetch real data
-  const { data: propertiesData, isLoading: propertiesLoading, refetch: refetchProperties } = useProperties({
-    limit: 8,
-    status: 'available'
-  });
+  const { properties, loading: propertiesLoading, loadProperties } = useProperties();
+
+  // Load properties on component mount
+  React.useEffect(() => {
+    loadProperties({
+      limit: 8,
+      status: 'available'
+    });
+  }, [loadProperties]);
 
   // Memoized data processing
   const featuredProperties = useMemo(() => {
-    if (!propertiesData?.properties) return [];
-    return propertiesData.properties.slice(0, 4);
-  }, [propertiesData]);
+    if (!properties) return [];
+    return properties.slice(0, 4);
+  }, [properties]);
 
   const propertyTypes = [
     { id: 'apartment', name: 'Apartments', icon: 'business-outline', count: 0 },
@@ -66,9 +71,9 @@ export default function HomePage() {
 
   // Calculate property type counts
   const propertyTypeCounts = useMemo(() => {
-    if (!propertiesData?.properties) return propertyTypes;
+    if (!properties) return propertyTypes;
 
-    const counts = propertiesData.properties.reduce((acc, property) => {
+    const counts = properties.reduce((acc: Record<string, number>, property: any) => {
       acc[property.type] = (acc[property.type] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -77,13 +82,13 @@ export default function HomePage() {
       ...type,
       count: counts[type.id] || 0
     }));
-  }, [propertiesData, propertyTypes]);
+  }, [properties, propertyTypes]);
 
   // Get top cities from real data
   const topCities = useMemo(() => {
-    if (!propertiesData?.properties) return [];
+    if (!properties) return [];
 
-    const cityCounts = propertiesData.properties.reduce((acc, property) => {
+    const cityCounts = properties.reduce((acc: Record<string, number>, property: any) => {
       const city = property.address?.city;
       if (city) {
         acc[city] = (acc[city] || 0) + 1;
@@ -92,10 +97,10 @@ export default function HomePage() {
     }, {} as Record<string, number>);
 
     return Object.entries(cityCounts)
-      .sort(([, a], [, b]) => b - a)
+      .sort(([, a], [, b]) => (b as number) - (a as number))
       .slice(0, 4)
       .map(([city, count]) => ({ id: city, name: city, count }));
-  }, [propertiesData]);
+  }, [properties]);
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -106,7 +111,10 @@ export default function HomePage() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await refetchProperties();
+      await loadProperties({
+        limit: 8,
+        status: 'available'
+      });
     } catch (error) {
       console.error('Error refreshing data:', error);
     } finally {
@@ -385,7 +393,7 @@ export default function HomePage() {
               >
                 <IconComponent name="home" size={20} color="white" />
                 <View style={styles.statChipContent}>
-                  <Text style={styles.statChipNumber}>{propertiesData?.total || 0}</Text>
+                  <Text style={styles.statChipNumber}>{properties?.length || 0}</Text>
                   <Text style={styles.statChipLabel}>Total Properties</Text>
                 </View>
               </LinearGradient>
@@ -400,7 +408,7 @@ export default function HomePage() {
               >
                 <IconComponent name="people" size={20} color="white" />
                 <View style={styles.statChipContent}>
-                  <Text style={styles.statChipNumber}>{propertiesData?.properties?.filter(p => p.status === 'available').length || 0}</Text>
+                  <Text style={styles.statChipNumber}>{properties?.filter(p => p.status === 'available').length || 0}</Text>
                   <Text style={styles.statChipLabel}>Available Now</Text>
                 </View>
               </LinearGradient>
@@ -416,7 +424,7 @@ export default function HomePage() {
                 <IconComponent name="leaf" size={20} color="white" />
                 <View style={styles.statChipContent}>
                   <Text style={styles.statChipNumber}>
-                    {propertiesData?.properties?.filter(p =>
+                    {properties?.filter(p =>
                       p.amenities?.some(a => a.includes('eco') || a.includes('green') || a.includes('solar'))
                     ).length || 0}
                   </Text>

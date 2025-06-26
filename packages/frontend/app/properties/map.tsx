@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/colors';
 import { PropertiesMap } from '@/components/PropertiesMap';
 import { PropertyCard } from '@/components/PropertyCard';
-import { useProperties } from '@/hooks/usePropertyQueries';
+import { useProperties } from '@/hooks';
 import { Property, PropertyFilters } from '@/services/propertyService';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { getPropertyImageSource } from '@/utils/propertyUtils';

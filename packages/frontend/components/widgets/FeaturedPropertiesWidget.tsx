@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import LoadingSpinner from '../LoadingSpinner';
 import { Link, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
-import { useProperties } from '@/hooks/usePropertyQueries';
+import { useProperties } from '@/hooks';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,15 +14,17 @@ const IconComponent = Ionicons as any;
 
 export function FeaturedPropertiesWidget() {
     const { t } = useTranslation();
-    const { data, isLoading, error } = useProperties({
-        limit: 3,
-        available: true
-    });
+    const { properties, loading, error, loadProperties } = useProperties();
+    const router = useRouter();
+
+    useEffect(() => { loadProperties({ limit: 4, status: 'available' }); }, [loadProperties]);
+
+    const featured = properties || [];
 
     // Basic monitoring log
     console.log('FeaturedPropertiesWidget:', {
-        isLoading,
-        propertiesCount: data?.properties?.length || 0,
+        loading,
+        propertiesCount: featured.length || 0,
         hasError: !!error
     });
 
@@ -42,13 +44,13 @@ export function FeaturedPropertiesWidget() {
     return (
         <BaseWidget title={t("Featured Properties")}>
             <View>
-                {isLoading ? (
+                {loading ? (
                     <View style={styles.loadingContainer}>
                         <LoadingSpinner size={16} showText={false} />
                         <Text style={styles.loadingText}>Loading properties...</Text>
                     </View>
                 ) : (
-                    <FeaturedProperties properties={data?.properties || []} />
+                    <FeaturedProperties properties={featured} />
                 )}
             </View>
         </BaseWidget>

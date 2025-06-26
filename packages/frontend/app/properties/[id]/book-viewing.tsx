@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
-import { useProperty } from '@/hooks/usePropertyQueries';
+import { useProperty } from '@/hooks';
 import { Property } from '@/services/propertyService';
 
 type PropertyData = {
@@ -39,13 +39,14 @@ export default function BookViewingPage() {
   const [message, setMessage] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Use real API data instead of mock data
-  const { data: apiProperty, isLoading, error } = useProperty(id as string);
+  const { property: apiProperty, loading: apiLoading, error: apiError, loadProperty } = useProperty(id);
 
-  // Update property data when API data changes
+  useEffect(() => {
+    loadProperty();
+  }, [id, loadProperty]);
+
   useEffect(() => {
     if (apiProperty) {
-      // Generate title dynamically from real property data
       const generatedTitle = generatePropertyTitle({
         type: apiProperty.type,
         address: apiProperty.address,
@@ -57,8 +58,8 @@ export default function BookViewingPage() {
         id: apiProperty._id || apiProperty.id || '',
         title: generatedTitle,
         location: `${apiProperty.address?.city || ''}, ${apiProperty.address?.state || ''}`,
-        landlordName: 'Property Owner', // This would come from landlord data in a real app
-        landlordRating: 4.8, // This would come from landlord rating in a real app
+        landlordName: 'Property Owner',
+        landlordRating: 4.8,
       };
 
       setProperty(propertyData);
@@ -66,13 +67,11 @@ export default function BookViewingPage() {
     }
   }, [apiProperty]);
 
-  // Available time slots
   const timeSlots = [
     '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
     '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'
   ];
 
-  // Available dates (next 7 days)
   const availableDates = Array.from({ length: 7 }, (_, i) => {
     const date = new Date();
     date.setDate(date.getDate() + i + 1);
@@ -88,8 +87,7 @@ export default function BookViewingPage() {
     setSubmitting(true);
 
     try {
-      // In a real app, this would make an API call to book the viewing
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       Alert.alert(
         t('Success'),
@@ -137,7 +135,6 @@ export default function BookViewingPage() {
       />
 
       <ScrollView style={styles.container}>
-        {/* Property Summary */}
         <View style={styles.propertyCard}>
           <Text style={styles.propertyTitle}>{property.title}</Text>
           <Text style={styles.propertyLocation}>
@@ -160,7 +157,6 @@ export default function BookViewingPage() {
           </View>
         </View>
 
-        {/* Calendar Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("Select Date")}</Text>
           <ScrollView
@@ -191,7 +187,6 @@ export default function BookViewingPage() {
           </ScrollView>
         </View>
 
-        {/* Time Slots Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
             {t("Available Time Slots")} - {selectedDate && new Date(selectedDate).toLocaleDateString()}
@@ -224,7 +219,6 @@ export default function BookViewingPage() {
           </View>
         </View>
 
-        {/* Additional Notes Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("Additional Notes")}</Text>
           <TextInput
@@ -238,7 +232,6 @@ export default function BookViewingPage() {
           />
         </View>
 
-        {/* Viewing Policy */}
         <View style={styles.policyContainer}>
           <Ionicons name="information-circle" size={20} color={colors.COLOR_BLACK_LIGHT_3} />
           <Text style={styles.policyText}>
@@ -246,7 +239,6 @@ export default function BookViewingPage() {
           </Text>
         </View>
 
-        {/* Submit Button */}
         <TouchableOpacity
           style={[styles.submitButton, !selectedDate || !selectedTime && styles.disabledButton]}
           onPress={handleSubmit}

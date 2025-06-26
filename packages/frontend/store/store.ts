@@ -4,6 +4,7 @@ import analyticsReducer from "./reducers/analyticsReducer";
 import profileReducer from "./reducers/profileReducer";
 import bottomSheetReducer from "./reducers/bottomSheetReducer";
 import propertyReducer from "./reducers/propertyReducer";
+import roomReducer from "./reducers/roomReducer";
 import recentlyViewedReducer from "./reducers/recentlyViewedReducer";
 import trustScoreReducer from "./reducers/trustScoreReducer";
 import savedPropertiesReducer from "./reducers/savedPropertiesReducer";
@@ -15,6 +16,7 @@ const rootReducer = combineReducers({
   profile: profileReducer,
   bottomSheet: bottomSheetReducer,
   properties: propertyReducer,
+  rooms: roomReducer,
   recentlyViewed: recentlyViewedReducer,
   trustScore: trustScoreReducer,
   savedProperties: savedPropertiesReducer,

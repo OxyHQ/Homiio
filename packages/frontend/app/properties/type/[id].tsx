@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
-import { useProperties } from '@/hooks/usePropertyQueries';
+import { useProperties } from '@/hooks';
 import { Property } from '@/services/propertyService';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 
@@ -28,7 +28,12 @@ export default function PropertyTypePage() {
   const [loading, setLoading] = useState(true);
 
   // Use real API data instead of mock data
-  const { data: apiData, isLoading, error } = useProperties({ type: id as string });
+  const { properties: apiProperties, loading: isLoading, error, loadProperties } = useProperties();
+
+  // Load properties on component mount
+  React.useEffect(() => {
+    loadProperties({ type: id as string });
+  }, [loadProperties, id]);
 
   // Property type definitions
   const propertyTypes: { [key: string]: PropertyType } = {
@@ -37,35 +42,35 @@ export default function PropertyTypePage() {
       name: t('Apartments'),
       description: t('Modern apartments with all amenities'),
       icon: 'business-outline',
-      propertiesCount: apiData?.properties?.length || 0,
+      propertiesCount: apiProperties?.length || 0,
     },
     'house': {
       id: 'house',
       name: t('Houses'),
       description: t('Spacious houses with gardens'),
       icon: 'home-outline',
-      propertiesCount: apiData?.properties?.length || 0,
+      propertiesCount: apiProperties?.length || 0,
     },
     'room': {
       id: 'room',
       name: t('Rooms'),
       description: t('Individual rooms in shared spaces'),
       icon: 'bed-outline',
-      propertiesCount: apiData?.properties?.length || 0,
+      propertiesCount: apiProperties?.length || 0,
     },
     'studio': {
       id: 'studio',
       name: t('Studios'),
       description: t('Compact studio apartments'),
       icon: 'home-outline',
-      propertiesCount: apiData?.properties?.length || 0,
+      propertiesCount: apiProperties?.length || 0,
     },
     'coliving': {
       id: 'coliving',
       name: t('Co-Living'),
       description: t('Shared spaces for community living'),
       icon: 'people-outline',
-      propertiesCount: apiData?.properties?.length || 0,
+      propertiesCount: apiProperties?.length || 0,
     },
 
   };
@@ -74,11 +79,11 @@ export default function PropertyTypePage() {
 
   // Update properties when API data changes
   useEffect(() => {
-    if (apiData?.properties) {
-      setProperties(apiData.properties);
+    if (apiProperties) {
+      setProperties(apiProperties);
       setLoading(false);
     }
-  }, [apiData]);
+  }, [apiProperties]);
 
   // Filter options
   const filterOptions = [
