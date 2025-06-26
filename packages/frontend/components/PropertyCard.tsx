@@ -357,13 +357,13 @@ export function PropertyCard({
                     <View style={styles.features}>
                         <View style={styles.feature}>
                             <Text style={styles.featureText}>
-                                {propertyData.bedrooms} bed{propertyData.bedrooms !== 1 ? 's' : ''}
+                                {`${propertyData.bedrooms} bed${propertyData.bedrooms !== 1 ? 's' : ''}`}
                             </Text>
                         </View>
                         <Text style={styles.featureSeparator}>•</Text>
                         <View style={styles.feature}>
                             <Text style={styles.featureText}>
-                                {propertyData.bathrooms} bath{propertyData.bathrooms !== 1 ? 's' : ''}
+                                {`${propertyData.bathrooms} bath${propertyData.bathrooms !== 1 ? 's' : ''}`}
                             </Text>
                         </View>
                         {propertyData.size && propertyData.size > 0 && (
@@ -371,7 +371,7 @@ export function PropertyCard({
                                 <Text style={styles.featureSeparator}>•</Text>
                                 <View style={styles.feature}>
                                     <Text style={styles.featureText}>
-                                        {propertyData.size} {sizeUnit}
+                                        {`${propertyData.size} ${sizeUnit}`}
                                     </Text>
                                 </View>
                             </>

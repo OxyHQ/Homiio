@@ -61,6 +61,7 @@ export default function HomePage() {
     { id: 'room', name: 'Rooms', icon: 'bed-outline', count: 0 },
     { id: 'studio', name: 'Studios', icon: 'home-outline', count: 0 },
     { id: 'coliving', name: 'Co-living', icon: 'people-outline', count: 0 },
+    { id: 'public_housing', name: 'Public Housing', icon: 'library-outline', count: 0 },
   ];
 
   // Calculate property type counts
@@ -152,6 +153,34 @@ export default function HomePage() {
             </View>
           </View>
         </LinearGradient>
+
+        {/* Property Types */}
+        <View style={styles.typesSection}>
+          <Text style={styles.sectionTitle}>{t("home.categories.title")}</Text>
+          <View style={styles.propertyChipsContainer}>
+            {propertyTypeCounts.map((type) => (
+              <TouchableOpacity
+                key={type.id}
+                style={styles.propertyChip}
+                onPress={() => router.push(`/properties/type/${type.id}`)}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={[colors.primaryColor, colors.secondaryLight]}
+                  style={styles.propertyChipGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <IconComponent name={type.icon as keyof typeof IconComponent.glyphMap} size={20} color="white" />
+                  <Text style={styles.propertyChipName}>{type.name}</Text>
+                  <View style={styles.propertyChipCountBadge}>
+                    <Text style={styles.propertyChipCountText}>{type.count}</Text>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
         {/* Trust Features */}
         <View style={styles.trustSection}>
@@ -267,34 +296,6 @@ export default function HomePage() {
           </ScrollView>
         </View>
 
-        {/* Property Types */}
-        <View style={styles.typesSection}>
-          <Text style={styles.sectionTitle}>{t("home.categories.title")}</Text>
-          <View style={styles.propertyChipsContainer}>
-            {propertyTypeCounts.map((type) => (
-              <TouchableOpacity
-                key={type.id}
-                style={styles.propertyChip}
-                onPress={() => router.push(`/properties/type/${type.id}`)}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={[colors.primaryColor, colors.secondaryLight]}
-                  style={styles.propertyChipGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <IconComponent name={type.icon as keyof typeof IconComponent.glyphMap} size={20} color="white" />
-                  <Text style={styles.propertyChipName}>{type.name}</Text>
-                  <View style={styles.propertyChipCountBadge}>
-                    <Text style={styles.propertyChipCountText}>{type.count}</Text>
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
         {/* Popular Amenities Showcase */}
         <View style={styles.amenitiesShowcase}>
           <Text style={styles.sectionTitle}>Popular Amenities</Text>
@@ -374,31 +375,70 @@ export default function HomePage() {
         {/* Stats Section */}
         <View style={styles.statsSection}>
           <Text style={styles.sectionTitle}>Platform Statistics</Text>
-          <View style={styles.statsGrid}>
-            <View style={styles.statCard}>
-              <IconComponent name="home" size={24} color={colors.primaryColor} />
-              <Text style={styles.statNumber}>{propertiesData?.total || 0}</Text>
-              <Text style={styles.statLabel}>Total Properties</Text>
-            </View>
-            <View style={styles.statCard}>
-              <IconComponent name="people" size={24} color={colors.primaryColor} />
-              <Text style={styles.statNumber}>{propertiesData?.properties?.filter(p => p.status === 'available').length || 0}</Text>
-              <Text style={styles.statLabel}>Available Now</Text>
-            </View>
-            <View style={styles.statCard}>
-              <IconComponent name="leaf" size={24} color="green" />
-              <Text style={styles.statNumber}>
-                {propertiesData?.properties?.filter(p =>
-                  p.amenities?.some(a => a.includes('eco') || a.includes('green') || a.includes('solar'))
-                ).length || 0}
-              </Text>
-              <Text style={styles.statLabel}>Eco-Friendly</Text>
-            </View>
-            <View style={styles.statCard}>
-              <IconComponent name="star" size={24} color="#FFD700" />
-              <Text style={styles.statNumber}>{topCities.length}</Text>
-              <Text style={styles.statLabel}>Cities Covered</Text>
-            </View>
+          <View style={styles.statsChipsContainer}>
+            <TouchableOpacity style={styles.statChip} activeOpacity={0.8}>
+              <LinearGradient
+                colors={[colors.primaryColor, colors.secondaryLight]}
+                style={styles.statChipGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <IconComponent name="home" size={20} color="white" />
+                <View style={styles.statChipContent}>
+                  <Text style={styles.statChipNumber}>{propertiesData?.total || 0}</Text>
+                  <Text style={styles.statChipLabel}>Total Properties</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.statChip} activeOpacity={0.8}>
+              <LinearGradient
+                colors={[colors.primaryColor, colors.secondaryLight]}
+                style={styles.statChipGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <IconComponent name="people" size={20} color="white" />
+                <View style={styles.statChipContent}>
+                  <Text style={styles.statChipNumber}>{propertiesData?.properties?.filter(p => p.status === 'available').length || 0}</Text>
+                  <Text style={styles.statChipLabel}>Available Now</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.statChip} activeOpacity={0.8}>
+              <LinearGradient
+                colors={['#16a34a', '#22c55e']}
+                style={styles.statChipGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <IconComponent name="leaf" size={20} color="white" />
+                <View style={styles.statChipContent}>
+                  <Text style={styles.statChipNumber}>
+                    {propertiesData?.properties?.filter(p =>
+                      p.amenities?.some(a => a.includes('eco') || a.includes('green') || a.includes('solar'))
+                    ).length || 0}
+                  </Text>
+                  <Text style={styles.statChipLabel}>Eco-Friendly</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.statChip} activeOpacity={0.8}>
+              <LinearGradient
+                colors={['#f59e0b', '#fbbf24']}
+                style={styles.statChipGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <IconComponent name="star" size={20} color="white" />
+                <View style={styles.statChipContent}>
+                  <Text style={styles.statChipNumber}>{topCities.length}</Text>
+                  <Text style={styles.statChipLabel}>Cities Covered</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -417,7 +457,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     borderRadius: 35,
-    margin: 10,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    marginTop: 16,
     borderColor: colors.COLOR_BLACK,
     borderWidth: 1,
   },
@@ -478,7 +520,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 12,
     color: colors.COLOR_BLACK,
   },
   sectionHeader: {
@@ -493,8 +535,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   trustSection: {
-    padding: 20,
-    marginTop: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 20,
   },
   trustFeatures: {
     flexDirection: 'row',
@@ -526,7 +568,8 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_3,
   },
   featuredSection: {
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -559,7 +602,8 @@ const styles = StyleSheet.create({
     width: 280,
   },
   citiesSection: {
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
   cityCard: {
     width: 170,
@@ -609,16 +653,17 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   typesSection: {
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
   propertyChipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    justifyContent: 'space-between',
+    gap: 8,
   },
   propertyChip: {
-    width: '48%',
+    flex: 1,
+    minWidth: '45%',
     borderRadius: 25,
     borderWidth: 1,
     borderColor: colors.COLOR_BLACK,
@@ -627,8 +672,8 @@ const styles = StyleSheet.create({
   propertyChipGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
     justifyContent: 'space-between',
   },
   propertyChipName: {
@@ -637,7 +682,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'white',
     flex: 1,
-    marginLeft: 8,
+    marginLeft: 6,
   },
   propertyChipCountBadge: {
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
@@ -654,8 +699,10 @@ const styles = StyleSheet.create({
   },
   horizonSection: {
     backgroundColor: colors.primaryLight,
-    padding: 20,
-    margin: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    marginHorizontal: 16,
+    marginVertical: 12,
     borderRadius: 15,
     flexDirection: 'row',
     alignItems: 'center',
@@ -691,38 +738,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statsSection: {
-    padding: 20,
-    marginTop: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
-  statsGrid: {
+  statsChipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    gap: 8,
   },
-  statCard: {
-    width: '48%',
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 12,
+  statChip: {
+    flexBasis: '47%',
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: colors.COLOR_BLACK,
+    overflow: 'hidden',
+  },
+  statChipGradient: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
   },
-  statNumber: {
-    fontSize: 24,
+  statChipContent: {
+    flex: 1,
+    marginLeft: 6,
+    alignItems: 'flex-start',
+  },
+  statChipNumber: {
+    fontFamily: 'Phudu',
+    fontSize: 20,
     fontWeight: 'bold',
-    color: colors.primaryColor,
-    marginTop: 8,
+    color: 'white',
+    marginBottom: 2,
   },
-  statLabel: {
+  statChipLabel: {
     fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    marginTop: 4,
-    textAlign: 'center',
+    color: 'white',
+    opacity: 0.9,
   },
   verifiedBadge: {
     backgroundColor: colors.primaryColor,
@@ -738,20 +790,21 @@ const styles = StyleSheet.create({
   },
   // Popular Amenities Section
   amenitiesShowcase: {
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 20,
     backgroundColor: '#f8f9fa',
   },
   amenitySectionSubtitle: {
     fontSize: 14,
     color: colors.COLOR_BLACK_LIGHT_3,
-    marginBottom: 20,
+    marginBottom: 12,
     textAlign: 'center',
   },
   amenityChipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 20,
+    gap: 8,
+    marginBottom: 24,
   },
   homeAmenityChip: {
     flexDirection: 'row',

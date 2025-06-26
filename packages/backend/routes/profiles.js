@@ -24,6 +24,11 @@ module.exports = function () {
   router.post("/me/save-property", asyncHandler(profileController.saveProperty));
   router.delete("/me/saved-properties/:propertyId", asyncHandler(profileController.unsaveProperty));
   router.put("/me/saved-properties/:propertyId/notes", asyncHandler(profileController.updateSavedPropertyNotes));
+  router.get("/me/saved-searches", asyncHandler(profileController.getSavedSearches));
+  router.post("/me/saved-searches", asyncHandler(profileController.saveSearch));
+  router.delete("/me/saved-searches/:searchId", asyncHandler(profileController.deleteSavedSearch));
+  router.put("/me/saved-searches/:searchId", asyncHandler(profileController.updateSavedSearch));
+  router.put("/me/saved-searches/:searchId/notifications", asyncHandler(profileController.toggleSearchNotifications));
   router.get("/me/:profileType", asyncHandler(profileController.getProfileByType));
   router.get("/:profileId", asyncHandler(profileController.getProfileById));
   router.post("/", asyncHandler(profileController.createProfile));

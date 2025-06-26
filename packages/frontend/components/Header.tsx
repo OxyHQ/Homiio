@@ -73,7 +73,9 @@ export const Header: React.FC<Props> = ({ options }) => {
                                 {options.title}
                             </Text>
                         )}
-                        {options?.subtitle && <Text>{options.subtitle}</Text>}
+                        {options?.subtitle && (
+                            <Text style={styles.subtitleText}>{options.subtitle}</Text>
+                        )}
                     </View>
                 )}
 
@@ -85,7 +87,9 @@ export const Header: React.FC<Props> = ({ options }) => {
                             {options.title}
                         </Text>
                     )}
-                    {options?.subtitle && <Text>{options.subtitle}</Text>}
+                    {options?.subtitle && (
+                        <Text style={styles.subtitleText}>{options.subtitle}</Text>
+                    )}
                 </View>
             )}
             <View style={styles.rightContainer}>
@@ -128,6 +132,11 @@ const styles = StyleSheet.create({
         color: colors.COLOR_BLACK,
         fontWeight: '800',
         paddingStart: 1,
+    },
+    subtitleText: {
+        fontSize: 14,
+        color: colors.COLOR_BLACK_LIGHT_3,
+        fontWeight: '400',
     },
     startContainer: {
         borderRadius: 100,

@@ -13,6 +13,7 @@ const API_CONFIG = {
     profiles: {
       recentProperties: '/api/profiles/me/recent-properties',
       savedProperties: '/api/profiles/me/saved-properties',
+      savedSearches: '/api/profiles/me/saved-searches',
       properties: '/api/profiles/me/properties',
     },
   },
@@ -476,6 +477,51 @@ export const userApi = {
   // Get user properties (authenticated)
   async getUserProperties(page: number = 1, limit: number = 10, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
     const response = await api.get<ApiResponse>(`${API_CONFIG.endpoints.profiles.properties}?page=${page}&limit=${limit}`, {
+      oxyServices,
+      activeSessionId,
+    });
+    return response.data;
+  },
+
+  // Get saved searches (authenticated)
+  async getSavedSearches(oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
+    const response = await api.get<ApiResponse>(API_CONFIG.endpoints.profiles.savedSearches, {
+      oxyServices,
+      activeSessionId,
+    });
+    return response.data;
+  },
+
+  // Save a search (authenticated)
+  async saveSearch(searchData: { name: string; query: string; filters?: any; notificationsEnabled?: boolean }, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
+    const response = await api.post<ApiResponse>(API_CONFIG.endpoints.profiles.savedSearches, searchData, {
+      oxyServices,
+      activeSessionId,
+    });
+    return response.data;
+  },
+
+  // Delete a saved search (authenticated)
+  async deleteSavedSearch(searchId: string, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
+    const response = await api.delete<ApiResponse>(`${API_CONFIG.endpoints.profiles.savedSearches}/${searchId}`, {
+      oxyServices,
+      activeSessionId,
+    });
+    return response.data;
+  },
+
+  // Update a saved search (authenticated)
+  async updateSavedSearch(searchId: string, searchData: { name?: string; query?: string; filters?: any; notificationsEnabled?: boolean }, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
+    const response = await api.patch<ApiResponse>(`${API_CONFIG.endpoints.profiles.savedSearches}/${searchId}`, searchData, {
+      oxyServices,
+      activeSessionId,
+    });
+    return response.data;
+  },
+
+  // Toggle notifications for a saved search (authenticated)
+  async toggleSearchNotifications(searchId: string, notificationsEnabled: boolean, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
+    const response = await api.patch<ApiResponse>(`${API_CONFIG.endpoints.profiles.savedSearches}/${searchId}/notifications`, { notificationsEnabled }, {
       oxyServices,
       activeSessionId,
     });

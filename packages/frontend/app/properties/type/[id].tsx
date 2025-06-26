@@ -67,6 +67,7 @@ export default function PropertyTypePage() {
       icon: 'people-outline',
       propertiesCount: apiData?.properties?.length || 0,
     },
+
   };
 
   const propertyType = propertyTypes[id as string];

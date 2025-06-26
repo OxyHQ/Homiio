@@ -16,6 +16,7 @@ export interface Property {
     };
   };
   type: 'apartment' | 'house' | 'room' | 'studio';
+  housingType?: 'private' | 'public'; // Distinguishes private vs public housing
   description?: string;
   squareFootage?: number;
   bedrooms?: number;
@@ -65,7 +66,7 @@ export interface CreatePropertyData {
     zipCode: string;
     country?: string;
   };
-  type: 'apartment' | 'house' | 'room' | 'studio';
+  type: 'apartment' | 'house' | 'room' | 'studio'; // Note: 'public' excluded - managed externally
   description?: string;
   squareFootage?: number;
   bedrooms?: number;

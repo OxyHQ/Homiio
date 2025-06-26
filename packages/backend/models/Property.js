@@ -20,6 +20,7 @@ class Property {
       }
     };
     this.type = data.type || 'apartment'; // apartment, house, room, studio
+    this.housingType = data.housingType || 'private'; // private, public
     this.bedrooms = data.bedrooms || 0;
     this.bathrooms = data.bathrooms || 0;
     this.squareFootage = data.squareFootage || 0;
@@ -89,6 +90,12 @@ class Property {
     const validTypes = ['apartment', 'house', 'room', 'studio'];
     if (!validTypes.includes(this.type)) {
       errors.push(`Property type must be one of: ${validTypes.join(', ')}`);
+    }
+
+    // Housing type validation
+    const validHousingTypes = ['private', 'public'];
+    if (this.housingType && !validHousingTypes.includes(this.housingType)) {
+      errors.push(`Housing type must be one of: ${validHousingTypes.join(', ')}`);
     }
     
     // Optional field validation (if provided, must be valid)

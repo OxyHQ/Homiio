@@ -92,7 +92,7 @@ export function SideBar() {
                     {
                         alignItems: isFullSideBar ? 'flex-start' : 'center',
                         paddingEnd: !isFullSideBar ? 10 : 0,
-                        width: isFullSideBar ? 360 : 60,
+                        width: isFullSideBar ? 350 : 60,
                     }
                 ]}>
                 <View style={styles.content}>

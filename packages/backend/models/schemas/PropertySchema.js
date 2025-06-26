@@ -163,6 +163,11 @@ const propertySchema = new mongoose.Schema({
     enum: ['apartment', 'house', 'room', 'studio'],
     default: 'apartment'
   },
+  housingType: {
+    type: String,
+    enum: ['private', 'public'],
+    default: 'private'
+  },
   bedrooms: {
     type: Number,
     min: [0, 'Bedrooms cannot be negative'],

@@ -5,6 +5,7 @@
 
 export interface PropertyCharacteristics {
   type: 'apartment' | 'house' | 'room' | 'studio' | 'duplex' | 'penthouse';
+  housingType?: 'private' | 'public'; // For public housing pricing adjustments
   bedrooms: number;
   bathrooms: number;
   squareFootage: number;
@@ -54,6 +55,12 @@ const BASE_PRICES_PER_SQFT = {
   room: 2.0, // For shared spaces, price per room
   duplex: 1.3,
   penthouse: 2.5,
+};
+
+// Housing type multipliers
+const HOUSING_TYPE_MULTIPLIERS = {
+  private: 1.0,
+  public: 0.8, // Subsidized/affordable housing discount
 };
 
 // Location multipliers (cost of living adjustments)
@@ -320,10 +327,18 @@ export function calculateEthicalRent(property: PropertyCharacteristics): Pricing
     amenityBreakdown.push(`additional parking (${additionalSpaces}): +$${parkingValue}`);
   }
   
-  const suggestedRent = Math.round(floorAdjustedPrice + amenityValue);
+  // Apply housing type multiplier
+  const housingTypeMultiplier = HOUSING_TYPE_MULTIPLIERS[property.housingType || 'private'];
+  const housingTypeAdjustedPrice = (floorAdjustedPrice + amenityValue) * housingTypeMultiplier;
+  
+  const suggestedRent = Math.round(housingTypeAdjustedPrice);
   
   if (amenityValue > 0) {
     reasoning.push(`Amenities added: +$${amenityValue} (${amenityBreakdown.join(', ')})`);
+  }
+  
+  if (property.housingType === 'public') {
+    reasoning.push(`Public housing discount (${housingTypeMultiplier}x): $${housingTypeAdjustedPrice.toFixed(0)}`);
   }
   
   reasoning.push(`Final suggested rent: $${suggestedRent}`);

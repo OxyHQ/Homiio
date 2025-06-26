@@ -20,5 +20,5 @@ module.exports = {
   notificationController,
   leaseController,
   profileController,
-  telegramController
+  telegramController,
 };

@@ -10,7 +10,7 @@ const CustomBackground: React.FC<BottomSheetBackgroundProps> = ({
     style,
     animatedIndex,
 }) => {
-    return <Animated.View pointerEvents="none" style={{ backgroundColor: "red" }} />;
+    return <Animated.View style={{ backgroundColor: "red", pointerEvents: "none" }} />;
 };
 
 export default CustomBackground;

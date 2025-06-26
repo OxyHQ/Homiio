@@ -7,6 +7,7 @@ import propertyReducer from "./reducers/propertyReducer";
 import recentlyViewedReducer from "./reducers/recentlyViewedReducer";
 import trustScoreReducer from "./reducers/trustScoreReducer";
 import savedPropertiesReducer from "./reducers/savedPropertiesReducer";
+import savedSearchesReducer from "./reducers/savedSearchesReducer";
 
 const rootReducer = combineReducers({
   trends: trendsReducer,
@@ -17,6 +18,7 @@ const rootReducer = combineReducers({
   recentlyViewed: recentlyViewedReducer,
   trustScore: trustScoreReducer,
   savedProperties: savedPropertiesReducer,
+  savedSearches: savedSearchesReducer,
 });
 
 export const store = configureStore({

@@ -1,12 +1,21 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Switch } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
+import { useSavedSearches } from '@/hooks/useSavedSearches';
+import { toast } from 'sonner';
+
+// Type assertion for Ionicons compatibility
+const IconComponent = Ionicons as any;
 
 export function PropertyAlertWidget() {
     const { t } = useTranslation();
+    const router = useRouter();
+    const { saveSearch, isAuthenticated, isSaving } = useSavedSearches();
+
     const [minPrice, setMinPrice] = useState('');
     const [maxPrice, setMaxPrice] = useState('1000');
     const [location, setLocation] = useState('');
@@ -14,30 +23,72 @@ export function PropertyAlertWidget() {
     const [pushNotifications, setPushNotifications] = useState(true);
 
     const handleCreateAlert = async () => {
+        if (!isAuthenticated) {
+            toast.error('Please sign in to create alerts');
+            return;
+        }
+
+        if (!location.trim() && !minPrice && !maxPrice) {
+            toast.error('Please specify at least a location or price range');
+            return;
+        }
+
         try {
-            // TODO: Implement API call to create property alert
-            // const alertData = {
-            //     minPrice: parseFloat(minPrice) || undefined,
-            //     maxPrice: parseFloat(maxPrice) || undefined,
-            //     location,
-            //     emailNotifications,
-            //     pushNotifications
-            // };
-            // await propertyService.createAlert(alertData);
-            
-            console.log('Creating alert:', { minPrice, maxPrice, location, emailNotifications, pushNotifications });
-            // Show success message
-            alert('Alert created successfully!');
+            // Build search query from alert criteria
+            const queryParts = [];
+            if (location.trim()) queryParts.push(location.trim());
+
+            const filters: any = {};
+            if (minPrice) filters.minPrice = parseFloat(minPrice);
+            if (maxPrice) filters.maxPrice = parseFloat(maxPrice);
+
+            const query = queryParts.length > 0 ? queryParts.join(' ') : 'properties';
+            const alertName = `Alert: ${location || 'Any location'} ${minPrice ? `⊜${minPrice}+` : ''}${maxPrice ? ` - ⊜${maxPrice}` : ''}`.trim();
+
+            const success = await saveSearch(
+                alertName,
+                query,
+                filters,
+                emailNotifications || pushNotifications
+            );
+
+            if (success) {
+                // Clear form
+                setMinPrice('');
+                setMaxPrice('1000');
+                setLocation('');
+                setEmailNotifications(true);
+                setPushNotifications(true);
+            }
         } catch (error) {
             console.error('Failed to create alert:', error);
-            alert('Failed to create alert. Please try again.');
+            toast.error('Failed to create alert. Please try again.');
         }
     };
+
+    if (!isAuthenticated) {
+        return (
+            <BaseWidget
+                title={t("Property Alerts")}
+                icon={<IconComponent name="notifications" size={22} color={colors.primaryColor} />}
+            >
+                <View style={styles.container}>
+                    <Text style={styles.subtitle}>{t("Sign in to create property alerts")}</Text>
+                    <TouchableOpacity
+                        style={styles.createButton}
+                        onPress={() => router.push('/search')}
+                    >
+                        <Text style={styles.createButtonText}>{t("Go to Search")}</Text>
+                    </TouchableOpacity>
+                </View>
+            </BaseWidget>
+        );
+    }
 
     return (
         <BaseWidget
             title={t("Property Alerts")}
-            icon={<Ionicons name="notifications" size={22} color={colors.primaryColor} />}
+            icon={<IconComponent name="notifications" size={22} color={colors.primaryColor} />}
         >
             <View style={styles.container}>
                 <Text style={styles.subtitle}>Get notified when new properties match your criteria</Text>
@@ -101,10 +152,13 @@ export function PropertyAlertWidget() {
                 </View>
 
                 <TouchableOpacity
-                    style={styles.createButton}
+                    style={[styles.createButton, isSaving && styles.createButtonDisabled]}
                     onPress={handleCreateAlert}
+                    disabled={isSaving}
                 >
-                    <Text style={styles.createButtonText}>Create Alert</Text>
+                    <Text style={styles.createButtonText}>
+                        {isSaving ? t("Creating...") : t("Create Alert")}
+                    </Text>
                 </TouchableOpacity>
             </View>
         </BaseWidget>
@@ -167,6 +221,9 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         alignItems: 'center',
         marginTop: 5,
+    },
+    createButtonDisabled: {
+        backgroundColor: colors.COLOR_BLACK_LIGHT_4,
     },
     createButtonText: {
         color: 'white',

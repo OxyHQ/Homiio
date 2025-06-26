@@ -34,6 +34,11 @@ class ProfileController {
     this.trackPropertyView = this.trackPropertyView.bind(this);
     this.clearRecentProperties = this.clearRecentProperties.bind(this);
     this.debugRecentProperties = this.debugRecentProperties.bind(this);
+    this.getSavedSearches = this.getSavedSearches.bind(this);
+    this.saveSearch = this.saveSearch.bind(this);
+    this.deleteSavedSearch = this.deleteSavedSearch.bind(this);
+    this.updateSavedSearch = this.updateSavedSearch.bind(this);
+    this.toggleSearchNotifications = this.toggleSearchNotifications.bind(this);
   }
 
   /**
@@ -1703,6 +1708,383 @@ class ProfileController {
       );
     } catch (error) {
       console.error("Error in debug recent properties:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Get saved searches for the current user's profile
+   */
+  async getSavedSearches(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      
+      console.log('[getSavedSearches] Called with:', {
+        hasUser: !!req.user,
+        oxyUserId,
+        userObject: req.user ? { id: req.user.id, _id: req.user._id } : null
+      });
+      
+      if (!oxyUserId) {
+        console.log('[getSavedSearches] No oxyUserId found, returning 401');
+        return res.status(401).json(
+          errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
+        );
+      }
+
+      // Get the active profile for the current user
+      let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      
+      console.log('[getSavedSearches] Active profile search result:', {
+        found: !!activeProfile,
+        profileId: activeProfile?._id,
+        profileType: activeProfile?.profileType
+      });
+      
+      if (!activeProfile) {
+        console.log(`[getSavedSearches] No active profile found for user ${oxyUserId}, creating default personal profile`);
+        // Create a default personal profile if none exists
+        const defaultPersonalProfile = new Profile({
+          oxyUserId,
+          profileType: "personal",
+          isActive: true,
+          isPrimary: true,
+          personalProfile: {
+            personalInfo: {
+              bio: "",
+              occupation: "",
+              employer: "",
+              annualIncome: null,
+              employmentStatus: "employed",
+              moveInDate: null,
+              leaseDuration: "yearly",
+            },
+            preferences: {},
+            references: [],
+            rentalHistory: [],
+            verification: {},
+            trustScore: { score: 50, factors: [] },
+            settings: {
+              notifications: { email: true, push: true, sms: false },
+              privacy: { profileVisibility: "public", showContactInfo: true, showIncome: false },
+              language: "en",
+              timezone: "UTC"
+            }
+          }
+        });
+        
+        defaultPersonalProfile.calculateTrustScore();
+        await defaultPersonalProfile.save();
+        activeProfile = defaultPersonalProfile;
+        
+        console.log('[getSavedSearches] Created new profile:', {
+          profileId: activeProfile._id,
+          profileType: activeProfile.profileType
+        });
+      }
+
+      // Import SavedSearchModel
+      const { SavedSearchModel } = require('../models');
+      
+      console.log('[getSavedSearches] Querying SavedSearchModel with profileId:', activeProfile._id);
+      
+      // Get saved searches
+      const savedSearches = await SavedSearchModel.find({ profileId: activeProfile._id })
+        .sort({ createdAt: -1 })
+        .lean();
+
+      console.log('[getSavedSearches] SavedSearchModel query result:', {
+        count: savedSearches.length,
+        firstItem: savedSearches[0] ? {
+          id: savedSearches[0]._id,
+          name: savedSearches[0].name,
+          query: savedSearches[0].query,
+          createdAt: savedSearches[0].createdAt
+        } : null
+      });
+
+      const response = successResponse(savedSearches, "Saved searches retrieved successfully");
+      
+      console.log('[getSavedSearches] Final response:', {
+        success: response.success,
+        message: response.message,
+        dataLength: Array.isArray(response.data) ? response.data.length : 'not array'
+      });
+
+      res.json(response);
+    } catch (error) {
+      console.error("Error getting saved searches:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Save a search for the current user's profile
+   */
+  async saveSearch(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      const { name, query, filters, notificationsEnabled } = req.body;
+      
+      console.log('saveSearch called:', { oxyUserId, name, query, filters, notificationsEnabled });
+      
+      if (!oxyUserId) {
+        return res.status(401).json(
+          errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
+        );
+      }
+
+      if (!name || !query) {
+        return res.status(400).json(
+          errorResponse("Search name and query are required", "SEARCH_DATA_REQUIRED")
+        );
+      }
+
+      // Get the active profile for the current user
+      let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      
+      if (!activeProfile) {
+        console.log('No active profile found, creating one...');
+        const defaultPersonalProfile = new Profile({
+          oxyUserId,
+          profileType: "personal",
+          isActive: true,
+          isPrimary: true,
+          personalProfile: {
+            personalInfo: {
+              bio: "",
+              occupation: "",
+              employer: "",
+              annualIncome: null,
+              employmentStatus: "employed",
+              moveInDate: null,
+              leaseDuration: "yearly",
+            },
+            preferences: {},
+            references: [],
+            rentalHistory: [],
+            verification: {},
+            trustScore: { score: 50, factors: [] },
+            settings: {
+              notifications: { email: true, push: true, sms: false },
+              privacy: { profileVisibility: "public", showContactInfo: true, showIncome: false },
+              language: "en",
+              timezone: "UTC"
+            }
+          }
+        });
+        
+        defaultPersonalProfile.calculateTrustScore();
+        await defaultPersonalProfile.save();
+        activeProfile = defaultPersonalProfile;
+      }
+
+      // Import SavedSearchModel
+      const { SavedSearchModel } = require('../models');
+      
+      // Check if search with same name already exists
+      const existingSearch = await SavedSearchModel.findOne({ 
+        profileId: activeProfile._id, 
+        name: name.trim()
+      });
+
+      if (existingSearch) {
+        return res.status(409).json(
+          errorResponse("A search with this name already exists", "SEARCH_NAME_EXISTS")
+        );
+      }
+
+      // Create new saved search
+      const savedSearch = new SavedSearchModel({
+        profileId: activeProfile._id,
+        name: name.trim(),
+        query: query.trim(),
+        filters: filters || {},
+        notificationsEnabled: !!notificationsEnabled,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+
+      await savedSearch.save();
+
+      res.status(201).json(
+        successResponse(savedSearch, "Search saved successfully")
+      );
+    } catch (error) {
+      console.error("Error saving search:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Delete a saved search for the current user's profile
+   */
+  async deleteSavedSearch(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      const { searchId } = req.params;
+      
+      if (!oxyUserId) {
+        return res.status(401).json(
+          errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
+        );
+      }
+
+      if (!searchId) {
+        return res.status(400).json(
+          errorResponse("Search ID is required", "SEARCH_ID_REQUIRED")
+        );
+      }
+
+      // Get the active profile for the current user
+      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      
+      if (!activeProfile) {
+        return res.status(404).json(
+          errorResponse("Saved search not found", "SAVED_SEARCH_NOT_FOUND")
+        );
+      }
+
+      // Import SavedSearchModel
+      const { SavedSearchModel } = require('../models');
+      
+      // Remove saved search
+      const result = await SavedSearchModel.deleteOne({ 
+        _id: searchId,
+        profileId: activeProfile._id
+      });
+
+      if (result.deletedCount === 0) {
+        return res.status(404).json(
+          errorResponse("Saved search not found", "SAVED_SEARCH_NOT_FOUND")
+        );
+      }
+
+      res.json(
+        successResponse(null, "Search deleted successfully")
+      );
+    } catch (error) {
+      console.error("Error deleting saved search:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Update a saved search for the current user's profile
+   */
+  async updateSavedSearch(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      const { searchId } = req.params;
+      const { name, query, filters, notificationsEnabled } = req.body;
+      
+      if (!oxyUserId) {
+        return res.status(401).json(
+          errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
+        );
+      }
+
+      if (!searchId) {
+        return res.status(400).json(
+          errorResponse("Search ID is required", "SEARCH_ID_REQUIRED")
+        );
+      }
+
+      // Get the active profile for the current user
+      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      
+      if (!activeProfile) {
+        return res.status(404).json(
+          errorResponse("Saved search not found", "SAVED_SEARCH_NOT_FOUND")
+        );
+      }
+
+      // Import SavedSearchModel
+      const { SavedSearchModel } = require('../models');
+      
+      // Prepare update data
+      const updateData = { updatedAt: new Date() };
+      if (name !== undefined) updateData.name = name.trim();
+      if (query !== undefined) updateData.query = query.trim();
+      if (filters !== undefined) updateData.filters = filters;
+      if (notificationsEnabled !== undefined) updateData.notificationsEnabled = !!notificationsEnabled;
+
+      // Update saved search
+      const savedSearch = await SavedSearchModel.findOneAndUpdate(
+        { _id: searchId, profileId: activeProfile._id },
+        updateData,
+        { new: true }
+      );
+
+      if (!savedSearch) {
+        return res.status(404).json(
+          errorResponse("Saved search not found", "SAVED_SEARCH_NOT_FOUND")
+        );
+      }
+
+      res.json(
+        successResponse(savedSearch, "Search updated successfully")
+      );
+    } catch (error) {
+      console.error("Error updating saved search:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Toggle notifications for a saved search
+   */
+  async toggleSearchNotifications(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      const { searchId } = req.params;
+      const { notificationsEnabled } = req.body;
+      
+      if (!oxyUserId) {
+        return res.status(401).json(
+          errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
+        );
+      }
+
+      if (!searchId) {
+        return res.status(400).json(
+          errorResponse("Search ID is required", "SEARCH_ID_REQUIRED")
+        );
+      }
+
+      // Get the active profile for the current user
+      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      
+      if (!activeProfile) {
+        return res.status(404).json(
+          errorResponse("Saved search not found", "SAVED_SEARCH_NOT_FOUND")
+        );
+      }
+
+      // Import SavedSearchModel
+      const { SavedSearchModel } = require('../models');
+      
+      // Update notifications setting
+      const savedSearch = await SavedSearchModel.findOneAndUpdate(
+        { _id: searchId, profileId: activeProfile._id },
+        { 
+          notificationsEnabled: !!notificationsEnabled,
+          updatedAt: new Date()
+        },
+        { new: true }
+      );
+
+      if (!savedSearch) {
+        return res.status(404).json(
+          errorResponse("Saved search not found", "SAVED_SEARCH_NOT_FOUND")
+        );
+      }
+
+      res.json(
+        successResponse(savedSearch, "Search notifications updated successfully")
+      );
+    } catch (error) {
+      console.error("Error toggling search notifications:", error);
       next(error);
     }
   }
