@@ -20,8 +20,6 @@ export const useFavorites = () => {
   const { oxyServices, activeSessionId } = useOxy();
 
   const toggleFavorite = useCallback(async (propertyId: string, propertyData?: Partial<Property>) => {
-    console.log(`🎯 useFavorites: toggleFavorite called with propertyId: ${propertyId}`);
-    
     if (!oxyServices || !activeSessionId) {
       console.error('useFavorites: Cannot toggle favorite - missing services or session');
       return;
@@ -35,7 +33,6 @@ export const useFavorites = () => {
       dispatch(removePropertyOptimistic(propertyId));
       
       try {
-        console.log(`🔄 useFavorites: Starting unsave operation for ${propertyId}`);
         await dispatch(unsaveProperty({ 
           propertyId, 
           oxyServices, 
@@ -52,7 +49,6 @@ export const useFavorites = () => {
       dispatch(addPropertyOptimistic({ propertyId, propertyData }));
       
       try {
-        console.log(`🔄 useFavorites: Starting save operation for ${propertyId}`);
         await dispatch(saveProperty({ 
           propertyId, 
           oxyServices, 

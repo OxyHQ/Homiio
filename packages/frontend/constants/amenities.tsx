@@ -1306,4 +1306,20 @@ export const EQUITY_FOCUSED_AMENITIES = [
     'bike_storage',
     'community_room',
     'playground'
+];
+
+// Popular amenities commonly selected by property owners for listings
+export const POPULAR_AMENITIES = [
+    'wifi',
+    'air_conditioning',
+    'washing_machine',
+    'dryer',
+    'dishwasher',
+    'parking_space',
+    'balcony',
+    'hardwood_floors',
+    'stainless_appliances',
+    'pet_friendly',
+    'gym',
+    'swimming_pool'
 ]; 
