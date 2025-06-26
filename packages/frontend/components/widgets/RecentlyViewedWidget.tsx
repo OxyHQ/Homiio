@@ -34,11 +34,11 @@ export function RecentlyViewedWidget() {
         router.push(`/properties/${property._id || property.id}`);
     };
 
-    const handleLogin = () => {
-        // This would trigger the Oxy sign-in flow
-        // For now, we'll just navigate to a sign-in page or show a message
-        console.log('Login requested');
-    };
+    // Hide widget completely if not authenticated
+    if (!isAuthenticated) {
+        console.log('RecentlyViewedWidget: User not authenticated, hiding widget');
+        return null;
+    }
 
     if (error) {
         console.log('RecentlyViewedWidget Error:', error);
@@ -47,25 +47,6 @@ export function RecentlyViewedWidget() {
                 icon={<IconComponent name="time-outline" size={22} color={colors.primaryColor} />}>
                 <View style={styles.errorContainer}>
                     <Text style={styles.errorText}>{error || 'Failed to load properties'}</Text>
-                </View>
-            </BaseWidget>
-        );
-    }
-
-    // Show login prompt if not authenticated
-    if (!isAuthenticated) {
-        console.log('RecentlyViewedWidget: User not authenticated, showing login prompt');
-        return (
-            <BaseWidget
-                title={t("Recently Viewed")}
-                icon={<IconComponent name="time-outline" size={22} color={colors.primaryColor} />}
-            >
-                <View style={styles.loginContainer}>
-                    <IconComponent name="log-in-outline" size={32} color={colors.COLOR_BLACK_LIGHT_4} />
-                    <Text style={styles.loginText}>Sign in to track your recently viewed properties</Text>
-                    <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-                        <Text style={styles.loginButtonText}>Sign In</Text>
-                    </TouchableOpacity>
                 </View>
             </BaseWidget>
         );
@@ -193,28 +174,5 @@ const styles = StyleSheet.create({
     errorText: {
         color: colors.COLOR_BLACK_LIGHT_4,
         fontSize: 12,
-    },
-    loginContainer: {
-        padding: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    loginText: {
-        fontSize: 14,
-        color: colors.COLOR_BLACK_LIGHT_4,
-        textAlign: 'center',
-        marginTop: 8,
-        marginBottom: 16,
-    },
-    loginButton: {
-        backgroundColor: colors.primaryColor,
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderRadius: 8,
-    },
-    loginButtonText: {
-        color: 'white',
-        fontSize: 14,
-        fontWeight: '600',
     },
 });

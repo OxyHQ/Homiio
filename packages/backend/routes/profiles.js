@@ -18,6 +18,8 @@ module.exports = function () {
   router.get("/me", asyncHandler(profileController.getOrCreateActiveProfile));
   router.get("/me/all", asyncHandler(profileController.getUserProfiles));
   router.get("/me/recent-properties", asyncHandler(profileController.getRecentProperties));
+  router.get("/me/recent-properties/debug", asyncHandler(profileController.debugRecentProperties));
+  router.delete("/me/recent-properties", asyncHandler(profileController.clearRecentProperties));
   router.get("/me/saved-properties", asyncHandler(profileController.getSavedProperties));
   router.post("/me/save-property", asyncHandler(profileController.saveProperty));
   router.delete("/me/saved-properties/:propertyId", asyncHandler(profileController.unsaveProperty));

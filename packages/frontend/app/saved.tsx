@@ -34,13 +34,12 @@ export default function SavedPropertiesScreen() {
         error,
         loadProperties,
         updateNotes,
+        isPropertySaving,
         clearError
     } = useSavedProperties();
 
     // Use the same favorites hook that works on property cards
-    const { toggleFavorite, isSaving: favoritesIsSaving } = useFavorites();
-
-
+    const { toggleFavorite } = useFavorites();
 
     // Enhanced SEO for saved properties page
     useSEO({
@@ -110,7 +109,8 @@ export default function SavedPropertiesScreen() {
     }, [clearError, loadProperties]);
 
     const renderPropertyItem = useCallback(({ item }: { item: SavedPropertyWithNotes }) => {
-        const isProcessing = isSaving || favoritesIsSaving;
+        const propertyId = item._id || item.id || '';
+        const isProcessing = isPropertySaving(propertyId);
 
         return (
             <View style={[styles.cardContainer, isProcessing && styles.cardLoading]}>
@@ -153,7 +153,7 @@ export default function SavedPropertiesScreen() {
                 )}
             </View>
         );
-    }, [isSaving, favoritesIsSaving, handlePropertyPress, handleEditNotes, handleUnsaveProperty]);
+    }, [isPropertySaving, handlePropertyPress, handleEditNotes, handleUnsaveProperty]);
 
     const keyExtractor = useCallback((item: SavedPropertyWithNotes) =>
         item._id || item.id || Math.random().toString(), []);

@@ -1,6 +1,11 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { useEffect } from 'react';
-import { fetchRecentlyViewedProperties, clearRecentlyViewed, addPropertyToRecentlyViewed, removePropertyFromRecentlyViewed } from '@/store/reducers/recentlyViewedReducer';
+import { 
+  fetchRecentlyViewedProperties, 
+  clearRecentlyViewedProperties,
+  addPropertyToRecentlyViewed, 
+  removePropertyFromRecentlyViewed 
+} from '@/store/reducers/recentlyViewedReducer';
 import { useOxy } from '@oxyhq/services';
 import type { RootState, AppDispatch } from '@/store/store';
 import type { Property } from '@/services/propertyService';
@@ -38,8 +43,12 @@ export function useRecentlyViewed() {
     };
 
     const clear = () => {
-        console.log('useRecentlyViewed: Clearing recently viewed properties');
-        dispatch(clearRecentlyViewed());
+        if (oxyServices && activeSessionId) {
+            console.log('useRecentlyViewed: Clearing recently viewed properties');
+            dispatch(clearRecentlyViewedProperties({ oxyServices, activeSessionId }));
+        } else {
+            console.log('useRecentlyViewed: Cannot clear - missing authentication');
+        }
     };
 
     const addProperty = (property: Property) => {

@@ -5,6 +5,7 @@
 
 const express = require("express");
 const propertyController = require("../controllers/propertyController");
+const profileController = require("../controllers/profileController");
 const { validation, asyncHandler } = require("../middlewares");
 const performanceMonitor = require("../middlewares/performance");
 
@@ -19,6 +20,9 @@ module.exports = function () {
   router.post("/dev", validation.validateProperty, asyncHandler(propertyController.createPropertyDev));
   router.put("/:propertyId", validation.validateProperty, asyncHandler(propertyController.updateProperty));
   router.delete("/:propertyId", asyncHandler(propertyController.deleteProperty));
+
+  // Property view tracking (authenticated) - uses profileController
+  router.post("/:propertyId/track-view", asyncHandler(profileController.trackPropertyView));
 
   // Property-specific authenticated routes
   router.get("/:propertyId/energy", asyncHandler(propertyController.getPropertyEnergyData));

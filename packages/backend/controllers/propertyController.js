@@ -285,8 +285,11 @@ class PropertyController {
               { profileId, propertyId, viewedAt: new Date() },
               { upsert: true, new: true }
             )
-            .then(() => {
-              console.log(`[getPropertyById] Successfully tracked property ${propertyId} for profile ${profileId}`);
+            .then((result) => {
+              console.log(`[getPropertyById] Successfully tracked property ${propertyId} for profile ${profileId}`, {
+                wasNew: !result.createdAt || result.createdAt.getTime() === result.updatedAt.getTime(),
+                viewedAt: result.viewedAt
+              });
             })
             .catch((err) => {
               console.error('[getPropertyById] Failed to track recently viewed property', {
@@ -296,7 +299,7 @@ class PropertyController {
               });
             });
           } else {
-            console.log(`[getPropertyById] No active profile found for Oxy user ${oxyUserId}`);
+            console.log(`[getPropertyById] No active profile found for Oxy user ${oxyUserId} - will create one on next profile request`);
           }
         } catch (profileError) {
           console.error('[getPropertyById] Error finding active profile:', profileError);

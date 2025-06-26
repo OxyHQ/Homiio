@@ -63,39 +63,12 @@ export function useSavedProperties() {
   });
 }
 
-// Hook to track property views and invalidate cache
-export function useTrackPropertyView() {
-  const queryClient = useQueryClient();
-  const { oxyServices, activeSessionId } = useOxy();
-
-  return useMutation({
-    mutationFn: async (propertyId: string) => {
-      // Check if OxyServices is available
-      if (!oxyServices || !activeSessionId) {
-        console.log('OxyServices not available - skipping property view tracking');
-        return;
-      }
-
-      try {
-        await userApi.trackPropertyView(propertyId, oxyServices, activeSessionId);
-        console.log(`Successfully tracked view for property ${propertyId}`);
-      } catch (error) {
-        console.error('Error tracking property view:', error);
-      }
-    },
-    onSuccess: () => {
-      // Note: We no longer invalidate recently viewed cache here since we're using Redux
-      console.log('Property view tracked successfully');
-    },
-  });
-}
-
 // Hook to save a property
 export function useSaveProperty() {
   const queryClient = useQueryClient();
   const { oxyServices, activeSessionId } = useOxy();
 
-  return useMutation({
+  const mutation = useMutation({
     mutationFn: async ({ propertyId, notes }: { propertyId: string; notes?: string }) => {
       console.log('Attempting to save property:', propertyId);
       
@@ -179,6 +152,8 @@ export function useSaveProperty() {
       queryClient.invalidateQueries({ queryKey: userKeys.savedProperties() });
     },
   });
+
+  return mutation;
 }
 
 // Hook to unsave a property

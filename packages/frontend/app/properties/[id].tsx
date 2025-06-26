@@ -17,11 +17,13 @@ import * as Clipboard from 'expo-clipboard';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
+import { getAmenityById, getCategoryById } from '@/constants/amenities';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchLandlordProfileById } from '@/store/reducers/profileReducer';
 import { fetchRecentlyViewedProperties, addPropertyToRecentlyViewed } from '@/store/reducers/recentlyViewedReducer';
 import { useFavorites } from '@/hooks/useFavorites';
 import type { RootState, AppDispatch } from '@/store/store';
+import { userApi } from '@/utils/api';
 
 type PropertyDetail = {
   id: string;
@@ -143,19 +145,36 @@ export default function PropertyDetailPage() {
   // Set document title for web
   useDocumentTitle(property?.title || 'Property Details');
 
-  // Track property view when component mounts
+  // Track property view when property is loaded and user is authenticated
   useEffect(() => {
     if (apiProperty && !hasViewedRef.current && oxyServices && activeSessionId) {
-      console.log('PropertyDetailPage: Property view will be tracked by backend when property is fetched');
       hasViewedRef.current = true;
 
-      // Add property to Redux state immediately for instant UI update
-      if (apiProperty) {
-        dispatch(addPropertyToRecentlyViewed(apiProperty));
-      }
+      console.log('PropertyDetailPage: Tracking property view for authenticated user', {
+        propertyId: apiProperty._id || apiProperty.id,
+        hasOxyServices: !!oxyServices,
+        hasActiveSession: !!activeSessionId
+      });
 
-      // Also refresh from backend to ensure consistency
-      dispatch(fetchRecentlyViewedProperties({ oxyServices, activeSessionId }));
+      // Add property to Redux state immediately for instant UI feedback
+      dispatch(addPropertyToRecentlyViewed(apiProperty));
+
+      // Call the backend to track the view in database
+      userApi.trackPropertyView(apiProperty._id || apiProperty.id, oxyServices, activeSessionId)
+        .then(() => {
+          console.log('PropertyDetailPage: Successfully tracked property view in backend');
+          // Refresh recently viewed from backend to get the updated list
+          dispatch(fetchRecentlyViewedProperties({ oxyServices, activeSessionId }));
+        })
+        .catch((error) => {
+          console.error('PropertyDetailPage: Failed to track property view in backend:', error);
+        });
+    } else if (apiProperty && !hasViewedRef.current) {
+      console.log('PropertyDetailPage: User not authenticated, skipping backend view tracking');
+      hasViewedRef.current = true;
+
+      // For unauthenticated users, only add to local Redux state
+      dispatch(addPropertyToRecentlyViewed(apiProperty));
     }
   }, [apiProperty, oxyServices, activeSessionId, dispatch]);
 
@@ -222,8 +241,212 @@ ${propertyUrl}`;
     }
   };
 
+  const renderAmenitiesByCategory = () => {
+    if (!property?.amenities || property.amenities.length === 0) return null;
+
+    // Group amenities by category
+    const amenitiesByCategory: { [key: string]: any[] } = {};
+    const uncategorized: any[] = [];
+
+    property.amenities.forEach(amenityId => {
+      const amenityConfig = getAmenityById(amenityId);
+      if (amenityConfig) {
+        const category = amenityConfig.category;
+        if (!amenitiesByCategory[category]) {
+          amenitiesByCategory[category] = [];
+        }
+        amenitiesByCategory[category].push(amenityConfig);
+      } else {
+        uncategorized.push({ id: amenityId, name: amenityId });
+      }
+    });
+
+    // Sort categories by priority: essential, accessibility, then others
+    const categoryOrder = ['essential', 'accessibility', 'eco', 'security', 'comfort', 'kitchen', 'technology', 'transportation', 'outdoor', 'wellness', 'community', 'storage'];
+    const sortedCategories = Object.keys(amenitiesByCategory).sort((a, b) => {
+      const indexA = categoryOrder.indexOf(a);
+      const indexB = categoryOrder.indexOf(b);
+      return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+    });
+
+    return (
+      <View style={styles.categorizedAmenities}>
+        {sortedCategories.map(categoryId => {
+          const categoryInfo = getCategoryById(categoryId);
+          const categoryAmenities = amenitiesByCategory[categoryId];
+
+          if (!categoryInfo || !categoryAmenities.length) return null;
+
+          return (
+            <View key={categoryId} style={styles.amenityCategory}>
+              <View style={styles.categoryHeader}>
+                <View style={[styles.categoryIcon, { backgroundColor: categoryInfo.color + '15' }]}>
+                  <IconComponent
+                    name={categoryInfo.icon as any}
+                    size={20}
+                    color={categoryInfo.color}
+                  />
+                </View>
+                <Text style={styles.categoryTitle}>{categoryInfo.name}</Text>
+                <View style={[styles.categoryBadge, { backgroundColor: categoryInfo.color }]}>
+                  <Text style={styles.categoryBadgeText}>{categoryAmenities.length}</Text>
+                </View>
+              </View>
+
+              <View style={styles.categoryAmenities}>
+                {categoryAmenities.map((amenity, index) => (
+                  <View key={amenity.id} style={[
+                    styles.modernAmenityCard,
+                    amenity.essential && styles.essentialCard,
+                    amenity.accessibility && styles.accessibilityCard
+                  ]}>
+                    <View style={styles.amenityCardContent}>
+                      <View style={[styles.amenityCardIcon, { backgroundColor: categoryInfo.color + '10' }]}>
+                        <IconComponent
+                          name={amenity.icon as any}
+                          size={18}
+                          color={categoryInfo.color}
+                        />
+                      </View>
+                      <View style={styles.amenityCardText}>
+                        <Text style={styles.amenityCardTitle}>{amenity.name}</Text>
+                        {amenity.description && (
+                          <Text style={styles.amenityCardDescription} numberOfLines={2}>
+                            {amenity.description}
+                          </Text>
+                        )}
+                        <View style={styles.amenityTags}>
+                          {amenity.essential && (
+                            <View style={[styles.amenityTag, styles.essentialTag]}>
+                              <Text style={styles.amenityTagText}>Essential</Text>
+                            </View>
+                          )}
+                          {amenity.accessibility && (
+                            <View style={[styles.amenityTag, styles.accessibilityTag]}>
+                              <Text style={styles.amenityTagText}>Accessible</Text>
+                            </View>
+                          )}
+                          {amenity.environmental === 'positive' && (
+                            <View style={[styles.amenityTag, styles.ecoTag]}>
+                              <Text style={styles.amenityTagText}>Eco</Text>
+                            </View>
+                          )}
+                          {amenity.maxFairValue === 0 && (
+                            <View style={[styles.amenityTag, styles.includedTag]}>
+                              <Text style={styles.amenityTagText}>Included</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+          );
+        })}
+
+        {/* Show uncategorized amenities if any */}
+        {uncategorized.length > 0 && (
+          <View style={styles.amenityCategory}>
+            <View style={styles.categoryHeader}>
+              <View style={[styles.categoryIcon, { backgroundColor: colors.COLOR_BLACK_LIGHT_4 + '15' }]}>
+                <IconComponent
+                  name="ellipsis-horizontal"
+                  size={20}
+                  color={colors.COLOR_BLACK_LIGHT_3}
+                />
+              </View>
+              <Text style={styles.categoryTitle}>Other Features</Text>
+              <View style={[styles.categoryBadge, { backgroundColor: colors.COLOR_BLACK_LIGHT_3 }]}>
+                <Text style={styles.categoryBadgeText}>{uncategorized.length}</Text>
+              </View>
+            </View>
+
+            <View style={styles.categoryAmenities}>
+              {uncategorized.map((amenity, index) => (
+                <View key={amenity.id} style={styles.modernAmenityCard}>
+                  <View style={styles.amenityCardContent}>
+                    <View style={[styles.amenityCardIcon, { backgroundColor: colors.COLOR_BLACK_LIGHT_4 + '10' }]}>
+                      <IconComponent
+                        name="checkmark-circle"
+                        size={18}
+                        color={colors.COLOR_BLACK_LIGHT_3}
+                      />
+                    </View>
+                    <View style={styles.amenityCardText}>
+                      <Text style={styles.amenityCardTitle}>{amenity.name}</Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+      </View>
+    );
+  };
+
   const renderAmenity = (amenity: string, index: number) => {
-    // Map amenities to appropriate Ionicons
+    // Try to find amenity in our comprehensive config first
+    const amenityConfig = getAmenityById(amenity);
+
+    if (amenityConfig) {
+      return (
+        <View key={index} style={[
+          styles.amenityItem,
+          amenityConfig.essential && styles.essentialAmenityItem,
+          amenityConfig.accessibility && styles.accessibilityAmenityItem
+        ]}>
+          <View style={[
+            styles.amenityIconContainer,
+            amenityConfig.essential && styles.essentialAmenityIconContainer,
+            amenityConfig.accessibility && styles.accessibilityAmenityIconContainer
+          ]}>
+            <IconComponent
+              name={amenityConfig.icon as any}
+              size={20}
+              color={
+                amenityConfig.accessibility ? '#6366f1' :
+                  amenityConfig.essential ? '#059669' :
+                    amenityConfig.environmental === 'positive' ? '#16a34a' :
+                      colors.primaryColor
+              }
+            />
+          </View>
+          <View style={styles.amenityTextContainer}>
+            <Text style={[
+              styles.amenityText,
+              amenityConfig.essential && styles.essentialAmenityText,
+              amenityConfig.accessibility && styles.accessibilityAmenityText
+            ]}>
+              {amenityConfig.name}
+              {amenityConfig.essential && (
+                <Text style={styles.essentialBadge}> ESSENTIAL</Text>
+              )}
+              {amenityConfig.accessibility && (
+                <Text style={styles.accessibilityBadge}> ACCESSIBLE</Text>
+              )}
+              {amenityConfig.environmental === 'positive' && (
+                <Text style={styles.ecoBadge}> ECO</Text>
+              )}
+            </Text>
+            {amenityConfig.description && (
+              <Text style={styles.amenityDescription}>
+                {amenityConfig.description}
+              </Text>
+            )}
+            {amenityConfig.ethicalNotes && (
+              <Text style={styles.amenityEthicalNotes}>
+                {amenityConfig.ethicalNotes}
+              </Text>
+            )}
+          </View>
+        </View>
+      );
+    }
+
+    // Fallback to legacy mapping for old amenity strings
     const getAmenityIcon = (amenityName: string) => {
       const lowerAmenity = amenityName.toLowerCase();
 
@@ -454,18 +677,56 @@ ${propertyUrl}`;
 
           {/* Amenities */}
           <View style={styles.divider} />
-          <Text style={styles.sectionTitle}>{t("Amenities")}</Text>
-          <View style={styles.amenitiesContainer}>
-            {property.amenities.length > 0 ? (
-              property.amenities.map((amenity, index) =>
-                renderAmenity(amenity, index)
-              )
-            ) : (
-              <View style={styles.noAmenitiesContainer}>
-                <Text style={styles.noAmenitiesText}>{t("No amenities listed")}</Text>
-              </View>
-            )}
-          </View>
+          <Text style={styles.sectionTitle}>{t("What's Included")}</Text>
+
+          {property.amenities.length > 0 ? (
+            <View style={styles.amenitiesContainer}>
+              {property.amenities.map((amenity, index) => {
+                const amenityConfig = getAmenityById(amenity);
+                return (
+                  <View
+                    key={index}
+                    style={[
+                      styles.amenityChip,
+                      amenityConfig?.essential && styles.essentialChip,
+                      amenityConfig?.accessibility && styles.accessibilityChip,
+                      amenityConfig?.environmental === 'positive' && styles.ecoChip,
+                    ]}
+                  >
+                    {amenityConfig && (
+                      <IconComponent
+                        name={amenityConfig.icon as any}
+                        size={16}
+                        color={
+                          amenityConfig.accessibility ? '#6366f1' :
+                            amenityConfig.essential ? '#059669' :
+                              amenityConfig.environmental === 'positive' ? '#16a34a' :
+                                colors.primaryColor
+                        }
+                        style={styles.amenityChipIcon}
+                      />
+                    )}
+                    <Text style={[
+                      styles.amenityChipText,
+                      amenityConfig?.essential && styles.essentialChipText,
+                      amenityConfig?.accessibility && styles.accessibilityChipText,
+                      amenityConfig?.environmental === 'positive' && styles.ecoChipText,
+                    ]}>
+                      {amenityConfig?.nameKey ? t(amenityConfig.nameKey) : (amenityConfig?.name || amenity)}
+                    </Text>
+                    {amenityConfig?.maxFairValue === 0 && (
+                      <View style={styles.includedDot} />
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          ) : (
+            <View style={styles.noAmenitiesContainer}>
+              <IconComponent name="home-outline" size={48} color={colors.COLOR_BLACK_LIGHT_4} />
+              <Text style={styles.noAmenitiesText}>{t("No amenities listed")}</Text>
+            </View>
+          )}
 
           {/* Map - Only show if location coordinates are available */}
           {apiProperty?.address?.coordinates?.lat && apiProperty?.address?.coordinates?.lng && (
@@ -773,6 +1034,53 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 8,
   },
+  // Simple chip styles
+  amenityChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  essentialChip: {
+    backgroundColor: '#f0fdf4',
+    borderColor: '#059669',
+  },
+  accessibilityChip: {
+    backgroundColor: '#f0f0ff',
+    borderColor: '#6366f1',
+  },
+  ecoChip: {
+    backgroundColor: '#f0fdf4',
+    borderColor: '#16a34a',
+  },
+  amenityChipIcon: {
+    marginRight: 6,
+  },
+  amenityChipText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.COLOR_BLACK,
+  },
+  essentialChipText: {
+    color: '#059669',
+  },
+  accessibilityChipText: {
+    color: '#6366f1',
+  },
+  ecoChipText: {
+    color: '#16a34a',
+  },
+  includedDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primaryColor,
+    marginLeft: 6,
+  },
   amenityItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -801,6 +1109,64 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     color: colors.COLOR_BLACK,
+  },
+  // Ethical amenity styles
+  essentialAmenityItem: {
+    borderColor: '#059669',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+  },
+  accessibilityAmenityItem: {
+    borderColor: '#6366f1',
+    backgroundColor: '#F0F0FF',
+    borderWidth: 1,
+  },
+  essentialAmenityIconContainer: {
+    backgroundColor: '#059669' + '20',
+  },
+  accessibilityAmenityIconContainer: {
+    backgroundColor: '#6366f1' + '20',
+  },
+  amenityTextContainer: {
+    flex: 1,
+  },
+  essentialAmenityText: {
+    color: '#059669',
+    fontWeight: '600',
+  },
+  accessibilityAmenityText: {
+    color: '#6366f1',
+    fontWeight: '600',
+  },
+  essentialBadge: {
+    fontSize: 10,
+    color: '#059669',
+    fontWeight: 'bold',
+  },
+  accessibilityBadge: {
+    fontSize: 10,
+    color: '#6366f1',
+    fontWeight: 'bold',
+  },
+  ecoBadge: {
+    fontSize: 10,
+    color: '#16a34a',
+    fontWeight: 'bold',
+  },
+  amenityDescription: {
+    fontSize: 11,
+    color: colors.COLOR_BLACK_LIGHT_4,
+    marginTop: 2,
+    fontStyle: 'italic',
+  },
+  amenityEthicalNotes: {
+    fontSize: 10,
+    color: colors.COLOR_BLACK_LIGHT_3,
+    marginTop: 4,
+    fontStyle: 'italic',
+    paddingTop: 4,
+    borderTopWidth: 0.5,
+    borderTopColor: colors.COLOR_BLACK_LIGHT_4,
   },
   landlordCard: {
     backgroundColor: '#fff',
@@ -1087,15 +1453,6 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     fontSize: 14,
   },
-  amenityIconContainer: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: colors.primaryColor + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 6,
-  },
   amenityIconText: {
     color: 'white',
     fontSize: 16,
@@ -1311,5 +1668,144 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 12,
+  },
+  // Enhanced amenities section styles
+  sectionSubtitle: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK_LIGHT_3,
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  amenitiesSection: {
+    marginTop: 8,
+  },
+  noAmenitiesSubtext: {
+    fontSize: 12,
+    color: colors.COLOR_BLACK_LIGHT_4,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  categorizedAmenities: {
+    gap: 24,
+  },
+  amenityCategory: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#f1f3f5',
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f3f5',
+  },
+  categoryIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  categoryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.COLOR_BLACK,
+    flex: 1,
+  },
+  categoryBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    minWidth: 24,
+    alignItems: 'center',
+  },
+  categoryBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'white',
+  },
+  categoryAmenities: {
+    gap: 8,
+  },
+  modernAmenityCard: {
+    backgroundColor: '#fafbfc',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  essentialCard: {
+    backgroundColor: '#f0fdf4',
+    borderColor: '#059669',
+  },
+  accessibilityCard: {
+    backgroundColor: '#f0f0ff',
+    borderColor: '#6366f1',
+  },
+  amenityCardContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  amenityCardIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  amenityCardText: {
+    flex: 1,
+  },
+  amenityCardTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.COLOR_BLACK,
+    marginBottom: 4,
+  },
+  amenityCardDescription: {
+    fontSize: 12,
+    color: colors.COLOR_BLACK_LIGHT_3,
+    lineHeight: 16,
+    marginBottom: 8,
+  },
+  amenityTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  amenityTag: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  essentialTag: {
+    backgroundColor: '#059669',
+  },
+  accessibilityTag: {
+    backgroundColor: '#6366f1',
+  },
+  ecoTag: {
+    backgroundColor: '#16a34a',
+  },
+  includedTag: {
+    backgroundColor: colors.primaryColor,
+  },
+  amenityTagText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: 'white',
+    textTransform: 'uppercase',
   },
 });

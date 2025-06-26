@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDocumentTitle, useSEO } from '@/hooks/useDocumentTitle';
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { Toaster } from '@/lib/sonner';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // Import real data hooks
 import { useProperties } from '@/hooks/usePropertyQueries';
@@ -21,6 +22,7 @@ import { FeaturedPropertiesWidget } from '@/components/widgets/FeaturedPropertie
 // Import utils
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
+import { AMENITY_CATEGORIES, getAmenitiesByCategory, ESSENTIAL_AMENITIES } from '@/constants/amenities';
 
 // Type assertion for Ionicons compatibility with React 19
 const IconComponent = Ionicons as any;
@@ -121,7 +123,11 @@ export default function HomePage() {
         }
       >
         {/* Hero Section */}
-        <View style={styles.heroSection}>
+        <LinearGradient
+          // Background Linear Gradient
+          colors={[colors.primaryColor, colors.secondaryLight]}
+          style={styles.heroSection}
+        >
           <View style={styles.heroContent}>
             <Text style={styles.heroTitle}>{t("home.hero.title")}</Text>
             <Text style={styles.heroSubtitle}>
@@ -144,7 +150,7 @@ export default function HomePage() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </LinearGradient>
 
         {/* Trust Features */}
         <View style={styles.trustSection}>
@@ -266,6 +272,65 @@ export default function HomePage() {
           </View>
         </View>
 
+        {/* Popular Amenities Showcase */}
+        <View style={styles.amenitiesShowcase}>
+          <Text style={styles.sectionTitle}>Popular Amenities</Text>
+          <Text style={styles.amenitySectionSubtitle}>
+            Essential features most renters look for
+          </Text>
+          <View style={styles.amenityChipsContainer}>
+            {ESSENTIAL_AMENITIES.slice(0, 12).map((amenityId) => {
+              const amenity = getAmenitiesByCategory('essential').find(a => a.id === amenityId) ||
+                getAmenitiesByCategory('accessibility').find(a => a.id === amenityId) ||
+                getAmenitiesByCategory('eco').find(a => a.id === amenityId);
+
+              if (!amenity) return null;
+
+              return (
+                <TouchableOpacity
+                  key={amenity.id}
+                  style={[
+                    styles.homeAmenityChip,
+                    amenity.essential && styles.homeEssentialChip,
+                    amenity.accessibility && styles.homeAccessibilityChip,
+                    amenity.environmental === 'positive' && styles.homeEcoChip,
+                  ]}
+                  onPress={() => router.push(`/properties/search?amenities=${amenity.id}`)}
+                >
+                  <IconComponent
+                    name={amenity.icon as keyof typeof IconComponent.glyphMap}
+                    size={16}
+                    color={
+                      amenity.accessibility ? '#6366f1' :
+                        amenity.essential ? '#059669' :
+                          amenity.environmental === 'positive' ? '#16a34a' :
+                            colors.primaryColor
+                    }
+                  />
+                  <Text style={[
+                    styles.homeAmenityChipText,
+                    amenity.essential && styles.homeEssentialChipText,
+                    amenity.accessibility && styles.homeAccessibilityChipText,
+                    amenity.environmental === 'positive' && styles.homeEcoChipText,
+                  ]}>
+                    {amenity.nameKey ? t(amenity.nameKey) : amenity.name}
+                  </Text>
+                  {amenity.maxFairValue === 0 && (
+                    <View style={styles.homeIncludedDot} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <TouchableOpacity
+            style={styles.viewAllAmenitiesButton}
+            onPress={() => router.push('/properties/search')}
+          >
+            <Text style={styles.viewAllAmenitiesText}>View All Properties</Text>
+            <IconComponent name="arrow-forward" size={16} color={colors.primaryColor} />
+          </TouchableOpacity>
+        </View>
+
         {/* Horizon Initiative */}
         <View style={styles.horizonSection}>
           <View style={styles.horizonContent}>
@@ -329,6 +394,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     borderRadius: 35,
+    margin: 10,
+    borderColor: colors.COLOR_BLACK,
+    borderWidth: 1,
   },
   heroContent: {
     width: '100%',
@@ -374,14 +442,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   searchButton: {
-    backgroundColor: colors.COLOR_BLACK,
+    backgroundColor: colors.secondaryColor,
     borderRadius: 30,
     padding: 15,
     height: 50,
     justifyContent: 'center',
   },
   searchButtonText: {
-    color: 'white',
+    color: colors.COLOR_BLACK,
     fontWeight: 'bold',
   },
   sectionTitle: {
@@ -622,5 +690,83 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 12,
     fontWeight: '600',
+  },
+  // Popular Amenities Section
+  amenitiesShowcase: {
+    padding: 20,
+    backgroundColor: '#f8f9fa',
+  },
+  amenitySectionSubtitle: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK_LIGHT_3,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  amenityChipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 20,
+  },
+  homeAmenityChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  homeEssentialChip: {
+    backgroundColor: '#f0fdf4',
+    borderColor: '#059669',
+  },
+  homeAccessibilityChip: {
+    backgroundColor: '#f0f0ff',
+    borderColor: '#6366f1',
+  },
+  homeEcoChip: {
+    backgroundColor: '#f0fdf4',
+    borderColor: '#16a34a',
+  },
+  homeAmenityChipText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.COLOR_BLACK,
+    marginLeft: 6,
+  },
+  homeEssentialChipText: {
+    color: '#059669',
+  },
+  homeAccessibilityChipText: {
+    color: '#6366f1',
+  },
+  homeEcoChipText: {
+    color: '#16a34a',
+  },
+  homeIncludedDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primaryColor,
+    marginLeft: 6,
+  },
+  viewAllAmenitiesButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'white',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: colors.primaryColor,
+  },
+  viewAllAmenitiesText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primaryColor,
+    marginRight: 6,
   },
 });

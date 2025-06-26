@@ -27,12 +27,13 @@ export interface UseSavedPropertiesReturn {
   unsaveProperty: (propertyId: string) => Promise<void>;
   updateNotes: (propertyId: string, notes: string) => Promise<void>;
   isFavorite: (propertyId: string) => boolean;
+  isPropertySaving: (propertyId: string) => boolean;
   clearError: () => void;
 }
 
 export const useSavedProperties = (): UseSavedPropertiesReturn => {
   const dispatch = useDispatch<AppDispatch>();
-  const { properties, favoriteIds, isLoading, isSaving, error, lastSynced } = useSelector(
+  const { properties, favoriteIds, isLoading, isSaving, error, lastSynced, savingPropertyIds } = useSelector(
     (state: RootState) => state.savedProperties
   );
   const { data: activeProfile } = useActiveProfile();
@@ -158,6 +159,10 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
     return favoriteIds.includes(propertyId);
   }, [favoriteIds]);
 
+  const isPropertySaving = useCallback((propertyId: string): boolean => {
+    return savingPropertyIds.includes(propertyId);
+  }, [savingPropertyIds]);
+
   const clearErrorHandler = useCallback(() => {
     dispatch(clearError());
   }, [dispatch]);
@@ -173,6 +178,7 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
     unsaveProperty: unsavePropertyHandler,
     updateNotes: updateNotesHandler,
     isFavorite,
+    isPropertySaving,
     clearError: clearErrorHandler,
   };
 };

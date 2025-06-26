@@ -13,13 +13,15 @@ import type { Property } from '@/services/propertyService';
 
 export const useFavorites = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { favoriteIds, isLoading, isSaving, error } = useSelector(
+  const { favoriteIds, isLoading, isSaving, error, savingPropertyIds } = useSelector(
     (state: RootState) => state.savedProperties
   );
   const { data: activeProfile } = useActiveProfile();
   const { oxyServices, activeSessionId } = useOxy();
 
   const toggleFavorite = useCallback(async (propertyId: string, propertyData?: Partial<Property>) => {
+    console.log(`🎯 useFavorites: toggleFavorite called with propertyId: ${propertyId}`);
+    
     if (!oxyServices || !activeSessionId) {
       console.error('useFavorites: Cannot toggle favorite - missing services or session');
       return;
@@ -33,6 +35,7 @@ export const useFavorites = () => {
       dispatch(removePropertyOptimistic(propertyId));
       
       try {
+        console.log(`🔄 useFavorites: Starting unsave operation for ${propertyId}`);
         await dispatch(unsaveProperty({ 
           propertyId, 
           oxyServices, 
@@ -49,6 +52,7 @@ export const useFavorites = () => {
       dispatch(addPropertyOptimistic({ propertyId, propertyData }));
       
       try {
+        console.log(`🔄 useFavorites: Starting save operation for ${propertyId}`);
         await dispatch(saveProperty({ 
           propertyId, 
           oxyServices, 
@@ -66,6 +70,10 @@ export const useFavorites = () => {
   const isFavorite = useCallback((propertyId: string): boolean => {
     return favoriteIds.includes(propertyId);
   }, [favoriteIds]);
+
+  const isPropertySaving = useCallback((propertyId: string): boolean => {
+    return savingPropertyIds.includes(propertyId);
+  }, [savingPropertyIds]);
 
   const addToFavorites = useCallback(async (propertyId: string, propertyData?: Partial<Property>) => {
     if (favoriteIds.includes(propertyId)) {
@@ -128,6 +136,7 @@ export const useFavorites = () => {
     error,
     toggleFavorite,
     isFavorite,
+    isPropertySaving,
     addToFavorites,
     removeFromFavorites,
   };

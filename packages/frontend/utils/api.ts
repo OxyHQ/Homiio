@@ -13,7 +13,6 @@ const API_CONFIG = {
     profiles: {
       recentProperties: '/api/profiles/me/recent-properties',
       savedProperties: '/api/profiles/me/saved-properties',
-      propertyViews: '/api/profiles/me/property-views',
       properties: '/api/profiles/me/properties',
     },
   },
@@ -420,18 +419,27 @@ export const userApi = {
     return response.data;
   },
 
-  // Get saved properties (authenticated)
-  async getSavedProperties(oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.get<ApiResponse>(API_CONFIG.endpoints.profiles.savedProperties, {
+  // Track property view (authenticated)
+  async trackPropertyView(propertyId: string, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
+    const response = await api.post<ApiResponse>(`/api/properties/${propertyId}/track-view`, {}, {
       oxyServices,
       activeSessionId,
     });
     return response.data;
   },
 
-  // Track property view (authenticated)
-  async trackPropertyView(propertyId: string, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.post<ApiResponse>(API_CONFIG.endpoints.profiles.propertyViews, { propertyId }, {
+  // Clear recently viewed properties (authenticated)
+  async clearRecentProperties(oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
+    const response = await api.delete<ApiResponse>(API_CONFIG.endpoints.profiles.recentProperties, {
+      oxyServices,
+      activeSessionId,
+    });
+    return response.data;
+  },
+
+  // Get saved properties (authenticated)
+  async getSavedProperties(oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
+    const response = await api.get<ApiResponse>(API_CONFIG.endpoints.profiles.savedProperties, {
       oxyServices,
       activeSessionId,
     });

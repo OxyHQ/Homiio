@@ -21,10 +21,31 @@ export const fetchRecentlyViewedProperties = createAsyncThunk(
     console.log('Redux: Fetching recently viewed properties');
     try {
       const response = await userApi.getRecentProperties(oxyServices, activeSessionId);
-      console.log('Redux: Successfully fetched recently viewed properties:', response.data?.length || 0);
-      return response.data || [];
+      console.log('Redux: Raw API response:', response);
+      
+      // Handle the nested response structure: { data: { success: true, data: [...], ... } }
+      const properties = response.data?.data || response.data || [];
+      console.log('Redux: Extracted properties:', properties.length, 'items');
+      
+      return properties;
     } catch (error) {
       console.error('Redux: Error fetching recently viewed properties:', error);
+      throw error;
+    }
+  }
+);
+
+// Async thunk to clear recently viewed properties
+export const clearRecentlyViewedProperties = createAsyncThunk(
+  'recentlyViewed/clearProperties',
+  async ({ oxyServices, activeSessionId }: { oxyServices: any, activeSessionId: string }) => {
+    console.log('Redux: Clearing recently viewed properties');
+    try {
+      const response = await userApi.clearRecentProperties(oxyServices, activeSessionId);
+      console.log('Redux: Successfully cleared recently viewed properties');
+      return [];
+    } catch (error) {
+      console.error('Redux: Error clearing recently viewed properties:', error);
       throw error;
     }
   }
@@ -34,10 +55,6 @@ const recentlyViewedSlice = createSlice({
   name: 'recentlyViewed',
   initialState,
   reducers: {
-    clearRecentlyViewed: (state) => {
-      state.properties = [];
-      state.error = null;
-    },
     addPropertyToRecentlyViewed: (state, action: PayloadAction<Property>) => {
       const property = action.payload;
       const propertyId = property._id || property.id;
@@ -57,6 +74,10 @@ const recentlyViewedSlice = createSlice({
       const propertyId = action.payload;
       state.properties = state.properties.filter(p => (p._id || p.id) !== propertyId);
     },
+    clearRecentlyViewed: (state) => {
+      state.properties = [];
+      state.error = null;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -71,14 +92,26 @@ const recentlyViewedSlice = createSlice({
       .addCase(fetchRecentlyViewedProperties.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.error.message || 'Failed to fetch recently viewed properties';
+      })
+      .addCase(clearRecentlyViewedProperties.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(clearRecentlyViewedProperties.fulfilled, (state) => {
+        state.isLoading = false;
+        state.properties = [];
+      })
+      .addCase(clearRecentlyViewedProperties.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message || 'Failed to clear recently viewed properties';
       });
   },
 });
 
 export const { 
-  clearRecentlyViewed, 
   addPropertyToRecentlyViewed, 
-  removePropertyFromRecentlyViewed 
+  removePropertyFromRecentlyViewed,
+  clearRecentlyViewed
 } = recentlyViewedSlice.actions;
 
 export default recentlyViewedSlice.reducer;

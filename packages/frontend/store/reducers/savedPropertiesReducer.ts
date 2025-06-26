@@ -14,6 +14,7 @@ interface SavedPropertiesState {
   favoriteIds: string[]; // Keep for quick lookups
   isLoading: boolean;
   isSaving: boolean;
+  savingPropertyIds: string[]; // Track which specific properties are being saved/unsaved
   error: string | null;
   lastSynced: number | null;
 }
@@ -23,8 +24,18 @@ const initialState: SavedPropertiesState = {
   favoriteIds: [],
   isLoading: false,
   isSaving: false,
+  savingPropertyIds: [],
   error: null,
   lastSynced: null,
+};
+
+// Helper functions for per-property loading states
+export const isPropertyLoading = (state: SavedPropertiesState, propertyId: string): boolean => {
+  return state.savingPropertyIds.includes(propertyId);
+};
+
+export const getSavingPropertyIds = (state: SavedPropertiesState): string[] => {
+  return state.savingPropertyIds;
 };
 
 // Async thunks for API operations
@@ -197,6 +208,7 @@ const savedPropertiesSlice = createSlice({
       state.favoriteIds = [];
       state.isLoading = false;
       state.isSaving = false;
+      state.savingPropertyIds = [];
       state.error = null;
       state.lastSynced = null;
     },
@@ -224,13 +236,19 @@ const savedPropertiesSlice = createSlice({
 
     // Save property
     builder
-      .addCase(saveProperty.pending, (state) => {
-        state.isSaving = true;
+      .addCase(saveProperty.pending, (state, action) => {
+        const { propertyId } = action.meta.arg;
         state.error = null;
+        // Add property ID to loading array
+        if (!state.savingPropertyIds.includes(propertyId)) {
+          state.savingPropertyIds.push(propertyId);
+        }
       })
       .addCase(saveProperty.fulfilled, (state, action) => {
-        state.isSaving = false;
         const { propertyId, notes, savedAt } = action.payload;
+        
+        // Remove property ID from loading array
+        state.savingPropertyIds = state.savingPropertyIds.filter(id => id !== propertyId);
         
         // Add to favorites if not already there
         if (!state.favoriteIds.includes(propertyId)) {
@@ -248,20 +266,28 @@ const savedPropertiesSlice = createSlice({
         console.log(`Redux: Successfully saved property ${propertyId}`);
       })
       .addCase(saveProperty.rejected, (state, action) => {
-        state.isSaving = false;
+        const { propertyId } = action.meta.arg;
         state.error = action.error.message || 'Failed to save property';
+        // Remove property ID from loading array
+        state.savingPropertyIds = state.savingPropertyIds.filter(id => id !== propertyId);
         console.error('Redux: Failed to save property:', action.error);
       });
 
     // Unsave property
     builder
-      .addCase(unsaveProperty.pending, (state) => {
-        state.isSaving = true;
+      .addCase(unsaveProperty.pending, (state, action) => {
+        const { propertyId } = action.meta.arg;
         state.error = null;
+        // Add property ID to loading array
+        if (!state.savingPropertyIds.includes(propertyId)) {
+          state.savingPropertyIds.push(propertyId);
+        }
       })
       .addCase(unsaveProperty.fulfilled, (state, action) => {
-        state.isSaving = false;
         const propertyId = action.payload;
+        
+        // Remove property ID from loading array
+        state.savingPropertyIds = state.savingPropertyIds.filter(id => id !== propertyId);
         
         // Remove from favorites and properties
         state.favoriteIds = state.favoriteIds.filter(id => id !== propertyId);
@@ -271,20 +297,28 @@ const savedPropertiesSlice = createSlice({
         console.log(`Redux: Successfully unsaved property ${propertyId}`);
       })
       .addCase(unsaveProperty.rejected, (state, action) => {
-        state.isSaving = false;
+        const { propertyId } = action.meta.arg;
         state.error = action.error.message || 'Failed to unsave property';
+        // Remove property ID from loading array
+        state.savingPropertyIds = state.savingPropertyIds.filter(id => id !== propertyId);
         console.error('Redux: Failed to unsave property:', action.error);
       });
 
     // Update notes
     builder
-      .addCase(updatePropertyNotes.pending, (state) => {
-        state.isSaving = true;
+      .addCase(updatePropertyNotes.pending, (state, action) => {
+        const { propertyId } = action.meta.arg;
         state.error = null;
+        // Add property ID to loading array
+        if (!state.savingPropertyIds.includes(propertyId)) {
+          state.savingPropertyIds.push(propertyId);
+        }
       })
       .addCase(updatePropertyNotes.fulfilled, (state, action) => {
-        state.isSaving = false;
         const { propertyId, notes } = action.payload;
+        
+        // Remove property ID from loading array
+        state.savingPropertyIds = state.savingPropertyIds.filter(id => id !== propertyId);
         
         const property = state.properties.find(p => p._id === propertyId || p.id === propertyId);
         if (property) {
@@ -295,8 +329,10 @@ const savedPropertiesSlice = createSlice({
         console.log(`Redux: Successfully updated notes for property ${propertyId}`);
       })
       .addCase(updatePropertyNotes.rejected, (state, action) => {
-        state.isSaving = false;
+        const { propertyId } = action.meta.arg;
         state.error = action.error.message || 'Failed to update notes';
+        // Remove property ID from loading array
+        state.savingPropertyIds = state.savingPropertyIds.filter(id => id !== propertyId);
         console.error('Redux: Failed to update notes:', action.error);
       });
   },

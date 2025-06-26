@@ -8,7 +8,7 @@ function lightenColor(hex: string, percent: number): string {
 }
 
 // Updated primary color for better contrast and modern feel
-const primaryColor = '#005c67';
+const primaryColor = '#0047bf';
 
 export const colors = {
   primaryColor,
@@ -18,6 +18,8 @@ export const colors = {
   primaryDark: '#1A1A1A',
   primaryDark_1: '#2D2D2D',
   primaryDark_2: '#404040',
+  secondaryColor: '#ffd013',
+  secondaryLight: '#fff7d7',
   overlay: 'rgba(0, 0, 0, 0.5)',
   shadow: 'rgba(0, 0, 0, 0.1)',
   COLOR_BLACK: '#000',

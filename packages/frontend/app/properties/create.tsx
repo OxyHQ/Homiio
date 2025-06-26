@@ -16,6 +16,7 @@ import { useOxy } from '@oxyhq/services';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { calculateEthicalRent, validateEthicalPricing, getPricingGuidance } from '@/utils/ethicalPricing';
 import { Ionicons } from '@expo/vector-icons';
+import { POPULAR_AMENITIES, getAmenityById } from '@/constants/amenities';
 
 const IconComponent = Ionicons as any;
 
@@ -1021,25 +1022,42 @@ export default function CreatePropertyScreen() {
           <View style={styles.inputGroup}>
             <ThemedText style={styles.label}>Amenities</ThemedText>
             <View style={styles.pickerContainer}>
-              {['wifi', 'parking', 'gym', 'pool', 'laundry', 'dishwasher', 'air_conditioning', 'heating', 'balcony', 'garden'].map((amenity) => (
-                <TouchableOpacity
-                  key={amenity}
-                  style={[
-                    styles.pickerOption,
-                    formData.amenities?.includes(amenity) && styles.pickerOptionSelected
-                  ]}
-                  onPress={() => toggleAmenity(amenity)}
-                >
-                  <ThemedText
+              {POPULAR_AMENITIES.map((amenityId) => {
+                const amenity = getAmenityById(amenityId);
+                if (!amenity) return null;
+                return (
+                  <TouchableOpacity
+                    key={amenity.id}
                     style={[
-                      styles.pickerOptionText,
-                      formData.amenities?.includes(amenity) && styles.pickerOptionTextSelected
+                      styles.pickerOption,
+                      formData.amenities?.includes(amenity.id) && styles.pickerOptionSelected,
+                      amenity.premium && styles.premiumAmenityOption
                     ]}
+                    onPress={() => toggleAmenity(amenity.id)}
                   >
-                    {amenity.charAt(0).toUpperCase() + amenity.slice(1).replace('_', ' ')}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
+                    <View style={styles.amenityOptionContent}>
+                      <IconComponent
+                        name={amenity.icon as any}
+                        size={16}
+                        color={formData.amenities?.includes(amenity.id) ? 'white' : colors.primaryColor}
+                      />
+                      <ThemedText
+                        style={[
+                          styles.pickerOptionText,
+                          formData.amenities?.includes(amenity.id) && styles.pickerOptionTextSelected
+                        ]}
+                      >
+                        {amenity.name}
+                      </ThemedText>
+                      {amenity.premium && (
+                        <View style={styles.premiumBadge}>
+                          <ThemedText style={styles.premiumBadgeText}>P</ThemedText>
+                        </View>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
 

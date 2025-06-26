@@ -32,6 +32,8 @@ class ProfileController {
     this.unsaveProperty = this.unsaveProperty.bind(this);
     this.updateSavedPropertyNotes = this.updateSavedPropertyNotes.bind(this);
     this.trackPropertyView = this.trackPropertyView.bind(this);
+    this.clearRecentProperties = this.clearRecentProperties.bind(this);
+    this.debugRecentProperties = this.debugRecentProperties.bind(this);
   }
 
   /**
@@ -1027,7 +1029,10 @@ class ProfileController {
       const oxyUserId = req.user?.id || req.user?._id;
       const { limit = 10 } = req.query;
       
+      console.log(`[getRecentProperties] Called for oxyUserId: ${oxyUserId}, limit: ${limit}`);
+      
       if (!oxyUserId) {
+        console.log('[getRecentProperties] No oxyUserId found, returning 401');
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
         );
@@ -1036,8 +1041,14 @@ class ProfileController {
       // Get the active profile for the current user
       let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
       
+      console.log(`[getRecentProperties] Active profile lookup result:`, {
+        found: !!activeProfile,
+        profileId: activeProfile?._id,
+        profileType: activeProfile?.profileType
+      });
+      
       if (!activeProfile) {
-        console.log(`No active profile found for user ${oxyUserId}, creating default personal profile`);
+        console.log(`[getRecentProperties] No active profile found for user ${oxyUserId}, creating default personal profile`);
         // Create a default personal profile if none exists
         const defaultPersonalProfile = new Profile({
           oxyUserId,
@@ -1072,10 +1083,14 @@ class ProfileController {
         defaultPersonalProfile.calculateTrustScore();
         await defaultPersonalProfile.save();
         activeProfile = defaultPersonalProfile;
+        
+        console.log(`[getRecentProperties] Created new profile with ID: ${activeProfile._id}`);
       }
 
       // Import RecentlyViewedModel
       const { RecentlyViewedModel } = require('../models');
+      
+      console.log(`[getRecentProperties] Querying RecentlyViewedModel for profileId: ${activeProfile._id}`);
       
       // Get recently viewed properties
       const recentViews = await RecentlyViewedModel.find({ profileId: activeProfile._id })
@@ -1084,10 +1099,34 @@ class ProfileController {
         .populate('propertyId')
         .lean();
 
+      console.log(`[getRecentProperties] Found ${recentViews.length} recently viewed records`);
+      
+      // Debug: Log the raw recently viewed records
+      recentViews.forEach((view, index) => {
+        console.log(`[getRecentProperties] Record ${index}:`, {
+          propertyId: view.propertyId ? (typeof view.propertyId === 'object' ? view.propertyId._id : view.propertyId) : 'null',
+          hasPopulatedProperty: !!view.propertyId && typeof view.propertyId === 'object',
+          viewedAt: view.viewedAt,
+          populatedPropertyKeys: view.propertyId && typeof view.propertyId === 'object' ? Object.keys(view.propertyId) : 'none'
+        });
+      });
+
       const properties = recentViews.map(view => ({
         ...view.propertyId,
         viewedAt: view.viewedAt
       })).filter(item => item._id); // Filter out any null properties
+
+      console.log(`[getRecentProperties] After mapping and filtering:`);
+      properties.forEach((prop, index) => {
+        console.log(`[getRecentProperties] Property ${index}:`, {
+          hasProperty: !!prop,
+          hasId: !!(prop._id || prop.id),
+          propertyId: prop._id || prop.id || 'missing',
+          keys: prop ? Object.keys(prop) : 'none'
+        });
+      });
+
+      console.log(`[getRecentProperties] Returning ${properties.length} properties after filtering`);
 
       res.json(
         successResponse(properties, "Recent properties retrieved successfully")
@@ -1443,7 +1482,9 @@ class ProfileController {
   async trackPropertyView(req, res, next) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
-      const { propertyId } = req.body;
+      const { propertyId } = req.params;
+      
+      console.log(`[trackPropertyView] Called for user ${oxyUserId}, property ${propertyId}`);
       
       if (!oxyUserId) {
         return res.status(401).json(
@@ -1458,12 +1499,46 @@ class ProfileController {
       }
 
       // Get the active profile for the current user
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
       
       if (!activeProfile) {
-        return res.status(404).json(
-          errorResponse("Profile not found", "PROFILE_NOT_FOUND")
-        );
+        console.log(`[trackPropertyView] No active profile found for user ${oxyUserId}, creating default personal profile`);
+        // Create a default personal profile if none exists
+        const defaultPersonalProfile = new Profile({
+          oxyUserId,
+          profileType: "personal",
+          isActive: true,
+          isPrimary: true, // First profile is always primary
+          personalProfile: {
+            personalInfo: {
+              bio: "",
+              occupation: "",
+              employer: "",
+              annualIncome: null,
+              employmentStatus: "employed",
+              moveInDate: null,
+              leaseDuration: "yearly",
+            },
+            preferences: {},
+            references: [],
+            rentalHistory: [],
+            verification: {},
+            trustScore: { score: 50, factors: [] },
+            settings: {
+              notifications: { email: true, push: true, sms: false },
+              privacy: { profileVisibility: "public", showContactInfo: true, showIncome: false },
+              language: "en",
+              timezone: "UTC"
+            }
+          }
+        });
+        
+        // Calculate initial trust score
+        defaultPersonalProfile.calculateTrustScore();
+        await defaultPersonalProfile.save();
+        activeProfile = defaultPersonalProfile;
+        
+        console.log(`[trackPropertyView] Created new profile with ID: ${activeProfile._id}`);
       }
 
       // Import RecentlyViewedModel
@@ -1479,6 +1554,7 @@ class ProfileController {
         // Update existing view timestamp
         existingView.viewedAt = new Date();
         await existingView.save();
+        console.log(`[trackPropertyView] Updated existing view for property ${propertyId}`);
       } else {
         // Create new view record
         const propertyView = new RecentlyViewedModel({
@@ -1487,6 +1563,7 @@ class ProfileController {
           viewedAt: new Date()
         });
         await propertyView.save();
+        console.log(`[trackPropertyView] Created new view record for property ${propertyId}`);
       }
 
       res.json(
@@ -1494,6 +1571,138 @@ class ProfileController {
       );
     } catch (error) {
       console.error("Error tracking property view:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Clear recently viewed properties for the current user's profile
+   */
+  async clearRecentProperties(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      
+      if (!oxyUserId) {
+        return res.status(401).json(
+          errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
+        );
+      }
+
+      // Get the active profile for the current user
+      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      
+      if (!activeProfile) {
+        return res.status(404).json(
+          errorResponse("Profile not found", "PROFILE_NOT_FOUND")
+        );
+      }
+
+      // Import RecentlyViewedModel
+      const { RecentlyViewedModel } = require('../models');
+      
+      // Clear all recently viewed properties for this profile
+      const result = await RecentlyViewedModel.deleteMany({ 
+        profileId: activeProfile._id 
+      });
+
+      res.json(
+        successResponse({ deletedCount: result.deletedCount }, "Recently viewed properties cleared successfully")
+      );
+    } catch (error) {
+      console.error("Error clearing recent properties:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Debug endpoint to check recently viewed data
+   */
+  async debugRecentProperties(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      
+      console.log(`[debugRecentProperties] Called for oxyUserId: ${oxyUserId}`);
+      
+      if (!oxyUserId) {
+        return res.status(401).json(
+          errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
+        );
+      }
+
+      // Get the active profile for the current user
+      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      
+      console.log(`[debugRecentProperties] Active profile:`, {
+        found: !!activeProfile,
+        profileId: activeProfile?._id,
+        profileType: activeProfile?.profileType
+      });
+
+      if (!activeProfile) {
+        return res.json(
+          successResponse({
+            error: "No active profile found",
+            oxyUserId,
+            debugInfo: "User needs to create a profile first"
+          }, "Debug info retrieved")
+        );
+      }
+
+      // Import RecentlyViewedModel and PropertyModel
+      const { RecentlyViewedModel, PropertyModel } = require('../models');
+      
+      // Get recently viewed records WITHOUT population
+      const rawRecentViews = await RecentlyViewedModel.find({ profileId: activeProfile._id })
+        .sort({ viewedAt: -1 })
+        .lean();
+
+      // Get recently viewed records WITH population
+      const populatedRecentViews = await RecentlyViewedModel.find({ profileId: activeProfile._id })
+        .sort({ viewedAt: -1 })
+        .populate('propertyId')
+        .lean();
+
+      // Check if properties exist
+      const propertyChecks = await Promise.all(
+        rawRecentViews.map(async (view) => {
+          const exists = await PropertyModel.findById(view.propertyId);
+          return {
+            propertyId: view.propertyId,
+            exists: !!exists,
+            propertyTitle: exists?.title || exists?.type || 'No title',
+            propertyStatus: exists?.status || 'unknown'
+          };
+        })
+      );
+
+      // Get total count
+      const totalCount = await RecentlyViewedModel.countDocuments({ profileId: activeProfile._id });
+
+      console.log(`[debugRecentProperties] Raw: ${rawRecentViews.length}, Populated: ${populatedRecentViews.length}, Total: ${totalCount}`);
+
+      res.json(
+        successResponse({
+          oxyUserId,
+          profileId: activeProfile._id,
+          profileType: activeProfile.profileType,
+          totalCount,
+          rawRecentViews: rawRecentViews.map(view => ({
+            propertyId: view.propertyId,
+            viewedAt: view.viewedAt,
+            createdAt: view.createdAt,
+            updatedAt: view.updatedAt
+          })),
+          populatedRecentViews: populatedRecentViews.map(view => ({
+            propertyId: view.propertyId ? (typeof view.propertyId === 'object' ? view.propertyId._id : view.propertyId) : null,
+            hasPopulatedProperty: !!view.propertyId && typeof view.propertyId === 'object',
+            viewedAt: view.viewedAt,
+            populatedKeys: view.propertyId && typeof view.propertyId === 'object' ? Object.keys(view.propertyId) : []
+          })),
+          propertyChecks
+        }, "Debug info retrieved successfully")
+      );
+    } catch (error) {
+      console.error("Error in debug recent properties:", error);
       next(error);
     }
   }
