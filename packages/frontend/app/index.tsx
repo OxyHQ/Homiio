@@ -235,16 +235,33 @@ export default function HomePage() {
         <View style={styles.citiesSection}>
           <Text style={styles.sectionTitle}>{t("home.cities.title")}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-            {topCities.map((city) => (
+            {topCities.map((city, index) => (
               <TouchableOpacity
                 key={city.id}
                 style={styles.cityCard}
                 onPress={() => router.push(`/properties/city/${city.id}`)}
+                activeOpacity={0.8}
               >
-                <View style={styles.cityImagePlaceholder}>
+                <LinearGradient
+                  colors={[colors.primaryColor, colors.secondaryLight]}
+                  style={styles.cityImagePlaceholder}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  {/* Location Icon */}
+                  <View style={styles.cityIconContainer}>
+                    <IconComponent name="location" size={24} color="white" />
+                  </View>
+
+                  {/* City Name */}
                   <Text style={styles.cityName}>{city.name}</Text>
-                </View>
-                <Text style={styles.cityCount}>{city.count} {t("home.cities.properties")}</Text>
+
+                  {/* Property Count Badge */}
+                  <View style={styles.propertyCountBadge}>
+                    <IconComponent name="home" size={12} color={colors.COLOR_BLACK} />
+                    <Text style={styles.propertyCountText}>{city.count}</Text>
+                  </View>
+                </LinearGradient>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -253,21 +270,26 @@ export default function HomePage() {
         {/* Property Types */}
         <View style={styles.typesSection}>
           <Text style={styles.sectionTitle}>{t("home.categories.title")}</Text>
-          <View style={styles.categoryContainer}>
+          <View style={styles.propertyChipsContainer}>
             {propertyTypeCounts.map((type) => (
               <TouchableOpacity
                 key={type.id}
-                style={styles.categoryCard}
+                style={styles.propertyChip}
                 onPress={() => router.push(`/properties/type/${type.id}`)}
+                activeOpacity={0.8}
               >
-                <View style={styles.categoryIconWrap}>
-                  <IconComponent name={type.icon as keyof typeof IconComponent.glyphMap} size={32} color={colors.primaryColor} />
-                </View>
-                <Text style={styles.categoryName}>{type.name}</Text>
-                <Text style={styles.categoryCount}>{type.count} available</Text>
-                <View style={styles.categoryBadge}>
-                  <Text style={styles.categoryBadgeText}>{t("home.categories.view")}</Text>
-                </View>
+                <LinearGradient
+                  colors={[colors.primaryColor, colors.secondaryLight]}
+                  style={styles.propertyChipGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <IconComponent name={type.icon as keyof typeof IconComponent.glyphMap} size={20} color="white" />
+                  <Text style={styles.propertyChipName}>{type.name}</Text>
+                  <View style={styles.propertyChipCountBadge}>
+                    <Text style={styles.propertyChipCountText}>{type.count}</Text>
+                  </View>
+                </LinearGradient>
               </TouchableOpacity>
             ))}
           </View>
@@ -540,73 +562,95 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   cityCard: {
-    width: 150,
+    width: 170,
     marginRight: 15,
+    backgroundColor: 'white',
+    borderRadius: 12,
   },
   cityImagePlaceholder: {
     width: '100%',
-    height: 100,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 10,
-    marginBottom: 5,
+    height: 120,
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+    paddingVertical: 0,
+    borderWidth: 1,
+    borderColor: colors.COLOR_BLACK,
+    borderRadius: 35,
+    overflow: 'hidden',
+  },
+  propertyCountBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 15,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  propertyCountText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: colors.COLOR_BLACK,
+    marginLeft: 4,
+  },
+  cityIconContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
+    padding: 8,
+    marginBottom: 8,
   },
   cityName: {
+    fontFamily: 'Phudu',
     fontWeight: 'bold',
-    fontSize: 16,
-  },
-  cityCount: {
-    color: colors.COLOR_BLACK_LIGHT_3,
-    fontSize: 12,
+    fontSize: 18,
+    color: 'white',
+    textAlign: 'center',
+    letterSpacing: 0.5,
   },
   typesSection: {
     padding: 20,
   },
-  categoryContainer: {
+  propertyChipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 12,
+    justifyContent: 'space-between',
   },
-  categoryCard: {
-    width: '49%',
-    backgroundColor: colors.primaryLight,
-    padding: 15,
-    borderRadius: 35,
-    alignItems: 'center',
+  propertyChip: {
+    width: '48%',
+    borderRadius: 25,
     borderWidth: 1,
-    borderColor: colors.primaryColor,
+    borderColor: colors.COLOR_BLACK,
+    overflow: 'hidden',
   },
-  categoryIconWrap: {
-    backgroundColor: colors.primaryLight,
-    borderRadius: 50,
-    width: 70,
-    height: 70,
-    justifyContent: 'center',
+  propertyChipGradient: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    justifyContent: 'space-between',
   },
-  categoryName: {
-    fontWeight: '600',
-    fontSize: 16,
-    marginBottom: 4,
-    color: colors.COLOR_BLACK,
-  },
-  categoryCount: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    marginBottom: 8,
-  },
-  categoryBadge: {
-    backgroundColor: colors.primaryColor,
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 15,
-  },
-  categoryBadgeText: {
+  propertyChipName: {
+    fontFamily: 'Phudu',
+    fontWeight: 'bold',
+    fontSize: 14,
     color: 'white',
+    flex: 1,
+    marginLeft: 8,
+  },
+  propertyChipCountBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minWidth: 24,
+    alignItems: 'center',
+  },
+  propertyChipCountText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: 'bold',
+    color: colors.COLOR_BLACK,
   },
   horizonSection: {
     backgroundColor: colors.primaryLight,

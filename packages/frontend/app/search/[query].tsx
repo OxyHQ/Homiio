@@ -7,7 +7,6 @@ import {
     TextInput,
     TouchableOpacity,
     FlatList,
-    ActivityIndicator,
     RefreshControl,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -20,6 +19,10 @@ import { useSearchProperties } from '@/hooks/usePropertyQueries';
 import { Property, PropertyFilters } from '@/services/propertyService';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
+import { Header } from '@/components/Header';
+import LoadingSpinner from '@/components/LoadingSpinner';
+
+const IconComponent = Ionicons as any;
 
 interface SearchFilters {
     type?: string;
@@ -44,22 +47,22 @@ export default function SearchResultsScreen() {
     const [properties, setProperties] = useState<Property[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Property type options
+    // Property type options with colors
     const propertyTypes = [
-        { id: 'apartment', label: t('Apartment'), icon: 'business-outline' },
-        { id: 'house', label: t('House'), icon: 'home-outline' },
-        { id: 'room', label: t('Room'), icon: 'bed-outline' },
-        { id: 'studio', label: t('Studio'), icon: 'square-outline' },
+        { id: 'apartment', label: t('Apartment'), icon: 'business-outline', color: '#3B82F6' },
+        { id: 'house', label: t('House'), icon: 'home-outline', color: '#10B981' },
+        { id: 'room', label: t('Room'), icon: 'bed-outline', color: '#F59E0B' },
+        { id: 'studio', label: t('Studio'), icon: 'square-outline', color: '#8B5CF6' },
     ];
 
-    // Amenity options
+    // Enhanced amenity options
     const amenityOptions = [
-        { id: 'wifi', label: t('WiFi'), icon: 'wifi-outline' },
-        { id: 'parking', label: t('Parking'), icon: 'car-outline' },
-        { id: 'gym', label: t('Gym'), icon: 'fitness-outline' },
-        { id: 'pool', label: t('Pool'), icon: 'water-outline' },
-        { id: 'balcony', label: t('Balcony'), icon: 'sunny-outline' },
-        { id: 'furnished', label: t('Furnished'), icon: 'bed-outline' },
+        { id: 'wifi', label: t('WiFi'), icon: 'wifi-outline', color: '#3B82F6' },
+        { id: 'parking', label: t('Parking'), icon: 'car-outline', color: '#10B981' },
+        { id: 'gym', label: t('Gym'), icon: 'fitness-outline', color: '#EF4444' },
+        { id: 'pool', label: t('Pool'), icon: 'water-outline', color: '#06B6D4' },
+        { id: 'balcony', label: t('Balcony'), icon: 'sunny-outline', color: '#F59E0B' },
+        { id: 'furnished', label: t('Furnished'), icon: 'bed-outline', color: '#8B5CF6' },
     ];
 
     // Convert search filters to API filters
@@ -123,6 +126,42 @@ export default function SearchResultsScreen() {
         setFilters({});
     };
 
+    // Get active filters count
+    const getActiveFiltersCount = () => {
+        let count = 0;
+        if (filters.type) count++;
+        if (filters.minRent || filters.maxRent) count++;
+        if (filters.bedrooms) count++;
+        if (filters.bathrooms) count++;
+        if (filters.amenities && filters.amenities.length > 0) count++;
+        return count;
+    };
+
+    // Render enhanced filter button
+    const renderFilterButton = () => {
+        const activeCount = getActiveFiltersCount();
+        return (
+            <TouchableOpacity
+                style={[styles.filterToggleButton, showFilters && styles.filterToggleButtonActive]}
+                onPress={() => setShowFilters(!showFilters)}
+            >
+                <IconComponent
+                    name={showFilters ? "options" : "options-outline"}
+                    size={20}
+                    color={showFilters ? 'white' : colors.primaryColor}
+                />
+                <Text style={[styles.filterToggleText, showFilters && styles.filterToggleTextActive]}>
+                    {t('Filters')}
+                </Text>
+                {activeCount > 0 && (
+                    <View style={styles.filterBadge}>
+                        <Text style={styles.filterBadgeText}>{activeCount}</Text>
+                    </View>
+                )}
+            </TouchableOpacity>
+        );
+    };
+
     // Render property type filter
     const renderPropertyTypeFilter = () => (
         <View style={styles.filterSection}>
@@ -136,11 +175,12 @@ export default function SearchResultsScreen() {
                             filters.type === type.id && styles.filterOptionActive,
                         ]}
                         onPress={() => handleFilterChange('type', filters.type === type.id ? undefined : type.id)}
+                        activeOpacity={0.7}
                     >
-                        <Ionicons
+                        <IconComponent
                             name={type.icon as any}
                             size={16}
-                            color={filters.type === type.id ? 'white' : colors.primaryColor}
+                            color={filters.type === type.id ? 'white' : type.color}
                         />
                         <Text style={[
                             styles.filterOptionText,
@@ -154,7 +194,7 @@ export default function SearchResultsScreen() {
         </View>
     );
 
-    // Render price range filter
+    // Render enhanced price range filter
     const renderPriceFilter = () => (
         <View style={styles.filterSection}>
             <Text style={styles.filterSectionTitle}>{t('Price Range')}</Text>
@@ -163,7 +203,8 @@ export default function SearchResultsScreen() {
                     <Text style={styles.priceLabel}>{t('Min')}</Text>
                     <TextInput
                         style={styles.priceTextInput}
-                        placeholder="0"
+                        placeholder="0€"
+                        placeholderTextColor={colors.COLOR_BLACK_LIGHT_4}
                         keyboardType="numeric"
                         value={filters.minRent?.toString() || ''}
                         onChangeText={(text) => handleFilterChange('minRent', text ? parseInt(text) : undefined)}
@@ -174,6 +215,7 @@ export default function SearchResultsScreen() {
                     <TextInput
                         style={styles.priceTextInput}
                         placeholder="∞"
+                        placeholderTextColor={colors.COLOR_BLACK_LIGHT_4}
                         keyboardType="numeric"
                         value={filters.maxRent?.toString() || ''}
                         onChangeText={(text) => handleFilterChange('maxRent', text ? parseInt(text) : undefined)}
@@ -183,7 +225,7 @@ export default function SearchResultsScreen() {
         </View>
     );
 
-    // Render bedrooms/bathrooms filter
+    // Render enhanced bedrooms/bathrooms filter
     const renderRoomsFilter = () => (
         <View style={styles.filterSection}>
             <Text style={styles.filterSectionTitle}>{t('Rooms')}</Text>
@@ -193,6 +235,7 @@ export default function SearchResultsScreen() {
                     <TextInput
                         style={styles.roomTextInput}
                         placeholder="Any"
+                        placeholderTextColor={colors.COLOR_BLACK_LIGHT_4}
                         keyboardType="numeric"
                         value={filters.bedrooms?.toString() || ''}
                         onChangeText={(text) => handleFilterChange('bedrooms', text ? parseInt(text) : undefined)}
@@ -203,6 +246,7 @@ export default function SearchResultsScreen() {
                     <TextInput
                         style={styles.roomTextInput}
                         placeholder="Any"
+                        placeholderTextColor={colors.COLOR_BLACK_LIGHT_4}
                         keyboardType="numeric"
                         value={filters.bathrooms?.toString() || ''}
                         onChangeText={(text) => handleFilterChange('bathrooms', text ? parseInt(text) : undefined)}
@@ -212,7 +256,7 @@ export default function SearchResultsScreen() {
         </View>
     );
 
-    // Render amenities filter
+    // Render enhanced amenities filter
     const renderAmenitiesFilter = () => (
         <View style={styles.filterSection}>
             <Text style={styles.filterSectionTitle}>{t('Amenities')}</Text>
@@ -225,11 +269,12 @@ export default function SearchResultsScreen() {
                             filters.amenities?.includes(amenity.id) && styles.amenityOptionActive,
                         ]}
                         onPress={() => handleAmenityToggle(amenity.id)}
+                        activeOpacity={0.7}
                     >
-                        <Ionicons
+                        <IconComponent
                             name={amenity.icon as any}
                             size={16}
-                            color={filters.amenities?.includes(amenity.id) ? 'white' : colors.primaryColor}
+                            color={filters.amenities?.includes(amenity.id) ? 'white' : amenity.color}
                         />
                         <Text style={[
                             styles.amenityOptionText,
@@ -248,8 +293,7 @@ export default function SearchResultsScreen() {
         if (loading && !isRefreshing) {
             return (
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={colors.primaryColor} />
-                    <Text style={styles.loadingText}>{t('Searching properties...')}</Text>
+                    <LoadingSpinner size={32} text={t('Searching properties...')} />
                 </View>
             );
         }
@@ -257,7 +301,7 @@ export default function SearchResultsScreen() {
         if (error) {
             return (
                 <View style={styles.errorContainer}>
-                    <Ionicons name={"alert-circle-outline" as any} size={48} color={colors.COLOR_BLACK_LIGHT_3} />
+                    <IconComponent name="alert-circle-outline" size={64} color={colors.COLOR_BLACK_LIGHT_3} />
                     <Text style={styles.errorText}>{t('Something went wrong')}</Text>
                     <Text style={styles.errorSubtext}>{t('Please try again later')}</Text>
                     <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
@@ -270,14 +314,16 @@ export default function SearchResultsScreen() {
         if (properties.length === 0) {
             return (
                 <View style={styles.emptyContainer}>
-                    <Ionicons name={"home-outline" as any} size={64} color={colors.COLOR_BLACK_LIGHT_3} />
+                    <IconComponent name="home-outline" size={80} color={colors.COLOR_BLACK_LIGHT_3} />
                     <Text style={styles.emptyText}>{t('No properties found')}</Text>
                     <Text style={styles.emptySubtext}>
                         {t('Try adjusting your search criteria or filters')}
                     </Text>
-                    <TouchableOpacity style={styles.clearFiltersButton} onPress={clearFilters}>
-                        <Text style={styles.clearFiltersButtonText}>{t('Clear Filters')}</Text>
-                    </TouchableOpacity>
+                    {getActiveFiltersCount() > 0 && (
+                        <TouchableOpacity style={styles.clearFiltersButton} onPress={clearFilters}>
+                            <Text style={styles.clearFiltersButtonText}>{t('Clear Filters')}</Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
             );
         }
@@ -286,10 +332,10 @@ export default function SearchResultsScreen() {
             <View style={styles.resultsContainer}>
                 <View style={styles.resultsHeader}>
                     <Text style={styles.resultsCount}>
-                        {t('{{count}} properties found', { count: apiData?.total || 0 })}
+                        {t('{{count}} properties found', { count: apiData?.total || properties.length })}
                     </Text>
-                    {Object.keys(filters).length > 0 && (
-                        <TouchableOpacity onPress={clearFilters}>
+                    {getActiveFiltersCount() > 0 && (
+                        <TouchableOpacity onPress={clearFilters} style={styles.clearAllButton}>
                             <Text style={styles.clearFiltersText}>{t('Clear all')}</Text>
                         </TouchableOpacity>
                     )}
@@ -320,49 +366,49 @@ export default function SearchResultsScreen() {
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => router.back()}
-                >
-                    <Ionicons name={"arrow-back" as any} size={24} color={colors.primaryColor} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle} numberOfLines={1}>
-                    {t('Search: {{query}}', { query: searchQuery })}
-                </Text>
-                <TouchableOpacity
-                    style={styles.filterButton}
-                    onPress={() => setShowFilters(!showFilters)}
-                >
-                    <Ionicons
-                        name={showFilters ? "options" : "options-outline"}
-                        size={24}
-                        color={colors.primaryColor}
-                    />
-                </TouchableOpacity>
-            </View>
+            {/* Enhanced Header */}
+            <Header
+                options={{
+                    title: searchQuery,
+                    titlePosition: 'center',
+                    showBackButton: true,
+                    rightComponents: [renderFilterButton()]
+                }}
+            />
 
-            {/* Filters */}
+            {/* Enhanced Filters Panel */}
             {showFilters && (
-                <ScrollView style={styles.filtersContainer} showsVerticalScrollIndicator={false}>
-                    {renderPropertyTypeFilter()}
-                    {renderPriceFilter()}
-                    {renderRoomsFilter()}
-                    {renderAmenitiesFilter()}
+                <View style={styles.filtersPanel}>
+                    <ScrollView style={styles.filtersContainer} showsVerticalScrollIndicator={false}>
+                        {renderPropertyTypeFilter()}
+                        {renderPriceFilter()}
+                        {renderRoomsFilter()}
+                        {renderAmenitiesFilter()}
 
-                    <View style={styles.filterActions}>
-                        <TouchableOpacity style={styles.clearFiltersButton} onPress={clearFilters}>
-                            <Text style={styles.clearFiltersButtonText}>{t('Clear All')}</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={styles.applyFiltersButton}
-                            onPress={() => setShowFilters(false)}
-                        >
-                            <Text style={styles.applyFiltersButtonText}>{t('Apply Filters')}</Text>
-                        </TouchableOpacity>
-                    </View>
-                </ScrollView>
+                        <View style={styles.filterActions}>
+                            <TouchableOpacity
+                                style={styles.clearFiltersActionButton}
+                                onPress={clearFilters}
+                                disabled={getActiveFiltersCount() === 0}
+                            >
+                                <Text style={[
+                                    styles.clearFiltersActionButtonText,
+                                    getActiveFiltersCount() === 0 && styles.clearFiltersActionButtonTextDisabled
+                                ]}>
+                                    {t('Clear All')}
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.applyFiltersButton}
+                                onPress={() => setShowFilters(false)}
+                            >
+                                <Text style={styles.applyFiltersButtonText}>
+                                    {t('Show Results')} ({apiData?.total || properties.length})
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </ScrollView>
+                </View>
             )}
 
             {/* Search Results */}
@@ -378,145 +424,213 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: colors.primaryLight,
     },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+    filtersPanel: {
         backgroundColor: 'white',
         borderBottomWidth: 1,
         borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
+        maxHeight: '70%',
     },
-    backButton: {
-        padding: 8,
+    filterToggleButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderWidth: 1,
+        borderColor: colors.primaryColor,
+        borderRadius: 20,
+        gap: 6,
     },
-    headerTitle: {
-        flex: 1,
-        fontSize: 18,
+    filterToggleButtonActive: {
+        backgroundColor: colors.primaryColor,
+    },
+    filterToggleText: {
+        fontSize: 14,
+        color: colors.primaryColor,
+        fontFamily: 'Inter-Medium',
+    },
+    filterToggleTextActive: {
+        color: 'white',
         fontWeight: '600',
-        color: colors.primaryDark,
-        marginHorizontal: 12,
     },
-    filterButton: {
-        padding: 8,
+    filterBadge: {
+        backgroundColor: colors.primaryColor,
+        borderRadius: 10,
+        minWidth: 20,
+        height: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 4,
+    },
+    filterBadgeText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: 'white',
+        fontFamily: 'Inter-Bold',
     },
     filtersContainer: {
-        padding: 16,
+        padding: 20,
     },
     filterSection: {
-        marginBottom: 16,
+        marginBottom: 24,
     },
     filterSectionTitle: {
-        fontSize: 16,
-        fontWeight: '600',
+        fontSize: 18,
+        fontWeight: '700',
         color: colors.primaryDark,
-        marginBottom: 8,
+        marginBottom: 16,
+        fontFamily: 'Inter-Bold',
     },
     filterOptions: {
         flexDirection: 'row',
-        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 8,
     },
     filterOption: {
-        padding: 8,
-        borderWidth: 1,
-        borderColor: colors.primaryColor,
-        borderRadius: 8,
-        marginRight: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderWidth: 2,
+        borderColor: colors.COLOR_BLACK_LIGHT_5,
+        borderRadius: 24,
+        backgroundColor: 'white',
+        gap: 8,
     },
     filterOptionActive: {
         backgroundColor: colors.primaryColor,
+        borderColor: colors.primaryColor,
     },
     filterOptionText: {
         fontSize: 14,
-        color: colors.primaryDark_1,
+        color: colors.primaryDark,
+        fontFamily: 'Inter-Medium',
     },
     filterOptionTextActive: {
+        color: 'white',
         fontWeight: '600',
     },
     priceInputs: {
         flexDirection: 'row',
-        alignItems: 'center',
+        gap: 12,
     },
     priceInput: {
         flex: 1,
-        marginRight: 8,
     },
     priceLabel: {
         fontSize: 14,
-        color: colors.primaryDark_1,
+        color: colors.primaryDark,
+        fontWeight: '600',
+        marginBottom: 8,
+        fontFamily: 'Inter-SemiBold',
     },
     priceTextInput: {
-        padding: 8,
-        borderWidth: 1,
-        borderColor: colors.primaryColor,
-        borderRadius: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderWidth: 2,
+        borderColor: colors.COLOR_BLACK_LIGHT_5,
+        borderRadius: 12,
+        fontSize: 16,
+        color: colors.primaryDark,
+        backgroundColor: 'white',
+        fontFamily: 'Inter-Regular',
     },
     roomsInputs: {
         flexDirection: 'row',
-        alignItems: 'center',
+        gap: 12,
     },
     roomInput: {
         flex: 1,
-        marginRight: 8,
     },
     roomLabel: {
         fontSize: 14,
-        color: colors.primaryDark_1,
+        color: colors.primaryDark,
+        fontWeight: '600',
+        marginBottom: 8,
+        fontFamily: 'Inter-SemiBold',
     },
     roomTextInput: {
-        padding: 8,
-        borderWidth: 1,
-        borderColor: colors.primaryColor,
-        borderRadius: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderWidth: 2,
+        borderColor: colors.COLOR_BLACK_LIGHT_5,
+        borderRadius: 12,
+        fontSize: 16,
+        color: colors.primaryDark,
+        backgroundColor: 'white',
+        fontFamily: 'Inter-Regular',
     },
     amenitiesGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
+        gap: 8,
     },
     amenityOption: {
-        padding: 8,
-        borderWidth: 1,
-        borderColor: colors.primaryColor,
-        borderRadius: 8,
-        marginRight: 8,
-        marginBottom: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderWidth: 2,
+        borderColor: colors.COLOR_BLACK_LIGHT_5,
+        borderRadius: 24,
+        backgroundColor: 'white',
+        gap: 8,
     },
     amenityOptionActive: {
         backgroundColor: colors.primaryColor,
+        borderColor: colors.primaryColor,
     },
     amenityOptionText: {
         fontSize: 14,
-        color: colors.primaryDark_1,
+        color: colors.primaryDark,
+        fontFamily: 'Inter-Medium',
     },
     amenityOptionTextActive: {
+        color: 'white',
         fontWeight: '600',
     },
     filterActions: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginTop: 16,
+        gap: 12,
+        marginTop: 24,
+        paddingTop: 20,
+        borderTopWidth: 1,
+        borderTopColor: colors.COLOR_BLACK_LIGHT_6,
     },
     clearFiltersButton: {
         backgroundColor: colors.primaryColor,
         paddingHorizontal: 24,
         paddingVertical: 12,
-        borderRadius: 8,
+        borderRadius: 12,
+        shadowColor: colors.primaryColor,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
     },
     clearFiltersButtonText: {
         color: 'white',
+        fontSize: 16,
         fontWeight: '600',
+        fontFamily: 'Inter-SemiBold',
     },
     applyFiltersButton: {
+        flex: 2,
         backgroundColor: colors.primaryColor,
-        paddingHorizontal: 24,
-        paddingVertical: 12,
-        borderRadius: 8,
+        paddingVertical: 14,
+        paddingHorizontal: 20,
+        borderRadius: 12,
+        alignItems: 'center',
+        shadowColor: colors.primaryColor,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
     },
     applyFiltersButtonText: {
+        fontSize: 16,
+        fontWeight: '700',
         color: 'white',
-        fontWeight: '600',
+        fontFamily: 'Inter-Bold',
     },
     content: {
         flex: 1,
@@ -603,5 +717,30 @@ const styles = StyleSheet.create({
     clearFiltersText: {
         fontSize: 14,
         color: colors.primaryColor,
+        fontWeight: '600',
+        fontFamily: 'Inter-SemiBold',
+    },
+    clearAllButton: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: colors.primaryColor + '15',
+    },
+    clearFiltersActionButton: {
+        flex: 1,
+        backgroundColor: colors.COLOR_BLACK_LIGHT_5,
+        paddingVertical: 14,
+        paddingHorizontal: 20,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    clearFiltersActionButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: colors.primaryDark,
+        fontFamily: 'Inter-SemiBold',
+    },
+    clearFiltersActionButtonTextDisabled: {
+        color: colors.COLOR_BLACK_LIGHT_4,
     },
 }); 

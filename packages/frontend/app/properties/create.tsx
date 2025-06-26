@@ -97,6 +97,32 @@ export default function CreatePropertyScreen() {
   const dispatch = useDispatch<AppDispatch>();
   const isLoading = useSelector((state: RootState) => state.properties.isLoading);
 
+  // Form validation function
+  const isFormValid = () => {
+    // Check authentication
+    if (!oxyServices || !activeSessionId) {
+      return false;
+    }
+
+    // Check required fields
+    if (!formData.address.street.trim()) return false;
+    if (!formData.address.city.trim()) return false;
+    if (!formData.address.state.trim()) return false;
+    if (!formData.address.zipCode.trim()) return false;
+    if (formData.rent.amount <= 0) return false;
+
+    // Check constraints
+    if (formData.bedrooms !== undefined && formData.bedrooms < 0) return false;
+    if (formData.bathrooms !== undefined && formData.bathrooms < 0) return false;
+    if (formData.squareFootage !== undefined && formData.squareFootage < 0) return false;
+    if (formData.rent.deposit !== undefined && formData.rent.deposit < 0) return false;
+
+    // Check ethical pricing validation
+    if (pricingValidation && !pricingValidation.isWithinEthicalRange) return false;
+
+    return true;
+  };
+
   // Check location permission on mount
   useEffect(() => {
     const checkLocationPermission = async () => {
@@ -1156,8 +1182,8 @@ export default function CreatePropertyScreen() {
 
           <TouchableOpacity
             onPress={handleSubmit}
-            disabled={isLoading}
-            style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
+            disabled={isLoading || !isFormValid()}
+            style={[styles.submitButton, (isLoading || !isFormValid()) && styles.submitButtonDisabled]}
             activeOpacity={0.8}
           >
             {isLoading ? (

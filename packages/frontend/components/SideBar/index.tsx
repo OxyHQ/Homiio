@@ -1,5 +1,5 @@
 import React, { useContext } from 'react'
-import { Dimensions, Platform, Text, View, ViewStyle, TouchableOpacity } from 'react-native'
+import { Dimensions, Platform, Text, View, ViewStyle, TouchableOpacity, StyleSheet } from 'react-native'
 import { usePathname } from 'expo-router';
 import { useMediaQuery } from 'react-responsive'
 import { useTranslation } from "react-i18next";
@@ -23,9 +23,6 @@ const WindowHeight = Dimensions.get('window').height;
 
 export function SideBar() {
     const { t } = useTranslation();
-    const state = {
-        userId: null,
-    }
 
     const { isAuthenticated, user, showBottomSheet } = useOxy();
 
@@ -90,88 +87,43 @@ export function SideBar() {
     if (isSideBarVisible) {
         return (
             <View
-                style={
+                style={[
+                    styles.container,
                     {
-                        paddingVertical: 20,
-                        height: WindowHeight,
-                        paddingHorizontal: isFullSideBar ? 20 : 0,
-                        alignItems: isFullSideBar ? 'flex-end' : 'center',
+                        alignItems: isFullSideBar ? 'flex-start' : 'center',
                         paddingEnd: !isFullSideBar ? 10 : 0,
                         width: isFullSideBar ? 360 : 60,
-                        ...Platform.select({
-                            web: {
-                                position: 'sticky',
-                            },
-                        }),
-                        top: 0,
-                    } as ViewStyle
-                }>
-                <View
-                    style={{
-                        justifyContent: 'center',
-                        alignItems: 'flex-start',
-                    }}>
+                    }
+                ]}>
+                <View style={styles.content}>
                     <Logo />
-                    {!state.userId && (
-                        <View>
+                    {!user?.id && (
+                        <View style={styles.heroSection}>
                             {isFullSideBar && (
-                                <Text
-                                    style={{
-                                        color: colors.COLOR_BLACK,
-                                        fontSize: 25,
-                                        fontWeight: 'bold',
-                                        fontFamily: 'Phudu',
-                                        flexWrap: 'wrap',
-                                        textAlign: 'left',
-                                        maxWidth: 200,
-                                        lineHeight: 30,
-                                    }}
-                                >{t("sidebar.hero.tagline")}</Text>
+                                <Text style={styles.heroTagline}>
+                                    {t("sidebar.hero.tagline")}
+                                </Text>
                             )}
                             {!isAuthenticated && (
-                                <View
-                                    style={{
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        marginVertical: 20,
-                                        gap: 10,
-                                    }}
-                                >
+                                <View style={styles.authButtonsContainer}>
                                     <TouchableOpacity
-                                        style={{
-                                            justifyContent: 'center',
-                                            alignItems: 'center',
-                                            backgroundColor: colors.COLOR_BLACK,
-                                            borderRadius: 25,
-                                            paddingHorizontal: 15,
-                                            paddingVertical: 8,
-                                        }}
+                                        style={styles.signUpButton}
                                         onPress={() => showBottomSheet?.('SignUp')}
                                     >
-                                        <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>{t("sidebar.actions.signUp")}</Text>
+                                        <Text style={styles.signUpButtonText}>{t("sidebar.actions.signUp")}</Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity
-                                        style={{
-                                            justifyContent: 'center',
-                                            alignItems: 'center',
-                                            backgroundColor: colors.primaryColor,
-                                            borderRadius: 25,
-                                            paddingHorizontal: 15,
-                                            paddingVertical: 8,
-                                        }}
+                                        style={styles.signInButton}
                                         onPress={() => showBottomSheet?.('SignIn')}
                                     >
-                                        <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>{t("sidebar.actions.signIn")}</Text>
+                                        <Text style={styles.signInButtonText}>{t("sidebar.actions.signIn")}</Text>
                                     </TouchableOpacity>
                                 </View>
                             )}
                         </View>
                     )}
                     {user && user.id && (
-                        <View style={{
-                            justifyContent: 'center',
-                            alignItems: 'flex-start',
-                        }}>
+                        <View style={styles.navigationSection}>
                             {
                                 sideBarData.map(({ title, icon, iconActive, route }) => {
                                     return <SideBarItem href={route} key={title}
@@ -183,12 +135,7 @@ export function SideBar() {
                                 href="/properties/create"
                                 renderText={({ state }) =>
                                     state === 'desktop' ? (
-                                        <Text style={{
-                                            color: 'white',
-                                            fontSize: 17,
-                                            fontWeight: 'bold',
-                                            textAlign: 'center'
-                                        }}>
+                                        <Text style={styles.addPropertyButtonText}>
                                             {t("sidebar.actions.addProperty")}
                                         </Text>
                                     ) : null
@@ -199,25 +146,20 @@ export function SideBar() {
                                     ) : null
                                 }
                                 containerStyle={({ state }) => ({
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    backgroundColor: colors.primaryColor,
-                                    borderRadius: 100,
+                                    ...styles.addPropertyButton,
                                     height: state === 'desktop' ? 47 : 50,
                                     width: state === 'desktop' ? 220 : 50,
                                     ...(state === 'desktop'
                                         ? {}
-                                        : {
-                                            alignSelf: 'center',
-                                        }),
+                                        : styles.addPropertyButtonTablet),
                                 })}
                             />
                         </View>)}
                 </View>
-                <View style={{ flex: 1, }}></View>
-                <View style={{ flexDirection: 'column', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+                <View style={styles.spacer}></View>
+                <View style={styles.footer}>
                     <OxySignInButton />
-                    <Text>{t("sidebar.footer.brandName")}</Text>
+                    {isFullSideBar && (<Text style={styles.brandName}>{t("sidebar.footer.brandName")}</Text>)}
                 </View>
             </View>
         )
@@ -225,3 +167,98 @@ export function SideBar() {
         return null
     }
 }
+
+const styles = StyleSheet.create({
+    container: {
+        paddingVertical: 20,
+        height: WindowHeight,
+        ...(Platform.select({
+            web: {
+                position: 'sticky' as any,
+            },
+        }) as ViewStyle),
+        top: 0,
+    },
+    content: {
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+    },
+    heroSection: {
+        marginTop: 16,
+    },
+    heroTagline: {
+        color: colors.COLOR_BLACK,
+        fontSize: 25,
+        fontWeight: 'bold',
+        fontFamily: 'Phudu',
+        flexWrap: 'wrap',
+        textAlign: 'left',
+        maxWidth: 200,
+        lineHeight: 30,
+    },
+    authButtonsContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 20,
+        gap: 10,
+    },
+    signUpButton: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: colors.COLOR_BLACK,
+        borderRadius: 25,
+        paddingHorizontal: 15,
+        paddingVertical: 8,
+    },
+    signUpButtonText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    signInButton: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: colors.primaryColor,
+        borderRadius: 25,
+        paddingHorizontal: 15,
+        paddingVertical: 8,
+    },
+    signInButtonText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    navigationSection: {
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+    },
+    addPropertyButton: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: colors.primaryColor,
+        borderRadius: 100,
+    },
+    addPropertyButtonTablet: {
+        alignSelf: 'center',
+    },
+    addPropertyButtonText: {
+        color: 'white',
+        fontSize: 17,
+        fontWeight: 'bold',
+        textAlign: 'center',
+    },
+    spacer: {
+        flex: 1,
+    },
+    footer: {
+        flexDirection: 'column',
+        justifyContent: 'flex-start',
+        alignItems: 'flex-start',
+        width: '100%',
+    },
+    brandName: {
+        marginTop: 8,
+        fontSize: 14,
+        color: colors.COLOR_BLACK,
+    },
+});

@@ -170,7 +170,7 @@ export default function RootLayout() {
   // Memoize styles to prevent recreation - MUST be before any conditional returns
   const styles = useMemo(() => StyleSheet.create({
     container: {
-      maxWidth: 1300,
+      maxWidth: 1800,
       width: '100%',
       paddingHorizontal: isScreenNotMobile ? 10 : 0,
       marginHorizontal: 'auto',
