@@ -34,7 +34,7 @@ export function FeaturedPropertiesWidget() {
             <BaseWidget title={t("Featured Properties")}>
                 <View style={styles.errorContainer}>
                     <Text style={styles.errorText}>
-                        {error?.message || 'Failed to load properties'}
+                        {typeof error === 'string' ? error : (error as Error)?.message || 'Failed to load properties'}
                     </Text>
                 </View>
             </BaseWidget>

@@ -1,17 +1,15 @@
 import React, { ReactNode } from 'react';
 import { View, StyleSheet } from 'react-native';
-import {
-    TrustScoreWidget,
-    FeaturedPropertiesWidget,
-    EcoCertificationWidget,
-    HorizonInitiativeWidget,
-    SavedSearchesWidget,
-    PaymentSummaryWidget,
-    PropertyAlertWidget,
-    NeighborhoodRatingWidget,
-    RecentlyViewedWidget,
-    QuickFiltersWidget
-} from './';
+import { TrustScoreWidget } from './TrustScoreWidget';
+import { FeaturedPropertiesWidget } from './FeaturedPropertiesWidget';
+import { EcoCertificationWidget } from './EcoCertificationWidget';
+import { HorizonInitiativeWidget } from './HorizonInitiativeWidget';
+import { SavedSearchesWidget } from './SavedSearchesWidget';
+import { PaymentSummaryWidget } from './PaymentSummaryWidget';
+import { PropertyAlertWidget } from './PropertyAlertWidget';
+import { NeighborhoodRatingWidget } from './NeighborhoodRatingWidget';
+import { RecentlyViewedWidget } from './RecentlyViewedWidget';
+import { QuickFiltersWidget } from './QuickFiltersWidget';
 
 // Define screen IDs
 export type ScreenId =
