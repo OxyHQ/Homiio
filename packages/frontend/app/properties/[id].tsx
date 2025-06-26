@@ -24,6 +24,7 @@ import { fetchRecentlyViewedProperties, addPropertyToRecentlyViewed } from '@/st
 import { useFavorites } from '@/hooks/useFavorites';
 import type { RootState, AppDispatch } from '@/store/store';
 import { userApi } from '@/utils/api';
+import { SaveButton } from '@/components/SaveButton';
 
 type PropertyDetail = {
   id: string;
@@ -59,7 +60,7 @@ export default function PropertyDetailPage() {
   const hasViewedRef = useRef(false);
 
   // Redux favorites
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { isFavorite, toggleFavorite, isPropertySaving } = useFavorites();
 
   // Redux: fetch landlord profile by profileId
   const dispatch = useDispatch<AppDispatch>();
@@ -548,18 +549,15 @@ ${propertyUrl}`;
             <TouchableOpacity key="share" style={styles.headerButton} onPress={handleShare}>
               <IconComponent name="share-outline" size={24} color={colors.COLOR_BLACK} />
             </TouchableOpacity>,
-            <TouchableOpacity
+            <SaveButton
               key="save"
+              isSaved={isPropertyFavorite}
               onPress={() => toggleFavorite(property.id || '', property)}
-              activeOpacity={0.7}
-              style={styles.headerButton}
-            >
-              <IconComponent
-                name={isPropertyFavorite ? "bookmark" : "bookmark-outline"}
-                size={24}
-                color={isPropertyFavorite ? colors.primaryColor : '#ccc'}
-              />
-            </TouchableOpacity>,
+              variant="heart"
+              color="#ccc"
+              activeColor="#EF4444"
+              isLoading={isPropertySaving(property.id || '')}
+            />,
           ],
         }}
       />
@@ -1353,63 +1351,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   saveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    marginVertical: 20,
+    backgroundColor: colors.primaryLight,
+    borderRadius: 12,
+    padding: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.10,
-    shadowRadius: 6,
-    elevation: 6,
-    minHeight: 52,
-    position: 'relative',
-    overflow: 'hidden',
-    borderWidth: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  savedButton: {
-    backgroundColor: '#f4f8fb',
-    borderColor: colors.primaryColor,
-    shadowColor: colors.primaryColor,
-    shadowOpacity: 0.12,
-  },
-  unsavedButton: {
-    backgroundColor: colors.primaryColor,
-    borderColor: colors.primaryColor,
-    shadowColor: colors.primaryColor,
-    shadowOpacity: 0.18,
-  },
-  loadingButton: {
-    backgroundColor: colors.primaryColor,
-    borderColor: colors.primaryColor,
-    opacity: 0.85,
-  },
-  saveButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  iconContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    position: 'relative',
-    marginRight: 4,
-  },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  savedButtonText: {
-    color: colors.primaryColor,
-  },
-  unsavedButtonText: {
-    color: 'white',
-  },
+
   mapContainer: {
     marginVertical: 10,
   },
@@ -1471,10 +1422,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  saveButtonIcon: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
+
   descriptionContainer: {
     marginBottom: 20,
   },

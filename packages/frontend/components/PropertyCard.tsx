@@ -6,7 +6,7 @@ import { IconButton } from './IconButton';
 import { Property } from '@/services/propertyService';
 import { getPropertyTitle, getPropertyImageSource } from '@/utils/propertyUtils';
 import { useFavorites } from '@/hooks/useFavorites';
-import FavoriteButton from './FavoriteButton';
+import { SaveButton } from './SaveButton';
 
 export type PropertyType = 'apartment' | 'house' | 'coliving' | 'eco';
 
@@ -161,7 +161,7 @@ export function PropertyCard({
     badgeContent,
     overlayContent,
 }: PropertyCardProps) {
-    const { isFavorite, toggleFavorite } = useFavorites();
+    const { isFavorite, toggleFavorite, isPropertySaving } = useFavorites();
 
     // Use property object if provided, otherwise use individual props
     const propertyData = property ? {
@@ -235,15 +235,17 @@ export function PropertyCard({
                     resizeMode="cover"
                 />
 
-                {/* Favorite Button */}
+                {/* Save Button */}
                 {showFavoriteButton && (
-                    <FavoriteButton
-                        propertyId={propertyData.id || ''}
+                    <SaveButton
+                        isSaved={isPropertyFavorite}
+                        onPress={handleFavoritePress}
                         size={24}
+                        variant="heart"
                         color="#222"
                         activeColor="#EF4444"
-                        variant="heart"
-                        style={styles.favoriteButton}
+                        isLoading={isPropertySaving(propertyData.id || '')}
+                        style={styles.saveButton}
                     />
                 )}
 
@@ -419,7 +421,7 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%',
     },
-    favoriteButton: {
+    saveButton: {
         position: 'absolute',
         top: 8,
         right: 8,

@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react'
-import { View, TextInput, Platform, ViewStyle, ActivityIndicator, Text, TouchableOpacity } from 'react-native'
+import { View, TextInput, Platform, ViewStyle, Text, TouchableOpacity } from 'react-native'
+import LoadingSpinner from './LoadingSpinner'
 import { Ionicons } from '@expo/vector-icons'
 import { colors } from '../styles/colors'
 import { useRouter } from 'expo-router'
@@ -74,7 +75,7 @@ export const SearchBar = ({ hideFilterIcon = false }: SearchBarProps) => {
                 width: '100%',
             }}>
                 {isLoading ? (
-                    <ActivityIndicator size="small" color={colors.COLOR_BLACK_LIGHT_4} />
+                    <LoadingSpinner size={16} color={colors.COLOR_BLACK_LIGHT_4} showText={false} />
                 ) : (
                     <Ionicons name="search" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
                 )}

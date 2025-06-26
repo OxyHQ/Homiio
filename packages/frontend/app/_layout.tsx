@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { ScrollView, Keyboard, LogBox, Platform } from "react-native";
 import * as SplashScreen from 'expo-splash-screen';
 import { Provider } from 'react-redux';
@@ -62,6 +62,10 @@ i18n.use(initReactI18next).init({
 
 export default function RootLayout() {
   const [appIsReady, setAppIsReady] = useState(false);
+  const [splashState, setSplashState] = useState({
+    initializationComplete: false,
+    startFade: false
+  });
   const { i18n } = useTranslation();
   const colorScheme = useColorScheme();
 
@@ -81,19 +85,19 @@ export default function RootLayout() {
     }
   }, []);
 
-  // Initialize OxyServices
-  const oxyServices = new OxyServices({
+  // Initialize OxyServices - memoize to prevent recreation
+  const oxyServices = useMemo(() => new OxyServices({
     baseURL: process.env.NODE_ENV === 'production'
       ? 'https://api.oxy.so'
       : 'http://localhost:3001',
-  });
+  }), []);
 
-  // Handle user authentication - no hooks here
-  const handleAuthenticated = (user: any) => {
+  // Handle user authentication - memoized callback
+  const handleAuthenticated = useCallback((user: any) => {
     console.log('User authenticated:', user);
     // We'll just log the authentication event here
     // The bottom sheet will be closed by the OxyProvider internally
-  };
+  }, []);
 
   const [loaded] = useFonts({
     "Inter-Black": require("@/assets/fonts/inter/Inter-Black.otf"),
@@ -108,8 +112,6 @@ export default function RootLayout() {
     "Phudu": require("@/assets/fonts/Phudu-VariableFont_wght.ttf"),
   });
 
-
-
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   useEffect(() => {
@@ -121,7 +123,8 @@ export default function RootLayout() {
     };
   }, []);
 
-  const initializeApp = async () => {
+  // Optimized initialization function
+  const initializeApp = useCallback(async () => {
     try {
       if (loaded) {
         await setupNotifications();
@@ -130,13 +133,20 @@ export default function RootLayout() {
         if (hasPermission) {
           await scheduleDemoNotification();
         }
-        setAppIsReady(true);
+
+        // Single state update instead of multiple
+        setSplashState(prev => ({ ...prev, initializationComplete: true }));
         await SplashScreen.hideAsync();
       }
     } catch (error) {
       console.warn("Failed to set up notifications:", error);
     }
-  };
+  }, [loaded]);
+
+  // Memoized splash fade completion handler
+  const handleSplashFadeComplete = useCallback(() => {
+    setAppIsReady(true);
+  }, []);
 
   useEffect(() => {
     initializeApp();
@@ -146,24 +156,19 @@ export default function RootLayout() {
       document.body.style.overflow = 'visible';
       document.body.style.backgroundColor = colors.COLOR_BACKGROUND;
     }
-  }, [loaded]);
+  }, [initializeApp]);
+
+  // Start fade immediately when everything is loaded
+  useEffect(() => {
+    if (loaded && splashState.initializationComplete && !splashState.startFade) {
+      setSplashState(prev => ({ ...prev, startFade: true }));
+    }
+  }, [loaded, splashState.initializationComplete, splashState.startFade]);
 
   const isScreenNotMobile = useMediaQuery({ minWidth: 500 })
 
-  if (!loaded) {
-    return null;
-  }
-
-  if (!appIsReady) {
-    // check if we are in web
-    if (Platform.OS === 'web') {
-      return <WebSplashScreen />;
-    } else {
-      return null;
-    }
-  }
-
-  const styles = StyleSheet.create({
+  // Memoize styles to prevent recreation - MUST be before any conditional returns
+  const styles = useMemo(() => StyleSheet.create({
     container: {
       maxWidth: 1300,
       width: '100%',
@@ -185,7 +190,20 @@ export default function RootLayout() {
       flex: 1,
       alignItems: 'center',
     },
-  });
+  }), [isScreenNotMobile]);
+
+  if (!loaded) {
+    return null;
+  }
+
+  if (!appIsReady) {
+    // check if we are in web
+    if (Platform.OS === 'web') {
+      return <WebSplashScreen onFadeComplete={handleSplashFadeComplete} startFade={splashState.startFade} />;
+    } else {
+      return null;
+    }
+  }
 
   return (
     <OxyProvider

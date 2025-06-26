@@ -1,5 +1,6 @@
 import React, { useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import LoadingSpinner from '../LoadingSpinner';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
@@ -51,7 +52,7 @@ export function TrustScoreWidget() {
         if (isLoading) {
             return (
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="small" color={colors.primaryColor} />
+                    <LoadingSpinner size={16} showText={false} />
                     <Text style={styles.loadingText}>
                         Loading {profileType === 'agency' ? 'verification status' : 'trust score'}...
                     </Text>

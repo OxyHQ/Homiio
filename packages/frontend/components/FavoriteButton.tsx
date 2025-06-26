@@ -1,5 +1,6 @@
 import React from 'react';
-import { TouchableOpacity, ActivityIndicator, View } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
+import LoadingSpinner from './LoadingSpinner';
 import { useFavorites } from '@/hooks/useFavorites';
 import { HeartIcon, HeartIconActive } from '@/assets/icons/heart-icon';
 import { Bookmark, BookmarkActive } from '@/assets/icons/bookmark-icon';
@@ -84,9 +85,10 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
                 justifyContent: 'center'
             }}>
                 {isLoading ? (
-                    <ActivityIndicator
-                        size="small"
+                    <LoadingSpinner
+                        size={size * 0.8}
                         color={isFavorited ? activeColor : color}
+                        showText={false}
                     />
                 ) : (
                     renderIcon()

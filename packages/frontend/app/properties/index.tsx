@@ -6,6 +6,7 @@ import { colors } from '@/styles/colors';
 import { Header } from '@/components/Header';
 import { PropertyList } from '@/components/PropertyList';
 import LoadingTopSpinner from '@/components/LoadingTopSpinner';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { useProperties } from '@/hooks/usePropertyQueries';
 import { SearchBar } from '@/components/SearchBar';
 import Button from '@/components/Button';

@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { toast } from 'sonner';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { useProfileRedux } from '@/hooks/useProfileQueries';
 import type { Profile } from '@/services/profileService';
 
@@ -232,8 +233,7 @@ export default function ProfileScreen() {
                     <Text style={styles.headerTitle}>Profile Management</Text>
                 </View>
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={colors.primaryColor} />
-                    <Text style={styles.loadingText}>Loading profiles...</Text>
+                    <LoadingSpinner size={32} text="Loading profiles..." />
                 </View>
             </SafeAreaView>
         );

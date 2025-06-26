@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import LoadingSpinner from '../LoadingSpinner';
 import { Link, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';
@@ -43,7 +44,7 @@ export function FeaturedPropertiesWidget() {
             <View>
                 {isLoading ? (
                     <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="small" color={colors.primaryColor} />
+                        <LoadingSpinner size={16} showText={false} />
                         <Text style={styles.loadingText}>Loading properties...</Text>
                     </View>
                 ) : (

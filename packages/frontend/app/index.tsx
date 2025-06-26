@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, RefreshControl } from 'react-native';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
@@ -199,7 +200,7 @@ export default function HomePage() {
 
           {propertiesLoading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.primaryColor} />
+              <LoadingSpinner size={32} />
               <Text style={styles.loadingText}>Loading properties...</Text>
             </View>
           ) : featuredProperties.length > 0 ? (
