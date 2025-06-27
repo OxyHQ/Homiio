@@ -21,6 +21,133 @@ module.exports = function () {
   router.get('/properties/:propertyId', asyncHandler(propertyController.getPropertyById));
   router.get('/properties/:propertyId/stats', asyncHandler(propertyController.getPropertyStats));
 
+  // Ethical pricing calculation endpoint (public - no authentication required)
+  router.post('/properties/calculate-ethical-pricing', asyncHandler(async (req, res) => {
+    const { localMedianIncome, areaAverageRent, propertyType, bedrooms, bathrooms, squareFootage } = req.body;
+
+    // Validate required fields
+    if (!localMedianIncome || !areaAverageRent) {
+      return res.status(400).json({
+        success: false,
+        message: 'Local median income and area average rent are required'
+      });
+    }
+
+    if (localMedianIncome <= 0 || areaAverageRent <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Income and rent values must be positive numbers'
+      });
+    }
+
+    // Calculate monthly income
+    const monthlyMedianIncome = localMedianIncome / 12;
+    
+    // Adjust percentages based on income level - lower incomes need higher housing percentages
+    let standardRentPercentage, affordableRentPercentage, communityRentPercentage;
+    
+    if (monthlyMedianIncome < 2000) {
+      // Lower income: higher percentage needed for housing
+      standardRentPercentage = 0.65; // 65% for very low income
+      affordableRentPercentage = 0.55; // 55% for affordable
+      communityRentPercentage = 0.45; // 45% for community
+    } else if (monthlyMedianIncome < 4000) {
+      // Moderate income
+      standardRentPercentage = 0.5; // 50%
+      affordableRentPercentage = 0.4; // 40%
+      communityRentPercentage = 0.35; // 35%
+    } else if (monthlyMedianIncome < 8000) {
+      // Higher income
+      standardRentPercentage = 0.4; // 40%
+      affordableRentPercentage = 0.35; // 35%
+      communityRentPercentage = 0.3; // 30%
+    } else {
+      // High income: can afford lower percentages
+      standardRentPercentage = 0.35; // 35%
+      affordableRentPercentage = 0.3; // 30%
+      communityRentPercentage = 0.25; // 25%
+    }
+
+    // Calculate ethical pricing suggestions
+    const suggestions = {
+      standardRent: Math.round(monthlyMedianIncome * standardRentPercentage),
+      affordableRent: Math.round(monthlyMedianIncome * affordableRentPercentage),
+      marketRate: areaAverageRent,
+      reducedDeposit: Math.round(monthlyMedianIncome * standardRentPercentage),
+      communityRent: Math.round(monthlyMedianIncome * communityRentPercentage),
+      slidingScaleBase: Math.round(monthlyMedianIncome * (communityRentPercentage - 0.1)),
+      slidingScaleMax: Math.round(monthlyMedianIncome * (standardRentPercentage + 0.1)),
+      marketAdjustedRent: Math.round(Math.min(areaAverageRent * 0.9, monthlyMedianIncome * 0.7)),
+      incomeBasedRent: Math.round(monthlyMedianIncome * 0.7),
+    };
+
+    // Validate suggestions against market rate
+    const isMarketRateReasonable = areaAverageRent >= suggestions.affordableRent * 0.7 && 
+                                  areaAverageRent <= suggestions.standardRent * 2.0;
+
+    // Provide market context
+    const rentToIncomeRatio = (areaAverageRent / monthlyMedianIncome) * 100;
+    let marketContext = '';
+    
+    if (rentToIncomeRatio < 25) {
+      marketContext = 'Very affordable market';
+    } else if (rentToIncomeRatio < 35) {
+      marketContext = 'Affordable market';
+    } else if (rentToIncomeRatio < 45) {
+      marketContext = 'Moderate market';
+    } else if (rentToIncomeRatio < 55) {
+      marketContext = 'Expensive market';
+    } else {
+      marketContext = 'Very expensive market';
+    }
+
+    // Generate warnings if needed
+    const warnings = [];
+    if (!isMarketRateReasonable) {
+      if (areaAverageRent < suggestions.affordableRent * 0.7) {
+        warnings.push('Market rate seems unusually low compared to local income');
+      } else {
+        warnings.push('Market rate seems unusually high compared to local income');
+      }
+    }
+
+    // Add property-specific adjustments
+    const propertyAdjustments = {
+      studio: 0.8, // Studios typically cost less
+      room: 0.6,   // Rooms cost significantly less
+      apartment: 1.0, // Base rate
+      house: 1.2,  // Houses typically cost more
+    };
+
+    const adjustmentFactor = propertyAdjustments[propertyType] || 1.0;
+    const adjustedSuggestions = {};
+
+    // Apply property type adjustments to relevant suggestions
+    Object.keys(suggestions).forEach(key => {
+      if (key !== 'marketRate' && key !== 'reducedDeposit') {
+        adjustedSuggestions[key] = Math.round(suggestions[key] * adjustmentFactor);
+      } else {
+        adjustedSuggestions[key] = suggestions[key];
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        suggestions: adjustedSuggestions,
+        marketContext,
+        warnings,
+        calculations: {
+          monthlyMedianIncome,
+          rentToIncomeRatio: Math.round(rentToIncomeRatio * 100) / 100,
+          standardRentPercentage: Math.round(standardRentPercentage * 100),
+          affordableRentPercentage: Math.round(affordableRentPercentage * 100),
+          communityRentPercentage: Math.round(communityRentPercentage * 100),
+        }
+      }
+    });
+  }));
+
   // Public Telegram routes (for testing and bot management)
   router.get('/telegram/status', asyncHandler(telegramController.getBotStatus));
   router.get('/telegram/groups/:city', asyncHandler(telegramController.getGroupMapping));

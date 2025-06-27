@@ -12,7 +12,10 @@ const { width: screenWidth } = Dimensions.get('window');
 
 export function PropertyPreviewWidget() {
     // Only show on desktop (tablet and larger screens)
-    if (screenWidth < 768) return null;
+    if (screenWidth < 768) {
+        console.log('PropertyPreviewWidget: Screen too small, not showing');
+        return null;
+    }
 
     // Get form data from Redux
     const { formData, isVisible } = useSelector((state: RootState) => state.createPropertyForm);
@@ -25,8 +28,12 @@ export function PropertyPreviewWidget() {
         formDataKeys: formData ? Object.keys(formData) : [],
         address: formData?.address,
         type: formData?.type,
-        rent: formData?.rent
+        rent: formData?.rent,
+        reduxState: useSelector((state: RootState) => state.createPropertyForm)
     });
+
+    // Always show the widget for debugging, even without form data
+    console.log('PropertyPreviewWidget: Rendering widget');
 
     // For testing - show widget even without form data
     if (!formData) {
@@ -48,6 +55,7 @@ export function PropertyPreviewWidget() {
                     <View style={styles.previewContent}>
                         <ThemedText style={styles.propertyTitle}>Property Preview</ThemedText>
                         <ThemedText style={styles.propertyLocation}>Start filling the form to see preview</ThemedText>
+                        <ThemedText style={styles.debugText}>Debug: Widget is rendering</ThemedText>
                     </View>
                 </View>
             </BaseWidget>
@@ -643,5 +651,10 @@ const styles = StyleSheet.create({
         fontSize: 11,
         fontWeight: '600',
         color: colors.COLOR_BLACK,
+    },
+    debugText: {
+        fontSize: 12,
+        color: colors.COLOR_BLACK_LIGHT_3,
+        marginTop: 4,
     },
 }); 

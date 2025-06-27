@@ -1,45 +1,55 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, TextInput, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, TextInput } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { Header } from '@/components/Header';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/colors';
-import { RoommateMatch, LifestylePreference } from '@/components/RoommateMatch';
+import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
-import { useRoommateProfiles, useHasRoommateMatching, useToggleRoommateMatching, useSendRoommateRequest } from '@/hooks/useRoommateQueries';
+import { useRoommateRedux } from '@/hooks/useRoommateRedux';
 import { roommateService } from '@/services/roommateService';
-import type { Profile } from '@/services/profileService';
+import { useOxy } from '@oxyhq/services';
+import { toast } from 'sonner';
 
-type FilterOptions = {
-    minMatchPercentage: number;
-    maxBudget: number;
-    withPets: boolean;
-    nonSmoking: boolean;
+type RoommateDisplay = {
+    id: string;
+    oxyUserId?: string;
+    name: string;
+    age: number;
+    bio: string;
+    budget: { min: number; max: number; currency: string };
+    location: string;
+    matchPercentage: number;
+    lifestylePreferences: string[];
     interests: string[];
+    occupation: string;
+    imageUrl: string;
 };
 
 export default function RoommatesScreen() {
     const { t } = useTranslation();
     const router = useRouter();
+    const { oxyServices, activeSessionId } = useOxy();
+    const {
+        profiles,
+        hasRoommateMatching,
+        isLoading,
+        error,
+        filters,
+        fetchProfiles,
+        fetchPreferences,
+        checkStatus,
+        toggleMatching,
+        sendRequest,
+        setFilters,
+        clearFilters,
+        clearError,
+    } = useRoommateRedux();
+
     const [searchQuery, setSearchQuery] = useState('');
     const [showFilters, setShowFilters] = useState(false);
-
-    // Get roommate data
-    const { data: roommateData, isLoading: roommatesLoading } = useRoommateProfiles();
-    const { hasRoommateMatching, activeProfile } = useHasRoommateMatching();
-    const toggleRoommateMatching = useToggleRoommateMatching();
-    const sendRoommateRequest = useSendRoommateRequest();
-
-    // Filtering options
-    const [filters, setFilters] = useState<FilterOptions>({
-        minMatchPercentage: 70,
-        maxBudget: 1000,
-        withPets: false,
-        nonSmoking: false,
-        interests: [],
-    });
+    const [isToggling, setIsToggling] = useState(false);
 
     // All possible interests for filtering
     const allInterests = [
@@ -47,37 +57,85 @@ export default function RoommatesScreen() {
         'Travel', 'Photography', 'Hiking', 'Yoga', 'Design', 'Technology'
     ];
 
-    // Convert profiles to roommate display format
-    const roommates = roommateData?.profiles.map(profile => {
-        const displayInfo = roommateService.getProfileDisplayInfo(profile);
-        const matchPercentage = activeProfile ? roommateService.calculateMatchPercentage(activeProfile, profile) : 0;
+    // Load data on mount
+    useEffect(() => {
+        console.log('RoommatesScreen: Loading data on mount');
+        console.log('Current filters:', filters);
+        console.log('OxyServices available:', !!oxyServices);
+        console.log('ActiveSessionId available:', !!activeSessionId);
+        console.log('Current hasRoommateMatching state:', hasRoommateMatching);
 
-        return {
-            id: profile.id,
-            profileId: profile.id,
-            name: displayInfo.name,
+        // Only make API calls if authentication is ready
+        if (oxyServices && activeSessionId) {
+            console.log('Authentication ready, making API calls...');
+            checkStatus(); // Check current roommate matching status
+            fetchProfiles(filters);
+            fetchPreferences();
+        } else {
+            console.log('Waiting for authentication to be ready...');
+        }
+    }, [oxyServices, activeSessionId]); // Add dependencies
+
+    // Show error toast if there's an error
+    useEffect(() => {
+        if (error) {
+            console.error('RoommatesScreen: Error occurred:', error);
+            toast.error(error);
+            clearError();
+        }
+    }, [error]);
+
+    // Debug profiles data
+    useEffect(() => {
+        console.log('RoommatesScreen: Profiles updated:', profiles);
+        console.log('RoommatesScreen: Profiles count:', profiles.length);
+    }, [profiles]);
+
+    // Debug effect to track hasRoommateMatching changes
+    useEffect(() => {
+        console.log('hasRoommateMatching state changed:', hasRoommateMatching);
+    }, [hasRoommateMatching]);
+
+    // Convert profiles to roommate display format
+    const roommatesDisplay: RoommateDisplay[] = profiles.map((profile: any) => {
+        console.log('Processing profile:', profile);
+        const displayInfo = roommateService.getProfileDisplayInfo(profile);
+        console.log('Display info:', displayInfo);
+        const preferences = roommateService.getRoommatePreferencesFromProfile(profile);
+        console.log('Preferences:', preferences);
+
+        // Extract lifestyle preferences
+        const lifestylePreferences: string[] = [];
+        if (preferences?.lifestyle) {
+            if (preferences.lifestyle.pets === 'yes') lifestylePreferences.push('Pet-friendly');
+            if (preferences.lifestyle.smoking === 'no') lifestylePreferences.push('Non-smoking');
+            if (preferences.lifestyle.cleanliness === 'very_clean') lifestylePreferences.push('Very clean');
+            if (preferences.lifestyle.schedule === 'early_bird') lifestylePreferences.push('Early bird');
+        }
+
+        const roommateDisplay = {
+            id: profile._id || profile.id || '',
+            oxyUserId: profile.oxyUserId || '',
+            name: profile.userData?.fullName || displayInfo.name,
             age: displayInfo.age,
-            occupation: displayInfo.occupation,
-            bio: displayInfo.bio,
-            imageUrl: 'https://randomuser.me/api/portraits/lego/1.jpg', // Default avatar
-            matchPercentage,
-            trustScore: displayInfo.trustScore,
-            lifestylePreferences: roommateService.getRoommatePreferencesFromProfile(profile)?.lifestyle ?
-                Object.entries(roommateService.getRoommatePreferencesFromProfile(profile)!.lifestyle!).map(([key, value]) => value) : [],
-            interests: [], // Would need to be added to profile
-            location: displayInfo.location,
+            bio: profile.userData?.bio || displayInfo.bio,
             budget: displayInfo.budget,
-            moveInDate: displayInfo.moveInDate,
-            duration: displayInfo.duration,
-            lastActive: profile.updatedAt,
-            isVerified: displayInfo.isVerified,
-            hasReferences: displayInfo.hasReferences,
-            rentalHistory: displayInfo.rentalHistory,
+            location: profile.userData?.location || displayInfo.location,
+            matchPercentage: (profile as any).matchPercentage || 75,
+            lifestylePreferences,
+            interests: preferences?.interests || [],
+            occupation: displayInfo.occupation,
+            imageUrl: profile.userData?.avatar || 'https://randomuser.me/api/portraits/lego/1.jpg',
         };
-    }) || [];
+
+        console.log('Created roommate display:', roommateDisplay);
+        return roommateDisplay;
+    });
+
+    console.log('All roommates display:', roommatesDisplay);
 
     // Apply filters to roommate list
-    const filteredRoommates = roommates.filter(roommate => {
+    const filteredRoommates = roommatesDisplay.filter(roommate => {
         // Match percentage filter
         if (roommate.matchPercentage < filters.minMatchPercentage) {
             return false;
@@ -89,12 +147,12 @@ export default function RoommatesScreen() {
         }
 
         // Pets preference filter
-        if (filters.withPets && !roommate.lifestylePreferences.includes('yes')) {
+        if (filters.withPets && !roommate.lifestylePreferences.includes('Pet-friendly')) {
             return false;
         }
 
         // Smoking preference filter
-        if (filters.nonSmoking && !roommate.lifestylePreferences.includes('no')) {
+        if (filters.nonSmoking && !roommate.lifestylePreferences.includes('Non-smoking')) {
             return false;
         }
 
@@ -140,43 +198,51 @@ export default function RoommatesScreen() {
         router.push('/roommates/preferences');
     };
 
-    const handleToggleRoommateMatching = () => {
-        toggleRoommateMatching.mutate(!hasRoommateMatching);
+    const handleToggleRoommateMatching = async () => {
+        setIsToggling(true);
+        try {
+            await toggleMatching(!hasRoommateMatching);
+            toast.success(`Roommate matching ${!hasRoommateMatching ? 'enabled' : 'disabled'}`);
+            // Refetch profiles after toggling
+            fetchProfiles(filters);
+        } catch (error) {
+            console.error('Error toggling roommate matching:', error);
+        } finally {
+            setIsToggling(false);
+        }
     };
 
-    const handleSendRequest = (roommateId: string) => {
-        sendRoommateRequest.mutate({ profileId: roommateId });
+    const handleSendRequest = async (roommateId: string) => {
+        try {
+            await sendRequest(roommateId);
+            toast.success('Roommate request sent successfully');
+        } catch (error) {
+            console.error('Error sending roommate request:', error);
+        }
     };
 
     const toggleInterestFilter = (interest: string) => {
-        setFilters(prevFilters => {
-            const updatedInterests = [...prevFilters.interests];
-            const index = updatedInterests.indexOf(interest);
+        const updatedInterests = [...filters.interests];
+        const index = updatedInterests.indexOf(interest);
 
-            if (index > -1) {
-                updatedInterests.splice(index, 1);
-            } else {
-                updatedInterests.push(interest);
-            }
+        if (index > -1) {
+            updatedInterests.splice(index, 1);
+        } else {
+            updatedInterests.push(interest);
+        }
 
-            return {
-                ...prevFilters,
-                interests: updatedInterests
-            };
-        });
+        setFilters({ ...filters, interests: updatedInterests });
     };
 
     const resetFilters = () => {
-        setFilters({
-            minMatchPercentage: 70,
-            maxBudget: 1000,
-            withPets: false,
-            nonSmoking: false,
-            interests: [],
-        });
+        clearFilters();
     };
 
-    if (roommatesLoading) {
+    const applyFilters = () => {
+        fetchProfiles(filters);
+    };
+
+    if (isLoading) {
         return (
             <SafeAreaView style={styles.container} edges={['top']}>
                 <Header
@@ -221,10 +287,10 @@ export default function RoommatesScreen() {
                     <TouchableOpacity
                         style={styles.profileButton}
                         onPress={handleToggleRoommateMatching}
-                        disabled={toggleRoommateMatching.isPending}
+                        disabled={isToggling}
                     >
                         <Text style={styles.profileButtonText}>
-                            {toggleRoommateMatching.isPending ? t("Enabling...") : t("Enable")}
+                            {isToggling ? t("Enabling...") : t("Enable")}
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -294,7 +360,7 @@ export default function RoommatesScreen() {
                         <Slider
                             style={styles.slider}
                             value={filters.minMatchPercentage}
-                            onValueChange={(value) => setFilters(prev => ({ ...prev, minMatchPercentage: value }))}
+                            onValueChange={(value) => setFilters({ ...filters, minMatchPercentage: value })}
                             minimumValue={50}
                             maximumValue={100}
                             step={1}
@@ -311,7 +377,7 @@ export default function RoommatesScreen() {
                         <Slider
                             style={styles.slider}
                             value={filters.maxBudget}
-                            onValueChange={(value) => setFilters(prev => ({ ...prev, maxBudget: value }))}
+                            onValueChange={(value) => setFilters({ ...filters, maxBudget: value })}
                             minimumValue={300}
                             maximumValue={1500}
                             step={50}
@@ -324,7 +390,7 @@ export default function RoommatesScreen() {
                     <View style={styles.checkboxSection}>
                         <TouchableOpacity
                             style={styles.checkboxRow}
-                            onPress={() => setFilters(prev => ({ ...prev, withPets: !prev.withPets }))}
+                            onPress={() => setFilters({ ...filters, withPets: !filters.withPets })}
                         >
                             <View style={[
                                 styles.checkbox,
@@ -337,7 +403,7 @@ export default function RoommatesScreen() {
 
                         <TouchableOpacity
                             style={styles.checkboxRow}
-                            onPress={() => setFilters(prev => ({ ...prev, nonSmoking: !prev.nonSmoking }))}
+                            onPress={() => setFilters({ ...filters, nonSmoking: !filters.nonSmoking })}
                         >
                             <View style={[
                                 styles.checkbox,
@@ -371,32 +437,92 @@ export default function RoommatesScreen() {
                             ))}
                         </View>
                     </View>
+
+                    <TouchableOpacity style={styles.applyFiltersButton} onPress={applyFilters}>
+                        <Text style={styles.applyFiltersButtonText}>{t("Apply Filters")}</Text>
+                    </TouchableOpacity>
                 </View>
             )}
 
-            <ScrollView
-                style={styles.scrollView}
-                contentContainerStyle={styles.scrollContent}
-            >
+            <ScrollView style={styles.roommatesList} showsVerticalScrollIndicator={false}>
                 {sortedRoommates.length === 0 ? (
-                    <View style={styles.emptyContainer}>
-                        <Ionicons name="people-outline" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
-                        <Text style={styles.emptyText}>{t("No roommates found")}</Text>
-                        <Text style={styles.emptySubtext}>
-                            {searchQuery || filters.interests.length > 0 ?
-                                t("Try adjusting your search or filters") :
-                                t("No roommates available in your area yet")}
+                    <View style={styles.emptyState}>
+                        <Ionicons name="people-outline" size={64} color={colors.primaryDark_1} />
+                        <Text style={styles.emptyStateTitle}>{t("No Roommates Found")}</Text>
+                        <Text style={styles.emptyStateText}>
+                            {t("Try adjusting your filters or search criteria to find more roommates.")}
                         </Text>
                     </View>
                 ) : (
-                    sortedRoommates.map((roommate) => (
-                        <RoommateMatch
-                            key={roommate.id}
-                            {...roommate}
-                            onPress={() => handleRoommateDetails(roommate.id)}
-                            onMessage={() => handleMessage(roommate.id)}
-                            onSendRequest={() => handleSendRequest(roommate.id)}
-                        />
+                    sortedRoommates.map((roommate, idx) => (
+                        <View key={roommate.id || roommate.oxyUserId || (roommate.name + idx)} style={styles.roommateCard}>
+                            <View style={styles.roommateHeader}>
+                                <View style={styles.roommateInfo}>
+                                    <Text style={styles.roommateName}>{roommate.name}</Text>
+                                    <Text style={styles.roommateAge}>{roommate.age} years old</Text>
+                                    <Text style={styles.roommateOccupation}>{roommate.occupation}</Text>
+                                </View>
+                                <View style={styles.matchBadge}>
+                                    <Text style={styles.matchPercentage}>{roommate.matchPercentage}%</Text>
+                                    <Text style={styles.matchLabel}>{t("Match")}</Text>
+                                </View>
+                            </View>
+
+                            <Text style={styles.roommateBio}>{roommate.bio}</Text>
+
+                            <View style={styles.roommateDetails}>
+                                <View style={styles.detailItem}>
+                                    <Ionicons name="location" size={16} color={colors.primaryDark_1} />
+                                    <Text style={styles.detailText}>{roommate.location}</Text>
+                                </View>
+                                <View style={styles.detailItem}>
+                                    <Ionicons name="cash" size={16} color={colors.primaryDark_1} />
+                                    <Text style={styles.detailText}>
+                                        {roommate.budget.min}-{roommate.budget.max} {roommate.budget.currency}/month
+                                    </Text>
+                                </View>
+                            </View>
+
+                            {roommate.lifestylePreferences.length > 0 && (
+                                <View style={styles.preferencesContainer}>
+                                    {roommate.lifestylePreferences.map((pref, index) => (
+                                        <View key={index} style={styles.preferenceChip}>
+                                            <Text style={styles.preferenceText}>{pref}</Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
+
+                            {roommate.interests.length > 0 && (
+                                <View style={styles.interestsContainer}>
+                                    {roommate.interests.slice(0, 3).map((interest, index) => (
+                                        <View key={index} style={styles.interestChip}>
+                                            <Text style={styles.interestText}>{interest}</Text>
+                                        </View>
+                                    ))}
+                                    {roommate.interests.length > 3 && (
+                                        <Text style={styles.moreInterests}>+{roommate.interests.length - 3} more</Text>
+                                    )}
+                                </View>
+                            )}
+
+                            <View style={styles.roommateActions}>
+                                <TouchableOpacity
+                                    style={styles.actionButton}
+                                    onPress={() => handleRoommateDetails(roommate.id)}
+                                >
+                                    <Text style={styles.actionButtonText}>{t("View Profile")}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.actionButton, styles.primaryButton]}
+                                    onPress={() => handleSendRequest(roommate.id)}
+                                >
+                                    <Text style={[styles.actionButtonText, styles.primaryButtonText]}>
+                                        {t("Send Request")}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
                     ))
                 )}
             </ScrollView>
@@ -590,31 +716,123 @@ const styles = StyleSheet.create({
     interestChipTextSelected: {
         color: 'white',
     },
-    scrollView: {
+    roommatesList: {
         flex: 1,
     },
-    scrollContent: {
-        paddingHorizontal: 16,
-        paddingBottom: 100,
-    },
-    emptyContainer: {
+    emptyState: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         padding: 40,
         marginTop: 80,
     },
-    emptyText: {
+    emptyStateTitle: {
         fontSize: 18,
         fontWeight: '600',
         color: colors.primaryDark,
         marginTop: 16,
         marginBottom: 8,
     },
-    emptySubtext: {
+    emptyStateText: {
         fontSize: 14,
         color: colors.primaryDark_1,
         textAlign: 'center',
         marginBottom: 24,
+    },
+    roommateCard: {
+        backgroundColor: 'white',
+        borderRadius: 8,
+        margin: 16,
+        padding: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    roommateHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    roommateInfo: {
+        flex: 1,
+    },
+    roommateName: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: colors.primaryDark,
+    },
+    roommateAge: {
+        fontSize: 14,
+        color: colors.primaryDark_1,
+    },
+    roommateOccupation: {
+        fontSize: 14,
+        color: colors.primaryDark_1,
+    },
+    matchBadge: {
+        backgroundColor: colors.primaryColor,
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        borderRadius: 16,
+        marginLeft: 16,
+    },
+    matchPercentage: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: 'white',
+    },
+    matchLabel: {
+        fontSize: 12,
+        color: 'rgba(255, 255, 255, 0.8)',
+    },
+    roommateBio: {
+        fontSize: 14,
+        color: colors.primaryDark_1,
+    },
+    roommateDetails: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    detailItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    detailText: {
+        fontSize: 14,
+        color: colors.primaryDark_1,
+    },
+    preferencesContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginBottom: 16,
+    },
+    preferenceChip: {
+        backgroundColor: 'rgba(0, 0, 0, 0.05)',
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        borderRadius: 16,
+        marginRight: 8,
+        marginBottom: 8,
+    },
+    preferenceText: {
+        fontSize: 12,
+    },
+    applyFiltersButton: {
+        backgroundColor: colors.primaryColor,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 16,
+        alignItems: 'center',
+        marginTop: 16,
+    },
+    applyFiltersButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: 'white',
     },
 }); 

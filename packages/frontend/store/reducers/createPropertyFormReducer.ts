@@ -4,7 +4,8 @@ import { CreatePropertyData } from '@/services/propertyService';
 interface CreatePropertyFormState {
   formData: CreatePropertyData & {
     priceUnit: 'day' | 'night' | 'week' | 'month' | 'year';
-    housingType?: 'private' | 'public' | 'shared' | 'open' | 'partitioned';
+    housingType?: 'private' | 'public';
+    layoutType?: 'open' | 'shared' | 'partitioned' | 'traditional' | 'studio' | 'other';
     // Advanced property features
     floor?: number;
     yearBuilt?: number;

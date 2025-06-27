@@ -11,13 +11,13 @@ import { PropertyMap } from '@/components/PropertyMap';
 import { Header } from '@/components/Header';
 import { CreatePropertyData } from '@/services/propertyService';
 import { useDispatch, useSelector } from 'react-redux';
-import { createProperty, clearError } from '@/store/reducers/propertyReducer';
+import { createProperty, clearError, resetLoading } from '@/store/reducers/propertyReducer';
 import type { RootState, AppDispatch } from '@/store/store';
 import { useOxy } from '@oxyhq/services';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { calculateEthicalRent, validateEthicalPricing, getPricingGuidance } from '@/utils/ethicalPricing';
 import { Ionicons } from '@expo/vector-icons';
-import { POPULAR_AMENITIES, getAmenityById } from '@/constants/amenities';
+import { POPULAR_AMENITIES, getAmenityById, getAmenitiesByPropertyType } from '@/constants/amenities';
 import { useTranslation } from 'react-i18next';
 import { useCreateProperty } from '@/hooks/usePropertyQueries';
 import { useLocationSearch, useReverseGeocode } from '@/hooks/useLocationRedux';
@@ -26,6 +26,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { toast } from 'sonner';
 import { CurrencyFormatter } from '@/components/CurrencyFormatter';
 import { setFormData, setVisibility } from '@/store/reducers/createPropertyFormReducer';
+import { propertyService, type EthicalPricingResponse } from '@/services/propertyService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const IconComponent = Ionicons as any;
 const { width: screenWidth } = Dimensions.get('window');
@@ -45,7 +47,8 @@ export default function CreatePropertyScreen() {
 
   const [formData, setLocalFormData] = useState<CreatePropertyData & {
     priceUnit: 'day' | 'night' | 'week' | 'month' | 'year';
-    housingType?: 'private' | 'public' | 'shared' | 'open' | 'partitioned';
+    housingType?: 'private' | 'public';
+    layoutType?: 'open' | 'shared' | 'partitioned' | 'traditional' | 'studio' | 'other';
     // Advanced property features
     floor?: number;
     yearBuilt?: number;
@@ -108,6 +111,18 @@ export default function CreatePropertyScreen() {
         affordableRent?: number;
         marketRate?: number;
         reducedDeposit?: number;
+        communityRent?: number;
+        slidingScaleBase?: number;
+        slidingScaleMax?: number;
+        marketAdjustedRent?: number;
+        incomeBasedRent?: number;
+        calculations?: {
+          monthlyMedianIncome: number;
+          rentToIncomeRatio: number;
+          standardRentPercentage: number;
+          affordableRentPercentage: number;
+          communityRentPercentage: number;
+        };
       };
     };
   }>({
@@ -137,6 +152,7 @@ export default function CreatePropertyScreen() {
     priceUnit: 'month',
     amenities: [],
     housingType: 'private',
+    layoutType: undefined,
     floor: undefined,
     hasElevator: false,
     parkingSpaces: 1,
@@ -207,6 +223,10 @@ export default function CreatePropertyScreen() {
 
   // Image management
   const [imageUploading, setImageUploading] = useState(false);
+
+  // Draft saving state
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [draftSavedMessage, setDraftSavedMessage] = useState(false);
 
   // Location intelligence
   const [locationScores, setLocationScores] = useState({
@@ -371,7 +391,18 @@ export default function CreatePropertyScreen() {
   // Clear loading state on mount to ensure clean state
   useEffect(() => {
     dispatch(clearError());
+    dispatch(resetLoading());
+
+    // Cleanup when component unmounts
+    return () => {
+      dispatch(resetLoading());
+    };
   }, [dispatch]);
+
+  // Load draft on mount if available
+  useEffect(() => {
+    loadDraft();
+  }, []);
 
   // Better address parsing function for OpenStreetMap Nominatim format
   const parseAddress = (fullAddress: string) => {
@@ -752,6 +783,9 @@ export default function CreatePropertyScreen() {
   }, [reverseResult, selectedLocation]);
 
   const handleSubmit = async () => {
+    // Reset loading state to ensure clean start
+    dispatch(resetLoading());
+
     // Check if user is authenticated
     if (!oxyServices || !activeSessionId) {
       toast.error('Authentication Required', {
@@ -788,7 +822,13 @@ export default function CreatePropertyScreen() {
         } : undefined,
       };
 
-      const result = await create(cleanedPropertyData);
+      const propertyToSubmit = {
+        ...cleanedPropertyData,
+        housingType: 'private', // Always private for user-created
+        layoutType: formData.layoutType,
+      };
+
+      const result = await create(propertyToSubmit);
 
       toast.success('Property Created Successfully', {
         description: 'Your property has been listed successfully!'
@@ -797,6 +837,9 @@ export default function CreatePropertyScreen() {
       router.push(`/properties/${result._id}`);
     } catch (error: any) {
       console.error('Property creation error:', error, JSON.stringify(error));
+
+      // Reset loading state on error
+      dispatch(resetLoading());
 
       let errorMessage = 'Failed to create property. Please try again.';
 
@@ -823,7 +866,8 @@ export default function CreatePropertyScreen() {
 
   const updateField = (field: keyof (CreatePropertyData & {
     priceUnit: 'day' | 'night' | 'week' | 'month' | 'year';
-    housingType?: 'private' | 'public' | 'shared' | 'open' | 'partitioned';
+    housingType?: 'private' | 'public';
+    layoutType?: 'open' | 'shared' | 'partitioned' | 'traditional' | 'studio' | 'other';
     // Advanced property features
     floor?: number;
     yearBuilt?: number;
@@ -886,13 +930,30 @@ export default function CreatePropertyScreen() {
         affordableRent?: number;
         marketRate?: number;
         reducedDeposit?: number;
+        communityRent?: number;
+        slidingScaleBase?: number;
+        slidingScaleMax?: number;
+        marketAdjustedRent?: number;
+        incomeBasedRent?: number;
+        calculations?: {
+          monthlyMedianIncome: number;
+          rentToIncomeRatio: number;
+          standardRentPercentage: number;
+          affordableRentPercentage: number;
+          communityRentPercentage: number;
+        };
       };
     };
   }), value: any) => {
-    setLocalFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    // If property type is changing, call resetFieldsForType to handle amenities filtering
+    if (field === 'type' && value !== formData.type) {
+      resetFieldsForType(value);
+    } else {
+      setLocalFormData(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
   };
 
   const updateAddressField = (field: keyof CreatePropertyData['address'], value: string) => {
@@ -972,29 +1033,93 @@ export default function CreatePropertyScreen() {
   const saveDraft = async () => {
     try {
       const draftData = {
-        ...formData,
-        lastSaved: new Date(),
+        id: `draft_${Date.now()}`,
+        title: formData.address.street ? `${formData.address.street}, ${formData.address.city}` : 'Untitled Property',
+        address: formData.address,
+        type: formData.type,
+        rent: formData.rent,
+        lastSaved: new Date(), // Ensure it's always a Date object
         isDraft: true,
+        formData: {
+          ...formData,
+          lastSaved: new Date(), // Ensure it's always a Date object in formData too
+        },
       };
 
-      // In a real app, you'd save to backend or local storage
       console.log('Auto-saving draft:', draftData);
+
+      // Get existing drafts
+      const existingDraftsData = await AsyncStorage.getItem('property_drafts');
+      const existingDrafts = existingDraftsData ? JSON.parse(existingDraftsData) : [];
+
+      // Check if this is an update to an existing draft (same address and type)
+      const existingDraftIndex = existingDrafts.findIndex((draft: any) =>
+        draft.address.street === formData.address.street &&
+        draft.address.city === formData.address.city &&
+        draft.type === formData.type
+      );
+
+      if (existingDraftIndex !== -1) {
+        // Update existing draft
+        existingDrafts[existingDraftIndex] = draftData;
+      } else {
+        // Add new draft
+        existingDrafts.push(draftData);
+      }
+
+      // Save updated drafts
+      await AsyncStorage.setItem('property_drafts', JSON.stringify(existingDrafts));
 
       setLocalFormData(prev => ({
         ...prev,
         lastSaved: new Date(),
       }));
+
+      console.log('Draft saved successfully');
     } catch (error) {
       console.error('Error saving draft:', error);
+    }
+  };
+
+  // Manual save draft function
+  const handleSaveDraft = async () => {
+    try {
+      setSavingDraft(true);
+      await saveDraft();
+      toast.success('Draft saved successfully');
+
+      // Show brief success message
+      setDraftSavedMessage(true);
+      setTimeout(() => {
+        setDraftSavedMessage(false);
+      }, 2000);
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      toast.error('Failed to save draft');
+    } finally {
+      setSavingDraft(false);
     }
   };
 
   // Load draft from local storage
   const loadDraft = async () => {
     try {
-      // In a real app, you'd load from backend or local storage
       console.log('Loading draft...');
-      // For now, we'll just show a placeholder
+      const currentDraftData = await AsyncStorage.getItem('current_draft');
+      if (currentDraftData) {
+        const draftData = JSON.parse(currentDraftData);
+
+        // Convert lastSaved string back to Date object
+        if (draftData.lastSaved && typeof draftData.lastSaved === 'string') {
+          draftData.lastSaved = new Date(draftData.lastSaved);
+        }
+
+        setLocalFormData(draftData);
+        console.log('Draft loaded successfully');
+
+        // Clear the current draft from storage after loading
+        await AsyncStorage.removeItem('current_draft');
+      }
     } catch (error) {
       console.error('Error loading draft:', error);
     }
@@ -1009,12 +1134,13 @@ export default function CreatePropertyScreen() {
         ...prev,
         isDraft: false,
       }));
+      console.log('Draft cleared successfully');
     } catch (error) {
       console.error('Error clearing draft:', error);
     }
   };
 
-  const calculateEthicalPricing = () => {
+  const calculateEthicalPricing = async () => {
     const { localMedianIncome, areaAverageRent } = formData.rent;
 
     if (!localMedianIncome || !areaAverageRent) {
@@ -1024,21 +1150,66 @@ export default function CreatePropertyScreen() {
       return;
     }
 
-    const suggestions = {
-      standardRent: Math.round(localMedianIncome * 0.3 / 12), // 30% of monthly median income
-      affordableRent: Math.round(localMedianIncome * 0.25 / 12), // 25% of monthly median income
-      marketRate: areaAverageRent,
-      reducedDeposit: Math.round(localMedianIncome * 0.3 / 12), // 1 month of standard rent
-    };
+    if (localMedianIncome <= 0 || areaAverageRent <= 0) {
+      toast.error('Invalid Data', {
+        description: 'Please enter valid positive numbers for income and rent data.'
+      });
+      return;
+    }
 
-    updateField('rent', {
-      ...formData.rent,
-      ethicalPricingSuggestions: suggestions
-    });
+    try {
+      // Call the backend API for ethical pricing calculation
+      const response: EthicalPricingResponse = await propertyService.calculateEthicalPricing({
+        localMedianIncome,
+        areaAverageRent,
+        propertyType: formData.type,
+        bedrooms: formData.bedrooms,
+        bathrooms: formData.bathrooms,
+        squareFootage: formData.squareFootage,
+      });
 
-    toast.success('Ethical Pricing Calculated', {
-      description: `Based on your local data:\n\n• Standard Rent: $${suggestions.standardRent.toLocaleString()}/month\n• Affordable Rent: $${suggestions.affordableRent.toLocaleString()}/month\n• Market Rate: $${suggestions.marketRate.toLocaleString()}/month\n• Reduced Deposit: $${suggestions.reducedDeposit.toLocaleString()}`
-    });
+      if (response.success) {
+        const { suggestions, marketContext, warnings, calculations } = response.data;
+
+        // Update form with suggestions
+        updateField('rent', {
+          ...formData.rent,
+          ethicalPricingSuggestions: {
+            ...suggestions,
+            calculations
+          }
+        });
+
+        // Show warnings if any
+        if (warnings.length > 0) {
+          warnings.forEach(warning => {
+            toast.warning('Market Rate Warning', {
+              description: warning
+            });
+          });
+        }
+
+        // Show success message with market context
+        toast.success('Ethical Pricing Calculated', {
+          description: `Based on local data ($${localMedianIncome.toLocaleString()}/year median income, ${marketContext}):\n\n` +
+            `• Standard Rent: $${suggestions.standardRent.toLocaleString()}/month\n` +
+            `• Affordable Rent: $${suggestions.affordableRent.toLocaleString()}/month\n` +
+            `• Market-Adjusted: $${suggestions.marketAdjustedRent.toLocaleString()}/month\n` +
+            `• Income-Based: $${suggestions.incomeBasedRent.toLocaleString()}/month\n` +
+            `• Market Rate: $${suggestions.marketRate.toLocaleString()}/month\n` +
+            `• Reduced Deposit: $${suggestions.reducedDeposit.toLocaleString()}`
+        });
+      } else {
+        toast.error('Calculation Failed', {
+          description: 'Failed to calculate ethical pricing. Please try again.'
+        });
+      }
+    } catch (error) {
+      console.error('Error calculating ethical pricing:', error);
+      toast.error('Calculation Error', {
+        description: 'Failed to calculate ethical pricing. Please check your data and try again.'
+      });
+    }
   };
 
   // Error handling and validation functions
@@ -1093,53 +1264,93 @@ export default function CreatePropertyScreen() {
     clearAllErrors();
     const newErrors: { [key: string]: string } = {};
 
-    // Address validation
+    // Basic required fields for all types
     if (!formData.address.street.trim()) {
       newErrors['address.street'] = 'Street address is required';
     }
-
     if (!formData.address.city.trim()) {
       newErrors['address.city'] = 'City is required';
     }
-
     if (!formData.address.state.trim()) {
       newErrors['address.state'] = 'State is required';
     }
-
     if (!formData.address.zipCode.trim()) {
       newErrors['address.zipCode'] = 'ZIP code is required';
     }
 
-    // Property details validation
-    if (formData.rent.amount <= 0) {
-      newErrors['rent.amount'] = 'Rent amount must be greater than 0';
+    // Accommodation type-specific validation
+    switch (formData.type) {
+      case 'apartment':
+      case 'house':
+      case 'room':
+      case 'studio':
+        // Standard rental validation
+        if (formData.rent.amount <= 0) {
+          newErrors['rent.amount'] = 'Rent amount must be greater than 0';
+        }
+        if ((formData.squareFootage || 0) <= 0) {
+          newErrors['squareFootage'] = 'Square footage is required';
+        }
+        break;
+
+      case 'couchsurfing':
+        // Couchsurfing can be free
+        if (formData.rent.amount < 0) {
+          newErrors['rent.amount'] = 'Contribution cannot be negative';
+        }
+        if (!formData.accommodationDetails?.maxStay || formData.accommodationDetails.maxStay <= 0) {
+          newErrors['accommodationDetails.maxStay'] = 'Maximum stay is required';
+        }
+        break;
+
+      case 'hostel':
+      case 'guesthouse':
+      case 'campsite':
+        // Daily pricing validation
+        if (formData.rent.amount < 0) {
+          newErrors['rent.amount'] = 'Price cannot be negative';
+        }
+        if (formData.rent.amount > 0 && formData.rent.amount < 10) {
+          newErrors['rent.amount'] = 'Price seems too low for this type of accommodation';
+        }
+        break;
+
+      case 'roommates':
+      case 'coliving':
+        // Shared living validation
+        if (formData.rent.amount <= 0) {
+          newErrors['rent.amount'] = 'Rent amount must be greater than 0';
+        }
+        if ((formData.squareFootage || 0) <= 0) {
+          newErrors['squareFootage'] = 'Square footage is required';
+        }
+        break;
+
+      case 'boat':
+      case 'treehouse':
+      case 'yurt':
+      case 'other':
+        // Unique accommodation validation
+        if (formData.rent.amount <= 0) {
+          newErrors['rent.amount'] = 'Rent amount must be greater than 0';
+        }
+        if ((formData.squareFootage || 0) <= 0) {
+          newErrors['squareFootage'] = 'Square footage is required';
+        }
+        break;
     }
 
-    if (formData.bedrooms !== undefined && formData.bedrooms < 0) {
-      newErrors['bedrooms'] = 'Bedrooms cannot be negative';
-    }
-
-    if (formData.bathrooms !== undefined && formData.bathrooms < 0) {
-      newErrors['bathrooms'] = 'Bathrooms cannot be negative';
-    }
-
-    if (formData.squareFootage !== undefined && formData.squareFootage < 0) {
-      newErrors['squareFootage'] = 'Square footage cannot be negative';
-    }
-
-    if (formData.rent.deposit !== undefined && formData.rent.deposit < 0) {
-      newErrors['rent.deposit'] = 'Security deposit cannot be negative';
-    }
-
-    // Ethical pricing validation
-    if (pricingValidation && !pricingValidation.isWithinEthicalRange) {
-      newErrors['rent.amount'] = `Rent price exceeds ethical maximum ($${pricingValidation.maxRent})`;
-      if (pricingValidation.warnings.length > 0) {
-        pricingValidation.warnings.forEach((warning: string) => {
-          if (warning.includes('speculative')) {
-            newErrors['rent.amount'] = 'Pricing appears to be speculative. Please consider a fair market rate.';
-          }
-        });
+    // Ethical pricing validation for all accommodation types that charge rent
+    if (formData.rent.amount > 0 && formData.type !== 'couchsurfing') {
+      if (pricingValidation && !pricingValidation.isWithinEthicalRange) {
+        newErrors['rent.amount'] = `Rent price exceeds ethical maximum ($${pricingValidation.maxRent})`;
+        if (pricingValidation.warnings.length > 0) {
+          pricingValidation.warnings.forEach((warning: string) => {
+            if (warning.includes('speculative')) {
+              newErrors['rent.amount'] = 'Pricing appears to be speculative. Please consider a fair market rate.';
+            }
+          });
+        }
       }
     }
 
@@ -1148,8 +1359,10 @@ export default function CreatePropertyScreen() {
       newErrors['location'] = 'Please select a location on the map or use current location';
     }
 
-    setErrors(newErrors);
-    setHasValidationErrors(Object.keys(newErrors).length > 0);
+    // Set errors
+    Object.keys(newErrors).forEach(field => {
+      setFieldError(field, newErrors[field]);
+    });
 
     return Object.keys(newErrors).length === 0;
   };
@@ -1160,11 +1373,18 @@ export default function CreatePropertyScreen() {
       hasFormData: !!formData,
       formDataKeys: formData ? Object.keys(formData) : [],
       address: formData?.address,
-      type: formData?.type
+      type: formData?.type,
+      rent: formData?.rent,
+      formDataString: JSON.stringify(formData, null, 2)
     });
 
-    dispatch(setFormData(formData));
-    dispatch(setVisibility(true));
+    if (formData) {
+      dispatch(setFormData(formData));
+      dispatch(setVisibility(true));
+      console.log('CreatePropertyScreen: Dispatched form data and set visibility to true');
+    } else {
+      console.log('CreatePropertyScreen: No form data to dispatch');
+    }
 
     // Cleanup when component unmounts
     return () => {
@@ -1172,6 +1392,331 @@ export default function CreatePropertyScreen() {
       dispatch(setVisibility(false));
     };
   }, [formData, dispatch]);
+
+  // Reset accommodation-specific fields when property type changes
+  const resetFieldsForType = (newType: string) => {
+    setLocalFormData(prev => {
+      const updates: any = { type: newType };
+
+      // Ensure rent object exists
+      const currentRent = prev.rent || {
+        amount: 0,
+        currency: 'USD',
+        paymentFrequency: 'monthly',
+        deposit: 0,
+        utilities: 'excluded',
+        hasIncomeBasedPricing: false,
+        hasSlidingScale: false,
+        hasUtilitiesIncluded: false,
+        hasReducedDeposit: false,
+      };
+
+      switch (newType) {
+        case 'apartment':
+        case 'house':
+          // Reset to standard apartment/house defaults
+          updates.bedrooms = 1;
+          updates.bathrooms = 1;
+          updates.layoutType = 'traditional';
+          updates.rent = {
+            ...currentRent,
+            amount: currentRent.amount || 0,
+            paymentFrequency: 'monthly',
+          };
+          updates.priceUnit = 'month';
+          break;
+
+        case 'room':
+          // Reset to room defaults
+          updates.bedrooms = 1;
+          updates.bathrooms = 0.5; // Shared bathroom
+          updates.layoutType = 'shared';
+          updates.rent = {
+            ...currentRent,
+            amount: currentRent.amount || 0,
+            paymentFrequency: 'monthly',
+          };
+          updates.priceUnit = 'month';
+          break;
+
+        case 'studio':
+          // Reset to studio defaults
+          updates.bedrooms = 0;
+          updates.bathrooms = 1;
+          updates.layoutType = 'open';
+          updates.rent = {
+            ...currentRent,
+            amount: currentRent.amount || 0,
+            paymentFrequency: 'monthly',
+          };
+          updates.priceUnit = 'month';
+          break;
+
+        case 'couchsurfing':
+          // Reset to couchsurfing defaults
+          updates.bedrooms = 0;
+          updates.bathrooms = 0;
+          updates.layoutType = 'shared';
+          updates.rent = {
+            ...currentRent,
+            amount: 0, // Free
+            paymentFrequency: 'daily',
+          };
+          updates.priceUnit = 'night';
+          updates.accommodationDetails = {
+            ...prev.accommodationDetails,
+            sleepingArrangement: 'couch',
+            culturalExchange: true,
+            maxStay: 7,
+          };
+          break;
+
+        case 'roommates':
+          // Reset to roommates defaults
+          updates.bedrooms = 1;
+          updates.bathrooms = 1;
+          updates.layoutType = 'shared';
+          updates.rent = {
+            ...currentRent,
+            amount: currentRent.amount || 0,
+            paymentFrequency: 'monthly',
+          };
+          updates.priceUnit = 'month';
+          updates.accommodationDetails = {
+            ...prev.accommodationDetails,
+            roommatePreferences: [],
+          };
+          break;
+
+        case 'coliving':
+          // Reset to coliving defaults
+          updates.bedrooms = 1;
+          updates.bathrooms = 1;
+          updates.layoutType = 'shared';
+          updates.rent = {
+            ...currentRent,
+            amount: currentRent.amount || 0,
+            paymentFrequency: 'monthly',
+          };
+          updates.priceUnit = 'month';
+          updates.accommodationDetails = {
+            ...prev.accommodationDetails,
+            colivingFeatures: [],
+          };
+          break;
+
+        case 'hostel':
+          // Reset to hostel defaults
+          updates.bedrooms = 0;
+          updates.bathrooms = 0;
+          updates.layoutType = 'shared';
+          updates.rent = {
+            ...currentRent,
+            amount: currentRent.amount || 0,
+            paymentFrequency: 'daily',
+          };
+          updates.priceUnit = 'night';
+          updates.accommodationDetails = {
+            ...prev.accommodationDetails,
+            hostelRoomType: 'dormitory',
+            maxStay: 30,
+            minAge: 18,
+          };
+          break;
+
+        case 'guesthouse':
+          // Reset to guesthouse defaults
+          updates.bedrooms = 1;
+          updates.bathrooms = 1;
+          updates.layoutType = 'traditional';
+          updates.rent = {
+            ...currentRent,
+            amount: currentRent.amount || 0,
+            paymentFrequency: 'daily',
+          };
+          updates.priceUnit = 'night';
+          updates.accommodationDetails = {
+            ...prev.accommodationDetails,
+            culturalExchange: false,
+            mealsIncluded: false,
+          };
+          break;
+
+        case 'campsite':
+          // Reset to campsite defaults
+          updates.bedrooms = 0;
+          updates.bathrooms = 0;
+          updates.layoutType = 'other';
+          updates.rent = {
+            ...currentRent,
+            amount: currentRent.amount || 0,
+            paymentFrequency: 'daily',
+          };
+          updates.priceUnit = 'night';
+          updates.accommodationDetails = {
+            ...prev.accommodationDetails,
+            campsiteType: 'tent_site',
+            sleepingArrangement: 'tent',
+          };
+          break;
+
+        case 'boat':
+        case 'treehouse':
+        case 'yurt':
+          // Reset to unique accommodation defaults
+          updates.bedrooms = 1;
+          updates.bathrooms = 1;
+          updates.layoutType = 'traditional';
+          updates.rent = {
+            ...currentRent,
+            amount: currentRent.amount || 0,
+            paymentFrequency: 'monthly',
+          };
+          updates.priceUnit = 'month';
+          break;
+
+        case 'other':
+          // Reset to generic defaults
+          updates.bedrooms = 1;
+          updates.bathrooms = 1;
+          updates.layoutType = 'other';
+          updates.rent = {
+            ...currentRent,
+            amount: currentRent.amount || 0,
+            paymentFrequency: 'monthly',
+          };
+          updates.priceUnit = 'month';
+          break;
+      }
+
+      // Filter amenities to only include those available for the new property type
+      const availableAmenities = getAmenitiesByPropertyType(newType);
+      const currentAmenities = prev.amenities || [];
+      const filteredAmenities = currentAmenities.filter(amenity =>
+        availableAmenities.includes(amenity)
+      );
+
+      // Only update amenities if there are changes
+      if (filteredAmenities.length !== currentAmenities.length) {
+        updates.amenities = filteredAmenities;
+      }
+
+      // Reset accommodation-specific features based on property type
+      const resetAccommodationDetails = () => {
+        const currentDetails = prev.accommodationDetails || {};
+
+        // Reset all accommodation-specific features
+        const resetDetails: any = {
+          sleepingArrangement: undefined,
+          roommatePreferences: [],
+          colivingFeatures: [],
+          hostelRoomType: undefined,
+          campsiteType: undefined,
+          maxStay: undefined,
+          minAge: undefined,
+          maxAge: undefined,
+          languages: [],
+          culturalExchange: false,
+          mealsIncluded: false,
+          wifiPassword: '',
+          houseRules: [],
+        };
+
+        // Set property-type specific defaults
+        switch (newType) {
+          case 'couchsurfing':
+            resetDetails.sleepingArrangement = 'couch';
+            resetDetails.culturalExchange = true;
+            resetDetails.maxStay = 7;
+            break;
+          case 'roommates':
+            resetDetails.roommatePreferences = [];
+            resetDetails.minAge = 18;
+            break;
+          case 'coliving':
+            resetDetails.colivingFeatures = [];
+            break;
+          case 'hostel':
+            resetDetails.hostelRoomType = 'dormitory';
+            resetDetails.maxStay = 30;
+            resetDetails.minAge = 18;
+            break;
+          case 'guesthouse':
+            resetDetails.culturalExchange = false;
+            resetDetails.mealsIncluded = false;
+            break;
+          case 'campsite':
+            resetDetails.campsiteType = 'tent_site';
+            resetDetails.sleepingArrangement = 'tent';
+            break;
+        }
+
+        // Only update if there are actual changes
+        const hasChanges = JSON.stringify(resetDetails) !== JSON.stringify(currentDetails);
+        if (hasChanges) {
+          updates.accommodationDetails = resetDetails;
+        }
+      };
+
+      // Reset accommodation details
+      resetAccommodationDetails();
+
+      // Reset advanced features that may not be relevant for certain property types
+      const resetAdvancedFeatures = () => {
+        switch (newType) {
+          case 'couchsurfing':
+            // Couchsurfing typically doesn't have traditional property features
+            updates.floor = undefined;
+            updates.yearBuilt = undefined;
+            updates.furnishedStatus = 'unfurnished';
+            updates.petPolicy = 'not_allowed';
+            updates.petFee = 0;
+            updates.parkingType = 'none';
+            updates.parkingSpaces = 0;
+            break;
+          case 'hostel':
+            // Hostels may not have individual pet policies or parking
+            updates.petPolicy = 'not_allowed';
+            updates.petFee = 0;
+            updates.parkingType = 'none';
+            updates.parkingSpaces = 0;
+            break;
+          case 'campsite':
+            // Campsites don't have traditional building features
+            updates.floor = undefined;
+            updates.yearBuilt = undefined;
+            updates.furnishedStatus = 'unfurnished';
+            updates.petPolicy = 'case_by_case';
+            updates.petFee = 0;
+            updates.parkingType = 'assigned';
+            updates.parkingSpaces = 1;
+            break;
+          case 'room':
+            // Rooms typically don't have individual parking
+            updates.parkingType = 'none';
+            updates.parkingSpaces = 0;
+            break;
+          case 'studio':
+            // Studios may not have parking
+            updates.parkingType = 'none';
+            updates.parkingSpaces = 0;
+            break;
+        }
+      };
+
+      // Reset advanced features
+      resetAdvancedFeatures();
+
+      return { ...prev, ...updates };
+    });
+  };
+
+  useEffect(() => {
+    // Only reset if type actually changed
+    if (formData.type) {
+      resetFieldsForType(formData.type);
+    }
+  }, [formData.type]); // Only trigger when type changes
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -1181,6 +1726,24 @@ export default function CreatePropertyScreen() {
           title: 'Create Property',
           titlePosition: 'center',
           rightComponents: [
+            // Draft indicator
+            formData.isDraft && (
+              <View key="draft-indicator" style={styles.headerDraftIndicator}>
+                <IconComponent name="save" size={16} color={colors.primaryColor} />
+                <ThemedText style={styles.headerDraftText}>
+                  Draft saved {formData.lastSaved instanceof Date ? formData.lastSaved.toLocaleTimeString() : 'Unknown'}
+                </ThemedText>
+              </View>
+            ),
+            // Drafts button
+            <TouchableOpacity
+              key="drafts"
+              style={styles.headerButton}
+              onPress={() => router.push('/properties/drafts')}
+            >
+              <IconComponent name="folder-open" size={24} color={colors.primaryDark} />
+            </TouchableOpacity>,
+            // Close button
             <TouchableOpacity
               key="close"
               style={styles.headerButton}
@@ -1515,7 +2078,7 @@ export default function CreatePropertyScreen() {
               </View>
             </View>
 
-            {/* Conditional fields based on property type */}
+            {/* Bedrooms and Bathrooms - only for apartment, house, room, studio */}
             {(formData.type === 'apartment' || formData.type === 'house') && (
               <View style={styles.row}>
                 <View style={styles.halfInput}>
@@ -1546,7 +2109,7 @@ export default function CreatePropertyScreen() {
                 <View style={styles.halfInput}>
                   <ThemedText style={styles.label}>Bathrooms</ThemedText>
                   <View style={styles.pickerContainer}>
-                    {[1, 1.5, 2, 2.5, 3, 3.5, 4].map((num) => (
+                    {[1, 1.5, 2, 2.5, 3].map((num) => (
                       <TouchableOpacity
                         key={num}
                         style={[
@@ -1581,14 +2144,14 @@ export default function CreatePropertyScreen() {
                         key={roomType}
                         style={[
                           styles.pickerOption,
-                          formData.housingType === roomType && styles.pickerOptionSelected
+                          formData.layoutType === roomType && styles.pickerOptionSelected
                         ]}
-                        onPress={() => updateField('housingType', roomType)}
+                        onPress={() => updateField('layoutType', roomType)}
                       >
                         <ThemedText
                           style={[
                             styles.pickerOptionText,
-                            formData.housingType === roomType && styles.pickerOptionTextSelected
+                            formData.layoutType === roomType && styles.pickerOptionTextSelected
                           ]}
                         >
                           {roomType.charAt(0).toUpperCase() + roomType.slice(1)} Room
@@ -1636,14 +2199,14 @@ export default function CreatePropertyScreen() {
                         key={layout}
                         style={[
                           styles.pickerOption,
-                          formData.housingType === layout && styles.pickerOptionSelected
+                          formData.layoutType === layout && styles.pickerOptionSelected
                         ]}
-                        onPress={() => updateField('housingType', layout)}
+                        onPress={() => updateField('layoutType', layout)}
                       >
                         <ThemedText
                           style={[
                             styles.pickerOptionText,
-                            formData.housingType === layout && styles.pickerOptionTextSelected
+                            formData.layoutType === layout && styles.pickerOptionTextSelected
                           ]}
                         >
                           {layout.charAt(0).toUpperCase() + layout.slice(1)} Layout
@@ -1680,21 +2243,23 @@ export default function CreatePropertyScreen() {
               </>
             )}
 
-            {/* Square footage for all property types */}
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>
-                {formData.type === 'room' ? 'Room Size (sq ft)' :
-                  formData.type === 'studio' ? 'Studio Size (sq ft)' :
-                    'Square Footage'}
-              </ThemedText>
-              <TextInput
-                style={styles.textInput}
-                value={formData.squareFootage?.toString() || ''}
-                onChangeText={(text) => updateField('squareFootage', parseInt(text) || 0)}
-                placeholder={`Enter ${formData.type} size`}
-                keyboardType="numeric"
-              />
-            </View>
+            {/* Square footage - hidden for couchsurfing, campsite */}
+            {formData.type !== 'couchsurfing' && formData.type !== 'campsite' && (
+              <View style={styles.inputGroup}>
+                <ThemedText style={styles.label}>
+                  {formData.type === 'room' ? 'Room Size (sq ft)' :
+                    formData.type === 'studio' ? 'Studio Size (sq ft)' :
+                      'Square Footage'}
+                </ThemedText>
+                <TextInput
+                  style={styles.textInput}
+                  value={formData.squareFootage?.toString() || ''}
+                  onChangeText={(text) => updateField('squareFootage', parseInt(text) || 0)}
+                  placeholder={`Enter ${formData.type} size`}
+                  keyboardType="numeric"
+                />
+              </View>
+            )}
 
             <View style={styles.inputGroup}>
               <ThemedText style={styles.label}>Description</ThemedText>
@@ -1864,7 +2429,9 @@ export default function CreatePropertyScreen() {
             <View style={styles.row}>
               <View style={styles.halfInput}>
                 <ThemedText style={styles.label}>
-                  {formData.type === 'couchsurfing' ? 'Contribution (Optional)' : 'Monthly Rent ($)'}
+                  {formData.type === 'couchsurfing' ? 'Contribution (Optional)' :
+                    formData.type === 'hostel' || formData.type === 'guesthouse' || formData.type === 'campsite' ? 'Price per Night ($)' :
+                      'Monthly Rent ($)'}
                 </ThemedText>
                 <TextInput
                   ref={(ref) => { fieldRefs.current['rent.amount'] = ref; }}
@@ -1894,7 +2461,9 @@ export default function CreatePropertyScreen() {
 
               <View style={styles.halfInput}>
                 <ThemedText style={styles.label}>
-                  {formData.type === 'couchsurfing' ? 'Max Stay (Days)' : 'Security Deposit ($)'}
+                  {formData.type === 'couchsurfing' ? 'Max Stay (Days)' :
+                    formData.type === 'hostel' || formData.type === 'guesthouse' || formData.type === 'campsite' ? 'Security Deposit ($)' :
+                      'Security Deposit ($)'}
                 </ThemedText>
                 {formData.type === 'couchsurfing' ? (
                   <TextInput
@@ -1975,25 +2544,186 @@ export default function CreatePropertyScreen() {
                 </View>
               )}
             </View>
-          </View>
 
-          {/* Accommodation-Specific Details Section */}
-          {(formData.type === 'couchsurfing' || formData.type === 'roommates' || formData.type === 'coliving' ||
-            formData.type === 'hostel' || formData.type === 'guesthouse' || formData.type === 'campsite') && (
-              <View style={styles.sectionCard}>
-                <View style={styles.sectionHeader}>
-                  <ThemedText style={styles.sectionTitle}>
-                    {formData.type === 'couchsurfing' ? 'Couchsurfing Details' :
-                      formData.type === 'roommates' ? 'Roommate Preferences' :
-                        formData.type === 'coliving' ? 'Co-Living Features' :
-                          formData.type === 'hostel' ? 'Hostel Details' :
-                            formData.type === 'guesthouse' ? 'Guesthouse Details' :
-                              'Campsite Details'}
-                  </ThemedText>
+            {/* Ethical Pricing Calculator */}
+            <View style={styles.ethicalPricingSection}>
+              <View style={styles.ethicalPricingHeader}>
+                <IconComponent name="heart" size={20} color={colors.primaryColor} />
+                <ThemedText style={styles.ethicalPricingTitle}>Ethical Pricing Calculator</ThemedText>
+              </View>
+
+              <View style={styles.ethicalPricingContent}>
+                <ThemedText style={styles.ethicalPricingDescription}>
+                  Set fair, community-focused pricing based on local economic data. This ensures your property is accessible to the community while maintaining sustainable returns.
+                </ThemedText>
+
+                <View style={styles.row}>
+                  <View style={styles.halfInput}>
+                    <ThemedText style={styles.label}>Local Median Income ($/year)</ThemedText>
+                    <TextInput
+                      style={styles.textInput}
+                      value={(formData.rent.localMedianIncome || 0).toString()}
+                      onChangeText={(text) => {
+                        const value = parseFloat(text) || 0;
+                        updateField('rent', { ...formData.rent, localMedianIncome: value });
+                        if (errors['rent.localMedianIncome']) {
+                          clearFieldError('rent.localMedianIncome');
+                        }
+                      }}
+                      keyboardType="numeric"
+                      placeholder="e.g., 75000"
+                    />
+                  </View>
+
+                  <View style={styles.halfInput}>
+                    <ThemedText style={styles.label}>Area Average Rent ($/month)</ThemedText>
+                    <TextInput
+                      style={styles.textInput}
+                      value={(formData.rent.areaAverageRent || 0).toString()}
+                      onChangeText={(text) => {
+                        const value = parseFloat(text) || 0;
+                        updateField('rent', { ...formData.rent, areaAverageRent: value });
+                        if (errors['rent.areaAverageRent']) {
+                          clearFieldError('rent.areaAverageRent');
+                        }
+                      }}
+                      keyboardType="numeric"
+                      placeholder="e.g., 2000"
+                    />
+                  </View>
                 </View>
 
-                {/* Cultural Exchange */}
-                {(formData.type === 'couchsurfing' || formData.type === 'hostel' || formData.type === 'guesthouse') && (
+                <TouchableOpacity
+                  style={styles.calculateEthicalButton}
+                  onPress={calculateEthicalPricing}
+                >
+                  <IconComponent name="calculator" size={16} color="white" />
+                  <ThemedText style={styles.calculateEthicalButtonText}>
+                    Calculate Ethical Pricing
+                  </ThemedText>
+                </TouchableOpacity>
+
+                {/* Display Ethical Pricing Suggestions */}
+                {formData.rent.ethicalPricingSuggestions && (
+                  <View style={styles.ethicalSuggestionsContainer}>
+                    <ThemedText style={styles.ethicalSuggestionsTitle}>
+                      💚 Ethical Pricing Suggestions
+                    </ThemedText>
+
+                    <View style={styles.ethicalSuggestionsGrid}>
+                      <View style={styles.ethicalSuggestionCard}>
+                        <ThemedText style={styles.ethicalSuggestionLabel}>Standard Rent</ThemedText>
+                        <ThemedText style={styles.ethicalSuggestionValue}>
+                          ${formData.rent.ethicalPricingSuggestions.standardRent?.toLocaleString()}/month
+                        </ThemedText>
+                        <ThemedText style={styles.ethicalSuggestionDesc}>
+                          {formData.rent.ethicalPricingSuggestions.calculations?.standardRentPercentage || '40'}% of monthly median income
+                        </ThemedText>
+                      </View>
+
+                      <View style={styles.ethicalSuggestionCard}>
+                        <ThemedText style={styles.ethicalSuggestionLabel}>Affordable Rent</ThemedText>
+                        <ThemedText style={styles.ethicalSuggestionValue}>
+                          ${formData.rent.ethicalPricingSuggestions.affordableRent?.toLocaleString()}/month
+                        </ThemedText>
+                        <ThemedText style={styles.ethicalSuggestionDesc}>
+                          {formData.rent.ethicalPricingSuggestions.calculations?.affordableRentPercentage || '35'}% of monthly median income
+                        </ThemedText>
+                      </View>
+
+                      <View style={styles.ethicalSuggestionCard}>
+                        <ThemedText style={styles.ethicalSuggestionLabel}>Market-Adjusted</ThemedText>
+                        <ThemedText style={styles.ethicalSuggestionValue}>
+                          ${formData.rent.ethicalPricingSuggestions.marketAdjustedRent?.toLocaleString()}/month
+                        </ThemedText>
+                        <ThemedText style={styles.ethicalSuggestionDesc}>
+                          90% of market rate or 70% of income
+                        </ThemedText>
+                      </View>
+
+                      <View style={styles.ethicalSuggestionCard}>
+                        <ThemedText style={styles.ethicalSuggestionLabel}>Income-Based</ThemedText>
+                        <ThemedText style={styles.ethicalSuggestionValue}>
+                          ${formData.rent.ethicalPricingSuggestions.incomeBasedRent?.toLocaleString()}/month
+                        </ThemedText>
+                        <ThemedText style={styles.ethicalSuggestionDesc}>
+                          70% of monthly median income
+                        </ThemedText>
+                      </View>
+
+                      <View style={styles.ethicalSuggestionCard}>
+                        <ThemedText style={styles.ethicalSuggestionLabel}>Community Rent</ThemedText>
+                        <ThemedText style={styles.ethicalSuggestionValue}>
+                          ${formData.rent.ethicalPricingSuggestions.communityRent?.toLocaleString()}/month
+                        </ThemedText>
+                        <ThemedText style={styles.ethicalSuggestionDesc}>
+                          {formData.rent.ethicalPricingSuggestions.calculations?.communityRentPercentage || '30'}% of monthly median income
+                        </ThemedText>
+                      </View>
+
+                      <View style={styles.ethicalSuggestionCard}>
+                        <ThemedText style={styles.ethicalSuggestionLabel}>Sliding Scale</ThemedText>
+                        <ThemedText style={styles.ethicalSuggestionValue}>
+                          ${formData.rent.ethicalPricingSuggestions.slidingScaleBase?.toLocaleString()} - ${formData.rent.ethicalPricingSuggestions.slidingScaleMax?.toLocaleString()}/month
+                        </ThemedText>
+                        <ThemedText style={styles.ethicalSuggestionDesc}>
+                          {(formData.rent.ethicalPricingSuggestions.calculations?.communityRentPercentage || 30) - 10}-{(formData.rent.ethicalPricingSuggestions.calculations?.standardRentPercentage || 40) + 10}% of monthly median income
+                        </ThemedText>
+                      </View>
+
+                      <View style={styles.ethicalSuggestionCard}>
+                        <ThemedText style={styles.ethicalSuggestionLabel}>Market Rate</ThemedText>
+                        <ThemedText style={styles.ethicalSuggestionValue}>
+                          ${formData.rent.ethicalPricingSuggestions.marketRate?.toLocaleString()}/month
+                        </ThemedText>
+                        <ThemedText style={styles.ethicalSuggestionDesc}>
+                          Area average rent
+                        </ThemedText>
+                      </View>
+
+                      <View style={styles.ethicalSuggestionCard}>
+                        <ThemedText style={styles.ethicalSuggestionLabel}>Reduced Deposit</ThemedText>
+                        <ThemedText style={styles.ethicalSuggestionValue}>
+                          ${formData.rent.ethicalPricingSuggestions.reducedDeposit?.toLocaleString()}
+                        </ThemedText>
+                        <ThemedText style={styles.ethicalSuggestionDesc}>
+                          One month of standard rent
+                        </ThemedText>
+                      </View>
+                    </View>
+
+                    <View style={styles.ethicalPricingBenefits}>
+                      <ThemedText style={styles.ethicalPricingBenefitsTitle}>
+                        Benefits of Ethical Pricing:
+                      </ThemedText>
+                      <View style={styles.ethicalPricingBenefitsList}>
+                        <ThemedText style={styles.ethicalPricingBenefit}>• Ensures housing accessibility for the community</ThemedText>
+                        <ThemedText style={styles.ethicalPricingBenefit}>• Reduces tenant turnover and vacancy periods</ThemedText>
+                        <ThemedText style={styles.ethicalPricingBenefit}>• Builds trust and long-term relationships</ThemedText>
+                        <ThemedText style={styles.ethicalPricingBenefit}>• Supports sustainable community development</ThemedText>
+                      </View>
+                    </View>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Accommodation-Specific Details Section */}
+            {(formData.type === 'couchsurfing' || formData.type === 'roommates' || formData.type === 'coliving' ||
+              formData.type === 'hostel' || formData.type === 'guesthouse' || formData.type === 'campsite') && (
+                <View style={styles.sectionCard}>
+                  <View style={styles.sectionHeader}>
+                    <ThemedText style={styles.sectionTitle}>
+                      {formData.type === 'couchsurfing' ? 'Couchsurfing Details' :
+                        formData.type === 'roommates' ? 'Roommate Preferences' :
+                          formData.type === 'coliving' ? 'Co-Living Features' :
+                            formData.type === 'hostel' ? 'Hostel Details' :
+                              formData.type === 'guesthouse' ? 'Guesthouse Details' :
+                                'Campsite Details'}
+                    </ThemedText>
+                  </View>
+
+                  {/* Cultural Exchange */}
                   <View style={styles.inputGroup}>
                     <ThemedText style={styles.label}>Cultural Exchange</ThemedText>
                     <View style={styles.pickerContainer}>
@@ -2023,550 +2753,578 @@ export default function CreatePropertyScreen() {
                       </TouchableOpacity>
                     </View>
                   </View>
-                )}
 
-                {/* Languages */}
-                {(formData.type === 'couchsurfing' || formData.type === 'hostel' || formData.type === 'guesthouse') && (
-                  <View style={styles.inputGroup}>
-                    <ThemedText style={styles.label}>Languages Spoken</ThemedText>
-                    <View style={styles.pickerContainer}>
-                      {([
-                        'English', 'Spanish', 'French', 'German', 'Italian', 'Portuguese',
-                        'Chinese', 'Japanese', 'Korean', 'Arabic', 'Russian', 'Hindi'
-                      ] as const).map((language) => (
+                  {/* Languages */}
+                  {(formData.type === 'couchsurfing' || formData.type === 'hostel' || formData.type === 'guesthouse') && (
+                    <View style={styles.inputGroup}>
+                      <ThemedText style={styles.label}>Languages Spoken</ThemedText>
+                      <View style={styles.pickerContainer}>
+                        {([
+                          'English', 'Spanish', 'French', 'German', 'Italian', 'Portuguese',
+                          'Chinese', 'Japanese', 'Korean', 'Arabic', 'Russian', 'Hindi'
+                        ] as const).map((language) => (
+                          <TouchableOpacity
+                            key={language}
+                            style={[
+                              styles.pickerOption,
+                              formData.accommodationDetails?.languages?.includes(language) && styles.pickerOptionSelected
+                            ]}
+                            onPress={() => {
+                              const current = formData.accommodationDetails?.languages || [];
+                              const updated = current.includes(language)
+                                ? current.filter(l => l !== language)
+                                : [...current, language];
+                              updateField('accommodationDetails', {
+                                ...formData.accommodationDetails,
+                                languages: updated
+                              });
+                            }}
+                          >
+                            <ThemedText
+                              style={[
+                                styles.pickerOptionText,
+                                formData.accommodationDetails?.languages?.includes(language) && styles.pickerOptionTextSelected
+                              ]}
+                            >
+                              {language}
+                            </ThemedText>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Meals Included */}
+                  {(formData.type === 'couchsurfing' || formData.type === 'hostel' || formData.type === 'guesthouse') && (
+                    <View style={styles.inputGroup}>
+                      <ThemedText style={styles.label}>Meals Included</ThemedText>
+                      <View style={styles.pickerContainer}>
                         <TouchableOpacity
-                          key={language}
                           style={[
                             styles.pickerOption,
-                            formData.accommodationDetails?.languages?.includes(language) && styles.pickerOptionSelected
+                            formData.accommodationDetails?.mealsIncluded && styles.pickerOptionSelected
+                          ]}
+                          onPress={() => updateField('accommodationDetails', {
+                            ...formData.accommodationDetails,
+                            mealsIncluded: !formData.accommodationDetails?.mealsIncluded
+                          })}
+                        >
+                          <IconComponent
+                            name="restaurant-outline"
+                            size={16}
+                            color={formData.accommodationDetails?.mealsIncluded ? colors.primaryLight : colors.COLOR_BLACK}
+                          />
+                          <ThemedText
+                            style={[
+                              styles.pickerOptionText,
+                              formData.accommodationDetails?.mealsIncluded && styles.pickerOptionTextSelected
+                            ]}
+                          >
+                            Meals Included
+                          </ThemedText>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Age restrictions */}
+                  {(formData.type === 'hostel' || formData.type === 'roommates') && (
+                    <View style={styles.row}>
+                      <View style={styles.halfInput}>
+                        <ThemedText style={styles.label}>Minimum Age</ThemedText>
+                        <TextInput
+                          style={styles.textInput}
+                          value={(formData.accommodationDetails?.minAge || 18).toString()}
+                          onChangeText={(text) => updateField('accommodationDetails', {
+                            ...formData.accommodationDetails,
+                            minAge: parseInt(text) || 18
+                          })}
+                          keyboardType="numeric"
+                          placeholder="18"
+                        />
+                      </View>
+
+                      <View style={styles.halfInput}>
+                        <ThemedText style={styles.label}>Maximum Age</ThemedText>
+                        <TextInput
+                          style={styles.textInput}
+                          value={(formData.accommodationDetails?.maxAge || 0).toString()}
+                          onChangeText={(text) => updateField('accommodationDetails', {
+                            ...formData.accommodationDetails,
+                            maxAge: parseInt(text) || 0
+                          })}
+                          keyboardType="numeric"
+                          placeholder="No limit"
+                        />
+                      </View>
+                    </View>
+                  )}
+
+                  {/* WiFi Password */}
+                  {(formData.type === 'couchsurfing' || formData.type === 'hostel' || formData.type === 'guesthouse') && (
+                    <View style={styles.inputGroup}>
+                      <ThemedText style={styles.label}>WiFi Password (Optional)</ThemedText>
+                      <TextInput
+                        style={styles.textInput}
+                        value={formData.accommodationDetails?.wifiPassword || ''}
+                        onChangeText={(text) => updateField('accommodationDetails', {
+                          ...formData.accommodationDetails,
+                          wifiPassword: text
+                        })}
+                        placeholder="Enter WiFi password"
+                        secureTextEntry={true}
+                      />
+                      <ThemedText style={styles.subLabel}>
+                        This will be shared with guests after booking
+                      </ThemedText>
+                    </View>
+                  )}
+
+                  {/* House Rules */}
+                  <View style={styles.inputGroup}>
+                    <ThemedText style={styles.label}>House Rules</ThemedText>
+                    <View style={styles.pickerContainer}>
+                      {([
+                        'No smoking', 'No parties', 'No pets', 'Quiet hours', 'No shoes inside',
+                        'Kitchen access', 'Laundry access', 'Cleaning required', 'Respect privacy',
+                        'Cultural sensitivity', 'Sustainable practices', 'Community participation'
+                      ] as const).map((rule) => (
+                        <TouchableOpacity
+                          key={rule}
+                          style={[
+                            styles.pickerOption,
+                            formData.accommodationDetails?.houseRules?.includes(rule) && styles.pickerOptionSelected
                           ]}
                           onPress={() => {
-                            const current = formData.accommodationDetails?.languages || [];
-                            const updated = current.includes(language)
-                              ? current.filter(l => l !== language)
-                              : [...current, language];
+                            const current = formData.accommodationDetails?.houseRules || [];
+                            const updated = current.includes(rule)
+                              ? current.filter(r => r !== rule)
+                              : [...current, rule];
                             updateField('accommodationDetails', {
                               ...formData.accommodationDetails,
-                              languages: updated
+                              houseRules: updated
                             });
                           }}
                         >
                           <ThemedText
                             style={[
                               styles.pickerOptionText,
-                              formData.accommodationDetails?.languages?.includes(language) && styles.pickerOptionTextSelected
+                              formData.accommodationDetails?.houseRules?.includes(rule) && styles.pickerOptionTextSelected
                             ]}
                           >
-                            {language}
+                            {rule}
+                          </ThemedText>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                </View>
+              )}
+
+            {/* Amenities Section */}
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeader}>
+                <ThemedText style={styles.sectionTitle}>Amenities & Features</ThemedText>
+                <ThemedText style={styles.sectionSubtitle}>
+                  Select the amenities and features available at your property
+                </ThemedText>
+              </View>
+              <AmenitiesSelector
+                selectedAmenities={formData.amenities || []}
+                onAmenityToggle={toggleAmenity}
+                propertyType={formData.type}
+              />
+            </View>
+
+            {/* Property Photos Section */}
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeader}>
+                <ThemedText style={styles.sectionTitle}>Property Photos</ThemedText>
+                <ThemedText style={styles.sectionSubtitle}>
+                  Add high-quality photos to attract potential tenants
+                </ThemedText>
+              </View>
+
+              {/* Image Upload Buttons */}
+              <View style={styles.imageUploadButtons}>
+                <TouchableOpacity style={styles.imageUploadButton} onPress={pickImage}>
+                  <IconComponent name="images-outline" size={24} color={colors.primaryColor} />
+                  <ThemedText style={styles.imageUploadButtonText}>Choose Photos</ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.imageUploadButton} onPress={takePhoto}>
+                  <IconComponent name="camera-outline" size={24} color={colors.primaryColor} />
+                  <ThemedText style={styles.imageUploadButtonText}>Take Photo</ThemedText>
+                </TouchableOpacity>
+              </View>
+
+              {/* Image Gallery */}
+              {formData.images.length > 0 && (
+                <View style={styles.imageGallery}>
+                  <ThemedText style={styles.imageGalleryTitle}>
+                    Photos ({formData.images.length})
+                  </ThemedText>
+
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    {formData.images.map((image, index) => (
+                      <View key={index} style={styles.imageContainer}>
+                        <Image source={{ uri: image }} style={styles.propertyImage} />
+
+                        {/* Cover Image Badge */}
+                        {index === formData.coverImageIndex && (
+                          <View style={styles.coverImageBadge}>
+                            <ThemedText style={styles.coverImageBadgeText}>Cover</ThemedText>
+                          </View>
+                        )}
+
+                        {/* Image Actions */}
+                        <View style={styles.imageActions}>
+                          <TouchableOpacity
+                            style={styles.imageActionButton}
+                            onPress={() => setCoverImage(index)}
+                          >
+                            <IconComponent name="star" size={16} color="white" />
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            style={[styles.imageActionButton, styles.deleteButton]}
+                            onPress={() => removeImage(index)}
+                          >
+                            <IconComponent name="trash" size={16} color="white" />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* Image Tips */}
+              <View style={styles.imageTips}>
+                <ThemedText style={styles.imageTipsTitle}>Photo Tips:</ThemedText>
+                <ThemedText style={styles.imageTipsText}>
+                  • Include photos of all rooms and key features{'\n'}
+                  • Use good lighting and clear angles{'\n'}
+                  • Show the property at its best{'\n'}
+                  • First photo will be the cover image
+                </ThemedText>
+              </View>
+            </View>
+
+            {/* Property Preview - Mobile Only */}
+            {screenWidth < 768 && (
+              <View style={styles.sectionCard}>
+                <View style={styles.sectionHeader}>
+                  <ThemedText style={styles.sectionTitle}>Property Preview</ThemedText>
+                </View>
+
+                <View style={styles.previewCard}>
+                  {formData.images.length > 0 && (
+                    <Image
+                      source={{ uri: formData.images[formData.coverImageIndex] }}
+                      style={styles.previewImage}
+                    />
+                  )}
+
+                  <View style={styles.previewContent}>
+                    <ThemedText style={styles.previewTitle}>
+                      {formData.address.street || 'Property Address'}
+                    </ThemedText>
+
+                    <ThemedText style={styles.previewLocation}>
+                      {formData.address.city}, {formData.address.state}
+                    </ThemedText>
+
+                    <View style={styles.previewDetails}>
+                      <View style={styles.previewDetail}>
+                        <IconComponent name="bed" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
+                        <ThemedText style={styles.previewDetailText}>{formData.bedrooms} bed</ThemedText>
+                      </View>
+                      <View style={styles.previewDetail}>
+                        <IconComponent name="water" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
+                        <ThemedText style={styles.previewDetailText}>{formData.bathrooms} bath</ThemedText>
+                      </View>
+                      <View style={styles.previewDetail}>
+                        <IconComponent name="resize" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
+                        <ThemedText style={styles.previewDetailText}>{formData.squareFootage} sqft</ThemedText>
+                      </View>
+                    </View>
+
+                    <View style={styles.previewPricing}>
+                      <ThemedText style={styles.previewPrice}>
+                        ${formData.rent.amount.toLocaleString()}
+                      </ThemedText>
+                      <ThemedText style={styles.previewPriceUnit}>/month</ThemedText>
+                    </View>
+
+                    <View style={styles.previewFeatures}>
+                      {formData.furnishedStatus === 'furnished' && (
+                        <View style={styles.previewFeature}>
+                          <ThemedText style={styles.previewFeatureText}>Furnished</ThemedText>
+                        </View>
+                      )}
+                      {formData.furnishedStatus === 'partially_furnished' && (
+                        <View style={styles.previewFeature}>
+                          <ThemedText style={styles.previewFeatureText}>Partially Furnished</ThemedText>
+                        </View>
+                      )}
+                      {formData.petPolicy === 'allowed' && (
+                        <View style={styles.previewFeature}>
+                          <ThemedText style={styles.previewFeatureText}>Pet Friendly</ThemedText>
+                        </View>
+                      )}
+                      {formData.parkingType !== 'none' && (
+                        <View style={styles.previewFeature}>
+                          <ThemedText style={styles.previewFeatureText}>Parking</ThemedText>
+                        </View>
+                      )}
+                      {formData.leaseTerm && (
+                        <View style={styles.previewFeature}>
+                          <ThemedText style={styles.previewFeatureText}>
+                            {formData.leaseTerm === '6_months' ? '6 Month Lease' :
+                              formData.leaseTerm === '12_months' ? '12 Month Lease' :
+                                formData.leaseTerm === 'monthly' ? 'Monthly Lease' : 'Flexible Lease'}
+                          </ThemedText>
+                        </View>
+                      )}
+                    </View>
+
+                    <ThemedText style={styles.previewDescription}>
+                      {formData.description || 'No description provided'}
+                    </ThemedText>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Smart Suggestions */}
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeader}>
+                <ThemedText style={styles.sectionTitle}>Smart Suggestions</ThemedText>
+              </View>
+
+              <View style={styles.suggestionsContainer}>
+                <View style={styles.suggestionItem}>
+                  <IconComponent name="bulb" size={20} color={colors.primaryColor} />
+                  <View style={styles.suggestionContent}>
+                    <ThemedText style={styles.suggestionTitle}>Competitive Pricing</ThemedText>
+                    <ThemedText style={styles.suggestionText}>
+                      Based on similar properties in your area, consider pricing between $1,200 - $1,800/month
+                    </ThemedText>
+                  </View>
+                </View>
+
+                <View style={styles.suggestionItem}>
+                  <IconComponent name="star" size={20} color={colors.primaryColor} />
+                  <View style={styles.suggestionContent}>
+                    <ThemedText style={styles.suggestionTitle}>High-Demand Features</ThemedText>
+                    <ThemedText style={styles.suggestionText}>
+                      Properties with parking, in-unit laundry, and pet-friendly policies rent 15% faster
+                    </ThemedText>
+                  </View>
+                </View>
+
+                <View style={styles.suggestionItem}>
+                  <IconComponent name="location" size={20} color={colors.primaryColor} />
+                  <View style={styles.suggestionContent}>
+                    <ThemedText style={styles.suggestionTitle}>Location Benefits</ThemedText>
+                    <ThemedText style={styles.suggestionText}>
+                      Highlight proximity to public transport, schools, and shopping centers
+                    </ThemedText>
+                  </View>
+                </View>
+
+                <View style={styles.suggestionItem}>
+                  <IconComponent name="camera" size={20} color={colors.primaryColor} />
+                  <View style={styles.suggestionContent}>
+                    <ThemedText style={styles.suggestionTitle}>Professional Photos</ThemedText>
+                    <ThemedText style={styles.suggestionText}>
+                      Properties with high-quality photos receive 40% more inquiries
+                    </ThemedText>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            {/* Availability & Rules Section */}
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeader}>
+                <ThemedText style={styles.sectionTitle}>Availability & Lease Terms</ThemedText>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <ThemedText style={styles.label}>Available From</ThemedText>
+                <TextInput
+                  style={styles.textInput}
+                  value={formData.availableFrom}
+                  onChangeText={(text) => updateField('availableFrom', text)}
+                  placeholder="YYYY-MM-DD"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <ThemedText style={styles.label}>Lease Term</ThemedText>
+                <View style={styles.pickerContainer}>
+                  {(['monthly', '6_months', '12_months', 'flexible'] as const).map((term) => (
+                    <TouchableOpacity
+                      key={term}
+                      style={[
+                        styles.pickerOption,
+                        formData.leaseTerm === term && styles.pickerOptionSelected
+                      ]}
+                      onPress={() => updateField('leaseTerm', term)}
+                    >
+                      <ThemedText
+                        style={[
+                          styles.pickerOptionText,
+                          formData.leaseTerm === term && styles.pickerOptionTextSelected
+                        ]}
+                      >
+                        {term === '6_months' ? '6 Months' :
+                          term === '12_months' ? '12 Months' :
+                            term.charAt(0).toUpperCase() + term.slice(1)}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <ThemedText style={styles.label}>House Rules</ThemedText>
+
+                <View style={styles.ruleItem}>
+                  <TouchableOpacity
+                    style={styles.ruleToggle}
+                    onPress={() => updateField('smokingAllowed', !formData.smokingAllowed)}
+                  >
+                    <IconComponent
+                      name={formData.smokingAllowed ? "checkmark-circle" : "close-circle"}
+                      size={24}
+                      color={formData.smokingAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3}
+                    />
+                    <ThemedText style={styles.ruleText}>Smoking Allowed</ThemedText>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.ruleItem}>
+                  <TouchableOpacity
+                    style={styles.ruleToggle}
+                    onPress={() => updateField('partiesAllowed', !formData.partiesAllowed)}
+                  >
+                    <IconComponent
+                      name={formData.partiesAllowed ? "checkmark-circle" : "close-circle"}
+                      size={24}
+                      color={formData.partiesAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3}
+                    />
+                    <ThemedText style={styles.ruleText}>Parties Allowed</ThemedText>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.ruleItem}>
+                  <TouchableOpacity
+                    style={styles.ruleToggle}
+                    onPress={() => updateField('guestsAllowed', !formData.guestsAllowed)}
+                  >
+                    <IconComponent
+                      name={formData.guestsAllowed ? "checkmark-circle" : "close-circle"}
+                      size={24}
+                      color={formData.guestsAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3}
+                    />
+                    <ThemedText style={styles.ruleText}>Guests Allowed</ThemedText>
+                  </TouchableOpacity>
+                </View>
+
+                {formData.guestsAllowed && (
+                  <View style={styles.inputGroup}>
+                    <ThemedText style={styles.label}>Maximum Overnight Guests</ThemedText>
+                    <View style={styles.pickerContainer}>
+                      {[1, 2, 3, 4, 5].map((num) => (
+                        <TouchableOpacity
+                          key={num}
+                          style={[
+                            styles.pickerOption,
+                            formData.maxGuests === num && styles.pickerOptionSelected
+                          ]}
+                          onPress={() => updateField('maxGuests', num)}
+                        >
+                          <ThemedText
+                            style={[
+                              styles.pickerOptionText,
+                              formData.maxGuests === num && styles.pickerOptionTextSelected
+                            ]}
+                          >
+                            {num}
                           </ThemedText>
                         </TouchableOpacity>
                       ))}
                     </View>
                   </View>
                 )}
-
-                {/* Meals Included */}
-                {(formData.type === 'couchsurfing' || formData.type === 'hostel' || formData.type === 'guesthouse') && (
-                  <View style={styles.inputGroup}>
-                    <ThemedText style={styles.label}>Meals Included</ThemedText>
-                    <View style={styles.pickerContainer}>
-                      <TouchableOpacity
-                        style={[
-                          styles.pickerOption,
-                          formData.accommodationDetails?.mealsIncluded && styles.pickerOptionSelected
-                        ]}
-                        onPress={() => updateField('accommodationDetails', {
-                          ...formData.accommodationDetails,
-                          mealsIncluded: !formData.accommodationDetails?.mealsIncluded
-                        })}
-                      >
-                        <IconComponent
-                          name="restaurant-outline"
-                          size={16}
-                          color={formData.accommodationDetails?.mealsIncluded ? colors.primaryLight : colors.COLOR_BLACK}
-                        />
-                        <ThemedText
-                          style={[
-                            styles.pickerOptionText,
-                            formData.accommodationDetails?.mealsIncluded && styles.pickerOptionTextSelected
-                          ]}
-                        >
-                          Meals Included
-                        </ThemedText>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                )}
-
-                {/* Age restrictions */}
-                {(formData.type === 'hostel' || formData.type === 'roommates') && (
-                  <View style={styles.row}>
-                    <View style={styles.halfInput}>
-                      <ThemedText style={styles.label}>Minimum Age</ThemedText>
-                      <TextInput
-                        style={styles.textInput}
-                        value={(formData.accommodationDetails?.minAge || 18).toString()}
-                        onChangeText={(text) => updateField('accommodationDetails', {
-                          ...formData.accommodationDetails,
-                          minAge: parseInt(text) || 18
-                        })}
-                        keyboardType="numeric"
-                        placeholder="18"
-                      />
-                    </View>
-
-                    <View style={styles.halfInput}>
-                      <ThemedText style={styles.label}>Maximum Age</ThemedText>
-                      <TextInput
-                        style={styles.textInput}
-                        value={(formData.accommodationDetails?.maxAge || 0).toString()}
-                        onChangeText={(text) => updateField('accommodationDetails', {
-                          ...formData.accommodationDetails,
-                          maxAge: parseInt(text) || 0
-                        })}
-                        keyboardType="numeric"
-                        placeholder="No limit"
-                      />
-                    </View>
-                  </View>
-                )}
-
-                {/* WiFi Password */}
-                {(formData.type === 'couchsurfing' || formData.type === 'hostel' || formData.type === 'guesthouse') && (
-                  <View style={styles.inputGroup}>
-                    <ThemedText style={styles.label}>WiFi Password (Optional)</ThemedText>
-                    <TextInput
-                      style={styles.textInput}
-                      value={formData.accommodationDetails?.wifiPassword || ''}
-                      onChangeText={(text) => updateField('accommodationDetails', {
-                        ...formData.accommodationDetails,
-                        wifiPassword: text
-                      })}
-                      placeholder="Enter WiFi password"
-                      secureTextEntry={true}
-                    />
-                    <ThemedText style={styles.subLabel}>
-                      This will be shared with guests after booking
-                    </ThemedText>
-                  </View>
-                )}
-
-                {/* House Rules */}
-                <View style={styles.inputGroup}>
-                  <ThemedText style={styles.label}>House Rules</ThemedText>
-                  <View style={styles.pickerContainer}>
-                    {([
-                      'No smoking', 'No parties', 'No pets', 'Quiet hours', 'No shoes inside',
-                      'Kitchen access', 'Laundry access', 'Cleaning required', 'Respect privacy',
-                      'Cultural sensitivity', 'Sustainable practices', 'Community participation'
-                    ] as const).map((rule) => (
-                      <TouchableOpacity
-                        key={rule}
-                        style={[
-                          styles.pickerOption,
-                          formData.accommodationDetails?.houseRules?.includes(rule) && styles.pickerOptionSelected
-                        ]}
-                        onPress={() => {
-                          const current = formData.accommodationDetails?.houseRules || [];
-                          const updated = current.includes(rule)
-                            ? current.filter(r => r !== rule)
-                            : [...current, rule];
-                          updateField('accommodationDetails', {
-                            ...formData.accommodationDetails,
-                            houseRules: updated
-                          });
-                        }}
-                      >
-                        <ThemedText
-                          style={[
-                            styles.pickerOptionText,
-                            formData.accommodationDetails?.houseRules?.includes(rule) && styles.pickerOptionTextSelected
-                          ]}
-                        >
-                          {rule}
-                        </ThemedText>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
               </View>
-            )}
-
-          {/* Amenities Section */}
-          <View style={styles.sectionCard}>
-            <AmenitiesSelector
-              selectedAmenities={formData.amenities || []}
-              onAmenityToggle={toggleAmenity}
-            />
-          </View>
-
-          {/* Image Upload Section */}
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionHeader}>
-              <ThemedText style={styles.sectionTitle}>Property Photos</ThemedText>
-              <ThemedText style={styles.sectionSubtitle}>
-                Add high-quality photos to attract potential tenants
-              </ThemedText>
             </View>
 
-            {/* Image Upload Buttons */}
-            <View style={styles.imageUploadButtons}>
-              <TouchableOpacity style={styles.imageUploadButton} onPress={pickImage}>
-                <IconComponent name="images-outline" size={24} color={colors.primaryColor} />
-                <ThemedText style={styles.imageUploadButtonText}>Choose Photos</ThemedText>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.imageUploadButton} onPress={takePhoto}>
-                <IconComponent name="camera-outline" size={24} color={colors.primaryColor} />
-                <ThemedText style={styles.imageUploadButtonText}>Take Photo</ThemedText>
-              </TouchableOpacity>
-            </View>
-
-            {/* Image Gallery */}
-            {formData.images.length > 0 && (
-              <View style={styles.imageGallery}>
-                <ThemedText style={styles.imageGalleryTitle}>
-                  Photos ({formData.images.length})
+            {/* Submit Button */}
+            <TouchableOpacity
+              style={[
+                styles.submitButton,
+                !isFormValid() && styles.submitButtonDisabled
+              ]}
+              onPress={handleSubmit}
+              disabled={!isFormValid() || createLoading}
+            >
+              {createLoading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color="white" />
+                  <ThemedText style={styles.submitButtonText}>Creating Property...</ThemedText>
+                </View>
+              ) : (
+                <ThemedText style={[
+                  styles.submitButtonText,
+                  !isFormValid() && styles.submitButtonTextDisabled
+                ]}>
+                  Create Property
                 </ThemedText>
+              )}
+            </TouchableOpacity>
 
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  {formData.images.map((image, index) => (
-                    <View key={index} style={styles.imageContainer}>
-                      <Image source={{ uri: image }} style={styles.propertyImage} />
-
-                      {/* Cover Image Badge */}
-                      {index === formData.coverImageIndex && (
-                        <View style={styles.coverImageBadge}>
-                          <ThemedText style={styles.coverImageBadgeText}>Cover</ThemedText>
-                        </View>
-                      )}
-
-                      {/* Image Actions */}
-                      <View style={styles.imageActions}>
-                        <TouchableOpacity
-                          style={styles.imageActionButton}
-                          onPress={() => setCoverImage(index)}
-                        >
-                          <IconComponent name="star" size={16} color="white" />
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          style={[styles.imageActionButton, styles.deleteButton]}
-                          onPress={() => removeImage(index)}
-                        >
-                          <IconComponent name="trash" size={16} color="white" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-
-            {/* Image Tips */}
-            <View style={styles.imageTips}>
-              <ThemedText style={styles.imageTipsTitle}>Photo Tips:</ThemedText>
-              <ThemedText style={styles.imageTipsText}>
-                • Include photos of all rooms and key features{'\n'}
-                • Use good lighting and clear angles{'\n'}
-                • Show the property at its best{'\n'}
-                • First photo will be the cover image
-              </ThemedText>
-            </View>
-          </View>
-
-          {/* Property Preview - Mobile Only */}
-          {screenWidth < 768 && (
-            <View style={styles.sectionCard}>
-              <View style={styles.sectionHeader}>
-                <ThemedText style={styles.sectionTitle}>Property Preview</ThemedText>
-              </View>
-
-              <View style={styles.previewCard}>
-                {formData.images.length > 0 && (
-                  <Image
-                    source={{ uri: formData.images[formData.coverImageIndex] }}
-                    style={styles.previewImage}
-                  />
-                )}
-
-                <View style={styles.previewContent}>
-                  <ThemedText style={styles.previewTitle}>
-                    {formData.address.street || 'Property Address'}
-                  </ThemedText>
-
-                  <ThemedText style={styles.previewLocation}>
-                    {formData.address.city}, {formData.address.state}
-                  </ThemedText>
-
-                  <View style={styles.previewDetails}>
-                    <View style={styles.previewDetail}>
-                      <IconComponent name="bed" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
-                      <ThemedText style={styles.previewDetailText}>{formData.bedrooms} bed</ThemedText>
-                    </View>
-                    <View style={styles.previewDetail}>
-                      <IconComponent name="water" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
-                      <ThemedText style={styles.previewDetailText}>{formData.bathrooms} bath</ThemedText>
-                    </View>
-                    <View style={styles.previewDetail}>
-                      <IconComponent name="resize" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
-                      <ThemedText style={styles.previewDetailText}>{formData.squareFootage} sqft</ThemedText>
-                    </View>
-                  </View>
-
-                  <View style={styles.previewPricing}>
-                    <ThemedText style={styles.previewPrice}>
-                      ${formData.rent.amount.toLocaleString()}
-                    </ThemedText>
-                    <ThemedText style={styles.previewPriceUnit}>/month</ThemedText>
-                  </View>
-
-                  <View style={styles.previewFeatures}>
-                    {formData.furnishedStatus === 'furnished' && (
-                      <View style={styles.previewFeature}>
-                        <ThemedText style={styles.previewFeatureText}>Furnished</ThemedText>
-                      </View>
-                    )}
-                    {formData.furnishedStatus === 'partially_furnished' && (
-                      <View style={styles.previewFeature}>
-                        <ThemedText style={styles.previewFeatureText}>Partially Furnished</ThemedText>
-                      </View>
-                    )}
-                    {formData.petPolicy === 'allowed' && (
-                      <View style={styles.previewFeature}>
-                        <ThemedText style={styles.previewFeatureText}>Pet Friendly</ThemedText>
-                      </View>
-                    )}
-                    {formData.parkingType !== 'none' && (
-                      <View style={styles.previewFeature}>
-                        <ThemedText style={styles.previewFeatureText}>Parking</ThemedText>
-                      </View>
-                    )}
-                    {formData.leaseTerm && (
-                      <View style={styles.previewFeature}>
-                        <ThemedText style={styles.previewFeatureText}>
-                          {formData.leaseTerm === '6_months' ? '6 Month Lease' :
-                            formData.leaseTerm === '12_months' ? '12 Month Lease' :
-                              formData.leaseTerm === 'monthly' ? 'Monthly Lease' : 'Flexible Lease'}
-                        </ThemedText>
-                      </View>
-                    )}
-                  </View>
-
-                  <ThemedText style={styles.previewDescription}>
-                    {formData.description || 'No description provided'}
-                  </ThemedText>
+            {/* Save Draft Button */}
+            <TouchableOpacity
+              style={styles.saveDraftButton}
+              onPress={handleSaveDraft}
+              disabled={savingDraft}
+            >
+              {savingDraft ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color={colors.primaryColor} />
+                  <ThemedText style={styles.saveDraftButtonText}>Saving Draft...</ThemedText>
                 </View>
-              </View>
-            </View>
-          )}
-
-          {/* Draft Status */}
-          {formData.isDraft && (
-            <View style={styles.draftStatus}>
-              <ThemedText style={styles.draftStatusText}>
-                💾 Draft saved {formData.lastSaved.toLocaleTimeString()}
-              </ThemedText>
-            </View>
-          )}
-
-          {/* Smart Suggestions */}
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionHeader}>
-              <ThemedText style={styles.sectionTitle}>Smart Suggestions</ThemedText>
-            </View>
-
-            <View style={styles.suggestionsContainer}>
-              <View style={styles.suggestionItem}>
-                <IconComponent name="bulb" size={20} color={colors.primaryColor} />
-                <View style={styles.suggestionContent}>
-                  <ThemedText style={styles.suggestionTitle}>Competitive Pricing</ThemedText>
-                  <ThemedText style={styles.suggestionText}>
-                    Based on similar properties in your area, consider pricing between $1,200 - $1,800/month
-                  </ThemedText>
-                </View>
-              </View>
-
-              <View style={styles.suggestionItem}>
-                <IconComponent name="star" size={20} color={colors.primaryColor} />
-                <View style={styles.suggestionContent}>
-                  <ThemedText style={styles.suggestionTitle}>High-Demand Features</ThemedText>
-                  <ThemedText style={styles.suggestionText}>
-                    Properties with parking, in-unit laundry, and pet-friendly policies rent 15% faster
-                  </ThemedText>
-                </View>
-              </View>
-
-              <View style={styles.suggestionItem}>
-                <IconComponent name="location" size={20} color={colors.primaryColor} />
-                <View style={styles.suggestionContent}>
-                  <ThemedText style={styles.suggestionTitle}>Location Benefits</ThemedText>
-                  <ThemedText style={styles.suggestionText}>
-                    Highlight proximity to public transport, schools, and shopping centers
-                  </ThemedText>
-                </View>
-              </View>
-
-              <View style={styles.suggestionItem}>
-                <IconComponent name="camera" size={20} color={colors.primaryColor} />
-                <View style={styles.suggestionContent}>
-                  <ThemedText style={styles.suggestionTitle}>Professional Photos</ThemedText>
-                  <ThemedText style={styles.suggestionText}>
-                    Properties with high-quality photos receive 40% more inquiries
-                  </ThemedText>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* Availability & Rules Section */}
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionHeader}>
-              <ThemedText style={styles.sectionTitle}>Availability & Lease Terms</ThemedText>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Available From</ThemedText>
-              <TextInput
-                style={styles.textInput}
-                value={formData.availableFrom}
-                onChangeText={(text) => updateField('availableFrom', text)}
-                placeholder="YYYY-MM-DD"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Lease Term</ThemedText>
-              <View style={styles.pickerContainer}>
-                {(['monthly', '6_months', '12_months', 'flexible'] as const).map((term) => (
-                  <TouchableOpacity
-                    key={term}
-                    style={[
-                      styles.pickerOption,
-                      formData.leaseTerm === term && styles.pickerOptionSelected
-                    ]}
-                    onPress={() => updateField('leaseTerm', term)}
-                  >
-                    <ThemedText
-                      style={[
-                        styles.pickerOptionText,
-                        formData.leaseTerm === term && styles.pickerOptionTextSelected
-                      ]}
-                    >
-                      {term === '6_months' ? '6 Months' :
-                        term === '12_months' ? '12 Months' :
-                          term.charAt(0).toUpperCase() + term.slice(1)}
-                    </ThemedText>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>House Rules</ThemedText>
-
-              <View style={styles.ruleItem}>
-                <TouchableOpacity
-                  style={styles.ruleToggle}
-                  onPress={() => updateField('smokingAllowed', !formData.smokingAllowed)}
-                >
-                  <IconComponent
-                    name={formData.smokingAllowed ? "checkmark-circle" : "close-circle"}
-                    size={24}
-                    color={formData.smokingAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3}
-                  />
-                  <ThemedText style={styles.ruleText}>Smoking Allowed</ThemedText>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.ruleItem}>
-                <TouchableOpacity
-                  style={styles.ruleToggle}
-                  onPress={() => updateField('partiesAllowed', !formData.partiesAllowed)}
-                >
-                  <IconComponent
-                    name={formData.partiesAllowed ? "checkmark-circle" : "close-circle"}
-                    size={24}
-                    color={formData.partiesAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3}
-                  />
-                  <ThemedText style={styles.ruleText}>Parties Allowed</ThemedText>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.ruleItem}>
-                <TouchableOpacity
-                  style={styles.ruleToggle}
-                  onPress={() => updateField('guestsAllowed', !formData.guestsAllowed)}
-                >
-                  <IconComponent
-                    name={formData.guestsAllowed ? "checkmark-circle" : "close-circle"}
-                    size={24}
-                    color={formData.guestsAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3}
-                  />
-                  <ThemedText style={styles.ruleText}>Guests Allowed</ThemedText>
-                </TouchableOpacity>
-              </View>
-
-              {formData.guestsAllowed && (
-                <View style={styles.inputGroup}>
-                  <ThemedText style={styles.label}>Maximum Overnight Guests</ThemedText>
-                  <View style={styles.pickerContainer}>
-                    {[1, 2, 3, 4, 5].map((num) => (
-                      <TouchableOpacity
-                        key={num}
-                        style={[
-                          styles.pickerOption,
-                          formData.maxGuests === num && styles.pickerOptionSelected
-                        ]}
-                        onPress={() => updateField('maxGuests', num)}
-                      >
-                        <ThemedText
-                          style={[
-                            styles.pickerOptionText,
-                            formData.maxGuests === num && styles.pickerOptionTextSelected
-                          ]}
-                        >
-                          {num}
-                        </ThemedText>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
+              ) : (
+                <View style={styles.saveDraftButtonContent}>
+                  <IconComponent name="save-outline" size={20} color={colors.primaryColor} />
+                  <ThemedText style={styles.saveDraftButtonText}>Save Draft</ThemedText>
                 </View>
               )}
-            </View>
-          </View>
+            </TouchableOpacity>
 
-          {/* Amenities Section */}
-          <View style={styles.sectionCard}>
-            <AmenitiesSelector
-              selectedAmenities={formData.amenities || []}
-              onAmenityToggle={toggleAmenity}
-            />
-          </View>
-
-          {/* Submit Button */}
-          <TouchableOpacity
-            style={[
-              styles.submitButton,
-              !isFormValid() && styles.submitButtonDisabled
-            ]}
-            onPress={handleSubmit}
-            disabled={!isFormValid() || createLoading}
-          >
-            {createLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color="white" />
-                <ThemedText style={styles.submitButtonText}>Creating Property...</ThemedText>
+            {/* Draft Saved Indicator */}
+            {draftSavedMessage && (
+              <View style={styles.draftSavedIndicator}>
+                <IconComponent name="checkmark-circle" size={16} color={colors.primaryColor} />
+                <ThemedText style={styles.draftSavedText}>
+                  Draft saved successfully!
+                </ThemedText>
               </View>
-            ) : (
-              <ThemedText style={[
-                styles.submitButtonText,
-                !isFormValid() && styles.submitButtonTextDisabled
-              ]}>
-                Create Property
-              </ThemedText>
             )}
-          </TouchableOpacity>
+
+            {/* Last Saved Info */}
+            {formData.isDraft && formData.lastSaved && (
+              <View style={styles.lastSavedInfo}>
+                <ThemedText style={styles.lastSavedText}>
+                  Last saved: {formData.lastSaved instanceof Date ? formData.lastSaved.toLocaleTimeString() : 'Unknown'}
+                </ThemedText>
+              </View>
+            )}
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -3088,6 +3846,28 @@ const styles = StyleSheet.create({
   submitButtonTextDisabled: {
     color: colors.COLOR_BLACK_LIGHT_3,
   },
+  saveDraftButton: {
+    backgroundColor: 'white',
+    borderRadius: 25,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    marginTop: 12,
+    marginBottom: 24,
+    borderWidth: 2,
+    borderColor: colors.primaryColor,
+    borderStyle: 'dashed',
+  },
+  saveDraftButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  saveDraftButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.primaryColor,
+  },
   headerButton: {
     padding: 8,
     borderRadius: 35,
@@ -3313,5 +4093,119 @@ const styles = StyleSheet.create({
     color: colors.primaryDark_1,
     marginBottom: 8,
   },
+  calculateEthicalButton: {
+    backgroundColor: colors.primaryColor,
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 16,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  calculateEthicalButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  ethicalSuggestionsContainer: {
+    marginTop: 16,
+  },
+  ethicalSuggestionsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.COLOR_BLACK,
+    marginBottom: 12,
+  },
+  ethicalSuggestionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  ethicalSuggestionCard: {
+    flex: 1,
+    minWidth: '48%',
+    padding: 12,
+    backgroundColor: colors.primaryLight,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primaryLight_1,
+  },
+  ethicalSuggestionLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: colors.COLOR_BLACK,
+    marginBottom: 4,
+  },
+  ethicalSuggestionValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.primaryColor,
+    marginBottom: 4,
+  },
+  ethicalSuggestionDesc: {
+    fontSize: 12,
+    color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  ethicalPricingBenefits: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: colors.primaryLight_1,
+    borderRadius: 8,
+  },
+  ethicalPricingBenefitsTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: colors.COLOR_BLACK,
+    marginBottom: 8,
+  },
+  ethicalPricingBenefitsList: {
+    gap: 4,
+  },
+  ethicalPricingBenefit: {
+    fontSize: 12,
+    color: colors.COLOR_BLACK_LIGHT_3,
+    marginBottom: 2,
+  },
+  headerDraftIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: colors.primaryLight,
+    borderRadius: 12,
+    gap: 4,
+  },
+  headerDraftText: {
+    fontSize: 12,
+    color: colors.primaryDark_1,
+    fontWeight: '500',
+  },
+  draftSavedIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryLight,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    marginTop: 8,
+    gap: 6,
+  },
+  draftSavedText: {
+    fontSize: 14,
+    color: colors.primaryColor,
+    fontWeight: '500',
+  },
+  lastSavedInfo: {
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  lastSavedText: {
+    fontSize: 12,
+    color: colors.COLOR_BLACK_LIGHT_3,
+    fontStyle: 'italic',
+  },
 });
-

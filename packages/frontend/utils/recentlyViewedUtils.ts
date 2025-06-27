@@ -33,7 +33,7 @@ export function clearRecentlyViewedProperties() {
  */
 export function isInRecentlyViewed(propertyId: string): boolean {
   const state = store.getState();
-  return state.recentlyViewed.properties.some(p => (p._id || p.id) === propertyId);
+  return state.recentlyViewed.properties.some((p: Property) => (p._id || p.id || '') === propertyId);
 }
 
 /**

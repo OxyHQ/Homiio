@@ -93,9 +93,15 @@ class Property {
     }
 
     // Housing type validation
-    const validHousingTypes = ['private', 'public', 'shared', 'open', 'partitioned'];
+    const validHousingTypes = ['private', 'public'];
     if (this.housingType && !validHousingTypes.includes(this.housingType)) {
       errors.push(`Housing type must be one of: ${validHousingTypes.join(', ')}`);
+    }
+    
+    // Layout type validation
+    const validLayoutTypes = ['open', 'shared', 'partitioned', 'traditional', 'studio', 'other'];
+    if (this.layoutType && !validLayoutTypes.includes(this.layoutType)) {
+      errors.push(`Layout type must be one of: ${validLayoutTypes.join(', ')}`);
     }
     
     // Optional field validation (if provided, must be valid)

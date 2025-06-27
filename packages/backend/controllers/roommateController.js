@@ -1,34 +1,78 @@
 /**
  * Roommate Controller
- * Handles roommate matching operations
+ * Handles roommate matching operations with Oxy user data integration
  */
 
 const Profile = require('../models').Profile;
+const oxyServices = require('../services/oxyServices');
 
-// Get all roommate profiles (profiles with roommate matching enabled)
+// Helper function to fetch Oxy user data
+const fetchOxyUserData = async (oxyUserId) => {
+  if (!oxyUserId) {
+    console.warn('[OXY] Missing oxyUserId, cannot fetch user data');
+    return null;
+  }
+  
+  if (!oxyServices || !oxyServices.users) {
+    console.error('[OXY] Oxy services not properly initialized, cannot fetch user data');
+    console.error('[OXY] oxyServices:', oxyServices);
+    console.error('[OXY] oxyServices.users:', oxyServices?.users);
+    return null;
+  }
+  
+  try {
+    console.log('[OXY] Fetching user data for oxyUserId:', oxyUserId);
+    console.log('[OXY] Using OxyServices baseURL:', oxyServices.baseURL);
+    console.log('[OXY] Available methods on oxyServices.users:', Object.keys(oxyServices.users));
+    
+    const userData = await oxyServices.users.getUser(oxyUserId);
+    console.log('[OXY] Received user data:', userData);
+    
+    if (!userData) {
+      console.warn('[OXY] No user data returned for oxyUserId:', oxyUserId);
+      return null;
+    }
+    
+    const enrichedData = {
+      fullName: userData.name || userData.fullName || 'User',
+      bio: userData.bio || '',
+      avatar: userData.avatar || null,
+      username: userData.username || '',
+      email: userData.email || '',
+      location: userData.location || '',
+      website: userData.website || '',
+      createdAt: userData.createdAt || null,
+      stats: userData.stats || {}
+    };
+    
+    console.log('[OXY] Enriched user data:', enrichedData);
+    return enrichedData;
+  } catch (error) {
+    console.error('[OXY] Error fetching Oxy user data for', oxyUserId, ':', error.message);
+    console.error('[OXY] Full error:', error);
+    return null;
+  }
+};
+
+// Get all roommate profiles with enriched Oxy user data
 const getRoommateProfiles = async (req, res) => {
   try {
+    console.log('=== Roommate Profiles API Called ===');
+    console.log('User ID:', req.user?.id || req.user?._id);
+    console.log('Profile ID:', req.user?.profileId);
+    console.log('Query params:', req.query);
+    
     const { page = 1, limit = 20, minMatchPercentage, maxBudget, withPets, nonSmoking, interests, ageRange, gender, location } = req.query;
     
-    // Build query for profiles with roommate matching enabled
+    // Build base query for profiles with roommate matching enabled
     const query = {
       'personalProfile.settings.roommate.enabled': true,
       _id: { $ne: req.user.profileId } // Exclude current user's profile
     };
 
-    // Add filters
-    if (maxBudget) {
-      query['personalProfile.settings.roommate.preferences.budget.max'] = { $lte: parseInt(maxBudget) };
-    }
+    console.log('Base query:', JSON.stringify(query, null, 2));
 
-    if (withPets) {
-      query['personalProfile.settings.roommate.preferences.lifestyle.pets'] = 'yes';
-    }
-
-    if (nonSmoking) {
-      query['personalProfile.settings.roommate.preferences.lifestyle.smoking'] = 'no';
-    }
-
+    // Add basic filters that apply to profile data (not preferences)
     if (gender && gender !== 'any') {
       query['personalProfile.gender'] = gender;
     }
@@ -46,6 +90,8 @@ const getRoommateProfiles = async (req, res) => {
       };
     }
 
+    console.log('Final query:', JSON.stringify(query, null, 2));
+
     const skip = (parseInt(page) - 1) * parseInt(limit);
     
     const profiles = await Profile.find(query)
@@ -53,19 +99,25 @@ const getRoommateProfiles = async (req, res) => {
       .limit(parseInt(limit))
       .sort({ updatedAt: -1 });
 
+    console.log(`Found ${profiles.length} profiles with roommate matching enabled`);
+
     const total = await Profile.countDocuments(query);
     const totalPages = Math.ceil(total / parseInt(limit));
 
-    // Calculate match percentages if current user has preferences
+    console.log(`Total profiles: ${total}, Total pages: ${totalPages}`);
+
+    // Get current user's profile and preferences
     const currentProfile = await Profile.findById(req.user.profileId);
+    const currentUserPrefs = currentProfile?.personalProfile?.settings?.roommate?.preferences;
+
     let profilesWithMatches = profiles;
 
-    if (currentProfile?.personalProfile?.settings?.roommate?.preferences) {
+    if (currentUserPrefs) {
+      console.log('Current user has roommate preferences, calculating match percentages and applying filters');
+      
       profilesWithMatches = profiles.map(profile => {
-        const matchPercentage = calculateMatchPercentage(
-          currentProfile.personalProfile.settings.roommate.preferences,
-          profile.personalProfile?.settings?.roommate?.preferences
-        );
+        const profilePrefs = profile.personalProfile?.settings?.roommate?.preferences;
+        const matchPercentage = calculateMatchPercentage(currentUserPrefs, profilePrefs);
         
         return {
           ...profile.toObject(),
@@ -73,19 +125,103 @@ const getRoommateProfiles = async (req, res) => {
         };
       });
 
+      // Apply preference-based filters
+      if (maxBudget) {
+        const budget = parseInt(maxBudget);
+        profilesWithMatches = profilesWithMatches.filter(profile => {
+          const profilePrefs = profile.personalProfile?.settings?.roommate?.preferences;
+          if (!profilePrefs?.budget?.max) return true; // Include if no budget preference
+          return profilePrefs.budget.max >= budget; // Profile owner's max budget should be >= current user's max budget
+        });
+        console.log(`After budget filter (maxBudget=${budget}): ${profilesWithMatches.length} profiles`);
+      }
+
+      if (withPets === 'true') {
+        profilesWithMatches = profilesWithMatches.filter(profile => {
+          const profilePrefs = profile.personalProfile?.settings?.roommate?.preferences;
+          if (!profilePrefs?.lifestyle?.pets) return true; // Include if no pet preference
+          return profilePrefs.lifestyle.pets === 'yes'; // Profile owner should want pets
+        });
+        console.log(`After pets filter (withPets=true): ${profilesWithMatches.length} profiles`);
+      }
+
+      if (nonSmoking === 'true') {
+        profilesWithMatches = profilesWithMatches.filter(profile => {
+          const profilePrefs = profile.personalProfile?.settings?.roommate?.preferences;
+          if (!profilePrefs?.lifestyle?.smoking) return true; // Include if no smoking preference
+          return profilePrefs.lifestyle.smoking === 'no'; // Profile owner should not want smoking
+        });
+        console.log(`After smoking filter (nonSmoking=true): ${profilesWithMatches.length} profiles`);
+      }
+
       // Filter by minimum match percentage if specified
       if (minMatchPercentage) {
         profilesWithMatches = profilesWithMatches.filter(
           profile => profile.matchPercentage >= parseInt(minMatchPercentage)
         );
+        console.log(`After minMatchPercentage filter: ${profilesWithMatches.length} profiles`);
       }
 
       // Sort by match percentage
       profilesWithMatches.sort((a, b) => b.matchPercentage - a.matchPercentage);
+    } else {
+      console.log('Current user does not have roommate preferences');
     }
 
+    // Enrich profiles with Oxy user data
+    console.log('Enriching profiles with Oxy user data...');
+    const enrichedProfiles = await Promise.all(
+      profilesWithMatches.map(async (profile) => {
+        const oxyUserId = profile.oxyUserId;
+        console.log('[ROOMMATE] Profile _id:', profile._id, 'oxyUserId:', oxyUserId);
+        if (!oxyUserId) {
+          console.warn('[ENRICH] Skipping profile with missing oxyUserId:', profile._id);
+          return null;
+        }
+        try {
+          const oxyUserData = await fetchOxyUserData(oxyUserId);
+          console.log('[ROOMMATE] Oxy user data for', oxyUserId, ':', oxyUserData);
+          return {
+            ...profile,
+            userData: oxyUserData || {
+              fullName: 'User',
+              bio: '',
+              avatar: null,
+              username: '',
+              email: '',
+              location: '',
+              website: '',
+              createdAt: null,
+              stats: {}
+            }
+          };
+        } catch (error) {
+          console.error(`[ENRICH] Error enriching profile ${profile._id}:`, error);
+          return {
+            ...profile,
+            userData: {
+              fullName: 'User',
+              bio: '',
+              avatar: null,
+              username: '',
+              email: '',
+              location: '',
+              website: '',
+              createdAt: null,
+              stats: {}
+            }
+          };
+        }
+      })
+    );
+
+    const filteredEnrichedProfiles = enrichedProfiles.filter(Boolean);
+
+    console.log(`Returning ${filteredEnrichedProfiles.length} enriched profiles`);
+    console.log('=== End Roommate Profiles API ===');
+
     res.json({
-      profiles: profilesWithMatches,
+      profiles: filteredEnrichedProfiles,
       total,
       page: parseInt(page),
       totalPages
@@ -290,6 +426,46 @@ const calculateMatchPercentage = (prefs1, prefs2) => {
   return totalFactors > 0 ? Math.round((matchScore / totalFactors) * 100) : 0;
 };
 
+// Get current user's roommate status with Oxy user data
+const getCurrentUserRoommateStatus = async (req, res) => {
+  try {
+    const oxyUserId = req.user?.id || req.user?._id;
+    
+    if (!oxyUserId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Get user's active profile
+    const profile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const hasRoommateMatching = profile?.personalProfile?.settings?.roommate?.enabled || false;
+    
+    // Fetch additional user data from Oxy
+    const userData = await fetchOxyUserData(oxyUserId);
+    
+    res.json({
+      hasRoommateMatching,
+      userData: userData || {
+        fullName: 'User',
+        bio: '',
+        avatar: null,
+        username: '',
+        email: '',
+        location: '',
+        website: '',
+        createdAt: null,
+        stats: {}
+      },
+      profile: profile ? {
+        id: profile._id,
+        roommatePreferences: profile.personalProfile?.settings?.roommate?.preferences || null
+      } : null
+    });
+  } catch (error) {
+    console.error('Error fetching current user roommate status:', error);
+    res.status(500).json({ error: 'Failed to fetch roommate status' });
+  }
+};
+
 module.exports = {
   getRoommateProfiles,
   getMyRoommatePreferences,
@@ -298,5 +474,6 @@ module.exports = {
   getRoommateRequests,
   sendRoommateRequest,
   acceptRoommateRequest,
-  declineRoommateRequest
+  declineRoommateRequest,
+  getCurrentUserRoommateStatus
 }; 

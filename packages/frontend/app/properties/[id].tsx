@@ -103,9 +103,11 @@ export default function PropertyDetailPage() {
     }, [id, apiProperty, isLoading, error, oxyServices, activeSessionId]);
 
     const property = useMemo<PropertyDetail | null>(() => {
-        if (!apiProperty) return null;
-
         try {
+            if (!apiProperty) return null;
+            // Defensive ID
+            const id = apiProperty._id || apiProperty.id || '';
+
             const currency = apiProperty.rent?.currency || '⊜';
 
             // Map legacy paymentFrequency to new priceUnit format
@@ -134,14 +136,20 @@ export default function PropertyDetailPage() {
 
             // Generate title dynamically from property data
             const generatedTitle = generatePropertyTitle({
-                type: apiProperty.type,
+                type: apiProperty.type as 'studio' | 'apartment' | 'house' | 'room' | 'duplex' | 'penthouse' | undefined,
                 address: apiProperty.address,
                 bedrooms: apiProperty.bedrooms,
                 bathrooms: apiProperty.bathrooms
             });
 
+            const isEcoCertified = apiProperty.amenities?.some((a: string) =>
+                a.toLowerCase().includes('eco') ||
+                a.toLowerCase().includes('green') ||
+                a.toLowerCase().includes('solar')
+            ) || false;
+
             return {
-                id: apiProperty._id || apiProperty.id || '',
+                id,
                 title: generatedTitle,
                 description: apiProperty.description || '',
                 location: `${apiProperty.address?.city || ''}, ${apiProperty.address?.country || ''}`,
@@ -151,8 +159,7 @@ export default function PropertyDetailPage() {
                 bathrooms: apiProperty.bathrooms || 0,
                 size: apiProperty.squareFootage || 0,
                 isVerified: apiProperty.status === 'available',
-                isEcoCertified:
-                    apiProperty.amenities?.some(a => a.toLowerCase().includes('eco')) || false,
+                isEcoCertified,
                 amenities: apiProperty.amenities || [],
                 landlordName: '',
                 landlordRating: 0,
@@ -548,29 +555,8 @@ ${propertyUrl}`;
                                 <View style={styles.landlordHeader}>
                                     <View style={styles.landlordAvatar}>
                                         <Text style={styles.landlordInitial}>
-                                            {landlordProfile?.profileType === 'personal'
-                                                ? landlordProfile?.personalProfile?.personalInfo?.bio?.charAt(0)
-                                                || landlordProfile?.oxyUserId?.charAt(0)
-                                                || '?'
-                                                : landlordProfile?.profileType === 'agency'
-                                                    ? landlordProfile?.agencyProfile?.legalCompanyName?.charAt(0)
-                                                    || landlordProfile?.oxyUserId?.charAt(0)
-                                                    || '?'
-                                                    : landlordProfile?.profileType === 'business'
-                                                        ? landlordProfile?.businessProfile?.legalCompanyName?.charAt(0)
-                                                        || landlordProfile?.oxyUserId?.charAt(0)
-                                                        || '?'
-                                                        : landlordProfile?.profileType === 'cooperative'
-                                                            ? landlordProfile?.cooperativeProfile?.legalName?.charAt(0)
-                                                            || landlordProfile?.oxyUserId?.charAt(0)
-                                                            || '?'
-                                                            : landlordProfile?.oxyUserId?.charAt(0) || '?'}
-                                        </Text>
-                                    </View>
-                                    <View style={styles.landlordInfo}>
-                                        <View style={styles.landlordNameRow}>
-                                            <Text style={styles.landlordName}>
-                                                {landlordProfile?.profileType === 'personal'
+                                            {landlordProfile?.userData?.fullName ? landlordProfile.userData.fullName :
+                                                landlordProfile?.profileType === 'personal'
                                                     ? landlordProfile?.personalProfile?.personalInfo?.bio
                                                     || landlordProfile?.oxyUserId
                                                     || '?'
@@ -587,6 +573,29 @@ ${propertyUrl}`;
                                                                 || landlordProfile?.oxyUserId
                                                                 || '?'
                                                                 : landlordProfile?.oxyUserId || '?'}
+                                        </Text>
+                                    </View>
+                                    <View style={styles.landlordInfo}>
+                                        <View style={styles.landlordNameRow}>
+                                            <Text style={styles.landlordName}>
+                                                {landlordProfile?.userData?.fullName ? landlordProfile.userData.fullName :
+                                                    landlordProfile?.profileType === 'personal'
+                                                        ? landlordProfile?.personalProfile?.personalInfo?.bio
+                                                        || landlordProfile?.oxyUserId
+                                                        || '?'
+                                                        : landlordProfile?.profileType === 'agency'
+                                                            ? landlordProfile?.agencyProfile?.legalCompanyName
+                                                            || landlordProfile?.oxyUserId
+                                                            || '?'
+                                                            : landlordProfile?.profileType === 'business'
+                                                                ? landlordProfile?.businessProfile?.legalCompanyName
+                                                                || landlordProfile?.oxyUserId
+                                                                || '?'
+                                                                : landlordProfile?.profileType === 'cooperative'
+                                                                    ? landlordProfile?.cooperativeProfile?.legalName
+                                                                    || landlordProfile?.oxyUserId
+                                                                    || '?'
+                                                                    : landlordProfile?.oxyUserId || '?'}
                                             </Text>
                                             {landlordProfile?.isActive && (
                                                 <View style={styles.verifiedBadge}>

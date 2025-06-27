@@ -15,6 +15,7 @@ import locationReducer from "./reducers/locationReducer";
 import neighborhoodReducer from "./reducers/neighborhoodReducer";
 import currencyReducer from "./reducers/currencyReducer";
 import createPropertyFormReducer from "./reducers/createPropertyFormReducer";
+import roommateReducer from "./reducers/roommateReducer";
 
 const rootReducer = combineReducers({
   trends: trendsReducer,
@@ -33,6 +34,7 @@ const rootReducer = combineReducers({
   neighborhood: neighborhoodReducer,
   currency: currencyReducer,
   createPropertyForm: createPropertyFormReducer,
+  roommate: roommateReducer,
 });
 
 export const store = configureStore({

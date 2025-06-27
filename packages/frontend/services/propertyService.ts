@@ -17,6 +17,7 @@ export interface Property {
   };
   type: 'apartment' | 'house' | 'room' | 'studio' | 'couchsurfing' | 'roommates' | 'coliving' | 'hostel' | 'guesthouse' | 'campsite' | 'boat' | 'treehouse' | 'yurt' | 'other';
   housingType?: 'private' | 'public'; // Distinguishes private vs public housing
+  layoutType?: 'open' | 'shared' | 'partitioned' | 'traditional' | 'studio' | 'other';
   description?: string;
   squareFootage?: number;
   bedrooms?: number;
@@ -146,6 +147,41 @@ export interface PropertyFilters {
   limit?: number;
 }
 
+export interface EthicalPricingRequest {
+  localMedianIncome: number;
+  areaAverageRent: number;
+  propertyType?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  squareFootage?: number;
+}
+
+export interface EthicalPricingResponse {
+  success: boolean;
+  data: {
+    suggestions: {
+      standardRent: number;
+      affordableRent: number;
+      marketRate: number;
+      reducedDeposit: number;
+      communityRent: number;
+      slidingScaleBase: number;
+      slidingScaleMax: number;
+      marketAdjustedRent: number;
+      incomeBasedRent: number;
+    };
+    marketContext: string;
+    warnings: string[];
+    calculations: {
+      monthlyMedianIncome: number;
+      rentToIncomeRatio: number;
+      standardRentPercentage: number;
+      affordableRentPercentage: number;
+      communityRentPercentage: number;
+    };
+  };
+}
+
 class PropertyService {
   private baseUrl = '/api/properties';
 
@@ -169,7 +205,9 @@ class PropertyService {
       oxyServices,
       activeSessionId,
     });
-    return response.data.data || response.data.property;
+    const property = response.data.data || response.data.property;
+    property.id = property._id || property.id || '';
+    return property;
   }
 
   async createProperty(data: CreatePropertyData, oxyServices: any, activeSessionId: string): Promise<Property> {
@@ -215,6 +253,15 @@ class PropertyService {
     return response.data;
   }
 
+  async calculateEthicalPricing(data: EthicalPricingRequest): Promise<EthicalPricingResponse> {
+    try {
+      const response = await api.post(`${this.baseUrl}/calculate-ethical-pricing`, data);
+      return response.data;
+    } catch (error) {
+      console.error('Error calculating ethical pricing:', error);
+      throw new Error('Failed to calculate ethical pricing');
+    }
+  }
 }
 
 export const propertyService = new PropertyService();

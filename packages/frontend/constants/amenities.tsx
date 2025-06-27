@@ -1243,35 +1243,20 @@ export const checkFairHousingCompliance = (amenityIds: string[]): {
     violations: string[];
     recommendations: string[];
 } => {
-    const selectedAmenities = amenityIds.map(id => getAmenityById(id)).filter(Boolean) as Amenity[];
     const violations: string[] = [];
     const recommendations: string[] = [];
 
-    // Check for accessibility violations
-    const accessibilityAmenities = selectedAmenities.filter(a => a.accessibility && (a.maxFairValue || 0) > 0);
-    if (accessibilityAmenities.length > 0) {
-        violations.push('Charging for accessibility features violates fair housing laws');
-        recommendations.push('Remove all charges for accessibility-related amenities');
+    // Check for discriminatory amenity combinations
+    const hasAccessibility = amenityIds.some(id => getAmenityById(id)?.accessibility);
+    const hasEssential = amenityIds.some(id => getAmenityById(id)?.essential);
+
+    if (!hasEssential) {
+        violations.push('Missing essential amenities for habitability');
+        recommendations.push('Include basic utilities and heating/cooling');
     }
 
-    // Check for discriminatory practices
-    const essentialAmenities = selectedAmenities.filter(a => a.essential && (a.maxFairValue || 0) > 30);
-    if (essentialAmenities.length > 0) {
-        violations.push('Overcharging for essential amenities may constitute discriminatory practices');
-        recommendations.push('Reduce charges for essential amenities to ethical levels');
-    }
-
-    // Positive recommendations
-    if (violations.length === 0) {
-        const ecoAmenities = selectedAmenities.filter(a => a.environmental === 'positive');
-        if (ecoAmenities.length > 0) {
-            recommendations.push('Great job including environmental amenities that benefit the community');
-        }
-
-        const communityAmenities = selectedAmenities.filter(a => a.category === 'community');
-        if (communityAmenities.length > 0) {
-            recommendations.push('Community amenities promote social connection and well-being');
-        }
+    if (!hasAccessibility) {
+        recommendations.push('Consider adding accessibility features for universal design');
     }
 
     return {
@@ -1322,4 +1307,167 @@ export const POPULAR_AMENITIES = [
     'pet_friendly',
     'gym',
     'swimming_pool'
-]; 
+];
+
+// Property type-specific amenity functions
+export const getAmenitiesByPropertyType = (propertyType: string): string[] => {
+    switch (propertyType) {
+        case 'apartment':
+            return [
+                'wifi', 'electricity', 'water', 'heating', 'trash_pickup',
+                'air_conditioning', 'kitchen', 'refrigerator', 'stove', 'microwave',
+                'dishwasher', 'laundry', 'parking', 'elevator', 'balcony',
+                'storage', 'security_system', 'intercom', 'package_reception'
+            ];
+
+        case 'house':
+            return [
+                'wifi', 'electricity', 'water', 'heating', 'trash_pickup',
+                'air_conditioning', 'kitchen', 'refrigerator', 'stove', 'microwave',
+                'dishwasher', 'laundry', 'parking', 'garage', 'garden',
+                'patio', 'fireplace', 'storage', 'security_system', 'smoke_detector'
+            ];
+
+        case 'room':
+            return [
+                'wifi', 'electricity', 'water', 'heating', 'trash_pickup',
+                'air_conditioning', 'kitchen_access', 'laundry_access',
+                'parking', 'storage', 'security_system', 'furnished'
+            ];
+
+        case 'studio':
+            return [
+                'wifi', 'electricity', 'water', 'heating', 'trash_pickup',
+                'air_conditioning', 'kitchen', 'refrigerator', 'stove', 'microwave',
+                'laundry', 'parking', 'elevator', 'storage', 'security_system',
+                'furnished', 'balcony'
+            ];
+
+        case 'duplex':
+            return [
+                'wifi', 'electricity', 'water', 'heating', 'trash_pickup',
+                'air_conditioning', 'kitchen', 'refrigerator', 'stove', 'microwave',
+                'dishwasher', 'laundry', 'parking', 'garden', 'patio',
+                'fireplace', 'storage', 'security_system', 'private_entrance'
+            ];
+
+        case 'penthouse':
+            return [
+                'wifi', 'electricity', 'water', 'heating', 'trash_pickup',
+                'air_conditioning', 'kitchen', 'refrigerator', 'stove', 'microwave',
+                'dishwasher', 'laundry', 'parking', 'elevator', 'rooftop_access',
+                'balcony', 'fireplace', 'storage', 'security_system', 'concierge',
+                'gym', 'pool', 'spa'
+            ];
+
+        case 'couchsurfing':
+            return [
+                'wifi', 'electricity', 'water', 'heating', 'trash_pickup',
+                'kitchen_access', 'laundry_access', 'cultural_exchange',
+                'local_guidance', 'flexible_checkin'
+            ];
+
+        case 'roommates':
+            return [
+                'wifi', 'electricity', 'water', 'heating', 'trash_pickup',
+                'air_conditioning', 'kitchen_access', 'laundry_access',
+                'parking', 'storage', 'security_system', 'shared_spaces',
+                'community_events'
+            ];
+
+        case 'coliving':
+            return [
+                'wifi', 'electricity', 'water', 'heating', 'trash_pickup',
+                'air_conditioning', 'kitchen', 'laundry', 'parking', 'storage',
+                'security_system', 'shared_spaces', 'community_events',
+                'gym', 'workspace', 'rooftop_access', 'cleaning_service'
+            ];
+
+        case 'hostel':
+            return [
+                'wifi', 'electricity', 'water', 'heating', 'trash_pickup',
+                'air_conditioning', 'kitchen_access', 'laundry_access',
+                'parking', 'storage', 'security_system', 'shared_spaces',
+                'cleaning_service', 'flexible_checkin', 'cultural_exchange'
+            ];
+
+        case 'guesthouse':
+            return [
+                'wifi', 'electricity', 'water', 'heating', 'trash_pickup',
+                'air_conditioning', 'kitchen', 'laundry', 'parking', 'storage',
+                'security_system', 'private_entrance', 'cleaning_service',
+                'flexible_checkin', 'local_guidance'
+            ];
+
+        case 'campsite':
+            return [
+                'electricity', 'water', 'heating', 'trash_pickup',
+                'parking', 'storage', 'security_system', 'outdoor_space',
+                'fire_pit', 'picnic_area', 'shower_facilities'
+            ];
+
+        case 'boat':
+            return [
+                'wifi', 'electricity', 'water', 'heating', 'trash_pickup',
+                'kitchen', 'laundry', 'parking', 'storage', 'security_system',
+                'waterfront_view', 'unique_experience'
+            ];
+
+        case 'treehouse':
+            return [
+                'wifi', 'electricity', 'water', 'heating', 'trash_pickup',
+                'kitchen', 'laundry', 'parking', 'storage', 'security_system',
+                'unique_experience', 'nature_immersion', 'outdoor_space'
+            ];
+
+        case 'yurt':
+            return [
+                'electricity', 'water', 'heating', 'trash_pickup',
+                'kitchen', 'laundry', 'parking', 'storage', 'security_system',
+                'unique_experience', 'cultural_immersion', 'outdoor_space'
+            ];
+
+        default:
+            return [
+                'wifi', 'electricity', 'water', 'heating', 'trash_pickup',
+                'air_conditioning', 'kitchen', 'laundry', 'parking', 'storage'
+            ];
+    }
+};
+
+export const getAmenityDescriptionByPropertyType = (propertyType: string): string => {
+    switch (propertyType) {
+        case 'apartment':
+            return 'Select amenities available in your apartment building';
+        case 'house':
+            return 'Choose amenities available in your house';
+        case 'room':
+            return 'Select amenities available to room tenants';
+        case 'studio':
+            return 'Choose amenities in your studio apartment';
+        case 'duplex':
+            return 'Select amenities available in your duplex';
+        case 'penthouse':
+            return 'Choose luxury amenities in your penthouse';
+        case 'couchsurfing':
+            return 'Select what you can offer to couchsurfers';
+        case 'roommates':
+            return 'Choose amenities available to roommates';
+        case 'coliving':
+            return 'Select community amenities in your co-living space';
+        case 'hostel':
+            return 'Choose amenities available to hostel guests';
+        case 'guesthouse':
+            return 'Select amenities for your guesthouse';
+        case 'campsite':
+            return 'Choose camping amenities and facilities';
+        case 'boat':
+            return 'Select amenities available on your boat';
+        case 'treehouse':
+            return 'Choose amenities in your treehouse';
+        case 'yurt':
+            return 'Select amenities in your yurt';
+        default:
+            return 'Select amenities available at your property';
+    }
+}; 

@@ -4,14 +4,16 @@
  */
 
 const express = require('express');
-const roommateController = require('../controllers/roommateController');
 const { asyncHandler } = require('../middlewares');
+const roommateController = require('../controllers/roommateController');
 
-module.exports = function() {
   const router = express.Router();
 
   // Get all roommate profiles
   router.get('/', asyncHandler(roommateController.getRoommateProfiles));
+
+// Get current user's roommate status with Oxy data
+router.get('/status', asyncHandler(roommateController.getCurrentUserRoommateStatus));
 
   // Get current user's roommate preferences
   router.get('/preferences', asyncHandler(roommateController.getMyRoommatePreferences));
@@ -34,5 +36,4 @@ module.exports = function() {
   // Decline roommate request
   router.post('/requests/:requestId/decline', asyncHandler(roommateController.declineRoommateRequest));
 
-  return router;
-}; 
+module.exports = () => router; 

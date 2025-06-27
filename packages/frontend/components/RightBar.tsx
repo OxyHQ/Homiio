@@ -92,39 +92,28 @@ export function RightBar() {
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
-        backgroundColor: colors.primaryLight,
+        width: 350,
         paddingStart: 20,
         flexDirection: 'column',
-        gap: 20,
-        ...Platform.select({
-            web: {
-                maxWidth: 400,
-                borderLeftWidth: 1,
-                borderLeftColor: colors.COLOR_BLACK_LIGHT_6,
-            },
-        }),
-    },
-    stickySearchContainer: {
+        gap: 10,
         ...Platform.select({
             web: {
                 position: 'sticky' as any,
                 top: 0,
-                zIndex: 10,
-                backgroundColor: colors.primaryLight,
-                paddingBottom: 10,
+                height: '100vh' as any,
             },
         }),
     },
+    stickySearchContainer: {
+        //...Platform.select({
+        //    web: {
+        //        position: 'sticky' as any,
+        //        top: 0,
+        //        zIndex: 10,
+        //    },
+        //}),
+    },
     stickyWidgetsContainer: {
-        ...Platform.select({
-            web: {
-                position: 'sticky' as any,
-                top: 120, // Below search bar
-                zIndex: 5,
-                maxHeight: '80vh' as any,
-                overflowY: 'auto' as any,
-            },
-        }),
+        flex: 1,
     },
 });

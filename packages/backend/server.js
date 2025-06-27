@@ -4,7 +4,6 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const { OxyServices } = require('@oxyhq/services/core');
 const { version } = require('./package.json');
 
 // Import our modules
@@ -13,6 +12,7 @@ const routes = require('./routes');
 const logging = require('./middlewares/logging');
 const { notFound, errorHandler } = require('./middlewares/errorHandler');
 const database = require('./database/connection');
+const oxyServices = require('./services/oxyServices');
 
 // Initialize database connection
 async function initializeDatabase() {
@@ -24,12 +24,6 @@ async function initializeDatabase() {
     process.exit(1);
   }
 }
-
-// Initialize OxyServices with your Oxy API URL
-const isProduction = config.environment === 'production';
-const oxyServices = new OxyServices({
-  baseURL: config.oxy.baseURL
-});
 
 // Express setup
 const app = express();
@@ -188,7 +182,7 @@ app.use(logging.errorLogger);
 app.use(notFound);
 app.use(errorHandler);
 
-const port = config.port;
+const port = process.env.PORT || config.port;
 
 // Start server with database initialization
 async function startServer() {
@@ -197,7 +191,7 @@ async function startServer() {
     await initializeDatabase();
     
     // Start the Express server
-    app.listen(port, () => {
+    const server = app.listen(port, () => {
       console.log(`🚀 Homio Backend running on port ${port}`);
       console.log(`Environment: ${config.environment}`);
       console.log('Features: Property & Room Management, Energy Monitoring, AI Streaming');
@@ -216,6 +210,17 @@ async function startServer() {
       console.log('  POST /api/ai/chat - AI chat completion (authenticated)');
       console.log('  GET  /api/ai/health - AI service health check');
     });
+
+    // Handle EADDRINUSE gracefully
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${port} is already in use. Please stop the other process or use a different port (set PORT env variable).`);
+        process.exit(1);
+      } else {
+        console.error('❌ Server error:', err);
+        process.exit(1);
+      }
+    });
   } catch (error) {
     console.error('❌ Failed to start server:', error.message);
     process.exit(1);
@@ -224,4 +229,9 @@ async function startServer() {
 
 // Start the server
 startServer();
+
+// Export app for testing purposes
+module.exports = {
+  app
+};
 

@@ -181,8 +181,13 @@ const propertySchema = new mongoose.Schema({
   },
   housingType: {
     type: String,
-    enum: ['private', 'public', 'shared', 'open', 'partitioned'],
+    enum: ['private', 'public'],
     default: 'private'
+  },
+  layoutType: {
+    type: String,
+    enum: ['open', 'shared', 'partitioned', 'traditional', 'studio', 'other'],
+    default: 'traditional'
   },
   bedrooms: {
     type: Number,
