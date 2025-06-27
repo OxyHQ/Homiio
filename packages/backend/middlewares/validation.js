@@ -51,7 +51,8 @@ const validateProperty = [
   body('bedrooms').optional().isInt({ min: 0 }).withMessage('Bedrooms must be a non-negative integer'),
   body('bathrooms').optional().isFloat({ min: 0 }).withMessage('Bathrooms must be a non-negative number'),
   body('squareFootage').optional().isFloat({ min: 0 }).withMessage('Square footage must be non-negative'),
-  body('type').isIn(['apartment', 'house', 'room', 'studio']).withMessage('Invalid property type'),
+  body('type').isIn(['apartment', 'house', 'room', 'studio', 'couchsurfing', 'roommates', 'coliving', 'hostel', 'guesthouse', 'campsite', 'boat', 'treehouse', 'yurt', 'other']).withMessage('Invalid property type'),
+  body('housingType').optional().isIn(['private', 'public', 'shared', 'open', 'partitioned']).withMessage('Invalid housing type'),
   handleValidationErrors
 ];
 

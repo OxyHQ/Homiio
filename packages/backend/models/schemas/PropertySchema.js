@@ -83,6 +83,22 @@ const rentSchema = new mongoose.Schema({
     type: String,
     enum: ['included', 'excluded', 'partial'],
     default: 'excluded'
+  },
+  hasIncomeBasedPricing: {
+    type: Boolean,
+    default: false
+  },
+  hasSlidingScale: {
+    type: Boolean,
+    default: false
+  },
+  hasUtilitiesIncluded: {
+    type: Boolean,
+    default: false
+  },
+  hasReducedDeposit: {
+    type: Boolean,
+    default: false
   }
 }, { _id: false });
 
@@ -160,12 +176,12 @@ const propertySchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['apartment', 'house', 'room', 'studio'],
+    enum: ['apartment', 'house', 'room', 'studio', 'couchsurfing', 'roommates', 'coliving', 'hostel', 'guesthouse', 'campsite', 'boat', 'treehouse', 'yurt', 'other'],
     default: 'apartment'
   },
   housingType: {
     type: String,
-    enum: ['private', 'public'],
+    enum: ['private', 'public', 'shared', 'open', 'partitioned'],
     default: 'private'
   },
   bedrooms: {
@@ -183,6 +199,36 @@ const propertySchema = new mongoose.Schema({
     min: [0, 'Square footage cannot be negative'],
     default: 0
   },
+  floor: {
+    type: Number,
+    min: [0, 'Floor cannot be negative'],
+    default: 0
+  },
+  yearBuilt: {
+    type: Number,
+    min: [1800, 'Year built must be at least 1800'],
+    max: [new Date().getFullYear(), 'Year built cannot be in the future']
+  },
+  hasElevator: {
+    type: Boolean,
+    default: false
+  },
+  hasBalcony: {
+    type: Boolean,
+    default: false
+  },
+  hasGarden: {
+    type: Boolean,
+    default: false
+  },
+  utilitiesIncluded: {
+    type: Boolean,
+    default: false
+  },
+  petFriendly: {
+    type: Boolean,
+    default: false
+  },
   rent: {
     type: rentSchema,
     required: true
@@ -192,6 +238,74 @@ const propertySchema = new mongoose.Schema({
     trim: true,
     lowercase: true
   }],
+  priceUnit: {
+    type: String,
+    enum: ['day', 'night', 'week', 'month', 'year'],
+    default: 'month'
+  },
+  furnishedStatus: {
+    type: String,
+    enum: ['furnished', 'unfurnished', 'partially_furnished'],
+    default: 'unfurnished'
+  },
+  petPolicy: {
+    type: String,
+    enum: ['allowed', 'not_allowed', 'case_by_case'],
+    default: 'not_allowed'
+  },
+  petFee: {
+    type: Number,
+    min: [0, 'Pet fee cannot be negative'],
+    default: 0
+  },
+  parkingType: {
+    type: String,
+    enum: ['none', 'street', 'assigned', 'garage'],
+    default: 'none'
+  },
+  parkingSpaces: {
+    type: Number,
+    min: [0, 'Parking spaces cannot be negative'],
+    default: 0
+  },
+  availableFrom: {
+    type: Date,
+    default: Date.now
+  },
+  leaseTerm: {
+    type: String,
+    enum: ['monthly', '6_months', '12_months', 'flexible'],
+    default: 'monthly'
+  },
+  smokingAllowed: {
+    type: Boolean,
+    default: false
+  },
+  partiesAllowed: {
+    type: Boolean,
+    default: false
+  },
+  guestsAllowed: {
+    type: Boolean,
+    default: true
+  },
+  maxGuests: {
+    type: Number,
+    min: [1, 'Maximum guests must be at least 1'],
+    default: 1
+  },
+  proximityToTransport: {
+    type: Boolean,
+    default: false
+  },
+  proximityToSchools: {
+    type: Boolean,
+    default: false
+  },
+  proximityToShopping: {
+    type: Boolean,
+    default: false
+  },
   rules: {
     type: rulesSchema,
     default: {}
@@ -213,6 +327,10 @@ const propertySchema = new mongoose.Schema({
       default: false
     }
   }],
+  coverImageIndex: {
+    type: Number,
+    default: -1
+  },
   documents: [{
     name: {
       type: String,
@@ -233,9 +351,85 @@ const propertySchema = new mongoose.Schema({
       default: 'other'
     }
   }],
+  location: {
+    latitude: {
+      type: Number,
+      min: [-90, 'Latitude must be between -90 and 90'],
+      max: [90, 'Latitude must be between -90 and 90']
+    },
+    longitude: {
+      type: Number,
+      min: [-180, 'Longitude must be between -180 and 180'],
+      max: [180, 'Longitude must be between -180 and 180']
+    }
+  },
+  // Accommodation-specific details
+  accommodationDetails: {
+    sleepingArrangement: {
+      type: String,
+      enum: ['couch', 'air_mattress', 'floor', 'tent', 'hammock']
+    },
+    roommatePreferences: [{
+      type: String,
+      trim: true
+    }],
+    colivingFeatures: [{
+      type: String,
+      trim: true
+    }],
+    hostelRoomType: {
+      type: String,
+      enum: ['dormitory', 'private_room', 'mixed_dorm', 'female_dorm', 'male_dorm']
+    },
+    campsiteType: {
+      type: String,
+      enum: ['tent_site', 'rv_site', 'cabin', 'glamping', 'backcountry']
+    },
+    maxStay: {
+      type: Number,
+      min: [1, 'Maximum stay must be at least 1 day']
+    },
+    minAge: {
+      type: Number,
+      min: [18, 'Minimum age must be at least 18']
+    },
+    maxAge: {
+      type: Number,
+      min: [18, 'Maximum age must be at least 18']
+    },
+    languages: [{
+      type: String,
+      trim: true
+    }],
+    culturalExchange: {
+      type: Boolean,
+      default: false
+    },
+    mealsIncluded: {
+      type: Boolean,
+      default: false
+    },
+    wifiPassword: {
+      type: String,
+      trim: true
+    },
+    houseRules: [{
+      type: String,
+      trim: true
+    }]
+  },
   availability: {
     type: availabilitySchema,
     default: {}
+  },
+  // Draft functionality
+  isDraft: {
+    type: Boolean,
+    default: true
+  },
+  lastSaved: {
+    type: Date,
+    default: Date.now
   },
   deviceId: {
     type: String,

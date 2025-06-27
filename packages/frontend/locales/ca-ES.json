@@ -353,7 +353,9 @@
             "autoSync": "Sincronització Automàtica",
             "autoSyncDesc": "Sincronitzar dades automàticament en segon pla",
             "offlineMode": "Mode Sense Connexió",
-            "offlineModeDesc": "Usar l'aplicació sense connexió a internet"
+            "offlineModeDesc": "Usar l'aplicació sense connexió a internet",
+            "currency": "Moneda",
+            "currencyDesc": "Selecciona la teva moneda preferida"
         },
         "quickActions": {
             "createProperty": "Crear Propietat",
@@ -363,13 +365,19 @@
         },
         "data": {
             "exportData": "Exportar Dades",
-            "exportDataDesc": "Descarregar les teves dades com a arxiu",
-            "exportDataMessage": "Això exportarà totes les teves dades incloent propietats, preferències i configuració.",
+            "exportDataDesc": "Descarregar les teves dades com a fitxer",
+            "exportDataMessage": "Això exportarà totes les teves dades incloent propietats, preferències i configuracions.",
             "exportDataSuccess": "Les teves dades han estat exportades amb èxit!",
-            "clearCache": "Netejar Memòria Cau",
+            "clearCache": "Netejar Caché",
             "clearCacheDesc": "Alliberar espai d'emmagatzematge",
-            "clearCacheMessage": "Això netejrarà totes les dades en memòria cau. L'aplicació pot trigar més a carregar la propera vegada.",
-            "clearCacheSuccess": "Memòria cau netejada amb èxit!"
+            "clearCacheMessage": "Això netejarà totes les dades en caché. L'aplicació pot tardar més a carregar la propera vegada.",
+            "clearCacheSuccess": "Caché netejat amb èxit!"
+        },
+        "currency": {
+            "title": "Moneda",
+            "selectCurrency": "Selecciona la teva moneda preferida",
+            "description": "Això s'utilitzarà per mostrar preus a tota l'aplicació",
+            "currencyChanged": "Moneda canviada amb èxit"
         }
     },
     "common": {

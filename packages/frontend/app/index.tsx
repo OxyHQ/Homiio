@@ -658,7 +658,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   statChip: {
-    flexBasis: '47%',
+    flex: 1,
+    minWidth: '45%',
     borderRadius: 25,
     borderWidth: 1,
     borderColor: colors.COLOR_BLACK,

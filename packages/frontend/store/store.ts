@@ -13,6 +13,8 @@ import searchStatisticsReducer from "./reducers/searchStatisticsReducer";
 import propertyListReducer from "./reducers/propertyListReducer";
 import locationReducer from "./reducers/locationReducer";
 import neighborhoodReducer from "./reducers/neighborhoodReducer";
+import currencyReducer from "./reducers/currencyReducer";
+import createPropertyFormReducer from "./reducers/createPropertyFormReducer";
 
 const rootReducer = combineReducers({
   trends: trendsReducer,
@@ -29,6 +31,8 @@ const rootReducer = combineReducers({
   propertyList: propertyListReducer,
   location: locationReducer,
   neighborhood: neighborhoodReducer,
+  currency: currencyReducer,
+  createPropertyForm: createPropertyFormReducer,
 });
 
 export const store = configureStore({

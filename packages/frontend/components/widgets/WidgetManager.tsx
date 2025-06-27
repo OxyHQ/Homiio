@@ -10,6 +10,7 @@ import { PropertyAlertWidget } from './PropertyAlertWidget';
 import { NeighborhoodRatingWidget } from './NeighborhoodRatingWidget';
 import { RecentlyViewedWidget } from './RecentlyViewedWidget';
 import { QuickFiltersWidget } from './QuickFiltersWidget';
+import { PropertyPreviewWidget } from './PropertyPreviewWidget';
 
 // Define screen IDs
 export type ScreenId =
@@ -22,7 +23,8 @@ export type ScreenId =
     | 'payments'
     | 'messages'
     | 'search'
-    | 'search-results';
+    | 'search-results'
+    | 'create-property';
 
 interface WidgetManagerProps {
     screenId: ScreenId;
@@ -127,6 +129,11 @@ export function WidgetManager({
                     <PropertyAlertWidget key="property-alert" />
                 ];
 
+            case 'create-property':
+                return [
+                    <PropertyPreviewWidget key="property-preview" />
+                ];
+
             default:
                 return [];
         }
@@ -152,9 +159,9 @@ export function WidgetManager({
 const styles = StyleSheet.create({
     container: {
         flexDirection: 'column',
-        gap: 10,
+        gap: 15,
     },
     widgetWrapper: {
-        marginBottom: 10,
+        marginBottom: 0, // No margin since we're using gap
     }
 }); 

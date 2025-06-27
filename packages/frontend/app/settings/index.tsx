@@ -16,6 +16,7 @@ import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { LogoIcon } from '@/assets/logo';
+import { useCurrency } from '@/hooks/useCurrency';
 import i18n from 'i18next';
 
 // Type assertion for Ionicons compatibility with React 19
@@ -25,6 +26,7 @@ export default function SettingsScreen() {
     const { t } = useTranslation();
     const router = useRouter();
     const { user, showBottomSheet } = useOxy();
+    const { currentCurrency } = useCurrency();
 
     // Settings state
     const [notifications, setNotifications] = useState(true);
@@ -112,9 +114,9 @@ export default function SettingsScreen() {
                         <View style={styles.settingInfo}>
                             <View>
                                 <Text style={styles.settingLabel}>
-                                    {typeof user.name === 'string' ? user.name : user.name?.full || user.name?.first || user.username}
+                                    {user ? (typeof user.name === 'string' ? user.name : user.name?.full || user.name?.first || user.username) : 'User'}
                                 </Text>
-                                <Text style={styles.settingDescription}>{user.username}</Text>
+                                <Text style={styles.settingDescription}>{user?.username || 'Username'}</Text>
                             </View>
                         </View>
                         <IconComponent name="chevron-forward" size={16} color="#ccc" />
@@ -284,6 +286,23 @@ export default function SettingsScreen() {
                             <View>
                                 <Text style={styles.settingLabel}>{t('Language')}</Text>
                                 <Text style={styles.settingDescription}>{t('Select your preferred language')}</Text>
+                            </View>
+                        </View>
+                        <IconComponent name="chevron-forward" size={16} color="#ccc" />
+                    </TouchableOpacity>
+
+                    {/* Currency Selection */}
+                    <TouchableOpacity
+                        style={styles.settingItem}
+                        onPress={() => router.push('/settings/currency')}
+                    >
+                        <View style={styles.settingInfo}>
+                            <IconComponent name="cash" size={20} color="#666" style={styles.settingIcon} />
+                            <View>
+                                <Text style={styles.settingLabel}>{t('settings.preferences.currency', 'Currency')}</Text>
+                                <Text style={styles.settingDescription}>
+                                    {currentCurrency.flag} {currentCurrency.name} ({currentCurrency.code})
+                                </Text>
                             </View>
                         </View>
                         <IconComponent name="chevron-forward" size={16} color="#ccc" />

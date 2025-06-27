@@ -169,7 +169,9 @@
       "autoSync": "Sincronizzazione Automatica",
       "autoSyncDesc": "Sincronizza automaticamente i dati in background",
       "offlineMode": "Modalità Offline",
-      "offlineModeDesc": "Usa l'app senza connessione internet"
+      "offlineModeDesc": "Usa l'app senza connessione internet",
+      "currency": "Valuta",
+      "currencyDesc": "Seleziona la tua valuta preferita"
     },
     "quickActions": {
       "createProperty": "Crea Proprietà",
@@ -186,6 +188,12 @@
       "clearCacheDesc": "Libera spazio di archiviazione",
       "clearCacheMessage": "Questo cancellerà tutti i dati in cache. L'app potrebbe impiegare più tempo a caricare la prossima volta.",
       "clearCacheSuccess": "Cache cancellata con successo!"
+    },
+    "currency": {
+      "title": "Valuta",
+      "selectCurrency": "Seleziona la tua valuta preferita",
+      "description": "Questo verrà utilizzato per visualizzare i prezzi in tutta l'app",
+      "currencyChanged": "Valuta cambiata con successo"
     }
   },
   "common": {

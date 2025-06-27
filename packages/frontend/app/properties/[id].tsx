@@ -8,6 +8,7 @@ import { Header } from '@/components/Header';
 import { PropertyMap } from '@/components/PropertyMap';
 import { ThemedText } from '@/components/ThemedText';
 import { AmenitiesDisplay } from '@/components/AmenitiesDisplay';
+import { CurrencyFormatter } from '@/components/CurrencyFormatter';
 import { useProperty } from '@/hooks';
 import { useOxy } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
@@ -435,7 +436,11 @@ ${propertyUrl}`;
                                             property.priceUnit === 'year' ? t("Yearly Rent") :
                                                 t("Rent")}
                         </Text>
-                        <Text style={styles.priceValue}>{property.price}</Text>
+                        <CurrencyFormatter
+                            amount={parseFloat(property.price) || 0}
+                            originalCurrency={apiProperty?.rent?.currency || 'USD'}
+                            showConversion={true}
+                        />
                     </View>
 
                     {/* Eco Rating */}
@@ -488,7 +493,7 @@ ${propertyUrl}`;
                     <View style={styles.divider} />
                     <Text style={styles.sectionTitle}>{t("What's Included")}</Text>
 
-                    <AmenitiesDisplay amenities={property.amenities} />
+                    <AmenitiesDisplay amenities={property.amenities} title="" />
 
                     {/* Map - Only show if location coordinates are available */}
                     {apiProperty?.address?.coordinates?.lat && apiProperty?.address?.coordinates?.lng && (

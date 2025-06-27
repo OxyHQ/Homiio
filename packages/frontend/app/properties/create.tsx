@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, ScrollView, TextInput, Alert, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Platform, Image, Dimensions, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
 import { colors } from '@/styles/colors';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -10,7 +11,7 @@ import { PropertyMap } from '@/components/PropertyMap';
 import { Header } from '@/components/Header';
 import { CreatePropertyData } from '@/services/propertyService';
 import { useDispatch, useSelector } from 'react-redux';
-import { createProperty } from '@/store/reducers/propertyReducer';
+import { createProperty, clearError } from '@/store/reducers/propertyReducer';
 import type { RootState, AppDispatch } from '@/store/store';
 import { useOxy } from '@oxyhq/services';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
@@ -21,8 +22,13 @@ import { useTranslation } from 'react-i18next';
 import { useCreateProperty } from '@/hooks/usePropertyQueries';
 import { useLocationSearch, useReverseGeocode } from '@/hooks/useLocationRedux';
 import { AmenitiesSelector } from '@/components/AmenitiesSelector';
+import { LinearGradient } from 'expo-linear-gradient';
+import { toast } from 'sonner';
+import { CurrencyFormatter } from '@/components/CurrencyFormatter';
+import { setFormData, setVisibility } from '@/store/reducers/createPropertyFormReducer';
 
 const IconComponent = Ionicons as any;
+const { width: screenWidth } = Dimensions.get('window');
 
 export default function CreatePropertyScreen() {
   const { t } = useTranslation();
@@ -37,7 +43,74 @@ export default function CreatePropertyScreen() {
   // Use Redux property creation hook
   const { create, loading: createLoading } = useCreateProperty();
 
-  const [formData, setFormData] = useState<CreatePropertyData & { priceUnit: 'day' | 'night' | 'week' | 'month' | 'year' }>({
+  const [formData, setLocalFormData] = useState<CreatePropertyData & {
+    priceUnit: 'day' | 'night' | 'week' | 'month' | 'year';
+    housingType?: 'private' | 'public' | 'shared' | 'open' | 'partitioned';
+    // Advanced property features
+    floor?: number;
+    yearBuilt?: number;
+    furnishedStatus: 'furnished' | 'unfurnished' | 'partially_furnished';
+    petPolicy: 'allowed' | 'not_allowed' | 'case_by_case';
+    petFee?: number;
+    parkingType: 'none' | 'street' | 'assigned' | 'garage';
+    parkingSpaces: number;
+    // Availability & rules
+    availableFrom: string;
+    leaseTerm: 'monthly' | '6_months' | '12_months' | 'flexible';
+    smokingAllowed: boolean;
+    partiesAllowed: boolean;
+    guestsAllowed: boolean;
+    maxGuests: number;
+    // Location intelligence
+    walkScore?: number;
+    transitScore?: number;
+    bikeScore?: number;
+    proximityToTransport: boolean;
+    proximityToSchools: boolean;
+    proximityToShopping: boolean;
+    // Images
+    images: string[];
+    coverImageIndex: number;
+    // Draft functionality
+    isDraft: boolean;
+    lastSaved: Date;
+    // Accommodation-specific details
+    accommodationDetails?: {
+      sleepingArrangement?: 'couch' | 'air_mattress' | 'floor' | 'tent' | 'hammock';
+      roommatePreferences?: string[];
+      colivingFeatures?: string[];
+      hostelRoomType?: 'dormitory' | 'private_room' | 'mixed_dorm' | 'female_dorm' | 'male_dorm';
+      campsiteType?: 'tent_site' | 'rv_site' | 'cabin' | 'glamping' | 'backcountry';
+      maxStay?: number; // For couchsurfing/hostels
+      minAge?: number;
+      maxAge?: number;
+      languages?: string[];
+      culturalExchange?: boolean;
+      mealsIncluded?: boolean;
+      wifiPassword?: string;
+      houseRules?: string[];
+    };
+    // Ethical pricing
+    rent: {
+      amount: number;
+      currency?: string;
+      paymentFrequency?: 'monthly' | 'weekly' | 'daily';
+      deposit?: number;
+      utilities?: 'excluded' | 'included' | 'partial';
+      hasIncomeBasedPricing?: boolean;
+      hasSlidingScale?: boolean;
+      hasUtilitiesIncluded?: boolean;
+      hasReducedDeposit?: boolean;
+      localMedianIncome?: number;
+      areaAverageRent?: number;
+      ethicalPricingSuggestions?: {
+        standardRent?: number;
+        affordableRent?: number;
+        marketRate?: number;
+        reducedDeposit?: number;
+      };
+    };
+  }>({
     address: {
       street: '',
       city: '',
@@ -56,14 +129,19 @@ export default function CreatePropertyScreen() {
       paymentFrequency: 'monthly',
       deposit: 0,
       utilities: 'excluded',
+      hasIncomeBasedPricing: false,
+      hasSlidingScale: false,
+      hasUtilitiesIncluded: false,
+      hasReducedDeposit: false,
     },
     priceUnit: 'month',
     amenities: [],
+    housingType: 'private',
     floor: undefined,
     hasElevator: false,
     parkingSpaces: 1,
     yearBuilt: undefined,
-    isFurnished: false,
+    furnishedStatus: 'unfurnished',
     utilitiesIncluded: false,
     petFriendly: false,
     hasBalcony: false,
@@ -71,6 +149,20 @@ export default function CreatePropertyScreen() {
     proximityToTransport: false,
     proximityToSchools: false,
     proximityToShopping: false,
+    // New fields
+    petPolicy: 'not_allowed',
+    petFee: 0,
+    parkingType: 'none',
+    availableFrom: new Date().toISOString().split('T')[0],
+    leaseTerm: '12_months',
+    smokingAllowed: false,
+    partiesAllowed: false,
+    guestsAllowed: true,
+    maxGuests: 2,
+    images: [],
+    coverImageIndex: 0,
+    isDraft: true,
+    lastSaved: new Date(),
   });
 
   const [selectedLocation, setSelectedLocation] = useState<{
@@ -109,6 +201,153 @@ export default function CreatePropertyScreen() {
   const [pricingValidation, setPricingValidation] = useState<any>(null);
   const [showPricingGuidance, setShowPricingGuidance] = useState(false);
 
+  // Auto-save functionality
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  const autoSaveTimeoutRef = useRef<any>(null);
+
+  // Image management
+  const [imageUploading, setImageUploading] = useState(false);
+
+  // Location intelligence
+  const [locationScores, setLocationScores] = useState({
+    walkScore: null as number | null,
+    transitScore: null as number | null,
+    bikeScore: null as number | null,
+  });
+
+  // Scroll refs for error handling
+  const scrollViewRef = useRef<ScrollView>(null);
+  const fieldRefs = useRef<{ [key: string]: any }>({});
+
+  // Error state management
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [hasValidationErrors, setHasValidationErrors] = useState(false);
+
+  const fetchLocationScores = async (zipCode: string) => {
+    try {
+      const response = await fetch(`https://api.zippopotam.us/us/${zipCode}`);
+      const data = await response.json();
+
+      if (data.places && data.places.length > 0) {
+        const place = data.places[0];
+        setLocalFormData(prev => ({
+          ...prev,
+          address: {
+            ...prev.address,
+            city: place['place name'],
+            state: place['state abbreviation'],
+            zipCode: zipCode,
+          },
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching location scores:', error);
+    }
+  };
+
+  const autoFillFromZipCode = async (zipCode: string) => {
+    try {
+      const response = await fetch(`https://api.zippopotam.us/us/${zipCode}`);
+      const data = await response.json();
+
+      if (data.places && data.places.length > 0) {
+        const place = data.places[0];
+        setLocalFormData(prev => ({
+          ...prev,
+          address: {
+            ...prev.address,
+            city: place['place name'],
+            state: place['state abbreviation'],
+            zipCode: zipCode,
+          },
+        }));
+      }
+    } catch (error) {
+      console.error('Error auto-filling from zip code:', error);
+    }
+  };
+
+  const updateZipCodeWithAutoFill = (zipCode: string) => {
+    if (zipCode.length === 5) {
+      autoFillFromZipCode(zipCode);
+    }
+  };
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const newImage = result.assets[0].uri;
+      setLocalFormData(prev => ({
+        ...prev,
+        images: [...prev.images, newImage],
+      }));
+    }
+  };
+
+  const takePhoto = async () => {
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const newImage = result.assets[0].uri;
+      setLocalFormData(prev => ({
+        ...prev,
+        images: [...prev.images, newImage],
+      }));
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setLocalFormData(prev => {
+      const newImages = prev.images.filter((_, i) => i !== index);
+      return {
+        ...prev,
+        images: newImages,
+        coverImageIndex: Math.min(prev.coverImageIndex, newImages.length - 1),
+      };
+    });
+  };
+
+  const setCoverImage = (index: number) => {
+    setLocalFormData(prev => ({
+      ...prev,
+      coverImageIndex: index,
+    }));
+  };
+
+  const reorderImages = (fromIndex: number, toIndex: number) => {
+    setLocalFormData(prev => {
+      const newImages = [...prev.images];
+      const [movedImage] = newImages.splice(fromIndex, 1);
+      newImages.splice(toIndex, 0, movedImage);
+
+      // Adjust cover image index if needed
+      let newCoverIndex = prev.coverImageIndex;
+      if (prev.coverImageIndex === fromIndex) {
+        newCoverIndex = toIndex;
+      } else if (prev.coverImageIndex > fromIndex && prev.coverImageIndex <= toIndex) {
+        newCoverIndex--;
+      } else if (prev.coverImageIndex < fromIndex && prev.coverImageIndex >= toIndex) {
+        newCoverIndex++;
+      }
+
+      return {
+        ...prev,
+        images: newImages,
+        coverImageIndex: newCoverIndex,
+      };
+    });
+  };
+
   const isFormValid = () => {
     return (
       formData.address.street.trim() !== '' &&
@@ -128,6 +367,11 @@ export default function CreatePropertyScreen() {
 
     checkLocationPermission();
   }, []);
+
+  // Clear loading state on mount to ensure clean state
+  useEffect(() => {
+    dispatch(clearError());
+  }, [dispatch]);
 
   // Better address parsing function for OpenStreetMap Nominatim format
   const parseAddress = (fullAddress: string) => {
@@ -195,11 +439,9 @@ export default function CreatePropertyScreen() {
       setLocationPermission(status);
 
       if (status !== 'granted') {
-        Alert.alert(
-          'Location Permission Required',
-          'Please enable location access to use this feature.',
-          [{ text: 'OK' }]
-        );
+        toast.error('Location Permission Required', {
+          description: 'Please enable location access to use this feature.'
+        });
         return;
       }
 
@@ -234,7 +476,7 @@ export default function CreatePropertyScreen() {
           country: addressInfo.country || 'US',
         };
 
-        setFormData(prev => ({
+        setLocalFormData(prev => ({
           ...prev,
           address: newAddress,
         }));
@@ -249,17 +491,13 @@ export default function CreatePropertyScreen() {
         // Update search query
         setSearchQuery(`${newAddress.street}, ${newAddress.city}, ${newAddress.state}`);
 
-        Alert.alert(
-          'Location Found',
-          `Address updated to: ${newAddress.street}, ${newAddress.city}, ${newAddress.state}`,
-          [{ text: 'OK' }]
-        );
+        toast.success('Location Found', {
+          description: `Address updated to: ${newAddress.street}, ${newAddress.city}, ${newAddress.state}`
+        });
       } else {
-        Alert.alert(
-          'Location Error',
-          'Could not find address for your current location. Please try again or enter address manually.',
-          [{ text: 'OK' }]
-        );
+        toast.error('Location Error', {
+          description: 'Could not find address for your current location. Please try again or enter address manually.'
+        });
       }
     } catch (error) {
       console.error('Error getting current location:', error);
@@ -276,7 +514,9 @@ export default function CreatePropertyScreen() {
         }
       }
 
-      Alert.alert('Location Error', errorMessage, [{ text: 'OK' }]);
+      toast.error('Location Error', {
+        description: errorMessage
+      });
     } finally {
       setIsGettingLocation(false);
     }
@@ -356,7 +596,7 @@ export default function CreatePropertyScreen() {
         hasElevator: formData.hasElevator,
         parkingSpaces: formData.parkingSpaces,
         yearBuilt: formData.yearBuilt,
-        isFurnished: formData.isFurnished,
+        isFurnished: formData.furnishedStatus === 'furnished',
         utilitiesIncluded: formData.utilitiesIncluded,
         petFriendly: formData.petFriendly,
         hasBalcony: formData.hasBalcony,
@@ -384,7 +624,7 @@ export default function CreatePropertyScreen() {
     formData.hasElevator,
     formData.parkingSpaces,
     formData.yearBuilt,
-    formData.isFurnished,
+    formData.furnishedStatus,
     formData.utilitiesIncluded,
     formData.petFriendly,
     formData.hasBalcony,
@@ -415,7 +655,7 @@ export default function CreatePropertyScreen() {
       hasElevator: formData.hasElevator,
       parkingSpaces: formData.parkingSpaces,
       yearBuilt: formData.yearBuilt,
-      isFurnished: formData.isFurnished,
+      isFurnished: formData.furnishedStatus === 'furnished',
       utilitiesIncluded: formData.utilitiesIncluded,
       petFriendly: formData.petFriendly,
       hasBalcony: formData.hasBalcony,
@@ -514,74 +754,23 @@ export default function CreatePropertyScreen() {
   const handleSubmit = async () => {
     // Check if user is authenticated
     if (!oxyServices || !activeSessionId) {
-      Alert.alert(
-        'Authentication Required',
-        'Please sign in with OxyServices to create a property.',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.back(),
-          },
-        ]
-      );
+      toast.error('Authentication Required', {
+        description: 'Please sign in with OxyServices to create a property.'
+      });
       return;
     }
 
-    // Validation
-    const errors = [];
+    // Validate form
+    if (!validateForm()) {
+      toast.error('Validation Errors', {
+        description: `Please fix ${Object.keys(errors).length} error(s) before submitting.`
+      });
 
-    // Title is now generated dynamically when displaying properties
+      // Scroll to first error after a short delay to ensure toast is shown
+      setTimeout(() => {
+        scrollToFirstError();
+      }, 500);
 
-    if (!formData.address.street.trim()) {
-      errors.push('Street address is required');
-    }
-
-    if (!formData.address.city.trim()) {
-      errors.push('City is required');
-    }
-
-    if (!formData.address.state.trim()) {
-      errors.push('State is required');
-    }
-
-    if (!formData.address.zipCode.trim()) {
-      errors.push('ZIP code is required');
-    }
-
-    if (formData.rent.amount <= 0) {
-      errors.push('Rent amount must be greater than 0');
-    }
-
-    // Ethical pricing validation
-    if (pricingValidation && !pricingValidation.isWithinEthicalRange) {
-      errors.push(`Rent price exceeds ethical maximum ($${pricingValidation.maxRent})`);
-      if (pricingValidation.warnings.length > 0) {
-        pricingValidation.warnings.forEach((warning: string) => {
-          if (warning.includes('speculative')) {
-            errors.push('Pricing appears to be speculative. Please consider a fair market rate.');
-          }
-        });
-      }
-    }
-
-    if (formData.bedrooms !== undefined && formData.bedrooms < 0) {
-      errors.push('Bedrooms cannot be negative');
-    }
-
-    if (formData.bathrooms !== undefined && formData.bathrooms < 0) {
-      errors.push('Bathrooms cannot be negative');
-    }
-
-    if (formData.squareFootage !== undefined && formData.squareFootage < 0) {
-      errors.push('Square footage cannot be negative');
-    }
-
-    if (formData.rent.deposit !== undefined && formData.rent.deposit < 0) {
-      errors.push('Security deposit cannot be negative');
-    }
-
-    if (errors.length > 0) {
-      Alert.alert('Validation Error', errors.join('\n'));
       return;
     }
 
@@ -600,6 +789,11 @@ export default function CreatePropertyScreen() {
       };
 
       const result = await create(cleanedPropertyData);
+
+      toast.success('Property Created Successfully', {
+        description: 'Your property has been listed successfully!'
+      });
+
       router.push(`/properties/${result._id}`);
     } catch (error: any) {
       console.error('Property creation error:', error, JSON.stringify(error));
@@ -621,16 +815,88 @@ export default function CreatePropertyScreen() {
         errorMessage = JSON.stringify(error);
       }
 
-      Alert.alert('Error', errorMessage);
+      toast.error('Creation Failed', {
+        description: errorMessage
+      });
     }
   };
 
-  const updateField = (field: keyof CreatePropertyData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const updateField = (field: keyof (CreatePropertyData & {
+    priceUnit: 'day' | 'night' | 'week' | 'month' | 'year';
+    housingType?: 'private' | 'public' | 'shared' | 'open' | 'partitioned';
+    // Advanced property features
+    floor?: number;
+    yearBuilt?: number;
+    furnishedStatus: 'furnished' | 'unfurnished' | 'partially_furnished';
+    petPolicy: 'allowed' | 'not_allowed' | 'case_by_case';
+    petFee?: number;
+    parkingType: 'none' | 'street' | 'assigned' | 'garage';
+    parkingSpaces: number;
+    // Availability & rules
+    availableFrom: string;
+    leaseTerm: 'monthly' | '6_months' | '12_months' | 'flexible';
+    smokingAllowed: boolean;
+    partiesAllowed: boolean;
+    guestsAllowed: boolean;
+    maxGuests: number;
+    // Location intelligence
+    walkScore?: number;
+    transitScore?: number;
+    bikeScore?: number;
+    proximityToTransport: boolean;
+    proximityToSchools: boolean;
+    proximityToShopping: boolean;
+    // Images
+    images: string[];
+    coverImageIndex: number;
+    // Draft functionality
+    isDraft: boolean;
+    lastSaved: Date;
+    // Accommodation-specific details
+    accommodationDetails?: {
+      sleepingArrangement?: 'couch' | 'air_mattress' | 'floor' | 'tent' | 'hammock';
+      roommatePreferences?: string[];
+      colivingFeatures?: string[];
+      hostelRoomType?: 'dormitory' | 'private_room' | 'mixed_dorm' | 'female_dorm' | 'male_dorm';
+      campsiteType?: 'tent_site' | 'rv_site' | 'cabin' | 'glamping' | 'backcountry';
+      maxStay?: number; // For couchsurfing/hostels
+      minAge?: number;
+      maxAge?: number;
+      languages?: string[];
+      culturalExchange?: boolean;
+      mealsIncluded?: boolean;
+      wifiPassword?: string;
+      houseRules?: string[];
+    };
+    // Ethical pricing
+    rent: {
+      amount: number;
+      currency?: string;
+      paymentFrequency?: 'monthly' | 'weekly' | 'daily';
+      deposit?: number;
+      utilities?: 'excluded' | 'included' | 'partial';
+      hasIncomeBasedPricing?: boolean;
+      hasSlidingScale?: boolean;
+      hasUtilitiesIncluded?: boolean;
+      hasReducedDeposit?: boolean;
+      localMedianIncome?: number;
+      areaAverageRent?: number;
+      ethicalPricingSuggestions?: {
+        standardRent?: number;
+        affordableRent?: number;
+        marketRate?: number;
+        reducedDeposit?: number;
+      };
+    };
+  }), value: any) => {
+    setLocalFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   const updateAddressField = (field: keyof CreatePropertyData['address'], value: string) => {
-    setFormData(prev => ({
+    setLocalFormData(prev => ({
       ...prev,
       address: {
         ...prev.address,
@@ -661,27 +927,251 @@ export default function CreatePropertyScreen() {
   };
 
   const updateRentField = (field: keyof CreatePropertyData['rent'], value: any) => {
-    setFormData(prev => ({
+    setLocalFormData(prev => ({
       ...prev,
       rent: { ...prev.rent, [field]: value }
     }));
   };
 
   const updatePriceUnit = (value: 'day' | 'night' | 'week' | 'month' | 'year') => {
-    setFormData(prev => ({
+    setLocalFormData(prev => ({
       ...prev,
       priceUnit: value
     }));
   };
 
   const toggleAmenity = (amenity: string) => {
-    setFormData(prev => ({
+    setLocalFormData(prev => ({
       ...prev,
       amenities: prev.amenities?.includes(amenity)
         ? prev.amenities.filter(a => a !== amenity)
         : [...(prev.amenities || []), amenity]
     }));
   };
+
+  // Auto-save functionality
+  useEffect(() => {
+    if (!autoSaveEnabled || !isFormValid()) return;
+
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      saveDraft();
+    }, 30000);
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [formData, autoSaveEnabled]);
+
+  // Save draft to local storage
+  const saveDraft = async () => {
+    try {
+      const draftData = {
+        ...formData,
+        lastSaved: new Date(),
+        isDraft: true,
+      };
+
+      // In a real app, you'd save to backend or local storage
+      console.log('Auto-saving draft:', draftData);
+
+      setLocalFormData(prev => ({
+        ...prev,
+        lastSaved: new Date(),
+      }));
+    } catch (error) {
+      console.error('Error saving draft:', error);
+    }
+  };
+
+  // Load draft from local storage
+  const loadDraft = async () => {
+    try {
+      // In a real app, you'd load from backend or local storage
+      console.log('Loading draft...');
+      // For now, we'll just show a placeholder
+    } catch (error) {
+      console.error('Error loading draft:', error);
+    }
+  };
+
+  // Clear draft
+  const clearDraft = async () => {
+    try {
+      // In a real app, you'd clear from backend or local storage
+      console.log('Clearing draft...');
+      setLocalFormData(prev => ({
+        ...prev,
+        isDraft: false,
+      }));
+    } catch (error) {
+      console.error('Error clearing draft:', error);
+    }
+  };
+
+  const calculateEthicalPricing = () => {
+    const { localMedianIncome, areaAverageRent } = formData.rent;
+
+    if (!localMedianIncome || !areaAverageRent) {
+      toast.error('Missing Data', {
+        description: 'Please enter both local median income and area average rent to calculate ethical pricing.'
+      });
+      return;
+    }
+
+    const suggestions = {
+      standardRent: Math.round(localMedianIncome * 0.3 / 12), // 30% of monthly median income
+      affordableRent: Math.round(localMedianIncome * 0.25 / 12), // 25% of monthly median income
+      marketRate: areaAverageRent,
+      reducedDeposit: Math.round(localMedianIncome * 0.3 / 12), // 1 month of standard rent
+    };
+
+    updateField('rent', {
+      ...formData.rent,
+      ethicalPricingSuggestions: suggestions
+    });
+
+    toast.success('Ethical Pricing Calculated', {
+      description: `Based on your local data:\n\n• Standard Rent: $${suggestions.standardRent.toLocaleString()}/month\n• Affordable Rent: $${suggestions.affordableRent.toLocaleString()}/month\n• Market Rate: $${suggestions.marketRate.toLocaleString()}/month\n• Reduced Deposit: $${suggestions.reducedDeposit.toLocaleString()}`
+    });
+  };
+
+  // Error handling and validation functions
+  const setFieldError = (fieldName: string, errorMessage: string) => {
+    setErrors(prev => ({
+      ...prev,
+      [fieldName]: errorMessage
+    }));
+    setHasValidationErrors(true);
+  };
+
+  const clearFieldError = (fieldName: string) => {
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[fieldName];
+      return newErrors;
+    });
+    setHasValidationErrors(Object.keys(errors).length > 1);
+  };
+
+  const clearAllErrors = () => {
+    setErrors({});
+    setHasValidationErrors(false);
+  };
+
+  const scrollToField = (fieldName: string) => {
+    if (fieldRefs.current[fieldName]) {
+      fieldRefs.current[fieldName].measureLayout(
+        scrollViewRef.current?.getInnerViewNode(),
+        (x: number, y: number) => {
+          scrollViewRef.current?.scrollTo({
+            y: y - 100, // Offset to show some context above the field
+            animated: true
+          });
+        },
+        () => {
+          // Fallback if measureLayout fails
+          console.warn(`Could not measure layout for field: ${fieldName}`);
+        }
+      );
+    }
+  };
+
+  const scrollToFirstError = () => {
+    const firstErrorField = Object.keys(errors)[0];
+    if (firstErrorField) {
+      scrollToField(firstErrorField);
+    }
+  };
+
+  const validateForm = () => {
+    clearAllErrors();
+    const newErrors: { [key: string]: string } = {};
+
+    // Address validation
+    if (!formData.address.street.trim()) {
+      newErrors['address.street'] = 'Street address is required';
+    }
+
+    if (!formData.address.city.trim()) {
+      newErrors['address.city'] = 'City is required';
+    }
+
+    if (!formData.address.state.trim()) {
+      newErrors['address.state'] = 'State is required';
+    }
+
+    if (!formData.address.zipCode.trim()) {
+      newErrors['address.zipCode'] = 'ZIP code is required';
+    }
+
+    // Property details validation
+    if (formData.rent.amount <= 0) {
+      newErrors['rent.amount'] = 'Rent amount must be greater than 0';
+    }
+
+    if (formData.bedrooms !== undefined && formData.bedrooms < 0) {
+      newErrors['bedrooms'] = 'Bedrooms cannot be negative';
+    }
+
+    if (formData.bathrooms !== undefined && formData.bathrooms < 0) {
+      newErrors['bathrooms'] = 'Bathrooms cannot be negative';
+    }
+
+    if (formData.squareFootage !== undefined && formData.squareFootage < 0) {
+      newErrors['squareFootage'] = 'Square footage cannot be negative';
+    }
+
+    if (formData.rent.deposit !== undefined && formData.rent.deposit < 0) {
+      newErrors['rent.deposit'] = 'Security deposit cannot be negative';
+    }
+
+    // Ethical pricing validation
+    if (pricingValidation && !pricingValidation.isWithinEthicalRange) {
+      newErrors['rent.amount'] = `Rent price exceeds ethical maximum ($${pricingValidation.maxRent})`;
+      if (pricingValidation.warnings.length > 0) {
+        pricingValidation.warnings.forEach((warning: string) => {
+          if (warning.includes('speculative')) {
+            newErrors['rent.amount'] = 'Pricing appears to be speculative. Please consider a fair market rate.';
+          }
+        });
+      }
+    }
+
+    // Location validation
+    if (!selectedLocation && !currentCoordinates) {
+      newErrors['location'] = 'Please select a location on the map or use current location';
+    }
+
+    setErrors(newErrors);
+    setHasValidationErrors(Object.keys(newErrors).length > 0);
+
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Sync form data with Redux
+  useEffect(() => {
+    console.log('CreatePropertyScreen: Dispatching form data to Redux:', {
+      hasFormData: !!formData,
+      formDataKeys: formData ? Object.keys(formData) : [],
+      address: formData?.address,
+      type: formData?.type
+    });
+
+    dispatch(setFormData(formData));
+    dispatch(setVisibility(true));
+
+    // Cleanup when component unmounts
+    return () => {
+      console.log('CreatePropertyScreen: Cleaning up Redux visibility');
+      dispatch(setVisibility(false));
+    };
+  }, [formData, dispatch]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -727,434 +1217,1352 @@ export default function CreatePropertyScreen() {
         </View>
       </View>
 
-      <ScrollView style={styles.scrollView}>
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.form}>
+          {/* Hero Section */}
+          <LinearGradient
+            colors={[colors.primaryColor, colors.secondaryLight]}
+            style={styles.heroSection}
+          >
+            <View style={styles.heroContent}>
+              <ThemedText style={styles.heroTitle}>Create Your Property</ThemedText>
+              <ThemedText style={styles.heroSubtitle}>
+                List your property with transparent pricing and ethical standards
+              </ThemedText>
+            </View>
+          </LinearGradient>
+
           {/* Map Section */}
-          <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Location *</ThemedText>
-            <ThemedText style={styles.subLabel}>
-              Search for an address or click on the map to select a location
-            </ThemedText>
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <ThemedText style={styles.sectionTitle}>Location</ThemedText>
+            </View>
 
-            {/* Search Input */}
-            <View style={styles.searchContainer}>
-              <TextInput
-                style={styles.searchInput}
-                value={searchQuery}
-                onChangeText={setSearchQueryWithSource}
-                placeholder="Search for an address..."
-                onFocus={() => {
-                  // Only show results if user is actively searching (not from map selection)
-                  if (searchResults.length > 0 && searchQuery.length >= 3) {
-                    setShowSearchResults(true);
-                  }
-                }}
-                onBlur={() => {
-                  // Hide results when input loses focus
-                  setTimeout(() => setShowSearchResults(false), 200);
-                }}
-              />
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.label}>Search Address</ThemedText>
+              <ThemedText style={styles.subLabel}>
+                Search for an address or click on the map to select a location
+              </ThemedText>
 
-              {/* Use Current Location Button */}
-              <TouchableOpacity
-                style={styles.locationButton}
-                onPress={getCurrentLocation}
-                disabled={isGettingLocation}
-              >
-                {isGettingLocation ? (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="small" color="white" />
-                    <ThemedText style={styles.locationButtonText}>Getting Location...</ThemedText>
-                  </View>
-                ) : (
-                  <ThemedText style={styles.locationButtonText}>📍 Use Current Location</ThemedText>
-                )}
-              </TouchableOpacity>
-
-              {/* Location Permission Status */}
-              {locationPermission && (
-                <View style={styles.permissionStatus}>
-                  <ThemedText style={[
-                    styles.permissionStatusText,
-                    locationPermission === 'granted' ? styles.permissionGranted : styles.permissionDenied
-                  ]}>
-                    {locationPermission === 'granted'
-                      ? '✅ Location access granted'
-                      : locationPermission === 'denied'
-                        ? '❌ Location access denied'
-                        : '⏳ Location permission pending'
+              {/* Search Input */}
+              <View style={styles.searchContainer}>
+                <TextInput
+                  style={styles.searchInput}
+                  value={searchQuery}
+                  onChangeText={setSearchQueryWithSource}
+                  placeholder="Search for an address..."
+                  onFocus={() => {
+                    // Only show results if user is actively searching (not from map selection)
+                    if (searchResults.length > 0 && searchQuery.length >= 3) {
+                      setShowSearchResults(true);
                     }
-                  </ThemedText>
-                </View>
-              )}
+                  }}
+                  onBlur={() => {
+                    // Hide results when input loses focus
+                    setTimeout(() => setShowSearchResults(false), 200);
+                  }}
+                />
 
-              {/* Current Coordinates Display */}
-              {currentCoordinates && (
-                <View style={styles.coordinatesContainer}>
-                  <ThemedText style={styles.coordinatesTitle}>Current Location:</ThemedText>
-                  <ThemedText style={styles.coordinatesText}>
-                    Lat: {currentCoordinates.latitude.toFixed(6)},
-                    Lng: {currentCoordinates.longitude.toFixed(6)}
-                  </ThemedText>
-                  {locationAccuracy && (
-                    <ThemedText style={styles.accuracyText}>
-                      Accuracy: ±{locationAccuracy.toFixed(1)} meters
-                    </ThemedText>
+                {/* Use Current Location Button */}
+                <TouchableOpacity
+                  style={styles.locationButton}
+                  onPress={getCurrentLocation}
+                  disabled={isGettingLocation}
+                >
+                  {isGettingLocation ? (
+                    <View style={styles.loadingContainer}>
+                      <ActivityIndicator size="small" color="white" />
+                      <ThemedText style={styles.locationButtonText}>Getting Location...</ThemedText>
+                    </View>
+                  ) : (
+                    <ThemedText style={styles.locationButtonText}>📍 Use Current Location</ThemedText>
                   )}
+                </TouchableOpacity>
 
-                  {/* Location Watching Toggle */}
-                  <TouchableOpacity
-                    style={[
-                      styles.watchLocationButton,
-                      isWatchingLocation && styles.watchLocationButtonActive
-                    ]}
-                    onPress={toggleLocationWatching}
-                  >
+                {/* Location Permission Status */}
+                {locationPermission && (
+                  <View style={styles.permissionStatus}>
                     <ThemedText style={[
-                      styles.watchLocationButtonText,
-                      isWatchingLocation && styles.watchLocationButtonTextActive
+                      styles.permissionStatusText,
+                      locationPermission === 'granted' ? styles.permissionGranted : styles.permissionDenied
                     ]}>
-                      {isWatchingLocation ? '🛑 Stop Tracking' : '📍 Start Tracking'}
+                      {locationPermission === 'granted'
+                        ? '✅ Location access granted'
+                        : locationPermission === 'denied'
+                          ? '❌ Location access denied'
+                          : '⏳ Location permission pending'
+                      }
                     </ThemedText>
-                  </TouchableOpacity>
-                </View>
-              )}
+                  </View>
+                )}
 
-              {/* Search Results */}
-              {showSearchResults && searchResults.length > 0 && (
-                <View style={styles.searchResults}>
-                  {searchResults.map((result, index) => (
+                {/* Current Coordinates Display */}
+                {currentCoordinates && (
+                  <View style={styles.coordinatesContainer}>
+                    <ThemedText style={styles.coordinatesTitle}>Current Location:</ThemedText>
+                    <ThemedText style={styles.coordinatesText}>
+                      Lat: {currentCoordinates.latitude.toFixed(6)},
+                      Lng: {currentCoordinates.longitude.toFixed(6)}
+                    </ThemedText>
+                    {locationAccuracy && (
+                      <ThemedText style={styles.accuracyText}>
+                        Accuracy: ±{locationAccuracy.toFixed(1)} meters
+                      </ThemedText>
+                    )}
+
+                    {/* Location Watching Toggle */}
                     <TouchableOpacity
-                      key={index}
-                      style={styles.searchResult}
-                      onPress={() => handleSearchSelect(result)}
+                      style={[
+                        styles.watchLocationButton,
+                        isWatchingLocation && styles.watchLocationButtonActive
+                      ]}
+                      onPress={toggleLocationWatching}
                     >
-                      <ThemedText style={styles.searchResultText}>
-                        {result.display_name}
+                      <ThemedText style={[
+                        styles.watchLocationButtonText,
+                        isWatchingLocation && styles.watchLocationButtonTextActive
+                      ]}>
+                        {isWatchingLocation ? '🛑 Stop Tracking' : '📍 Start Tracking'}
                       </ThemedText>
                     </TouchableOpacity>
-                  ))}
+                  </View>
+                )}
+
+                {/* Search Results */}
+                {showSearchResults && searchResults.length > 0 && (
+                  <View style={styles.searchResults}>
+                    {searchResults.map((result, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        style={styles.searchResult}
+                        onPress={() => handleSearchSelect(result)}
+                      >
+                        <ThemedText style={styles.searchResultText}>
+                          {result.display_name}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+
+              <PropertyMap
+                latitude={selectedLocation?.latitude || currentCoordinates?.latitude}
+                longitude={selectedLocation?.longitude || currentCoordinates?.longitude}
+                address={selectedLocation?.address}
+                onLocationSelect={handleLocationSelect}
+                height={300}
+                interactive={true}
+              />
+
+              {errors['location'] && (
+                <View style={styles.locationErrorContainer}>
+                  <ThemedText style={styles.errorText}>{errors['location']}</ThemedText>
                 </View>
               )}
             </View>
-
-            <PropertyMap
-              latitude={selectedLocation?.latitude || currentCoordinates?.latitude}
-              longitude={selectedLocation?.longitude || currentCoordinates?.longitude}
-              address={selectedLocation?.address}
-              onLocationSelect={handleLocationSelect}
-              height={300}
-              interactive={true}
-            />
           </View>
 
-          <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Street Address *</ThemedText>
-            <TextInput
-              style={styles.textInput}
-              value={formData.address.street}
-              onChangeText={(text) => updateAddressField('street', text)}
-              placeholder="Enter street address"
-            />
-          </View>
-
-          <View style={styles.row}>
-            <View style={styles.halfInput}>
-              <ThemedText style={styles.label}>City *</ThemedText>
-              <TextInput
-                style={styles.textInput}
-                value={formData.address.city}
-                onChangeText={(text) => updateAddressField('city', text)}
-                placeholder="Enter city"
-              />
+          {/* Address Details Section */}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <ThemedText style={styles.sectionTitle}>Address Details</ThemedText>
             </View>
 
-            <View style={styles.halfInput}>
-              <ThemedText style={styles.label}>State *</ThemedText>
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.label}>Street Address *</ThemedText>
               <TextInput
-                style={styles.textInput}
-                value={formData.address.state}
-                onChangeText={(text) => updateAddressField('state', text)}
-                placeholder="Enter state"
+                ref={(ref) => { fieldRefs.current['address.street'] = ref; }}
+                style={[
+                  styles.textInput,
+                  errors['address.street'] && styles.textInputError
+                ]}
+                value={formData.address.street}
+                onChangeText={(text) => {
+                  updateAddressField('street', text);
+                  if (errors['address.street']) {
+                    clearFieldError('address.street');
+                  }
+                }}
+                placeholder="Enter street address"
               />
+              {errors['address.street'] && (
+                <ThemedText style={styles.errorText}>{errors['address.street']}</ThemedText>
+              )}
             </View>
-          </View>
 
-          <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>ZIP Code *</ThemedText>
-            <TextInput
-              style={styles.textInput}
-              value={formData.address.zipCode}
-              onChangeText={(text) => updateAddressField('zipCode', cleanZipCode(text))}
-              placeholder="Enter ZIP code"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Property Type *</ThemedText>
-            <View style={styles.pickerContainer}>
-              {(['apartment', 'house', 'room', 'studio'] as const).map((type) => (
-                <TouchableOpacity
-                  key={type}
+            <View style={styles.row}>
+              <View style={styles.halfInput}>
+                <ThemedText style={styles.label}>City *</ThemedText>
+                <TextInput
+                  ref={(ref) => { fieldRefs.current['address.city'] = ref; }}
                   style={[
-                    styles.pickerOption,
-                    formData.type === type && styles.pickerOptionSelected
+                    styles.textInput,
+                    errors['address.city'] && styles.textInputError
                   ]}
-                  onPress={() => updateField('type', type)}
-                >
-                  <ThemedText
+                  value={formData.address.city}
+                  onChangeText={(text) => {
+                    updateAddressField('city', text);
+                    if (errors['address.city']) {
+                      clearFieldError('address.city');
+                    }
+                  }}
+                  placeholder="Enter city"
+                />
+                {errors['address.city'] && (
+                  <ThemedText style={styles.errorText}>{errors['address.city']}</ThemedText>
+                )}
+              </View>
+
+              <View style={styles.halfInput}>
+                <ThemedText style={styles.label}>State *</ThemedText>
+                <TextInput
+                  ref={(ref) => { fieldRefs.current['address.state'] = ref; }}
+                  style={[
+                    styles.textInput,
+                    errors['address.state'] && styles.textInputError
+                  ]}
+                  value={formData.address.state}
+                  onChangeText={(text) => {
+                    updateAddressField('state', text);
+                    if (errors['address.state']) {
+                      clearFieldError('address.state');
+                    }
+                  }}
+                  placeholder="Enter state"
+                />
+                {errors['address.state'] && (
+                  <ThemedText style={styles.errorText}>{errors['address.state']}</ThemedText>
+                )}
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.label}>ZIP Code *</ThemedText>
+              <TextInput
+                ref={(ref) => { fieldRefs.current['address.zipCode'] = ref; }}
+                style={[
+                  styles.textInput,
+                  errors['address.zipCode'] && styles.textInputError
+                ]}
+                value={formData.address.zipCode}
+                onChangeText={(text) => {
+                  updateAddressField('zipCode', cleanZipCode(text));
+                  if (errors['address.zipCode']) {
+                    clearFieldError('address.zipCode');
+                  }
+                }}
+                placeholder="Enter ZIP code"
+              />
+              {errors['address.zipCode'] && (
+                <ThemedText style={styles.errorText}>{errors['address.zipCode']}</ThemedText>
+              )}
+            </View>
+          </View>
+
+          {/* Property Details Section */}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <ThemedText style={styles.sectionTitle}>Property Details</ThemedText>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.label}>Accommodation Type *</ThemedText>
+              <View style={styles.pickerContainer}>
+                {([
+                  { id: 'apartment', label: 'Apartment', icon: 'business-outline' },
+                  { id: 'house', label: 'House', icon: 'home-outline' },
+                  { id: 'room', label: 'Room', icon: 'bed-outline' },
+                  { id: 'studio', label: 'Studio', icon: 'home-outline' },
+                  { id: 'couchsurfing', label: 'Couchsurfing', icon: 'people-outline' },
+                  { id: 'roommates', label: 'Roommates', icon: 'people-circle-outline' },
+                  { id: 'coliving', label: 'Co-Living', icon: 'home-outline' },
+                  { id: 'hostel', label: 'Hostel', icon: 'bed-outline' },
+                  { id: 'guesthouse', label: 'Guesthouse', icon: 'home-outline' },
+                  { id: 'campsite', label: 'Campsite', icon: 'leaf-outline' },
+                  { id: 'boat', label: 'Boat/Houseboat', icon: 'boat-outline' },
+                  { id: 'treehouse', label: 'Treehouse', icon: 'leaf-outline' },
+                  { id: 'yurt', label: 'Yurt/Tent', icon: 'home-outline' },
+                  { id: 'other', label: 'Other', icon: 'ellipsis-horizontal-outline' }
+                ] as const).map((type) => (
+                  <TouchableOpacity
+                    key={type.id}
                     style={[
-                      styles.pickerOptionText,
-                      formData.type === type && styles.pickerOptionTextSelected
+                      styles.pickerOption,
+                      formData.type === type.id && styles.pickerOptionSelected
                     ]}
+                    onPress={() => updateField('type', type.id)}
                   >
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Description</ThemedText>
-            <TextInput
-              style={[styles.textInput, styles.textArea]}
-              value={formData.description}
-              onChangeText={(text) => updateField('description', text)}
-              placeholder="Enter property description"
-              multiline
-              numberOfLines={4}
-            />
-          </View>
-
-          <View style={styles.row}>
-            <View style={styles.halfInput}>
-              <ThemedText style={styles.label}>Bedrooms</ThemedText>
-              <TextInput
-                style={styles.textInput}
-                value={formData.bedrooms?.toString() || ''}
-                onChangeText={(text) => updateField('bedrooms', parseInt(text) || 0)}
-                placeholder="0"
-                keyboardType="numeric"
-              />
+                    <IconComponent
+                      name={type.icon as any}
+                      size={16}
+                      color={formData.type === type.id ? colors.primaryLight : colors.COLOR_BLACK}
+                    />
+                    <ThemedText
+                      style={[
+                        styles.pickerOptionText,
+                        formData.type === type.id && styles.pickerOptionTextSelected
+                      ]}
+                    >
+                      {type.label}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
 
-            <View style={styles.halfInput}>
-              <ThemedText style={styles.label}>Bathrooms</ThemedText>
-              <TextInput
-                style={styles.textInput}
-                value={formData.bathrooms?.toString() || ''}
-                onChangeText={(text) => updateField('bathrooms', parseInt(text) || 0)}
-                placeholder="0"
-                keyboardType="numeric"
-              />
-            </View>
-          </View>
+            {/* Conditional fields based on property type */}
+            {(formData.type === 'apartment' || formData.type === 'house') && (
+              <View style={styles.row}>
+                <View style={styles.halfInput}>
+                  <ThemedText style={styles.label}>Bedrooms</ThemedText>
+                  <View style={styles.pickerContainer}>
+                    {[1, 2, 3, 4, 5].map((num) => (
+                      <TouchableOpacity
+                        key={num}
+                        style={[
+                          styles.pickerOption,
+                          formData.bedrooms === num && styles.pickerOptionSelected
+                        ]}
+                        onPress={() => updateField('bedrooms', num)}
+                      >
+                        <ThemedText
+                          style={[
+                            styles.pickerOptionText,
+                            formData.bedrooms === num && styles.pickerOptionTextSelected
+                          ]}
+                        >
+                          {num}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
 
-          <View style={styles.row}>
-            <View style={styles.halfInput}>
-              <ThemedText style={styles.label}>Size (sq ft)</ThemedText>
+                <View style={styles.halfInput}>
+                  <ThemedText style={styles.label}>Bathrooms</ThemedText>
+                  <View style={styles.pickerContainer}>
+                    {[1, 1.5, 2, 2.5, 3, 3.5, 4].map((num) => (
+                      <TouchableOpacity
+                        key={num}
+                        style={[
+                          styles.pickerOption,
+                          formData.bathrooms === num && styles.pickerOptionSelected
+                        ]}
+                        onPress={() => updateField('bathrooms', num)}
+                      >
+                        <ThemedText
+                          style={[
+                            styles.pickerOptionText,
+                            formData.bathrooms === num && styles.pickerOptionTextSelected
+                          ]}
+                        >
+                          {num}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Room-specific fields */}
+            {formData.type === 'room' && (
+              <>
+                <View style={styles.inputGroup}>
+                  <ThemedText style={styles.label}>Room Type</ThemedText>
+                  <View style={styles.pickerContainer}>
+                    {(['private', 'shared'] as const).map((roomType) => (
+                      <TouchableOpacity
+                        key={roomType}
+                        style={[
+                          styles.pickerOption,
+                          formData.housingType === roomType && styles.pickerOptionSelected
+                        ]}
+                        onPress={() => updateField('housingType', roomType)}
+                      >
+                        <ThemedText
+                          style={[
+                            styles.pickerOptionText,
+                            formData.housingType === roomType && styles.pickerOptionTextSelected
+                          ]}
+                        >
+                          {roomType.charAt(0).toUpperCase() + roomType.slice(1)} Room
+                        </ThemedText>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <ThemedText style={styles.label}>Bathroom Access</ThemedText>
+                  <View style={styles.pickerContainer}>
+                    {(['private', 'shared'] as const).map((bathroomType) => (
+                      <TouchableOpacity
+                        key={bathroomType}
+                        style={[
+                          styles.pickerOption,
+                          formData.bathrooms === (bathroomType === 'private' ? 1 : 0.5) && styles.pickerOptionSelected
+                        ]}
+                        onPress={() => updateField('bathrooms', bathroomType === 'private' ? 1 : 0.5)}
+                      >
+                        <ThemedText
+                          style={[
+                            styles.pickerOptionText,
+                            formData.bathrooms === (bathroomType === 'private' ? 1 : 0.5) && styles.pickerOptionTextSelected
+                          ]}
+                        >
+                          {bathroomType.charAt(0).toUpperCase() + bathroomType.slice(1)} Bathroom
+                        </ThemedText>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </>
+            )}
+
+            {/* Studio-specific fields */}
+            {formData.type === 'studio' && (
+              <>
+                <View style={styles.inputGroup}>
+                  <ThemedText style={styles.label}>Studio Layout</ThemedText>
+                  <View style={styles.pickerContainer}>
+                    {(['open', 'partitioned'] as const).map((layout) => (
+                      <TouchableOpacity
+                        key={layout}
+                        style={[
+                          styles.pickerOption,
+                          formData.housingType === layout && styles.pickerOptionSelected
+                        ]}
+                        onPress={() => updateField('housingType', layout)}
+                      >
+                        <ThemedText
+                          style={[
+                            styles.pickerOptionText,
+                            formData.housingType === layout && styles.pickerOptionTextSelected
+                          ]}
+                        >
+                          {layout.charAt(0).toUpperCase() + layout.slice(1)} Layout
+                        </ThemedText>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <ThemedText style={styles.label}>Bathrooms</ThemedText>
+                  <View style={styles.pickerContainer}>
+                    {[1, 1.5, 2].map((num) => (
+                      <TouchableOpacity
+                        key={num}
+                        style={[
+                          styles.pickerOption,
+                          formData.bathrooms === num && styles.pickerOptionSelected
+                        ]}
+                        onPress={() => updateField('bathrooms', num)}
+                      >
+                        <ThemedText
+                          style={[
+                            styles.pickerOptionText,
+                            formData.bathrooms === num && styles.pickerOptionTextSelected
+                          ]}
+                        >
+                          {num}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </>
+            )}
+
+            {/* Square footage for all property types */}
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.label}>
+                {formData.type === 'room' ? 'Room Size (sq ft)' :
+                  formData.type === 'studio' ? 'Studio Size (sq ft)' :
+                    'Square Footage'}
+              </ThemedText>
               <TextInput
                 style={styles.textInput}
                 value={formData.squareFootage?.toString() || ''}
                 onChangeText={(text) => updateField('squareFootage', parseInt(text) || 0)}
-                placeholder="0"
+                placeholder={`Enter ${formData.type} size`}
                 keyboardType="numeric"
               />
             </View>
 
-            <View style={styles.halfInput}>
-              <ThemedText style={styles.label}>Rent Amount *</ThemedText>
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.label}>Description</ThemedText>
               <TextInput
-                style={[
-                  styles.textInput,
-                  pricingValidation && !pricingValidation.isWithinEthicalRange && styles.textInputError
-                ]}
-                value={formData.rent.amount?.toString() || ''}
-                onChangeText={(text) => updateRentField('amount', parseFloat(text) || 0)}
-                placeholder="0"
-                keyboardType="numeric"
+                style={[styles.textInput, styles.textArea]}
+                value={formData.description}
+                onChangeText={(text) => updateField('description', text)}
+                placeholder={`Describe your ${formData.type}...`}
+                multiline
+                numberOfLines={4}
               />
             </View>
           </View>
 
-          <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Rent Period</ThemedText>
-            <View style={styles.pickerContainer}>
-              {(['day', 'night', 'week', 'month', 'year'] as const).map((unit) => (
-                <TouchableOpacity
-                  key={unit}
-                  style={[
-                    styles.pickerOption,
-                    formData.priceUnit === unit && styles.pickerOptionSelected
-                  ]}
-                  onPress={() => updatePriceUnit(unit)}
-                >
-                  <ThemedText
+          {/* Advanced Property Features Section */}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <ThemedText style={styles.sectionTitle}>Advanced Features</ThemedText>
+            </View>
+
+            <View style={styles.row}>
+              <View style={styles.halfInput}>
+                <ThemedText style={styles.label}>Floor/Level</ThemedText>
+                <TextInput
+                  style={styles.textInput}
+                  value={formData.floor?.toString() || ''}
+                  onChangeText={(text) => updateField('floor', parseInt(text) || undefined)}
+                  placeholder="e.g., 3"
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <View style={styles.halfInput}>
+                <ThemedText style={styles.label}>Year Built</ThemedText>
+                <TextInput
+                  style={styles.textInput}
+                  value={formData.yearBuilt?.toString() || ''}
+                  onChangeText={(text) => updateField('yearBuilt', parseInt(text) || undefined)}
+                  placeholder="e.g., 2020"
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.label}>Furnished Status</ThemedText>
+              <View style={styles.pickerContainer}>
+                {(['furnished', 'unfurnished', 'partially_furnished'] as const).map((status) => (
+                  <TouchableOpacity
+                    key={status}
                     style={[
-                      styles.pickerOptionText,
-                      formData.priceUnit === unit && styles.pickerOptionTextSelected
+                      styles.pickerOption,
+                      formData.furnishedStatus === status && styles.pickerOptionSelected
                     ]}
+                    onPress={() => updateField('furnishedStatus', status)}
                   >
-                    {unit.charAt(0).toUpperCase() + unit.slice(1)}
+                    <ThemedText
+                      style={[
+                        styles.pickerOptionText,
+                        formData.furnishedStatus === status && styles.pickerOptionTextSelected
+                      ]}
+                    >
+                      {status.replace('_', ' ').charAt(0).toUpperCase() + status.replace('_', ' ').slice(1)}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.label}>Pet Policy</ThemedText>
+              <View style={styles.pickerContainer}>
+                {(['allowed', 'not_allowed', 'case_by_case'] as const).map((policy) => (
+                  <TouchableOpacity
+                    key={policy}
+                    style={[
+                      styles.pickerOption,
+                      formData.petPolicy === policy && styles.pickerOptionSelected
+                    ]}
+                    onPress={() => updateField('petPolicy', policy)}
+                  >
+                    <ThemedText
+                      style={[
+                        styles.pickerOptionText,
+                        formData.petPolicy === policy && styles.pickerOptionTextSelected
+                      ]}
+                    >
+                      {policy.replace('_', ' ').charAt(0).toUpperCase() + policy.replace('_', ' ').slice(1)}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {formData.petPolicy === 'allowed' && (
+              <View style={styles.inputGroup}>
+                <ThemedText style={styles.label}>Pet Fee (per month)</ThemedText>
+                <TextInput
+                  style={styles.textInput}
+                  value={formData.petFee?.toString() || ''}
+                  onChangeText={(text) => updateField('petFee', parseFloat(text) || 0)}
+                  placeholder="e.g., 50"
+                  keyboardType="numeric"
+                />
+              </View>
+            )}
+
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.label}>Parking</ThemedText>
+              <View style={styles.pickerContainer}>
+                {(['none', 'street', 'assigned', 'garage'] as const).map((parking) => (
+                  <TouchableOpacity
+                    key={parking}
+                    style={[
+                      styles.pickerOption,
+                      formData.parkingType === parking && styles.pickerOptionSelected
+                    ]}
+                    onPress={() => updateField('parkingType', parking)}
+                  >
+                    <ThemedText
+                      style={[
+                        styles.pickerOptionText,
+                        formData.parkingType === parking && styles.pickerOptionTextSelected
+                      ]}
+                    >
+                      {parking.charAt(0).toUpperCase() + parking.slice(1)}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {formData.parkingType !== 'none' && (
+              <View style={styles.inputGroup}>
+                <ThemedText style={styles.label}>Number of Parking Spaces</ThemedText>
+                <View style={styles.pickerContainer}>
+                  {[1, 2, 3, 4].map((num) => (
+                    <TouchableOpacity
+                      key={num}
+                      style={[
+                        styles.pickerOption,
+                        formData.parkingSpaces === num && styles.pickerOptionSelected
+                      ]}
+                      onPress={() => updateField('parkingSpaces', num)}
+                    >
+                      <ThemedText
+                        style={[
+                          styles.pickerOptionText,
+                          formData.parkingSpaces === num && styles.pickerOptionTextSelected
+                        ]}
+                      >
+                        {num}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* Pricing Section */}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <ThemedText style={styles.sectionTitle}>Rental Pricing</ThemedText>
+            </View>
+
+            <View style={styles.row}>
+              <View style={styles.halfInput}>
+                <ThemedText style={styles.label}>
+                  {formData.type === 'couchsurfing' ? 'Contribution (Optional)' : 'Monthly Rent ($)'}
+                </ThemedText>
+                <TextInput
+                  ref={(ref) => { fieldRefs.current['rent.amount'] = ref; }}
+                  style={[
+                    styles.textInput,
+                    (errors['rent.amount'] || (pricingValidation && !pricingValidation.isWithinEthicalRange)) && styles.textInputError
+                  ]}
+                  value={formData.rent.amount.toString()}
+                  onChangeText={(text) => {
+                    updateField('rent', { ...formData.rent, amount: parseFloat(text) || 0 });
+                    if (errors['rent.amount']) {
+                      clearFieldError('rent.amount');
+                    }
+                  }}
+                  keyboardType="numeric"
+                  placeholder={formData.type === 'couchsurfing' ? "0 (Free)" : "0"}
+                />
+                {errors['rent.amount'] && (
+                  <ThemedText style={styles.errorText}>{errors['rent.amount']}</ThemedText>
+                )}
+                {formData.type === 'couchsurfing' && (
+                  <ThemedText style={styles.subLabel}>
+                    Couchsurfing is typically free, but you can ask for a small contribution
                   </ThemedText>
-                </TouchableOpacity>
-              ))}
+                )}
+              </View>
+
+              <View style={styles.halfInput}>
+                <ThemedText style={styles.label}>
+                  {formData.type === 'couchsurfing' ? 'Max Stay (Days)' : 'Security Deposit ($)'}
+                </ThemedText>
+                {formData.type === 'couchsurfing' ? (
+                  <TextInput
+                    ref={(ref) => { fieldRefs.current['accommodationDetails.maxStay'] = ref; }}
+                    style={styles.textInput}
+                    value={(formData.accommodationDetails?.maxStay || 0).toString()}
+                    onChangeText={(text) => updateField('accommodationDetails', {
+                      ...formData.accommodationDetails,
+                      maxStay: parseInt(text) || 0
+                    })}
+                    keyboardType="numeric"
+                    placeholder="7"
+                  />
+                ) : (
+                  <TextInput
+                    ref={(ref) => { fieldRefs.current['rent.deposit'] = ref; }}
+                    style={[
+                      styles.textInput,
+                      errors['rent.deposit'] && styles.textInputError
+                    ]}
+                    value={(formData.rent.deposit || 0).toString()}
+                    onChangeText={(text) => {
+                      updateField('rent', { ...formData.rent, deposit: parseFloat(text) || 0 });
+                      if (errors['rent.deposit']) {
+                        clearFieldError('rent.deposit');
+                      }
+                    }}
+                    keyboardType="numeric"
+                    placeholder="0"
+                  />
+                )}
+                {errors['rent.deposit'] && (
+                  <ThemedText style={styles.errorText}>{errors['rent.deposit']}</ThemedText>
+                )}
+              </View>
+            </View>
+
+            {/* Pricing Validation Display */}
+            {pricingValidation && (
+              <View style={[
+                styles.pricingValidationContainer,
+                pricingValidation.isWithinEthicalRange ? styles.pricingValidationGood : styles.pricingValidationWarning
+              ]}>
+                <ThemedText style={styles.pricingValidationText}>
+                  {pricingValidation.isWithinEthicalRange
+                    ? `✅ Pricing is within ethical range (max: $${pricingValidation.maxRent})`
+                    : `⚠️ Pricing exceeds ethical maximum (max: $${pricingValidation.maxRent})`
+                  }
+                </ThemedText>
+                {pricingValidation.warnings && pricingValidation.warnings.length > 0 && (
+                  <View style={styles.pricingWarningsContainer}>
+                    {pricingValidation.warnings.map((warning: string, index: number) => (
+                      <ThemedText key={index} style={styles.pricingWarningText}>
+                        • {warning}
+                      </ThemedText>
+                    ))}
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Pricing Guidance */}
+            <View style={styles.inputGroup}>
+              <TouchableOpacity
+                style={styles.pricingGuidanceButton}
+                onPress={() => setShowPricingGuidance(!showPricingGuidance)}
+              >
+                <ThemedText style={styles.pricingGuidanceButtonText}>
+                  💡 Get Pricing Guidance
+                </ThemedText>
+              </TouchableOpacity>
+
+              {showPricingGuidance && (
+                <View style={styles.pricingGuidanceContainer}>
+                  <ThemedText style={styles.pricingGuidanceText}>
+                    {getCurrentPricingGuidance()}
+                  </ThemedText>
+                </View>
+              )}
             </View>
           </View>
 
-          <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Security Deposit</ThemedText>
-            <TextInput
-              style={styles.textInput}
-              value={formData.rent.deposit?.toString() || ''}
-              onChangeText={(text) => updateRentField('deposit', parseFloat(text) || 0)}
-              placeholder="0"
-              keyboardType="numeric"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Utilities</ThemedText>
-            <View style={styles.pickerContainer}>
-              {(['included', 'excluded', 'partial'] as const).map((utility) => (
-                <TouchableOpacity
-                  key={utility}
-                  style={[
-                    styles.pickerOption,
-                    formData.rent.utilities === utility && styles.pickerOptionSelected
-                  ]}
-                  onPress={() => updateRentField('utilities', utility)}
-                >
-                  <ThemedText
-                    style={[
-                      styles.pickerOptionText,
-                      formData.rent.utilities === utility && styles.pickerOptionTextSelected
-                    ]}
-                  >
-                    {utility.charAt(0).toUpperCase() + utility.slice(1)}
+          {/* Accommodation-Specific Details Section */}
+          {(formData.type === 'couchsurfing' || formData.type === 'roommates' || formData.type === 'coliving' ||
+            formData.type === 'hostel' || formData.type === 'guesthouse' || formData.type === 'campsite') && (
+              <View style={styles.sectionCard}>
+                <View style={styles.sectionHeader}>
+                  <ThemedText style={styles.sectionTitle}>
+                    {formData.type === 'couchsurfing' ? 'Couchsurfing Details' :
+                      formData.type === 'roommates' ? 'Roommate Preferences' :
+                        formData.type === 'coliving' ? 'Co-Living Features' :
+                          formData.type === 'hostel' ? 'Hostel Details' :
+                            formData.type === 'guesthouse' ? 'Guesthouse Details' :
+                              'Campsite Details'}
                   </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+                </View>
 
-          <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Amenities</ThemedText>
+                {/* Cultural Exchange */}
+                {(formData.type === 'couchsurfing' || formData.type === 'hostel' || formData.type === 'guesthouse') && (
+                  <View style={styles.inputGroup}>
+                    <ThemedText style={styles.label}>Cultural Exchange</ThemedText>
+                    <View style={styles.pickerContainer}>
+                      <TouchableOpacity
+                        style={[
+                          styles.pickerOption,
+                          formData.accommodationDetails?.culturalExchange && styles.pickerOptionSelected
+                        ]}
+                        onPress={() => updateField('accommodationDetails', {
+                          ...formData.accommodationDetails,
+                          culturalExchange: !formData.accommodationDetails?.culturalExchange
+                        })}
+                      >
+                        <IconComponent
+                          name="heart-outline"
+                          size={16}
+                          color={formData.accommodationDetails?.culturalExchange ? colors.primaryLight : colors.COLOR_BLACK}
+                        />
+                        <ThemedText
+                          style={[
+                            styles.pickerOptionText,
+                            formData.accommodationDetails?.culturalExchange && styles.pickerOptionTextSelected
+                          ]}
+                        >
+                          Cultural Exchange Welcome
+                        </ThemedText>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+
+                {/* Languages */}
+                {(formData.type === 'couchsurfing' || formData.type === 'hostel' || formData.type === 'guesthouse') && (
+                  <View style={styles.inputGroup}>
+                    <ThemedText style={styles.label}>Languages Spoken</ThemedText>
+                    <View style={styles.pickerContainer}>
+                      {([
+                        'English', 'Spanish', 'French', 'German', 'Italian', 'Portuguese',
+                        'Chinese', 'Japanese', 'Korean', 'Arabic', 'Russian', 'Hindi'
+                      ] as const).map((language) => (
+                        <TouchableOpacity
+                          key={language}
+                          style={[
+                            styles.pickerOption,
+                            formData.accommodationDetails?.languages?.includes(language) && styles.pickerOptionSelected
+                          ]}
+                          onPress={() => {
+                            const current = formData.accommodationDetails?.languages || [];
+                            const updated = current.includes(language)
+                              ? current.filter(l => l !== language)
+                              : [...current, language];
+                            updateField('accommodationDetails', {
+                              ...formData.accommodationDetails,
+                              languages: updated
+                            });
+                          }}
+                        >
+                          <ThemedText
+                            style={[
+                              styles.pickerOptionText,
+                              formData.accommodationDetails?.languages?.includes(language) && styles.pickerOptionTextSelected
+                            ]}
+                          >
+                            {language}
+                          </ThemedText>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {/* Meals Included */}
+                {(formData.type === 'couchsurfing' || formData.type === 'hostel' || formData.type === 'guesthouse') && (
+                  <View style={styles.inputGroup}>
+                    <ThemedText style={styles.label}>Meals Included</ThemedText>
+                    <View style={styles.pickerContainer}>
+                      <TouchableOpacity
+                        style={[
+                          styles.pickerOption,
+                          formData.accommodationDetails?.mealsIncluded && styles.pickerOptionSelected
+                        ]}
+                        onPress={() => updateField('accommodationDetails', {
+                          ...formData.accommodationDetails,
+                          mealsIncluded: !formData.accommodationDetails?.mealsIncluded
+                        })}
+                      >
+                        <IconComponent
+                          name="restaurant-outline"
+                          size={16}
+                          color={formData.accommodationDetails?.mealsIncluded ? colors.primaryLight : colors.COLOR_BLACK}
+                        />
+                        <ThemedText
+                          style={[
+                            styles.pickerOptionText,
+                            formData.accommodationDetails?.mealsIncluded && styles.pickerOptionTextSelected
+                          ]}
+                        >
+                          Meals Included
+                        </ThemedText>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+
+                {/* Age restrictions */}
+                {(formData.type === 'hostel' || formData.type === 'roommates') && (
+                  <View style={styles.row}>
+                    <View style={styles.halfInput}>
+                      <ThemedText style={styles.label}>Minimum Age</ThemedText>
+                      <TextInput
+                        style={styles.textInput}
+                        value={(formData.accommodationDetails?.minAge || 18).toString()}
+                        onChangeText={(text) => updateField('accommodationDetails', {
+                          ...formData.accommodationDetails,
+                          minAge: parseInt(text) || 18
+                        })}
+                        keyboardType="numeric"
+                        placeholder="18"
+                      />
+                    </View>
+
+                    <View style={styles.halfInput}>
+                      <ThemedText style={styles.label}>Maximum Age</ThemedText>
+                      <TextInput
+                        style={styles.textInput}
+                        value={(formData.accommodationDetails?.maxAge || 0).toString()}
+                        onChangeText={(text) => updateField('accommodationDetails', {
+                          ...formData.accommodationDetails,
+                          maxAge: parseInt(text) || 0
+                        })}
+                        keyboardType="numeric"
+                        placeholder="No limit"
+                      />
+                    </View>
+                  </View>
+                )}
+
+                {/* WiFi Password */}
+                {(formData.type === 'couchsurfing' || formData.type === 'hostel' || formData.type === 'guesthouse') && (
+                  <View style={styles.inputGroup}>
+                    <ThemedText style={styles.label}>WiFi Password (Optional)</ThemedText>
+                    <TextInput
+                      style={styles.textInput}
+                      value={formData.accommodationDetails?.wifiPassword || ''}
+                      onChangeText={(text) => updateField('accommodationDetails', {
+                        ...formData.accommodationDetails,
+                        wifiPassword: text
+                      })}
+                      placeholder="Enter WiFi password"
+                      secureTextEntry={true}
+                    />
+                    <ThemedText style={styles.subLabel}>
+                      This will be shared with guests after booking
+                    </ThemedText>
+                  </View>
+                )}
+
+                {/* House Rules */}
+                <View style={styles.inputGroup}>
+                  <ThemedText style={styles.label}>House Rules</ThemedText>
+                  <View style={styles.pickerContainer}>
+                    {([
+                      'No smoking', 'No parties', 'No pets', 'Quiet hours', 'No shoes inside',
+                      'Kitchen access', 'Laundry access', 'Cleaning required', 'Respect privacy',
+                      'Cultural sensitivity', 'Sustainable practices', 'Community participation'
+                    ] as const).map((rule) => (
+                      <TouchableOpacity
+                        key={rule}
+                        style={[
+                          styles.pickerOption,
+                          formData.accommodationDetails?.houseRules?.includes(rule) && styles.pickerOptionSelected
+                        ]}
+                        onPress={() => {
+                          const current = formData.accommodationDetails?.houseRules || [];
+                          const updated = current.includes(rule)
+                            ? current.filter(r => r !== rule)
+                            : [...current, rule];
+                          updateField('accommodationDetails', {
+                            ...formData.accommodationDetails,
+                            houseRules: updated
+                          });
+                        }}
+                      >
+                        <ThemedText
+                          style={[
+                            styles.pickerOptionText,
+                            formData.accommodationDetails?.houseRules?.includes(rule) && styles.pickerOptionTextSelected
+                          ]}
+                        >
+                          {rule}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            )}
+
+          {/* Amenities Section */}
+          <View style={styles.sectionCard}>
             <AmenitiesSelector
               selectedAmenities={formData.amenities || []}
               onAmenityToggle={toggleAmenity}
             />
           </View>
 
-          {/* Property Preview Card */}
-          <View style={styles.previewSection}>
-            <ThemedText style={styles.previewTitle}>Property Preview</ThemedText>
-            <View style={styles.previewCard}>
-              <View style={styles.previewHeader}>
-                <ThemedText style={styles.previewPropertyTitle}>
-                  {generatePropertyTitle({
-                    type: formData.type,
-                    address: formData.address,
-                    bedrooms: formData.bedrooms,
-                    bathrooms: formData.bathrooms
-                  })}
+          {/* Image Upload Section */}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <ThemedText style={styles.sectionTitle}>Property Photos</ThemedText>
+              <ThemedText style={styles.sectionSubtitle}>
+                Add high-quality photos to attract potential tenants
+              </ThemedText>
+            </View>
+
+            {/* Image Upload Buttons */}
+            <View style={styles.imageUploadButtons}>
+              <TouchableOpacity style={styles.imageUploadButton} onPress={pickImage}>
+                <IconComponent name="images-outline" size={24} color={colors.primaryColor} />
+                <ThemedText style={styles.imageUploadButtonText}>Choose Photos</ThemedText>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.imageUploadButton} onPress={takePhoto}>
+                <IconComponent name="camera-outline" size={24} color={colors.primaryColor} />
+                <ThemedText style={styles.imageUploadButtonText}>Take Photo</ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            {/* Image Gallery */}
+            {formData.images.length > 0 && (
+              <View style={styles.imageGallery}>
+                <ThemedText style={styles.imageGalleryTitle}>
+                  Photos ({formData.images.length})
                 </ThemedText>
-                <ThemedText style={styles.previewPrice}>
-                  ${formData.rent.amount?.toLocaleString() || '0'}/{formData.priceUnit}
-                </ThemedText>
-              </View>
 
-              <View style={styles.previewLocation}>
-                <ThemedText style={styles.previewAddress}>
-                  {formData.address.street && formData.address.city
-                    ? `${formData.address.street}, ${formData.address.city}, ${formData.address.state}`
-                    : 'Address not specified'
-                  }
-                </ThemedText>
-              </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {formData.images.map((image, index) => (
+                    <View key={index} style={styles.imageContainer}>
+                      <Image source={{ uri: image }} style={styles.propertyImage} />
 
-              <View style={styles.previewDetails}>
-                <View style={styles.previewDetail}>
-                  <ThemedText style={styles.previewDetailLabel}>Bedrooms:</ThemedText>
-                  <ThemedText style={styles.previewDetailValue}>
-                    {formData.bedrooms || 0}
-                  </ThemedText>
-                </View>
-                <View style={styles.previewDetail}>
-                  <ThemedText style={styles.previewDetailLabel}>Bathrooms:</ThemedText>
-                  <ThemedText style={styles.previewDetailValue}>
-                    {formData.bathrooms || 0}
-                  </ThemedText>
-                </View>
-                {formData.squareFootage && formData.squareFootage > 0 && (
-                  <View style={styles.previewDetail}>
-                    <ThemedText style={styles.previewDetailLabel}>Size:</ThemedText>
-                    <ThemedText style={styles.previewDetailValue}>
-                      {formData.squareFootage} sq ft
-                    </ThemedText>
-                  </View>
-                )}
-              </View>
+                      {/* Cover Image Badge */}
+                      {index === formData.coverImageIndex && (
+                        <View style={styles.coverImageBadge}>
+                          <ThemedText style={styles.coverImageBadgeText}>Cover</ThemedText>
+                        </View>
+                      )}
 
-              {formData.description && (
-                <View style={styles.previewDescription}>
-                  <ThemedText style={styles.previewDescriptionText}>
-                    {formData.description.length > 100
-                      ? `${formData.description.substring(0, 100)}...`
-                      : formData.description
-                    }
-                  </ThemedText>
-                </View>
-              )}
+                      {/* Image Actions */}
+                      <View style={styles.imageActions}>
+                        <TouchableOpacity
+                          style={styles.imageActionButton}
+                          onPress={() => setCoverImage(index)}
+                        >
+                          <IconComponent name="star" size={16} color="white" />
+                        </TouchableOpacity>
 
-              {formData.amenities && formData.amenities.length > 0 && (
-                <View style={styles.previewAmenities}>
-                  <ThemedText style={styles.previewAmenitiesTitle}>Amenities:</ThemedText>
-                  <View style={styles.previewAmenitiesList}>
-                    {formData.amenities.slice(0, 4).map((amenity, index) => (
-                      <View key={index} style={styles.previewAmenityTag}>
-                        <ThemedText style={styles.previewAmenityText}>
-                          {amenity.charAt(0).toUpperCase() + amenity.slice(1).replace('_', ' ')}
-                        </ThemedText>
+                        <TouchableOpacity
+                          style={[styles.imageActionButton, styles.deleteButton]}
+                          onPress={() => removeImage(index)}
+                        >
+                          <IconComponent name="trash" size={16} color="white" />
+                        </TouchableOpacity>
                       </View>
-                    ))}
-                    {formData.amenities.length > 4 && (
-                      <View style={styles.previewAmenityTag}>
-                        <ThemedText style={styles.previewAmenityText}>
-                          +{formData.amenities.length - 4} more
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Image Tips */}
+            <View style={styles.imageTips}>
+              <ThemedText style={styles.imageTipsTitle}>Photo Tips:</ThemedText>
+              <ThemedText style={styles.imageTipsText}>
+                • Include photos of all rooms and key features{'\n'}
+                • Use good lighting and clear angles{'\n'}
+                • Show the property at its best{'\n'}
+                • First photo will be the cover image
+              </ThemedText>
+            </View>
+          </View>
+
+          {/* Property Preview - Mobile Only */}
+          {screenWidth < 768 && (
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeader}>
+                <ThemedText style={styles.sectionTitle}>Property Preview</ThemedText>
+              </View>
+
+              <View style={styles.previewCard}>
+                {formData.images.length > 0 && (
+                  <Image
+                    source={{ uri: formData.images[formData.coverImageIndex] }}
+                    style={styles.previewImage}
+                  />
+                )}
+
+                <View style={styles.previewContent}>
+                  <ThemedText style={styles.previewTitle}>
+                    {formData.address.street || 'Property Address'}
+                  </ThemedText>
+
+                  <ThemedText style={styles.previewLocation}>
+                    {formData.address.city}, {formData.address.state}
+                  </ThemedText>
+
+                  <View style={styles.previewDetails}>
+                    <View style={styles.previewDetail}>
+                      <IconComponent name="bed" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
+                      <ThemedText style={styles.previewDetailText}>{formData.bedrooms} bed</ThemedText>
+                    </View>
+                    <View style={styles.previewDetail}>
+                      <IconComponent name="water" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
+                      <ThemedText style={styles.previewDetailText}>{formData.bathrooms} bath</ThemedText>
+                    </View>
+                    <View style={styles.previewDetail}>
+                      <IconComponent name="resize" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
+                      <ThemedText style={styles.previewDetailText}>{formData.squareFootage} sqft</ThemedText>
+                    </View>
+                  </View>
+
+                  <View style={styles.previewPricing}>
+                    <ThemedText style={styles.previewPrice}>
+                      ${formData.rent.amount.toLocaleString()}
+                    </ThemedText>
+                    <ThemedText style={styles.previewPriceUnit}>/month</ThemedText>
+                  </View>
+
+                  <View style={styles.previewFeatures}>
+                    {formData.furnishedStatus === 'furnished' && (
+                      <View style={styles.previewFeature}>
+                        <ThemedText style={styles.previewFeatureText}>Furnished</ThemedText>
+                      </View>
+                    )}
+                    {formData.furnishedStatus === 'partially_furnished' && (
+                      <View style={styles.previewFeature}>
+                        <ThemedText style={styles.previewFeatureText}>Partially Furnished</ThemedText>
+                      </View>
+                    )}
+                    {formData.petPolicy === 'allowed' && (
+                      <View style={styles.previewFeature}>
+                        <ThemedText style={styles.previewFeatureText}>Pet Friendly</ThemedText>
+                      </View>
+                    )}
+                    {formData.parkingType !== 'none' && (
+                      <View style={styles.previewFeature}>
+                        <ThemedText style={styles.previewFeatureText}>Parking</ThemedText>
+                      </View>
+                    )}
+                    {formData.leaseTerm && (
+                      <View style={styles.previewFeature}>
+                        <ThemedText style={styles.previewFeatureText}>
+                          {formData.leaseTerm === '6_months' ? '6 Month Lease' :
+                            formData.leaseTerm === '12_months' ? '12 Month Lease' :
+                              formData.leaseTerm === 'monthly' ? 'Monthly Lease' : 'Flexible Lease'}
                         </ThemedText>
                       </View>
                     )}
                   </View>
-                </View>
-              )}
 
-              {formData.rent.deposit && formData.rent.deposit > 0 && (
-                <View style={styles.previewDeposit}>
-                  <ThemedText style={styles.previewDepositText}>
-                    Security Deposit: ${formData.rent.deposit.toLocaleString()}
+                  <ThemedText style={styles.previewDescription}>
+                    {formData.description || 'No description provided'}
                   </ThemedText>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* Draft Status */}
+          {formData.isDraft && (
+            <View style={styles.draftStatus}>
+              <ThemedText style={styles.draftStatusText}>
+                💾 Draft saved {formData.lastSaved.toLocaleTimeString()}
+              </ThemedText>
+            </View>
+          )}
+
+          {/* Smart Suggestions */}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <ThemedText style={styles.sectionTitle}>Smart Suggestions</ThemedText>
+            </View>
+
+            <View style={styles.suggestionsContainer}>
+              <View style={styles.suggestionItem}>
+                <IconComponent name="bulb" size={20} color={colors.primaryColor} />
+                <View style={styles.suggestionContent}>
+                  <ThemedText style={styles.suggestionTitle}>Competitive Pricing</ThemedText>
+                  <ThemedText style={styles.suggestionText}>
+                    Based on similar properties in your area, consider pricing between $1,200 - $1,800/month
+                  </ThemedText>
+                </View>
+              </View>
+
+              <View style={styles.suggestionItem}>
+                <IconComponent name="star" size={20} color={colors.primaryColor} />
+                <View style={styles.suggestionContent}>
+                  <ThemedText style={styles.suggestionTitle}>High-Demand Features</ThemedText>
+                  <ThemedText style={styles.suggestionText}>
+                    Properties with parking, in-unit laundry, and pet-friendly policies rent 15% faster
+                  </ThemedText>
+                </View>
+              </View>
+
+              <View style={styles.suggestionItem}>
+                <IconComponent name="location" size={20} color={colors.primaryColor} />
+                <View style={styles.suggestionContent}>
+                  <ThemedText style={styles.suggestionTitle}>Location Benefits</ThemedText>
+                  <ThemedText style={styles.suggestionText}>
+                    Highlight proximity to public transport, schools, and shopping centers
+                  </ThemedText>
+                </View>
+              </View>
+
+              <View style={styles.suggestionItem}>
+                <IconComponent name="camera" size={20} color={colors.primaryColor} />
+                <View style={styles.suggestionContent}>
+                  <ThemedText style={styles.suggestionTitle}>Professional Photos</ThemedText>
+                  <ThemedText style={styles.suggestionText}>
+                    Properties with high-quality photos receive 40% more inquiries
+                  </ThemedText>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Availability & Rules Section */}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <ThemedText style={styles.sectionTitle}>Availability & Lease Terms</ThemedText>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.label}>Available From</ThemedText>
+              <TextInput
+                style={styles.textInput}
+                value={formData.availableFrom}
+                onChangeText={(text) => updateField('availableFrom', text)}
+                placeholder="YYYY-MM-DD"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.label}>Lease Term</ThemedText>
+              <View style={styles.pickerContainer}>
+                {(['monthly', '6_months', '12_months', 'flexible'] as const).map((term) => (
+                  <TouchableOpacity
+                    key={term}
+                    style={[
+                      styles.pickerOption,
+                      formData.leaseTerm === term && styles.pickerOptionSelected
+                    ]}
+                    onPress={() => updateField('leaseTerm', term)}
+                  >
+                    <ThemedText
+                      style={[
+                        styles.pickerOptionText,
+                        formData.leaseTerm === term && styles.pickerOptionTextSelected
+                      ]}
+                    >
+                      {term === '6_months' ? '6 Months' :
+                        term === '12_months' ? '12 Months' :
+                          term.charAt(0).toUpperCase() + term.slice(1)}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.label}>House Rules</ThemedText>
+
+              <View style={styles.ruleItem}>
+                <TouchableOpacity
+                  style={styles.ruleToggle}
+                  onPress={() => updateField('smokingAllowed', !formData.smokingAllowed)}
+                >
+                  <IconComponent
+                    name={formData.smokingAllowed ? "checkmark-circle" : "close-circle"}
+                    size={24}
+                    color={formData.smokingAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3}
+                  />
+                  <ThemedText style={styles.ruleText}>Smoking Allowed</ThemedText>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.ruleItem}>
+                <TouchableOpacity
+                  style={styles.ruleToggle}
+                  onPress={() => updateField('partiesAllowed', !formData.partiesAllowed)}
+                >
+                  <IconComponent
+                    name={formData.partiesAllowed ? "checkmark-circle" : "close-circle"}
+                    size={24}
+                    color={formData.partiesAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3}
+                  />
+                  <ThemedText style={styles.ruleText}>Parties Allowed</ThemedText>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.ruleItem}>
+                <TouchableOpacity
+                  style={styles.ruleToggle}
+                  onPress={() => updateField('guestsAllowed', !formData.guestsAllowed)}
+                >
+                  <IconComponent
+                    name={formData.guestsAllowed ? "checkmark-circle" : "close-circle"}
+                    size={24}
+                    color={formData.guestsAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3}
+                  />
+                  <ThemedText style={styles.ruleText}>Guests Allowed</ThemedText>
+                </TouchableOpacity>
+              </View>
+
+              {formData.guestsAllowed && (
+                <View style={styles.inputGroup}>
+                  <ThemedText style={styles.label}>Maximum Overnight Guests</ThemedText>
+                  <View style={styles.pickerContainer}>
+                    {[1, 2, 3, 4, 5].map((num) => (
+                      <TouchableOpacity
+                        key={num}
+                        style={[
+                          styles.pickerOption,
+                          formData.maxGuests === num && styles.pickerOptionSelected
+                        ]}
+                        onPress={() => updateField('maxGuests', num)}
+                      >
+                        <ThemedText
+                          style={[
+                            styles.pickerOptionText,
+                            formData.maxGuests === num && styles.pickerOptionTextSelected
+                          ]}
+                        >
+                          {num}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 </View>
               )}
             </View>
           </View>
 
+          {/* Amenities Section */}
+          <View style={styles.sectionCard}>
+            <AmenitiesSelector
+              selectedAmenities={formData.amenities || []}
+              onAmenityToggle={toggleAmenity}
+            />
+          </View>
+
+          {/* Submit Button */}
           <TouchableOpacity
+            style={[
+              styles.submitButton,
+              !isFormValid() && styles.submitButtonDisabled
+            ]}
             onPress={handleSubmit}
-            disabled={createLoading || !isFormValid()}
-            style={[styles.submitButton, (createLoading || !isFormValid()) && styles.submitButtonDisabled]}
-            activeOpacity={0.8}
+            disabled={!isFormValid() || createLoading}
           >
             {createLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color="white" />
-                <ThemedText style={[styles.submitButtonText, { marginLeft: 8 }]}>
-                  Creating...
-                </ThemedText>
+                <ThemedText style={styles.submitButtonText}>Creating Property...</ThemedText>
               </View>
             ) : (
-              <ThemedText style={styles.submitButtonText}>
+              <ThemedText style={[
+                styles.submitButtonText,
+                !isFormValid() && styles.submitButtonTextDisabled
+              ]}>
                 Create Property
               </ThemedText>
             )}
@@ -1169,30 +2577,134 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollView: {
-    flex: 1,
-  },
   form: {
     padding: 16,
   },
-  inputGroup: {
+  heroSection: {
+    height: 200,
+    backgroundColor: colors.primaryColor,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    borderRadius: 35,
+    marginBottom: 24,
+    borderColor: colors.COLOR_BLACK,
+    borderWidth: 1,
+  },
+  heroContent: {
+    width: '100%',
+    maxWidth: 800,
+    alignItems: 'center',
+  },
+  heroTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    fontFamily: 'Phudu',
+    color: 'white',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  heroSubtitle: {
+    fontSize: 16,
+    color: 'white',
+    opacity: 0.9,
+    textAlign: 'center',
+    maxWidth: 400,
+  },
+  progressContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.primaryLight,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.primaryLight_1,
+  },
+  progressBar: {
+    height: 4,
+    backgroundColor: colors.primaryLight_1,
+    borderRadius: 2,
     marginBottom: 16,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.primaryColor,
+    borderRadius: 2,
+  },
+  progressSteps: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  progressStep: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  progressStepActive: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  progressStepDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.primaryLight_1,
+    marginBottom: 4,
+  },
+  progressStepDotActive: {
+    backgroundColor: colors.primaryColor,
+  },
+  progressStepText: {
+    fontSize: 12,
+    color: colors.primaryDark_1,
+    textAlign: 'center',
+  },
+  progressStepTextActive: {
+    color: colors.primaryColor,
+  },
+  sectionCard: {
+    backgroundColor: 'white',
+    borderRadius: 25,
+    padding: 20,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: colors.COLOR_BLACK,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  sectionHeader: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: colors.COLOR_BLACK,
+    fontFamily: 'Phudu',
+    marginBottom: 8,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  inputGroup: {
+    marginBottom: 20,
   },
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.primaryDark,
+    color: colors.COLOR_BLACK,
     marginBottom: 8,
   },
   textInput: {
     borderWidth: 1,
-    borderColor: colors.primaryLight_1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderColor: colors.COLOR_BLACK,
+    borderRadius: 25,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     fontSize: 16,
-    backgroundColor: colors.primaryLight,
-    color: colors.primaryDark,
+    backgroundColor: 'white',
+    color: colors.COLOR_BLACK,
   },
   textArea: {
     height: 100,
@@ -1201,7 +2713,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   halfInput: {
     flex: 0.48,
@@ -1214,10 +2726,10 @@ const styles = StyleSheet.create({
   pickerOption: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 25,
     borderWidth: 1,
-    borderColor: colors.primaryLight_1,
-    backgroundColor: colors.primaryLight,
+    borderColor: colors.COLOR_BLACK,
+    backgroundColor: 'white',
   },
   pickerOptionSelected: {
     backgroundColor: colors.primaryColor,
@@ -1225,16 +2737,11 @@ const styles = StyleSheet.create({
   },
   pickerOptionText: {
     fontSize: 14,
-    color: colors.primaryDark,
+    color: colors.COLOR_BLACK,
   },
   pickerOptionTextSelected: {
     color: 'white',
     fontWeight: '600',
-  },
-  subLabel: {
-    fontSize: 14,
-    color: colors.primaryDark_1,
-    marginBottom: 8,
   },
   searchContainer: {
     position: 'relative',
@@ -1272,167 +2779,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.primaryDark,
   },
-  headerButton: {
-    padding: 8,
-    borderRadius: 35,
-    borderWidth: 1,
-    borderColor: colors.primaryLight_1,
-    backgroundColor: colors.primaryLight,
-  },
-  headerButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primaryDark,
-  },
-  previewSection: {
-    marginBottom: 24,
-  },
-  previewTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.primaryDark,
-    marginBottom: 8,
-  },
-  previewCard: {
-    backgroundColor: colors.primaryLight,
-    borderRadius: 25,
-    padding: 16,
-    shadowColor: colors.primaryDark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  previewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  previewPropertyTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.primaryDark,
-  },
-  previewPrice: {
-    fontSize: 14,
-    color: colors.primaryDark_1,
-  },
-  previewLocation: {
-    marginBottom: 8,
-  },
-  previewAddress: {
-    fontSize: 14,
-    color: colors.primaryDark,
-  },
-  previewDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  previewDetail: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  previewDetailLabel: {
-    fontSize: 14,
-    color: colors.primaryDark_1,
-    marginRight: 8,
-  },
-  previewDetailValue: {
-    fontSize: 14,
-    color: colors.primaryDark,
-  },
-  previewDescription: {
-    marginBottom: 8,
-  },
-  previewDescriptionText: {
-    fontSize: 14,
-    color: colors.primaryDark,
-  },
-  previewAmenities: {
-    marginBottom: 8,
-  },
-  previewAmenitiesTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: colors.primaryDark,
-    marginBottom: 8,
-  },
-  previewAmenitiesList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  previewAmenityTag: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: colors.primaryLight_1,
-    borderRadius: 25,
-  },
-  previewAmenityText: {
-    fontSize: 14,
-    color: colors.primaryDark,
-  },
-  previewDeposit: {
-    marginTop: 8,
-  },
-  previewDepositText: {
-    fontSize: 14,
-    color: colors.primaryDark_1,
-  },
-  pricingGuidanceButton: {
-    padding: 8,
-    borderWidth: 1,
-    borderColor: colors.primaryLight_1,
-    borderRadius: 8,
-  },
-  pricingGuidanceButtonText: {
-    fontSize: 14,
-    color: colors.primaryDark,
-  },
-  pricingGuidanceContainer: {
-    marginTop: 8,
-    padding: 12,
-    backgroundColor: colors.primaryLight,
-    borderWidth: 1,
-    borderColor: colors.primaryLight_1,
-    borderRadius: 8,
-  },
-  pricingGuidanceText: {
-    fontSize: 14,
-    color: colors.primaryDark,
-  },
-  pricingValidationContainer: {
-    marginTop: 8,
-    padding: 12,
-    backgroundColor: colors.primaryLight,
-    borderWidth: 1,
-    borderColor: colors.primaryLight_1,
-    borderRadius: 8,
-  },
-  pricingValidationGood: {
-    backgroundColor: colors.primaryLight_1,
-  },
-  pricingValidationWarning: {
-    backgroundColor: colors.primaryLight_1,
-  },
-  pricingValidationText: {
-    fontSize: 14,
-    color: colors.primaryDark,
-  },
-  pricingWarningsContainer: {
-    marginTop: 8,
-  },
-  pricingWarningText: {
-    fontSize: 12,
-    color: colors.primaryDark_1,
-    marginBottom: 2,
-  },
-  textInputError: {
-    borderColor: '#ff6b6b',
-  },
   locationButton: {
     marginTop: 8,
     paddingVertical: 12,
@@ -1446,6 +2792,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: 'white',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   permissionStatus: {
     marginTop: 8,
@@ -1504,76 +2854,464 @@ const styles = StyleSheet.create({
   watchLocationButtonTextActive: {
     color: 'white',
   },
-  loadingContainer: {
+  ruleItem: {
+    marginBottom: 12,
+  },
+  ruleToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    paddingVertical: 8,
   },
-  progressContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: colors.primaryLight,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.primaryLight_1,
+  ruleText: {
+    fontSize: 16,
+    color: colors.COLOR_BLACK,
+    marginLeft: 12,
   },
-  progressBar: {
-    height: 4,
-    backgroundColor: colors.primaryLight_1,
-    borderRadius: 2,
+  imageUploadButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 16,
   },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.primaryColor,
-    borderRadius: 2,
+  imageUploadButton: {
+    flex: 1,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.primaryColor,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 4,
   },
-  progressSteps: {
+  imageUploadButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.primaryColor,
+    marginTop: 4,
+  },
+  imageGallery: {
+    marginBottom: 24,
+  },
+  imageGalleryTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.COLOR_BLACK,
+    marginBottom: 8,
+  },
+  imageContainer: {
+    width: 100,
+    height: 100,
+    marginRight: 8,
+    position: 'relative',
+  },
+  propertyImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+  },
+  coverImageBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 4,
+    backgroundColor: colors.primaryColor,
+    borderRadius: 8,
+  },
+  coverImageBadgeText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  imageActions: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  imageActionButton: {
+    padding: 4,
+    borderRadius: 20,
+    backgroundColor: colors.primaryColor,
+    marginRight: 4,
+  },
+  deleteButton: {
+    backgroundColor: '#ff6b6b',
+  },
+  imageTips: {
+    marginTop: 8,
+    padding: 12,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primaryLight_1,
+    borderRadius: 8,
+  },
+  imageTipsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.COLOR_BLACK,
+    marginBottom: 8,
+  },
+  imageTipsText: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  previewSection: {
+    marginBottom: 24,
+  },
+  previewTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.COLOR_BLACK,
+    marginBottom: 8,
+  },
+  previewCard: {
+    backgroundColor: 'white',
+    borderRadius: 25,
+    padding: 16,
+    shadowColor: colors.COLOR_BLACK,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: colors.COLOR_BLACK,
+  },
+  previewHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 8,
   },
-  progressStep: {
+  previewPropertyTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.COLOR_BLACK,
+  },
+  previewPrice: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  previewLocation: {
+    marginBottom: 8,
+  },
+  previewAddress: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK,
+  },
+  previewDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  previewDetail: {
+    flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
   },
-  progressStepActive: {
+  previewDetailLabel: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK_LIGHT_3,
+    marginRight: 8,
+  },
+  previewDetailValue: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK,
+  },
+  previewDescription: {
+    marginBottom: 8,
+  },
+  previewDescriptionText: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK,
+  },
+  previewAmenities: {
+    marginBottom: 8,
+  },
+  previewAmenitiesTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: colors.COLOR_BLACK,
+    marginBottom: 8,
+  },
+  previewAmenitiesList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  previewAmenityTag: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: colors.COLOR_BLACK,
+    borderRadius: 25,
+  },
+  previewAmenityText: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK,
+  },
+  previewDeposit: {
+    marginTop: 8,
+  },
+  previewDepositText: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  draftStatus: {
+    backgroundColor: colors.primaryLight,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
     alignItems: 'center',
-    flex: 1,
   },
-  progressStepDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: colors.primaryLight_1,
-    marginBottom: 4,
-  },
-  progressStepDotActive: {
-    backgroundColor: colors.primaryColor,
-  },
-  progressStepText: {
-    fontSize: 12,
-    color: colors.primaryDark_1,
-    textAlign: 'center',
-  },
-  progressStepTextActive: {
-    color: colors.primaryColor,
+  draftStatusText: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK_LIGHT_3,
   },
   submitButton: {
-    marginTop: 24,
-    paddingVertical: 16,
     backgroundColor: colors.primaryColor,
-    borderRadius: 8,
+    borderRadius: 25,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
     alignItems: 'center',
-    justifyContent: 'center',
+    marginTop: 24,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: colors.COLOR_BLACK,
+  },
+  submitButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
   },
   submitButtonDisabled: {
     backgroundColor: colors.primaryLight_1,
   },
-  submitButtonText: {
-    fontSize: 16,
+  submitButtonTextDisabled: {
+    color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  headerButton: {
+    padding: 8,
+    borderRadius: 35,
+    borderWidth: 1,
+    borderColor: colors.COLOR_BLACK,
+    backgroundColor: 'white',
+  },
+  headerButtonText: {
+    fontSize: 14,
     fontWeight: '600',
-    color: 'white',
-    textAlign: 'center',
+    color: colors.COLOR_BLACK,
+  },
+  pricingGuidanceButton: {
+    padding: 8,
+    borderWidth: 1,
+    borderColor: colors.primaryLight_1,
+    borderRadius: 8,
+  },
+  pricingGuidanceButtonText: {
+    fontSize: 14,
+    color: colors.primaryDark,
+  },
+  pricingGuidanceContainer: {
+    marginTop: 8,
+    padding: 12,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primaryLight_1,
+    borderRadius: 8,
+  },
+  pricingGuidanceText: {
+    fontSize: 14,
+    color: colors.primaryDark,
+  },
+  pricingValidationContainer: {
+    marginTop: 8,
+    padding: 12,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primaryLight_1,
+    borderRadius: 8,
+  },
+  pricingValidationGood: {
+    backgroundColor: colors.primaryLight_1,
+  },
+  pricingValidationWarning: {
+    backgroundColor: colors.primaryLight_1,
+  },
+  pricingValidationText: {
+    fontSize: 14,
+    color: colors.primaryDark,
+  },
+  pricingWarningsContainer: {
+    marginTop: 8,
+  },
+  pricingWarningText: {
+    fontSize: 12,
+    color: colors.primaryDark_1,
+    marginBottom: 2,
+  },
+  errorText: {
+    color: '#ff6b6b',
+    fontSize: 12,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  textInputError: {
+    borderColor: '#ff6b6b',
+    borderWidth: 2,
+  },
+  locationErrorContainer: {
+    marginTop: 8,
+    padding: 12,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: '#ff6b6b',
+    borderRadius: 8,
+  },
+  previewImage: {
+    width: '100%',
+    height: 150,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  previewContent: {
+    padding: 16,
+  },
+  previewPricing: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  previewPriceUnit: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  previewFeatures: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  previewFeature: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  previewFeatureText: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK,
+    marginLeft: 8,
+  },
+  previewDetailText: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK,
+    marginLeft: 8,
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  suggestionContent: {
+    marginLeft: 8,
+  },
+  suggestionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.COLOR_BLACK,
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  suggestionsContainer: {
+    marginBottom: 16,
+  },
+  ethicalPricingSection: {
+    marginBottom: 20,
+  },
+  ethicalPricingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  ethicalPricingTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.COLOR_BLACK,
+    marginLeft: 8,
+  },
+  ethicalPricingContent: {
+    backgroundColor: colors.primaryLight,
+    padding: 12,
+    borderRadius: 8,
+  },
+  ethicalPricingDescription: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK,
+    marginBottom: 8,
+  },
+  ethicalPricingOptions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  ethicalPricingOption: {
+    flex: 1,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.primaryColor,
+    borderRadius: 8,
+    marginHorizontal: 4,
+  },
+  ethicalPricingToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  ethicalPricingOptionText: {
+    flex: 1,
+    marginLeft: 8,
+  },
+  ethicalPricingOptionTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: colors.COLOR_BLACK,
+  },
+  ethicalPricingOptionDescription: {
+    fontSize: 12,
+    color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  ethicalCalculatorSection: {
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: colors.COLOR_BLACK_LIGHT_4,
+  },
+  ethicalCalculatorHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  ethicalCalculatorTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.COLOR_BLACK,
+    marginLeft: 8,
+  },
+  ethicalCalculatorContent: {
+    backgroundColor: colors.primaryLight,
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.COLOR_BLACK_LIGHT_4,
+  },
+  ethicalCalculatorDescription: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK,
+    marginBottom: 16,
+  },
+  subLabel: {
+    fontSize: 14,
+    color: colors.primaryDark_1,
+    marginBottom: 8,
   },
 });
+

@@ -138,6 +138,18 @@ const propertySlice = createSlice({
     clearFilters: (state) => {
       state.filters = {};
     },
+    resetLoading: (state) => {
+      state.loading = {
+        properties: false,
+        currentProperty: false,
+        stats: false,
+        energy: false,
+        search: false,
+        create: false,
+        update: false,
+        delete: false,
+      };
+    },
     updatePropertyInList: (state, action: PayloadAction<Property>) => {
       const index = state.properties.findIndex(p => (p._id || p.id) === (action.payload._id || action.payload.id));
       if (index !== -1) {
@@ -299,6 +311,7 @@ export const {
   clearSearchResults,
   setFilters,
   clearFilters,
+  resetLoading,
   updatePropertyInList,
   removePropertyFromList,
 } = propertySlice.actions;

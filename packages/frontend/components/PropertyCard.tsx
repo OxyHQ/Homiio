@@ -7,6 +7,7 @@ import { Property } from '@/services/propertyService';
 import { getPropertyTitle, getPropertyImageSource } from '@/utils/propertyUtils';
 import { useFavorites } from '@/hooks/useFavorites';
 import { SaveButton } from './SaveButton';
+import { CurrencyFormatter } from './CurrencyFormatter';
 
 export type PropertyType = 'apartment' | 'house' | 'coliving' | 'eco';
 
@@ -368,7 +369,11 @@ export function PropertyCard({
                             variant === 'compact' ? styles.compactPrice : null,
                             isFeatured ? styles.featuredPrice : null,
                         ]}>
-                            {propertyData.currency}{propertyData.price.toLocaleString()}
+                            <CurrencyFormatter
+                                amount={propertyData.price}
+                                originalCurrency={propertyData.currency}
+                                showConversion={false}
+                            />
                             <Text style={styles.priceUnit}> / {priceUnit}</Text>
                         </Text>
                     </View>

@@ -15,7 +15,7 @@ export interface Property {
       lng: number | null;
     };
   };
-  type: 'apartment' | 'house' | 'room' | 'studio';
+  type: 'apartment' | 'house' | 'room' | 'studio' | 'couchsurfing' | 'roommates' | 'coliving' | 'hostel' | 'guesthouse' | 'campsite' | 'boat' | 'treehouse' | 'yurt' | 'other';
   housingType?: 'private' | 'public'; // Distinguishes private vs public housing
   description?: string;
   squareFootage?: number;
@@ -56,6 +56,22 @@ export interface Property {
       };
     };
   };
+  // Accommodation-specific details
+  accommodationDetails?: {
+    sleepingArrangement?: 'couch' | 'air_mattress' | 'floor' | 'tent' | 'hammock';
+    roommatePreferences?: string[];
+    colivingFeatures?: string[];
+    hostelRoomType?: 'dormitory' | 'private_room' | 'mixed_dorm' | 'female_dorm' | 'male_dorm';
+    campsiteType?: 'tent_site' | 'rv_site' | 'cabin' | 'glamping' | 'backcountry';
+    maxStay?: number;
+    minAge?: number;
+    maxAge?: number;
+    languages?: string[];
+    culturalExchange?: boolean;
+    mealsIncluded?: boolean;
+    wifiPassword?: string;
+    houseRules?: string[];
+  };
 }
 
 export interface CreatePropertyData {
@@ -67,7 +83,7 @@ export interface CreatePropertyData {
     zipCode: string;
     country?: string;
   };
-  type: 'apartment' | 'house' | 'room' | 'studio'; // Note: 'public' excluded - managed externally
+  type: 'apartment' | 'house' | 'room' | 'studio' | 'couchsurfing' | 'roommates' | 'coliving' | 'hostel' | 'guesthouse' | 'campsite' | 'boat' | 'treehouse' | 'yurt' | 'other';
   description?: string;
   squareFootage?: number;
   bedrooms?: number;
@@ -99,6 +115,22 @@ export interface CreatePropertyData {
   proximityToTransport?: boolean;
   proximityToSchools?: boolean;
   proximityToShopping?: boolean;
+  // Accommodation-specific details
+  accommodationDetails?: {
+    sleepingArrangement?: 'couch' | 'air_mattress' | 'floor' | 'tent' | 'hammock';
+    roommatePreferences?: string[];
+    colivingFeatures?: string[];
+    hostelRoomType?: 'dormitory' | 'private_room' | 'mixed_dorm' | 'female_dorm' | 'male_dorm';
+    campsiteType?: 'tent_site' | 'rv_site' | 'cabin' | 'glamping' | 'backcountry';
+    maxStay?: number;
+    minAge?: number;
+    maxAge?: number;
+    languages?: string[];
+    culturalExchange?: boolean;
+    mealsIncluded?: boolean;
+    wifiPassword?: string;
+    houseRules?: string[];
+  };
 }
 
 export interface PropertyFilters {

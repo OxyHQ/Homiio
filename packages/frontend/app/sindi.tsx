@@ -13,6 +13,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { Header } from '@/components/Header';
 import { useTranslation } from 'react-i18next';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function sindi() {
   const { oxyServices, activeSessionId } = useOxy();
@@ -25,13 +26,22 @@ export default function sindi() {
       <ThemedView style={styles.container} lightColor="transparent" darkColor="transparent">
         <Header options={{ title: t('sindi.title'), showBackButton: true }} />
         <View style={styles.authRequiredContainer}>
-          <View style={styles.authRequiredContent}>
-            <Text style={styles.authRequiredIcon}>🔒</Text>
-            <ThemedText style={styles.authRequiredTitle}>{t('sindi.auth.required')}</ThemedText>
-            <ThemedText style={styles.authRequiredSubtitle}>
-              {t('sindi.auth.message')}
-            </ThemedText>
-          </View>
+          <LinearGradient
+            colors={[colors.primaryColor, colors.secondaryLight]}
+            style={styles.authRequiredCard}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <View style={styles.authRequiredContent}>
+              <View style={styles.authRequiredIconContainer}>
+                <Text style={styles.authRequiredIcon}>🔒</Text>
+              </View>
+              <Text style={styles.authRequiredTitle}>{t('sindi.auth.required')}</Text>
+              <Text style={styles.authRequiredSubtitle}>
+                {t('sindi.auth.message')}
+              </Text>
+            </View>
+          </LinearGradient>
         </View>
       </ThemedView>
     );
@@ -103,11 +113,18 @@ export default function sindi() {
 
   if (error) return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.errorContainer}>
-        <Ionicons name="alert-circle" size={48} color={colors.primaryColor} />
-        <Text style={styles.errorText}>{t('sindi.errors.connection')}</Text>
-        <Text style={styles.errorSubtext}>{t('sindi.errors.connectionMessage')}</Text>
-      </View>
+      <LinearGradient
+        colors={[colors.primaryColor, colors.secondaryLight]}
+        style={styles.errorContainer}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.errorContent}>
+          <Ionicons name="alert-circle" size={48} color="white" />
+          <Text style={styles.errorText}>{t('sindi.errors.connection')}</Text>
+          <Text style={styles.errorSubtext}>{t('sindi.errors.connectionMessage')}</Text>
+        </View>
+      </LinearGradient>
     </SafeAreaView>
   );
 
@@ -122,24 +139,14 @@ export default function sindi() {
 
   return (
     <SafeAreaView style={[styles.container, webStyles.container]}>
-      {/* Sticky Header */}
-      <View style={[styles.stickyHeader, webStyles.stickyHeader]}>
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <View style={styles.avatarContainer}>
-              <SindiIcon size={24} color="white" />
-            </View>
-            <View style={styles.headerText}>
-              <Text style={styles.title}>{t('sindi.title')}</Text>
-              <Text style={styles.subtitle}>{t('sindi.subtitle')}</Text>
-            </View>
-          </View>
-          <View style={styles.statusIndicator}>
-            <View style={[styles.statusDot, { backgroundColor: isLoading ? '#FFD700' : '#4CAF50' }]} />
-            <Text style={styles.statusText}>{isLoading ? t('sindi.status.thinking') : t('sindi.status.online')}</Text>
-          </View>
-        </View>
-      </View>
+      {/* Header */}
+      <Header
+        options={{
+          title: t('sindi.title'),
+          subtitle: t('sindi.subtitle'),
+          showBackButton: true
+        }}
+      />
 
       {/* Messages */}
       <ScrollView
@@ -149,13 +156,18 @@ export default function sindi() {
       >
         {messages.length === 0 ? (
           <View style={styles.welcomeContainer}>
-            <View style={styles.welcomeHeader}>
-              <SindiIcon size={48} color={colors.primaryColor} />
+            <LinearGradient
+              colors={[colors.primaryColor, colors.secondaryLight]}
+              style={styles.welcomeHeader}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <SindiIcon size={48} color="white" />
               <Text style={styles.welcomeTitle}>{t('sindi.welcome.title')}</Text>
               <Text style={styles.welcomeSubtitle}>
                 {t('sindi.welcome.subtitle')}
               </Text>
-            </View>
+            </LinearGradient>
 
             <View style={styles.quickActionsContainer}>
               <Text style={styles.quickActionsTitle}>{t('sindi.actions.title')}</Text>
@@ -166,8 +178,15 @@ export default function sindi() {
                     style={styles.quickActionButton}
                     onPress={() => handleQuickAction(action.prompt)}
                   >
-                    <Ionicons name={action.icon as any} size={20} color={colors.primaryColor} />
-                    <Text style={styles.quickActionText}>{action.title}</Text>
+                    <LinearGradient
+                      colors={[colors.primaryColor, colors.secondaryLight]}
+                      style={styles.quickActionGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Ionicons name={action.icon as any} size={20} color="white" />
+                      <Text style={styles.quickActionText}>{action.title}</Text>
+                    </LinearGradient>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -185,8 +204,15 @@ export default function sindi() {
                     style={styles.propertySearchButton}
                     onPress={() => handleQuickAction(example.prompt)}
                   >
-                    <Ionicons name={example.icon as any} size={18} color={colors.primaryColor} />
-                    <Text style={styles.propertySearchText}>{example.title}</Text>
+                    <LinearGradient
+                      colors={[colors.primaryColor, colors.secondaryLight]}
+                      style={styles.propertySearchGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Ionicons name={example.icon as any} size={18} color="white" />
+                      <Text style={styles.propertySearchText}>{example.title}</Text>
+                    </LinearGradient>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -195,7 +221,12 @@ export default function sindi() {
               </Text>
             </View>
 
-            <View style={styles.featuresContainer}>
+            <LinearGradient
+              colors={[colors.primaryColor, colors.secondaryLight]}
+              style={styles.featuresContainer}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
               <Text style={styles.featuresTitle}>{t('sindi.features.title')}</Text>
               <View style={styles.featureList}>
                 <Text style={styles.featureItem}>{t('sindi.features.rentIncreases')}</Text>
@@ -209,7 +240,7 @@ export default function sindi() {
                 <Text style={styles.featureItem}>{t('sindi.features.updates')}</Text>
                 <Text style={styles.featureItem}>{t('sindi.features.organizations')}</Text>
               </View>
-            </View>
+            </LinearGradient>
           </View>
         ) : (
           messages.map(m => (
@@ -293,35 +324,43 @@ export default function sindi() {
 
       {/* Sticky Input */}
       <View style={[styles.stickyInput, webStyles.stickyInput]}>
-        <View style={styles.inputContainer}>
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={styles.textInput}
-              placeholder={t('sindi.chat.placeholder')}
-              value={input}
-              onChangeText={(text) => handleInputChange({
-                target: { value: text }
-              } as any)}
-              onSubmitEditing={() => handleSubmit()}
-              multiline
-              maxLength={1000}
-            />
-            <TouchableOpacity
-              style={[styles.sendButton, !input.trim() && styles.sendButtonDisabled]}
-              onPress={() => handleSubmit()}
-              disabled={!input.trim() || isLoading}
-            >
-              <Ionicons
-                name={isLoading ? "hourglass" : "send"}
-                size={20}
-                color={input.trim() ? "white" : "#ccc"}
+        <LinearGradient
+          colors={[colors.primaryColor, colors.secondaryLight]}
+          style={styles.inputGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View style={styles.inputContainer}>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.textInput}
+                placeholder={t('sindi.chat.placeholder')}
+                placeholderTextColor="rgba(255, 255, 255, 0.6)"
+                value={input}
+                onChangeText={(text) => handleInputChange({
+                  target: { value: text }
+                } as any)}
+                onSubmitEditing={() => handleSubmit()}
+                multiline
+                maxLength={1000}
               />
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sendButton, !input.trim() && styles.sendButtonDisabled]}
+                onPress={() => handleSubmit()}
+                disabled={!input.trim() || isLoading}
+              >
+                <Ionicons
+                  name={isLoading ? "hourglass" : "send"}
+                  size={20}
+                  color={input.trim() ? "white" : "rgba(255, 255, 255, 0.4)"}
+                />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.disclaimer}>
+              {t('sindi.chat.disclaimer')}
+            </Text>
           </View>
-          <Text style={styles.disclaimer}>
-            {t('sindi.chat.disclaimer')}
-          </Text>
-        </View>
+        </LinearGradient>
       </View>
     </SafeAreaView>
   );
@@ -332,66 +371,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
-  stickyHeader: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1000,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primaryColor,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  headerText: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-  },
-  subtitle: {
-    fontSize: 12,
-    color: '#7f8c8d',
-    marginTop: 2,
-  },
-  statusIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-  statusText: {
-    fontSize: 12,
-    color: '#7f8c8d',
-  },
   messagesContainer: {
     flex: 1,
-    marginTop: 70, // Account for sticky header
     marginBottom: 120, // Account for sticky input
   },
   messagesContent: {
@@ -404,17 +385,23 @@ const styles = StyleSheet.create({
   welcomeHeader: {
     alignItems: 'center',
     marginBottom: 30,
+    padding: 24,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: colors.COLOR_BLACK,
+    marginHorizontal: 16,
   },
   welcomeTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2c3e50',
+    color: 'white',
     marginTop: 16,
     marginBottom: 8,
+    fontFamily: 'Phudu',
   },
   welcomeSubtitle: {
     fontSize: 16,
-    color: '#7f8c8d',
+    color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
     lineHeight: 24,
     paddingHorizontal: 20,
@@ -423,30 +410,35 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   quickActionsTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2c3e50',
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: colors.COLOR_BLACK,
     marginBottom: 16,
+    fontFamily: 'Phudu',
+    paddingHorizontal: 16,
   },
   quickActionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    gap: 8,
+    paddingHorizontal: 16,
   },
   quickActionButton: {
-    width: '48%',
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    alignItems: 'center',
+    flex: 1,
+    minWidth: '45%',
+    borderRadius: 25,
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: colors.COLOR_BLACK,
+    overflow: 'hidden',
+  },
+  quickActionGradient: {
+    padding: 16,
+    alignItems: 'center',
   },
   quickActionText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#2c3e50',
+    color: 'white',
     marginTop: 8,
     textAlign: 'center',
   },
@@ -454,14 +446,16 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   propertySearchTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2c3e50',
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: colors.COLOR_BLACK,
     marginBottom: 16,
+    fontFamily: 'Phudu',
+    paddingHorizontal: 16,
   },
   propertySearchSubtitle: {
     fontSize: 14,
-    color: '#7f8c8d',
+    color: colors.COLOR_BLACK_LIGHT_3,
     textAlign: 'center',
     lineHeight: 24,
     paddingHorizontal: 20,
@@ -470,49 +464,56 @@ const styles = StyleSheet.create({
   propertySearchGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    gap: 8,
+    paddingHorizontal: 16,
   },
   propertySearchButton: {
-    width: '48%',
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    alignItems: 'center',
+    flex: 1,
+    minWidth: '45%',
+    borderRadius: 25,
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: colors.COLOR_BLACK,
+    overflow: 'hidden',
+  },
+  propertySearchGradient: {
+    padding: 16,
+    alignItems: 'center',
   },
   propertySearchText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#2c3e50',
+    color: 'white',
     marginTop: 8,
     textAlign: 'center',
   },
   propertySearchNote: {
     fontSize: 12,
-    color: '#7f8c8d',
+    color: colors.COLOR_BLACK_LIGHT_4,
     textAlign: 'center',
     marginTop: 8,
+    paddingHorizontal: 16,
   },
   featuresContainer: {
-    backgroundColor: 'white',
     padding: 20,
-    borderRadius: 12,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: colors.COLOR_BLACK,
+    marginHorizontal: 16,
     marginBottom: 20,
   },
   featuresTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2c3e50',
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: 'white',
     marginBottom: 16,
+    fontFamily: 'Phudu',
   },
   featureList: {
     gap: 8,
   },
   featureItem: {
     fontSize: 14,
-    color: '#7f8c8d',
+    color: 'rgba(255, 255, 255, 0.9)',
     lineHeight: 20,
   },
   messageContainer: {
@@ -565,6 +566,13 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#e9ecef',
   },
+  inputGradient: {
+    margin: 16,
+    marginBottom: 8,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: colors.COLOR_BLACK,
+  },
   inputContainer: {
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -572,7 +580,7 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 24,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -582,22 +590,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     maxHeight: 100,
     paddingVertical: 8,
+    color: 'white',
   },
   sendButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.primaryColor,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
   },
   sendButtonDisabled: {
-    backgroundColor: '#e9ecef',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   disclaimer: {
     fontSize: 11,
-    color: '#95a5a6',
+    color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
     marginTop: 8,
     fontStyle: 'italic',
@@ -606,18 +615,26 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
+    padding: 40,
+    margin: 16,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: colors.COLOR_BLACK,
+  },
+  errorContent: {
+    alignItems: 'center',
   },
   errorText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2c3e50',
+    color: 'white',
     marginTop: 16,
     marginBottom: 8,
+    fontFamily: 'Phudu',
   },
   errorSubtext: {
     fontSize: 14,
-    color: '#7f8c8d',
+    color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
   },
   markdownH3: {
@@ -737,21 +754,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 40,
   },
+  authRequiredCard: {
+    padding: 24,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: colors.COLOR_BLACK,
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
   authRequiredContent: {
     alignItems: 'center',
   },
+  authRequiredIconContainer: {
+    marginBottom: 16,
+  },
   authRequiredIcon: {
     fontSize: 48,
-    marginBottom: 16,
   },
   authRequiredTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 8,
+    fontFamily: 'Phudu',
+    color: colors.COLOR_BLACK,
   },
   authRequiredSubtitle: {
     fontSize: 14,
-    color: '#7f8c8d',
+    color: colors.COLOR_BLACK_LIGHT_3,
     textAlign: 'center',
   },
 });

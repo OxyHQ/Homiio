@@ -270,7 +270,9 @@
       "autoSync": "Sincronización Automática",
       "autoSyncDesc": "Sincronizar datos automáticamente en segundo plano",
       "offlineMode": "Modo Sin Conexión",
-      "offlineModeDesc": "Usar la aplicación sin conexión a internet"
+      "offlineModeDesc": "Usar la aplicación sin conexión a internet",
+      "currency": "Moneda",
+      "currencyDesc": "Selecciona tu moneda preferida"
     },
     "quickActions": {
       "createProperty": "Crear Propiedad",
@@ -287,6 +289,12 @@
       "clearCacheDesc": "Liberar espacio de almacenamiento",
       "clearCacheMessage": "Esto limpiará todos los datos en caché. La aplicación puede tardar más en cargar la próxima vez.",
       "clearCacheSuccess": "¡Caché limpiado exitosamente!"
+    },
+    "currency": {
+      "title": "Moneda",
+      "selectCurrency": "Selecciona tu moneda preferida",
+      "description": "Esto se usará para mostrar precios en toda la aplicación",
+      "currencyChanged": "Moneda cambiada exitosamente"
     }
   },
   "common": {

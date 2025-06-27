@@ -1,10 +1,18 @@
 import React from 'react'
-import { View, StyleSheet, Platform } from "react-native";
+import { View, StyleSheet, Platform, ScrollView } from "react-native";
 import { useMediaQuery } from 'react-responsive'
 import { colors } from '../styles/colors'
 import { SearchBar } from './SearchBar'
 import { usePathname } from "expo-router";
 import { WidgetManager } from './widgets';
+
+// Global form data store for create property screen
+let createPropertyFormData: any = null;
+
+// Function to update form data (will be called from create property screen)
+export const updateCreatePropertyFormData = (formData: any) => {
+    createPropertyFormData = formData;
+};
 
 export function RightBar() {
     const isRightBarVisible = useMediaQuery({ minWidth: 990 });
@@ -14,6 +22,7 @@ export function RightBar() {
     const getScreenId = () => {
         if (pathname === '/') return 'home';
         if (pathname === '/properties') return 'properties';
+        if (pathname === '/properties/create') return 'create-property';
         if (pathname.startsWith('/properties/') && pathname !== '/properties/my' && pathname !== '/properties/saved') return 'property-details';
         if (pathname === '/properties/saved') return 'saved-properties';
         if (pathname === '/profile' || pathname.startsWith('/profile/')) return 'profile';
@@ -62,29 +71,59 @@ export function RightBar() {
 
     return (
         <View style={styles.container}>
-            <SearchBar hideFilterIcon={isSearchScreen} />
-            <WidgetManager
-                screenId={getScreenId()}
-                propertyId={propertyInfo.propertyId}
-                neighborhoodName={propertyInfo.neighborhoodName}
-                city={propertyInfo.city}
-                state={propertyInfo.state}
-            />
+            {/* Sticky Search Bar */}
+            <View style={styles.stickySearchContainer}>
+                <SearchBar hideFilterIcon={isSearchScreen} />
+            </View>
+
+            {/* Sticky Widgets Container */}
+            <View style={styles.stickyWidgetsContainer}>
+                <WidgetManager
+                    screenId={getScreenId()}
+                    propertyId={propertyInfo.propertyId}
+                    neighborhoodName={propertyInfo.neighborhoodName}
+                    city={propertyInfo.city}
+                    state={propertyInfo.state}
+                />
+            </View>
         </View>
     )
 }
 
 const styles = StyleSheet.create({
     container: {
-        width: 350,
+        flex: 1,
+        backgroundColor: colors.primaryLight,
         paddingStart: 20,
         flexDirection: 'column',
         gap: 20,
         ...Platform.select({
             web: {
+                maxWidth: 400,
+                borderLeftWidth: 1,
+                borderLeftColor: colors.COLOR_BLACK_LIGHT_6,
+            },
+        }),
+    },
+    stickySearchContainer: {
+        ...Platform.select({
+            web: {
                 position: 'sticky' as any,
-                top: 50,
-                bottom: 20,
+                top: 0,
+                zIndex: 10,
+                backgroundColor: colors.primaryLight,
+                paddingBottom: 10,
+            },
+        }),
+    },
+    stickyWidgetsContainer: {
+        ...Platform.select({
+            web: {
+                position: 'sticky' as any,
+                top: 120, // Below search bar
+                zIndex: 5,
+                maxHeight: '80vh' as any,
+                overflowY: 'auto' as any,
             },
         }),
     },

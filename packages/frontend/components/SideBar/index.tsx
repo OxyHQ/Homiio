@@ -237,6 +237,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: colors.primaryColor,
         borderRadius: 100,
+        display: 'flex',
     },
     addPropertyButtonTablet: {
         alignSelf: 'center',
@@ -246,6 +247,8 @@ const styles = StyleSheet.create({
         fontSize: 17,
         fontWeight: 'bold',
         textAlign: 'center',
+        margin: 'auto',
+        fontFamily: 'Phudu',
     },
     spacer: {
         flex: 1,

@@ -4,7 +4,7 @@
  */
 
 export interface PropertyCharacteristics {
-  type: 'apartment' | 'house' | 'room' | 'studio' | 'duplex' | 'penthouse';
+  type: 'apartment' | 'house' | 'room' | 'studio' | 'duplex' | 'penthouse' | 'couchsurfing' | 'roommates' | 'coliving' | 'hostel' | 'guesthouse' | 'campsite' | 'boat' | 'treehouse' | 'yurt' | 'other';
   housingType?: 'private' | 'public'; // For public housing pricing adjustments
   bedrooms: number;
   bathrooms: number;
@@ -55,6 +55,17 @@ const BASE_PRICES_PER_SQFT = {
   room: 2.0, // For shared spaces, price per room
   duplex: 1.3,
   penthouse: 2.5,
+  // New accommodation types
+  couchsurfing: 0.0, // Typically free
+  roommates: 1.8, // Shared living spaces
+  coliving: 1.6, // Community living
+  hostel: 0.8, // Budget accommodation
+  guesthouse: 1.4, // Similar to hotel
+  campsite: 0.3, // Outdoor accommodation
+  boat: 1.7, // Unique accommodation
+  treehouse: 1.9, // Unique accommodation
+  yurt: 0.6, // Traditional accommodation
+  other: 1.0, // Default pricing
 };
 
 // Housing type multipliers

@@ -87,13 +87,13 @@ class Property {
     }
     
     // Type validation
-    const validTypes = ['apartment', 'house', 'room', 'studio'];
+    const validTypes = ['apartment', 'house', 'room', 'studio', 'couchsurfing', 'roommates', 'coliving', 'hostel', 'guesthouse', 'campsite', 'boat', 'treehouse', 'yurt', 'other'];
     if (!validTypes.includes(this.type)) {
       errors.push(`Property type must be one of: ${validTypes.join(', ')}`);
     }
 
     // Housing type validation
-    const validHousingTypes = ['private', 'public'];
+    const validHousingTypes = ['private', 'public', 'shared', 'open', 'partitioned'];
     if (this.housingType && !validHousingTypes.includes(this.housingType)) {
       errors.push(`Housing type must be one of: ${validHousingTypes.join(', ')}`);
     }
