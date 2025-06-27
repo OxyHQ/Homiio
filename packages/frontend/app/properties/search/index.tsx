@@ -10,6 +10,7 @@ import {
     ActivityIndicator,
     RefreshControl,
     Platform,
+    Dimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -54,6 +55,9 @@ export default function SearchScreen() {
     const router = useRouter();
     const { query: initialQuery = '' } = useLocalSearchParams<{ query: string }>();
 
+    const screenWidth = Dimensions.get('window').width;
+    const isMobile = screenWidth < 600;
+
     const [searchQuery, setSearchQuery] = useState(decodeURIComponent(initialQuery));
     const [filters, setFilters] = useState<SearchFilters>({
         page: 1,
@@ -62,12 +66,13 @@ export default function SearchScreen() {
     const [showFilters, setShowFilters] = useState(false);
     const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
     const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+    const [viewMode, setViewMode] = useState<'list' | 'grid'>(isMobile ? 'grid' : 'list');
 
     // Use the search hook
-    const { searchResults, loading, error, search, clearSearchResults } = useSearchProperties();
+    const { searchResults, pagination, loading, error, search, clearSearchResults } = useSearchProperties();
 
-    const properties = searchResults?.properties || [];
-    const totalResults = searchResults?.total || 0;
+    const properties = searchResults || [];
+    const totalResults = pagination.total || 0;
 
     const handleSearch = useCallback(() => {
         if (searchQuery.trim()) {
@@ -115,10 +120,28 @@ export default function SearchScreen() {
         });
     };
 
+    // Trigger search whenever filters change (including pagination)
+    useEffect(() => {
+        if (searchQuery.trim()) {
+            search(searchQuery, filters);
+        } else {
+            clearSearchResults();
+        }
+    }, [filters]);
+
+    // Run initial search if query param provided
+    useEffect(() => {
+        if (initialQuery) {
+            search(initialQuery, { ...filters, page: 1 });
+        }
+    }, []);
+
     const renderPropertyItem = ({ item }: { item: Property }) => (
         <PropertyCard
             property={item}
+            variant={viewMode === 'grid' ? 'compact' : 'default'}
             onPress={() => router.push(`/properties/${item._id || item.id}`)}
+            style={viewMode === 'grid' ? styles.gridCard : undefined}
         />
     );
 
@@ -338,6 +361,28 @@ export default function SearchScreen() {
                             ? t('Searching...')
                             : t('{{count}} properties found', { count: totalResults })}
                     </Text>
+                    <View style={styles.viewModeToggle}>
+                        <TouchableOpacity
+                            style={[styles.toggleButton, viewMode === 'grid' && styles.toggleButtonActive]}
+                            onPress={() => setViewMode('grid')}
+                        >
+                            <Ionicons
+                                name="grid-outline"
+                                size={20}
+                                color={viewMode === 'grid' ? 'white' : colors.primaryColor}
+                            />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.toggleButton, viewMode === 'list' && styles.toggleButtonActive]}
+                            onPress={() => setViewMode('list')}
+                        >
+                            <Ionicons
+                                name="list-outline"
+                                size={20}
+                                color={viewMode === 'list' ? 'white' : colors.primaryColor}
+                            />
+                        </TouchableOpacity>
+                    </View>
                 </View>
             )}
 
@@ -352,6 +397,9 @@ export default function SearchScreen() {
                     data={properties}
                     renderItem={renderPropertyItem}
                     keyExtractor={(item) => item._id || item.id || Math.random().toString()}
+                    key={viewMode}
+                    numColumns={viewMode === 'grid' ? 2 : 1}
+                    columnWrapperStyle={viewMode === 'grid' ? styles.gridRow : undefined}
                     contentContainerStyle={styles.listContainer}
                     refreshControl={
                         <RefreshControl
@@ -429,6 +477,9 @@ const styles = StyleSheet.create({
         padding: 8,
     },
     resultsHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         paddingHorizontal: 16,
         paddingVertical: 8,
         backgroundColor: 'white',
@@ -607,4 +658,27 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
     },
-}); 
+    viewModeToggle: {
+        flexDirection: 'row',
+        backgroundColor: colors.primaryLight_1,
+        borderRadius: 100,
+        borderWidth: 1,
+        borderColor: colors.primaryColor,
+        overflow: 'hidden',
+    },
+    toggleButton: {
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+    },
+    toggleButtonActive: {
+        backgroundColor: colors.primaryColor,
+    },
+    gridRow: {
+        justifyContent: 'space-between',
+        paddingHorizontal: 4,
+    },
+    gridCard: {
+        width: (Dimensions.get('window').width - 48) / 2,
+        marginHorizontal: 4,
+    },
+});

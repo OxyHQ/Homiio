@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
-import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
+import { PropertyCard } from '@/components/PropertyCard';
 import { useProperties } from '@/hooks';
 import { Property } from '@/services/propertyService';
-import { getPropertyImageSource } from '@/utils/propertyUtils';
 
 type PropertyType = {
   id: string;
@@ -175,93 +174,13 @@ export default function PropertyTypePage() {
     </TouchableOpacity>
   );
 
-  const renderPropertyItem = ({ item }: { item: Property }) => {
-    // Generate title dynamically from real property data
-    const generatedTitle = generatePropertyTitle({
-      type: item.type,
-      address: item.address,
-      bedrooms: item.bedrooms,
-      bathrooms: item.bathrooms
-    });
-
-    const isEcoCertified = item.amenities?.some(a =>
-      a.toLowerCase().includes('eco') ||
-      a.toLowerCase().includes('green') ||
-      a.toLowerCase().includes('solar')
-    );
-
-    return (
-      <TouchableOpacity
-        style={styles.propertyCard}
-        onPress={() => router.push(`/properties/${item._id || item.id}`)}
-      >
-        <Image
-          source={getPropertyImageSource(item.images)}
-          style={styles.propertyImage}
-          resizeMode="cover"
-        />
-
-        {item.status === 'available' && (
-          <View style={styles.verifiedBadge}>
-            <Ionicons name="shield-checkmark" size={14} color="white" />
-          </View>
-        )}
-
-        {isEcoCertified && (
-          <View style={styles.ecoBadge}>
-            <Ionicons name="leaf" size={14} color="white" />
-          </View>
-        )}
-
-        <View style={styles.propertyContent}>
-          <Text style={styles.propertyTitle} numberOfLines={1}>{generatedTitle}</Text>
-
-          <Text style={styles.propertyLocation}>
-            <Ionicons name="location-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} />
-            {item.address?.city}, {item.address?.state}
-          </Text>
-
-          <View style={styles.propertyDetailsRow}>
-            <View style={styles.propertyDetail}>
-              <Ionicons name="bed-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
-              <Text style={styles.detailText}>{item.bedrooms}</Text>
-            </View>
-
-            <View style={styles.propertyDetail}>
-              <Ionicons name="water-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
-              <Text style={styles.detailText}>{item.bathrooms}</Text>
-            </View>
-
-            <View style={styles.propertyDetail}>
-              <Ionicons name="resize-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
-              <Text style={styles.detailText}>{item.squareFootage} m²</Text>
-            </View>
-          </View>
-
-          <View style={styles.featuresContainer}>
-            {item.amenities?.slice(0, 3).map((amenity, index) => (
-              <View key={index} style={styles.featureTag}>
-                <Text style={styles.featureText}>{amenity}</Text>
-              </View>
-            ))}
-            {item.amenities && item.amenities.length > 3 && (
-              <Text style={styles.moreFeatures}>+{item.amenities.length - 3}</Text>
-            )}
-          </View>
-
-          <View style={styles.propertyFooter}>
-            <Text style={styles.propertyPrice}>
-              {item.rent?.currency || '⊜'}{item.rent?.amount}/{item.priceUnit || item.rent?.paymentFrequency || 'month'}
-            </Text>
-            <View style={styles.ratingContainer}>
-              <Ionicons name="star" size={14} color="#FFD700" />
-              <Text style={styles.ratingText}>4.5</Text>
-            </View>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
+  const renderPropertyItem = ({ item }: { item: Property }) => (
+    <PropertyCard
+      property={item}
+      onPress={() => router.push(`/properties/${item._id || item.id}`)}
+      style={styles.propertyCard}
+    />
+  );
 
   if (loading || !propertyType) {
     return (
