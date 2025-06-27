@@ -234,7 +234,16 @@ const propertySlice = createSlice({
       })
       .addCase(searchProperties.fulfilled, (state, action) => {
         state.loading.search = false;
-        state.searchResults = action.payload.properties;
+        const page = action.meta.arg.filters?.page ?? 1;
+        state.searchResults = page > 1
+          ? [...state.searchResults, ...action.payload.properties]
+          : action.payload.properties;
+        state.pagination = {
+          total: action.payload.total,
+          page,
+          totalPages: Math.ceil(action.payload.total / (action.meta.arg.filters?.limit || 10)),
+          limit: action.meta.arg.filters?.limit || 10,
+        };
       })
       .addCase(searchProperties.rejected, (state, action) => {
         state.loading.search = false;

@@ -6,6 +6,7 @@ import { colors } from '@/styles/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
+import { PropertyCard } from '@/components/PropertyCard';
 import { useEcoProperties } from '@/hooks/usePropertyListRedux';
 import type { Property } from '@/services/propertyService';
 
@@ -78,51 +79,13 @@ export default function EcoPropertiesPage() {
     </TouchableOpacity>
   );
 
-  const renderPropertyItem = ({ item }: { item: Property }) => {
-    // Generate title from property data
-    const title = `${item.type.charAt(0).toUpperCase() + item.type.slice(1)} in ${item.address.city}`;
-
-    return (
-      <TouchableOpacity
-        style={styles.propertyCard}
-        onPress={() => router.push(`/properties/${item._id || item.id}`)}
-      >
-        <View style={styles.propertyImagePlaceholder}>
-          <IconComponent name="leaf" size={30} color="green" />
-          <View style={styles.energyRatingBadge}>
-            <Text style={styles.energyRatingText}>A</Text>
-          </View>
-        </View>
-
-        <View style={styles.propertyContent}>
-          <View style={styles.propertyHeader}>
-            <Text style={styles.propertyTitle} numberOfLines={1}>{title}</Text>
-            <View style={styles.ratingContainer}>
-              <IconComponent name="star" size={14} color="#FFD700" />
-              <Text style={styles.ratingText}>4.5</Text>
-            </View>
-          </View>
-
-          <Text style={styles.propertyLocation}>
-            <IconComponent name="location-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} /> {item.address.city}, {item.address.country}
-          </Text>
-
-          <View style={styles.propertyFeatures}>
-            {(item.amenities || []).slice(0, 2).map((feature: string, index: number) => (
-              <View key={index} style={styles.featureBadge}>
-                <Text style={styles.featureText}>{feature}</Text>
-              </View>
-            ))}
-            {(item.amenities || []).length > 2 && (
-              <Text style={styles.moreFeatures}>+{(item.amenities || []).length - 2}</Text>
-            )}
-          </View>
-
-          <Text style={styles.propertyPrice}>⊜{item.rent?.amount || 0}/month</Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
+  const renderPropertyItem = ({ item }: { item: Property }) => (
+    <PropertyCard
+      property={item}
+      onPress={() => router.push(`/properties/${item._id || item.id}`)}
+      style={styles.propertyCard}
+    />
+  );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>

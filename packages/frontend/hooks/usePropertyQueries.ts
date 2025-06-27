@@ -142,7 +142,7 @@ export const usePropertyEnergyStats = (id: string, period: 'day' | 'week' | 'mon
 
 export const useSearchProperties = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { searchResults, loading, error } = usePropertySelectors();
+  const { searchResults, pagination, loading, error } = usePropertySelectors();
 
   const search = useCallback((query: string, filters?: PropertyFilters) => {
     if (query && query.length > 0) {
@@ -156,6 +156,7 @@ export const useSearchProperties = () => {
 
   return {
     searchResults,
+    pagination,
     loading: loading.search,
     error,
     search,
