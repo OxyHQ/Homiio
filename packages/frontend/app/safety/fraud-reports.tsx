@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, TextInput } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
@@ -7,6 +7,11 @@ import { Header } from '@/components/Header';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/colors';
 import { FraudAlert, AlertSeverity } from '@/components/FraudAlert';
+import { FilterChip } from '@/components/ui/FilterChip';
+import { EmptyState } from '@/components/ui/EmptyState';
+
+// Type assertion for Ionicons compatibility
+const IconComponent = Ionicons as any;
 
 // Define custom colors that might not be in the colors object
 const customColors = {
@@ -162,22 +167,12 @@ export default function FraudReportsScreen() {
     };
 
     const renderFilterButton = (label: string, value: FilterOptions) => (
-        <TouchableOpacity
-            style={[
-                styles.filterButton,
-                filter === value && styles.filterButtonActive
-            ]}
+        <FilterChip
+            label={label}
+            selected={filter === value}
             onPress={() => setFilter(value)}
-        >
-            <Text
-                style={[
-                    styles.filterButtonText,
-                    filter === value && styles.filterButtonTextActive
-                ]}
-            >
-                {label}
-            </Text>
-        </TouchableOpacity>
+            size="medium"
+        />
     );
 
     if (loading) {
@@ -205,7 +200,7 @@ export default function FraudReportsScreen() {
                     titlePosition: 'center',
                     rightComponents: [
                         <TouchableOpacity key="add" style={styles.headerButton} onPress={handleReportFraud}>
-                            <Ionicons name="add-circle-outline" size={24} color={colors.COLOR_BLACK} />
+                            <IconComponent name="add-circle-outline" size={24} color={colors.COLOR_BLACK} />
                         </TouchableOpacity>,
                     ],
                 }}
@@ -213,7 +208,7 @@ export default function FraudReportsScreen() {
 
             <View style={styles.safetyInfoCard}>
                 <View style={styles.safetyIconContainer}>
-                    <Ionicons name="shield-checkmark" size={32} color={colors.primaryColor} />
+                    <IconComponent name="shield-checkmark" size={32} color={colors.primaryColor} />
                 </View>
                 <View style={styles.safetyInfoContent}>
                     <Text style={styles.safetyInfoTitle}>{t("Stay Safe on Homio")}</Text>
@@ -225,14 +220,14 @@ export default function FraudReportsScreen() {
                         onPress={() => router.push('/safety/tips')}
                     >
                         <Text style={styles.safetyInfoButtonText}>{t("Safety Tips")}</Text>
-                        <Ionicons name="chevron-forward" size={16} color={colors.primaryColor} />
+                        <IconComponent name="chevron-forward" size={16} color={colors.primaryColor} />
                     </TouchableOpacity>
                 </View>
             </View>
 
             <View style={styles.searchContainer}>
                 <View style={styles.searchInputContainer}>
-                    <Ionicons name="search" size={20} color={colors.primaryDark_1} />
+                    <IconComponent name="search" size={20} color={colors.primaryDark_1} />
                     <TextInput
                         style={styles.searchInput}
                         placeholder={t("Search reports...")}
@@ -241,7 +236,7 @@ export default function FraudReportsScreen() {
                     />
                     {searchQuery.length > 0 && (
                         <TouchableOpacity onPress={() => setSearchQuery('')}>
-                            <Ionicons name="close-circle" size={20} color={colors.primaryDark_1} />
+                            <IconComponent name="close-circle" size={20} color={colors.primaryDark_1} />
                         </TouchableOpacity>
                     )}
                 </View>
@@ -260,7 +255,7 @@ export default function FraudReportsScreen() {
             >
                 {sortedReports.length === 0 ? (
                     <View style={styles.emptyContainer}>
-                        <Ionicons name="shield-outline" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
+                        <IconComponent name="shield-outline" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
                         <Text style={styles.emptyText}>{t("No fraud reports found")}</Text>
                         <Text style={styles.emptySubtext}>
                             {searchQuery
@@ -322,7 +317,7 @@ export default function FraudReportsScreen() {
                                     <Text style={styles.infoButtonText}>
                                         {expandedInfo === report.id ? t("Hide Info") : t("Show More")}
                                     </Text>
-                                    <Ionicons
+                                    <IconComponent
                                         name={expandedInfo === report.id ? "chevron-up" : "chevron-down"}
                                         size={16}
                                         color={colors.primaryDark_1}
@@ -384,7 +379,7 @@ export default function FraudReportsScreen() {
                                                 style={styles.infoActionButton}
                                                 onPress={() => handleReportDetails(report.id)}
                                             >
-                                                <Ionicons name="document-text-outline" size={20} color={colors.primaryColor} />
+                                                <IconComponent name="document-text-outline" size={20} color={colors.primaryColor} />
                                                 <Text style={styles.infoActionText}>{t("Full Report")}</Text>
                                             </TouchableOpacity>
 
@@ -393,7 +388,7 @@ export default function FraudReportsScreen() {
                                                     style={styles.infoActionButton}
                                                     onPress={() => handleDismissAlert(report.id)}
                                                 >
-                                                    <Ionicons name="checkmark-circle-outline" size={20} color={customColors.COLOR_GREEN} />
+                                                    <IconComponent name="checkmark-circle-outline" size={20} color={customColors.COLOR_GREEN} />
                                                     <Text style={[styles.infoActionText, { color: customColors.COLOR_GREEN }]}>
                                                         {t("Mark as Resolved")}
                                                     </Text>
@@ -412,7 +407,7 @@ export default function FraudReportsScreen() {
                 style={styles.reportFraudButton}
                 onPress={handleReportFraud}
             >
-                <Ionicons name="warning-outline" size={24} color="white" />
+                <IconComponent name="warning-outline" size={24} color="white" />
                 <Text style={styles.reportFraudButtonText}>{t("Report Fraud")}</Text>
             </TouchableOpacity>
         </SafeAreaView>

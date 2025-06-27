@@ -25,14 +25,51 @@ export function RightBar() {
         return 'home'; // Default to home
     };
 
+    // Extract property information from URL
+    const getPropertyInfo = () => {
+        // Extract property ID from property details page
+        if (pathname.startsWith('/properties/') && pathname !== '/properties/my' && pathname !== '/properties/saved') {
+            const pathParts = pathname.split('/');
+            const propertyId = pathParts[2]; // /properties/[id]
+
+            if (propertyId && propertyId !== 'my' && propertyId !== 'saved' && propertyId !== 'eco' && propertyId !== 'type' && propertyId !== 'city') {
+                return { propertyId };
+            }
+        }
+
+        // Extract city information from city properties page
+        if (pathname.startsWith('/properties/city/')) {
+            const pathParts = pathname.split('/');
+            const cityId = pathParts[3]; // /properties/city/[id]
+
+            if (cityId) {
+                // You could fetch city details here or pass the city ID
+                return {
+                    city: cityId,
+                    state: 'Unknown', // This would come from city data
+                    neighborhoodName: 'Downtown' // This would come from city data
+                };
+            }
+        }
+
+        return {};
+    };
+
     const isSearchScreen = pathname === '/search' || pathname.startsWith('/search/');
+    const propertyInfo = getPropertyInfo();
 
     if (!isRightBarVisible) return null;
 
     return (
         <View style={styles.container}>
             <SearchBar hideFilterIcon={isSearchScreen} />
-            <WidgetManager screenId={getScreenId()} />
+            <WidgetManager
+                screenId={getScreenId()}
+                propertyId={propertyInfo.propertyId}
+                neighborhoodName={propertyInfo.neighborhoodName}
+                city={propertyInfo.city}
+                state={propertyInfo.state}
+            />
         </View>
     )
 }

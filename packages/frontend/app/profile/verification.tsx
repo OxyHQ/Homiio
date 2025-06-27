@@ -8,6 +8,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/colors';
 import { VerificationBadge, VerificationLevel } from '@/components/VerificationBadge';
 import { TrustScore } from '@/components/TrustScore';
+import { ProgressBar } from '@/components/ui/ProgressBar';
+
+// Type assertion for Ionicons compatibility
+const IconComponent = Ionicons as any;
 
 type VerificationMethod = {
     id: string;
@@ -154,7 +158,7 @@ export default function VerificationScreen() {
             onPress={() => handleVerificationPress(method.id)}
         >
             <View style={styles.verificationIconContainer}>
-                <Ionicons
+                <IconComponent
                     name={method.icon as any}
                     size={24}
                     color={method.completed ? colors.primaryColor : colors.primaryDark_1}
@@ -164,7 +168,7 @@ export default function VerificationScreen() {
                 <View style={styles.verificationHeader}>
                     <Text style={styles.verificationTitle}>{method.title}</Text>
                     {method.completed ? (
-                        <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+                        <IconComponent name="checkmark-circle" size={20} color="#4CAF50" />
                     ) : method.required ? (
                         <Text style={styles.requiredText}>Required</Text>
                     ) : (
@@ -178,7 +182,7 @@ export default function VerificationScreen() {
                     </Text>
                 </View>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.primaryDark_1} />
+            <IconComponent name="chevron-forward" size={20} color={colors.primaryDark_1} />
         </TouchableOpacity>
     );
 
@@ -228,14 +232,12 @@ export default function VerificationScreen() {
                             <VerificationBadge level="basic" size="small" />
                             <Text style={styles.progressCount}>{basicCompleted}/{basicTotal}</Text>
                         </View>
-                        <View style={styles.progressBar}>
-                            <View
-                                style={[
-                                    styles.progressFill,
-                                    { width: `${(basicCompleted / basicTotal) * 100}%`, backgroundColor: '#4CAF50' }
-                                ]}
-                            />
-                        </View>
+                        <ProgressBar
+                            progress={basicCompleted / basicTotal}
+                            current={basicCompleted}
+                            total={basicTotal}
+                            color="#4CAF50"
+                        />
                     </View>
 
                     <View style={styles.progressItem}>
@@ -243,14 +245,12 @@ export default function VerificationScreen() {
                             <VerificationBadge level="enhanced" size="small" />
                             <Text style={styles.progressCount}>{enhancedCompleted}/{enhancedTotal}</Text>
                         </View>
-                        <View style={styles.progressBar}>
-                            <View
-                                style={[
-                                    styles.progressFill,
-                                    { width: `${(enhancedCompleted / enhancedTotal) * 100}%`, backgroundColor: '#2196F3' }
-                                ]}
-                            />
-                        </View>
+                        <ProgressBar
+                            progress={enhancedCompleted / enhancedTotal}
+                            current={enhancedCompleted}
+                            total={enhancedTotal}
+                            color="#2196F3"
+                        />
                     </View>
 
                     <View style={styles.progressItem}>
@@ -258,14 +258,12 @@ export default function VerificationScreen() {
                             <VerificationBadge level="premium" size="small" />
                             <Text style={styles.progressCount}>{premiumCompleted}/{premiumTotal}</Text>
                         </View>
-                        <View style={styles.progressBar}>
-                            <View
-                                style={[
-                                    styles.progressFill,
-                                    { width: `${(premiumCompleted / premiumTotal) * 100}%`, backgroundColor: '#673AB7' }
-                                ]}
-                            />
-                        </View>
+                        <ProgressBar
+                            progress={premiumCompleted / premiumTotal}
+                            current={premiumCompleted}
+                            total={premiumTotal}
+                            color="#673AB7"
+                        />
                     </View>
                 </View>
 
@@ -277,7 +275,7 @@ export default function VerificationScreen() {
                 <View style={styles.benefitsSection}>
                     <Text style={styles.sectionTitle}>{t("Verification Benefits")}</Text>
                     <View style={styles.benefitItem}>
-                        <Ionicons name="shield-checkmark-outline" size={24} color={colors.primaryColor} />
+                        <IconComponent name="shield-checkmark-outline" size={24} color={colors.primaryColor} />
                         <View style={styles.benefitContent}>
                             <Text style={styles.benefitTitle}>{t("Increased Trust")}</Text>
                             <Text style={styles.benefitDescription}>
@@ -287,7 +285,7 @@ export default function VerificationScreen() {
                     </View>
 
                     <View style={styles.benefitItem}>
-                        <Ionicons name="star-outline" size={24} color={colors.primaryColor} />
+                        <IconComponent name="star-outline" size={24} color={colors.primaryColor} />
                         <View style={styles.benefitContent}>
                             <Text style={styles.benefitTitle}>{t("Priority Access")}</Text>
                             <Text style={styles.benefitDescription}>
@@ -297,7 +295,7 @@ export default function VerificationScreen() {
                     </View>
 
                     <View style={styles.benefitItem}>
-                        <Ionicons name="flash-outline" size={24} color={colors.primaryColor} />
+                        <IconComponent name="flash-outline" size={24} color={colors.primaryColor} />
                         <View style={styles.benefitContent}>
                             <Text style={styles.benefitTitle}>{t("Faster Approvals")}</Text>
                             <Text style={styles.benefitDescription}>
@@ -330,7 +328,7 @@ export default function VerificationScreen() {
                         <ActivityIndicator color="white" />
                     ) : (
                         <>
-                            <Ionicons name="shield-checkmark" size={20} color="white" />
+                            <IconComponent name="shield-checkmark" size={20} color="white" />
                             <Text style={styles.upgradeButtonText}>
                                 {currentLevel === 'premium'
                                     ? t("Maximum Level Reached")
@@ -395,16 +393,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: colors.primaryDark,
         fontWeight: '500',
-    },
-    progressBar: {
-        height: 8,
-        backgroundColor: colors.COLOR_BLACK_LIGHT_5,
-        borderRadius: 4,
-        overflow: 'hidden',
-    },
-    progressFill: {
-        height: '100%',
-        borderRadius: 4,
     },
     verificationList: {
         padding: 16,

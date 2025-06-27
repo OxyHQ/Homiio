@@ -9,7 +9,45 @@ export {
   useUpdateProperty,
   useDeleteProperty,
   usePropertySelectors,
-} from './usePropertyRedux';
+  useUserProperties,
+} from './usePropertyQueries';
+
+// Property List Redux Hooks
+export {
+  useEcoProperties,
+  useCityProperties,
+  useTypeProperties,
+  usePropertyListSelectors,
+  useClearAllPropertyLists,
+} from './usePropertyListRedux';
+
+// Location Redux Hooks
+export {
+  useLocationSearch,
+  useReverseGeocode,
+  useLocation,
+  useLocationSelectors,
+} from './useLocationRedux';
+
+// Profile Redux Hooks
+export {
+  useProfileRedux,
+  useActiveProfile,
+} from './useProfileQueries';
+
+// Lease Redux Hooks
+export {
+  useUserLeases,
+  useHasRentalProperties,
+} from './useLeaseQueries';
+
+// Roommate Redux Hooks
+export {
+  useRoommateProfiles,
+  useHasRoommateMatching,
+  useToggleRoommateMatching,
+  useSendRoommateRequest,
+} from './useRoommateQueries';
 
 // Room Redux Hooks
 export {
@@ -23,5 +61,9 @@ export {
   useDeleteRoom,
   useAssignTenant,
   useUnassignTenant,
-  useRoomSelectors,
-} from './useRoomRedux'; 
+} from './useRoomRedux';
+
+// Neighborhood Redux Hooks
+export {
+  useNeighborhood,
+} from './useNeighborhood'; 

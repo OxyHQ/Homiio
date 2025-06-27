@@ -72,11 +72,15 @@ const styles = StyleSheet.create({
         padding: 16,
     },
     columnWrapper: {
-        justifyContent: 'space-between',
+        justifyContent: 'flex-start',
         marginBottom: 8,
+        alignItems: 'stretch',
+        flexDirection: 'row',
     },
     card: {
         marginBottom: 12,
+        flex: 1,
+        alignSelf: 'stretch',
     },
     horizontalCard: {
         width: 280,

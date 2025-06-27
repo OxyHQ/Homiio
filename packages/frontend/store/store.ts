@@ -10,6 +10,9 @@ import trustScoreReducer from "./reducers/trustScoreReducer";
 import savedPropertiesReducer from "./reducers/savedPropertiesReducer";
 import savedSearchesReducer from "./reducers/savedSearchesReducer";
 import searchStatisticsReducer from "./reducers/searchStatisticsReducer";
+import propertyListReducer from "./reducers/propertyListReducer";
+import locationReducer from "./reducers/locationReducer";
+import neighborhoodReducer from "./reducers/neighborhoodReducer";
 
 const rootReducer = combineReducers({
   trends: trendsReducer,
@@ -23,6 +26,9 @@ const rootReducer = combineReducers({
   savedProperties: savedPropertiesReducer,
   savedSearches: savedSearchesReducer,
   searchStatistics: searchStatisticsReducer,
+  propertyList: propertyListReducer,
+  location: locationReducer,
+  neighborhood: neighborhoodReducer,
 });
 
 export const store = configureStore({

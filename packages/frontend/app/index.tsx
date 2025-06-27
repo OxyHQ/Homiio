@@ -164,7 +164,9 @@ export default function HomePage() {
 
         {/* Property Types */}
         <View style={styles.typesSection}>
-          <Text style={styles.sectionTitle}>{t("home.categories.title")}</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{t("home.categories.title")}</Text>
+          </View>
           <View style={styles.propertyChipsContainer}>
             {propertyTypeCounts.map((type) => (
               <TouchableOpacity
@@ -192,7 +194,9 @@ export default function HomePage() {
 
         {/* Trust Features */}
         <View style={styles.trustSection}>
-          <Text style={styles.sectionTitle}>{t("home.trust.title")}</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{t("home.trust.title")}</Text>
+          </View>
           <View style={styles.trustFeatures}>
             <View style={styles.trustFeature}>
               <View style={styles.featureIconCircle}>
@@ -241,7 +245,12 @@ export default function HomePage() {
               <Text style={styles.loadingText}>Loading properties...</Text>
             </View>
           ) : featuredProperties.length > 0 ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.horizontalScroll}
+              contentContainerStyle={{ paddingHorizontal: 16 }}
+            >
               {featuredProperties.map((property) => (
                 <View key={property._id || property.id} style={styles.propertyCardContainer}>
                   <PropertyCard
@@ -270,8 +279,15 @@ export default function HomePage() {
 
         {/* Top Cities */}
         <View style={styles.citiesSection}>
-          <Text style={styles.sectionTitle}>{t("home.cities.title")}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{t("home.cities.title")}</Text>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.horizontalScroll}
+            contentContainerStyle={{ paddingHorizontal: 16 }}
+          >
             {topCities.map((city, index) => (
               <TouchableOpacity
                 key={city.id}
@@ -304,85 +320,11 @@ export default function HomePage() {
           </ScrollView>
         </View>
 
-        {/* Popular Amenities Showcase */}
-        <View style={styles.amenitiesShowcase}>
-          <Text style={styles.sectionTitle}>Popular Amenities</Text>
-          <Text style={styles.amenitySectionSubtitle}>
-            Essential features most renters look for
-          </Text>
-          <View style={styles.amenityChipsContainer}>
-            {ESSENTIAL_AMENITIES.slice(0, 12).map((amenityId) => {
-              const amenity = getAmenitiesByCategory('essential').find(a => a.id === amenityId) ||
-                getAmenitiesByCategory('accessibility').find(a => a.id === amenityId) ||
-                getAmenitiesByCategory('eco').find(a => a.id === amenityId);
-
-              if (!amenity) return null;
-
-              return (
-                <TouchableOpacity
-                  key={amenity.id}
-                  style={[
-                    styles.homeAmenityChip,
-                    amenity.essential && styles.homeEssentialChip,
-                    amenity.accessibility && styles.homeAccessibilityChip,
-                    amenity.environmental === 'positive' && styles.homeEcoChip,
-                  ]}
-                  onPress={() => router.push(`/properties/search?amenities=${amenity.id}`)}
-                >
-                  <IconComponent
-                    name={amenity.icon as keyof typeof IconComponent.glyphMap}
-                    size={16}
-                    color={
-                      amenity.accessibility ? '#6366f1' :
-                        amenity.essential ? '#059669' :
-                          amenity.environmental === 'positive' ? '#16a34a' :
-                            colors.primaryColor
-                    }
-                  />
-                  <Text style={[
-                    styles.homeAmenityChipText,
-                    amenity.essential && styles.homeEssentialChipText,
-                    amenity.accessibility && styles.homeAccessibilityChipText,
-                    amenity.environmental === 'positive' && styles.homeEcoChipText,
-                  ]}>
-                    {amenity.nameKey ? t(amenity.nameKey) : amenity.name}
-                  </Text>
-                  {amenity.maxFairValue === 0 && (
-                    <View style={styles.homeIncludedDot} />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-          <TouchableOpacity
-            style={styles.viewAllAmenitiesButton}
-            onPress={() => router.push('/properties/search')}
-          >
-            <Text style={styles.viewAllAmenitiesText}>View All Properties</Text>
-            <IconComponent name="arrow-forward" size={16} color={colors.primaryColor} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Horizon Initiative */}
-        <View style={styles.horizonSection}>
-          <View style={styles.horizonContent}>
-            <Text style={styles.horizonTitle}>{t("home.horizon.title")}</Text>
-            <Text style={styles.horizonDescription}>
-              {t("home.horizon.description")}
-            </Text>
-            <TouchableOpacity style={styles.horizonButton} onPress={() => router.push('/horizon')}>
-              <Text style={styles.horizonButtonText}>{t("home.horizon.learnMore")}</Text>
-              <IconComponent name="arrow-forward" size={16} color="#333" style={{ marginLeft: 5 }} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.horizonImagePlaceholder}>
-            <IconComponent name="globe-outline" size={50} color="#FFD700" />
-          </View>
-        </View>
-
         {/* Stats Section */}
         <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>Platform Statistics</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Platform Statistics</Text>
+          </View>
           <View style={styles.statsChipsContainer}>
             <TouchableOpacity style={styles.statChip} activeOpacity={0.8}>
               <LinearGradient
@@ -525,17 +467,18 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK,
     fontWeight: 'bold',
   },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    color: colors.COLOR_BLACK,
-  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
+    paddingHorizontal: 16,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: colors.COLOR_BLACK,
+    fontFamily: 'Phudu',
   },
   viewAllText: {
     color: colors.primaryColor,
@@ -543,18 +486,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   trustSection: {
-    paddingHorizontal: 16,
-    paddingVertical: 20,
+    paddingVertical: 12,
   },
   trustFeatures: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    paddingHorizontal: 16,
   },
   trustFeature: {
     width: '30%',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   featureIconCircle: {
     width: 60,
@@ -563,11 +506,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   featureTitle: {
     fontWeight: 'bold',
-    marginBottom: 5,
+    marginBottom: 4,
     textAlign: 'center',
   },
   featureDescription: {
@@ -576,12 +519,12 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_3,
   },
   featuredSection: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 12,
   },
   loadingContainer: {
     alignItems: 'center',
     paddingVertical: 40,
+    paddingHorizontal: 16,
   },
   loadingText: {
     marginTop: 10,
@@ -590,6 +533,7 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     paddingVertical: 40,
+    paddingHorizontal: 16,
   },
   emptyText: {
     fontSize: 16,
@@ -610,8 +554,7 @@ const styles = StyleSheet.create({
     width: 280,
   },
   citiesSection: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 12,
   },
   cityCard: {
     width: 170,
@@ -661,13 +604,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   typesSection: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 12,
   },
   propertyChipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+    paddingHorizontal: 16,
   },
   propertyChip: {
     flex: 1,
@@ -705,54 +648,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.COLOR_BLACK,
   },
-  horizonSection: {
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    marginHorizontal: 16,
-    marginVertical: 12,
-    borderRadius: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  horizonContent: {
-    flex: 1,
-  },
-  horizonTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  horizonDescription: {
-    marginBottom: 15,
-    lineHeight: 20,
-  },
-  horizonButton: {
-    backgroundColor: '#FFD700',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 'auto',
-  },
-  horizonButtonText: {
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  horizonImagePlaceholder: {
-    marginLeft: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   statsSection: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 12,
   },
   statsChipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+    paddingHorizontal: 16,
   },
   statChip: {
     flexBasis: '47%',

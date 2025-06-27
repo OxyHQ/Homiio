@@ -139,6 +139,7 @@ export default function ProfileEditScreen() {
     const [preferences, setPreferences] = useState({
         propertyTypes: [] as string[],
         maxRent: '',
+        priceUnit: 'month' as 'day' | 'night' | 'week' | 'month' | 'year',
         minBedrooms: '',
         minBathrooms: '',
         preferredAmenities: [] as string[],
@@ -243,6 +244,7 @@ export default function ProfileEditScreen() {
             setPreferences({
                 propertyTypes: profile?.preferences?.propertyTypes || [],
                 maxRent: profile?.preferences?.maxRent?.toString() || '',
+                priceUnit: profile?.preferences?.priceUnit || 'month',
                 minBedrooms: profile?.preferences?.minBedrooms?.toString() || '',
                 minBathrooms: profile?.preferences?.minBathrooms?.toString() || '',
                 preferredAmenities: profile?.preferences?.preferredAmenities || [],
@@ -1460,6 +1462,29 @@ export default function ProfileEditScreen() {
                                 placeholder="Enter maximum rent"
                                 keyboardType="numeric"
                             />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Rent Period</Text>
+                            <View style={styles.pickerContainer}>
+                                {(['day', 'night', 'week', 'month', 'year'] as const).map((unit) => (
+                                    <TouchableOpacity
+                                        key={unit}
+                                        style={[
+                                            styles.pickerOption,
+                                            preferences.priceUnit === unit && styles.pickerOptionSelected
+                                        ]}
+                                        onPress={() => updatePreferences({ priceUnit: unit })}
+                                    >
+                                        <Text style={[
+                                            styles.pickerOptionText,
+                                            preferences.priceUnit === unit && styles.pickerOptionTextSelected
+                                        ]}>
+                                            {unit.charAt(0).toUpperCase() + unit.slice(1)}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
                         </View>
 
                         <View style={styles.row}>

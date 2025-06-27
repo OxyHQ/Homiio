@@ -185,7 +185,7 @@ const WebPropertiesMap: React.FC<PropertiesMapProps> = ({
             <h3 style="margin: 0 0 8px 0; font-size: 16px; color: #333;">${property.title}</h3>
             <p style="margin: 0 0 8px 0; font-size: 12px; color: #666;">${property.location}</p>
             <p style="margin: 0 0 12px 0; font-size: 18px; font-weight: bold; color: #4CAF50;">
-              $${property.rent.amount}/${property.rent.paymentFrequency}
+              $${property.rent.amount}/${property.priceUnit || property.rent.paymentFrequency}
             </p>
             <div style="display: flex; gap: 8px;">
               <button onclick="window.selectProperty('${property._id}')" style="
@@ -342,7 +342,7 @@ const MobilePropertiesMap: React.FC<PropertiesMapProps> = (props) => {
                 title: p.title,
                 location: p.location,
                 price: p.rent.amount,
-                frequency: p.rent.paymentFrequency,
+                frequency: p.priceUnit || p.rent.paymentFrequency,
                 type: p.type,
                 isSelected: props.selectedPropertyId === p._id,
             }));
@@ -637,5 +637,11 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: '600',
         fontSize: 14,
+    },
+    propertyPrice: {
+        margin: 0,
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: colors.primaryDark,
     },
 }); 

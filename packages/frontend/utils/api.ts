@@ -7,7 +7,7 @@ const API_CONFIG = {
   baseURL: API_URL,
   endpoints: {
     health: '/api/health',
-    profile: '/api/profile',
+    profile: '/api/profiles',
     data: '/api/data',
     users: undefined,
     profiles: {

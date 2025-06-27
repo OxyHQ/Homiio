@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
 import { PropertyMap } from '@/components/PropertyMap';
 import { ThemedText } from '@/components/ThemedText';
+import { AmenitiesDisplay } from '@/components/AmenitiesDisplay';
 import { useProperty } from '@/hooks';
 import { useOxy } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,6 +33,7 @@ type PropertyDetail = {
     description: string;
     location: string;
     price: string;
+    priceUnit: 'day' | 'night' | 'week' | 'month' | 'year';
     bedrooms: number;
     bathrooms: number;
     size: number;
@@ -104,8 +106,29 @@ export default function PropertyDetailPage() {
 
         try {
             const currency = apiProperty.rent?.currency || '⊜';
+
+            // Map legacy paymentFrequency to new priceUnit format
+            let priceUnit: 'day' | 'night' | 'week' | 'month' | 'year' = 'month';
+            if (apiProperty.priceUnit) {
+                priceUnit = apiProperty.priceUnit;
+            } else if (apiProperty.rent?.paymentFrequency) {
+                switch (apiProperty.rent.paymentFrequency) {
+                    case 'daily':
+                        priceUnit = 'day';
+                        break;
+                    case 'weekly':
+                        priceUnit = 'week';
+                        break;
+                    case 'monthly':
+                        priceUnit = 'month';
+                        break;
+                    default:
+                        priceUnit = 'month';
+                }
+            }
+
             const price = apiProperty.rent
-                ? `${currency}${apiProperty.rent.amount}/${apiProperty.rent.paymentFrequency || 'month'}`
+                ? `${currency}${apiProperty.rent.amount}/${priceUnit}`
                 : '';
 
             // Generate title dynamically from property data
@@ -122,6 +145,7 @@ export default function PropertyDetailPage() {
                 description: apiProperty.description || '',
                 location: `${apiProperty.address?.city || ''}, ${apiProperty.address?.country || ''}`,
                 price,
+                priceUnit,
                 bedrooms: apiProperty.bedrooms || 0,
                 bathrooms: apiProperty.bathrooms || 0,
                 size: apiProperty.squareFootage || 0,
@@ -403,7 +427,14 @@ ${propertyUrl}`;
                 {/* Basic Info */}
                 <View style={styles.infoContainer}>
                     <View style={styles.priceContainer}>
-                        <Text style={styles.priceLabel}>{t("Monthly Rent")}</Text>
+                        <Text style={styles.priceLabel}>
+                            {property.priceUnit === 'day' ? t("Daily Rent") :
+                                property.priceUnit === 'night' ? t("Nightly Rent") :
+                                    property.priceUnit === 'week' ? t("Weekly Rent") :
+                                        property.priceUnit === 'month' ? t("Monthly Rent") :
+                                            property.priceUnit === 'year' ? t("Yearly Rent") :
+                                                t("Rent")}
+                        </Text>
                         <Text style={styles.priceValue}>{property.price}</Text>
                     </View>
 
@@ -457,54 +488,7 @@ ${propertyUrl}`;
                     <View style={styles.divider} />
                     <Text style={styles.sectionTitle}>{t("What's Included")}</Text>
 
-                    {property.amenities.length > 0 ? (
-                        <View style={styles.amenitiesContainer}>
-                            {property.amenities.map((amenity, index) => {
-                                const amenityConfig = getAmenityById(amenity);
-                                return (
-                                    <View
-                                        key={index}
-                                        style={[
-                                            styles.amenityChip,
-                                            amenityConfig?.essential && styles.essentialChip,
-                                            amenityConfig?.accessibility && styles.accessibilityChip,
-                                            amenityConfig?.environmental === 'positive' && styles.ecoChip,
-                                        ]}
-                                    >
-                                        {amenityConfig && (
-                                            <IconComponent
-                                                name={amenityConfig.icon as any}
-                                                size={16}
-                                                color={
-                                                    amenityConfig.accessibility ? '#6366f1' :
-                                                        amenityConfig.essential ? '#059669' :
-                                                            amenityConfig.environmental === 'positive' ? '#16a34a' :
-                                                                colors.primaryColor
-                                                }
-                                                style={styles.amenityChipIcon}
-                                            />
-                                        )}
-                                        <Text style={[
-                                            styles.amenityChipText,
-                                            amenityConfig?.essential && styles.essentialChipText,
-                                            amenityConfig?.accessibility && styles.accessibilityChipText,
-                                            amenityConfig?.environmental === 'positive' && styles.ecoChipText,
-                                        ]}>
-                                            {amenityConfig?.nameKey ? t(amenityConfig.nameKey) : (amenityConfig?.name || amenity)}
-                                        </Text>
-                                        {amenityConfig?.maxFairValue === 0 && (
-                                            <View style={styles.includedDot} />
-                                        )}
-                                    </View>
-                                );
-                            })}
-                        </View>
-                    ) : (
-                        <View style={styles.noAmenitiesContainer}>
-                            <IconComponent name="home-outline" size={48} color={colors.COLOR_BLACK_LIGHT_4} />
-                            <Text style={styles.noAmenitiesText}>{t("No amenities listed")}</Text>
-                        </View>
-                    )}
+                    <AmenitiesDisplay amenities={property.amenities} />
 
                     {/* Map - Only show if location coordinates are available */}
                     {apiProperty?.address?.coordinates?.lat && apiProperty?.address?.coordinates?.lng && (
@@ -897,69 +881,6 @@ const styles = StyleSheet.create({
     availabilityValue: {
         fontSize: 16,
         fontWeight: 'bold',
-    },
-    amenitiesContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-        paddingVertical: 8,
-    },
-    amenityChip: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#f8f9fa',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: '#e9ecef',
-    },
-    essentialChip: {
-        backgroundColor: '#f0fdf4',
-        borderColor: '#059669',
-    },
-    accessibilityChip: {
-        backgroundColor: '#f0f0ff',
-        borderColor: '#6366f1',
-    },
-    ecoChip: {
-        backgroundColor: '#f0fdf4',
-        borderColor: '#16a34a',
-    },
-    amenityChipIcon: {
-        marginRight: 6,
-    },
-    amenityChipText: {
-        fontSize: 13,
-        fontWeight: '500',
-        color: colors.COLOR_BLACK,
-    },
-    essentialChipText: {
-        color: '#059669',
-    },
-    accessibilityChipText: {
-        color: '#6366f1',
-    },
-    ecoChipText: {
-        color: '#16a34a',
-    },
-    includedDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: colors.primaryColor,
-        marginLeft: 6,
-    },
-    noAmenitiesContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 40,
-    },
-    noAmenitiesText: {
-        color: colors.COLOR_BLACK_LIGHT_3,
-        fontSize: 14,
-        marginTop: 10,
     },
     landlordCard: {
         backgroundColor: '#fff',

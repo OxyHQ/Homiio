@@ -14,6 +14,7 @@ export interface PersonalProfile {
   preferences: {
     propertyTypes?: string[];
     maxRent?: number;
+    priceUnit?: 'day' | 'night' | 'week' | 'month' | 'year';
     minBedrooms?: number;
     minBathrooms?: number;
     preferredAmenities?: string[];

@@ -33,7 +33,6 @@ import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import WebSplashScreen from "@/components/WebSplashScreen";
 import LoadingTopSpinner from "@/components/LoadingTopSpinner";
 import ErrorBoundary from '@/components/ErrorBoundary';
-import { BottomSheetProvider } from '@/context/BottomSheetContext';
 import { ProfileProvider } from '@/context/ProfileContext';
 import { OxyLogo, OxyProvider, OxyServices, OxySignInButton, useOxy } from '@oxyhq/services';
 import { generateWebsiteStructuredData, injectStructuredData } from '@/utils/structuredData';
@@ -219,23 +218,19 @@ export default function RootLayout() {
           <I18nextProvider i18n={i18n}>
             <MenuProvider>
               <ErrorBoundary>
-                <BottomSheetModalProvider>
-                  <BottomSheetProvider>
-                    <ProfileProvider>
-                      <View style={styles.container}>
-                        <SideBar />
-                        <View style={styles.mainContentWrapper}>
-                          <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0, }} />
-                          <Slot />
-                        </View>
-                        <RightBar />
-                      </View>
-                      <StatusBar style="auto" />
-                      <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
-                      {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
-                    </ProfileProvider>
-                  </BottomSheetProvider>
-                </BottomSheetModalProvider>
+                <ProfileProvider>
+                  <View style={styles.container}>
+                    <SideBar />
+                    <View style={styles.mainContentWrapper}>
+                      <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0, }} />
+                      <Slot />
+                    </View>
+                    <RightBar />
+                  </View>
+                  <StatusBar style="auto" />
+                  <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
+                  {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
+                </ProfileProvider>
               </ErrorBoundary>
             </MenuProvider>
           </I18nextProvider>

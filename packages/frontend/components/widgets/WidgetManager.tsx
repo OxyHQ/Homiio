@@ -26,6 +26,10 @@ export type ScreenId =
 
 interface WidgetManagerProps {
     screenId: ScreenId;
+    propertyId?: string;
+    neighborhoodName?: string;
+    city?: string;
+    state?: string;
 }
 
 /**
@@ -34,7 +38,13 @@ interface WidgetManagerProps {
  * This component controls which widgets should appear on which screens.
  * It provides a centralized way to manage widget visibility based on screen context.
  */
-export function WidgetManager({ screenId }: WidgetManagerProps) {
+export function WidgetManager({
+    screenId,
+    propertyId,
+    neighborhoodName,
+    city,
+    state
+}: WidgetManagerProps) {
     // Define which widgets should appear on which screens
     const getWidgetsForScreen = (screen: ScreenId): ReactNode[] => {
         switch (screen) {
@@ -51,13 +61,24 @@ export function WidgetManager({ screenId }: WidgetManagerProps) {
                 return [
                     <PropertyAlertWidget key="property-alert" />,
                     <SavedSearchesWidget key="saved-searches" />,
-                    <NeighborhoodRatingWidget key="neighborhood" />,
+                    <NeighborhoodRatingWidget
+                        key="neighborhood"
+                        neighborhoodName={neighborhoodName}
+                        city={city}
+                        state={state}
+                    />,
                     <EcoCertificationWidget key="eco-cert" />
                 ];
 
             case 'property-details':
                 return [
-                    <NeighborhoodRatingWidget key="neighborhood" />,
+                    <NeighborhoodRatingWidget
+                        key="neighborhood"
+                        propertyId={propertyId}
+                        neighborhoodName={neighborhoodName}
+                        city={city}
+                        state={state}
+                    />,
                     <RecentlyViewedWidget key="recently-viewed" />,
                     <EcoCertificationWidget key="eco-cert" />
                 ];
@@ -65,7 +86,12 @@ export function WidgetManager({ screenId }: WidgetManagerProps) {
             case 'saved-properties':
                 return [
                     <PropertyAlertWidget key="property-alert" />,
-                    <NeighborhoodRatingWidget key="neighborhood" />
+                    <NeighborhoodRatingWidget
+                        key="neighborhood"
+                        neighborhoodName={neighborhoodName}
+                        city={city}
+                        state={state}
+                    />
                 ];
 
             case 'profile':

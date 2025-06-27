@@ -12,7 +12,6 @@ import {
   clearError,
   SavedPropertyWithMeta
 } from '@/store/reducers/savedPropertiesReducer';
-import { useActiveProfile } from '@/hooks/useProfileQueries';
 import { useOxy } from '@oxyhq/services';
 import type { Property } from '@/services/propertyService';
 
@@ -36,7 +35,6 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
   const { properties, favoriteIds, isLoading, isSaving, error, lastSynced, savingPropertyIds } = useSelector(
     (state: RootState) => state.savedProperties
   );
-  const { data: activeProfile } = useActiveProfile();
   const { oxyServices, activeSessionId } = useOxy();
 
   // Load properties on mount if not already loaded

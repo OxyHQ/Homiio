@@ -28,6 +28,7 @@ export interface Property {
     deposit: number;
     utilities: 'included' | 'excluded' | 'partial';
   };
+  priceUnit?: 'day' | 'night' | 'week' | 'month' | 'year';
   amenities?: string[];
   images?: string[];
   status: 'available' | 'occupied' | 'maintenance' | 'offline';
@@ -78,6 +79,7 @@ export interface CreatePropertyData {
     deposit?: number;
     utilities?: 'included' | 'excluded' | 'partial';
   };
+  priceUnit?: 'day' | 'night' | 'week' | 'month' | 'year';
   amenities?: string[];
   images?: string[];
   location?: {

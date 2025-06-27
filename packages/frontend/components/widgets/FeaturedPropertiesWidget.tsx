@@ -79,7 +79,7 @@ function FeaturedProperties({ properties }: { properties: any[] }) {
             id: property._id || property.id, // Use _id from MongoDB or fallback to id
             title: generatedTitle,
             location: `${property.address?.city || 'Unknown'}, ${property.address?.state || 'Unknown'}`,
-            price: `$${property.rent?.amount || 0}/${property.rent?.paymentFrequency || 'month'}`,
+            price: `$${property.rent?.amount || 0}/${property.priceUnit || property.rent?.paymentFrequency || 'month'}`,
             imageSource: getPropertyImageSource(property.images),
             isEcoCertified: property.amenities?.includes('eco-friendly') ||
                 property.amenities?.includes('green') ||

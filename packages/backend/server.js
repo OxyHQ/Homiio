@@ -44,13 +44,30 @@ const authenticateToken = oxyServices.createAuthenticateTokenMiddleware({
   loadFullUser: true,  
   onError: (error) => {  
     console.error('Auth error:', error);
+    // Don't throw error for expired tokens, let the route handle it
+    if (error.message && error.message.includes('No refresh token available')) {
+      console.warn('JWT token expired and no refresh token available - user needs to re-authenticate');
+    }
   }  
 });
 
-// Custom middleware to extract Oxy user ID
+// Custom middleware to extract Oxy user ID with better error handling
 const extractOxyUserId = (req, res, next) => {
-  if (req.user) {
-    req.userId = req.user.id || req.user._id;
+  try {
+    if (req.user) {
+      req.userId = req.user.id || req.user._id;
+      console.log(`[extractOxyUserId] User authenticated: ${req.userId}`, {
+        hasUser: !!req.user,
+        userId: req.userId,
+        userFields: req.user ? Object.keys(req.user) : []
+      });
+    } else {
+      console.log('[extractOxyUserId] No user object found in request');
+      req.userId = null;
+    }
+  } catch (error) {
+    console.error('[extractOxyUserId] Error extracting user ID:', error);
+    req.userId = null;
   }
   next();
 };
@@ -129,6 +146,41 @@ app.post('/api/test', authenticateToken, async (req, res) => {
   } catch (error) {  
     res.status(500).json({ error: error.message });  
   }  
+});
+
+// Debug endpoint to check authentication status
+app.get('/api/debug/auth', authenticateToken, (req, res) => {
+  res.json({
+    success: true,
+    authenticated: true,
+    userId: req.userId,
+    user: req.user ? {
+      id: req.user.id || req.user._id,
+      username: req.user.username,
+      email: req.user.email,
+      fields: Object.keys(req.user)
+    } : null,
+    headers: {
+      authorization: req.headers.authorization ? 'present' : 'missing',
+      'user-agent': req.headers['user-agent']
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Debug endpoint without authentication to check what happens
+app.get('/api/debug/no-auth', (req, res) => {
+  res.json({
+    success: true,
+    authenticated: false,
+    userId: req.userId,
+    user: req.user,
+    headers: {
+      authorization: req.headers.authorization ? 'present' : 'missing',
+      'user-agent': req.headers['user-agent']
+    },
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Error handling middleware

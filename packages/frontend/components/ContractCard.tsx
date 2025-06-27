@@ -2,6 +2,10 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
+import { StatusBadge, type StatusType } from './ui/StatusBadge';
+
+// Type assertion for Ionicons compatibility
+const IconComponent = Ionicons as any;
 
 export type ContractStatus = 'draft' | 'pending' | 'active' | 'expired' | 'terminated';
 
@@ -46,52 +50,12 @@ export function ContractCard({
         });
     };
 
-    const getStatusInfo = (status: ContractStatus) => {
-        switch (status) {
-            case 'draft':
-                return {
-                    icon: 'document-outline',
-                    color: colors.COLOR_BLACK_LIGHT_3,
-                    label: 'Draft',
-                };
-            case 'pending':
-                return {
-                    icon: 'hourglass-outline',
-                    color: '#FFC107',
-                    label: 'Pending Approval',
-                };
-            case 'active':
-                return {
-                    icon: 'checkmark-circle',
-                    color: '#4CAF50',
-                    label: 'Active',
-                };
-            case 'expired':
-                return {
-                    icon: 'calendar-outline',
-                    color: '#9E9E9E',
-                    label: 'Expired',
-                };
-            case 'terminated':
-                return {
-                    icon: 'close-circle-outline',
-                    color: '#F44336',
-                    label: 'Terminated',
-                };
-        }
-    };
-
-    const statusInfo = getStatusInfo(status);
-
     return (
         <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
             <View style={styles.header}>
                 <View style={styles.titleContainer}>
                     <Text style={styles.title} numberOfLines={1}>{title}</Text>
-                    <View style={[styles.statusBadge, { backgroundColor: statusInfo.color }]}>
-                        <Ionicons name={statusInfo.icon as any} size={12} color="white" />
-                        <Text style={styles.statusText}>{statusInfo.label}</Text>
-                    </View>
+                    <StatusBadge status={status as StatusType} size="small" />
                 </View>
                 <Text style={styles.rent}>
                     {currency}{monthlyRent.toLocaleString()}<Text style={styles.rentPeriod}>/month</Text>
@@ -99,7 +63,7 @@ export function ContractCard({
             </View>
 
             <View style={styles.propertyRow}>
-                <Ionicons name="home-outline" size={16} color={colors.primaryDark_1} />
+                <IconComponent name="home-outline" size={16} color={colors.primaryDark_1} />
                 <Text style={styles.propertyName} numberOfLines={1}>{propertyName}</Text>
             </View>
 
@@ -116,12 +80,12 @@ export function ContractCard({
 
             <View style={styles.partiesContainer}>
                 <View style={styles.partyRow}>
-                    <Ionicons name="business-outline" size={16} color={colors.primaryDark_1} />
+                    <IconComponent name="business-outline" size={16} color={colors.primaryDark_1} />
                     <Text style={styles.partyLabel}>Landlord:</Text>
                     <Text style={styles.partyName} numberOfLines={1}>{landlordName}</Text>
                 </View>
                 <View style={styles.partyRow}>
-                    <Ionicons name="person-outline" size={16} color={colors.primaryDark_1} />
+                    <IconComponent name="person-outline" size={16} color={colors.primaryDark_1} />
                     <Text style={styles.partyLabel}>Tenant:</Text>
                     <Text style={styles.partyName} numberOfLines={1}>{tenantName}</Text>
                 </View>
@@ -132,14 +96,14 @@ export function ContractCard({
                     style={styles.actionButton}
                     onPress={onSharePress}
                 >
-                    <Ionicons name="share-outline" size={18} color={colors.primaryColor} />
+                    <IconComponent name="share-outline" size={18} color={colors.primaryColor} />
                     <Text style={styles.actionText}>Share</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={styles.actionButton}
                     onPress={onDownloadPress}
                 >
-                    <Ionicons name="download-outline" size={18} color={colors.primaryColor} />
+                    <IconComponent name="download-outline" size={18} color={colors.primaryColor} />
                     <Text style={styles.actionText}>Download</Text>
                 </TouchableOpacity>
             </View>
@@ -177,19 +141,6 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: colors.primaryDark,
         marginRight: 8,
-    },
-    statusBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    statusText: {
-        color: 'white',
-        fontSize: 10,
-        fontWeight: '500',
-        marginLeft: 4,
     },
     rent: {
         fontSize: 18,

@@ -29,14 +29,18 @@ class PropertyController {
           ),
         );
       }
+      
+      // Use the same user ID fix as in getPropertyById
+      const oxyUserId = req.user?.id || req.user?._id || req.userId;
+      
       if (!req.body.profileId) {
         // Try to fetch the active profile for the current user
         const Profile = require('../models').Profile;
-        let activeProfile = await Profile.findActiveByOxyUserId(req.userId);
+        let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
         if (!activeProfile) {
           // Auto-create a personal profile for the user
           activeProfile = await Profile.create({
-            oxyUserId: req.userId,
+            oxyUserId: oxyUserId,
             profileType: 'personal',
             isPrimary: true,
             isActive: true,
@@ -110,10 +114,13 @@ class PropertyController {
    */
   async createPropertyDev(req, res, next) {
     try {
+      // Use the same user ID fix as in getPropertyById
+      const oxyUserId = req.user?.id || req.user?._id || req.userId;
+      
       if (!req.body.profileId) {
         // Try to fetch the active profile for the current user
         const Profile = require('../models').Profile;
-        const activeProfile = await Profile.findActiveByOxyUserId(req.userId);
+        const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
         if (!activeProfile) {
           return next(
             new AppError(

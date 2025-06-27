@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { View, StyleSheet, Platform, ActivityIndicator, Text } from 'react-native';
 import { colors } from '@/styles/colors';
+import { useLocationSearch, useReverseGeocode } from '@/hooks/useLocationRedux';
 
 interface PropertyMapProps {
   latitude?: number;
@@ -11,7 +12,7 @@ interface PropertyMapProps {
   interactive?: boolean;
 }
 
-// Web-specific map component
+// Web-specific map component using Leaflet
 const WebMap: React.FC<PropertyMapProps> = ({
   latitude = 40.7128,
   longitude = -74.0060,
@@ -24,147 +25,120 @@ const WebMap: React.FC<PropertyMapProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Use Redux location hooks
+  const { search, results: locationSearchResults, loading: searchLoading } = useLocationSearch();
+  const { reverseGeocode, result: reverseResult, loading: reverseLoading } = useReverseGeocode();
+
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || typeof window === 'undefined') return;
 
-    // Load Leaflet CSS
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(link);
-
-    // Load Leaflet JS
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    script.onload = () => {
-      initializeMap();
-    };
-    script.onerror = () => {
-      setError('Failed to load map library');
-      setLoading(false);
-    };
-    document.head.appendChild(script);
-
-    return () => {
-      // Cleanup
-      document.head.removeChild(link);
-      document.head.removeChild(script);
-    };
-  }, []);
-
-  const initializeMap = () => {
-    if (!mapRef.current || !(window as any).L) return;
-
-    const L = (window as any).L;
-    let map: any, marker: any, searchTimeout: any;
-
-    // Initialize map and disable the default attribution control
-    map = L.map(mapRef.current, {
-      attributionControl: false,
-    }).setView([latitude, longitude], 13);
-
-    // Add OpenStreetMap tiles without any attribution text
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-    // Add marker if coordinates are provided
-    if (latitude && longitude) {
-      marker = L.marker([latitude, longitude]).addTo(map);
-    }
-
-    if (interactive) {
-      // Create search container
-      const searchContainer = document.createElement('div');
-      searchContainer.style.cssText = `
-                position: absolute;
-                top: 10px;
-                left: 10px;
-                right: 10px;
-                z-index: 1000;
-                background: white;
-                border-radius: 8px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                padding: 10px;
-            `;
-
-      const searchInput = document.createElement('input');
-      searchInput.type = 'text';
-      searchInput.placeholder = 'Search for an address...';
-      searchInput.style.cssText = `
-                width: 100%;
-                padding: 12px;
-                border: 1px solid #ddd;
-                border-radius: 6px;
-                font-size: 16px;
-                box-sizing: border-box;
-            `;
-
-      const searchResults = document.createElement('div');
-      searchResults.style.cssText = `
-                position: absolute;
-                top: 100%;
-                left: 0;
-                right: 0;
-                background: white;
-                border-radius: 6px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                max-height: 200px;
-                overflow-y: auto;
-                z-index: 1001;
-                display: none;
-            `;
-
-      searchContainer.appendChild(searchInput);
-      searchContainer.appendChild(searchResults);
-      mapRef.current.appendChild(searchContainer);
-
-      // Create location info
-      const locationInfo = document.createElement('div');
-      locationInfo.style.cssText = `
-                position: absolute;
-                bottom: 10px;
-                left: 10px;
-                right: 10px;
-                background: white;
-                border-radius: 8px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                padding: 10px;
-                z-index: 1000;
-                font-size: 14px;
-                color: #333;
-            `;
-      locationInfo.textContent = address || 'Click on the map to select a location';
-      mapRef.current.appendChild(locationInfo);
-
-      // Search functionality
-      searchInput.addEventListener('input', function () {
-        clearTimeout(searchTimeout);
-        const query = this.value.trim();
-
-        if (query.length < 3) {
-          searchResults.style.display = 'none';
+    const initializeMap = () => {
+      try {
+        // Dynamically import Leaflet
+        const L = (window as any).L;
+        if (!L) {
+          setError('Leaflet not loaded');
           return;
         }
 
-        searchTimeout = setTimeout(() => {
-          searchAddress(query);
-        }, 500);
-      });
+        const map = L.map(mapRef.current!).setView([latitude, longitude], 13);
+        let marker: any = null;
 
-      async function searchAddress(query: string) {
-        try {
-          const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`);
-          const data = await response.json();
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
 
-          searchResults.innerHTML = '';
+        // Add initial marker if coordinates are provided
+        if (latitude && longitude) {
+          marker = L.marker([latitude, longitude]).addTo(map);
+        }
 
-          if (data.length > 0) {
-            data.forEach((result: any) => {
+        // Add search functionality if interactive
+        if (interactive) {
+          const searchContainer = document.createElement('div');
+          searchContainer.style.cssText = `
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 10px;
+          `;
+
+          const searchInput = document.createElement('input');
+          searchInput.type = 'text';
+          searchInput.placeholder = 'Search for a location...';
+          searchInput.style.cssText = `
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            box-sizing: border-box;
+          `;
+
+          const searchResults = document.createElement('div');
+          searchResults.style.cssText = `
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1001;
+            display: none;
+          `;
+
+          const locationInfo = document.createElement('div');
+          locationInfo.style.cssText = `
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 10px;
+            z-index: 1000;
+            font-size: 14px;
+            color: #333;
+          `;
+          locationInfo.textContent = address || 'Click on the map to select a location';
+
+          searchContainer.appendChild(searchInput);
+          searchContainer.appendChild(searchResults);
+          map.getContainer().appendChild(searchContainer);
+          map.getContainer().appendChild(locationInfo);
+
+          // Search input handler
+          let searchTimeout: ReturnType<typeof setTimeout>;
+          searchInput.addEventListener('input', (e) => {
+            const query = (e.target as HTMLInputElement).value;
+
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+              if (query.length >= 3) {
+                search(query);
+              }
+            }, 400);
+          });
+
+          // Display search results from Redux state
+          if (locationSearchResults && locationSearchResults.length > 0) {
+            searchResults.innerHTML = '';
+            locationSearchResults.forEach((result: any) => {
               const div = document.createElement('div');
               div.style.cssText = `
-                                padding: 12px;
-                                border-bottom: 1px solid #eee;
-                                cursor: pointer;
-                            `;
+                padding: 12px;
+                border-bottom: 1px solid #eee;
+                cursor: pointer;
+              `;
               div.textContent = result.display_name;
               div.onclick = () => {
                 selectLocation(result.lat, result.lon, result.display_name);
@@ -174,59 +148,92 @@ const WebMap: React.FC<PropertyMapProps> = ({
               searchResults.appendChild(div);
             });
             searchResults.style.display = 'block';
-          } else {
-            searchResults.style.display = 'none';
           }
-        } catch (error) {
-          console.error('Search error:', error);
-        }
-      }
 
-      // Map click handler
-      map.on('click', function (e: any) {
-        const lat = e.latlng.lat;
-        const lng = e.latlng.lng;
+          // Map click handler
+          map.on('click', function (e: any) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
 
-        // Reverse geocode to get address
-        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
-          .then(response => response.json())
-          .then(data => {
-            const address = data.display_name || 'Unknown location';
-            selectLocation(lat, lng, address);
-          })
-          .catch(error => {
-            console.error('Reverse geocoding error:', error);
-            selectLocation(lat, lng, 'Selected location');
+            // Use Redux reverse geocoding
+            reverseGeocode(lat, lng);
           });
-      });
 
-      function selectLocation(lat: number, lng: number, address: string) {
-        // Update marker
-        if (marker) {
-          map.removeLayer(marker);
+          function selectLocation(lat: number, lng: number, address: string) {
+            // Update marker
+            if (marker) {
+              map.removeLayer(marker);
+            }
+            marker = L.marker([lat, lng]).addTo(map);
+            map.setView([lat, lng], 16);
+
+            // Update location info
+            locationInfo.textContent = address;
+
+            // Call the callback
+            if (onLocationSelect) {
+              onLocationSelect(lat, lng, address);
+            }
+          }
+
+          // Handle reverse geocoding result
+          if (reverseResult) {
+            const address = reverseResult.display_name || 'Unknown location';
+            selectLocation(parseFloat(reverseResult.lat), parseFloat(reverseResult.lon), address);
+          }
+
+          // Close search results when clicking outside
+          document.addEventListener('click', function (e) {
+            if (!searchInput.contains(e.target as Node) && !searchResults.contains(e.target as Node)) {
+              searchResults.style.display = 'none';
+            }
+          });
         }
-        marker = L.marker([lat, lng]).addTo(map);
-        map.setView([lat, lng], 16);
 
-        // Update location info
-        locationInfo.textContent = address;
-
-        // Call the callback
-        if (onLocationSelect) {
-          onLocationSelect(lat, lng, address);
-        }
+        setLoading(false);
+      } catch (err) {
+        setError('Failed to initialize map');
+        setLoading(false);
       }
+    };
 
-      // Close search results when clicking outside
-      document.addEventListener('click', function (e) {
-        if (!searchInput.contains(e.target as Node) && !searchResults.contains(e.target as Node)) {
-          searchResults.style.display = 'none';
+    // Load Leaflet CSS and JS
+    const loadLeaflet = () => {
+      return new Promise<void>((resolve, reject) => {
+        // Check if Leaflet is already loaded
+        if ((window as any).L) {
+          resolve();
+          return;
         }
-      });
-    }
 
-    setLoading(false);
-  };
+        // Load CSS
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        link.onload = () => {
+          // Load JS
+          const script = document.createElement('script');
+          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+          script.onload = () => resolve();
+          script.onerror = reject;
+          document.head.appendChild(script);
+        };
+        link.onerror = reject;
+        document.head.appendChild(link);
+      });
+    };
+
+    loadLeaflet()
+      .then(() => {
+        setTimeout(() => {
+          initializeMap();
+        }, 500);
+      })
+      .catch(() => {
+        setError('Failed to load map library');
+        setLoading(false);
+      });
+  }, [latitude, longitude, address, interactive, onLocationSelect, search, reverseGeocode, reverseResult, locationSearchResults]);
 
   if (error) {
     return (

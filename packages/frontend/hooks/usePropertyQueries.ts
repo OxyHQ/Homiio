@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '@/store/store';
 import { useOxy } from '@oxyhq/services';
@@ -10,7 +10,7 @@ import {
   searchProperties,
   createProperty,
   updateProperty,
-  deleteProperty,
+  deleteProperty as deletePropertyAction,
   clearError,
   clearCurrentProperty,
   clearSearchResults,
@@ -216,9 +216,9 @@ export const useDeleteProperty = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { loading, error } = usePropertySelectors();
 
-  const remove = useCallback(async (id: string) => {
+  const deletePropertyHandler = useCallback(async (id: string) => {
     try {
-      await dispatch(deleteProperty(id)).unwrap();
+      await dispatch(deletePropertyAction(id)).unwrap();
       toast.success('Property deleted successfully');
     } catch (error: any) {
       toast.error(error.message || 'Failed to delete property');
@@ -227,8 +227,72 @@ export const useDeleteProperty = () => {
   }, [dispatch]);
 
   return {
-    remove,
+    deleteProperty: deletePropertyHandler,
     loading: loading.delete,
     error,
+  };
+};
+
+// Hook for user's owned properties
+export const useUserProperties = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { oxyServices, activeSessionId } = useOxy();
+  const { loading, error } = usePropertySelectors();
+  
+  const [userProperties, setUserProperties] = useState<Property[]>([]);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    total: 0,
+    totalPages: 1,
+  });
+
+  const fetchUserProperties = useCallback(async (page = 1, limit = 10) => {
+    if (!oxyServices || !activeSessionId) {
+      console.log('OxyServices not available - returning empty properties');
+      return { properties: [], total: 0, page: 1, totalPages: 1 };
+    }
+
+    try {
+      console.log('Fetching user properties with OxyServices authentication');
+      
+      // Import the API function
+      const { userApi } = await import('@/utils/api');
+      const response = await userApi.getUserProperties(page, limit, oxyServices, activeSessionId);
+      
+      const result = {
+        properties: response.data?.properties || response.data || [],
+        total: response.data?.total || 0,
+        page: response.data?.page || 1,
+        totalPages: response.data?.totalPages || 1,
+      };
+      
+      setUserProperties(result.properties);
+      setPagination({
+        page: result.page,
+        total: result.total,
+        totalPages: result.totalPages,
+      });
+      
+      console.log(`Successfully fetched ${result.properties.length} user properties`);
+      return result;
+    } catch (error) {
+      console.error('Error fetching user properties:', error);
+      return { properties: [], total: 0, page: 1, totalPages: 1 };
+    }
+  }, [oxyServices, activeSessionId]);
+
+  // Load properties on mount
+  useEffect(() => {
+    fetchUserProperties();
+  }, [fetchUserProperties]);
+
+  return {
+    data: {
+      properties: userProperties,
+      ...pagination,
+    },
+    isLoading: loading.properties,
+    error,
+    refetch: () => fetchUserProperties(),
   };
 }; 

@@ -17,14 +17,27 @@ import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { calculateEthicalRent, validateEthicalPricing, getPricingGuidance } from '@/utils/ethicalPricing';
 import { Ionicons } from '@expo/vector-icons';
 import { POPULAR_AMENITIES, getAmenityById } from '@/constants/amenities';
+import { useTranslation } from 'react-i18next';
+import { useCreateProperty } from '@/hooks/usePropertyQueries';
+import { useLocationSearch, useReverseGeocode } from '@/hooks/useLocationRedux';
+import { AmenitiesSelector } from '@/components/AmenitiesSelector';
 
 const IconComponent = Ionicons as any;
 
 export default function CreatePropertyScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
+  const dispatch = useDispatch<AppDispatch>();
   const { oxyServices, activeSessionId } = useOxy();
 
-  const [formData, setFormData] = useState<CreatePropertyData>({
+  // Use Redux location hooks
+  const { search, results: searchResults, loading: searchLoading, clearResults } = useLocationSearch();
+  const { reverseGeocode, result: reverseResult, loading: reverseLoading } = useReverseGeocode();
+
+  // Use Redux property creation hook
+  const { create, loading: createLoading } = useCreateProperty();
+
+  const [formData, setFormData] = useState<CreatePropertyData & { priceUnit: 'day' | 'night' | 'week' | 'month' | 'year' }>({
     address: {
       street: '',
       city: '',
@@ -44,6 +57,7 @@ export default function CreatePropertyScreen() {
       deposit: 0,
       utilities: 'excluded',
     },
+    priceUnit: 'month',
     amenities: [],
     floor: undefined,
     hasElevator: false,
@@ -67,14 +81,15 @@ export default function CreatePropertyScreen() {
 
   // Search functionality
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const isMapSelectionRef = useRef(false);
+  const [isMapSelectionRef, setIsMapSelectionRef] = useState(false);
 
-  // Custom search query setter
+  const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const setSearchQueryWithSource = (query: string, fromMap: boolean = false) => {
     if (fromMap) {
-      isMapSelectionRef.current = true;
+      setIsMapSelectionRef(true);
     }
     setSearchQuery(query);
   };
@@ -94,33 +109,14 @@ export default function CreatePropertyScreen() {
   const [pricingValidation, setPricingValidation] = useState<any>(null);
   const [showPricingGuidance, setShowPricingGuidance] = useState(false);
 
-  const dispatch = useDispatch<AppDispatch>();
-  const isLoading = useSelector((state: RootState) => state.properties.isLoading);
-
-  // Form validation function
   const isFormValid = () => {
-    // Check authentication
-    if (!oxyServices || !activeSessionId) {
-      return false;
-    }
-
-    // Check required fields
-    if (!formData.address.street.trim()) return false;
-    if (!formData.address.city.trim()) return false;
-    if (!formData.address.state.trim()) return false;
-    if (!formData.address.zipCode.trim()) return false;
-    if (formData.rent.amount <= 0) return false;
-
-    // Check constraints
-    if (formData.bedrooms !== undefined && formData.bedrooms < 0) return false;
-    if (formData.bathrooms !== undefined && formData.bathrooms < 0) return false;
-    if (formData.squareFootage !== undefined && formData.squareFootage < 0) return false;
-    if (formData.rent.deposit !== undefined && formData.rent.deposit < 0) return false;
-
-    // Check ethical pricing validation
-    if (pricingValidation && !pricingValidation.isWithinEthicalRange) return false;
-
-    return true;
+    return (
+      formData.address.street.trim() !== '' &&
+      formData.address.city.trim() !== '' &&
+      formData.address.state.trim() !== '' &&
+      formData.address.zipCode.trim() !== '' &&
+      formData.rent.amount > 0
+    );
   };
 
   // Check location permission on mount
@@ -435,32 +431,24 @@ export default function CreatePropertyScreen() {
   // Search handler
   useEffect(() => {
     // Don't search if this is from map selection
-    if (isMapSelectionRef.current) {
-      isMapSelectionRef.current = false;
+    if (isMapSelectionRef) {
+      setIsMapSelectionRef(false);
       return;
     }
 
     if (searchQuery.length < 3) {
-      setSearchResults([]);
+      clearResults();
       setShowSearchResults(false);
       return;
     }
 
     const timeout = setTimeout(() => {
-      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5`)
-        .then(res => res.json())
-        .then(data => {
-          setSearchResults(data);
-          setShowSearchResults(true);
-        })
-        .catch(() => {
-          setSearchResults([]);
-          setShowSearchResults(false);
-        });
+      search(searchQuery);
+      setShowSearchResults(true);
     }, 400);
 
     return () => clearTimeout(timeout);
-  }, [searchQuery, isMapSelectionRef]);
+  }, [searchQuery, isMapSelectionRef, search, clearResults]);
 
   const handleSearchSelect = (result: any) => {
     const lat = parseFloat(result.lat);
@@ -498,35 +486,30 @@ export default function CreatePropertyScreen() {
     // Hide search results when location is selected on map
     setShowSearchResults(false);
 
-    // For map clicks, we need to fetch the structured address data
-    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`)
-      .then(response => response.json())
-      .then(data => {
-        if (data.address) {
-          const addr = data.address;
-          updateAddressField('street', `${addr.house_number || ''} ${addr.road || addr.street || ''}`.trim());
-          updateAddressField('city', addr.city || addr.town || addr.village || addr.county || '');
-          // Prioritize province over state for international addresses
-          updateAddressField('state', addr.province || addr.state || '');
-          updateAddressField('zipCode', addr.postcode || '');
-        } else {
-          // Fallback to parsing display_name
-          const parsedAddress = parseAddress(address);
-          updateAddressField('street', parsedAddress.street);
-          updateAddressField('city', parsedAddress.city);
-          updateAddressField('state', parsedAddress.state);
-          updateAddressField('zipCode', parsedAddress.zipCode);
-        }
-      })
-      .catch(() => {
-        // Fallback to parsing display_name if API call fails
-        const parsedAddress = parseAddress(address);
+    // Use Redux reverse geocoding
+    reverseGeocode(lat, lng);
+  };
+
+  // Handle reverse geocoding result
+  useEffect(() => {
+    if (reverseResult && selectedLocation) {
+      if (reverseResult.address) {
+        const addr = reverseResult.address;
+        updateAddressField('street', `${addr.house_number || ''} ${addr.road || ''}`.trim());
+        updateAddressField('city', addr.city || '');
+        // Prioritize province over state for international addresses
+        updateAddressField('state', addr.state || '');
+        updateAddressField('zipCode', addr.postcode || '');
+      } else {
+        // Fallback to parsing display_name
+        const parsedAddress = parseAddress(reverseResult.display_name);
         updateAddressField('street', parsedAddress.street);
         updateAddressField('city', parsedAddress.city);
         updateAddressField('state', parsedAddress.state);
         updateAddressField('zipCode', parsedAddress.zipCode);
-      });
-  };
+      }
+    }
+  }, [reverseResult, selectedLocation]);
 
   const handleSubmit = async () => {
     // Check if user is authenticated
@@ -603,22 +586,21 @@ export default function CreatePropertyScreen() {
     }
 
     try {
-      // Add location data to the form data
-      const propertyData = {
+      // Clean ZIP code before submission
+      const cleanedPropertyData = {
         ...formData,
+        address: {
+          ...formData.address,
+          zipCode: cleanZipCode(formData.address.zipCode)
+        },
         location: selectedLocation ? {
           latitude: selectedLocation.latitude,
           longitude: selectedLocation.longitude,
         } : undefined,
       };
 
-      const resultAction = await dispatch(createProperty({ data: propertyData, oxyServices, activeSessionId }));
-      if (createProperty.fulfilled.match(resultAction)) {
-        const createdProperty = resultAction.payload;
-        router.push(`/properties/${createdProperty._id}`);
-      } else {
-        throw resultAction.error;
-      }
+      const result = await create(cleanedPropertyData);
+      router.push(`/properties/${result._id}`);
     } catch (error: any) {
       console.error('Property creation error:', error, JSON.stringify(error));
 
@@ -650,14 +632,45 @@ export default function CreatePropertyScreen() {
   const updateAddressField = (field: keyof CreatePropertyData['address'], value: string) => {
     setFormData(prev => ({
       ...prev,
-      address: { ...prev.address, [field]: value }
+      address: {
+        ...prev.address,
+        [field]: value
+      }
     }));
+  };
+
+  // Clean ZIP code format before submission
+  const cleanZipCode = (zipCode: string): string => {
+    // Remove all non-digit and non-hyphen characters, then ensure proper format
+    const cleaned = zipCode.replace(/[^\d-]/g, '');
+
+    // If it's just digits, ensure it's 5 digits
+    if (/^\d+$/.test(cleaned)) {
+      return cleaned.slice(0, 5);
+    }
+
+    // If it has a hyphen, ensure it's in format 12345-6789
+    if (cleaned.includes('-')) {
+      const parts = cleaned.split('-');
+      const firstPart = parts[0].slice(0, 5);
+      const secondPart = parts[1] ? parts[1].slice(0, 4) : '';
+      return secondPart ? `${firstPart}-${secondPart}` : firstPart;
+    }
+
+    return cleaned;
   };
 
   const updateRentField = (field: keyof CreatePropertyData['rent'], value: any) => {
     setFormData(prev => ({
       ...prev,
       rent: { ...prev.rent, [field]: value }
+    }));
+  };
+
+  const updatePriceUnit = (value: 'day' | 'night' | 'week' | 'month' | 'year') => {
+    setFormData(prev => ({
+      ...prev,
+      priceUnit: value
     }));
   };
 
@@ -872,7 +885,7 @@ export default function CreatePropertyScreen() {
             <TextInput
               style={styles.textInput}
               value={formData.address.zipCode}
-              onChangeText={(text) => updateAddressField('zipCode', text)}
+              onChangeText={(text) => updateAddressField('zipCode', cleanZipCode(text))}
               placeholder="Enter ZIP code"
             />
           </View>
@@ -951,7 +964,7 @@ export default function CreatePropertyScreen() {
             </View>
 
             <View style={styles.halfInput}>
-              <ThemedText style={styles.label}>Monthly Rent *</ThemedText>
+              <ThemedText style={styles.label}>Rent Amount *</ThemedText>
               <TextInput
                 style={[
                   styles.textInput,
@@ -962,50 +975,31 @@ export default function CreatePropertyScreen() {
                 placeholder="0"
                 keyboardType="numeric"
               />
+            </View>
+          </View>
 
-              {/* Pricing Guidance */}
-              <TouchableOpacity
-                style={styles.pricingGuidanceButton}
-                onPress={() => setShowPricingGuidance(!showPricingGuidance)}
-              >
-                <ThemedText style={styles.pricingGuidanceButtonText}>
-                  💡 Get Ethical Pricing Guidance
-                </ThemedText>
-              </TouchableOpacity>
-
-              {showPricingGuidance && (
-                <View style={styles.pricingGuidanceContainer}>
-                  <ThemedText style={styles.pricingGuidanceText}>
-                    {getCurrentPricingGuidance()}
+          <View style={styles.inputGroup}>
+            <ThemedText style={styles.label}>Rent Period</ThemedText>
+            <View style={styles.pickerContainer}>
+              {(['day', 'night', 'week', 'month', 'year'] as const).map((unit) => (
+                <TouchableOpacity
+                  key={unit}
+                  style={[
+                    styles.pickerOption,
+                    formData.priceUnit === unit && styles.pickerOptionSelected
+                  ]}
+                  onPress={() => updatePriceUnit(unit)}
+                >
+                  <ThemedText
+                    style={[
+                      styles.pickerOptionText,
+                      formData.priceUnit === unit && styles.pickerOptionTextSelected
+                    ]}
+                  >
+                    {unit.charAt(0).toUpperCase() + unit.slice(1)}
                   </ThemedText>
-                </View>
-              )}
-
-              {/* Pricing Validation Feedback */}
-              {pricingValidation && (
-                <View style={[
-                  styles.pricingValidationContainer,
-                  pricingValidation.isWithinEthicalRange
-                    ? styles.pricingValidationGood
-                    : styles.pricingValidationWarning
-                ]}>
-                  <ThemedText style={styles.pricingValidationText}>
-                    {pricingValidation.isWithinEthicalRange
-                      ? '✅ Price is within ethical range'
-                      : '⚠️ Price exceeds ethical maximum'
-                    }
-                  </ThemedText>
-                  {pricingValidation.warnings.length > 0 && (
-                    <View style={styles.pricingWarningsContainer}>
-                      {pricingValidation.warnings.map((warning: string, index: number) => (
-                        <ThemedText key={index} style={styles.pricingWarningText}>
-                          • {warning}
-                        </ThemedText>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              )}
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
 
@@ -1047,44 +1041,10 @@ export default function CreatePropertyScreen() {
 
           <View style={styles.inputGroup}>
             <ThemedText style={styles.label}>Amenities</ThemedText>
-            <View style={styles.pickerContainer}>
-              {POPULAR_AMENITIES.map((amenityId) => {
-                const amenity = getAmenityById(amenityId);
-                if (!amenity) return null;
-                return (
-                  <TouchableOpacity
-                    key={amenity.id}
-                    style={[
-                      styles.pickerOption,
-                      formData.amenities?.includes(amenity.id) && styles.pickerOptionSelected,
-                      amenity.premium && styles.premiumAmenityOption
-                    ]}
-                    onPress={() => toggleAmenity(amenity.id)}
-                  >
-                    <View style={styles.amenityOptionContent}>
-                      <IconComponent
-                        name={amenity.icon as any}
-                        size={16}
-                        color={formData.amenities?.includes(amenity.id) ? 'white' : colors.primaryColor}
-                      />
-                      <ThemedText
-                        style={[
-                          styles.pickerOptionText,
-                          formData.amenities?.includes(amenity.id) && styles.pickerOptionTextSelected
-                        ]}
-                      >
-                        {amenity.name}
-                      </ThemedText>
-                      {amenity.premium && (
-                        <View style={styles.premiumBadge}>
-                          <ThemedText style={styles.premiumBadgeText}>P</ThemedText>
-                        </View>
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <AmenitiesSelector
+              selectedAmenities={formData.amenities || []}
+              onAmenityToggle={toggleAmenity}
+            />
           </View>
 
           {/* Property Preview Card */}
@@ -1101,7 +1061,7 @@ export default function CreatePropertyScreen() {
                   })}
                 </ThemedText>
                 <ThemedText style={styles.previewPrice}>
-                  ${formData.rent.amount?.toLocaleString() || '0'}/month
+                  ${formData.rent.amount?.toLocaleString() || '0'}/{formData.priceUnit}
                 </ThemedText>
               </View>
 
@@ -1182,11 +1142,11 @@ export default function CreatePropertyScreen() {
 
           <TouchableOpacity
             onPress={handleSubmit}
-            disabled={isLoading || !isFormValid()}
-            style={[styles.submitButton, (isLoading || !isFormValid()) && styles.submitButtonDisabled]}
+            disabled={createLoading || !isFormValid()}
+            style={[styles.submitButton, (createLoading || !isFormValid()) && styles.submitButtonDisabled]}
             activeOpacity={0.8}
           >
-            {isLoading ? (
+            {createLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color="white" />
                 <ThemedText style={[styles.submitButtonText, { marginLeft: 8 }]}>

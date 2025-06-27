@@ -15,6 +15,8 @@ module.exports = function () {
   router.use(performanceMonitor);
 
   // Profile routes
+  router.get("/", asyncHandler(profileController.getOrCreateActiveProfile));
+  router.post("/", asyncHandler(profileController.createProfile));
   router.get("/me", asyncHandler(profileController.getOrCreateActiveProfile));
   router.get("/me/all", asyncHandler(profileController.getUserProfiles));
   router.get("/me/recent-properties", asyncHandler(profileController.getRecentProperties));
@@ -31,7 +33,6 @@ module.exports = function () {
   router.put("/me/saved-searches/:searchId/notifications", asyncHandler(profileController.toggleSearchNotifications));
   router.get("/me/:profileType", asyncHandler(profileController.getProfileByType));
   router.get("/:profileId", asyncHandler(profileController.getProfileById));
-  router.post("/", asyncHandler(profileController.createProfile));
   router.put("/:profileId", asyncHandler(profileController.updateProfile));
   router.delete("/:profileId", asyncHandler(profileController.deleteProfile));
   router.post("/:profileId/activate", asyncHandler(profileController.activateProfile));

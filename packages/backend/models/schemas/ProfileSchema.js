@@ -43,6 +43,11 @@ const personalProfileSchema = new mongoose.Schema({
       type: Number,
       min: [0, "Maximum rent cannot be negative"],
     },
+    priceUnit: {
+      type: String,
+      enum: ["day", "night", "week", "month", "year"],
+      default: "month",
+    },
     minBedrooms: {
       type: Number,
       min: [0, "Minimum bedrooms cannot be negative"],

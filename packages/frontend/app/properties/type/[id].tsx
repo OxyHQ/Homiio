@@ -251,7 +251,7 @@ export default function PropertyTypePage() {
 
           <View style={styles.propertyFooter}>
             <Text style={styles.propertyPrice}>
-              {item.rent?.currency || '⊜'}{item.rent?.amount}/{item.rent?.paymentFrequency || 'month'}
+              {item.rent?.currency || '⊜'}{item.rent?.amount}/{item.priceUnit || item.rent?.paymentFrequency || 'month'}
             </Text>
             <View style={styles.ratingContainer}>
               <Ionicons name="star" size={14} color="#FFD700" />

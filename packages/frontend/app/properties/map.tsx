@@ -386,7 +386,7 @@ export default function PropertiesMapScreen() {
                             📍 {selectedProperty.location || 'Unknown location'}
                         </Text>
                         <Text style={styles.selectedPropertyPrice}>
-                            ${selectedProperty.rent.amount}/{selectedProperty.rent.paymentFrequency}
+                            ${selectedProperty.rent.amount}/{selectedProperty.priceUnit || selectedProperty.rent.paymentFrequency}
                         </Text>
                     </View>
                     <TouchableOpacity

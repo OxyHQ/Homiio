@@ -29,7 +29,9 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.0",
     "node-telegram-bot-api": "^0.66.0",
-    "validator": "^13.11.0"
+    "qrcode-terminal": "^0.11.0",
+    "validator": "^13.11.0",
+    "whatsapp-web.js": "^1.31.0"
   },
   "devDependencies": {
     "node-fetch": "^2.7.0",

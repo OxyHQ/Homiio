@@ -18,7 +18,7 @@ import { Header } from '@/components/Header';
 import { PropertyCard } from '@/components/PropertyCard';
 import Button from '@/components/Button';
 import LoadingTopSpinner from '@/components/LoadingTopSpinner';
-import { useUserProperties } from '@/hooks/useUserQueries';
+import { useUserProperties } from '@/hooks/usePropertyQueries';
 import { useOxy } from '@oxyhq/services';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';

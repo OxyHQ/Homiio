@@ -2,6 +2,10 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
+import { StatusBadge, type StatusType } from './ui/StatusBadge';
+
+// Type assertion for Ionicons compatibility
+const IconComponent = Ionicons as any;
 
 export type PaymentStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'refunded';
 export type PaymentType = 'rent' | 'deposit' | 'service' | 'fairCoin';
@@ -45,41 +49,6 @@ export function PaymentCard({
         });
     };
 
-    const getStatusInfo = (status: PaymentStatus) => {
-        switch (status) {
-            case 'pending':
-                return {
-                    icon: 'time-outline',
-                    color: '#FFC107',
-                    label: 'Pending',
-                };
-            case 'processing':
-                return {
-                    icon: 'reload-outline',
-                    color: '#2196F3',
-                    label: 'Processing',
-                };
-            case 'completed':
-                return {
-                    icon: 'checkmark-circle',
-                    color: '#4CAF50',
-                    label: 'Completed',
-                };
-            case 'failed':
-                return {
-                    icon: 'close-circle-outline',
-                    color: '#F44336',
-                    label: 'Failed',
-                };
-            case 'refunded':
-                return {
-                    icon: 'refresh-circle-outline',
-                    color: '#9E9E9E',
-                    label: 'Refunded',
-                };
-        }
-    };
-
     const getTypeInfo = (type: PaymentType) => {
         switch (type) {
             case 'rent':
@@ -105,7 +74,6 @@ export function PaymentCard({
         }
     };
 
-    const statusInfo = getStatusInfo(status);
     const typeInfo = getTypeInfo(type);
 
     return (
@@ -113,17 +81,14 @@ export function PaymentCard({
             <View style={styles.header}>
                 <View style={styles.typeContainer}>
                     <View style={styles.iconContainer}>
-                        <Ionicons name={typeInfo.icon as any} size={20} color={colors.primaryColor} />
+                        <IconComponent name={typeInfo.icon} size={20} color={colors.primaryColor} />
                     </View>
                     <View>
                         <Text style={styles.typeLabel}>{typeInfo.label}</Text>
                         <Text style={styles.dateText}>{formatDate(date)}</Text>
                     </View>
                 </View>
-                <View style={[styles.statusBadge, { backgroundColor: statusInfo.color }]}>
-                    <Ionicons name={statusInfo.icon as any} size={12} color="white" />
-                    <Text style={styles.statusText}>{statusInfo.label}</Text>
-                </View>
+                <StatusBadge status={status as StatusType} size="small" />
             </View>
 
             <Text style={styles.amount}>
@@ -132,7 +97,7 @@ export function PaymentCard({
 
             {propertyName && (
                 <View style={styles.propertyRow}>
-                    <Ionicons name="home-outline" size={16} color={colors.primaryDark_1} />
+                    <IconComponent name="home-outline" size={16} color={colors.primaryDark_1} />
                     <Text style={styles.propertyName} numberOfLines={1}>{propertyName}</Text>
                 </View>
             )}
@@ -167,14 +132,14 @@ export function PaymentCard({
                     style={styles.actionButton}
                     onPress={onViewPress}
                 >
-                    <Ionicons name="eye-outline" size={18} color={colors.primaryColor} />
+                    <IconComponent name="eye-outline" size={18} color={colors.primaryColor} />
                     <Text style={styles.actionText}>View Details</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={styles.actionButton}
                     onPress={onReceiptPress}
                 >
-                    <Ionicons name="document-text-outline" size={18} color={colors.primaryColor} />
+                    <IconComponent name="document-text-outline" size={18} color={colors.primaryColor} />
                     <Text style={styles.actionText}>Receipt</Text>
                 </TouchableOpacity>
             </View>
@@ -222,19 +187,6 @@ const styles = StyleSheet.create({
     dateText: {
         fontSize: 12,
         color: colors.primaryDark_1,
-    },
-    statusBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    statusText: {
-        color: 'white',
-        fontSize: 10,
-        fontWeight: '500',
-        marginLeft: 4,
     },
     amount: {
         fontSize: 24,

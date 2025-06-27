@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, ViewStyle, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
@@ -20,6 +20,7 @@ type PropertyCardProps = {
     location?: string;
     price?: number;
     currency?: string;
+    priceUnit?: 'day' | 'night' | 'week' | 'month' | 'year';
     type?: PropertyType;
     imageSource?: any;
     bedrooms?: number;
@@ -79,38 +80,23 @@ const getVariantStyles = (variant: PropertyCardVariant) => {
     switch (variant) {
         case 'compact':
             return {
-                imageHeight: 120,
-                titleLines: 1,
-                locationLines: 1,
+                imageHeight: 100,
                 showFeatures: false,
                 showTypeIcon: false,
                 showRating: false,
             };
         case 'featured':
             return {
-                imageHeight: 200,
-                titleLines: 2,
-                locationLines: 1,
-                showFeatures: true,
-                showTypeIcon: true,
-                showRating: true,
-            };
-        case 'saved':
-            return {
-                imageHeight: 160,
-                titleLines: 2,
-                locationLines: 1,
+                imageHeight: 140,
                 showFeatures: true,
                 showTypeIcon: true,
                 showRating: true,
             };
         default:
             return {
-                imageHeight: 160,
-                titleLines: 2,
-                locationLines: 1,
+                imageHeight: 120,
                 showFeatures: true,
-                showTypeIcon: true,
+                showTypeIcon: false,
                 showRating: true,
             };
     }
@@ -124,6 +110,7 @@ export function PropertyCard({
     location,
     price,
     currency = '$',
+    priceUnit = 'month',
     type,
     imageSource,
     bedrooms,
@@ -201,8 +188,28 @@ export function PropertyCard({
     // Get variant-specific styles
     const variantStyles = getVariantStyles(variant);
     const finalImageHeight = imageHeight || variantStyles.imageHeight;
-    const finalTitleLines = titleLines || variantStyles.titleLines;
-    const finalLocationLines = locationLines || variantStyles.locationLines;
+    const finalTitleLines = useMemo(() => {
+        if (titleLines !== undefined) return titleLines;
+
+        switch (variant) {
+            case 'compact':
+                return 1;
+            case 'featured':
+                return 2;
+            default:
+                return 2; // Allow 2 lines for better readability
+        }
+    }, [titleLines, variant]);
+    const finalLocationLines = useMemo(() => {
+        switch (variant) {
+            case 'compact':
+                return 1;
+            case 'featured':
+                return 2;
+            default:
+                return 1;
+        }
+    }, [variant]);
     const shouldShowFeatures = showFeatures && variantStyles.showFeatures;
     const shouldShowTypeIcon = showTypeIcon && variantStyles.showTypeIcon;
     const shouldShowRating = showRating && variantStyles.showRating;
@@ -235,7 +242,24 @@ export function PropertyCard({
                     resizeMode="cover"
                 />
 
-                {/* Save Button */}
+                {/* Save Button and Rating Container */}
+                {/* Rating - moved to top-left */}
+                {shouldShowRating && propertyData.rating && (
+                    <View style={styles.ratingBadge}>
+                        <Text style={styles.ratingBadgeText}>
+                            {propertyData.rating.toFixed(1)}
+                        </Text>
+                        <IconButton
+                            style={{ width: 10, height: 10 }}
+                            name="star"
+                            size={12}
+                            color="#FFD700"
+                            backgroundColor="transparent"
+                        />
+                    </View>
+                )}
+
+                {/* Save Button - moved to top-right */}
                 {showFavoriteButton && (
                     <SaveButton
                         isSaved={isPropertyFavorite}
@@ -289,37 +313,14 @@ export function PropertyCard({
                 variant === 'compact' ? styles.compactContent : null,
                 isFeatured ? styles.featuredContent : null,
             ]}>
-                {/* Header with Title and Price */}
-                <View style={styles.header}>
-                    <View style={styles.titleContainer}>
-                        <Text style={[
-                            styles.title,
-                            variant === 'compact' ? styles.compactTitle : null,
-                            isFeatured ? styles.featuredTitle : null,
-                        ]} numberOfLines={finalTitleLines}>
-                            {propertyData.title}
-                        </Text>
-                        {shouldShowTypeIcon && propertyData.type && (
-                            <IconButton
-                                name={getPropertyTypeIcon(propertyData.type)}
-                                size={14}
-                                color={colors.primaryDark_1}
-                                backgroundColor="transparent"
-                                style={styles.typeIcon}
-                            />
-                        )}
-                    </View>
-                    {showPrice && propertyData.price && (
-                        <Text style={[
-                            styles.price,
-                            variant === 'compact' ? styles.compactPrice : null,
-                            isFeatured ? styles.featuredPrice : null,
-                        ]}>
-                            {propertyData.currency}{propertyData.price.toLocaleString()}
-                            <Text style={styles.priceUnit}>/month</Text>
-                        </Text>
-                    )}
-                </View>
+                {/* Title - Airbnb style */}
+                <Text style={[
+                    styles.title,
+                    variant === 'compact' ? styles.compactTitle : null,
+                    isFeatured ? styles.featuredTitle : null,
+                ]} numberOfLines={finalTitleLines}>
+                    {propertyData.title}
+                </Text>
 
                 {/* Location */}
                 {showLocation && propertyData.location && (
@@ -330,26 +331,6 @@ export function PropertyCard({
                     ]} numberOfLines={finalLocationLines}>
                         {propertyData.location}
                     </Text>
-                )}
-
-                {/* Rating */}
-                {shouldShowRating && propertyData.rating && (
-                    <View style={styles.ratingContainer}>
-                        <IconButton
-                            name="star"
-                            size={14}
-                            color="#FFD700"
-                            backgroundColor="transparent"
-                        />
-                        <Text style={styles.ratingText}>
-                            {propertyData.rating.toFixed(1)}
-                        </Text>
-                        {propertyData.reviewCount && (
-                            <Text style={styles.reviewCount}>
-                                ({propertyData.reviewCount})
-                            </Text>
-                        )}
-                    </View>
                 )}
 
                 {/* Features */}
@@ -378,6 +359,20 @@ export function PropertyCard({
                         )}
                     </View>
                 )}
+
+                {/* Price - Airbnb style at bottom */}
+                {showPrice && propertyData.price && (
+                    <View style={styles.priceContainer}>
+                        <Text style={[
+                            styles.price,
+                            variant === 'compact' ? styles.compactPrice : null,
+                            isFeatured ? styles.featuredPrice : null,
+                        ]}>
+                            {propertyData.currency}{propertyData.price.toLocaleString()}
+                            <Text style={styles.priceUnit}> / {priceUnit}</Text>
+                        </Text>
+                    </View>
+                )}
             </View>
 
             {/* Footer Content */}
@@ -390,17 +385,20 @@ export function PropertyCard({
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: colors.primaryLight,
+        backgroundColor: '#ffffff',
         borderRadius: 12,
         overflow: 'hidden',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.08,
         shadowRadius: 8,
         elevation: 3,
         marginBottom: 12,
         width: '100%',
         maxWidth: 350,
+        height: 'auto',
+        flex: 1,
+        alignSelf: 'stretch',
     },
     featuredCard: {
         borderWidth: 1,
@@ -411,11 +409,11 @@ const styles = StyleSheet.create({
     },
     imageContainer: {
         position: 'relative',
-        height: 160,
+        height: 120,
         backgroundColor: '#f8f8f8',
     },
     featuredImageContainer: {
-        height: 200,
+        height: 140,
     },
     image: {
         width: '100%',
@@ -426,6 +424,14 @@ const styles = StyleSheet.create({
         top: 8,
         right: 8,
         zIndex: 2,
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderRadius: 20,
+        padding: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
     },
     ecoBadge: {
         position: 'absolute',
@@ -444,72 +450,43 @@ const styles = StyleSheet.create({
     },
     content: {
         padding: 10,
+        flex: 1,
+        justifyContent: 'space-between',
     },
     compactContent: {
-        padding: 6,
+        padding: 8,
     },
     featuredContent: {
-        padding: 14,
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: 3,
-    },
-    titleContainer: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        flex: 1,
-        marginRight: 6,
+        padding: 12,
     },
     title: {
         fontSize: 14,
         fontWeight: '600',
-        color: colors.primaryDark,
-        flex: 1,
+        color: '#222222',
         lineHeight: 18,
+        marginBottom: 3,
     },
     compactTitle: {
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: '500',
     },
     featuredTitle: {
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: '700',
-    },
-    typeIcon: {
-        marginLeft: 4,
-    },
-    price: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: colors.primaryDark,
-    },
-    compactPrice: {
-        fontSize: 12,
-    },
-    featuredPrice: {
-        fontSize: 16,
-    },
-    priceUnit: {
-        fontSize: 12,
-        fontWeight: '400',
-        color: colors.primaryDark_1,
     },
     location: {
         fontSize: 12,
-        color: colors.primaryDark_1,
-        marginBottom: 6,
+        color: '#717171',
+        marginBottom: 4,
         lineHeight: 16,
     },
     compactLocation: {
         fontSize: 11,
-        marginBottom: 4,
+        marginBottom: 3,
     },
     featuredLocation: {
-        fontSize: 14,
-        marginBottom: 10,
+        fontSize: 13,
+        marginBottom: 6,
     },
     ratingContainer: {
         flexDirection: 'row',
@@ -519,18 +496,19 @@ const styles = StyleSheet.create({
     ratingText: {
         fontSize: 12,
         fontWeight: '500',
-        color: colors.primaryDark,
+        color: '#222222',
         marginLeft: 3,
     },
     reviewCount: {
         fontSize: 12,
-        color: colors.primaryDark_1,
+        color: '#717171',
         marginLeft: 3,
     },
     features: {
         flexDirection: 'row',
         alignItems: 'center',
         flexWrap: 'wrap',
+        marginBottom: 6,
     },
     feature: {
         flexDirection: 'row',
@@ -538,16 +516,35 @@ const styles = StyleSheet.create({
     },
     featureText: {
         fontSize: 12,
-        color: colors.primaryDark_1,
+        color: '#717171',
     },
     featureSeparator: {
         fontSize: 12,
-        color: colors.primaryDark_1,
+        color: '#717171',
         marginHorizontal: 4,
     },
+    priceContainer: {
+        marginTop: 'auto',
+    },
+    price: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#222222',
+    },
+    compactPrice: {
+        fontSize: 13,
+    },
+    featuredPrice: {
+        fontSize: 15,
+    },
+    priceUnit: {
+        fontSize: 12,
+        fontWeight: '400',
+        color: '#717171',
+    },
     footer: {
-        marginTop: 10,
-        paddingTop: 10,
+        marginTop: 8,
+        paddingTop: 8,
         borderTopWidth: 1,
         borderTopColor: '#f0f0f0',
     },
@@ -564,5 +561,30 @@ const styles = StyleSheet.create({
         right: 0,
         bottom: 0,
         backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    },
+    ratingBadge: {
+        position: 'absolute',
+        top: 8,
+        left: 8,
+        zIndex: 2,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderRadius: 12,
+        paddingHorizontal: 6,
+        paddingVertical: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+        justifyContent: 'center',
+    },
+    ratingBadgeText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#222222',
+        marginRight: 1,
+        fontFamily: 'Phudu',
     },
 }); 

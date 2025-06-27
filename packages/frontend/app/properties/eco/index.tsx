@@ -6,24 +6,19 @@ import { colors } from '@/styles/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
+import { useEcoProperties } from '@/hooks/usePropertyListRedux';
+import type { Property } from '@/services/propertyService';
 
-type Property = {
-  id: string;
-  title: string;
-  location: string;
-  price: string;
-  energyRating: string;
-  features: string[];
-  rating: number;
-  imageUrl?: string;
-};
+// Type assertion for Ionicons compatibility with React 19
+const IconComponent = Ionicons as any;
 
 export default function EcoPropertiesPage() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [properties, setProperties] = useState<Property[]>([]);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
+
+  // Use Redux hook instead of local state
+  const { properties, loading, error, loadProperties } = useEcoProperties();
 
   const filterOptions = [
     { id: 'energy-a', label: t('Energy A'), icon: 'flash' },
@@ -33,75 +28,22 @@ export default function EcoPropertiesPage() {
   ];
 
   useEffect(() => {
-    // Simulating API call with a timeout
-    const fetchProperties = setTimeout(() => {
-      const mockProperties: Property[] = [
-        {
-          id: '1',
-          title: 'Eco-friendly Studio with Solar Panels',
-          location: 'Barcelona, Spain',
-          price: '⊜950/month',
-          energyRating: 'A',
-          features: ['Solar Panels', 'Recycled Materials', 'Energy Efficient'],
-          rating: 4.9
-        },
-        {
-          id: '2',
-          title: 'Green Co-Living House with Garden',
-          location: 'Berlin, Germany',
-          price: '⊜650/month',
-          energyRating: 'A+',
-          features: ['Community Garden', 'Rainwater Collection', 'Solar Heating'],
-          rating: 4.8
-        },
-        {
-          id: '3',
-          title: 'Sustainable Apartment near City Center',
-          location: 'Amsterdam, Netherlands',
-          price: '⊜1,100/month',
-          energyRating: 'A',
-          features: ['Green Roof', 'Triple Glazing', 'Smart Temperature Control'],
-          rating: 4.7
-        },
-        {
-          id: '4',
-          title: 'Energy-Positive Tiny House',
-          location: 'Stockholm, Sweden',
-          price: '⊜800/month',
-          energyRating: 'A+',
-          features: ['Net Energy Producer', 'Sustainable Materials', 'Minimal Footprint'],
-          rating: 4.9
-        },
-        {
-          id: '5',
-          title: 'Eco Co-Living Community Space',
-          location: 'Copenhagen, Denmark',
-          price: '⊜700/month',
-          energyRating: 'A',
-          features: ['Shared Electric Vehicles', 'Urban Farming', 'Zero Waste Policy'],
-          rating: 4.6
-        },
-      ];
-
-      setProperties(mockProperties);
-      setLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(fetchProperties);
-  }, []);
+    // Load eco properties on mount
+    loadProperties();
+  }, [loadProperties]);
 
   const getFilteredProperties = () => {
     if (!activeFilter) return properties;
 
     switch (activeFilter) {
       case 'energy-a':
-        return properties.filter(p => p.energyRating.startsWith('A'));
+        return properties.filter(p => p.energyStats?.current?.power && p.energyStats.current.power > 0);
       case 'solar':
-        return properties.filter(p => p.features.some(f => f.toLowerCase().includes('solar')));
+        return properties.filter(p => p.amenities?.some((f: string) => f.toLowerCase().includes('solar')));
       case 'garden':
-        return properties.filter(p => p.features.some(f => f.toLowerCase().includes('garden')));
+        return properties.filter(p => p.amenities?.some((f: string) => f.toLowerCase().includes('garden')));
       case 'coliving':
-        return properties.filter(p => p.title.toLowerCase().includes('co-living'));
+        return properties.filter(p => p.type === 'room' || p.housingType === 'public');
       default:
         return properties;
     }
@@ -120,8 +62,8 @@ export default function EcoPropertiesPage() {
       ]}
       onPress={() => handleFilterPress(option.id)}
     >
-      <Ionicons
-        name={option.icon as any}
+      <IconComponent
+        name={option.icon}
         size={18}
         color={activeFilter === option.id ? 'white' : colors.COLOR_BLACK}
       />
@@ -136,46 +78,51 @@ export default function EcoPropertiesPage() {
     </TouchableOpacity>
   );
 
-  const renderPropertyItem = ({ item }: { item: Property }) => (
-    <TouchableOpacity
-      style={styles.propertyCard}
-      onPress={() => router.push(`/properties/${item.id}`)}
-    >
-      <View style={styles.propertyImagePlaceholder}>
-        <Ionicons name="leaf" size={30} color="green" />
-        <View style={styles.energyRatingBadge}>
-          <Text style={styles.energyRatingText}>{item.energyRating}</Text>
-        </View>
-      </View>
+  const renderPropertyItem = ({ item }: { item: Property }) => {
+    // Generate title from property data
+    const title = `${item.type.charAt(0).toUpperCase() + item.type.slice(1)} in ${item.address.city}`;
 
-      <View style={styles.propertyContent}>
-        <View style={styles.propertyHeader}>
-          <Text style={styles.propertyTitle} numberOfLines={1}>{item.title}</Text>
-          <View style={styles.ratingContainer}>
-            <Ionicons name="star" size={14} color="#FFD700" />
-            <Text style={styles.ratingText}>{item.rating}</Text>
+    return (
+      <TouchableOpacity
+        style={styles.propertyCard}
+        onPress={() => router.push(`/properties/${item._id || item.id}`)}
+      >
+        <View style={styles.propertyImagePlaceholder}>
+          <IconComponent name="leaf" size={30} color="green" />
+          <View style={styles.energyRatingBadge}>
+            <Text style={styles.energyRatingText}>A</Text>
           </View>
         </View>
 
-        <Text style={styles.propertyLocation}>
-          <Ionicons name="location-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} /> {item.location}
-        </Text>
-
-        <View style={styles.propertyFeatures}>
-          {item.features.slice(0, 2).map((feature, index) => (
-            <View key={index} style={styles.featureBadge}>
-              <Text style={styles.featureText}>{feature}</Text>
+        <View style={styles.propertyContent}>
+          <View style={styles.propertyHeader}>
+            <Text style={styles.propertyTitle} numberOfLines={1}>{title}</Text>
+            <View style={styles.ratingContainer}>
+              <IconComponent name="star" size={14} color="#FFD700" />
+              <Text style={styles.ratingText}>4.5</Text>
             </View>
-          ))}
-          {item.features.length > 2 && (
-            <Text style={styles.moreFeatures}>+{item.features.length - 2}</Text>
-          )}
-        </View>
+          </View>
 
-        <Text style={styles.propertyPrice}>{item.price}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+          <Text style={styles.propertyLocation}>
+            <IconComponent name="location-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} /> {item.address.city}, {item.address.country}
+          </Text>
+
+          <View style={styles.propertyFeatures}>
+            {(item.amenities || []).slice(0, 2).map((feature: string, index: number) => (
+              <View key={index} style={styles.featureBadge}>
+                <Text style={styles.featureText}>{feature}</Text>
+              </View>
+            ))}
+            {(item.amenities || []).length > 2 && (
+              <Text style={styles.moreFeatures}>+{(item.amenities || []).length - 2}</Text>
+            )}
+          </View>
+
+          <Text style={styles.propertyPrice}>⊜{item.rent?.amount || 0}/month</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -197,7 +144,7 @@ export default function EcoPropertiesPage() {
             </Text>
           </View>
           <View style={styles.ecoBannerIcon}>
-            <Ionicons name="leaf" size={40} color="white" />
+            <IconComponent name="leaf" size={40} color="white" />
           </View>
         </View>
 
@@ -218,11 +165,11 @@ export default function EcoPropertiesPage() {
           <FlatList
             data={getFilteredProperties()}
             renderItem={renderPropertyItem}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => (item._id || item.id || '').toString()}
             contentContainerStyle={styles.listContainer}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Ionicons name="leaf" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
+                <IconComponent name="leaf" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
                 <Text style={styles.emptyText}>
                   {t("No eco properties match your filters")}
                 </Text>
@@ -248,14 +195,14 @@ export default function EcoPropertiesPage() {
 
           <View style={styles.infoItem}>
             <View style={styles.infoIcon}>
-              <Ionicons name="water-outline" size={22} color="green" />
+              <IconComponent name="water-outline" size={22} color="green" />
             </View>
             <Text style={styles.infoText}>{t("Water conservation features")}</Text>
           </View>
 
           <View style={styles.infoItem}>
             <View style={styles.infoIcon}>
-              <Ionicons name="leaf-outline" size={22} color="green" />
+              <IconComponent name="leaf-outline" size={22} color="green" />
             </View>
             <Text style={styles.infoText}>{t("Sustainably sourced materials")}</Text>
           </View>

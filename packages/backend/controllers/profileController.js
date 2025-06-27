@@ -945,6 +945,15 @@ class ProfileController {
     try {
       const { profileId } = req.params;
       
+      console.log(`[getProfileById] Called for profileId: ${profileId}`, {
+        hasUser: !!req.user,
+        userId: req.userId,
+        userFields: req.user ? Object.keys(req.user) : [],
+        headers: {
+          authorization: req.headers.authorization ? 'present' : 'missing'
+        }
+      });
+      
       if (!profileId) {
         return res.status(400).json(
           errorResponse("Profile ID is required", "PROFILE_ID_REQUIRED")
@@ -958,6 +967,12 @@ class ProfileController {
           errorResponse("Profile not found", "PROFILE_NOT_FOUND")
         );
       }
+
+      console.log(`[getProfileById] Found profile: ${profile._id}`, {
+        profileType: profile.profileType,
+        isActive: profile.isActive,
+        oxyUserId: profile.oxyUserId
+      });
 
       res.json(
         successResponse(profile, "Profile retrieved successfully")
