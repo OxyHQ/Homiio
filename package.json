@@ -34,6 +34,7 @@
   "license": "ISC",
   "dependencies": {
     "@babel/plugin-proposal-export-namespace-from": "^7.18.9",
+    "@oxyhq/services": "5.4.4",
     "expo-linear-gradient": "^14.1.5",
     "sonner-native": "^0.21.0"
   }

@@ -9,7 +9,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build-web": "expo export --platform web --output-dir dist",
-    "build-web:prod": "npm install @oxyhq/services@latest && expo export --platform web --output-dir dist",
+    "build-web:prod": "expo export --platform web --output-dir dist",
     "test": "jest --watchAll",
     "lint": "expo lint"
   },
@@ -20,7 +20,6 @@
     "@ai-sdk/react": "^1.2.12",
     "@bitdrift/react-native": "^0.6.13",
     "@expo/vector-icons": "^14.1.0",
-    "@oxyhq/services": "^5.4.1",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/slider": "^4.5.7",
     "@react-navigation/bottom-tabs": "^7.3.17",
