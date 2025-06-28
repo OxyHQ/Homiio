@@ -31,8 +31,13 @@ const app = express();
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
+    console.log('CORS Origin Check:', origin);
+    
     // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('CORS: Allowing request with no origin');
+      return callback(null, true);
+    }
     
     const allowedOrigins = [
       'https://homiio.com',
@@ -47,17 +52,20 @@ const corsOptions = {
     
     // In development, allow all localhost origins
     if (config.environment === 'development') {
-      if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      if (origin && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
+        console.log('CORS: Allowing development origin:', origin);
         return callback(null, true);
       }
     }
     
     if (allowedOrigins.includes(origin)) {
+      console.log('CORS: Allowing whitelisted origin:', origin);
       return callback(null, true);
     }
     
-    const msg = `The CORS policy for this origin doesn't allow access from the particular origin: ${origin}`;
-    return callback(new Error(msg), false);
+    console.log('CORS: Rejecting origin:', origin);
+    // Don't throw an error, just reject silently
+    return callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
