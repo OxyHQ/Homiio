@@ -1,12 +1,13 @@
+// --- 1. Organized Imports ---
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { ScrollView, Keyboard, LogBox, Platform } from "react-native";
+import { ScrollView, Keyboard, LogBox, Platform, View, StyleSheet } from "react-native";
 import * as SplashScreen from 'expo-splash-screen';
 import { Provider } from 'react-redux';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { useFonts } from "expo-font";
 import { Slot } from 'expo-router';
 import store from '@/store/store';
-import { useMediaQuery } from 'react-responsive'
+import { useMediaQuery } from 'react-responsive';
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 import { SideBar } from '@/components/SideBar';
@@ -25,9 +26,7 @@ import { initReactI18next, I18nextProvider, useTranslation } from "react-i18next
 import enUS from "@/locales/en.json";
 import esES from "@/locales/es.json";
 import caES from "@/locales/ca-ES.json";
-import { View, StyleSheet, } from 'react-native';
 import { BottomBar } from "@/components/BottomBar";
-import { initialWindowMetrics } from 'react-native-safe-area-context';
 import { MenuProvider } from 'react-native-popup-menu';
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import WebSplashScreen from "@/components/WebSplashScreen";
@@ -36,12 +35,9 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import { ProfileProvider } from '@/context/ProfileContext';
 import { OxyLogo, OxyProvider, OxyServices, OxySignInButton, useOxy } from '@oxyhq/services';
 import { generateWebsiteStructuredData, injectStructuredData } from '@/utils/structuredData';
-
 import "../styles/global.css";
 
-// Keep the splash screen visible while we fetch resources
-SplashScreen.preventAutoHideAsync();
-
+// --- 2. i18n Initialization ---
 i18n.use(initReactI18next).init({
   resources: {
     "en-US": { translation: enUS },
@@ -50,52 +46,47 @@ i18n.use(initReactI18next).init({
   },
   lng: "en-US",
   fallbackLng: "en-US",
-  interpolation: {
-    escapeValue: false,
-  },
+  interpolation: { escapeValue: false },
 }).catch(error => {
   console.error("Failed to initialize i18n:", error);
 });
 
+// --- 3. Styles (outside component) ---
+const getStyles = (isScreenNotMobile: boolean) => StyleSheet.create({
+  container: {
+    maxWidth: 1800,
+    width: '100%',
+    paddingHorizontal: isScreenNotMobile ? 10 : 0,
+    marginHorizontal: 'auto',
+    justifyContent: 'space-between',
+    flexDirection: isScreenNotMobile ? 'row' : 'column',
+    ...(!isScreenNotMobile && { flex: 1 }),
+  },
+  mainContentWrapper: {
+    marginVertical: isScreenNotMobile ? 20 : 0,
+    flex: isScreenNotMobile ? 2.2 : 1,
+    backgroundColor: colors.primaryLight,
+    borderRadius: isScreenNotMobile ? 35 : 0,
+  },
+  contentContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+});
+
+// --- 4. RootLayout Component ---
 export default function RootLayout() {
   const [appIsReady, setAppIsReady] = useState(false);
   const [splashState, setSplashState] = useState({
     initializationComplete: false,
-    startFade: false
+    startFade: false,
   });
   const { i18n } = useTranslation();
   const colorScheme = useColorScheme();
+  const isScreenNotMobile = useMediaQuery({ minWidth: 500 });
+  const styles = useMemo(() => getStyles(isScreenNotMobile), [isScreenNotMobile]);
 
-  // Set default document title and SEO for web
-  useSEO({
-    title: 'Ethical Housing Platform',
-    description: 'Find your ethical home with transparent rentals, fair agreements, and verified properties. Join Homiio for a better housing experience.',
-    keywords: 'housing, rental, property, ethical housing, transparent rentals, verified properties, fair agreements',
-    type: 'website'
-  });
-
-  // Inject website structured data
-  useEffect(() => {
-    if (Platform.OS === 'web') {
-      const websiteData = generateWebsiteStructuredData();
-      injectStructuredData(websiteData);
-    }
-  }, []);
-
-  // Initialize OxyServices - memoize to prevent recreation
-  const oxyServices = useMemo(() => new OxyServices({
-    baseURL: process.env.NODE_ENV === 'production'
-      ? 'https://api.oxy.so'
-      : 'http://localhost:3001',
-  }), []);
-
-  // Handle user authentication - memoized callback
-  const handleAuthenticated = useCallback((user: any) => {
-    console.log('User authenticated:', user);
-    // We'll just log the authentication event here
-    // The bottom sheet will be closed by the OxyProvider internally
-  }, []);
-
+  // --- Font Loading ---
   const [loaded] = useFonts({
     "Inter-Black": require("@/assets/fonts/inter/Inter-Black.otf"),
     "Inter-Bold": require("@/assets/fonts/inter/Inter-Bold.otf"),
@@ -109,8 +100,8 @@ export default function RootLayout() {
     "Phudu": require("@/assets/fonts/Phudu-VariableFont_wght.ttf"),
   });
 
+  // --- Keyboard State ---
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-
   useEffect(() => {
     const show = Keyboard.addListener("keyboardDidShow", () => setKeyboardVisible(true));
     const hide = Keyboard.addListener("keyboardDidHide", () => setKeyboardVisible(false));
@@ -120,18 +111,41 @@ export default function RootLayout() {
     };
   }, []);
 
-  // Optimized initialization function
+  // --- SEO and Structured Data (Web only) ---
+  useSEO({
+    title: 'Ethical Housing Platform',
+    description: 'Find your ethical home with transparent rentals, fair agreements, and verified properties. Join Homiio for a better housing experience.',
+    keywords: 'housing, rental, property, ethical housing, transparent rentals, verified properties, fair agreements',
+    type: 'website',
+  });
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      const websiteData = generateWebsiteStructuredData();
+      injectStructuredData(websiteData);
+    }
+  }, []);
+
+  // --- OxyServices Memoization ---
+  const oxyServices = useMemo(() => new OxyServices({
+    baseURL: process.env.NODE_ENV === 'production'
+      ? 'https://api.oxy.so'
+      : 'http://localhost:3001',
+  }), []);
+
+  // --- Auth Handlers ---
+  const handleAuthenticated = useCallback((user: any) => {
+    console.log('User authenticated:', user);
+  }, []);
+
+  // --- App Initialization ---
   const initializeApp = useCallback(async () => {
     try {
       if (loaded) {
         await setupNotifications();
         const hasPermission = await requestNotificationPermissions();
-
         if (hasPermission) {
           await scheduleDemoNotification();
         }
-
-        // Single state update instead of multiple
         setSplashState(prev => ({ ...prev, initializationComplete: true }));
         await SplashScreen.hideAsync();
       }
@@ -140,77 +154,46 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
-  // Memoized splash fade completion handler
+  // --- Splash Fade Handler ---
   const handleSplashFadeComplete = useCallback(() => {
     setAppIsReady(true);
   }, []);
 
+  // --- Effects: App Initialization, Body Styling ---
   useEffect(() => {
     initializeApp();
-
-    // Change overflow style to visible only on web
     if (typeof document !== 'undefined') {
       document.body.style.overflow = 'visible';
       document.body.style.backgroundColor = colors.COLOR_BACKGROUND;
     }
   }, [initializeApp]);
 
-  // Start fade immediately when everything is loaded
+  // --- Effects: Splash Fade Trigger ---
   useEffect(() => {
     if (loaded && splashState.initializationComplete && !splashState.startFade) {
       setSplashState(prev => ({ ...prev, startFade: true }));
     }
   }, [loaded, splashState.initializationComplete, splashState.startFade]);
 
-  const isScreenNotMobile = useMediaQuery({ minWidth: 500 })
-
-  // Memoize styles to prevent recreation - MUST be before any conditional returns
-  const styles = useMemo(() => StyleSheet.create({
-    container: {
-      maxWidth: 1800,
-      width: '100%',
-      paddingHorizontal: isScreenNotMobile ? 10 : 0,
-      marginHorizontal: 'auto',
-      justifyContent: 'space-between',
-      flexDirection: isScreenNotMobile ? 'row' : 'column',
-      ...(!isScreenNotMobile && {
-        flex: 1,
-      }),
-    },
-    mainContentWrapper: {
-      marginVertical: isScreenNotMobile ? 20 : 0,
-      flex: isScreenNotMobile ? 2.2 : 1,
-      backgroundColor: colors.primaryLight,
-      borderRadius: isScreenNotMobile ? 35 : 0,
-    },
-    contentContainer: {
-      flex: 1,
-      alignItems: 'center',
-    },
-  }), [isScreenNotMobile]);
-
-  if (!loaded) {
+  // --- Early Returns: Loading/Splash ---
+  if (!loaded) return null;
+  if (!appIsReady) {
+    if (Platform.OS === 'web') {
+      return <WebSplashScreen onFadeComplete={handleSplashFadeComplete} startFade={splashState.startFade} />;
+    }
     return null;
   }
 
-  if (!appIsReady) {
-    // check if we are in web
-    if (Platform.OS === 'web') {
-      return <WebSplashScreen onFadeComplete={handleSplashFadeComplete} startFade={splashState.startFade} />;
-    } else {
-      return null;
-    }
-  }
-
+  // --- Main Render ---
   return (
     <OxyProvider
       oxyServices={oxyServices}
       initialScreen="SignIn"
-      autoPresent={false} // Don't auto-present, we'll control it with the button
+      autoPresent={false}
       onClose={() => console.log('Sheet closed')}
       onAuthenticated={handleAuthenticated}
-      onAuthStateChange={(user) => console.log('Auth state changed:', user?.username || 'logged out')}
-      storageKeyPrefix="oxy_example" // Prefix for stored auth tokens
+      onAuthStateChange={user => console.log('Auth state changed:', user?.username || 'logged out')}
+      storageKeyPrefix="oxy_example"
       theme="light"
     >
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
@@ -222,7 +205,7 @@ export default function RootLayout() {
                   <View style={styles.container}>
                     <SideBar />
                     <View style={styles.mainContentWrapper}>
-                      <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0, }} />
+                      <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0 }} />
                       <Slot />
                     </View>
                     <RightBar />
