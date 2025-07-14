@@ -1,4 +1,58 @@
-const config = {
+export interface Config {
+  environment: string;
+  port: number | string;
+  oxy: {
+    baseURL: string;
+  };
+  openai: {
+    apiKey?: string;
+    organization?: string;
+    model: string;
+  };
+  telegram: {
+    botToken?: string;
+    enabled: boolean;
+    defaultGroup: {
+      id: string;
+      language: string;
+      name: string;
+    };
+    groups: Record<string, { language: string; name: string }>;
+  };
+  database: {
+    url: string;
+    options: {
+      maxPoolSize: number;
+      serverSelectionTimeoutMS: number;
+      socketTimeoutMS: number;
+    };
+  };
+  jwt: {
+    secret: string;
+    expiresIn: string;
+    refreshSecret: string;
+    refreshExpiresIn: string;
+  };
+  redis: {
+    url: string;
+    ttl: number;
+  };
+  email: {
+    service: string;
+    user?: string;
+    password?: string;
+  };
+  rateLimit: {
+    windowMs: number;
+    max: number;
+  };
+  logging: {
+    level: string;
+    file: string;
+  };
+}
+
+const config: Config = {
   // Environment
   environment: process.env.NODE_ENV || 'development',
   port: process.env.PORT || 4000,
@@ -84,4 +138,4 @@ const config = {
   },
 };
 
-module.exports = config;
+export default config;

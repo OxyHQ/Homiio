@@ -5,15 +5,14 @@
   "license": "ISC",
   "author": "",
   "type": "commonjs",
-  "main": "server.js",
+  "main": "server.ts",
   "scripts": {
-    "start": "node server.ts",
-    "dev": "nodemon server.ts",
-    "build": "npm install",
-    "migrate": "node scripts/migrate.js",
-    "migrate:dev": "NODE_ENV=development node scripts/migrate.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "test:ai": "node test-ai.js"
+    "start": "ts-node --transpile-only server.ts",
+    "dev": "nodemon --watch \"**/*.ts\" --exec ts-node --transpile-only server.ts",
+    "build": "tsc",
+    "migrate": "ts-node --transpile-only scripts/migrate.ts",
+    "migrate:dev": "NODE_ENV=development ts-node --transpile-only scripts/migrate.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.3.22",
@@ -34,6 +33,8 @@
   },
   "devDependencies": {
     "node-fetch": "^2.7.0",
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
   }
 }

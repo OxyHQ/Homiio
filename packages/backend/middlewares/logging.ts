@@ -3,9 +3,10 @@
  * Request logging and application logging utilities
  */
 
-const fs = require('fs');
-const path = require('path');
-const config = require('../config');
+import fs from 'fs';
+import path from 'path';
+import { Request, Response, NextFunction } from 'express';
+import config from '../config';
 
 /**
  * Ensure logs directory exists
@@ -21,19 +22,19 @@ const ensureLogDirectory = () => {
  * Logger utility
  */
 const logger = {
-  info: (message, meta = {}) => {
+  info: (message: string, meta: Record<string, unknown> = {}): void => {
     log('INFO', message, meta);
   },
   
-  warn: (message, meta = {}) => {
+  warn: (message: string, meta: Record<string, unknown> = {}): void => {
     log('WARN', message, meta);
   },
   
-  error: (message, meta = {}) => {
+  error: (message: string, meta: Record<string, unknown> = {}): void => {
     log('ERROR', message, meta);
   },
   
-  debug: (message, meta = {}) => {
+  debug: (message: string, meta: Record<string, unknown> = {}): void => {
     if (config.environment === 'development') {
       log('DEBUG', message, meta);
     }
@@ -43,7 +44,7 @@ const logger = {
 /**
  * Core logging function
  */
-const log = (level, message, meta = {}) => {
+const log = (level: string, message: string, meta: Record<string, unknown> = {}): void => {
   const timestamp = new Date().toISOString();
   const logEntry = {
     timestamp,
@@ -84,7 +85,7 @@ const log = (level, message, meta = {}) => {
 /**
  * Request logging middleware
  */
-const requestLogger = (req, res, next) => {
+const requestLogger = (req: Request, res: Response, next: NextFunction): void => {
   const start = Date.now();
   const userAgent = req.get('User-Agent') || '';
   const ip = req.ip || req.connection.remoteAddress;
@@ -127,7 +128,7 @@ const requestLogger = (req, res, next) => {
 /**
  * Error logging middleware
  */
-const errorLogger = (err, req, res, next) => {
+const errorLogger = (err: any, req: Request, res: Response, next: NextFunction): void => {
   logger.error('Request error', {
     method: req.method,
     url: req.originalUrl,
@@ -261,7 +262,7 @@ const businessLogger = {
   }
 };
 
-module.exports = {
+export {
   logger,
   requestLogger,
   errorLogger,

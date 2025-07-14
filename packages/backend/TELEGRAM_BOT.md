@@ -49,7 +49,7 @@ TELEGRAM_GROUP_DEFAULT=-1002750613848
 
 ### 4. Language Configuration
 
-Each group is configured with a specific language in `config.js`:
+Each group is configured with a specific language in `config.ts`:
 
 ```javascript
 groups: {
@@ -93,7 +93,7 @@ To get Telegram group IDs:
 
 ### City-to-Group Mapping
 
-The system maps cities to Telegram groups based on the configuration in `config.js`. You can customize the mappings:
+The system maps cities to Telegram groups based on the configuration in `config.ts`. You can customize the mappings:
 
 ```javascript
 groupMappings: {
@@ -405,7 +405,7 @@ Check your server logs for messages like:
 
 ### Message Templates
 
-Customize message format in `services/telegramService.js`:
+Customize message format in `services/telegramService.ts`:
 
 ```javascript
 formatPropertyMessage(property) {
@@ -416,7 +416,7 @@ formatPropertyMessage(property) {
 
 ### City Mappings
 
-Add custom city mappings in `config.js`:
+Add custom city mappings in `config.ts`:
 
 ```javascript
 groupMappings: {

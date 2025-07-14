@@ -1,18 +1,19 @@
 // Load environment variables first
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
 
-const express = require('express');
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const { version } = require('./package.json');
+import express, { Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import bodyParser from 'body-parser';
+import { version } from './package.json';
 
 // Import our modules
-const config = require('./config');
-const routes = require('./routes');
-const logging = require('./middlewares/logging');
-const { notFound, errorHandler } = require('./middlewares/errorHandler');
-const database = require('./database/connection');
-const oxyServices = require('./services/oxyServices');
+import config from './config';
+import routes from './routes';
+import * as logging from './middlewares/logging';
+import { notFound, errorHandler } from './middlewares/errorHandler';
+import database from './database/connection';
+import oxyServices from './services/oxyServices';
 
 // Initialize database connection
 async function initializeDatabase() {
@@ -100,7 +101,7 @@ const authenticateToken = oxyServices.createAuthenticateTokenMiddleware({
 });
 
 // Custom middleware to extract Oxy user ID with better error handling
-const extractOxyUserId = (req, res, next) => {
+const extractOxyUserId = (req: Request, res: Response, next: NextFunction) => {
   try {
     if (req.user) {
       req.userId = req.user.id || req.user._id;
@@ -153,7 +154,7 @@ app.get('/health', async (req, res) => {
 });
 
 // Mount public API routes (no authentication required)
-const publicRoutes = require('./routes/public');
+import publicRoutes from './routes/public';
 app.use('/api', publicRoutes());
 
 // Mount authenticated API routes
@@ -285,7 +286,6 @@ async function startServer() {
 startServer();
 
 // Export app for testing purposes
-module.exports = {
-  app
-};
+export { app };
+export default app;
 

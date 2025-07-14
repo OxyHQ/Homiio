@@ -3,18 +3,23 @@
  * Central error handling for the application
  */
 
-const config = require('../config');
+import { Request, Response, NextFunction } from 'express';
+import config from '../config';
 
 /**
  * Custom error class for application errors
  */
 class AppError extends Error {
-  constructor(message, statusCode = 500, code = null) {
+  statusCode: number;
+  code?: string | null;
+  isOperational: boolean;
+
+  constructor(message: string, statusCode = 500, code: string | null = null) {
     super(message);
     this.statusCode = statusCode;
     this.code = code;
     this.isOperational = true;
-    
+
     Error.captureStackTrace(this, this.constructor);
   }
 }
@@ -22,7 +27,7 @@ class AppError extends Error {
 /**
  * Not found middleware (404 handler)
  */
-const notFound = (req, res, next) => {
+const notFound = (req: Request, res: Response, next: NextFunction): void => {
   const error = new AppError(`Resource not found - ${req.originalUrl}`, 404, 'NOT_FOUND');
   next(error);
 };
@@ -30,7 +35,7 @@ const notFound = (req, res, next) => {
 /**
  * Global error handler
  */
-const errorHandler = (err, req, res, next) => {
+const errorHandler = (err: any, req: Request, res: Response, next: NextFunction): void => {
   let error = { ...err };
   error.message = err.message;
 
@@ -152,14 +157,16 @@ const errorHandler = (err, req, res, next) => {
  * Async error wrapper
  * Wraps async functions to catch errors and pass to next()
  */
-const asyncHandler = (fn) => (req, res, next) => {
-  Promise.resolve(fn(req, res, next)).catch(next);
-};
+const asyncHandler =
+  (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) =>
+  (req: Request, res: Response, next: NextFunction): void => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
 
 /**
  * Validation error formatter
  */
-const formatValidationError = (errors) => {
+const formatValidationError = (errors: Array<{ param: string; msg: string; value: any; location: string }>) => {
   return errors.map(err => ({
     field: err.param,
     message: err.msg,
@@ -171,7 +178,7 @@ const formatValidationError = (errors) => {
 /**
  * Success response formatter
  */
-const successResponse = (data, message = 'Success', meta = {}) => {
+const successResponse = (data: unknown, message = 'Success', meta: Record<string, unknown> = {}) => {
   return {
     success: true,
     message,
@@ -186,7 +193,13 @@ const successResponse = (data, message = 'Success', meta = {}) => {
 /**
  * Pagination response formatter
  */
-const paginationResponse = (data, page, limit, total, message = 'Success') => {
+const paginationResponse = (
+  data: unknown,
+  page: number,
+  limit: number,
+  total: number,
+  message = 'Success'
+) => {
   const totalPages = Math.ceil(total / limit);
   const hasNext = page < totalPages;
   const hasPrev = page > 1;
@@ -211,7 +224,7 @@ const paginationResponse = (data, page, limit, total, message = 'Success') => {
   };
 };
 
-module.exports = {
+export {
   AppError,
   notFound,
   errorHandler,

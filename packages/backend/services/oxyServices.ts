@@ -3,8 +3,8 @@
  * This module provides a centralized OxyServices instance for use across the application
  */
 
-const { OxyServices } = require('@oxyhq/services/core');
-const config = require('../config');
+import { OxyServices } from '@oxyhq/services/core';
+import config from '../config';
 
 // Initialize OxyServices with your Oxy API URL
 const oxyServices = new OxyServices({
@@ -13,4 +13,4 @@ const oxyServices = new OxyServices({
 
 console.log('[OXY] Services initialized with baseURL:', config.oxy.baseURL);
 
-module.exports = oxyServices; 
+export default oxyServices;
