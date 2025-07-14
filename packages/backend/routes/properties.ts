@@ -3,14 +3,15 @@
  * API routes for property management
  */
 
-const express = require("express");
-const propertyController = require("../controllers/propertyController");
-const profileController = require("../controllers/profileController");
-const { validation, asyncHandler } = require("../middlewares");
-const performanceMonitor = require("../middlewares/performance");
+import express from "express";
+import { validation, asyncHandler } from "../middlewares";
+import performanceMonitor from "../middlewares/performance";
 
-module.exports = function () {
+export default function () {
   const router = express.Router();
+
+  const propertyController = require("../controllers/propertyController");
+  const profileController = require("../controllers/profileController");
 
   // Performance monitoring for all property routes
   router.use(performanceMonitor);

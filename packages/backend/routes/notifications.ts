@@ -3,8 +3,9 @@
  * API routes for notification management
  */
 
-const express = require('express');
-const { notificationController } = require('../controllers');
+import controllers from '../controllers';
+import express from 'express';
+const { notificationController } = controllers;
 const { validation, asyncHandler } = require('../middlewares');
 
 module.exports = function() {

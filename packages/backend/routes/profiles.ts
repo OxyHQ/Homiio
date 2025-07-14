@@ -3,12 +3,12 @@
  * API routes for profile management
  */
 
-const express = require("express");
+import express from "express";
 const profileController = require("../controllers/profileController");
-const { asyncHandler } = require("../middlewares");
-const performanceMonitor = require("../middlewares/performance");
+import { asyncHandler } from "../middlewares";
+import performanceMonitor from "../middlewares/performance";
 
-module.exports = function () {
+export default function () {
   const router = express.Router();
 
   // Performance monitoring for all profile routes

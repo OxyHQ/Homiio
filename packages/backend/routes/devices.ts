@@ -3,11 +3,11 @@
  * API routes for IoT device management
  */
 
-const express = require('express');
+import express from 'express';
+import { asyncHandler } from '../middlewares';
 const deviceController = require('../controllers/deviceController');
-const { asyncHandler } = require('../middlewares');
 
-module.exports = function() {
+export default function() {
   const router = express.Router();
 
   // Device CRUD operations

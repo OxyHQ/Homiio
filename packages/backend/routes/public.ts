@@ -7,9 +7,9 @@ const express = require('express');
 const propertyController = require('../controllers/propertyController');
 const telegramController = require('../controllers/telegramController');
 const { asyncHandler } = require('../middlewares');
-const performanceMonitor = require('../middlewares/performance');
+const performanceMonitor = require('../middlewares/performance').default;
 
-module.exports = function () {
+export default function () {
   const router = express.Router();
 
   // Performance monitoring for all routes

@@ -3,8 +3,9 @@
  * API routes for lease management
  */
 
-const express = require('express');
-const { leaseController } = require('../controllers');
+import controllers from '../controllers';
+import express from 'express';
+const { leaseController } = controllers;
 const { validation, asyncHandler } = require('../middlewares');
 
 module.exports = function() {

@@ -4,55 +4,10 @@
  */
 
 const Profile = require('../models').Profile;
-const oxyServices = require('../services/oxyServices');
+// Remove oxyServices and fetchOxyUserData related code
+// const oxyServices = require('../services/oxyServices');
 
-// Helper function to fetch Oxy user data
-const fetchOxyUserData = async (oxyUserId) => {
-  if (!oxyUserId) {
-    console.warn('[OXY] Missing oxyUserId, cannot fetch user data');
-    return null;
-  }
-  
-  if (!oxyServices || !oxyServices.users) {
-    console.error('[OXY] Oxy services not properly initialized, cannot fetch user data');
-    console.error('[OXY] oxyServices:', oxyServices);
-    console.error('[OXY] oxyServices.users:', oxyServices?.users);
-    return null;
-  }
-  
-  try {
-    console.log('[OXY] Fetching user data for oxyUserId:', oxyUserId);
-    console.log('[OXY] Using OxyServices baseURL:', oxyServices.baseURL);
-    console.log('[OXY] Available methods on oxyServices.users:', Object.keys(oxyServices.users));
-    
-    const userData = await oxyServices.users.getUser(oxyUserId);
-    console.log('[OXY] Received user data:', userData);
-    
-    if (!userData) {
-      console.warn('[OXY] No user data returned for oxyUserId:', oxyUserId);
-      return null;
-    }
-    
-    const enrichedData = {
-      fullName: userData.name || userData.fullName || 'User',
-      bio: userData.bio || '',
-      avatar: userData.avatar || null,
-      username: userData.username || '',
-      email: userData.email || '',
-      location: userData.location || '',
-      website: userData.website || '',
-      createdAt: userData.createdAt || null,
-      stats: userData.stats || {}
-    };
-    
-    console.log('[OXY] Enriched user data:', enrichedData);
-    return enrichedData;
-  } catch (error) {
-    console.error('[OXY] Error fetching Oxy user data for', oxyUserId, ':', error.message);
-    console.error('[OXY] Full error:', error);
-    return null;
-  }
-};
+// Remove fetchOxyUserData helper function
 
 // Get all roommate profiles with enriched Oxy user data
 const getRoommateProfiles = async (req, res) => {
@@ -168,60 +123,9 @@ const getRoommateProfiles = async (req, res) => {
       console.log('Current user does not have roommate preferences');
     }
 
-    // Enrich profiles with Oxy user data
-    console.log('Enriching profiles with Oxy user data...');
-    const enrichedProfiles = await Promise.all(
-      profilesWithMatches.map(async (profile) => {
-        const oxyUserId = profile.oxyUserId;
-        console.log('[ROOMMATE] Profile _id:', profile._id, 'oxyUserId:', oxyUserId);
-        if (!oxyUserId) {
-          console.warn('[ENRICH] Skipping profile with missing oxyUserId:', profile._id);
-          return null;
-        }
-        try {
-          const oxyUserData = await fetchOxyUserData(oxyUserId);
-          console.log('[ROOMMATE] Oxy user data for', oxyUserId, ':', oxyUserData);
-          return {
-            ...profile,
-            userData: oxyUserData || {
-              fullName: 'User',
-              bio: '',
-              avatar: null,
-              username: '',
-              email: '',
-              location: '',
-              website: '',
-              createdAt: null,
-              stats: {}
-            }
-          };
-        } catch (error) {
-          console.error(`[ENRICH] Error enriching profile ${profile._id}:`, error);
-          return {
-            ...profile,
-            userData: {
-              fullName: 'User',
-              bio: '',
-              avatar: null,
-              username: '',
-              email: '',
-              location: '',
-              website: '',
-              createdAt: null,
-              stats: {}
-            }
-          };
-        }
-      })
-    );
-
-    const filteredEnrichedProfiles = enrichedProfiles.filter(Boolean);
-
-    console.log(`Returning ${filteredEnrichedProfiles.length} enriched profiles`);
-    console.log('=== End Roommate Profiles API ===');
-
+    // No Oxy enrichment, just return profiles
     res.json({
-      profiles: filteredEnrichedProfiles,
+      profiles: profilesWithMatches,
       total,
       page: parseInt(page),
       totalPages
@@ -439,22 +343,9 @@ const getCurrentUserRoommateStatus = async (req, res) => {
     const profile = await Profile.findActiveByOxyUserId(oxyUserId);
     const hasRoommateMatching = profile?.personalProfile?.settings?.roommate?.enabled || false;
     
-    // Fetch additional user data from Oxy
-    const userData = await fetchOxyUserData(oxyUserId);
-    
+    // Remove Oxy user data fetching and just return profile info
     res.json({
       hasRoommateMatching,
-      userData: userData || {
-        fullName: 'User',
-        bio: '',
-        avatar: null,
-        username: '',
-        email: '',
-        location: '',
-        website: '',
-        createdAt: null,
-        stats: {}
-      },
       profile: profile ? {
         id: profile._id,
         roommatePreferences: profile.personalProfile?.settings?.roommate?.preferences || null

@@ -3,10 +3,11 @@
  * Telegram bot management and testing endpoints
  */
 
-const express = require('express');
-const { telegramController } = require('../controllers');
+import controllers from '../controllers';
+import express from 'express';
+const { telegramController } = controllers;
 
-module.exports = function() {
+export default function() {
   const router = express.Router();
 
   /**

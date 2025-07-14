@@ -3,8 +3,8 @@
  * Handles roommate matching functionality
  */
 
-const express = require('express');
-const { asyncHandler } = require('../middlewares');
+import express from 'express';
+import { asyncHandler } from '../middlewares';
 const roommateController = require('../controllers/roommateController');
 
   const router = express.Router();
@@ -36,4 +36,4 @@ router.get('/status', asyncHandler(roommateController.getCurrentUserRoommateStat
   // Decline roommate request
   router.post('/requests/:requestId/decline', asyncHandler(roommateController.declineRoommateRequest));
 
-module.exports = () => router; 
+export default () => router; 

@@ -4,7 +4,8 @@
  */
 
 const express = require('express');
-const { roomController } = require('../controllers');
+import controllers from '../controllers';
+const { roomController } = controllers;
 const { validation, asyncHandler } = require('../middlewares');
 
 module.exports = function() {

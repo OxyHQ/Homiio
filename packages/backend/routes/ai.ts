@@ -3,13 +3,13 @@
  * Handles AI-powered features including streaming text generation
  */
 
-const express = require('express');
-const { openai } = require('@ai-sdk/openai');
-const { streamText } = require('ai');
-const { PassThrough } = require('stream');
-const Profile = require('../models/schemas/ProfileSchema');
+import express from 'express';
+import { openai } from 'ai';
+import { streamText } from 'ai';
+import { PassThrough } from 'stream';
+import Profile from '../models/schemas/ProfileSchema';
 
-module.exports = function() {
+export default function() {
   const router = express.Router();
 
   /**

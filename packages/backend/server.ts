@@ -1,19 +1,23 @@
 // Load environment variables first
-import dotenv from 'dotenv';
-dotenv.config();
+require('dotenv').config();
 
-import express, { Request, Response, NextFunction } from 'express';
+import express from "express";
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import { version } from './package.json';
 
-// Import our modules
 import config from './config';
 import routes from './routes';
-import * as logging from './middlewares/logging';
+import { requestLogger, errorLogger } from './middlewares/logging';
 import { notFound, errorHandler } from './middlewares/errorHandler';
 import database from './database/connection';
-import oxyServices from './services/oxyServices';
+import publicRoutes from './routes/public';
+
+import { OxyServices } from '@oxyhq/services/core';
+
+const oxy = new OxyServices({
+  baseURL: 'http://localhost:3001'
+});
 
 // Initialize database connection
 async function initializeDatabase() {
@@ -42,7 +46,6 @@ const corsOptions = {
     
     const allowedOrigins = [
       'https://homiio.com',
-      'https://www.homiio.com',
       'http://localhost:3000',
       'http://localhost:8081',
       'http://localhost:19006', // Expo web dev
@@ -86,40 +89,27 @@ const corsOptions = {
 // Middleware
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
-app.use(logging.requestLogger);
+app.use(requestLogger);
 
-// Create authentication middleware for Oxy integration
-const authenticateToken = oxyServices.createAuthenticateTokenMiddleware({  
-  loadFullUser: true,  
-  onError: (error) => {  
-    console.error('Auth error:', error);
-    // Don't throw error for expired tokens, let the route handle it
-    if (error.message && error.message.includes('No refresh token available')) {
-      console.warn('JWT token expired and no refresh token available - user needs to re-authenticate');
-    }
-  }  
+// Use OxyHQServices middleware for authentication
+const authenticateToken = oxy.createAuthenticateTokenMiddleware({
+  loadFullUser: true,
+  onError: (error, req, res, next) => {
+  console.error('Auth error:', error);
+  let status = 403;
+  let message = 'Unknown error';
+  if (error && typeof error === 'object') {
+    if (typeof error.status === 'number') status = error.status;
+    if (typeof error.message === 'string') message = error.message;
+  }
+  res.status(status).json({ error: message });
+}
 });
 
-// Custom middleware to extract Oxy user ID with better error handling
-const extractOxyUserId = (req: Request, res: Response, next: NextFunction) => {
-  try {
-    if (req.user) {
-      req.userId = req.user.id || req.user._id;
-      console.log(`[extractOxyUserId] User authenticated: ${req.userId}`, {
-        hasUser: !!req.user,
-        userId: req.userId,
-        userFields: req.user ? Object.keys(req.user) : []
-      });
-    } else {
-      console.log('[extractOxyUserId] No user object found in request');
-      req.userId = null;
-    }
-  } catch (error) {
-    console.error('[extractOxyUserId] Error extracting user ID:', error);
-    req.userId = null;
-  }
+app.use((req, res, next) => {
+  console.log('Authorization header:', req.headers.authorization);
   next();
-};
+});
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -154,11 +144,10 @@ app.get('/health', async (req, res) => {
 });
 
 // Mount public API routes (no authentication required)
-import publicRoutes from './routes/public';
 app.use('/api', publicRoutes());
 
 // Mount authenticated API routes
-app.use('/api', authenticateToken, extractOxyUserId, routes());
+app.use('/api', authenticateToken, routes());
 
 // Temporary test route without authentication to verify route mounting
 app.get('/api/test-routes', (req, res) => {
@@ -175,65 +164,8 @@ app.get('/api/test-routes', (req, res) => {
   });
 });
 
-// Test endpoint (authenticated)
-app.post('/api/test', authenticateToken, async (req, res) => {
-  try {  
-    const { title, content } = req.body;
-      
-    res.json({   
-      success: true,
-      userId: req.userId,
-      user: {
-        id: req.user.id || req.user._id,
-        username: req.user.username,
-        email: req.user.email
-      },
-      message: 'Test run successfully',
-      data: { title, content },
-      timestamp: new Date().toISOString()
-    });  
-  } catch (error) {  
-    res.status(500).json({ error: error.message });  
-  }  
-});
-
-// Debug endpoint to check authentication status
-app.get('/api/debug/auth', authenticateToken, (req, res) => {
-  res.json({
-    success: true,
-    authenticated: true,
-    userId: req.userId,
-    user: req.user ? {
-      id: req.user.id || req.user._id,
-      username: req.user.username,
-      email: req.user.email,
-      fields: Object.keys(req.user)
-    } : null,
-    headers: {
-      authorization: req.headers.authorization ? 'present' : 'missing',
-      'user-agent': req.headers['user-agent']
-    },
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Debug endpoint without authentication to check what happens
-app.get('/api/debug/no-auth', (req, res) => {
-  res.json({
-    success: true,
-    authenticated: false,
-    userId: req.userId,
-    user: req.user,
-    headers: {
-      authorization: req.headers.authorization ? 'present' : 'missing',
-      'user-agent': req.headers['user-agent']
-    },
-    timestamp: new Date().toISOString()
-  });
-});
-
 // Error handling middleware
-app.use(logging.errorLogger);
+app.use(errorLogger);
 app.use(notFound);
 app.use(errorHandler);
 
@@ -267,7 +199,7 @@ async function startServer() {
     });
 
     // Handle EADDRINUSE gracefully
-    server.on('error', (err) => {
+    server.on('error', (err: NodeJS.ErrnoException) => {
       if (err.code === 'EADDRINUSE') {
         console.error(`❌ Port ${port} is already in use. Please stop the other process or use a different port (set PORT env variable).`);
         process.exit(1);
@@ -286,6 +218,7 @@ async function startServer() {
 startServer();
 
 // Export app for testing purposes
-export { app };
-export default app;
+module.exports = {
+  app
+};
 
