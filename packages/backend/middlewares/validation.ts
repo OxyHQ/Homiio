@@ -3,16 +3,16 @@
  * Handles request validation using various validation schemas
  */
 
-const { body, param, query, validationResult } = require('express-validator');
+import { Request, Response, NextFunction } from 'express';
+import { body, param, query, validationResult } from 'express-validator';
+import { logger } from './logging';
 
 /**
  * Handle validation errors
  */
-const handleValidationErrors = (req, res, next) => {
+const handleValidationErrors = (req: Request, res: Response, next: NextFunction): void => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    const { logger } = require('./logging');
-    
     // Log validation errors for debugging
     logger.error('Validation errors detected', {
       errors: errors.array(),
@@ -162,7 +162,7 @@ const validateDateRange = [
 /**
  * File upload validation
  */
-const validateFileUpload = (req, res, next) => {
+const validateFileUpload = (req: Request, res: Response, next: NextFunction): void => {
   if (!req.file && !req.files) {
     return res.status(400).json({ error: 'No file uploaded' });
   }
@@ -182,7 +182,7 @@ const validateFileUpload = (req, res, next) => {
   next();
 };
 
-module.exports = {
+export {
   handleValidationErrors,
   validateProperty,
   validateLease,
@@ -193,5 +193,5 @@ module.exports = {
   validatePagination,
   validateId,
   validateDateRange,
-  validateFileUpload
+  validateFileUpload,
 };

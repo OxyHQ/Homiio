@@ -3,13 +3,11 @@
  * Handles Telegram bot management and testing operations
  */
 
-const { telegramService } = require('../services');
-const { logger } = require('../middlewares/logging');
-const {
-  AppError,
-  successResponse,
-} = require('../middlewares/errorHandler');
-const { PropertyModel } = require('../models');
+import { telegramService } from '../services';
+import { logger } from '../middlewares/logging';
+import { AppError, successResponse } from '../middlewares/errorHandler';
+import { PropertyModel } from '../models';
+import config from '../config';
 
 class TelegramController {
   /**
@@ -17,7 +15,6 @@ class TelegramController {
    */
   async getBotStatus(req, res, next) {
     try {
-      const config = require('../config');
       
       const status = {
         enabled: config.telegram.enabled,
@@ -244,4 +241,4 @@ class TelegramController {
   }
 }
 
-module.exports = new TelegramController(); 
+export default new TelegramController();

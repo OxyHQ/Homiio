@@ -3,9 +3,11 @@
  * Tracks slow queries and provides performance insights
  */
 
+import { Request, Response, NextFunction } from 'express';
+
 const SLOW_QUERY_THRESHOLD = 100; // 100ms
 
-function performanceMonitor(req, res, next) {
+function performanceMonitor(req: Request, res: Response, next: NextFunction): void {
   const start = Date.now();
   
   // Override res.json to capture response time
@@ -27,4 +29,4 @@ function performanceMonitor(req, res, next) {
   next();
 }
 
-module.exports = performanceMonitor; 
+export default performanceMonitor;

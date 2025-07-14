@@ -24,36 +24,36 @@ A comprehensive housing and rental solutions API built with Express.js, designed
 ```
 packages/backend/
 ├── controllers/          # Request handlers
-│   ├── propertyController.js
-│   ├── roomController.js
-│   └── index.js
+│   ├── propertyController.ts
+│   ├── roomController.ts
+│   └── index.ts
 ├── models/              # Data models
-│   ├── Property.js
-│   ├── Room.js
-│   ├── User.js
-│   ├── Lease.js
-│   ├── Payment.js
-│   ├── Device.js
-│   ├── EnergyData.js
-│   └── index.js
+│   ├── Property.ts
+│   ├── Room.ts
+│   ├── User.ts
+│   ├── Lease.ts
+│   ├── Payment.ts
+│   ├── Device.ts
+│   ├── EnergyData.ts
+│   └── index.ts
 ├── routes/              # API routes
-│   ├── properties.js
-│   ├── rooms.js
-│   └── index.js
+│   ├── properties.ts
+│   ├── rooms.ts
+│   └── index.ts
 ├── middlewares/         # Express middlewares
-│   ├── auth.js
-│   ├── validation.js
-│   ├── errorHandler.js
-│   ├── logging.js
-│   └── index.js
+│   ├── auth.ts
+│   ├── validation.ts
+│   ├── errorHandler.ts
+│   ├── logging.ts
+│   └── index.ts
 ├── services/           # Business logic
-│   ├── energyService.js
-│   └── index.js
+│   ├── energyService.ts
+│   └── index.ts
 ├── utils/              # Utility functions
-│   ├── helpers.js
-│   └── index.js
-├── config.js           # Configuration
-├── server.js           # Application entry point
+│   ├── helpers.ts
+│   └── index.ts
+├── config.ts           # Configuration
+├── server.ts           # Application entry point
 └── package.json
 ```
 

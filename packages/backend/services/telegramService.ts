@@ -3,11 +3,11 @@
  * Handles Telegram bot operations and property notifications
  */
 
-const TelegramBot = require('node-telegram-bot-api');
-const i18n = require('i18n');
-const path = require('path');
-const config = require('../config');
-const { logger } = require('../middlewares/logging');
+import TelegramBot from 'node-telegram-bot-api';
+import i18n from 'i18n';
+import path from 'path';
+import config from '../config';
+import { logger } from '../middlewares/logging';
 
 // Configure i18n
 i18n.configure({
@@ -376,4 +376,4 @@ ${t.__('telegram.hashtags.newProperty')} #${address.city.replace(/\s+/g, '')} #$
 // Create singleton instance
 const telegramService = new TelegramService();
 
-module.exports = telegramService; 
+export default telegramService;

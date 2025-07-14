@@ -3,8 +3,8 @@
  * Handles MongoDB connection using Mongoose
  */
 
-const mongoose = require('mongoose');
-const config = require('../config');
+import mongoose from 'mongoose';
+import config from '../config';
 
 class Database {
   constructor() {
@@ -132,4 +132,4 @@ class Database {
 // Create singleton instance
 const database = new Database();
 
-module.exports = database;
+export default database;
