@@ -13,6 +13,7 @@ interface SindiChatState {
   isLoading: boolean;
   error: string | null;
   fetchHistory: (oxyServices: OxyServices, activeSessionId: string) => Promise<void>;
+  fetchConversation: (conversationId: string, oxyServices: OxyServices, activeSessionId: string) => Promise<void>;
   sendMessage: (userMessage: string, assistantMessage: string, oxyServices: OxyServices, activeSessionId: string) => Promise<void>;
   clearHistory: (oxyServices: OxyServices, activeSessionId: string) => Promise<void>;
   addMessage: (msg: SindiChatMessage) => void;
@@ -29,6 +30,15 @@ export const useSindiChatStore = create<SindiChatState>((set, get) => ({
       set({ messages: res.history || [], isLoading: false });
     } catch (err: any) {
       set({ error: err.message || 'Failed to load chat history', isLoading: false });
+    }
+  },
+  fetchConversation: async (conversationId, oxyServices, activeSessionId) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await sindiApi.getSindiConversation(conversationId, oxyServices, activeSessionId);
+      set({ messages: res.conversation?.messages || [], isLoading: false });
+    } catch (err: any) {
+      set({ error: err.message || 'Failed to load conversation', isLoading: false });
     }
   },
   sendMessage: async (userMessage, assistantMessage, oxyServices, activeSessionId) => {
