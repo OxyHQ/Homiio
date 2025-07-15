@@ -8,7 +8,7 @@ const IconComponent = Ionicons as any;
 import { colors } from '@/styles/colors';
 import MarkdownDisplay from 'react-native-markdown-display';
 const Markdown = MarkdownDisplay as unknown as React.ComponentType<any>;
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { PropertyCard } from '@/components/PropertyCard';
 import { SindiIcon } from '@/assets/icons';
 import { ThemedView } from '@/components/ThemedView';
@@ -18,12 +18,12 @@ import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as DocumentPicker from 'expo-document-picker';
 import React from 'react';
-import { sindiApi } from '@/utils/api';
 import { useSindiChatStore } from '@/store/sindiChatStore';
 
 export default function sindi() {
   const { oxyServices, activeSessionId } = useOxy();
   const router = useRouter();
+  const { conversationId } = useLocalSearchParams<{ conversationId: string }>();
   const { t } = useTranslation();
   const [attachedFile, setAttachedFile] = React.useState<any>(null);
 
@@ -32,7 +32,7 @@ export default function sindi() {
     messages: sindiMessages,
     isLoading: sindiLoading,
     error: sindiError,
-    fetchHistory,
+    fetchConversation,
     sendMessage,
     clearHistory,
     addMessage,
@@ -96,10 +96,10 @@ export default function sindi() {
 
   // Fetch chat history on mount or auth change
   React.useEffect(() => {
-    if (isAuthenticated) {
-      fetchHistory(oxyServices, activeSessionId);
+    if (isAuthenticated && conversationId) {
+      fetchConversation(conversationId as string, oxyServices, activeSessionId);
     }
-  }, [isAuthenticated, oxyServices, activeSessionId, fetchHistory]);
+  }, [isAuthenticated, oxyServices, activeSessionId, conversationId, fetchConversation]);
 
   const handleAttachFile = async () => {
     try {
