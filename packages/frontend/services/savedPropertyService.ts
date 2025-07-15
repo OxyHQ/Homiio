@@ -1,75 +1,96 @@
-import { api } from '@/utils/api';
-import { OxyServices } from '@oxyhq/services';
+import api from '@/utils/api';
+import type { Property } from './propertyService';
 
-export interface SavedProperty {
-  _id: string;
-  title: string;
-  description?: string;
-  price: number;
-  location: {
-    address: string;
-    city: string;
-    state: string;
-    zipCode: string;
-  };
-  images: string[];
-  savedAt: string;
+export interface SavedProperty extends Property {
   notes?: string;
+  savedAt?: string;
 }
 
-export interface SavePropertyRequest {
-  propertyId: string;
-  notes?: string;
-}
-
-export interface UpdateNotesRequest {
-  notes: string;
+export interface SavedPropertiesResponse {
+  properties: SavedProperty[];
+  total: number;
+  page: number;
+  totalPages: number;
 }
 
 class SavedPropertyService {
-  /**
-   * Get all saved properties for the current user
-   */
-  async getSavedProperties(oxyServices: OxyServices, activeSessionId: string): Promise<SavedProperty[]> {
-    const response = await api.get('/api/profiles/me/saved-properties', {
-      oxyServices,
-      activeSessionId,
+  private baseUrl = '/api/profiles/me/saved-properties';
+
+  async getSavedProperties(oxyServices: any, activeSessionId: string): Promise<SavedPropertiesResponse> {
+    const response = await api.get(this.baseUrl, {
+      headers: {
+        'Authorization': `Bearer ${activeSessionId}`,
+        'Content-Type': 'application/json',
+      },
     });
-    return response.data.data;
+    
+    return {
+      properties: response.data.data || response.data || [],
+      total: response.data.pagination?.total || 0,
+      page: response.data.pagination?.page || 1,
+      totalPages: response.data.pagination?.totalPages || 1,
+    };
   }
 
-  /**
-   * Save a property
-   */
-  async saveProperty(data: SavePropertyRequest, oxyServices: OxyServices, activeSessionId: string): Promise<any> {
-    const response = await api.post('/api/profiles/me/save-property', data, {
-      oxyServices,
-      activeSessionId,
+  async saveProperty(
+    propertyId: string, 
+    notes?: string, 
+    oxyServices: any, 
+    activeSessionId: string
+  ): Promise<void> {
+    await api.post('/api/profiles/me/save-property', {
+      propertyId,
+      notes,
+    }, {
+      headers: {
+        'Authorization': `Bearer ${activeSessionId}`,
+        'Content-Type': 'application/json',
+      },
     });
-    return response.data.data;
   }
 
-  /**
-   * Unsave a property
-   */
-  async unsaveProperty(propertyId: string, oxyServices: OxyServices, activeSessionId: string): Promise<void> {
+  async unsaveProperty(
+    propertyId: string, 
+    oxyServices: any, 
+    activeSessionId: string
+  ): Promise<void> {
     await api.delete(`/api/profiles/me/saved-properties/${propertyId}`, {
-      oxyServices,
-      activeSessionId,
+      headers: {
+        'Authorization': `Bearer ${activeSessionId}`,
+        'Content-Type': 'application/json',
+      },
     });
   }
 
-  /**
-   * Update notes for a saved property
-   */
-  async updateNotes(propertyId: string, data: UpdateNotesRequest, oxyServices: OxyServices, activeSessionId: string): Promise<any> {
-    const response = await api.put(`/api/profiles/me/saved-properties/${propertyId}/notes`, data, {
-      oxyServices,
-      activeSessionId,
+  async updateNotes(
+    propertyId: string, 
+    notes: string, 
+    oxyServices: any, 
+    activeSessionId: string
+  ): Promise<void> {
+    await api.patch(`/api/profiles/me/saved-properties/${propertyId}/notes`, {
+      notes,
+    }, {
+      headers: {
+        'Authorization': `Bearer ${activeSessionId}`,
+        'Content-Type': 'application/json',
+      },
     });
-    return response.data.data;
+  }
+
+  async bulkUnsave(
+    propertyIds: string[], 
+    oxyServices: any, 
+    activeSessionId: string
+  ): Promise<void> {
+    await api.delete('/api/profiles/me/saved-properties/bulk', {
+      data: { propertyIds },
+      headers: {
+        'Authorization': `Bearer ${activeSessionId}`,
+        'Content-Type': 'application/json',
+      },
+    });
   }
 }
 
-export const savedPropertyService = new SavedPropertyService();
-export default savedPropertyService; 
+export default new SavedPropertyService(); 
