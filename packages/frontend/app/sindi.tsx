@@ -6,7 +6,8 @@ import { useOxy } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons'; // keep for IconComponent type assertion
 const IconComponent = Ionicons as any;
 import { colors } from '@/styles/colors';
-import Markdown from 'react-native-markdown-display';
+import MarkdownDisplay from 'react-native-markdown-display';
+const Markdown = MarkdownDisplay as unknown as React.ComponentType<any>;
 import { useRouter } from 'expo-router';
 import { PropertyCard } from '@/components/PropertyCard';
 import { SindiIcon } from '@/assets/icons';
@@ -17,12 +18,25 @@ import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as DocumentPicker from 'expo-document-picker';
 import React from 'react';
+import { sindiApi } from '@/utils/api';
+import { useSindiChatStore } from '@/store/sindiChatStore';
 
 export default function sindi() {
   const { oxyServices, activeSessionId } = useOxy();
   const router = useRouter();
   const { t } = useTranslation();
   const [attachedFile, setAttachedFile] = React.useState<any>(null);
+
+  // Zustand Sindi chat store
+  const {
+    messages: sindiMessages,
+    isLoading: sindiLoading,
+    error: sindiError,
+    fetchHistory,
+    sendMessage,
+    clearHistory,
+    addMessage,
+  } = useSindiChatStore();
 
   // Create a custom fetch function that includes authentication
   const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
@@ -61,7 +75,31 @@ export default function sindi() {
     api: generateAPIUrl('/api/ai/stream'),
     onError: (error: any) => console.error(error, 'ERROR'),
     enabled: isAuthenticated, // Only enable chat if authenticated
-  } as any); // Cast to any to allow 'enabled' prop if not in type
+  } as any);
+
+  // --- Sync Zustand store with new assistant messages from useChat ---
+  const prevMessagesRef = React.useRef<typeof messages>(messages);
+  React.useEffect(() => {
+    if (!isAuthenticated || messages.length < 2) return;
+    const prevMessages = prevMessagesRef.current;
+    const lastMsg = messages[messages.length - 1];
+    // Only update local state for UI, do not call sendMessage
+    if (
+      lastMsg.role === 'assistant' &&
+      (!prevMessages || prevMessages.length !== messages.length)
+    ) {
+      // Optionally, update Zustand for local UI only (not backend)
+      // No call to sendMessage here
+    }
+    prevMessagesRef.current = messages;
+  }, [messages, isAuthenticated, oxyServices, activeSessionId]);
+
+  // Fetch chat history on mount or auth change
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      fetchHistory(oxyServices, activeSessionId);
+    }
+  }, [isAuthenticated, oxyServices, activeSessionId, fetchHistory]);
 
   const handleAttachFile = async () => {
     try {
@@ -80,14 +118,35 @@ export default function sindi() {
 
   const handleRemoveFile = () => setAttachedFile(null);
 
-  // Wrap the original handleSubmit to include file info (for now, just log)
-  const handleSubmitWithFile = () => {
+  // Refactor handleSubmitWithFile to accept an optional message
+  const handleSubmitWithFile = async (customMessage?: string) => {
     if (attachedFile) {
       console.log('Sending file:', attachedFile);
       // TODO: Integrate file upload to backend here
       setAttachedFile(null);
     }
-    handleSubmit();
+    const userMessage = customMessage !== undefined ? customMessage : input;
+    // Optimistically add user message to Zustand for instant bubble
+    if (userMessage.trim()) {
+      const now = new Date().toISOString();
+      addMessage({ role: 'user', content: userMessage, timestamp: now });
+    }
+    // Submit to AI (streaming)
+    if (customMessage !== undefined) {
+      await handleInputChange({ target: { value: customMessage } } as any);
+    }
+    await handleSubmit();
+  };
+
+  // For demo: Add a button to save the last user/assistant message to history
+  const handleSaveLastToHistory = async () => {
+    if (!oxyServices || !activeSessionId) return;
+    // Find last user and assistant message from useChat
+    const userMsg = input; // This is not ideal, but for demo
+    const assistantMsg = document.querySelector('.assistantMessage .messageBubble')?.textContent || '';
+    if (userMsg && assistantMsg) {
+      await sendMessage(userMsg, assistantMsg, oxyServices, activeSessionId);
+    }
   };
 
   // Early return for unauthenticated users (after all hooks)
@@ -118,16 +177,16 @@ export default function sindi() {
   }
 
   const quickActions = [
-    { title: t('sindi.actions.rentGouging.title'), icon: 'trending-up', prompt: t('sindi.actions.rentGouging.prompt') },
-    { title: t('sindi.actions.evictionDefense.title'), icon: 'warning', prompt: t('sindi.actions.evictionDefense.prompt') },
-    { title: t('sindi.actions.securityDeposit.title'), icon: 'card', prompt: t('sindi.actions.securityDeposit.prompt') },
-    { title: t('sindi.actions.unsafeLiving.title'), icon: 'construct', prompt: t('sindi.actions.unsafeLiving.prompt') },
-    { title: t('sindi.actions.discrimination.title'), icon: 'shield-checkmark', prompt: t('sindi.actions.discrimination.prompt') },
-    { title: t('sindi.actions.retaliation.title'), icon: 'alert-circle', prompt: t('sindi.actions.retaliation.prompt') },
-    { title: t('sindi.actions.leaseReview.title'), icon: 'document-text', prompt: t('sindi.actions.leaseReview.prompt') },
-    { title: t('sindi.actions.tenantOrganizing.title'), icon: 'people', prompt: t('sindi.actions.tenantOrganizing.prompt') },
-    { title: t('sindi.actions.currentLaws.title'), icon: 'globe', prompt: t('sindi.actions.currentLaws.prompt') },
-    { title: t('sindi.actions.catalunya.title'), icon: 'location', prompt: t('sindi.actions.catalunya.prompt') },
+    { title: t('sindi.actions.rentGouging.title'), icon: 'trending-up', prompt: t('sindi.actions.rentGouging.prompt'), requiresInput: false },
+    { title: t('sindi.actions.evictionDefense.title'), icon: 'warning', prompt: t('sindi.actions.evictionDefense.prompt'), requiresInput: false },
+    { title: t('sindi.actions.securityDeposit.title'), icon: 'card', prompt: t('sindi.actions.securityDeposit.prompt'), requiresInput: false },
+    { title: t('sindi.actions.unsafeLiving.title'), icon: 'construct', prompt: t('sindi.actions.unsafeLiving.prompt'), requiresInput: false },
+    { title: t('sindi.actions.discrimination.title'), icon: 'shield-checkmark', prompt: t('sindi.actions.discrimination.prompt'), requiresInput: false },
+    { title: t('sindi.actions.retaliation.title'), icon: 'alert-circle', prompt: t('sindi.actions.retaliation.prompt'), requiresInput: false },
+    { title: t('sindi.actions.leaseReview.title'), icon: 'document-text', prompt: t('sindi.actions.leaseReview.prompt'), requiresInput: true }, // Needs file
+    { title: t('sindi.actions.tenantOrganizing.title'), icon: 'people', prompt: t('sindi.actions.tenantOrganizing.prompt'), requiresInput: false },
+    { title: t('sindi.actions.currentLaws.title'), icon: 'globe', prompt: t('sindi.actions.currentLaws.prompt'), requiresInput: false },
+    { title: t('sindi.actions.catalunya.title'), icon: 'location', prompt: t('sindi.actions.catalunya.prompt'), requiresInput: false },
   ];
 
   const propertySearchExamples = [
@@ -139,10 +198,15 @@ export default function sindi() {
     { title: t('sindi.housing.examples.shared.title'), icon: 'people', prompt: t('sindi.housing.examples.shared.prompt') },
   ];
 
-  const handleQuickAction = (prompt: string) => {
-    handleInputChange({
-      target: { value: prompt }
-    } as any);
+  // Update handleQuickAction to send or prefill
+  const handleQuickAction = async (prompt: string, requiresInput: boolean) => {
+    if (requiresInput) {
+      // Pre-fill input for user to add more info or attach a file
+      handleInputChange({ target: { value: prompt } } as any);
+    } else {
+      // Send the message directly
+      await handleSubmitWithFile(prompt);
+    }
   };
 
   if (error) return (
@@ -210,7 +274,7 @@ export default function sindi() {
                   <TouchableOpacity
                     key={index}
                     style={styles.quickActionButton}
-                    onPress={() => handleQuickAction(action.prompt)}
+                    onPress={() => handleQuickAction(action.prompt, action.requiresInput)}
                   >
                     <LinearGradient
                       colors={[colors.primaryColor, colors.secondaryLight]}
@@ -236,7 +300,7 @@ export default function sindi() {
                   <TouchableOpacity
                     key={index}
                     style={styles.propertySearchButton}
-                    onPress={() => handleQuickAction(example.prompt)}
+                    onPress={() => handleQuickAction(example.prompt, false)}
                   >
                     <LinearGradient
                       colors={[colors.primaryColor, colors.secondaryLight]}
@@ -277,8 +341,8 @@ export default function sindi() {
             </LinearGradient>
           </View>
         ) : (
-          messages.map(m => (
-            <View key={m.id} style={[
+          messages.map((m, idx) => (
+            <View key={idx} style={[
               styles.messageContainer,
               m.role === 'user' ? styles.userMessage : styles.assistantMessage
             ]}>
@@ -308,10 +372,10 @@ export default function sindi() {
                         return undefined;
                       }).filter((p): p is any => !!p);
                       return (
-                        <View key={m.id || m.content} style={styles.propertyCardsContainer}>
-                          {properties.map((property, idx) => (
+                        <View key={idx} style={styles.propertyCardsContainer}>
+                          {properties.map((property, pidx) => (
                             <PropertyCard
-                              key={property._id || property.id || idx}
+                              key={property._id || property.id || pidx}
                               property={property}
                               variant={"featured"}
                               onPress={() => router.push(`/properties/${property._id || property.id}`)}
@@ -322,7 +386,7 @@ export default function sindi() {
                     })() : (
                     <View style={{ flexShrink: 1, flexWrap: 'wrap', width: '100%' }}>
                       <Markdown
-                        key={m.id}
+                        key={idx}
                         style={{
                           body: {
                             ...styles.markdownParagraph,
@@ -572,13 +636,13 @@ export default function sindi() {
                 onChangeText={(text) => handleInputChange({
                   target: { value: text }
                 } as any)}
-                onSubmitEditing={handleSubmitWithFile}
+                onSubmitEditing={() => handleSubmitWithFile()}
                 multiline
                 maxLength={1000}
               />
               <TouchableOpacity
                 style={[styles.sendButton, !input.trim() && styles.sendButtonDisabled]}
-                onPress={handleSubmitWithFile}
+                onPress={() => handleSubmitWithFile()}
                 disabled={!input.trim() || isLoading}
               >
                 <IconComponent

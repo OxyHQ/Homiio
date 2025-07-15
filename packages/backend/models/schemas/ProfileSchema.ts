@@ -371,22 +371,34 @@ const personalProfileSchema = new mongoose.Schema({
       default: "USD",
     },
   },
-  // Sindi chat history
-  chatHistory: [
+  // Sindi chat conversations (grouped messages)
+  chatConversations: [
     {
-      role: {
-        type: String,
-        enum: ['user', 'assistant', 'system'],
-        required: true,
+      _id: {
+        type: mongoose.Schema.Types.ObjectId,
+        auto: true,
       },
-      content: {
-        type: String,
-        required: true,
-      },
-      timestamp: {
+      startedAt: {
         type: Date,
         default: Date.now,
       },
+      messages: [
+        {
+          role: {
+            type: String,
+            enum: ['user', 'assistant', 'system'],
+            required: true,
+          },
+          content: {
+            type: String,
+            required: true,
+          },
+          timestamp: {
+            type: Date,
+            default: Date.now,
+          },
+        },
+      ],
     },
   ],
 }, { _id: false });

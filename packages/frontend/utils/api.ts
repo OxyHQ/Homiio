@@ -576,9 +576,9 @@ export const healthApi = {
  * Sindi chat history API functions
  */
 export const sindiApi = {
-  // Get Sindi chat history (authenticated)
-  async getSindiChatHistory(oxyServices: OxyServices, activeSessionId: string): Promise<{ history: any[] }> {
-    const response = await api.get<{ history: any[] }>('/api/ai/history', {
+  // Get Sindi chat conversations (authenticated)
+  async getSindiChatHistory(oxyServices: OxyServices, activeSessionId: string): Promise<{ conversations: any[] }> {
+    const response = await api.get<{ conversations: any[] }>('/api/ai/history', {
       oxyServices,
       activeSessionId,
     });

@@ -448,6 +448,7 @@ Remember: You're here to empower tenants and promote ethical housing practices. 
         console.log('Property search was triggered but no results found');
       }
 
+      let fullAssistantResponse = '';
       const result = streamText({
         model: openai('gpt-4o'),
         messages: enhancedMessages,
@@ -455,10 +456,94 @@ Remember: You're here to empower tenants and promote ethical housing practices. 
 
       // Only handle streaming to the client. No buffering or chat history logic here.
       if (typeof result.pipeDataStreamToResponse === 'function') {
-        result.pipeDataStreamToResponse(res);
+        await result.pipeDataStreamToResponse(res);
+        // Get the full response from the result object after streaming
+        if (result.response) {
+          const response = await result.response;
+          // Try to extract the full assistant message from response
+          if (response && response.messages && Array.isArray(response.messages)) {
+            const lastAssistant = response.messages.slice().reverse().find(m => m.role === 'assistant');
+            if (lastAssistant && lastAssistant.content) {
+              // If content is an array, join all text parts
+              if (Array.isArray(lastAssistant.content)) {
+                fullAssistantResponse = lastAssistant.content
+                  .filter(part => typeof part === 'string' || (typeof part === 'object' && part.type === 'text' && typeof part.text === 'string'))
+                  .map(part => typeof part === 'string' ? part : part.type === 'text' ? part.text : '')
+                  .join('');
+              } else {
+                fullAssistantResponse = lastAssistant.content;
+              }
+            }
+          } else {
+            console.warn('[DEBUG] Could not capture full assistant response after stream');
+          }
+        } else {
+          console.warn('[DEBUG] Could not capture full assistant response after stream');
+        }
       } else {
         res.status(501).json({ error: 'Streaming not supported by this SDK.' });
+        return;
       }
+
+      // --- DEBUG LOGGING AND SAVE CHAT HISTORY ---
+      try {
+        const userId = (req as any).user?.oxyUserId || (req as any).user?._id || (req as any).user?.id;
+        console.log('[DEBUG][STREAM] userId:', userId);
+        if (!userId) {
+          console.error('[DEBUG][STREAM] No userId found');
+          return;
+        }
+        const profile = await Profile.findOne({ oxyUserId: userId, profileType: 'personal' });
+        console.log('[DEBUG][STREAM] Found profile:', profile ? profile._id : null);
+        if (!profile) {
+          console.error('[DEBUG][STREAM] No profile found for user');
+          return;
+        }
+        // Find last user message
+        const lastUser = Array.isArray(messages) ? [...messages].reverse().find(m => m.role === 'user') : null;
+        if (!lastUser || !lastUser.content) {
+          console.error('[DEBUG][STREAM] No user message found');
+          return;
+        }
+        if (!fullAssistantResponse) {
+          console.error('[DEBUG][STREAM] No assistant response to save');
+          return;
+        }
+        // --- Conversation logic ---
+        profile.personalProfile = profile.personalProfile || {};
+        profile.personalProfile.chatConversations = profile.personalProfile.chatConversations || [];
+        let conversation;
+        if (profile.personalProfile.chatConversations.length === 0 ||
+            !profile.personalProfile.chatConversations[profile.personalProfile.chatConversations.length - 1].messages ||
+            profile.personalProfile.chatConversations[profile.personalProfile.chatConversations.length - 1].messages.length === 0) {
+          // Start a new conversation using Mongoose subdocument
+          profile.personalProfile.chatConversations.push({
+            startedAt: new Date(),
+            messages: []
+          });
+          conversation = profile.personalProfile.chatConversations[profile.personalProfile.chatConversations.length - 1];
+        } else {
+          // Use the latest conversation
+          conversation = profile.personalProfile.chatConversations[profile.personalProfile.chatConversations.length - 1];
+        }
+        // Save both user and assistant messages in the conversation using .push()
+        const now = new Date();
+        conversation.messages.push({ role: 'user', content: lastUser.content, timestamp: now });
+        conversation.messages.push({ role: 'assistant', content: fullAssistantResponse, timestamp: now });
+        try {
+          const savedProfile = await profile.save();
+          console.log('[DEBUG][STREAM] profile.save() result:', savedProfile);
+          // Fetch the profile again to confirm persistence
+          const freshProfile = await Profile.findById(profile._id);
+          console.log('[DEBUG][STREAM] Fresh profile after save:', freshProfile?.personalProfile?.chatConversations);
+        } catch (saveErr) {
+          console.error('[DEBUG][STREAM] Error during profile.save():', saveErr);
+        }
+        console.log('[DEBUG][STREAM] Chat conversation saved:', conversation);
+      } catch (err) {
+        console.error('[DEBUG][STREAM] Error saving chat conversation:', err);
+      }
+      // --- END DEBUG LOGGING ---
     } catch (error) {
       console.error('AI streaming error:', error);
       console.error('Error stack:', error.stack);
@@ -482,46 +567,55 @@ Remember: You're here to empower tenants and promote ethical housing practices. 
     });
   });
 
-  // Get Sindi chat history for the authenticated user
+  // Get Sindi chat conversations for the authenticated user
   router.get('/history', async (req, res) => {
     try {
-      const user = req.user;
-      if (!user) return res.status(401).json({ error: 'Unauthorized' });
-      // Return most recent first
-      const history = (user.chatHistory || []).slice().reverse();
-      res.json({ success: true, history });
+      const userId = (req as any).user?.oxyUserId || (req as any).user?._id || (req as any).user?.id;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+      const profile = await Profile.findOne({ oxyUserId: userId, profileType: 'personal' });
+      if (!profile) return res.status(404).json({ error: 'Personal profile not found' });
+      const conversations = (profile.personalProfile?.chatConversations || []).slice().reverse();
+      res.json({ success: true, conversations });
     } catch (error) {
-      console.error('Failed to get chat history:', error);
-      res.status(500).json({ error: 'Failed to get chat history' });
+      console.error('Failed to get chat conversations:', error);
+      res.status(500).json({ error: 'Failed to get chat conversations' });
     }
   });
 
-  // Clear Sindi chat history for the authenticated user
+  // Clear Sindi chat conversations for the authenticated user
   router.delete('/history', async (req, res) => {
     try {
-      const user = req.user;
-      if (!user) return res.status(401).json({ error: 'Unauthorized' });
-      user.chatHistory = [];
-      await user.save();
+      const userId = (req as any).user?.oxyUserId || (req as any).user?._id || (req as any).user?.id;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+      const profile = await Profile.findOne({ oxyUserId: userId, profileType: 'personal' });
+      if (!profile) return res.status(404).json({ error: 'Personal profile not found' });
+      if (!profile.personalProfile) profile.personalProfile = {};
+      profile.personalProfile.chatConversations = [];
+      await profile.save();
       res.json({ success: true });
     } catch (error) {
-      console.error('Failed to clear chat history:', error);
-      res.status(500).json({ error: 'Failed to clear chat history' });
+      console.error('Failed to clear chat conversations:', error);
+      res.status(500).json({ error: 'Failed to clear chat conversations' });
     }
   });
 
   // Save Sindi chat history for the authenticated user (on personal profile)
   router.post('/history', async (req, res) => {
     try {
+      console.log('[DEBUG] /api/ai/history POST called');
+      console.log('[DEBUG] req.user:', (req as any).user);
       // Get userId from req.user
-      const userId = req.user?.oxyUserId || req.user?._id || req.user?.id;
+      const userId = (req as any).user?.oxyUserId || (req as any).user?._id || (req as any).user?.id;
+      console.log('[DEBUG] userId:', userId);
       if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
       // Find the personal profile for this user
       const profile = await Profile.findOne({ oxyUserId: userId, profileType: 'personal' });
+      console.log('[DEBUG] Found profile:', profile ? profile._id : null);
       if (!profile) return res.status(404).json({ error: 'Personal profile not found' });
 
       const { userMessage, assistantMessage } = req.body;
+      console.log('[DEBUG] Incoming body:', req.body);
       if (!userMessage || !assistantMessage) return res.status(400).json({ error: 'Missing userMessage or assistantMessage' });
 
       profile.chatHistory = profile.chatHistory || [];
@@ -538,11 +632,57 @@ Remember: You're here to empower tenants and promote ethical housing practices. 
       if (profile.chatHistory.length > 100) {
         profile.chatHistory = profile.chatHistory.slice(-100);
       }
+      console.log('[DEBUG] Saving profile with chatHistory length:', profile.chatHistory.length);
       await profile.save();
+      console.log('[DEBUG] Profile saved successfully');
       res.json({ success: true });
     } catch (error) {
       console.error('Failed to save chat history:', error);
       res.status(500).json({ error: 'Failed to save chat history' });
+    }
+  });
+
+  // Get a specific conversation by ID
+  router.get('/conversation/:conversationId', async (req, res) => {
+    try {
+      const userId = (req as any).user?.oxyUserId || (req as any).user?._id || (req as any).user?.id;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+      const profile = await Profile.findOne({ oxyUserId: userId, profileType: 'personal' });
+      if (!profile) return res.status(404).json({ error: 'Personal profile not found' });
+      const { conversationId } = req.params;
+      const conversation = (profile.personalProfile?.chatConversations || []).find(
+        (conv: any) => conv._id?.toString() === conversationId
+      );
+      if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
+      res.json({ success: true, conversation });
+    } catch (error) {
+      console.error('Failed to get conversation:', error);
+      res.status(500).json({ error: 'Failed to get conversation' });
+    }
+  });
+
+  // Append messages to an existing conversation (continue conversation)
+  router.post('/conversation/:conversationId', async (req, res) => {
+    try {
+      const userId = (req as any).user?.oxyUserId || (req as any).user?._id || (req as any).user?.id;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+      const profile = await Profile.findOne({ oxyUserId: userId, profileType: 'personal' });
+      if (!profile) return res.status(404).json({ error: 'Personal profile not found' });
+      const { conversationId } = req.params;
+      const { messages } = req.body; // messages: [{role, content, timestamp}]
+      if (!Array.isArray(messages) || messages.length === 0) {
+        return res.status(400).json({ error: 'No messages to append' });
+      }
+      const conversation = (profile.personalProfile?.chatConversations || []).find(
+        (conv: any) => conv._id?.toString() === conversationId
+      );
+      if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
+      conversation.messages.push(...messages);
+      await profile.save();
+      res.json({ success: true, conversation });
+    } catch (error) {
+      console.error('Failed to append messages to conversation:', error);
+      res.status(500).json({ error: 'Failed to append messages to conversation' });
     }
   });
 

@@ -16,7 +16,7 @@ export default function SindiSettingsScreen() {
     const { t } = useTranslation();
     const { oxyServices, activeSessionId } = useOxy();
     const [showTips, setShowTips] = useState(true);
-    const [history, setHistory] = useState<any[]>([]);
+    const [conversations, setConversations] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [clearing, setClearing] = useState(false);
@@ -27,7 +27,7 @@ export default function SindiSettingsScreen() {
         setError(null);
         try {
             const res = await sindiApi.getSindiChatHistory(oxyServices, activeSessionId);
-            setHistory(res.history || []);
+            setConversations(res.conversations || []);
         } catch (err: any) {
             setError(t('sindi.settings.historyError', 'Failed to load chat history.'));
         } finally {
@@ -54,7 +54,7 @@ export default function SindiSettingsScreen() {
                         setClearing(true);
                         try {
                             await sindiApi.clearSindiChatHistory(oxyServices, activeSessionId);
-                            setHistory([]);
+                            setConversations([]);
                             Alert.alert(t('common.success', 'Success'), t('sindi.settings.cleared', 'Chat history cleared.'));
                         } catch (err: any) {
                             Alert.alert(t('sindi.settings.historyError', 'Failed to clear chat history.'));
@@ -100,22 +100,42 @@ export default function SindiSettingsScreen() {
                     <Text style={styles.settingLabel}>{t('sindi.settings.tips', 'Show Tips & Hints')}</Text>
                     <Switch value={showTips} onValueChange={setShowTips} thumbColor={showTips ? colors.sindiColor : '#ccc'} trackColor={{ true: '#b3d8ff', false: '#eee' }} />
                 </View>
-                {/* Chat History Section */}
+                {/* Chat Conversations Section */}
                 <View style={styles.historySection}>
                     <Text style={styles.historyTitle}>{t('sindi.settings.chatHistory', 'Sindi Chat History')}</Text>
                     {loading ? (
                         <ActivityIndicator size="small" color={colors.sindiColor} />
                     ) : error ? (
                         <Text style={{ color: 'red', marginBottom: 8 }}>{error}</Text>
-                    ) : history.length === 0 ? (
+                    ) : conversations.length === 0 ? (
                         <Text style={{ color: '#7f8c8d' }}>{t('sindi.settings.noHistory', 'No chat history yet.')}</Text>
                     ) : (
-                        <ScrollView style={{ maxHeight: 200 }}>
-                            {history.map((msg, idx) => (
-                                <View key={idx} style={styles.historyMsgRow}>
-                                    <Text style={[styles.historyMsgRole, { color: msg.role === 'user' ? colors.sindiColor : '#2c3e50' }]}>{msg.role}</Text>
-                                    <Text style={styles.historyMsgContent}>{msg.content}</Text>
-                                    <Text style={styles.historyMsgTime}>{new Date(msg.timestamp).toLocaleString()}</Text>
+                        <ScrollView style={{ maxHeight: 300 }}>
+                            {conversations.map((conv, cidx) => (
+                                <View key={conv._id || cidx} style={{ marginBottom: 18 }}>
+                                    <Text style={{ fontWeight: 'bold', color: colors.sindiColor, marginBottom: 4 }}>
+                                        {t('sindi.settings.conversation', 'Conversation')} #{conversations.length - cidx}
+                                        {conv.startedAt ? ` • ${new Date(conv.startedAt).toLocaleString()}` : ''}
+                                    </Text>
+                                    {conv.messages && conv.messages.length > 0 ? (
+                                        conv.messages.map((msg: any, midx: number) => (
+                                            <View key={midx} style={styles.historyMsgRow}>
+                                                <Text style={[styles.historyMsgRole, { color: msg.role === 'user' ? colors.sindiColor : '#2c3e50' }]}>{msg.role}</Text>
+                                                <Text style={styles.historyMsgContent}>{msg.content}</Text>
+                                                <Text style={styles.historyMsgTime}>{new Date(msg.timestamp).toLocaleString()}</Text>
+                                            </View>
+                                        ))
+                                    ) : (
+                                        <Text style={{ color: '#7f8c8d' }}>{t('sindi.settings.noMessages', 'No messages in this conversation.')}</Text>
+                                    )}
+                                    {/* Reopen button */}
+                                    <TouchableOpacity
+                                        style={[styles.actionButton, { marginTop: 8, alignSelf: 'flex-end' }]}
+                                        onPress={() => router.push(`/sindi?conversationId=${conv._id}`)}
+                                    >
+                                        <Ionicons name="chatbubbles-outline" size={16} color={colors.sindiColor} style={{ marginRight: 6 }} />
+                                        <Text style={styles.actionText}>{t('sindi.settings.reopen', 'Reopen')}</Text>
+                                    </TouchableOpacity>
                                 </View>
                             ))}
                         </ScrollView>
