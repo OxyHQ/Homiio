@@ -18,11 +18,11 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Property } from '@/services/propertyService';
+import savedPropertyService, { SavedProperty } from '@/services/savedPropertyService';
 
 // Extended interface for saved properties
-interface SavedProperty extends Property {
-    notes?: string;
-    savedAt?: string;
+interface SavedPropertyWithUI extends SavedProperty {
+    // Additional UI-specific properties can be added here
 }
 
 const IconComponent = Ionicons as any;
@@ -56,14 +56,19 @@ export default function SavedPropertiesScreen() {
     // Use the new Zustand-based favorites system
     const {
         favoriteIds,
-        isLoading,
-        error,
+        isLoading: favoritesLoading,
+        error: favoritesError,
         isSaving,
         toggleFavorite,
         isFavorite,
         isPropertySaving,
-        clearError
+        clearError: clearFavoritesError
     } = useFavorites();
+
+    // Local state for saved properties
+    const [savedProperties, setSavedProperties] = useState<SavedPropertyWithUI[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     // Local state
     const [searchQuery, setSearchQuery] = useState('');
@@ -76,48 +81,35 @@ export default function SavedPropertiesScreen() {
 
     // Notes modal state
     const [notesModalVisible, setNotesModalVisible] = useState(false);
-    const [selectedProperty, setSelectedProperty] = useState<SavedProperty | null>(null);
+    const [selectedProperty, setSelectedProperty] = useState<SavedPropertyWithUI | null>(null);
     const [notesText, setNotesText] = useState('');
 
     // Debounced search
     const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-    // Get saved properties from favorites store
-    const savedProperties = useMemo((): SavedProperty[] => {
-        // For now, we'll use a placeholder since the favorites store doesn't store full property data
-        // In a real implementation, you'd want to fetch the full property data for saved properties
-        return favoriteIds.map(id => ({
-            _id: id,
-            id: id,
-            // Add placeholder data - in production, you'd fetch this from an API
-            title: `Property ${id}`,
-            address: {
-                street: 'Street Address',
-                city: 'City',
-                state: 'State',
-                zipCode: '12345',
-                country: 'Country'
-            },
-            rent: {
-                amount: 0,
-                currency: '$',
-                paymentFrequency: 'monthly',
-                deposit: 0,
-                utilities: 'included'
-            },
-            type: 'apartment',
-            bedrooms: 0,
-            bathrooms: 0,
-            squareFootage: 0,
-            images: [],
-            status: 'available',
-            ownerId: '',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            notes: '',
-            savedAt: new Date().toISOString(),
-        }));
-    }, [favoriteIds]);
+    // Load saved properties
+    const loadSavedProperties = useCallback(async () => {
+        if (!oxyServices || !activeSessionId) return;
+
+        try {
+            setIsLoading(true);
+            setError(null);
+            const response = await savedPropertyService.getSavedProperties(oxyServices, activeSessionId);
+            setSavedProperties(response.properties);
+        } catch (error: any) {
+            console.error('Failed to load saved properties:', error);
+            setError(error.message || 'Failed to load saved properties');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [oxyServices, activeSessionId]);
+
+    // Load properties on mount
+    useEffect(() => {
+        if (oxyServices && activeSessionId) {
+            loadSavedProperties();
+        }
+    }, [oxyServices, activeSessionId, loadSavedProperties]);
 
     // Memoized filtered properties
     const filteredProperties = useMemo(() => {
@@ -208,24 +200,27 @@ export default function SavedPropertiesScreen() {
     const handleRefresh = useCallback(async () => {
         if (!oxyServices || !activeSessionId) return;
 
-        clearError();
-        // The favorites system automatically loads data, so we just clear any errors
-    }, [oxyServices, activeSessionId, clearError]);
+        setError(null);
+        clearFavoritesError();
+        await loadSavedProperties();
+    }, [oxyServices, activeSessionId, loadSavedProperties, clearFavoritesError]);
 
     const handleUnsaveProperty = useCallback(async (propertyId: string) => {
         if (!oxyServices || !activeSessionId) return;
 
         try {
             await toggleFavorite(propertyId);
+            // Refresh the saved properties list
+            await loadSavedProperties();
         } catch (error) {
             Alert.alert(
                 'Error',
                 `Failed to unsave property. ${error instanceof Error ? error.message : 'Please try again.'}`
             );
         }
-    }, [oxyServices, activeSessionId, toggleFavorite]);
+    }, [oxyServices, activeSessionId, toggleFavorite, loadSavedProperties]);
 
-    const handleEditNotes = useCallback((property: SavedProperty) => {
+    const handleEditNotes = useCallback((property: SavedPropertyWithUI) => {
         setSelectedProperty(property);
         setNotesText(property.notes || '');
         setNotesModalVisible(true);
@@ -241,9 +236,17 @@ export default function SavedPropertiesScreen() {
         }
 
         try {
-            // TODO: Implement notes update functionality
-            // For now, we'll just close the modal
-            console.log('TODO: Update notes for property', propertyId, notesText);
+            await savedPropertyService.updateNotes(propertyId, notesText, oxyServices, activeSessionId);
+
+            // Update the local state
+            setSavedProperties(prev =>
+                prev.map(p =>
+                    (p._id || p.id) === propertyId
+                        ? { ...p, notes: notesText }
+                        : p
+                )
+            );
+
             setNotesModalVisible(false);
             setSelectedProperty(null);
             setNotesText('');
@@ -252,7 +255,7 @@ export default function SavedPropertiesScreen() {
         }
     }, [selectedProperty, notesText, oxyServices, activeSessionId]);
 
-    const handlePropertyPress = useCallback((property: SavedProperty) => {
+    const handlePropertyPress = useCallback((property: SavedPropertyWithUI) => {
         if (bulkActionMode) {
             const propertyId = property._id || property.id || '';
             if (propertyId) {
@@ -293,6 +296,9 @@ export default function SavedPropertiesScreen() {
                             );
                             await Promise.all(unsavePromises);
 
+                            // Refresh the saved properties list
+                            await loadSavedProperties();
+
                             setSelectedProperties(new Set());
                             setBulkActionMode(false);
                         } catch (error) {
@@ -302,10 +308,10 @@ export default function SavedPropertiesScreen() {
                 }
             ]
         );
-    }, [selectedProperties, oxyServices, activeSessionId, toggleFavorite]);
+    }, [selectedProperties, oxyServices, activeSessionId, toggleFavorite, loadSavedProperties]);
 
     // Render functions
-    const renderPropertyItem = useCallback(({ item }: { item: SavedProperty }) => {
+    const renderPropertyItem = useCallback(({ item }: { item: SavedPropertyWithUI }) => {
         const propertyId = item._id || item.id || '';
         const isProcessing = isPropertySaving(propertyId);
         const isSelected = selectedProperties.has(propertyId);
@@ -395,7 +401,7 @@ export default function SavedPropertiesScreen() {
         );
     }, [viewMode, isPropertySaving, selectedProperties, bulkActionMode, handlePropertyPress, handleEditNotes]);
 
-    const keyExtractor = useCallback((item: SavedProperty) =>
+    const keyExtractor = useCallback((item: SavedPropertyWithUI) =>
         item._id || item.id || '', []
     );
 

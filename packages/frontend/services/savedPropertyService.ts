@@ -1,4 +1,3 @@
-import { api } from '@/utils/api';
 import { OxyServices } from '@oxyhq/services';
 import type { Property } from './propertyService';
 
@@ -16,7 +15,8 @@ export interface SavedPropertiesResponse {
 
 class SavedPropertyService {
   async getSavedProperties(oxyServices: OxyServices, activeSessionId: string): Promise<SavedPropertiesResponse> {
-    const response = await api.getSavedProperties(oxyServices, activeSessionId);
+    const { userApi } = await import('@/utils/api');
+    const response = await userApi.getSavedProperties(oxyServices, activeSessionId);
     
     return {
       properties: response.data?.properties || response.data || [],
@@ -32,7 +32,8 @@ class SavedPropertyService {
     oxyServices: OxyServices, 
     activeSessionId: string
   ): Promise<void> {
-    await api.saveProperty(propertyId, notes, oxyServices, activeSessionId);
+    const { userApi } = await import('@/utils/api');
+    await userApi.saveProperty(propertyId, notes, oxyServices, activeSessionId);
   }
 
   async unsaveProperty(
@@ -40,7 +41,8 @@ class SavedPropertyService {
     oxyServices: OxyServices, 
     activeSessionId: string
   ): Promise<void> {
-    await api.unsaveProperty(propertyId, oxyServices, activeSessionId);
+    const { userApi } = await import('@/utils/api');
+    await userApi.unsaveProperty(propertyId, oxyServices, activeSessionId);
   }
 
   async updateNotes(
@@ -49,7 +51,8 @@ class SavedPropertyService {
     oxyServices: OxyServices, 
     activeSessionId: string
   ): Promise<void> {
-    await api.updateSavedPropertyNotes(propertyId, notes, oxyServices, activeSessionId);
+    const { userApi } = await import('@/utils/api');
+    await userApi.updateSavedPropertyNotes(propertyId, notes, oxyServices, activeSessionId);
   }
 
   async bulkUnsave(
