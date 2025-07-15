@@ -131,7 +131,7 @@ export default function SindiSettingsScreen() {
                                     {/* Reopen button */}
                                     <TouchableOpacity
                                         style={[styles.actionButton, { marginTop: 8, alignSelf: 'flex-end' }]}
-                                        onPress={() => router.push(`/sindi?conversationId=${conv._id}`)}
+                                        onPress={() => router.push(`/sindi/${conv._id}`)}
                                     >
                                         <Ionicons name="chatbubbles-outline" size={16} color={colors.sindiColor} style={{ marginRight: 6 }} />
                                         <Text style={styles.actionText}>{t('sindi.settings.reopen', 'Reopen')}</Text>

@@ -605,6 +605,24 @@ export const sindiApi = {
     });
     return response.data;
   },
+
+  // Get a specific conversation by id
+  async getSindiConversation(conversationId: string, oxyServices: OxyServices, activeSessionId: string): Promise<{ conversation: any }> {
+    const response = await api.get<{ conversation: any }>(`/api/ai/conversation/${conversationId}` as any, {
+      oxyServices,
+      activeSessionId,
+    });
+    return response.data;
+  },
+
+  // Append messages to a conversation
+  async appendSindiConversation(conversationId: string, messages: any[], oxyServices: OxyServices, activeSessionId: string): Promise<{ conversation: any }> {
+    const response = await api.post<{ conversation: any }>(`/api/ai/conversation/${conversationId}` as any, { messages }, {
+      oxyServices,
+      activeSessionId,
+    });
+    return response.data;
+  },
 };
 
 // Export the API configuration for external use
