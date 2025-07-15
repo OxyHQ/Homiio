@@ -12,11 +12,18 @@ import Button from '@/components/Button';
 import { colors } from '@/styles/colors';
 import { useSEO } from '@/hooks/useDocumentTitle';
 import { getPropertyTitle } from '@/utils/propertyUtils';
-import { useSavedPropertiesStore } from '@/store/savedPropertiesStore';
+import { useFavorites } from '@/hooks/useFavorites';
 import { useOxy } from '@oxyhq/services';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import type { Property } from '@/services/propertyService';
+
+// Extended interface for saved properties
+interface SavedProperty extends Property {
+    notes?: string;
+    savedAt?: string;
+}
 
 const IconComponent = Ionicons as any;
 const { width: screenWidth } = Dimensions.get('window');
@@ -46,17 +53,17 @@ export default function SavedPropertiesScreen() {
     const { t } = useTranslation();
     const { oxyServices, activeSessionId } = useOxy();
 
-    // Zustand state
+    // Use the new Zustand-based favorites system
     const {
-        properties,
+        favoriteIds,
         isLoading,
         error,
-        savingPropertyIds,
-        setProperties,
-        setIsLoading,
-        setError,
-        setSavingPropertyIds
-    } = useSavedPropertiesStore();
+        isSaving,
+        toggleFavorite,
+        isFavorite,
+        isPropertySaving,
+        clearError
+    } = useFavorites();
 
     // Local state
     const [searchQuery, setSearchQuery] = useState('');
@@ -69,21 +76,58 @@ export default function SavedPropertiesScreen() {
 
     // Notes modal state
     const [notesModalVisible, setNotesModalVisible] = useState(false);
-    const [selectedProperty, setSelectedProperty] = useState<any | null>(null);
+    const [selectedProperty, setSelectedProperty] = useState<SavedProperty | null>(null);
     const [notesText, setNotesText] = useState('');
 
     // Debounced search
     const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
+    // Get saved properties from favorites store
+    const savedProperties = useMemo((): SavedProperty[] => {
+        // For now, we'll use a placeholder since the favorites store doesn't store full property data
+        // In a real implementation, you'd want to fetch the full property data for saved properties
+        return favoriteIds.map(id => ({
+            _id: id,
+            id: id,
+            // Add placeholder data - in production, you'd fetch this from an API
+            title: `Property ${id}`,
+            address: {
+                street: 'Street Address',
+                city: 'City',
+                state: 'State',
+                zipCode: '12345',
+                country: 'Country'
+            },
+            rent: {
+                amount: 0,
+                currency: '$',
+                paymentFrequency: 'monthly',
+                deposit: 0,
+                utilities: 'included'
+            },
+            type: 'apartment',
+            bedrooms: 0,
+            bathrooms: 0,
+            squareFootage: 0,
+            images: [],
+            status: 'available',
+            ownerId: '',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            notes: '',
+            savedAt: new Date().toISOString(),
+        }));
+    }, [favoriteIds]);
+
     // Memoized filtered properties
     const filteredProperties = useMemo(() => {
-        let filtered = [...properties];
+        let filtered = [...savedProperties];
 
         // Apply search filter
         if (debouncedSearchQuery.trim()) {
             const query = debouncedSearchQuery.toLowerCase().trim();
             filtered = filtered.filter(property => {
-                const title = getPropertyTitle(property as any).toLowerCase() || '';
+                const title = getPropertyTitle(property).toLowerCase() || '';
                 const city = property.address?.city?.toLowerCase() || '';
                 const street = property.address?.street?.toLowerCase() || '';
                 const notes = property.notes?.toLowerCase() || '';
@@ -127,7 +171,7 @@ export default function SavedPropertiesScreen() {
                 case 'price-high':
                     return (b.rent?.amount || 0) - (a.rent?.amount || 0);
                 case 'title':
-                    return getPropertyTitle(a as any).localeCompare(getPropertyTitle(b as any));
+                    return getPropertyTitle(a).localeCompare(getPropertyTitle(b));
                 case 'notes':
                     return (b.notes?.length || 0) - (a.notes?.length || 0);
                 default:
@@ -136,21 +180,21 @@ export default function SavedPropertiesScreen() {
         });
 
         return filtered;
-    }, [properties, debouncedSearchQuery, selectedCategory, sortBy]);
+    }, [savedProperties, debouncedSearchQuery, selectedCategory, sortBy]);
 
     // Memoized category counts
     const categoryCounts = useMemo(() => {
         const now = Date.now();
         return {
-            all: properties.length,
-            recent: properties.filter(p => {
+            all: savedProperties.length,
+            recent: savedProperties.filter(p => {
                 const savedTime = p.savedAt ? new Date(p.savedAt).getTime() : now;
                 return (now - savedTime) <= (7 * 24 * 60 * 60 * 1000);
             }).length,
-            noted: properties.filter(p => p.notes && p.notes.trim().length > 0).length,
-            'quick-saves': properties.filter(p => !p.notes || p.notes.trim().length === 0).length,
+            noted: savedProperties.filter(p => p.notes && p.notes.trim().length > 0).length,
+            'quick-saves': savedProperties.filter(p => !p.notes || p.notes.trim().length === 0).length,
         };
-    }, [properties]);
+    }, [savedProperties]);
 
     // SEO
     useSEO({
@@ -160,38 +204,28 @@ export default function SavedPropertiesScreen() {
         type: 'website'
     });
 
-    // Load properties on mount
-    useEffect(() => {
-        if (oxyServices && activeSessionId && properties.length === 0 && !isLoading) {
-            // TODO: Implement loadSavedProperties with Zustand
-            console.log('TODO: Load saved properties with Zustand');
-        }
-    }, [oxyServices, activeSessionId, properties.length, isLoading]);
-
     // Handlers
     const handleRefresh = useCallback(async () => {
         if (!oxyServices || !activeSessionId) return;
 
-        setError(null);
-        // TODO: Implement loadSavedProperties with Zustand
-        console.log('TODO: Refresh saved properties with Zustand');
-    }, [oxyServices, activeSessionId, setError]);
+        clearError();
+        // The favorites system automatically loads data, so we just clear any errors
+    }, [oxyServices, activeSessionId, clearError]);
 
     const handleUnsaveProperty = useCallback(async (propertyId: string) => {
         if (!oxyServices || !activeSessionId) return;
 
         try {
-            // TODO: Implement unsaveProperty with Zustand
-            console.log('TODO: Unsave property with Zustand', propertyId);
+            await toggleFavorite(propertyId);
         } catch (error) {
             Alert.alert(
                 'Error',
                 `Failed to unsave property. ${error instanceof Error ? error.message : 'Please try again.'}`
             );
         }
-    }, [oxyServices, activeSessionId]);
+    }, [oxyServices, activeSessionId, toggleFavorite]);
 
-    const handleEditNotes = useCallback((property: any) => {
+    const handleEditNotes = useCallback((property: SavedProperty) => {
         setSelectedProperty(property);
         setNotesText(property.notes || '');
         setNotesModalVisible(true);
@@ -207,8 +241,9 @@ export default function SavedPropertiesScreen() {
         }
 
         try {
-            // TODO: Implement updatePropertyNotes with Zustand
-            console.log('TODO: Update property notes with Zustand', propertyId, notesText);
+            // TODO: Implement notes update functionality
+            // For now, we'll just close the modal
+            console.log('TODO: Update notes for property', propertyId, notesText);
             setNotesModalVisible(false);
             setSelectedProperty(null);
             setNotesText('');
@@ -217,7 +252,7 @@ export default function SavedPropertiesScreen() {
         }
     }, [selectedProperty, notesText, oxyServices, activeSessionId]);
 
-    const handlePropertyPress = useCallback((property: any) => {
+    const handlePropertyPress = useCallback((property: SavedProperty) => {
         if (bulkActionMode) {
             const propertyId = property._id || property.id || '';
             if (propertyId) {
@@ -252,8 +287,12 @@ export default function SavedPropertiesScreen() {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            // TODO: Implement bulk unsave with Zustand
-                            console.log('TODO: Bulk unsave with Zustand', Array.from(selectedProperties));
+                            // Unsave all selected properties
+                            const unsavePromises = Array.from(selectedProperties).map(propertyId =>
+                                toggleFavorite(propertyId)
+                            );
+                            await Promise.all(unsavePromises);
+
                             setSelectedProperties(new Set());
                             setBulkActionMode(false);
                         } catch (error) {
@@ -263,12 +302,12 @@ export default function SavedPropertiesScreen() {
                 }
             ]
         );
-    }, [selectedProperties, oxyServices, activeSessionId, setSelectedProperties, setBulkActionMode]);
+    }, [selectedProperties, oxyServices, activeSessionId, toggleFavorite]);
 
     // Render functions
-    const renderPropertyItem = useCallback(({ item }: { item: any }) => {
+    const renderPropertyItem = useCallback(({ item }: { item: SavedProperty }) => {
         const propertyId = item._id || item.id || '';
-        const isProcessing = savingPropertyIds.includes(propertyId);
+        const isProcessing = isPropertySaving(propertyId);
         const isSelected = selectedProperties.has(propertyId);
 
         return (
@@ -277,7 +316,7 @@ export default function SavedPropertiesScreen() {
                 viewMode === 'grid' && styles.gridCardWrapper
             ])}>
                 <PropertyCard
-                    property={item as any}
+                    property={item}
                     variant={viewMode === 'grid' ? 'compact' : 'saved'}
                     onPress={() => !isProcessing && handlePropertyPress(item)}
                     style={StyleSheet.flatten([
@@ -354,9 +393,9 @@ export default function SavedPropertiesScreen() {
                 />
             </View>
         );
-    }, [viewMode, savingPropertyIds, selectedProperties, bulkActionMode, handlePropertyPress, handleEditNotes]);
+    }, [viewMode, isPropertySaving, selectedProperties, bulkActionMode, handlePropertyPress, handleEditNotes]);
 
-    const keyExtractor = useCallback((item: any) =>
+    const keyExtractor = useCallback((item: SavedProperty) =>
         item._id || item.id || '', []
     );
 
@@ -624,7 +663,7 @@ export default function SavedPropertiesScreen() {
                 }}
             />
 
-            {isLoading && properties.length === 0 && <LoadingTopSpinner showLoading={true} />}
+            {isLoading && savedProperties.length === 0 && <LoadingTopSpinner showLoading={true} />}
 
             {error && !isLoading && (
                 <View style={styles.errorState}>
@@ -653,7 +692,7 @@ export default function SavedPropertiesScreen() {
                     columnWrapperStyle={viewMode === 'grid' ? styles.gridRow : undefined}
                     ListHeaderComponent={renderHeader}
                     ListEmptyComponent={renderEmptyState}
-                    refreshing={isLoading && properties.length > 0}
+                    refreshing={isLoading && savedProperties.length > 0}
                     onRefresh={handleRefresh}
                     maxToRenderPerBatch={viewMode === 'grid' ? 6 : 4}
                     windowSize={8}
@@ -682,7 +721,7 @@ export default function SavedPropertiesScreen() {
                         </View>
 
                         <Text style={styles.modalSubtitle}>
-                            Add personal notes for "{selectedProperty ? getPropertyTitle(selectedProperty as any) : 'this property'}"
+                            Add personal notes for "{selectedProperty ? getPropertyTitle(selectedProperty) : 'this property'}"
                         </Text>
 
                         <TextInput
