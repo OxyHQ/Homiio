@@ -4,10 +4,11 @@
  */
 
 import express from 'express';
-import { openai } from 'ai';
+import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
 import { PassThrough } from 'stream';
-import Profile from '../models/schemas/ProfileSchema';
+// import Profile from '../models/schemas/ProfileSchema';
+const Profile = require('../models/schemas/ProfileSchema');
 
 export default function() {
   const router = express.Router();
@@ -85,7 +86,19 @@ export default function() {
    * Parse natural language query to extract property search filters
    */
   function parsePropertyFilters(query) {
-    const filters = {};
+    const filters: {
+      maxRent?: number;
+      minRent?: number;
+      city?: string;
+      type?: string;
+      bedrooms?: number;
+      bathrooms?: number;
+      amenities?: string[];
+      minSize?: number;
+      availableNow?: boolean;
+      budgetFriendly?: boolean;
+      luxury?: boolean;
+    } = {};
     const lowerQuery = query.toLowerCase();
     
     // Price filters

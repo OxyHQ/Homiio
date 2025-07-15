@@ -3,7 +3,8 @@ import { useChat } from '@ai-sdk/react';
 import { fetch as expoFetch } from 'expo/fetch';
 import { View, TextInput, ScrollView, Text, SafeAreaView, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useOxy } from '@oxyhq/services';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons'; // keep for IconComponent type assertion
+const IconComponent = Ionicons as any;
 import { colors } from '@/styles/colors';
 import Markdown from 'react-native-markdown-display';
 import { useRouter } from 'expo-router';
@@ -14,38 +15,14 @@ import { ThemedText } from '@/components/ThemedText';
 import { Header } from '@/components/Header';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as DocumentPicker from 'expo-document-picker';
+import React from 'react';
 
 export default function sindi() {
   const { oxyServices, activeSessionId } = useOxy();
   const router = useRouter();
   const { t } = useTranslation();
-
-  // Check if user is authenticated
-  if (!oxyServices || !activeSessionId) {
-    return (
-      <ThemedView style={styles.container} lightColor="transparent" darkColor="transparent">
-        <Header options={{ title: t('sindi.title'), showBackButton: true }} />
-        <View style={styles.authRequiredContainer}>
-          <LinearGradient
-            colors={[colors.primaryColor, colors.secondaryLight]}
-            style={styles.authRequiredCard}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <View style={styles.authRequiredContent}>
-              <View style={styles.authRequiredIconContainer}>
-                <Text style={styles.authRequiredIcon}>🔒</Text>
-              </View>
-              <Text style={styles.authRequiredTitle}>{t('sindi.auth.required')}</Text>
-              <Text style={styles.authRequiredSubtitle}>
-                {t('sindi.auth.message')}
-              </Text>
-            </View>
-          </LinearGradient>
-        </View>
-      </ThemedView>
-    );
-  }
+  const [attachedFile, setAttachedFile] = React.useState<any>(null);
 
   // Create a custom fetch function that includes authentication
   const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
@@ -77,11 +54,68 @@ export default function sindi() {
     return expoFetch(url, fetchOptions as any);
   };
 
+  // Always call useChat, but only enable it if authenticated
+  const isAuthenticated = !!oxyServices && !!activeSessionId;
   const { messages, error, handleInputChange, input, handleSubmit, isLoading } = useChat({
     fetch: authenticatedFetch as unknown as typeof globalThis.fetch,
     api: generateAPIUrl('/api/ai/stream'),
-    onError: error => console.error(error, 'ERROR'),
-  });
+    onError: (error: any) => console.error(error, 'ERROR'),
+    enabled: isAuthenticated, // Only enable chat if authenticated
+  } as any); // Cast to any to allow 'enabled' prop if not in type
+
+  const handleAttachFile = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setAttachedFile(result.assets[0]);
+      }
+    } catch (e) {
+      console.error('File pick error:', e);
+    }
+  };
+
+  const handleRemoveFile = () => setAttachedFile(null);
+
+  // Wrap the original handleSubmit to include file info (for now, just log)
+  const handleSubmitWithFile = () => {
+    if (attachedFile) {
+      console.log('Sending file:', attachedFile);
+      // TODO: Integrate file upload to backend here
+      setAttachedFile(null);
+    }
+    handleSubmit();
+  };
+
+  // Early return for unauthenticated users (after all hooks)
+  if (!isAuthenticated) {
+    return (
+      <ThemedView style={styles.container} lightColor="transparent" darkColor="transparent">
+        <Header options={{ title: t('sindi.title'), showBackButton: true }} />
+        <View style={styles.authRequiredContainer}>
+          <LinearGradient
+            colors={[colors.primaryColor, colors.secondaryLight]}
+            style={styles.authRequiredCard}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <View style={styles.authRequiredContent}>
+              <View style={styles.authRequiredIconContainer}>
+                <Text style={styles.authRequiredIcon}>🔒</Text>
+              </View>
+              <Text style={styles.authRequiredTitle}>{t('sindi.auth.required')}</Text>
+              <Text style={styles.authRequiredSubtitle}>
+                {t('sindi.auth.message')}
+              </Text>
+            </View>
+          </LinearGradient>
+        </View>
+      </ThemedView>
+    );
+  }
 
   const quickActions = [
     { title: t('sindi.actions.rentGouging.title'), icon: 'trending-up', prompt: t('sindi.actions.rentGouging.prompt') },
@@ -120,7 +154,7 @@ export default function sindi() {
         end={{ x: 1, y: 1 }}
       >
         <View style={styles.errorContent}>
-          <Ionicons name="alert-circle" size={48} color="white" />
+          <IconComponent name="alert-circle" size={48} color="white" />
           <Text style={styles.errorText}>{t('sindi.errors.connection')}</Text>
           <Text style={styles.errorSubtext}>{t('sindi.errors.connectionMessage')}</Text>
         </View>
@@ -184,7 +218,7 @@ export default function sindi() {
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                     >
-                      <Ionicons name={action.icon as any} size={20} color="white" />
+                      <IconComponent name={action.icon as any} size={20} color="white" />
                       <Text style={styles.quickActionText}>{action.title}</Text>
                     </LinearGradient>
                   </TouchableOpacity>
@@ -210,7 +244,7 @@ export default function sindi() {
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                     >
-                      <Ionicons name={example.icon as any} size={18} color="white" />
+                      <IconComponent name={example.icon as any} size={18} color="white" />
                       <Text style={styles.propertySearchText}>{example.title}</Text>
                     </LinearGradient>
                   </TouchableOpacity>
@@ -296,16 +330,201 @@ export default function sindi() {
                             flexWrap: 'wrap',
                             flexShrink: 1,
                             width: '100%',
+                            ...(Platform.OS === 'web'
+                              ? ({
+                                overflowWrap: 'break-word',
+                                wordBreak: 'break-word',
+                                whiteSpace: 'pre-line',
+                              } as any)
+                              : {}),
                           },
-                          heading1: styles.markdownH1,
-                          heading2: styles.markdownH2,
-                          heading3: styles.markdownH3,
+                          paragraph: {
+                            width: '100%',
+                            flexWrap: 'wrap',
+                            ...(Platform.OS === 'web' ? ({
+                              overflowWrap: 'break-word',
+                              wordBreak: 'break-word',
+                              whiteSpace: 'pre-line',
+                            } as any) : {}),
+                          },
+                          heading1: {
+                            ...styles.markdownH1,
+                            flexWrap: 'wrap',
+                            width: '100%',
+                            ...(Platform.OS === 'web'
+                              ? ({
+                                overflowWrap: 'break-word',
+                                wordBreak: 'break-word',
+                                whiteSpace: 'pre-line',
+                              } as any)
+                              : {}),
+                          },
+                          heading2: {
+                            ...styles.markdownH2,
+                            flexWrap: 'wrap',
+                            width: '100%',
+                            ...(Platform.OS === 'web'
+                              ? ({
+                                overflowWrap: 'break-word',
+                                wordBreak: 'break-word',
+                                whiteSpace: 'pre-line',
+                              } as any)
+                              : {}),
+                          },
+                          heading3: {
+                            ...styles.markdownH3,
+                            flexWrap: 'wrap',
+                            width: '100%',
+                            ...(Platform.OS === 'web'
+                              ? ({
+                                overflowWrap: 'break-word',
+                                wordBreak: 'break-word',
+                                whiteSpace: 'pre-line',
+                              } as any)
+                              : {}),
+                          },
+                          heading4: {
+                            fontSize: 16,
+                            fontWeight: 'bold',
+                            marginBottom: 8,
+                            flexWrap: 'wrap',
+                            width: '100%',
+                            ...(Platform.OS === 'web' ? ({
+                              overflowWrap: 'break-word',
+                              wordBreak: 'break-word',
+                              whiteSpace: 'pre-line',
+                            } as any) : {}),
+                          },
+                          heading5: {
+                            fontSize: 14,
+                            fontWeight: 'bold',
+                            marginBottom: 8,
+                            flexWrap: 'wrap',
+                            width: '100%',
+                            ...(Platform.OS === 'web' ? ({
+                              overflowWrap: 'break-word',
+                              wordBreak: 'break-word',
+                              whiteSpace: 'pre-line',
+                            } as any) : {}),
+                          },
+                          heading6: {
+                            fontSize: 12,
+                            fontWeight: 'bold',
+                            marginBottom: 8,
+                            flexWrap: 'wrap',
+                            width: '100%',
+                            ...(Platform.OS === 'web' ? ({
+                              overflowWrap: 'break-word',
+                              wordBreak: 'break-word',
+                              whiteSpace: 'pre-line',
+                            } as any) : {}),
+                          },
                           strong: styles.markdownBold,
                           em: styles.markdownItalic,
-                          bullet_list: styles.markdownListItem,
-                          ordered_list: styles.markdownListItem,
-                          code_block: styles.markdownCodeBlock,
-                          code_inline: styles.markdownInlineCode,
+                          bullet_list: {
+                            ...styles.markdownListItem,
+                            flexWrap: 'wrap',
+                            width: '100%',
+                            ...(Platform.OS === 'web'
+                              ? ({
+                                overflowWrap: 'break-word',
+                                wordBreak: 'break-word',
+                              } as any)
+                              : {}),
+                          },
+                          ordered_list: {
+                            ...styles.markdownListItem,
+                            flexWrap: 'wrap',
+                            width: '100%',
+                            ...(Platform.OS === 'web'
+                              ? ({
+                                overflowWrap: 'break-word',
+                                wordBreak: 'break-word',
+                              } as any)
+                              : {}),
+                          },
+                          list_item: {
+                            flexDirection: 'row',
+                            alignItems: 'flex-start',
+                            marginBottom: 4,
+                            flexWrap: 'wrap',
+                            width: '100%',
+                            ...(Platform.OS === 'web' ? ({
+                              overflowWrap: 'break-word',
+                              wordBreak: 'break-word',
+                            } as any) : {}),
+                          },
+                          code_block: {
+                            ...styles.markdownCodeBlock,
+                            ...(Platform.OS === 'web'
+                              ? ({
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word',
+                                overflowX: 'auto',
+                                maxWidth: '100%',
+                                boxSizing: 'border-box',
+                              } as any)
+                              : {}),
+                          },
+                          code_inline: {
+                            ...styles.markdownInlineCode,
+                            ...(Platform.OS === 'web'
+                              ? ({
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word',
+                                maxWidth: '100%',
+                              } as any)
+                              : {}),
+                          },
+                          table: {
+                            width: '100%',
+                            ...(Platform.OS === 'web' ? ({
+                              tableLayout: 'fixed',
+                              wordBreak: 'break-word',
+                            } as any) : {}),
+                          },
+                          th: {
+                            fontWeight: 'bold',
+                            borderBottomWidth: 1,
+                            borderColor: '#ccc',
+                            padding: 4,
+                            width: '100%',
+                            ...(Platform.OS === 'web' ? ({
+                              wordBreak: 'break-word',
+                            } as any) : {}),
+                          },
+                          td: {
+                            padding: 4,
+                            width: '100%',
+                            ...(Platform.OS === 'web' ? ({
+                              wordBreak: 'break-word',
+                            } as any) : {}),
+                          },
+                          blockquote: {
+                            borderLeftWidth: 4,
+                            borderLeftColor: '#ccc',
+                            paddingLeft: 8,
+                            marginVertical: 8,
+                            width: '100%',
+                            ...(Platform.OS === 'web' ? ({
+                              wordBreak: 'break-word',
+                            } as any) : {}),
+                          },
+                          link: {
+                            color: '#007AFF',
+                            textDecorationLine: 'underline',
+                            width: '100%',
+                            ...(Platform.OS === 'web' ? ({
+                              wordBreak: 'break-word',
+                            } as any) : {}),
+                          },
+                          image: {
+                            maxWidth: '100%',
+                            height: 'auto',
+                            ...(Platform.OS === 'web' ? ({
+                              boxSizing: 'border-box',
+                            } as any) : {}),
+                          },
                         }}
                       >
                         {m.content}
@@ -331,7 +550,20 @@ export default function sindi() {
           end={{ x: 1, y: 1 }}
         >
           <View style={styles.inputContainer}>
+            {/* File preview */}
+            {attachedFile && (
+              <View style={styles.filePreviewContainer}>
+                <Text style={styles.filePreviewText}>{attachedFile.name}</Text>
+                <TouchableOpacity onPress={handleRemoveFile} style={styles.removeFileButton}>
+                  <IconComponent name="close-circle" size={18} color="#e74c3c" />
+                </TouchableOpacity>
+              </View>
+            )}
             <View style={styles.inputWrapper}>
+              {/* Attach button */}
+              <TouchableOpacity onPress={handleAttachFile} style={styles.attachButton}>
+                <IconComponent name="attach" size={20} color="white" />
+              </TouchableOpacity>
               <TextInput
                 style={styles.textInput}
                 placeholder={t('sindi.chat.placeholder')}
@@ -340,16 +572,16 @@ export default function sindi() {
                 onChangeText={(text) => handleInputChange({
                   target: { value: text }
                 } as any)}
-                onSubmitEditing={() => handleSubmit()}
+                onSubmitEditing={handleSubmitWithFile}
                 multiline
                 maxLength={1000}
               />
               <TouchableOpacity
                 style={[styles.sendButton, !input.trim() && styles.sendButtonDisabled]}
-                onPress={() => handleSubmit()}
+                onPress={handleSubmitWithFile}
                 disabled={!input.trim() || isLoading}
               >
-                <Ionicons
+                <IconComponent
                   name={isLoading ? "hourglass" : "send"}
                   size={20}
                   color={input.trim() ? "white" : "rgba(255, 255, 255, 0.4)"}
@@ -667,6 +899,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 4,
+    flexWrap: 'wrap',
+    flex: 1,
   },
   markdownBullet: {
     fontSize: 16,
@@ -786,5 +1020,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.COLOR_BLACK_LIGHT_3,
     textAlign: 'center',
+  },
+  filePreviewContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 8,
+    padding: 6,
+    marginBottom: 6,
+  },
+  filePreviewText: {
+    color: 'white',
+    fontSize: 13,
+    marginRight: 8,
+  },
+  removeFileButton: {
+    padding: 2,
+  },
+  attachButton: {
+    marginRight: 8,
+    padding: 4,
   },
 });
