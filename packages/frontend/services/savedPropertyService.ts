@@ -1,4 +1,5 @@
-import api from '@/utils/api';
+import { api } from '@/utils/api';
+import { OxyServices } from '@oxyhq/services';
 import type { Property } from './propertyService';
 
 export interface SavedProperty extends Property {
@@ -14,82 +15,54 @@ export interface SavedPropertiesResponse {
 }
 
 class SavedPropertyService {
-  private baseUrl = '/api/profiles/me/saved-properties';
-
-  async getSavedProperties(oxyServices: any, activeSessionId: string): Promise<SavedPropertiesResponse> {
-    const response = await api.get(this.baseUrl, {
-      headers: {
-        'Authorization': `Bearer ${activeSessionId}`,
-        'Content-Type': 'application/json',
-      },
-    });
+  async getSavedProperties(oxyServices: OxyServices, activeSessionId: string): Promise<SavedPropertiesResponse> {
+    const response = await api.getSavedProperties(oxyServices, activeSessionId);
     
     return {
-      properties: response.data.data || response.data || [],
-      total: response.data.pagination?.total || 0,
-      page: response.data.pagination?.page || 1,
-      totalPages: response.data.pagination?.totalPages || 1,
+      properties: response.data?.properties || response.data || [],
+      total: response.data?.pagination?.total || 0,
+      page: response.data?.pagination?.page || 1,
+      totalPages: response.data?.pagination?.totalPages || 1,
     };
   }
 
   async saveProperty(
     propertyId: string, 
-    notes?: string, 
-    oxyServices: any, 
+    notes: string | undefined, 
+    oxyServices: OxyServices, 
     activeSessionId: string
   ): Promise<void> {
-    await api.post('/api/profiles/me/save-property', {
-      propertyId,
-      notes,
-    }, {
-      headers: {
-        'Authorization': `Bearer ${activeSessionId}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    await api.saveProperty(propertyId, notes, oxyServices, activeSessionId);
   }
 
   async unsaveProperty(
     propertyId: string, 
-    oxyServices: any, 
+    oxyServices: OxyServices, 
     activeSessionId: string
   ): Promise<void> {
-    await api.delete(`/api/profiles/me/saved-properties/${propertyId}`, {
-      headers: {
-        'Authorization': `Bearer ${activeSessionId}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    await api.unsaveProperty(propertyId, oxyServices, activeSessionId);
   }
 
   async updateNotes(
     propertyId: string, 
     notes: string, 
-    oxyServices: any, 
+    oxyServices: OxyServices, 
     activeSessionId: string
   ): Promise<void> {
-    await api.patch(`/api/profiles/me/saved-properties/${propertyId}/notes`, {
-      notes,
-    }, {
-      headers: {
-        'Authorization': `Bearer ${activeSessionId}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    await api.updateSavedPropertyNotes(propertyId, notes, oxyServices, activeSessionId);
   }
 
   async bulkUnsave(
     propertyIds: string[], 
-    oxyServices: any, 
+    oxyServices: OxyServices, 
     activeSessionId: string
   ): Promise<void> {
-    await api.delete('/api/profiles/me/saved-properties/bulk', {
-      data: { propertyIds },
-      headers: {
-        'Authorization': `Bearer ${activeSessionId}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    // For bulk operations, we'll need to implement this in the API utility
+    // For now, we'll use individual calls
+    const promises = propertyIds.map(propertyId => 
+      this.unsaveProperty(propertyId, oxyServices, activeSessionId)
+    );
+    await Promise.all(promises);
   }
 }
 
