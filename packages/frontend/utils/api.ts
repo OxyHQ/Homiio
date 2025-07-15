@@ -13,6 +13,7 @@ const API_CONFIG = {
     profiles: {
       recentProperties: '/api/profiles/me/recent-properties',
       savedProperties: '/api/profiles/me/saved-properties',
+      saveProperty: '/api/profiles/me/save-property',
       savedSearches: '/api/profiles/me/saved-searches',
       properties: '/api/profiles/me/properties',
     },
@@ -449,7 +450,7 @@ export const userApi = {
 
   // Save a property (authenticated)
   async saveProperty(propertyId: string, notes: string | undefined, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.post<ApiResponse>(API_CONFIG.endpoints.profiles.savedProperties, { propertyId, notes }, {
+    const response = await api.post<ApiResponse>(API_CONFIG.endpoints.profiles.saveProperty, { propertyId, notes }, {
       oxyServices,
       activeSessionId,
     });

@@ -1,14 +1,7 @@
 import React, { createContext, useContext, useEffect } from 'react';
 import { useOxy } from '@oxyhq/services';
-import { useDispatch, useSelector } from 'react-redux';
+import { useProfileStore } from '@/store/profileStore';
 import type { Profile } from '@/services/profileService';
-import {
-    fetchPrimaryProfile,
-    fetchUserProfiles,
-    setPrimaryProfile as setPrimaryProfileAction,
-    setAllProfiles as setAllProfilesAction,
-} from '@/store/reducers/profileReducer';
-import type { RootState, AppDispatch } from '@/store/store';
 
 interface ProfileContextType {
     primaryProfile: Profile | null;
@@ -23,29 +16,37 @@ const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
     const { oxyServices, activeSessionId } = useOxy();
-    const dispatch = useDispatch<AppDispatch>();
-
-    const primaryProfile = useSelector((state: RootState) => state.profile.primaryProfile);
-    const allProfiles = useSelector((state: RootState) => state.profile.allProfiles);
-    const isLoading = useSelector((state: RootState) => state.profile.isLoading);
-    const error = useSelector((state: RootState) => state.profile.error) as Error | null;
+    const {
+        primaryProfile,
+        allProfiles,
+        isLoading,
+        error,
+        setPrimaryProfile,
+        setAllProfiles,
+        setLoading,
+        setError
+    } = useProfileStore();
 
     useEffect(() => {
         if (oxyServices && activeSessionId) {
-            dispatch(fetchPrimaryProfile({ oxyServices, activeSessionId }));
-            dispatch(fetchUserProfiles({ oxyServices, activeSessionId }));
+            // TODO: Implement fetch logic with Zustand
+            // For now, just set loading state
+            setLoading(true);
+            // You'll need to implement the actual fetch logic here
+            // or use a separate service/hook for API calls
         } else {
-            dispatch(setPrimaryProfileAction(null));
-            dispatch(setAllProfilesAction([]));
+            setPrimaryProfile(null);
+            setAllProfiles([]);
         }
-    }, [oxyServices, activeSessionId, dispatch]);
+    }, [oxyServices, activeSessionId, setPrimaryProfile, setAllProfiles, setLoading]);
 
     const hasPrimaryProfile = !!primaryProfile;
 
     const refetch = () => {
         if (oxyServices && activeSessionId) {
-            dispatch(fetchPrimaryProfile({ oxyServices, activeSessionId }));
-            dispatch(fetchUserProfiles({ oxyServices, activeSessionId }));
+            // TODO: Implement refetch logic with Zustand
+            setLoading(true);
+            // You'll need to implement the actual fetch logic here
         }
     };
 
@@ -53,7 +54,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         primaryProfile,
         allProfiles,
         isLoading,
-        error,
+        error: error as Error | null,
         hasPrimaryProfile,
         refetch,
     };

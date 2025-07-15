@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { View, FlatList, StyleSheet, Dimensions, Alert, TouchableOpacity, TextInput, ScrollView, Text, Modal } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { ThemedView } from '@/components/ThemedView';
@@ -13,14 +12,7 @@ import Button from '@/components/Button';
 import { colors } from '@/styles/colors';
 import { useSEO } from '@/hooks/useDocumentTitle';
 import { getPropertyTitle } from '@/utils/propertyUtils';
-import { RootState, AppDispatch } from '@/store/store';
-import {
-    loadSavedProperties,
-    unsaveProperty,
-    updatePropertyNotes,
-    clearError,
-    SavedPropertyWithMeta
-} from '@/store/reducers/savedPropertiesReducer';
+import { useSavedPropertiesStore } from '@/store/savedPropertiesStore';
 import { useOxy } from '@oxyhq/services';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Ionicons } from '@expo/vector-icons';
@@ -52,14 +44,19 @@ const CATEGORIES = [
 
 export default function SavedPropertiesScreen() {
     const { t } = useTranslation();
-    const dispatch = useDispatch<AppDispatch>();
     const { oxyServices, activeSessionId } = useOxy();
 
-    // Redux state
-    const properties = useSelector((state: RootState) => state.savedProperties.properties);
-    const isLoading = useSelector((state: RootState) => state.savedProperties.isLoading);
-    const error = useSelector((state: RootState) => state.savedProperties.error);
-    const savingPropertyIds = useSelector((state: RootState) => state.savedProperties.savingPropertyIds);
+    // Zustand state
+    const {
+        properties,
+        isLoading,
+        error,
+        savingPropertyIds,
+        setProperties,
+        setIsLoading,
+        setError,
+        setSavingPropertyIds
+    } = useSavedPropertiesStore();
 
     // Local state
     const [searchQuery, setSearchQuery] = useState('');
@@ -72,7 +69,7 @@ export default function SavedPropertiesScreen() {
 
     // Notes modal state
     const [notesModalVisible, setNotesModalVisible] = useState(false);
-    const [selectedProperty, setSelectedProperty] = useState<SavedPropertyWithMeta | null>(null);
+    const [selectedProperty, setSelectedProperty] = useState<any | null>(null);
     const [notesText, setNotesText] = useState('');
 
     // Debounced search
@@ -166,36 +163,35 @@ export default function SavedPropertiesScreen() {
     // Load properties on mount
     useEffect(() => {
         if (oxyServices && activeSessionId && properties.length === 0 && !isLoading) {
-            dispatch(loadSavedProperties({ oxyServices, activeSessionId }));
+            // TODO: Implement loadSavedProperties with Zustand
+            console.log('TODO: Load saved properties with Zustand');
         }
-    }, [oxyServices, activeSessionId, properties.length, isLoading, dispatch]);
+    }, [oxyServices, activeSessionId, properties.length, isLoading]);
 
     // Handlers
     const handleRefresh = useCallback(async () => {
         if (!oxyServices || !activeSessionId) return;
 
-        dispatch(clearError());
-        dispatch(loadSavedProperties({ oxyServices, activeSessionId }));
-    }, [dispatch, oxyServices, activeSessionId]);
+        setError(null);
+        // TODO: Implement loadSavedProperties with Zustand
+        console.log('TODO: Refresh saved properties with Zustand');
+    }, [oxyServices, activeSessionId, setError]);
 
     const handleUnsaveProperty = useCallback(async (propertyId: string) => {
         if (!oxyServices || !activeSessionId) return;
 
         try {
-            await dispatch(unsaveProperty({
-                propertyId,
-                oxyServices,
-                activeSessionId
-            })).unwrap();
+            // TODO: Implement unsaveProperty with Zustand
+            console.log('TODO: Unsave property with Zustand', propertyId);
         } catch (error) {
             Alert.alert(
                 'Error',
                 `Failed to unsave property. ${error instanceof Error ? error.message : 'Please try again.'}`
             );
         }
-    }, [dispatch, oxyServices, activeSessionId]);
+    }, [oxyServices, activeSessionId]);
 
-    const handleEditNotes = useCallback((property: SavedPropertyWithMeta) => {
+    const handleEditNotes = useCallback((property: any) => {
         setSelectedProperty(property);
         setNotesText(property.notes || '');
         setNotesModalVisible(true);
@@ -211,22 +207,17 @@ export default function SavedPropertiesScreen() {
         }
 
         try {
-            await dispatch(updatePropertyNotes({
-                propertyId,
-                notes: notesText,
-                oxyServices,
-                activeSessionId
-            })).unwrap();
-
+            // TODO: Implement updatePropertyNotes with Zustand
+            console.log('TODO: Update property notes with Zustand', propertyId, notesText);
             setNotesModalVisible(false);
             setSelectedProperty(null);
             setNotesText('');
         } catch (error) {
             Alert.alert('Error', 'Failed to update notes. Please try again.');
         }
-    }, [selectedProperty, notesText, dispatch, oxyServices, activeSessionId]);
+    }, [selectedProperty, notesText, oxyServices, activeSessionId]);
 
-    const handlePropertyPress = useCallback((property: SavedPropertyWithMeta) => {
+    const handlePropertyPress = useCallback((property: any) => {
         if (bulkActionMode) {
             const propertyId = property._id || property.id || '';
             if (propertyId) {
@@ -261,15 +252,8 @@ export default function SavedPropertiesScreen() {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            const unsavePromises = Array.from(selectedProperties).map(propertyId =>
-                                dispatch(unsaveProperty({
-                                    propertyId,
-                                    oxyServices,
-                                    activeSessionId
-                                })).unwrap()
-                            );
-
-                            await Promise.all(unsavePromises);
+                            // TODO: Implement bulk unsave with Zustand
+                            console.log('TODO: Bulk unsave with Zustand', Array.from(selectedProperties));
                             setSelectedProperties(new Set());
                             setBulkActionMode(false);
                         } catch (error) {
@@ -279,10 +263,10 @@ export default function SavedPropertiesScreen() {
                 }
             ]
         );
-    }, [selectedProperties, dispatch, oxyServices, activeSessionId]);
+    }, [selectedProperties, oxyServices, activeSessionId, setSelectedProperties, setBulkActionMode]);
 
     // Render functions
-    const renderPropertyItem = useCallback(({ item }: { item: SavedPropertyWithMeta }) => {
+    const renderPropertyItem = useCallback(({ item }: { item: any }) => {
         const propertyId = item._id || item.id || '';
         const isProcessing = savingPropertyIds.includes(propertyId);
         const isSelected = selectedProperties.has(propertyId);
@@ -372,7 +356,7 @@ export default function SavedPropertiesScreen() {
         );
     }, [viewMode, savingPropertyIds, selectedProperties, bulkActionMode, handlePropertyPress, handleEditNotes]);
 
-    const keyExtractor = useCallback((item: SavedPropertyWithMeta) =>
+    const keyExtractor = useCallback((item: any) =>
         item._id || item.id || '', []
     );
 

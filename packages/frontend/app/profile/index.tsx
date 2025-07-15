@@ -17,7 +17,7 @@ import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { toast } from 'sonner';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import { useProfileRedux } from '@/hooks/useProfileQueries';
+import { useProfileZustand } from '@/hooks/useProfileZustand';
 import type { Profile } from '@/services/profileService';
 
 // Type assertion for Ionicons compatibility with React 19
@@ -86,7 +86,7 @@ export default function ProfileScreen() {
         updateProfile,
         deleteProfile,
         activateProfile
-    } = useProfileRedux();
+    } = useProfileZustand();
 
     const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
     const [isSwitching, setIsSwitching] = useState(false);

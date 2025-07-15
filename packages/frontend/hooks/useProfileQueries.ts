@@ -1,18 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState, AppDispatch } from '@/store/store';
+import { useProfileStore } from '@/store/profileStore';
 import { useOxy } from '@oxyhq/services';
 import { toast } from 'sonner';
 import type { UserProfile } from '@/utils/api';
 
-// Profile Redux Hook
+// Profile Zustand Hook
 export const useProfileRedux = () => {
-  const dispatch = useDispatch<AppDispatch>();
+  const { primaryProfile, allProfiles, isLoading, error } = useProfileStore();
+  const { setPrimaryProfile, setAllProfiles, setLoading, setError } = useProfileStore();
   const { oxyServices, activeSessionId } = useOxy();
-  
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const fetchProfile = useCallback(async () => {
     if (!oxyServices || !activeSessionId) {
@@ -20,23 +16,20 @@ export const useProfileRedux = () => {
       return;
     }
 
-    setIsLoading(true);
+    setLoading(true);
     setError(null);
 
     try {
-      // Import the API function
-      const { profileApi } = await import('@/utils/api');
-      const response = await profileApi.getUserProfile(oxyServices, activeSessionId);
-      
-      setProfile(response.data || null);
+      // Use the profile store's async action
+      const profile = await useProfileStore.getState().fetchPrimaryProfile(oxyServices, activeSessionId);
       console.log('Successfully fetched user profile');
     } catch (error: any) {
       console.error('Error fetching profile:', error);
       setError(error.message || 'Failed to fetch profile');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }, [oxyServices, activeSessionId]);
+  }, [oxyServices, activeSessionId, setPrimaryProfile, setAllProfiles, setLoading, setError]);
 
   const updateProfile = useCallback(async (profileData: Partial<UserProfile>) => {
     if (!oxyServices || !activeSessionId) {
@@ -44,14 +37,11 @@ export const useProfileRedux = () => {
     }
 
     try {
-      const { profileApi } = await import('@/utils/api');
-      const response = await profileApi.updateUserProfile(profileData, oxyServices, activeSessionId);
-      
-      // Update local state
-      setProfile(prev => prev ? { ...prev, ...response.data } : response.data || null);
+      // Use the profile store's async action for primary profile
+      const updatedProfile = await useProfileStore.getState().updatePrimaryProfile(profileData as any, oxyServices, activeSessionId);
       
       toast.success('Profile updated successfully');
-      return response.data;
+      return updatedProfile;
     } catch (error: any) {
       console.error('Error updating profile:', error);
       toast.error(error.message || 'Failed to update profile');
@@ -65,12 +55,11 @@ export const useProfileRedux = () => {
     }
 
     try {
-      const { profileApi } = await import('@/utils/api');
-      const response = await profileApi.createPersonalProfile(oxyServices, activeSessionId);
+      // Use the profile store's async action
+      const profile = await useProfileStore.getState().createProfile({ profileType: 'personal' }, oxyServices, activeSessionId);
       
-      setProfile(response.data || null);
       toast.success('Profile created successfully');
-      return response.data;
+      return profile;
     } catch (error: any) {
       console.error('Error creating profile:', error);
       toast.error(error.message || 'Failed to create profile');
@@ -84,9 +73,9 @@ export const useProfileRedux = () => {
   }, [fetchProfile]);
 
   return {
-    profile,
-    allProfiles: profile ? [profile] : [],
-    primaryProfile: profile,
+    profile: primaryProfile,
+    allProfiles,
+    primaryProfile,
     isLoading,
     error,
     refetchProfiles: fetchProfile,
@@ -99,10 +88,10 @@ export const useProfileRedux = () => {
 
 // Hook to get the active profile
 export const useActiveProfile = () => {
-  const { profile, isLoading, error } = useProfileRedux();
+  const { primaryProfile, isLoading, error } = useProfileStore();
   
   return {
-    data: profile,
+    data: primaryProfile,
     isLoading,
     error,
   };

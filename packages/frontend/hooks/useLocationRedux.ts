@@ -1,51 +1,44 @@
 import { useCallback } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState, AppDispatch } from '@/store/store';
-import {
-  searchLocation,
-  reverseGeocode,
-  clearSearchResults,
-  clearReverseGeocode,
-  setSearchQuery,
-  clearAllLocationData,
-} from '@/store/reducers/locationReducer';
-import type { LocationResult, ReverseLocationResult } from '@/store/reducers/locationReducer';
-
-// Selectors
-export const useLocationSelectors = () => {
-  const searchResults = useSelector((state: RootState) => state.location.searchResults);
-  const reverseGeocodeData = useSelector((state: RootState) => state.location.reverseGeocode);
-
-  return {
-    searchResults,
-    reverseGeocodeData,
-  };
-};
+import { useLocationStore, useLocationSelectors } from '@/store/locationStore';
 
 // Location Search Hook
 export const useLocationSearch = () => {
-  const dispatch = useDispatch<AppDispatch>();
-  const { searchResults } = useLocationSelectors();
+  const { searchResults, searchQuery, isLoading, error } = useLocationSelectors();
+  const { setSearchResults, setSearchQuery, setLoading, setError, clearSearchResults } = useLocationStore();
 
-  const search = useCallback((query: string) => {
+  const search = useCallback(async (query: string) => {
     if (query && query.trim().length > 0) {
-      dispatch(searchLocation(query));
+      try {
+        setLoading(true);
+        setError(null);
+        setSearchQuery(query);
+        
+        // Import the API function
+        const { locationApi } = await import('@/utils/api');
+        const response = await locationApi.searchLocation(query);
+        
+        setSearchResults(response.data || []);
+      } catch (error: any) {
+        setError(error.message || 'Failed to search location');
+      } finally {
+        setLoading(false);
+      }
     }
-  }, [dispatch]);
+  }, [setSearchResults, setSearchQuery, setLoading, setError]);
 
   const clearResults = useCallback(() => {
-    dispatch(clearSearchResults());
-  }, [dispatch]);
+    clearSearchResults();
+  }, [clearSearchResults]);
 
   const setQuery = useCallback((query: string) => {
-    dispatch(setSearchQuery(query));
-  }, [dispatch]);
+    setSearchQuery(query);
+  }, [setSearchQuery]);
 
   return {
-    results: searchResults.results,
-    loading: searchResults.loading,
-    error: searchResults.error,
-    query: searchResults.query,
+    results: searchResults,
+    loading: isLoading,
+    error,
+    query: searchQuery,
     search,
     clearResults,
     setQuery,
@@ -54,22 +47,36 @@ export const useLocationSearch = () => {
 
 // Reverse Geocoding Hook
 export const useReverseGeocode = () => {
-  const dispatch = useDispatch<AppDispatch>();
-  const { reverseGeocodeData } = useLocationSelectors();
+  const { reverseGeocodeData, coordinates, isLoading, error } = useLocationSelectors();
+  const { setReverseGeocodeData, setCoordinates, setLoading, setError, clearReverseGeocode } = useLocationStore();
 
-  const reverseGeocodeLocation = useCallback((lat: number, lng: number) => {
-    dispatch(reverseGeocode({ lat, lng }));
-  }, [dispatch]);
+  const reverseGeocodeLocation = useCallback(async (lat: number, lng: number) => {
+    try {
+      setLoading(true);
+      setError(null);
+      setCoordinates({ lat, lng });
+      
+      // Import the API function
+      const { locationApi } = await import('@/utils/api');
+      const response = await locationApi.reverseGeocode(lat, lng);
+      
+      setReverseGeocodeData(response.data);
+    } catch (error: any) {
+      setError(error.message || 'Failed to reverse geocode');
+    } finally {
+      setLoading(false);
+    }
+  }, [setReverseGeocodeData, setCoordinates, setLoading, setError]);
 
   const clearResult = useCallback(() => {
-    dispatch(clearReverseGeocode());
-  }, [dispatch]);
+    clearReverseGeocode();
+  }, [clearReverseGeocode]);
 
   return {
-    result: reverseGeocodeData.result,
-    loading: reverseGeocodeData.loading,
-    error: reverseGeocodeData.error,
-    coordinates: reverseGeocodeData.coordinates,
+    result: reverseGeocodeData,
+    loading: isLoading,
+    error,
+    coordinates,
     reverseGeocode: reverseGeocodeLocation,
     clearResult,
   };
@@ -77,43 +84,81 @@ export const useReverseGeocode = () => {
 
 // Combined Location Hook
 export const useLocation = () => {
-  const dispatch = useDispatch<AppDispatch>();
-  const { searchResults, reverseGeocodeData } = useLocationSelectors();
+  const { searchResults, searchQuery, reverseGeocodeData, coordinates, isLoading, error } = useLocationSelectors();
+  const { 
+    setSearchResults, 
+    setSearchQuery, 
+    setReverseGeocodeData, 
+    setCoordinates, 
+    setLoading, 
+    setError, 
+    clearSearchResults, 
+    clearReverseGeocode,
+    clearAllLocationData 
+  } = useLocationStore();
 
-  const search = useCallback((query: string) => {
+  const search = useCallback(async (query: string) => {
     if (query && query.trim().length > 0) {
-      dispatch(searchLocation(query));
+      try {
+        setLoading(true);
+        setError(null);
+        setSearchQuery(query);
+        
+        // Import the API function
+        const { locationApi } = await import('@/utils/api');
+        const response = await locationApi.searchLocation(query);
+        
+        setSearchResults(response.data || []);
+      } catch (error: any) {
+        setError(error.message || 'Failed to search location');
+      } finally {
+        setLoading(false);
+      }
     }
-  }, [dispatch]);
+  }, [setSearchResults, setSearchQuery, setLoading, setError]);
 
-  const reverseGeocodeLocation = useCallback((lat: number, lng: number) => {
-    dispatch(reverseGeocode({ lat, lng }));
-  }, [dispatch]);
+  const reverseGeocodeLocation = useCallback(async (lat: number, lng: number) => {
+    try {
+      setLoading(true);
+      setError(null);
+      setCoordinates({ lat, lng });
+      
+      // Import the API function
+      const { locationApi } = await import('@/utils/api');
+      const response = await locationApi.reverseGeocode(lat, lng);
+      
+      setReverseGeocodeData(response.data);
+    } catch (error: any) {
+      setError(error.message || 'Failed to reverse geocode');
+    } finally {
+      setLoading(false);
+    }
+  }, [setReverseGeocodeData, setCoordinates, setLoading, setError]);
 
   const clearAll = useCallback(() => {
-    dispatch(clearAllLocationData());
-  }, [dispatch]);
+    clearAllLocationData();
+  }, [clearAllLocationData]);
 
   const clearSearch = useCallback(() => {
-    dispatch(clearSearchResults());
-  }, [dispatch]);
+    clearSearchResults();
+  }, [clearSearchResults]);
 
   const clearReverse = useCallback(() => {
-    dispatch(clearReverseGeocode());
-  }, [dispatch]);
+    clearReverseGeocode();
+  }, [clearReverseGeocode]);
 
   return {
     // Search functionality
-    searchResults: searchResults.results,
-    searchLoading: searchResults.loading,
-    searchError: searchResults.error,
-    searchQuery: searchResults.query,
+    searchResults,
+    searchLoading: isLoading,
+    searchError: error,
+    searchQuery,
     
     // Reverse geocoding functionality
-    reverseResult: reverseGeocodeData.result,
-    reverseLoading: reverseGeocodeData.loading,
-    reverseError: reverseGeocodeData.error,
-    reverseCoordinates: reverseGeocodeData.coordinates,
+    reverseResult: reverseGeocodeData,
+    reverseLoading: isLoading,
+    reverseError: error,
+    reverseCoordinates: coordinates,
     
     // Actions
     search,

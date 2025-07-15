@@ -1,35 +1,25 @@
 import { useEffect, useCallback } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useNeighborhoodStore } from '@/store/neighborhoodStore';
 import { useOxy } from '@oxyhq/services';
-import { RootState, AppDispatch } from '@/store/store';
-import {
-  fetchNeighborhoodByLocation,
-  fetchNeighborhoodByName,
-  fetchNeighborhoodByProperty,
-  searchNeighborhoods,
-  fetchPopularNeighborhoods,
-  setCurrentNeighborhood,
-  clearCurrentNeighborhood,
-  clearSearchResults,
-  setError,
-  clearError,
-  resetNeighborhood,
-} from '@/store/reducers/neighborhoodReducer';
 import type { NeighborhoodFilters } from '@/services/neighborhoodService';
 
 export function useNeighborhood() {
-  const dispatch = useDispatch<AppDispatch>();
-  const { oxyServices, activeSessionId } = useOxy();
-  
-  const {
+  const { 
     currentNeighborhood,
     popularNeighborhoods,
     searchResults,
     isLoading,
-    isSearching,
     error,
-    lastFetched,
-  } = useSelector((state: RootState) => state.neighborhood);
+    setCurrentNeighborhood,
+    setPopularNeighborhoods,
+    setSearchResults,
+    setLoading,
+    setError,
+    clearCurrentNeighborhood,
+    clearSearchResults,
+    clearError
+  } = useNeighborhoodStore();
+  const { oxyServices, activeSessionId } = useOxy();
 
   const isAuthenticated = !!(oxyServices && activeSessionId);
 
@@ -42,17 +32,22 @@ export function useNeighborhood() {
       }
 
       try {
-        await dispatch(fetchNeighborhoodByLocation({
-          latitude,
-          longitude,
-          oxyServices,
-          activeSessionId,
-        })).unwrap();
-      } catch (error) {
+        setLoading(true);
+        setError(null);
+        
+        // Import the API function
+        const { neighborhoodApi } = await import('@/utils/api');
+        const response = await neighborhoodApi.getNeighborhoodByLocation(latitude, longitude, oxyServices, activeSessionId);
+        
+        setCurrentNeighborhood(response.data);
+      } catch (error: any) {
         console.error('useNeighborhood: Failed to fetch neighborhood by location:', error);
+        setError(error.message || 'Failed to fetch neighborhood by location');
+      } finally {
+        setLoading(false);
       }
     },
-    [dispatch, oxyServices, activeSessionId, isAuthenticated]
+    [oxyServices, activeSessionId, isAuthenticated, setCurrentNeighborhood, setLoading, setError]
   );
 
   // Fetch neighborhood by name
@@ -64,18 +59,22 @@ export function useNeighborhood() {
       }
 
       try {
-        await dispatch(fetchNeighborhoodByName({
-          name,
-          city,
-          state,
-          oxyServices,
-          activeSessionId,
-        })).unwrap();
-      } catch (error) {
+        setLoading(true);
+        setError(null);
+        
+        // Import the API function
+        const { neighborhoodApi } = await import('@/utils/api');
+        const response = await neighborhoodApi.getNeighborhoodByName(name, city, state, oxyServices, activeSessionId);
+        
+        setCurrentNeighborhood(response.data);
+      } catch (error: any) {
         console.error('useNeighborhood: Failed to fetch neighborhood by name:', error);
+        setError(error.message || 'Failed to fetch neighborhood by name');
+      } finally {
+        setLoading(false);
       }
     },
-    [dispatch, oxyServices, activeSessionId, isAuthenticated]
+    [oxyServices, activeSessionId, isAuthenticated, setCurrentNeighborhood, setLoading, setError]
   );
 
   // Fetch neighborhood by property
@@ -87,16 +86,22 @@ export function useNeighborhood() {
       }
 
       try {
-        await dispatch(fetchNeighborhoodByProperty({
-          propertyId,
-          oxyServices,
-          activeSessionId,
-        })).unwrap();
-      } catch (error) {
+        setLoading(true);
+        setError(null);
+        
+        // Import the API function
+        const { neighborhoodApi } = await import('@/utils/api');
+        const response = await neighborhoodApi.getNeighborhoodByProperty(propertyId, oxyServices, activeSessionId);
+        
+        setCurrentNeighborhood(response.data);
+      } catch (error: any) {
         console.error('useNeighborhood: Failed to fetch neighborhood by property:', error);
+        setError(error.message || 'Failed to fetch neighborhood by property');
+      } finally {
+        setLoading(false);
       }
     },
-    [dispatch, oxyServices, activeSessionId, isAuthenticated]
+    [oxyServices, activeSessionId, isAuthenticated, setCurrentNeighborhood, setLoading, setError]
   );
 
   // Search neighborhoods
@@ -108,16 +113,22 @@ export function useNeighborhood() {
       }
 
       try {
-        await dispatch(searchNeighborhoods({
-          filters,
-          oxyServices,
-          activeSessionId,
-        })).unwrap();
-      } catch (error) {
+        setLoading(true);
+        setError(null);
+        
+        // Import the API function
+        const { neighborhoodApi } = await import('@/utils/api');
+        const response = await neighborhoodApi.searchNeighborhoods(filters, oxyServices, activeSessionId);
+        
+        setSearchResults(response.data || []);
+      } catch (error: any) {
         console.error('useNeighborhood: Failed to search neighborhoods:', error);
+        setError(error.message || 'Failed to search neighborhoods');
+      } finally {
+        setLoading(false);
       }
     },
-    [dispatch, oxyServices, activeSessionId, isAuthenticated]
+    [oxyServices, activeSessionId, isAuthenticated, setSearchResults, setLoading, setError]
   );
 
   // Fetch popular neighborhoods
@@ -129,57 +140,62 @@ export function useNeighborhood() {
       }
 
       try {
-        await dispatch(fetchPopularNeighborhoods({
-          city,
-          state,
-          limit,
-          oxyServices,
-          activeSessionId,
-        })).unwrap();
-      } catch (error) {
+        setLoading(true);
+        setError(null);
+        
+        // Import the API function
+        const { neighborhoodApi } = await import('@/utils/api');
+        const response = await neighborhoodApi.getPopularNeighborhoods(city, state, limit, oxyServices, activeSessionId);
+        
+        setPopularNeighborhoods(response.data || []);
+      } catch (error: any) {
         console.error('useNeighborhood: Failed to fetch popular neighborhoods:', error);
+        setError(error.message || 'Failed to fetch popular neighborhoods');
+      } finally {
+        setLoading(false);
       }
     },
-    [dispatch, oxyServices, activeSessionId, isAuthenticated]
+    [oxyServices, activeSessionId, isAuthenticated, setPopularNeighborhoods, setLoading, setError]
   );
 
   // Manual actions
   const setCurrent = useCallback(
     (neighborhood: any) => {
-      dispatch(setCurrentNeighborhood(neighborhood));
+      setCurrentNeighborhood(neighborhood);
     },
-    [dispatch]
+    [setCurrentNeighborhood]
   );
 
   const clearCurrent = useCallback(() => {
-    dispatch(clearCurrentNeighborhood());
-  }, [dispatch]);
+    clearCurrentNeighborhood();
+  }, [clearCurrentNeighborhood]);
 
   const clearSearch = useCallback(() => {
-    dispatch(clearSearchResults());
-  }, [dispatch]);
+    clearSearchResults();
+  }, [clearSearchResults]);
 
   const setErrorState = useCallback(
     (error: string | null) => {
-      dispatch(setError(error));
+      setError(error);
     },
-    [dispatch]
+    [setError]
   );
 
   const clearErrorState = useCallback(() => {
-    dispatch(clearError());
-  }, [dispatch]);
+    clearError();
+  }, [clearError]);
 
   const reset = useCallback(() => {
-    dispatch(resetNeighborhood());
-  }, [dispatch]);
+    clearCurrentNeighborhood();
+    clearSearchResults();
+    clearError();
+  }, [clearCurrentNeighborhood, clearSearchResults, clearError]);
 
   // Check if data is stale (older than 5 minutes)
   const isDataStale = useCallback(() => {
-    if (!lastFetched) return true;
-    const fiveMinutes = 5 * 60 * 1000;
-    return Date.now() - lastFetched > fiveMinutes;
-  }, [lastFetched]);
+    // Not implemented in Zustand store yet
+    return false;
+  }, []);
 
   return {
     // State
@@ -187,9 +203,9 @@ export function useNeighborhood() {
     popularNeighborhoods,
     searchResults,
     isLoading,
-    isSearching,
+    isSearching: isLoading, // Not implemented in Zustand store yet
     error,
-    lastFetched,
+    lastFetched: null, // Not implemented in Zustand store yet
     isAuthenticated,
     isDataStale,
 

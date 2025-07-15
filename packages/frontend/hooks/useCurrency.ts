@@ -1,6 +1,4 @@
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState, AppDispatch } from '@/store/store';
-import { setCurrency, setCurrencyByCode } from '@/store/reducers/currencyReducer';
+import { useCurrencyStore } from '@/store/currencyStore';
 import { 
     getCurrencyByCode, 
     formatCurrency, 
@@ -16,8 +14,7 @@ import { useEffect } from 'react';
 const CURRENCY_STORAGE_KEY = '@homiio_currency';
 
 export const useCurrency = () => {
-  const dispatch = useDispatch<AppDispatch>();
-  const { currentCurrency, isLoading, error } = useSelector((state: RootState) => state.currency);
+  const { currentCurrency, isLoading, error, setCurrentCurrency, setLoading, setError } = useCurrencyStore();
 
   // Load saved currency on app start
   useEffect(() => {
@@ -26,35 +23,37 @@ export const useCurrency = () => {
 
   const loadSavedCurrency = async () => {
     try {
+      setLoading(true);
       const savedCurrencyCode = await AsyncStorage.getItem(CURRENCY_STORAGE_KEY);
       if (savedCurrencyCode) {
-        const currency = getCurrencyByCode(savedCurrencyCode);
-        if (currency) {
-          dispatch(setCurrency(currency));
-        }
+        setCurrentCurrency(savedCurrencyCode);
       }
     } catch (error) {
       console.error('Failed to load saved currency:', error);
+      setError('Failed to load saved currency');
+    } finally {
+      setLoading(false);
     }
   };
 
   const changeCurrency = async (currencyCode: string) => {
     try {
-      const currency = getCurrencyByCode(currencyCode);
-      if (currency) {
-        dispatch(setCurrency(currency));
-        await AsyncStorage.setItem(CURRENCY_STORAGE_KEY, currencyCode);
-      }
+      setLoading(true);
+      setCurrentCurrency(currencyCode);
+      await AsyncStorage.setItem(CURRENCY_STORAGE_KEY, currencyCode);
     } catch (error) {
       console.error('Failed to save currency preference:', error);
+      setError('Failed to save currency preference');
+    } finally {
+      setLoading(false);
     }
   };
 
   const formatAmount = (amount: number, showCode: boolean = false): string => {
     if (showCode) {
-      return formatCurrencyWithCode(amount, currentCurrency.code);
+      return formatCurrencyWithCode(amount, currentCurrency);
     }
-    return formatCurrency(amount, currentCurrency.code);
+    return formatCurrency(amount, currentCurrency);
   };
 
   const convertAndFormat = (
@@ -62,28 +61,29 @@ export const useCurrency = () => {
     originalCurrency: string, 
     showCode: boolean = false
   ): string => {
-    const convertedAmount = convertCurrency(amount, originalCurrency, currentCurrency.code);
+    const convertedAmount = convertCurrency(amount, originalCurrency, currentCurrency);
     return formatAmount(convertedAmount, showCode);
   };
 
   const getCurrentCurrency = (): Currency => {
-    return currentCurrency;
+    return getCurrencyByCode(currentCurrency) || { code: currentCurrency, symbol: '$', name: 'Unknown' };
   };
 
   const getCurrencySymbol = (): string => {
-    return currentCurrency.symbol;
+    const currency = getCurrencyByCode(currentCurrency);
+    return currency?.symbol || '$';
   };
 
   const getCurrencyCode = (): string => {
-    return currentCurrency.code;
+    return currentCurrency;
   };
 
   const getExchangeRateInfo = (fromCurrency: string): string => {
-    return getExchangeRateDisplay(fromCurrency, currentCurrency.code);
+    return getExchangeRateDisplay(fromCurrency, currentCurrency);
   };
 
   const convertAmount = (amount: number, fromCurrency: string): number => {
-    return convertCurrency(amount, fromCurrency, currentCurrency.code);
+    return convertCurrency(amount, fromCurrency, currentCurrency);
   };
 
   return {

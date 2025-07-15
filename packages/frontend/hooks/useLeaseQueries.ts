@@ -1,18 +1,14 @@
 import { useCallback, useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState, AppDispatch } from '@/store/store';
+import { useLeaseStore, useLeaseSelectors } from '@/store/leaseStore';
 import { useOxy } from '@oxyhq/services';
 import { toast } from 'sonner';
 import { leaseService, Lease, LeaseFilters } from '@/services/leaseService';
 
-// Lease Redux Hook
+// Lease Zustand Hook
 export const useUserLeases = () => {
-  const dispatch = useDispatch<AppDispatch>();
+  const { leases, isLoading, error } = useLeaseSelectors();
+  const { setLeases, setLoading, setError } = useLeaseStore();
   const { oxyServices, activeSessionId } = useOxy();
-  
-  const [leases, setLeases] = useState<Lease[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const fetchLeases = useCallback(async (filters?: LeaseFilters) => {
     if (!oxyServices || !activeSessionId) {
@@ -20,7 +16,7 @@ export const useUserLeases = () => {
       return;
     }
 
-    setIsLoading(true);
+    setLoading(true);
     setError(null);
 
     try {
@@ -32,9 +28,9 @@ export const useUserLeases = () => {
       console.error('Error fetching leases:', error);
       setError(error.message || 'Failed to fetch leases');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }, [oxyServices, activeSessionId]);
+  }, [oxyServices, activeSessionId, setLeases, setLoading, setError]);
 
   // Load leases on mount
   useEffect(() => {

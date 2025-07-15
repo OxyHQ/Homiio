@@ -2,11 +2,10 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { ScrollView, Keyboard, LogBox, Platform, View, StyleSheet } from "react-native";
 import * as SplashScreen from 'expo-splash-screen';
-import { Provider } from 'react-redux';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { useFonts } from "expo-font";
 import { Slot } from 'expo-router';
-import store from '@/store/store';
+// Redux store removed - now using Zustand
 import { useMediaQuery } from 'react-responsive';
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
@@ -197,27 +196,25 @@ export default function RootLayout() {
       theme="light"
     >
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <Provider store={store}>
-          <I18nextProvider i18n={i18n}>
-            <MenuProvider>
-              <ErrorBoundary>
-                <ProfileProvider>
-                  <View style={styles.container}>
-                    <SideBar />
-                    <View style={styles.mainContentWrapper}>
-                      <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0 }} />
-                      <Slot />
-                    </View>
-                    <RightBar />
+        <I18nextProvider i18n={i18n}>
+          <MenuProvider>
+            <ErrorBoundary>
+              <ProfileProvider>
+                <View style={styles.container}>
+                  <SideBar />
+                  <View style={styles.mainContentWrapper}>
+                    <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0 }} />
+                    <Slot />
                   </View>
-                  <StatusBar style="auto" />
-                  <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
-                  {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
-                </ProfileProvider>
-              </ErrorBoundary>
-            </MenuProvider>
-          </I18nextProvider>
-        </Provider>
+                  <RightBar />
+                </View>
+                <StatusBar style="auto" />
+                <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
+                {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
+              </ProfileProvider>
+            </ErrorBoundary>
+          </MenuProvider>
+        </I18nextProvider>
       </SafeAreaProvider>
     </OxyProvider>
   );

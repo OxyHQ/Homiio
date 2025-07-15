@@ -4,8 +4,7 @@ import { colors } from '@/styles/colors';
 import { ThemedText } from '../ThemedText';
 import { Ionicons } from '@expo/vector-icons';
 import { BaseWidget } from './BaseWidget';
-import { useSelector } from 'react-redux';
-import { RootState } from '@/store/store';
+import { useCreatePropertyFormStore } from '@/store/createPropertyFormStore';
 
 const IconComponent = Ionicons as any;
 const { width: screenWidth } = Dimensions.get('window');
@@ -17,8 +16,8 @@ export function PropertyPreviewWidget() {
         return null;
     }
 
-    // Get form data from Redux
-    const { formData, isVisible } = useSelector((state: RootState) => state.createPropertyForm);
+    // Get form data from Zustand
+    const { formData, isVisible } = useCreatePropertyFormStore();
 
     // Debug logging
     console.log('PropertyPreviewWidget Debug:', {
@@ -29,7 +28,7 @@ export function PropertyPreviewWidget() {
         address: formData?.address,
         type: formData?.type,
         rent: formData?.rent,
-        reduxState: useSelector((state: RootState) => state.createPropertyForm)
+        zustandState: { formData, isVisible }
     });
 
     // Always show the widget for debugging, even without form data

@@ -6,7 +6,25 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
-import { SavedSearch } from '@/store/reducers/savedSearchesReducer';
+
+// Define SavedSearch type locally since we're no longer using Redux
+interface SavedSearch {
+    id: string;
+    name: string;
+    query: string;
+    filters?: {
+        minPrice?: number;
+        maxPrice?: number;
+        bedrooms?: number;
+        bathrooms?: number;
+        propertyType?: string;
+        location?: string;
+        amenities?: string[];
+    };
+    createdAt: string;
+    updatedAt: string;
+    notificationsEnabled?: boolean;
+}
 
 // Type assertion for Ionicons compatibility
 const IconComponent = Ionicons as any;
@@ -32,7 +50,7 @@ export function SavedSearchesWidget() {
         router.push(`/search/${encodeURIComponent(search.query)}`);
     };
 
-    // Actions for saved searches using Redux
+    // Actions for saved searches using custom hook
     const handleShowActions = (search: SavedSearch) => {
         setSelectedSearch(search);
         setShowActionsModal(true);

@@ -1,55 +1,44 @@
 import { useCallback } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState, AppDispatch } from '@/store/store';
-import {
-  fetchEcoProperties,
-  fetchCityProperties,
-  fetchTypeProperties,
-  clearEcoProperties,
-  clearCityProperties,
-  clearTypeProperties,
-  setEcoFilters,
-  setCityFilters,
-  setTypeFilters,
-  clearAllPropertyLists,
-} from '@/store/reducers/propertyListReducer';
-import { PropertyFilters } from '@/services/propertyService';
-
-// Selectors
-export const usePropertyListSelectors = () => {
-  const ecoProperties = useSelector((state: RootState) => state.propertyList.ecoProperties);
-  const cityProperties = useSelector((state: RootState) => state.propertyList.cityProperties);
-  const typeProperties = useSelector((state: RootState) => state.propertyList.typeProperties);
-
-  return {
-    ecoProperties,
-    cityProperties,
-    typeProperties,
-  };
-};
+import { usePropertyListStore } from '@/store/propertyListStore';
+import { PropertyFilters, propertyService } from '@/services/propertyService';
 
 // Eco Properties Hook
 export const useEcoProperties = () => {
-  const dispatch = useDispatch<AppDispatch>();
-  const { ecoProperties } = usePropertyListSelectors();
+  const { properties, isLoading, error, filters } = usePropertyListStore();
+  const { setProperties, setLoading, setError, setFilters, clearFilters } = usePropertyListStore();
 
-  const loadEcoProperties = useCallback((filters?: PropertyFilters) => {
-    dispatch(fetchEcoProperties(filters));
-  }, [dispatch]);
+  const loadEcoProperties = useCallback(async (filters?: PropertyFilters) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await propertyService.getProperties({ ...filters, eco: true });
+      
+      setProperties(response.properties);
+      if (filters) {
+        setFilters(filters as any);
+      }
+    } catch (error: any) {
+      setError(error.message || 'Failed to load eco properties');
+    } finally {
+      setLoading(false);
+    }
+  }, [setProperties, setLoading, setError, setFilters]);
 
   const clearEcoPropertiesAction = useCallback(() => {
-    dispatch(clearEcoProperties());
-  }, [dispatch]);
+    setProperties([]);
+    clearFilters();
+  }, [setProperties, clearFilters]);
 
   const setEcoFiltersAction = useCallback((filters: PropertyFilters) => {
-    dispatch(setEcoFilters(filters));
-  }, [dispatch]);
+    setFilters(filters);
+  }, [setFilters]);
 
   return {
-    properties: ecoProperties.properties,
-    loading: ecoProperties.loading,
-    error: ecoProperties.error,
-    filters: ecoProperties.filters,
+    properties,
+    loading,
+    error,
+    filters,
     loadProperties: loadEcoProperties,
     clearProperties: clearEcoPropertiesAction,
     setFilters: setEcoFiltersAction,
@@ -58,27 +47,44 @@ export const useEcoProperties = () => {
 
 // City Properties Hook
 export const useCityProperties = () => {
-  const dispatch = useDispatch<AppDispatch>();
-  const { cityProperties } = usePropertyListSelectors();
+  const { properties, loading, error, filters } = usePropertyListSelectors();
+  const { setProperties, setLoading, setError, setFilters, clearFilters } = usePropertyListStore();
 
-  const loadCityProperties = useCallback((cityId: string, filters?: PropertyFilters) => {
-    dispatch(fetchCityProperties({ cityId, filters }));
-  }, [dispatch]);
+  const loadCityProperties = useCallback(async (cityId: string, filters?: PropertyFilters) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Import the API function
+      const { propertyApi } = await import('@/utils/api');
+      const response = await propertyApi.getProperties({ ...filters, city: cityId });
+      
+      setProperties(response.data?.properties || response.data || []);
+      if (filters) {
+        setFilters(filters);
+      }
+    } catch (error: any) {
+      setError(error.message || 'Failed to load city properties');
+    } finally {
+      setLoading(false);
+    }
+  }, [setProperties, setLoading, setError, setFilters]);
 
   const clearCityPropertiesAction = useCallback(() => {
-    dispatch(clearCityProperties());
-  }, [dispatch]);
+    setProperties([]);
+    clearFilters();
+  }, [setProperties, clearFilters]);
 
   const setCityFiltersAction = useCallback((filters: PropertyFilters) => {
-    dispatch(setCityFilters(filters));
-  }, [dispatch]);
+    setFilters(filters);
+  }, [setFilters]);
 
   return {
-    properties: cityProperties.properties,
-    loading: cityProperties.loading,
-    error: cityProperties.error,
-    filters: cityProperties.filters,
-    currentCity: cityProperties.currentCity,
+    properties,
+    loading,
+    error,
+    filters,
+    currentCity: null, // Not implemented in Zustand store yet
     loadProperties: loadCityProperties,
     clearProperties: clearCityPropertiesAction,
     setFilters: setCityFiltersAction,
@@ -87,27 +93,44 @@ export const useCityProperties = () => {
 
 // Type Properties Hook
 export const useTypeProperties = () => {
-  const dispatch = useDispatch<AppDispatch>();
-  const { typeProperties } = usePropertyListSelectors();
+  const { properties, loading, error, filters } = usePropertyListSelectors();
+  const { setProperties, setLoading, setError, setFilters, clearFilters } = usePropertyListStore();
 
-  const loadTypeProperties = useCallback((propertyType: string, filters?: PropertyFilters) => {
-    dispatch(fetchTypeProperties({ propertyType, filters }));
-  }, [dispatch]);
+  const loadTypeProperties = useCallback(async (propertyType: string, filters?: PropertyFilters) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Import the API function
+      const { propertyApi } = await import('@/utils/api');
+      const response = await propertyApi.getProperties({ ...filters, type: propertyType });
+      
+      setProperties(response.data?.properties || response.data || []);
+      if (filters) {
+        setFilters(filters);
+      }
+    } catch (error: any) {
+      setError(error.message || 'Failed to load type properties');
+    } finally {
+      setLoading(false);
+    }
+  }, [setProperties, setLoading, setError, setFilters]);
 
   const clearTypePropertiesAction = useCallback(() => {
-    dispatch(clearTypeProperties());
-  }, [dispatch]);
+    setProperties([]);
+    clearFilters();
+  }, [setProperties, clearFilters]);
 
   const setTypeFiltersAction = useCallback((filters: PropertyFilters) => {
-    dispatch(setTypeFilters(filters));
-  }, [dispatch]);
+    setFilters(filters);
+  }, [setFilters]);
 
   return {
-    properties: typeProperties.properties,
-    loading: typeProperties.loading,
-    error: typeProperties.error,
-    filters: typeProperties.filters,
-    currentType: typeProperties.currentType,
+    properties,
+    loading,
+    error,
+    filters,
+    currentType: null, // Not implemented in Zustand store yet
     loadProperties: loadTypeProperties,
     clearProperties: clearTypePropertiesAction,
     setFilters: setTypeFiltersAction,
@@ -116,11 +139,12 @@ export const useTypeProperties = () => {
 
 // Utility hook to clear all property lists
 export const useClearAllPropertyLists = () => {
-  const dispatch = useDispatch<AppDispatch>();
+  const { setProperties, clearFilters } = usePropertyListStore();
 
   const clearAll = useCallback(() => {
-    dispatch(clearAllPropertyLists());
-  }, [dispatch]);
+    setProperties([]);
+    clearFilters();
+  }, [setProperties, clearFilters]);
 
   return { clearAll };
 }; 

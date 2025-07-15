@@ -29,11 +29,10 @@ export {
   useLocationSelectors,
 } from './useLocationRedux';
 
-// Profile Redux Hooks
+// Profile Zustand Hooks
 export {
-  useProfileRedux,
-  useActiveProfile,
-} from './useProfileQueries';
+  useProfileZustand,
+} from './useProfileZustand';
 
 // Lease Redux Hooks
 export {

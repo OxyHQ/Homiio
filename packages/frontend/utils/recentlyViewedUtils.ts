@@ -1,5 +1,4 @@
-import { store } from '@/store/store';
-import { addPropertyToRecentlyViewed, removePropertyFromRecentlyViewed, clearRecentlyViewed } from '@/store/reducers/recentlyViewedReducer';
+import { useRecentlyViewedStore } from '@/store/recentlyViewedStore';
 import type { Property } from '@/services/propertyService';
 
 /**
@@ -8,7 +7,7 @@ import type { Property } from '@/services/propertyService';
  * @param property - The property to add
  */
 export function addToRecentlyViewed(property: Property) {
-  store.dispatch(addPropertyToRecentlyViewed(property));
+  useRecentlyViewedStore.getState().addPropertyToRecentlyViewed(property);
 }
 
 /**
@@ -16,14 +15,14 @@ export function addToRecentlyViewed(property: Property) {
  * @param propertyId - The ID of the property to remove
  */
 export function removeFromRecentlyViewed(propertyId: string) {
-  store.dispatch(removePropertyFromRecentlyViewed(propertyId));
+  useRecentlyViewedStore.getState().removePropertyFromRecentlyViewed(propertyId);
 }
 
 /**
  * Clear all recently viewed properties
  */
 export function clearRecentlyViewedProperties() {
-  store.dispatch(clearRecentlyViewed());
+  useRecentlyViewedStore.getState().clearRecentlyViewed();
 }
 
 /**
@@ -32,8 +31,8 @@ export function clearRecentlyViewedProperties() {
  * @returns True if the property is in the recently viewed list
  */
 export function isInRecentlyViewed(propertyId: string): boolean {
-  const state = store.getState();
-  return state.recentlyViewed.properties.some((p: Property) => (p._id || p.id || '') === propertyId);
+  const state = useRecentlyViewedStore.getState();
+  return state.properties.some((p: Property) => (p._id || p.id || '') === propertyId);
 }
 
 /**
@@ -41,6 +40,6 @@ export function isInRecentlyViewed(propertyId: string): boolean {
  * @returns Array of recently viewed properties
  */
 export function getRecentlyViewedProperties(): Property[] {
-  const state = store.getState();
-  return state.recentlyViewed.properties;
+  const state = useRecentlyViewedStore.getState();
+  return state.properties;
 } 

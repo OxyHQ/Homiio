@@ -13,9 +13,6 @@ import { Property } from '@/services/propertyService';
 import { Ionicons } from '@expo/vector-icons';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { useOxy } from '@oxyhq/services';
-import { useDispatch } from 'react-redux';
-import { fetchRecentlyViewedProperties } from '@/store/reducers/recentlyViewedReducer';
-import type { AppDispatch } from '@/store/store';
 
 const screenWidth = Dimensions.get('window').width;
 const isMobile = screenWidth < 600;
@@ -25,7 +22,6 @@ export default function RecentlyViewedScreen() {
     const { t } = useTranslation();
     const router = useRouter();
     const { oxyServices, activeSessionId } = useOxy();
-    const dispatch = useDispatch<AppDispatch>();
     const [refreshing, setRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState<'list' | 'grid'>(isMobile ? 'grid' : 'list');

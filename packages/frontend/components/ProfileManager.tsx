@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { useProfileRedux } from '@/hooks/useProfileQueries';
+import { useProfileZustand } from '@/hooks/useProfileZustand';
 import { useOxy } from '@oxyhq/services';
 import type { CreateProfileData, UpdateProfileData } from '@/services/profileService';
 
@@ -14,13 +14,13 @@ export function ProfileManager() {
         createProfile,
         updateProfile,
         deleteProfile
-    } = useProfileRedux();
+    } = useProfileZustand();
 
     const [selectedProfileType, setSelectedProfileType] = useState<'personal' | 'agency'>('personal');
 
     // Get personal and agency profiles from allProfiles
-    const personalProfile = allProfiles.find(p => p.profileType === 'personal');
-    const agencyProfiles = allProfiles.filter(p => p.profileType === 'agency');
+    const personalProfile = allProfiles.find((p: any) => p.profileType === 'personal');
+    const agencyProfiles = allProfiles.filter((p: any) => p.profileType === 'agency');
 
     if (!oxyServices || !activeSessionId) {
         return (
@@ -89,7 +89,7 @@ export function ProfileManager() {
                     break;
             }
 
-            await createProfile(profileData);
+            await createProfile(profileData, oxyServices, activeSessionId);
             Alert.alert('Success', `${profileType} profile created successfully!`);
         } catch (error: any) {
             Alert.alert('Error', `Failed to create ${profileType} profile: ${error.message || 'Unknown error'}`);
@@ -98,7 +98,7 @@ export function ProfileManager() {
 
     const handleUpdateProfile = async (profileId: string, updateData: UpdateProfileData) => {
         try {
-            await updateProfile(profileId, updateData);
+            await updateProfile(profileId, updateData, oxyServices, activeSessionId);
             Alert.alert('Success', 'Profile updated successfully!');
         } catch (error: any) {
             Alert.alert('Error', `Failed to update profile: ${error.message || 'Unknown error'}`);
@@ -116,7 +116,7 @@ export function ProfileManager() {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            await deleteProfile(profileId);
+                            await deleteProfile(profileId, oxyServices, activeSessionId);
                             Alert.alert('Success', 'Profile deleted successfully!');
                         } catch (error: any) {
                             Alert.alert('Error', `Failed to delete profile: ${error.message || 'Unknown error'}`);

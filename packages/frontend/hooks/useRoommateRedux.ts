@@ -1,85 +1,104 @@
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState, AppDispatch } from '@/store/store';
+import { useRoommateStore } from '@/store/roommateStore';
 import { roommateService, type RoommateFilters, type RoommatePreferences } from '@/services/roommateService';
 import { useOxy } from '@oxyhq/services';
-import {
-  fetchRoommateProfiles,
-  fetchMyRoommatePreferences,
-  updateRoommatePreferences,
-  toggleRoommateMatching,
-  sendRoommateRequest,
-  checkRoommateMatchingStatus,
-  setFilters,
-  clearFilters,
-  setError,
-  clearError,
-  setHasRoommateMatching,
-} from '@/store/reducers/roommateReducer';
 
 export const useRoommateRedux = () => {
-  const dispatch = useDispatch<AppDispatch>();
-  const roommateState = useSelector((state: RootState) => state.roommate);
+  const { 
+    roommates: profiles,
+    filters,
+    isLoading,
+    error,
+    setRoommates,
+    setFilters,
+    clearFilters,
+    setLoading,
+    setError,
+    clearError
+  } = useRoommateStore();
   const { oxyServices, activeSessionId } = useOxy();
 
   return {
     // State
-    profiles: roommateState.profiles,
-    myPreferences: roommateState.myPreferences,
-    hasRoommateMatching: roommateState.hasRoommateMatching,
-    isLoading: roommateState.isLoading,
-    error: roommateState.error,
-    filters: roommateState.filters,
-    total: roommateState.total,
-    page: roommateState.page,
-    totalPages: roommateState.totalPages,
+    profiles,
+    myPreferences: null, // Not implemented in Zustand store yet
+    hasRoommateMatching: false, // Not implemented in Zustand store yet
+    isLoading,
+    error,
+    filters,
+    total: profiles.length, // Not implemented in Zustand store yet
+    page: 1, // Not implemented in Zustand store yet
+    totalPages: 1, // Not implemented in Zustand store yet
 
     // Actions
-    fetchProfiles: (filters?: RoommateFilters) => {
+    fetchProfiles: async (filters?: RoommateFilters) => {
       if (!oxyServices || !activeSessionId) {
         console.warn('Missing authentication for roommate API calls');
         return;
       }
-      dispatch(fetchRoommateProfiles({ filters, oxyServices, activeSessionId }));
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await roommateService.getRoommateProfiles(filters, oxyServices, activeSessionId);
+        setRoommates(response.profiles || []);
+      } catch (error: any) {
+        setError(error.message || 'Failed to fetch roommate profiles');
+      } finally {
+        setLoading(false);
+      }
     },
-    fetchPreferences: () => {
+    fetchPreferences: async () => {
       if (!oxyServices || !activeSessionId) {
         console.warn('Missing authentication for roommate API calls');
         return;
       }
-      dispatch(fetchMyRoommatePreferences({ oxyServices, activeSessionId }));
+      // Not implemented in Zustand store yet
+      console.warn('fetchPreferences not implemented in Zustand store');
     },
-    checkStatus: () => {
+    checkStatus: async () => {
       if (!oxyServices || !activeSessionId) {
         console.warn('Missing authentication for roommate API calls');
         return;
       }
-      dispatch(checkRoommateMatchingStatus({ oxyServices, activeSessionId }));
+      // Not implemented in Zustand store yet
+      console.warn('checkStatus not implemented in Zustand store');
     },
-    updatePreferences: (preferences: RoommatePreferences) => {
+    updatePreferences: async (preferences: RoommatePreferences) => {
       if (!oxyServices || !activeSessionId) {
         console.warn('Missing authentication for roommate API calls');
         return;
       }
-      dispatch(updateRoommatePreferences({ preferences, oxyServices, activeSessionId }));
+      // Not implemented in Zustand store yet
+      console.warn('updatePreferences not implemented in Zustand store');
     },
-    toggleMatching: (enabled: boolean) => {
+    toggleMatching: async (enabled: boolean) => {
       if (!oxyServices || !activeSessionId) {
         console.warn('Missing authentication for roommate API calls');
         return;
       }
-      dispatch(toggleRoommateMatching({ enabled, oxyServices, activeSessionId }));
+      try {
+        await roommateService.toggleRoommateMatching(enabled, oxyServices, activeSessionId);
+      } catch (error: any) {
+        setError(error.message || 'Failed to toggle roommate matching');
+      }
     },
-    sendRequest: (profileId: string, message?: string) => {
+    sendRequest: async (profileId: string, message?: string) => {
       if (!oxyServices || !activeSessionId) {
         console.warn('Missing authentication for roommate API calls');
         return;
       }
-      dispatch(sendRoommateRequest({ profileId, message, oxyServices, activeSessionId }));
+      try {
+        await roommateService.sendRoommateRequest(profileId, message, oxyServices, activeSessionId);
+      } catch (error: any) {
+        setError(error.message || 'Failed to send roommate request');
+      }
     },
-    setFilters: (filters: Partial<RoommateFilters>) => dispatch(setFilters(filters)),
-    clearFilters: () => dispatch(clearFilters()),
-    setError: (error: string | null) => dispatch(setError(error)),
-    clearError: () => dispatch(clearError()),
-    setHasRoommateMatching: (enabled: boolean) => dispatch(setHasRoommateMatching(enabled)),
+    setFilters: (filters: Partial<RoommateFilters>) => setFilters(filters as any),
+    clearFilters: () => clearFilters(),
+    setError: (error: string | null) => setError(error),
+    clearError: () => clearError(),
+    setHasRoommateMatching: (enabled: boolean) => {
+      // Not implemented in Zustand store yet
+      console.warn('setHasRoommateMatching not implemented in Zustand store');
+    },
   };
 }; 

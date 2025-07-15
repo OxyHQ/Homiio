@@ -1,70 +1,54 @@
-import { useSelector, useDispatch } from 'react-redux';
+import { useRecentlyViewedStore } from '@/store/recentlyViewedStore';
 import { useEffect } from 'react';
-import { 
-  fetchRecentlyViewedProperties, 
-  clearRecentlyViewedProperties,
-  addPropertyToRecentlyViewed, 
-  removePropertyFromRecentlyViewed 
-} from '@/store/reducers/recentlyViewedReducer';
 import { useOxy } from '@oxyhq/services';
-import type { RootState, AppDispatch } from '@/store/store';
 import type { Property } from '@/services/propertyService';
 
 export function useRecentlyViewed() {
-    const dispatch = useDispatch<AppDispatch>();
+    const { 
+        items,
+        addItem,
+        removeItem,
+        clearAll,
+        getRecentProperties
+    } = useRecentlyViewedStore();
     const { oxyServices, activeSessionId } = useOxy();
-    
-    const { properties, isLoading, error } = useSelector((state: RootState) => state.recentlyViewed);
 
     // Debug logging
     console.log('useRecentlyViewed Hook Debug:', {
         oxyServices: !!oxyServices,
         activeSessionId: !!activeSessionId,
-        propertiesCount: properties?.length || 0,
-        isLoading,
-        error: error || null
+        propertiesCount: getRecentProperties().length,
     });
 
-    // Fetch recently viewed properties when hook is used and user is authenticated
-    useEffect(() => {
-        if (oxyServices && activeSessionId) {
-            console.log('useRecentlyViewed: Fetching recently viewed properties');
-            dispatch(fetchRecentlyViewedProperties({ oxyServices, activeSessionId }));
-        } else {
-            console.log('useRecentlyViewed: Not fetching - missing oxyServices or activeSessionId');
-        }
-    }, [dispatch, oxyServices, activeSessionId]);
+    const properties = getRecentProperties();
 
     const refetch = () => {
-        if (oxyServices && activeSessionId) {
-            console.log('useRecentlyViewed: Refetching recently viewed properties');
-            dispatch(fetchRecentlyViewedProperties({ oxyServices, activeSessionId }));
-        }
+        // Not implemented in Zustand store - would need to fetch from API
+        console.log('useRecentlyViewed: Refetch not implemented in Zustand store');
     };
 
     const clear = () => {
-        if (oxyServices && activeSessionId) {
-            console.log('useRecentlyViewed: Clearing recently viewed properties');
-            dispatch(clearRecentlyViewedProperties({ oxyServices, activeSessionId }));
-        } else {
-            console.log('useRecentlyViewed: Cannot clear - missing authentication');
-        }
+        console.log('useRecentlyViewed: Clearing recently viewed properties');
+        clearAll();
     };
 
     const addProperty = (property: Property) => {
-        console.log('useRecentlyViewed: Adding property to recently viewed:', property._id || property.id);
-        dispatch(addPropertyToRecentlyViewed(property));
+        const propertyId = property._id || property.id;
+        console.log('useRecentlyViewed: Adding property to recently viewed:', propertyId);
+        if (propertyId) {
+            addItem(propertyId, 'property', property);
+        }
     };
 
     const removeProperty = (propertyId: string) => {
         console.log('useRecentlyViewed: Removing property from recently viewed:', propertyId);
-        dispatch(removePropertyFromRecentlyViewed(propertyId));
+        removeItem(propertyId);
     };
 
     return {
         properties,
-        isLoading,
-        error,
+        isLoading: false, // Not implemented in Zustand store
+        error: null, // Not implemented in Zustand store
         refetch,
         clear,
         addProperty,

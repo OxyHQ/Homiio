@@ -217,7 +217,14 @@ export function PropertyCard({
 
     const handleFavoritePress = () => {
         if (propertyData.id) {
-            toggleFavorite(propertyData.id || '');
+            // Convert PropertyCard type to Property interface type
+            const propertyForToggle: Partial<Property> = {
+                ...propertyData,
+                type: (propertyData.type === 'eco' ? 'apartment' :
+                    propertyData.type === 'coliving' ? 'coliving' :
+                        propertyData.type === 'house' ? 'house' : 'apartment') as any
+            };
+            toggleFavorite(propertyData.id || '', propertyForToggle);
         }
     };
 

@@ -1,12 +1,7 @@
 import React, { createContext, ReactNode, useRef, useCallback, useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop, BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
-import { useDispatch, useSelector } from 'react-redux';
-import type { RootState, AppDispatch } from '@/store/store';
-import {
-    openBottomSheet as openBottomSheetAction,
-    setBottomSheetContent as setBottomSheetContentAction,
-} from '@/store/reducers/bottomSheetReducer';
+import { useBottomSheetStore } from '@/store/bottomSheetStore';
 
 interface BottomSheetContextProps {
     openBottomSheet: (isOpen: boolean) => void;
@@ -17,13 +12,11 @@ interface BottomSheetContextProps {
 export const BottomSheetContext = createContext<BottomSheetContextProps>({
     openBottomSheet: () => { },
     setBottomSheetContent: () => { },
-    bottomSheetRef: { current: null },
+    bottomSheetRef: { current: null } as React.RefObject<BottomSheetModal>,
 });
 
 export const BottomSheetProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const dispatch = useDispatch<AppDispatch>();
-    const bottomSheetContent = useSelector((state: RootState) => state.bottomSheet.content);
-    const isOpen = useSelector((state: RootState) => state.bottomSheet.isOpen);
+    const { isOpen, content: bottomSheetContent, openBottomSheet, setBottomSheetContent } = useBottomSheetStore();
     const bottomSheetModalRef = useRef<BottomSheetModal>(null);
 
     const renderBackdrop = useCallback(
@@ -37,14 +30,6 @@ export const BottomSheetProvider: React.FC<{ children: ReactNode }> = ({ childre
         ),
         []
     );
-
-    const openBottomSheet = (open: boolean) => {
-        dispatch(openBottomSheetAction(open));
-    };
-
-    const setBottomSheetContent = (content: ReactNode) => {
-        dispatch(setBottomSheetContentAction(content));
-    };
 
     useEffect(() => {
         if (isOpen) {

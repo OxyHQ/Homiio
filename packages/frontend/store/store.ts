@@ -1,47 +1,73 @@
-import { combineReducers, configureStore } from "@reduxjs/toolkit";
-import trendsReducer from "./reducers/trendsReducer";
-import analyticsReducer from "./reducers/analyticsReducer";
-import profileReducer from "./reducers/profileReducer";
-import bottomSheetReducer from "./reducers/bottomSheetReducer";
-import propertyReducer from "./reducers/propertyReducer";
-import roomReducer from "./reducers/roomReducer";
-import recentlyViewedReducer from "./reducers/recentlyViewedReducer";
-import trustScoreReducer from "./reducers/trustScoreReducer";
-import savedPropertiesReducer from "./reducers/savedPropertiesReducer";
-import savedSearchesReducer from "./reducers/savedSearchesReducer";
-import searchStatisticsReducer from "./reducers/searchStatisticsReducer";
-import propertyListReducer from "./reducers/propertyListReducer";
-import locationReducer from "./reducers/locationReducer";
-import neighborhoodReducer from "./reducers/neighborhoodReducer";
-import currencyReducer from "./reducers/currencyReducer";
-import createPropertyFormReducer from "./reducers/createPropertyFormReducer";
-import roommateReducer from "./reducers/roommateReducer";
+import { create } from 'zustand';
 
-const rootReducer = combineReducers({
-  trends: trendsReducer,
-  analytics: analyticsReducer,
-  profile: profileReducer,
-  bottomSheet: bottomSheetReducer,
-  properties: propertyReducer,
-  rooms: roomReducer,
-  recentlyViewed: recentlyViewedReducer,
-  trustScore: trustScoreReducer,
-  savedProperties: savedPropertiesReducer,
-  savedSearches: savedSearchesReducer,
-  searchStatistics: searchStatisticsReducer,
-  propertyList: propertyListReducer,
-  location: locationReducer,
-  neighborhood: neighborhoodReducer,
-  currency: currencyReducer,
-  createPropertyForm: createPropertyFormReducer,
-  roommate: roommateReducer,
-});
+// Define the shape of your global state
+interface StoreState {
+  trends: any;
+  analytics: any;
+  properties: any;
+  rooms: any;
+  recentlyViewed: any;
+  trustScore: any;
+  savedProperties: any;
+  savedSearches: any;
+  searchStatistics: any;
+  propertyList: any;
+  location: any;
+  neighborhood: any;
+  currency: any;
+  createPropertyForm: any;
+  roommate: any;
+  // Add actions for each slice
+  setTrends: (trends: any) => void;
+  setAnalytics: (analytics: any) => void;
+  setProperties: (properties: any) => void;
+  setRooms: (rooms: any) => void;
+  setRecentlyViewed: (recentlyViewed: any) => void;
+  setTrustScore: (trustScore: any) => void;
+  setSavedProperties: (savedProperties: any) => void;
+  setSavedSearches: (savedSearches: any) => void;
+  setSearchStatistics: (searchStatistics: any) => void;
+  setPropertyList: (propertyList: any) => void;
+  setLocation: (location: any) => void;
+  setNeighborhood: (neighborhood: any) => void;
+  setCurrency: (currency: any) => void;
+  setCreatePropertyForm: (createPropertyForm: any) => void;
+  setRoommate: (roommate: any) => void;
+}
 
-export const store = configureStore({
-  reducer: rootReducer,
-});
+export const useStore = create<StoreState>((set) => ({
+  trends: null,
+  analytics: null,
+  properties: null,
+  rooms: null,
+  recentlyViewed: null,
+  trustScore: null,
+  savedProperties: null,
+  savedSearches: null,
+  searchStatistics: null,
+  propertyList: null,
+  location: null,
+  neighborhood: null,
+  currency: null,
+  createPropertyForm: null,
+  roommate: null,
+  setTrends: (trends) => set({ trends }),
+  setAnalytics: (analytics) => set({ analytics }),
+  setProperties: (properties) => set({ properties }),
+  setRooms: (rooms) => set({ rooms }),
+  setRecentlyViewed: (recentlyViewed) => set({ recentlyViewed }),
+  setTrustScore: (trustScore) => set({ trustScore }),
+  setSavedProperties: (savedProperties) => set({ savedProperties }),
+  setSavedSearches: (savedSearches) => set({ savedSearches }),
+  setSearchStatistics: (searchStatistics) => set({ searchStatistics }),
+  setPropertyList: (propertyList) => set({ propertyList }),
+  setLocation: (location) => set({ location }),
+  setNeighborhood: (neighborhood) => set({ neighborhood }),
+  setCurrency: (currency) => set({ currency }),
+  setCreatePropertyForm: (createPropertyForm) => set({ createPropertyForm }),
+  setRoommate: (roommate) => set({ roommate }),
+}));
 
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
-
-export default store;
+// Example usage in a component:
+// const trends = useStore((state) => state.trends);
+// const setTrends = useStore((state) => state.setTrends);

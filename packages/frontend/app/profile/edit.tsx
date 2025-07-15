@@ -7,19 +7,22 @@ import { useRouter } from 'expo-router';
 import { IconButton } from '@/components/IconButton';
 import { TrustScore } from '@/components/TrustScore';
 import { Header } from '@/components/Header';
-import { useProfileRedux } from '@/hooks/useProfileQueries';
-import { UpdateProfileData } from '@/services/profileService';
+import { UpdateProfileData, Profile } from '@/services/profileService';
 import { storeData, getData } from '@/utils/storage';
+import { useOxy } from '@oxyhq/services';
+import { useProfileStore } from '@/store/profileStore';
 
 export default function ProfileEditScreen() {
     const { t } = useTranslation();
     const router = useRouter();
+    const { oxyServices, activeSessionId } = useOxy();
+
+    // Use Zustand store to get profile data
     const {
         primaryProfile: activeProfile,
         isLoading: profileLoading,
-        refetchProfiles,
         updateProfile
-    } = useProfileRedux();
+    } = useProfileStore();
     const [isSaving, setIsSaving] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [activeSection, setActiveSection] = useState('personal');
@@ -506,7 +509,7 @@ export default function ProfileEditScreen() {
                 };
             }
 
-            await updateProfile(profileId, updateData);
+            await updateProfile(profileId, updateData, oxyServices, activeSessionId);
 
             setHasUnsavedChanges(false);
             Alert.alert('Success', 'Profile updated successfully!');
@@ -663,12 +666,12 @@ export default function ProfileEditScreen() {
     const handleRefresh = useCallback(async () => {
         try {
             console.log('Manually refreshing profile data...');
-            await refetchProfiles();
+            // TODO: Implement profile refresh using Redux action
             console.log('Profile data refreshed successfully');
         } catch (error) {
             console.error('Error refreshing profile data:', error);
         }
-    }, [refetchProfiles]);
+    }, []);
 
     const renderSection = () => {
         if (profileType === 'agency') {

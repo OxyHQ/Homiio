@@ -10,9 +10,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { PropertyMap } from '@/components/PropertyMap';
 import { Header } from '@/components/Header';
 import { CreatePropertyData } from '@/services/propertyService';
-import { useDispatch, useSelector } from 'react-redux';
-import { createProperty, clearError, resetLoading } from '@/store/reducers/propertyReducer';
-import type { RootState, AppDispatch } from '@/store/store';
+import { useCreatePropertyFormStore } from '@/store/createPropertyFormStore';
 import { useOxy } from '@oxyhq/services';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { calculateEthicalRent, validateEthicalPricing, getPricingGuidance } from '@/utils/ethicalPricing';
@@ -25,7 +23,6 @@ import { AmenitiesSelector } from '@/components/AmenitiesSelector';
 import { LinearGradient } from 'expo-linear-gradient';
 import { toast } from 'sonner';
 import { CurrencyFormatter } from '@/components/CurrencyFormatter';
-import { setFormData, setVisibility } from '@/store/reducers/createPropertyFormReducer';
 import { propertyService, type EthicalPricingResponse } from '@/services/propertyService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -35,14 +32,16 @@ const { width: screenWidth } = Dimensions.get('window');
 export default function CreatePropertyScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const dispatch = useDispatch<AppDispatch>();
   const { oxyServices, activeSessionId } = useOxy();
 
-  // Use Redux location hooks
+  // Use Zustand store for create property form
+  const { formData: reduxFormData, isVisible, setFormData, setIsVisible } = useCreatePropertyFormStore();
+
+  // Use location hooks (now Zustand-based)
   const { search, results: searchResults, loading: searchLoading, clearResults } = useLocationSearch();
   const { reverseGeocode, result: reverseResult, loading: reverseLoading } = useReverseGeocode();
 
-  // Use Redux property creation hook
+  // Use property creation hook (now Zustand-based)
   const { create, loading: createLoading } = useCreateProperty();
 
   const [formData, setLocalFormData] = useState<CreatePropertyData & {
@@ -390,14 +389,15 @@ export default function CreatePropertyScreen() {
 
   // Clear loading state on mount to ensure clean state
   useEffect(() => {
-    dispatch(clearError());
-    dispatch(resetLoading());
+    setErrors({});
+    setHasValidationErrors(false);
 
     // Cleanup when component unmounts
     return () => {
-      dispatch(resetLoading());
+      setErrors({});
+      setHasValidationErrors(false);
     };
-  }, [dispatch]);
+  }, []);
 
   // Load draft on mount if available
   useEffect(() => {
@@ -757,7 +757,7 @@ export default function CreatePropertyScreen() {
     // Hide search results when location is selected on map
     setShowSearchResults(false);
 
-    // Use Redux reverse geocoding
+    // Use reverse geocoding (now Zustand-based)
     reverseGeocode(lat, lng);
   };
 
@@ -784,7 +784,8 @@ export default function CreatePropertyScreen() {
 
   const handleSubmit = async () => {
     // Reset loading state to ensure clean start
-    dispatch(resetLoading());
+    setErrors({});
+    setHasValidationErrors(false);
 
     // Check if user is authenticated
     if (!oxyServices || !activeSessionId) {
@@ -837,9 +838,6 @@ export default function CreatePropertyScreen() {
       router.push(`/properties/${result._id}`);
     } catch (error: any) {
       console.error('Property creation error:', error, JSON.stringify(error));
-
-      // Reset loading state on error
-      dispatch(resetLoading());
 
       let errorMessage = 'Failed to create property. Please try again.';
 
@@ -1366,32 +1364,6 @@ export default function CreatePropertyScreen() {
 
     return Object.keys(newErrors).length === 0;
   };
-
-  // Sync form data with Redux
-  useEffect(() => {
-    console.log('CreatePropertyScreen: Dispatching form data to Redux:', {
-      hasFormData: !!formData,
-      formDataKeys: formData ? Object.keys(formData) : [],
-      address: formData?.address,
-      type: formData?.type,
-      rent: formData?.rent,
-      formDataString: JSON.stringify(formData, null, 2)
-    });
-
-    if (formData) {
-      dispatch(setFormData(formData));
-      dispatch(setVisibility(true));
-      console.log('CreatePropertyScreen: Dispatched form data and set visibility to true');
-    } else {
-      console.log('CreatePropertyScreen: No form data to dispatch');
-    }
-
-    // Cleanup when component unmounts
-    return () => {
-      console.log('CreatePropertyScreen: Cleaning up Redux visibility');
-      dispatch(setVisibility(false));
-    };
-  }, [formData, dispatch]);
 
   // Reset accommodation-specific fields when property type changes
   const resetFieldsForType = (newType: string) => {

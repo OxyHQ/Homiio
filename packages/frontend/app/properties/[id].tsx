@@ -20,13 +20,12 @@ import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 import { getAmenityById, getCategoryById } from '@/constants/amenities';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchLandlordProfileById } from '@/store/reducers/profileReducer';
-import { fetchRecentlyViewedProperties, addPropertyToRecentlyViewed } from '@/store/reducers/recentlyViewedReducer';
+import { useProfileStore } from '@/store/profileStore';
+import { useRecentlyViewedStore } from '@/store/recentlyViewedStore';
 import { useFavorites } from '@/hooks/useFavorites';
-import type { RootState, AppDispatch } from '@/store/store';
 import { userApi } from '@/utils/api';
 import { SaveButton } from '@/components/SaveButton';
+import type { Profile } from '@/services/profileService';
 
 type PropertyDetail = {
     id: string;
@@ -62,33 +61,35 @@ export default function PropertyDetailPage() {
     const [landlordVerified, setLandlordVerified] = useState(true);
     const hasViewedRef = useRef(false);
 
-    // Redux favorites
+    // Zustand stores
+    const { primaryProfile } = useProfileStore();
+    const { items: recentlyViewed, addItem } = useRecentlyViewedStore();
+
+    // Favorites (now Zustand-based)
     const { isFavorite, toggleFavorite, isPropertySaving } = useFavorites();
 
-    // Redux: fetch landlord profile by profileId
-    const dispatch = useDispatch<AppDispatch>();
-    const landlordProfileId = apiProperty?.profileId;
-    const landlordProfile = useSelector((state: RootState) => state.profile.landlordProfile);
-    const landlordLoading = useSelector((state: RootState) => state.profile.landlordProfileLoading);
-
-    // Get current user's primary profile for tracking
-    const primaryProfile = useSelector((state: RootState) => state.profile.primaryProfile);
+    // TODO: Implement landlord profile fetching with Zustand
+    // For now, we'll use placeholder values
+    const landlordProfile: Profile | null = null;
+    const landlordLoading = false;
 
     // Normalize landlordProfileId to string if it's an object (MongoDB $oid)
     let normalizedLandlordProfileId: string | undefined = undefined;
-    if (landlordProfileId) {
-        if (typeof landlordProfileId === 'object' && landlordProfileId && '$oid' in landlordProfileId) {
-            normalizedLandlordProfileId = (landlordProfileId as any).$oid;
-        } else if (typeof landlordProfileId === 'string') {
-            normalizedLandlordProfileId = landlordProfileId;
+    if (apiProperty?.profileId) {
+        if (typeof apiProperty.profileId === 'object' && apiProperty.profileId && '$oid' in apiProperty.profileId) {
+            normalizedLandlordProfileId = (apiProperty.profileId as any).$oid;
+        } else if (typeof apiProperty.profileId === 'string') {
+            normalizedLandlordProfileId = apiProperty.profileId;
         }
     }
 
+    // TODO: Implement landlord profile fetching with Zustand
     useEffect(() => {
         if (normalizedLandlordProfileId && oxyServices && activeSessionId) {
-            dispatch(fetchLandlordProfileById({ profileId: normalizedLandlordProfileId, oxyServices, activeSessionId }));
+            // TODO: Implement fetchLandlordProfileById with Zustand
+            console.log('TODO: Fetch landlord profile with Zustand');
         }
-    }, [normalizedLandlordProfileId, oxyServices, activeSessionId, dispatch]);
+    }, [normalizedLandlordProfileId, oxyServices, activeSessionId]);
 
     // Debug logging
     useEffect(() => {
@@ -189,17 +190,18 @@ export default function PropertyDetailPage() {
                 hasActiveSession: !!activeSessionId
             });
 
-            // Add property to Redux state immediately for instant UI feedback
-            dispatch(addPropertyToRecentlyViewed(apiProperty));
+            // Add property to Zustand state immediately for instant UI feedback
+            const propertyId = apiProperty._id || apiProperty.id;
+            if (propertyId && !recentlyViewed.find(item => item.data._id === propertyId || item.data.id === propertyId)) {
+                addItem(propertyId, 'property', apiProperty);
+            }
 
             // Call the backend to track the view in database
-            const propertyId = apiProperty._id || apiProperty.id;
             if (propertyId) {
                 userApi.trackPropertyView(propertyId, oxyServices, activeSessionId)
                     .then(() => {
                         console.log('PropertyDetailPage: Successfully tracked property view in backend');
-                        // Refresh recently viewed from backend to get the updated list
-                        dispatch(fetchRecentlyViewedProperties({ oxyServices, activeSessionId }));
+                        // TODO: Refresh recently viewed from backend to get the updated list
                     })
                     .catch((error) => {
                         console.error('PropertyDetailPage: Failed to track property view in backend:', error);
@@ -209,10 +211,13 @@ export default function PropertyDetailPage() {
             console.log('PropertyDetailPage: User not authenticated, skipping backend view tracking');
             hasViewedRef.current = true;
 
-            // For unauthenticated users, only add to local Redux state
-            dispatch(addPropertyToRecentlyViewed(apiProperty));
+            // For unauthenticated users, only add to local Zustand state
+            const propertyId = apiProperty._id || apiProperty.id;
+            if (propertyId && !recentlyViewed.find(item => item.data._id === propertyId || item.data.id === propertyId)) {
+                addItem(propertyId, 'property', apiProperty);
+            }
         }
-    }, [apiProperty, oxyServices, activeSessionId, dispatch]);
+    }, [apiProperty, oxyServices, activeSessionId, recentlyViewed, addItem]);
 
     // Load property on component mount
     React.useEffect(() => {
@@ -555,47 +560,49 @@ ${propertyUrl}`;
                                 <View style={styles.landlordHeader}>
                                     <View style={styles.landlordAvatar}>
                                         <Text style={styles.landlordInitial}>
-                                            {landlordProfile?.userData?.fullName ? landlordProfile.userData.fullName :
-                                                landlordProfile?.profileType === 'personal'
-                                                    ? landlordProfile?.personalProfile?.personalInfo?.bio
-                                                    || landlordProfile?.oxyUserId
-                                                    || '?'
-                                                    : landlordProfile?.profileType === 'agency'
-                                                        ? landlordProfile?.agencyProfile?.legalCompanyName
-                                                        || landlordProfile?.oxyUserId
-                                                        || '?'
-                                                        : landlordProfile?.profileType === 'business'
-                                                            ? landlordProfile?.businessProfile?.legalCompanyName
-                                                            || landlordProfile?.oxyUserId
-                                                            || '?'
-                                                            : landlordProfile?.profileType === 'cooperative'
-                                                                ? landlordProfile?.cooperativeProfile?.legalName
-                                                                || landlordProfile?.oxyUserId
-                                                                || '?'
-                                                                : landlordProfile?.oxyUserId || '?'}
+                                            {landlordProfile ? (
+                                                landlordProfile.profileType === 'personal'
+                                                    ? (landlordProfile.personalProfile?.personalInfo?.bio
+                                                        || landlordProfile.oxyUserId
+                                                        || '?')
+                                                    : landlordProfile.profileType === 'agency'
+                                                        ? (landlordProfile.agencyProfile?.legalCompanyName
+                                                            || landlordProfile.oxyUserId
+                                                            || '?')
+                                                        : landlordProfile.profileType === 'business'
+                                                            ? (landlordProfile.businessProfile?.legalCompanyName
+                                                                || landlordProfile.oxyUserId
+                                                                || '?')
+                                                            : landlordProfile.profileType === 'cooperative'
+                                                                ? (landlordProfile.cooperativeProfile?.legalName
+                                                                    || landlordProfile.oxyUserId
+                                                                    || '?')
+                                                                : (landlordProfile.oxyUserId || '?')
+                                            ) : '?'}
                                         </Text>
                                     </View>
                                     <View style={styles.landlordInfo}>
                                         <View style={styles.landlordNameRow}>
                                             <Text style={styles.landlordName}>
-                                                {landlordProfile?.userData?.fullName ? landlordProfile.userData.fullName :
-                                                    landlordProfile?.profileType === 'personal'
-                                                        ? landlordProfile?.personalProfile?.personalInfo?.bio
-                                                        || landlordProfile?.oxyUserId
-                                                        || '?'
-                                                        : landlordProfile?.profileType === 'agency'
-                                                            ? landlordProfile?.agencyProfile?.legalCompanyName
-                                                            || landlordProfile?.oxyUserId
-                                                            || '?'
-                                                            : landlordProfile?.profileType === 'business'
-                                                                ? landlordProfile?.businessProfile?.legalCompanyName
-                                                                || landlordProfile?.oxyUserId
-                                                                || '?'
-                                                                : landlordProfile?.profileType === 'cooperative'
-                                                                    ? landlordProfile?.cooperativeProfile?.legalName
-                                                                    || landlordProfile?.oxyUserId
-                                                                    || '?'
-                                                                    : landlordProfile?.oxyUserId || '?'}
+                                                {landlordProfile ? (
+                                                    landlordProfile.profileType === 'personal'
+                                                        ? (landlordProfile.personalProfile?.personalInfo?.bio
+                                                            || landlordProfile.oxyUserId
+                                                            || '?')
+                                                        : landlordProfile.profileType === 'agency'
+                                                            ? (landlordProfile.agencyProfile?.legalCompanyName
+                                                                || landlordProfile.oxyUserId
+                                                                || '?')
+                                                            : landlordProfile.profileType === 'business'
+                                                                ? (landlordProfile.businessProfile?.legalCompanyName
+                                                                    || landlordProfile.oxyUserId
+                                                                    || '?')
+                                                                : landlordProfile.profileType === 'cooperative'
+                                                                    ? (landlordProfile.cooperativeProfile?.legalName
+                                                                        || landlordProfile.oxyUserId
+                                                                        || '?')
+                                                                    : (landlordProfile.oxyUserId || '?')
+                                                ) : '?'}
                                             </Text>
                                             {landlordProfile?.isActive && (
                                                 <View style={styles.verifiedBadge}>

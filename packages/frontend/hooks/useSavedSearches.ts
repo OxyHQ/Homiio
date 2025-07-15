@@ -1,36 +1,23 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSavedSearchesStore, useSavedSearchesSelectors } from '@/store/savedSearchesStore';
 import { useOxy } from '@oxyhq/services';
 import { toast } from 'sonner';
-import type { RootState, AppDispatch } from '@/store/store';
-import {
-  SavedSearch,
-  fetchSavedSearches,
-  saveSavedSearch,
-  deleteSavedSearchAsync,
-  updateSavedSearchAsync,
-  toggleSavedSearchNotifications,
-  addSavedSearch,
-  removeSavedSearch,
-  updateSavedSearch,
-  toggleSearchNotifications,
-  setError,
-} from '@/store/reducers/savedSearchesReducer';
 
 export const useSavedSearches = () => {
-  const dispatch = useDispatch<AppDispatch>();
+  const { searches, isLoading, error } = useSavedSearchesSelectors();
+  const { 
+    setSearches, 
+    addSearch, 
+    removeSearch, 
+    updateSearch: updateSearchAction, 
+    toggleNotifications: toggleNotificationsAction,
+    setLoading, 
+    setError 
+  } = useSavedSearchesStore();
   const { oxyServices, activeSessionId } = useOxy();
   const hasFetchedRef = useRef(false);
-  
-  const {
-    searches,
-    isLoading,
-    isSaving,
-    error,
-    lastSynced,
-  } = useSelector((state: RootState) => state.savedSearches);
 
-  // Fetch saved searches from backend using Redux action
+  // Fetch saved searches from backend using Zustand store
   const fetchSavedSearchesCallback = useCallback(async () => {
     if (!oxyServices || !activeSessionId) {
       console.log('useSavedSearches: No authentication, skipping fetch');
@@ -38,14 +25,23 @@ export const useSavedSearches = () => {
     }
 
     try {
-      await dispatch(fetchSavedSearches({ oxyServices, activeSessionId })).unwrap();
+      setLoading(true);
+      setError(null);
+      
+      // Import the API function
+      const { userApi } = await import('@/utils/api');
+      const response = await userApi.getSavedSearches(oxyServices, activeSessionId);
+      
+      setSearches(response.data?.searches || response.data || []);
     } catch (error: any) {
       console.error('Failed to fetch saved searches:', error);
-      // Error is already handled in Redux reducer
+      setError(error.message || 'Failed to fetch saved searches');
+    } finally {
+      setLoading(false);
     }
-  }, [oxyServices, activeSessionId, dispatch]);
+  }, [oxyServices, activeSessionId, setSearches, setLoading, setError]);
 
-  // Save a new search using Redux action
+  // Save a new search using Zustand store
   const saveSearch = useCallback(async (
     name: string,
     query: string,
@@ -70,18 +66,25 @@ export const useSavedSearches = () => {
         notificationsEnabled,
       };
 
-      await dispatch(saveSavedSearch({ searchData, oxyServices, activeSessionId })).unwrap();
+      // Import the API function
+      const { userApi } = await import('@/utils/api');
+      const response = await userApi.saveSearch(searchData, oxyServices, activeSessionId);
+      
+      // Add to store
+      addSearch(response.data?.search || response.data);
+      
       toast.success(`Search "${name}" saved successfully`);
       return true;
     } catch (error: any) {
       console.error('Failed to save search:', error);
       const errorMessage = error.message || 'Failed to save search';
       toast.error(errorMessage);
+      setError(errorMessage);
       return false;
     }
-  }, [oxyServices, activeSessionId, dispatch]);
+  }, [oxyServices, activeSessionId, addSearch, setError]);
 
-  // Delete a saved search using Redux action
+  // Delete a saved search using Zustand store
   const deleteSavedSearch = useCallback(async (searchId: string, searchName?: string) => {
     if (!oxyServices || !activeSessionId) {
       toast.error('Please sign in to manage searches');
@@ -89,18 +92,25 @@ export const useSavedSearches = () => {
     }
 
     try {
-      await dispatch(deleteSavedSearchAsync({ searchId, oxyServices, activeSessionId })).unwrap();
+      // Import the API function
+      const { userApi } = await import('@/utils/api');
+      await userApi.deleteSavedSearch(searchId, oxyServices, activeSessionId);
+      
+      // Remove from store
+      removeSearch(searchId);
+      
       toast.success(`Search ${searchName ? `"${searchName}"` : ''} deleted successfully`);
       return true;
     } catch (error: any) {
       console.error('Failed to delete search:', error);
       const errorMessage = error.message || 'Failed to delete search';
       toast.error(errorMessage);
+      setError(errorMessage);
       return false;
     }
-  }, [oxyServices, activeSessionId, dispatch]);
+  }, [oxyServices, activeSessionId, removeSearch, setError]);
 
-  // Update a saved search using Redux action
+  // Update a saved search using Zustand store
   const updateSearch = useCallback(async (
     searchId: string,
     updates: { name?: string; query?: string; filters?: any; notificationsEnabled?: boolean }
@@ -111,18 +121,25 @@ export const useSavedSearches = () => {
     }
 
     try {
-      await dispatch(updateSavedSearchAsync({ searchId, searchData: updates, oxyServices, activeSessionId })).unwrap();
+      // Import the API function
+      const { userApi } = await import('@/utils/api');
+      await userApi.updateSavedSearch(searchId, updates, oxyServices, activeSessionId);
+      
+      // Update in store
+      updateSearchAction(searchId, updates);
+      
       toast.success('Search updated successfully');
       return true;
     } catch (error: any) {
       console.error('Failed to update search:', error);
       const errorMessage = error.message || 'Failed to update search';
       toast.error(errorMessage);
+      setError(errorMessage);
       return false;
     }
-  }, [oxyServices, activeSessionId, dispatch]);
+  }, [oxyServices, activeSessionId, updateSearchAction, setError]);
 
-  // Toggle notifications for a search using Redux action
+  // Toggle notifications for a search using Zustand store
   const toggleNotifications = useCallback(async (searchId: string, enabled: boolean) => {
     if (!oxyServices || !activeSessionId) {
       toast.error('Please sign in to manage notifications');
@@ -130,15 +147,22 @@ export const useSavedSearches = () => {
     }
 
     try {
-      await dispatch(toggleSavedSearchNotifications({ searchId, oxyServices, activeSessionId })).unwrap();
+      // Import the API function
+      const { userApi } = await import('@/utils/api');
+      await userApi.toggleSearchNotifications(searchId, enabled, oxyServices, activeSessionId);
+      
+      // Toggle in store
+      toggleNotificationsAction(searchId);
+      
       toast.success(`Notifications ${enabled ? 'enabled' : 'disabled'} for search`);
       return true;
     } catch (error: any) {
       console.error('Failed to toggle notifications:', error);
       toast.error(error.message || 'Failed to update notifications');
+      setError(error.message || 'Failed to update notifications');
       return false;
     }
-  }, [oxyServices, activeSessionId, dispatch]);
+  }, [oxyServices, activeSessionId, toggleNotificationsAction, setError]);
 
   // Check if a search exists by name or query
   const searchExists = useCallback((name: string, query?: string) => {
@@ -172,9 +196,9 @@ export const useSavedSearches = () => {
     // State
     searches,
     isLoading,
-    isSaving,
+    isSaving: false, // Not implemented in Zustand store yet
     error,
-    lastSynced,
+    lastSynced: null, // Not implemented in Zustand store yet
     
     // Actions
     fetchSavedSearches: fetchSavedSearchesCallback,

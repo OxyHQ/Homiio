@@ -1,70 +1,46 @@
 import { useCallback, useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState, AppDispatch } from '@/store/store';
 import { useOxy } from '@oxyhq/services';
-import {
-  fetchProperties,
-  fetchProperty,
-  fetchPropertyStats,
-  fetchPropertyEnergyStats,
-  searchProperties,
-  createProperty,
-  updateProperty,
-  deleteProperty as deletePropertyAction,
-  clearError,
-  clearCurrentProperty,
-  clearSearchResults,
-  setFilters,
-  clearFilters,
-} from '@/store/reducers/propertyReducer';
-import { Property, CreatePropertyData, PropertyFilters } from '@/services/propertyService';
+import { usePropertyStore, usePropertySelectors } from '@/store/propertyStore';
+import { Property, CreatePropertyData, PropertyFilters, propertyService } from '@/services/propertyService';
 import { toast } from 'sonner';
-
-// Property Selectors
-export const usePropertySelectors = () => {
-  const properties = useSelector((state: RootState) => state.properties.properties);
-  const currentProperty = useSelector((state: RootState) => state.properties.currentProperty);
-  const propertyStats = useSelector((state: RootState) => state.properties.propertyStats);
-  const propertyEnergyStats = useSelector((state: RootState) => state.properties.propertyEnergyStats);
-  const searchResults = useSelector((state: RootState) => state.properties.searchResults);
-  const filters = useSelector((state: RootState) => state.properties.filters);
-  const pagination = useSelector((state: RootState) => state.properties.pagination);
-  const loading = useSelector((state: RootState) => state.properties.loading);
-  const error = useSelector((state: RootState) => state.properties.error);
-
-  return {
-    properties,
-    currentProperty,
-    propertyStats,
-    propertyEnergyStats,
-    searchResults,
-    filters,
-    pagination,
-    loading,
-    error,
-  };
-};
 
 // Property Hooks
 export const useProperties = () => {
-  const dispatch = useDispatch<AppDispatch>();
   const { properties, loading, error, pagination } = usePropertySelectors();
+  const { setProperties, setLoading, setError, clearError, setFilters, clearFilters, setPagination } = usePropertyStore();
 
-  const loadProperties = useCallback((filters?: PropertyFilters) => {
-    dispatch(fetchProperties(filters));
-  }, [dispatch]);
+  const loadProperties = useCallback(async (filters?: PropertyFilters) => {
+    try {
+      setLoading('properties', true);
+      setError(null);
+      
+      const response = await propertyService.getProperties(filters);
+      
+      setProperties(response.properties);
+      setPagination({
+        page: response.page,
+        total: response.total,
+        totalPages: response.totalPages,
+        limit: 10,
+      });
+    } catch (error: any) {
+      setError(error.message || 'Failed to load properties');
+    } finally {
+      setLoading('properties', false);
+    }
+  }, [setProperties, setLoading, setError, setPagination]);
 
   const clearErrorAction = useCallback(() => {
-    dispatch(clearError());
-  }, [dispatch]);
+    clearError();
+  }, [clearError]);
 
   const setFiltersAction = useCallback((newFilters: PropertyFilters) => {
-    dispatch(setFilters(newFilters));
-  }, [dispatch]);
+    setFilters(newFilters);
+  }, [setFilters]);
 
   const clearFiltersAction = useCallback(() => {
-    dispatch(clearFilters());
-  }, [dispatch]);
+    clearFilters();
+  }, [clearFilters]);
 
   return {
     properties,
@@ -79,19 +55,30 @@ export const useProperties = () => {
 };
 
 export const useProperty = (id: string) => {
-  const dispatch = useDispatch<AppDispatch>();
-  const { oxyServices, activeSessionId } = useOxy();
   const { currentProperty, loading, error } = usePropertySelectors();
+  const { setCurrentProperty, setLoading, setError, clearCurrentProperty } = usePropertyStore();
+  const { oxyServices, activeSessionId } = useOxy();
 
-  const loadProperty = useCallback(() => {
+  const loadProperty = useCallback(async () => {
     if (id) {
-      dispatch(fetchProperty({ id, oxyServices, activeSessionId: activeSessionId || '' }));
+      try {
+        setLoading('currentProperty', true);
+        setError(null);
+        
+        const response = await propertyService.getProperty(id, oxyServices, activeSessionId || '');
+        
+        setCurrentProperty(response);
+      } catch (error: any) {
+        setError(error.message || 'Failed to load property');
+      } finally {
+        setLoading('currentProperty', false);
+      }
     }
-  }, [dispatch, id, oxyServices, activeSessionId]);
+  }, [id, oxyServices, activeSessionId, setCurrentProperty, setLoading, setError]);
 
   const clearCurrentPropertyAction = useCallback(() => {
-    dispatch(clearCurrentProperty());
-  }, [dispatch]);
+    clearCurrentProperty();
+  }, [clearCurrentProperty]);
 
   return {
     property: currentProperty,
@@ -103,14 +90,25 @@ export const useProperty = (id: string) => {
 };
 
 export const usePropertyStats = (id: string) => {
-  const dispatch = useDispatch<AppDispatch>();
   const { propertyStats, loading, error } = usePropertySelectors();
+  const { setPropertyStats, setLoading, setError } = usePropertyStore();
 
-  const loadStats = useCallback(() => {
+  const loadStats = useCallback(async () => {
     if (id) {
-      dispatch(fetchPropertyStats(id));
+      try {
+        setLoading('stats', true);
+        setError(null);
+        
+        const response = await propertyService.getPropertyStats(id);
+        
+        setPropertyStats(id, response);
+      } catch (error: any) {
+        setError(error.message || 'Failed to load property stats');
+      } finally {
+        setLoading('stats', false);
+      }
     }
-  }, [dispatch, id]);
+  }, [id, setPropertyStats, setLoading, setError]);
 
   return {
     stats: propertyStats[id] || null,
@@ -121,14 +119,25 @@ export const usePropertyStats = (id: string) => {
 };
 
 export const usePropertyEnergyStats = (id: string, period: 'day' | 'week' | 'month' = 'day') => {
-  const dispatch = useDispatch<AppDispatch>();
   const { propertyEnergyStats, loading, error } = usePropertySelectors();
+  const { setPropertyEnergyStats, setLoading, setError } = usePropertyStore();
 
-  const loadEnergyStats = useCallback(() => {
+  const loadEnergyStats = useCallback(async () => {
     if (id) {
-      dispatch(fetchPropertyEnergyStats({ id, period }));
+      try {
+        setLoading('energy', true);
+        setError(null);
+        
+        const response = await propertyService.getPropertyEnergyStats(id, period);
+        
+        setPropertyEnergyStats(id, period, response);
+      } catch (error: any) {
+        setError(error.message || 'Failed to load energy stats');
+      } finally {
+        setLoading('energy', false);
+      }
     }
-  }, [dispatch, id, period]);
+  }, [id, period, setPropertyEnergyStats, setLoading, setError]);
 
   const stats = propertyEnergyStats[id]?.[period] || null;
 
@@ -141,18 +150,37 @@ export const usePropertyEnergyStats = (id: string, period: 'day' | 'week' | 'mon
 };
 
 export const useSearchProperties = () => {
-  const dispatch = useDispatch<AppDispatch>();
   const { searchResults, pagination, loading, error } = usePropertySelectors();
+  const { setSearchResults, setLoading, setError, clearSearchResults, setPagination } = usePropertyStore();
 
-  const search = useCallback((query: string, filters?: PropertyFilters) => {
+  const search = useCallback(async (query: string, filters?: PropertyFilters) => {
     if (query && query.length > 0) {
-      dispatch(searchProperties({ query, filters }));
+      try {
+        setLoading('search', true);
+        setError(null);
+        
+        // Import the API function
+        const { propertyApi } = await import('@/utils/api');
+        const response = await propertyApi.searchProperties(query, filters);
+        
+        setSearchResults(response.data?.properties || response.data || []);
+        setPagination({
+          page: response.data?.page || 1,
+          total: response.data?.total || 0,
+          totalPages: response.data?.totalPages || 1,
+          limit: response.data?.limit || 10,
+        });
+      } catch (error: any) {
+        setError(error.message || 'Failed to search properties');
+      } finally {
+        setLoading('search', false);
+      }
     }
-  }, [dispatch]);
+  }, [setSearchResults, setLoading, setError, setPagination]);
 
   const clearSearchResultsAction = useCallback(() => {
-    dispatch(clearSearchResults());
-  }, [dispatch]);
+    clearSearchResults();
+  }, [clearSearchResults]);
 
   return {
     searchResults,
@@ -165,24 +193,30 @@ export const useSearchProperties = () => {
 };
 
 export const useCreateProperty = () => {
-  const dispatch = useDispatch<AppDispatch>();
-  const { oxyServices, activeSessionId } = useOxy();
   const { loading, error } = usePropertySelectors();
+  const { setLoading, setError } = usePropertyStore();
+  const { oxyServices, activeSessionId } = useOxy();
 
   const create = useCallback(async (data: CreatePropertyData) => {
     try {
-      const result = await dispatch(createProperty({ 
-        data, 
-        oxyServices, 
-        activeSessionId: activeSessionId || '' 
-      })).unwrap();
+      setLoading('create', true);
+      setError(null);
+      
+      // Import the API function
+      const { propertyApi } = await import('@/utils/api');
+      const response = await propertyApi.createProperty(data, oxyServices, activeSessionId || '');
+      
       toast.success('Property created successfully');
-      return result;
+      return response.data;
     } catch (error: any) {
-      toast.error(error.message || 'Failed to create property');
+      const errorMessage = error.message || 'Failed to create property';
+      setError(errorMessage);
+      toast.error(errorMessage);
       throw error;
+    } finally {
+      setLoading('create', false);
     }
-  }, [dispatch, oxyServices, activeSessionId]);
+  }, [oxyServices, activeSessionId, setLoading, setError]);
 
   return {
     create,
@@ -192,19 +226,29 @@ export const useCreateProperty = () => {
 };
 
 export const useUpdateProperty = () => {
-  const dispatch = useDispatch<AppDispatch>();
   const { loading, error } = usePropertySelectors();
+  const { setLoading, setError } = usePropertyStore();
 
   const update = useCallback(async (id: string, data: Partial<CreatePropertyData>) => {
     try {
-      const result = await dispatch(updateProperty({ id, data })).unwrap();
+      setLoading('update', true);
+      setError(null);
+      
+      // Import the API function
+      const { propertyApi } = await import('@/utils/api');
+      const response = await propertyApi.updateProperty(id, data);
+      
       toast.success('Property updated successfully');
-      return result;
+      return response.data;
     } catch (error: any) {
-      toast.error(error.message || 'Failed to update property');
+      const errorMessage = error.message || 'Failed to update property';
+      setError(errorMessage);
+      toast.error(errorMessage);
       throw error;
+    } finally {
+      setLoading('update', false);
     }
-  }, [dispatch]);
+  }, [setLoading, setError]);
 
   return {
     update,
@@ -214,18 +258,28 @@ export const useUpdateProperty = () => {
 };
 
 export const useDeleteProperty = () => {
-  const dispatch = useDispatch<AppDispatch>();
   const { loading, error } = usePropertySelectors();
+  const { setLoading, setError } = usePropertyStore();
 
   const deletePropertyHandler = useCallback(async (id: string) => {
     try {
-      await dispatch(deletePropertyAction(id)).unwrap();
+      setLoading('delete', true);
+      setError(null);
+      
+      // Import the API function
+      const { propertyApi } = await import('@/utils/api');
+      await propertyApi.deleteProperty(id);
+      
       toast.success('Property deleted successfully');
     } catch (error: any) {
-      toast.error(error.message || 'Failed to delete property');
+      const errorMessage = error.message || 'Failed to delete property';
+      setError(errorMessage);
+      toast.error(errorMessage);
       throw error;
+    } finally {
+      setLoading('delete', false);
     }
-  }, [dispatch]);
+  }, [setLoading, setError]);
 
   return {
     deleteProperty: deletePropertyHandler,
@@ -236,9 +290,9 @@ export const useDeleteProperty = () => {
 
 // Hook for user's owned properties
 export const useUserProperties = () => {
-  const dispatch = useDispatch<AppDispatch>();
-  const { oxyServices, activeSessionId } = useOxy();
   const { loading, error } = usePropertySelectors();
+  const { setLoading, setError } = usePropertyStore();
+  const { oxyServices, activeSessionId } = useOxy();
   
   const [userProperties, setUserProperties] = useState<Property[]>([]);
   const [pagination, setPagination] = useState({
@@ -254,6 +308,8 @@ export const useUserProperties = () => {
     }
 
     try {
+      setLoading('properties', true);
+      setError(null);
       console.log('Fetching user properties with OxyServices authentication');
       
       // Import the API function
@@ -276,11 +332,15 @@ export const useUserProperties = () => {
       
       console.log(`Successfully fetched ${result.properties.length} user properties`);
       return result;
-    } catch (error) {
+    } catch (error: any) {
+      const errorMessage = error.message || 'Failed to fetch user properties';
+      setError(errorMessage);
       console.error('Error fetching user properties:', error);
       return { properties: [], total: 0, page: 1, totalPages: 1 };
+    } finally {
+      setLoading('properties', false);
     }
-  }, [oxyServices, activeSessionId]);
+  }, [oxyServices, activeSessionId, setLoading, setError]);
 
   // Load properties on mount
   useEffect(() => {

@@ -1,22 +1,10 @@
 import { useCallback, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState, AppDispatch } from '@/store/store';
-import { 
-  loadSavedProperties, 
-  saveProperty, 
-  unsaveProperty, 
-  updatePropertyNotes,
-  addPropertyOptimistic,
-  removePropertyOptimistic,
-  updatePropertyNotesOptimistic,
-  clearError,
-  SavedPropertyWithMeta
-} from '@/store/reducers/savedPropertiesReducer';
+import { useSavedPropertiesStore, useSavedPropertiesSelectors } from '@/store/savedPropertiesStore';
 import { useOxy } from '@oxyhq/services';
 import type { Property } from '@/services/propertyService';
 
 export interface UseSavedPropertiesReturn {
-  properties: SavedPropertyWithMeta[];
+  properties: Property[];
   favoriteIds: string[];
   isLoading: boolean;
   isSaving: boolean;
@@ -31,29 +19,51 @@ export interface UseSavedPropertiesReturn {
 }
 
 export const useSavedProperties = (): UseSavedPropertiesReturn => {
-  const dispatch = useDispatch<AppDispatch>();
-  const { properties, favoriteIds, isLoading, isSaving, error, lastSynced, savingPropertyIds } = useSelector(
-    (state: RootState) => state.savedProperties
-  );
+  const { properties, isLoading, error, savingPropertyIds } = useSavedPropertiesSelectors();
+  const { 
+    setProperties, 
+    addProperty, 
+    removeProperty, 
+    updatePropertyNotes, 
+    setLoading, 
+    setError, 
+    addSavingPropertyId, 
+    removeSavingPropertyId, 
+    clearError: clearErrorAction 
+  } = useSavedPropertiesStore();
   const { oxyServices, activeSessionId } = useOxy();
 
   // Load properties on mount if not already loaded
   useEffect(() => {
-    if (oxyServices && activeSessionId && !lastSynced && !isLoading) {
-      console.log('Redux Hook: Auto-loading saved properties on mount');
-      dispatch(loadSavedProperties({ oxyServices, activeSessionId }));
+    if (oxyServices && activeSessionId && !isLoading) {
+      console.log('Zustand Hook: Auto-loading saved properties on mount');
+      loadProperties();
     }
-  }, [oxyServices, activeSessionId, lastSynced, isLoading, dispatch]);
+  }, [oxyServices, activeSessionId, isLoading]);
 
   const loadProperties = useCallback(async () => {
     if (!oxyServices || !activeSessionId) {
-      console.error('Redux Hook: Cannot load properties - missing services or session');
+      console.error('Zustand Hook: Cannot load properties - missing services or session');
       return;
     }
 
-    console.log('Redux Hook: Manually loading saved properties');
-    await dispatch(loadSavedProperties({ oxyServices, activeSessionId })).unwrap();
-  }, [dispatch, oxyServices, activeSessionId]);
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('Zustand Hook: Manually loading saved properties');
+      
+      // Import the API function
+      const { userApi } = await import('@/utils/api');
+      const response = await userApi.getSavedProperties(oxyServices, activeSessionId);
+      
+      setProperties(response.data?.properties || response.data || []);
+    } catch (error: any) {
+      console.error('Zustand Hook: Failed to load saved properties:', error);
+      setError(error.message || 'Failed to load saved properties');
+    } finally {
+      setLoading(false);
+    }
+  }, [oxyServices, activeSessionId, setProperties, setLoading, setError]);
 
   const savePropertyHandler = useCallback(async (
     propertyId: string, 
@@ -61,115 +71,121 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
     propertyData?: Partial<Property>
   ) => {
     if (!oxyServices || !activeSessionId) {
-      console.error('Redux Hook: Cannot save property - missing services or session');
+      console.error('Zustand Hook: Cannot save property - missing services or session');
       return;
     }
 
-    console.log('Redux Hook: Saving property', propertyId);
+    console.log('Zustand Hook: Saving property', propertyId);
+    
+    // Add to saving list
+    addSavingPropertyId(propertyId);
     
     // Optimistic update first
-    dispatch(addPropertyOptimistic({ propertyId, propertyData }));
+    if (propertyData) {
+      addProperty(propertyData as Property);
+    }
     
     try {
-      await dispatch(saveProperty({ 
-        propertyId, 
-        notes, 
-        oxyServices, 
-        activeSessionId 
-      })).unwrap();
+      // Import the API function
+      const { userApi } = await import('@/utils/api');
+      await userApi.saveProperty(propertyId, notes, oxyServices, activeSessionId);
       
-      console.log('Redux Hook: Property saved successfully');
-    } catch (error) {
-      console.error('Redux Hook: Failed to save property:', error);
+      console.log('Zustand Hook: Property saved successfully');
+    } catch (error: any) {
+      console.error('Zustand Hook: Failed to save property:', error);
       // Revert optimistic update on error
-      dispatch(removePropertyOptimistic(propertyId));
+      if (propertyData) {
+        removeProperty(propertyId);
+      }
+      setError(error.message || 'Failed to save property');
       throw error;
+    } finally {
+      removeSavingPropertyId(propertyId);
     }
-  }, [dispatch, oxyServices, activeSessionId]);
+  }, [oxyServices, activeSessionId, addProperty, removeProperty, addSavingPropertyId, removeSavingPropertyId, setError]);
 
   const unsavePropertyHandler = useCallback(async (propertyId: string) => {
     if (!oxyServices || !activeSessionId) {
-      console.error('Redux Hook: Cannot unsave property - missing services or session');
+      console.error('Zustand Hook: Cannot unsave property - missing services or session');
       return;
     }
 
-    console.log('Redux Hook: Unsaving property', propertyId);
+    console.log('Zustand Hook: Unsaving property', propertyId);
     
     // Store current property data for potential revert
     const currentProperty = properties.find(p => (p._id || p.id) === propertyId);
     
+    // Add to saving list
+    addSavingPropertyId(propertyId);
+    
     // Optimistic update first
-    dispatch(removePropertyOptimistic(propertyId));
+    removeProperty(propertyId);
     
     try {
-      const result = await dispatch(unsaveProperty({ 
-        propertyId, 
-        oxyServices, 
-        activeSessionId 
-      })).unwrap();
+      // Import the API function
+      const { userApi } = await import('@/utils/api');
+      await userApi.unsaveProperty(propertyId, oxyServices, activeSessionId);
       
-      console.log('Redux Hook: Property unsaved successfully', result);
-    } catch (error) {
-      console.error('Redux Hook: Failed to unsave property:', error);
-      console.error('Redux Hook: Full error details:', JSON.stringify(error, null, 2));
+      console.log('Zustand Hook: Property unsaved successfully');
+    } catch (error: any) {
+      console.error('Zustand Hook: Failed to unsave property:', error);
+      console.error('Zustand Hook: Full error details:', JSON.stringify(error, null, 2));
       
       // Revert optimistic update on error - re-add the property
       if (currentProperty) {
-        dispatch(addPropertyOptimistic({ 
-          propertyId, 
-          propertyData: currentProperty 
-        }));
-        console.log('Redux Hook: Reverted optimistic update for property', propertyId);
+        addProperty(currentProperty);
+        console.log('Zustand Hook: Reverted optimistic update for property', propertyId);
       }
       
+      setError(error.message || 'Failed to unsave property');
       throw error;
+    } finally {
+      removeSavingPropertyId(propertyId);
     }
-  }, [dispatch, oxyServices, activeSessionId, properties]);
+  }, [oxyServices, activeSessionId, properties, addProperty, removeProperty, addSavingPropertyId, removeSavingPropertyId, setError]);
 
   const updateNotesHandler = useCallback(async (propertyId: string, notes: string) => {
     if (!oxyServices || !activeSessionId) {
-      console.error('Redux Hook: Cannot update notes - missing services or session');
+      console.error('Zustand Hook: Cannot update notes - missing services or session');
       return;
     }
 
-    console.log('Redux Hook: Updating notes for property', propertyId);
+    console.log('Zustand Hook: Updating notes for property', propertyId);
     
     // Optimistic update first
-    dispatch(updatePropertyNotesOptimistic({ propertyId, notes }));
+    updatePropertyNotes(propertyId, notes);
     
     try {
-      await dispatch(updatePropertyNotes({ 
-        propertyId, 
-        notes, 
-        oxyServices, 
-        activeSessionId 
-      })).unwrap();
+      // Import the API function
+      const { userApi } = await import('@/utils/api');
+      await userApi.updateSavedPropertyNotes(propertyId, notes, oxyServices, activeSessionId);
       
-      console.log('Redux Hook: Notes updated successfully');
-    } catch (error) {
-      console.error('Redux Hook: Failed to update notes:', error);
+      console.log('Zustand Hook: Notes updated successfully');
+    } catch (error: any) {
+      console.error('Zustand Hook: Failed to update notes:', error);
+      setError(error.message || 'Failed to update notes');
       // Note: Proper revert would require storing original notes
       throw error;
     }
-  }, [dispatch, oxyServices, activeSessionId]);
+  }, [oxyServices, activeSessionId, updatePropertyNotes, setError]);
 
   const isFavorite = useCallback((propertyId: string): boolean => {
-    return favoriteIds.includes(propertyId);
-  }, [favoriteIds]);
+    return properties.some(p => (p._id || p.id) === propertyId);
+  }, [properties]);
 
   const isPropertySaving = useCallback((propertyId: string): boolean => {
     return savingPropertyIds.includes(propertyId);
   }, [savingPropertyIds]);
 
   const clearErrorHandler = useCallback(() => {
-    dispatch(clearError());
-  }, [dispatch]);
+    clearErrorAction();
+  }, [clearErrorAction]);
 
   return {
     properties,
-    favoriteIds,
+    favoriteIds: properties.map(p => p._id || p.id || ''),
     isLoading,
-    isSaving,
+    isSaving: savingPropertyIds.length > 0,
     error,
     loadProperties,
     saveProperty: savePropertyHandler,

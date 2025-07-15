@@ -14,9 +14,6 @@ import { Property } from '@/services/propertyService';
 import { Ionicons } from '@expo/vector-icons';
 import useSavedProperties from '@/hooks/useSavedPropertiesRedux';
 import { useOxy } from '@oxyhq/services';
-import { useDispatch } from 'react-redux';
-import { fetchRecentlyViewedProperties } from '@/store/reducers/recentlyViewedReducer';
-import type { AppDispatch } from '@/store/store';
 import { useFavorites } from '@/hooks/useFavorites';
 
 const screenWidth = Dimensions.get('window').width;
@@ -27,7 +24,6 @@ export default function PropertiesScreen() {
     const { t } = useTranslation();
     const router = useRouter();
     const { oxyServices, activeSessionId } = useOxy();
-    const dispatch = useDispatch<AppDispatch>();
     const [refreshing, setRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [filters, setFilters] = useState({ page: 1, limit: 20 });
@@ -44,9 +40,9 @@ export default function PropertiesScreen() {
     // Refresh recently viewed list when screen loads
     useEffect(() => {
         if (oxyServices && activeSessionId) {
-            dispatch(fetchRecentlyViewedProperties({ oxyServices, activeSessionId }));
+            // TODO: Refresh recently viewed with Zustand if needed
         }
-    }, [oxyServices, activeSessionId, dispatch]);
+    }, [oxyServices, activeSessionId]);
 
     const getPropertyId = (property: Property) => property._id || property.id || '';
     const isPropertySaved = (property: Property) => {

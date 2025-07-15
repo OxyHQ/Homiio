@@ -1,5 +1,5 @@
-import React from 'react';
-import { TouchableOpacity, View } from 'react-native';
+import React, { memo } from 'react';
+import { TouchableOpacity, View, AccessibilityInfo } from 'react-native';
 import LoadingSpinner from './LoadingSpinner';
 import { useFavorites } from '@/hooks/useFavorites';
 import { HeartIcon, HeartIconActive } from '@/assets/icons/heart-icon';
@@ -11,31 +11,62 @@ interface FavoriteButtonProps {
     color?: string;
     activeColor?: string;
     onPress?: () => void;
+    onError?: (error: string) => void;
     showLoading?: boolean;
     variant?: 'heart' | 'bookmark';
     style?: any;
+    accessibilityLabel?: string;
+    testID?: string;
 }
 
-export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
+export const FavoriteButton: React.FC<FavoriteButtonProps> = memo(({
     propertyId,
     size = 24,
     color = '#6B7280',
     activeColor = '#EF4444',
     onPress,
+    onError,
     showLoading = true,
     variant = 'heart',
     style,
+    accessibilityLabel,
+    testID,
 }) => {
-    const { isFavorite, toggleFavorite, isSaving } = useFavorites();
+    const { isFavorite, toggleFavorite, isPropertySaving, error } = useFavorites();
     const isFavorited = isFavorite(propertyId);
-    const isLoading = showLoading && isSaving;
+    const isLoading = showLoading && isPropertySaving(propertyId);
+    const [isScreenReaderEnabled, setIsScreenReaderEnabled] = React.useState(false);
+
+    // Check if screen reader is enabled
+    React.useEffect(() => {
+        AccessibilityInfo.isScreenReaderEnabled().then(setIsScreenReaderEnabled);
+    }, []);
+
+    // Handle errors
+    React.useEffect(() => {
+        if (error && onError) {
+            onError(error);
+        }
+    }, [error, onError]);
 
     const handlePress = async () => {
+        if (!propertyId || isLoading) {
+            return;
+        }
+
         try {
             await toggleFavorite(propertyId);
             onPress?.();
+
+            // Provide haptic feedback
+            if (isScreenReaderEnabled) {
+                AccessibilityInfo.announceForAccessibility(
+                    isFavorited ? 'Removed from favorites' : 'Added to favorites'
+                );
+            }
         } catch (error) {
-            console.error('Error toggling favorite:', error);
+            console.error('FavoriteButton: Error toggling favorite:', error);
+            onError?.(error instanceof Error ? error.message : 'Failed to update favorite');
         }
     };
 
@@ -54,6 +85,9 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
             );
         }
     };
+
+    const defaultAccessibilityLabel = accessibilityLabel ||
+        `${isFavorited ? 'Remove from' : 'Add to'} ${variant === 'heart' ? 'favorites' : 'saved'}`;
 
     return (
         <TouchableOpacity
@@ -77,6 +111,13 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
                 },
                 style,
             ]}
+            accessibilityLabel={defaultAccessibilityLabel}
+            accessibilityRole="button"
+            accessibilityState={{
+                disabled: isLoading,
+                selected: isFavorited
+            }}
+            testID={testID}
         >
             <View style={{
                 width: size,
@@ -96,6 +137,8 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
             </View>
         </TouchableOpacity>
     );
-};
+});
+
+FavoriteButton.displayName = 'FavoriteButton';
 
 export default FavoriteButton; 

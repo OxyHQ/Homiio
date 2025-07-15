@@ -1,9 +1,7 @@
 import { useEffect } from 'react';
 import { useOxy } from '@oxyhq/services';
 import { api } from '@/utils/api';
-import { useDispatch, useSelector } from 'react-redux';
-import type { AppDispatch, RootState } from '@/store/store';
-import { setLoading, setData, setError } from '@/store/reducers/searchStatisticsReducer';
+import { useSearchStatisticsStore } from '@/store/searchStatisticsStore';
 
 interface SearchStatistics {
   recentSearches: string[];
@@ -14,14 +12,11 @@ interface SearchStatistics {
 
 export const useSearchStatistics = () => {
   const { oxyServices, activeSessionId } = useOxy();
-  const dispatch = useDispatch<AppDispatch>();
-  
-  // Get search statistics from Redux store
-  const { data, loading, error } = useSelector((state: RootState) => state.searchStatistics);
+  const { statistics, isLoading, error, setStatistics, setLoading, setError } = useSearchStatisticsStore();
 
   useEffect(() => {
     const fetchStatistics = async () => {
-      dispatch(setLoading(true));
+      setLoading(true);
       try {
         // For authenticated users, get their personal search statistics
         if (oxyServices && activeSessionId) {
@@ -29,17 +24,28 @@ export const useSearchStatistics = () => {
             oxyServices,
             activeSessionId,
           });
-          // Dispatch to Redux store
-          dispatch(setData(response.data));
+          // Set data in Zustand store
+          setStatistics({
+            totalSearches: 0,
+            recentSearches: response.data.recentSearches || [],
+            popularSearches: response.data.popularSearches || [],
+            searchTrends: [],
+          });
         } else {
           // For unauthenticated users, get general statistics
           const response = await api.get<SearchStatistics>('/api/search/statistics/public');
-          dispatch(setData(response.data));
+          setStatistics({
+            totalSearches: 0,
+            recentSearches: response.data.recentSearches || [],
+            popularSearches: response.data.popularSearches || [],
+            searchTrends: [],
+          });
         }
       } catch (error) {
         console.error('Failed to fetch search statistics:', error);
         // Return fallback data if API fails
         const fallbackData = {
+          totalSearches: 0,
           recentSearches: [],
           popularSearches: [
             'Barcelona apartments',
@@ -49,31 +55,20 @@ export const useSearchStatistics = () => {
             'London furnished',
             'Paris city center',
           ],
-          propertyTypeCounts: {
-            apartment: 128,
-            house: 94,
-            room: 75,
-            studio: 103,
-          },
-          cityCounts: {
-            Barcelona: 128,
-            Berlin: 94,
-            Amsterdam: 103,
-            Stockholm: 75,
-            London: 156,
-            Paris: 89,
-          },
+          searchTrends: [],
         };
-        dispatch(setData(fallbackData));
+        setStatistics(fallbackData);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchStatistics();
-  }, [oxyServices, activeSessionId, dispatch]);
+  }, [oxyServices, activeSessionId, setStatistics, setLoading]);
 
   return {
-    data,
-    loading,
+    data: statistics,
+    loading: isLoading,
     error,
   };
 }; 

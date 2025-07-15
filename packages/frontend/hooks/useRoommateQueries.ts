@@ -1,20 +1,16 @@
 import { useCallback, useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState, AppDispatch } from '@/store/store';
+import { useRoommateStore, useRoommateSelectors } from '@/store/roommateStore';
 import { useOxy } from '@oxyhq/services';
 import { toast } from 'sonner';
 import { roommateService, RoommateFilters, RoommatePreferences } from '@/services/roommateService';
 import { useActiveProfile } from './useProfileQueries';
 import type { Profile } from '@/services/profileService';
 
-// Roommate Redux Hook
+// Roommate Zustand Hook
 export const useRoommateProfiles = (filters?: RoommateFilters) => {
-  const dispatch = useDispatch<AppDispatch>();
+  const { roommates, isLoading, error } = useRoommateSelectors();
+  const { setRoommates, setLoading, setError } = useRoommateStore();
   const { oxyServices, activeSessionId } = useOxy();
-  
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const fetchProfiles = useCallback(async () => {
     if (!oxyServices || !activeSessionId) {
@@ -22,21 +18,21 @@ export const useRoommateProfiles = (filters?: RoommateFilters) => {
       return;
     }
 
-    setIsLoading(true);
+    setLoading(true);
     setError(null);
 
     try {
       const response = await roommateService.getRoommateProfiles(filters, oxyServices, activeSessionId);
       
-      setProfiles(response.profiles || []);
+      setRoommates(response.profiles || []);
       console.log('Successfully fetched roommate profiles');
     } catch (error: any) {
       console.error('Error fetching roommate profiles:', error);
       setError(error.message || 'Failed to fetch roommate profiles');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }, [oxyServices, activeSessionId, filters]);
+  }, [oxyServices, activeSessionId, filters, setRoommates, setLoading, setError]);
 
   // Load profiles on mount
   useEffect(() => {
@@ -45,7 +41,7 @@ export const useRoommateProfiles = (filters?: RoommateFilters) => {
 
   return {
     data: {
-      profiles,
+      profiles: roommates,
     },
     isLoading,
     error,
