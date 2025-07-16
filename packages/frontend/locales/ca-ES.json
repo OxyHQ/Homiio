@@ -11,7 +11,7 @@
     "Language": "Idioma",
     "Primary Color": "Color Principal",
     "Apply Settings": "Aplicar Configuració",
-    "Welcome to Mention! 👋": "Benvingut a Mention! 👋",
+    "Welcome to Mention! 👋": "Benvingut a Homiio! 👋",
     "Thanks for trying out our app. Start exploring now!": "Gràcies per provar la nostra aplicació. Comença a explorar ara!",
     "This screen doesn't exist.": "Aquesta pantalla no existeix.",
     "Go to home screen!": "Vés a la pantalla d'inici!",
@@ -22,7 +22,7 @@
     "This is a sample post": "Aquesta és una publicació d'exemple",
     "Another example post": "Una altra publicació d'exemple",
     "Customize your view": "Personalitza la teva vista",
-    "These settings affect all the Mention accounts on this device.": "Aquesta configuració afecta tots els comptes de Mention en aquest dispositiu.",
+    "These settings affect all the Mention accounts on this device.": "Aquesta configuració afecta tots els comptes de Homiio en aquest dispositiu.",
     "Account": "Compte",
     "Manage your account settings": "Gestiona la configuració del teu compte",
     "Notification preferences": "Preferències de notificacions",
@@ -80,7 +80,7 @@
     "error.chat.load_failed": "Error carregant missatges",
     "error.data.fetch_failed": "Error obtenint dades: {{message}}",
     "error.users.fetch_failed": "Error obtenint usuaris: {{message}}",
-    "notification.welcome.title": "Benvingut a Mention! 👋",
+    "notification.welcome.title": "Benvingut a Homiio! 👋",
     "notification.welcome.body": "Gràcies per provar la nostra aplicació. Comença a explorar ara!",
     "success.signup": "Registre exitós",
     "action.retry": "Tornar a provar",
@@ -159,20 +159,84 @@
         "propertyTypes": "Tipus de Propietats",
         "popularCities": "Ciutats Populars",
         "properties": "propietats",
+        "savedSearches": "Cerques Guardades",
+        "saveSearch": "Guardar Cerca",
+        "searchQuery": "Consulta de Cerca",
+        "searchName": "Nom de Cerca",
+        "searchNamePlaceholder": "Introdueix un nom per aquesta cerca",
+        "enableNotifications": "Habilitar Notificacions",
+        "notificationsDescription": "Rep notificacions quan noves propietats coincideixin amb aquesta cerca",
+        "withFilters": "Amb filtres",
+        "error": "Error",
+        "enterSearchQuery": "Si us plau introdueix una consulta de cerca primer",
+        "deleteSearch": "Eliminar Cerca",
+        "deleteSearchConfirm": "Estàs segur que vols eliminar la cerca \"{{name}}\"?",
+        "viewAllSaved": "Veure Totes Guardades",
+        "more": "més",
+        "Eco-friendly": "Ecològic",
+        "Co-living": "Convivència",
+        "Furnished": "Amoblat",
+        "Pets Allowed": "Mascotes Permeses",
+        "Verified": "Verificat",
+        "Search with": "Cercar amb",
+        "filters": "filtres",
+        "Advanced Filters": "Filtres Avançats",
         "types": {
             "apartments": "Apartaments",
             "houses": "Cases",
             "rooms": "Habitacions",
             "studios": "Estudis"
-        }
+        },
+        "errorLoadingData": "Error carregant dades",
+        "noPropertyTypesAvailable": "No hi ha tipus de propietat disponibles",
+        "noCitiesAvailable": "No hi ha ciutats disponibles",
+        "noPropertyTypes": "No hi ha tipus de propietat disponibles",
+        "searching": "Cercant..."
     },
     "profile": {
+        "title": "Perfil",
         "editProfile": "Editar Perfil",
         "myProperties": "Les Meves Propietats",
         "savedProperties": "Propietats Guardades",
         "myContracts": "Els Meus Contractes",
         "trustScore": "Puntuació de Confiança",
-        "logOut": "Tancar Sessió"
+        "logOut": "Tancar Sessió",
+        "loading": "Carregant perfil...",
+        "signInRequired": "Inici de sessió requerit",
+        "signInMessage": "Si us plau inicia sessió per veure el teu perfil",
+        "createProfile": "Crear Perfil",
+        "deleteProfile": "Eliminar Perfil",
+        "types": {
+            "personal": "Perfil Personal",
+            "agency": "Perfil d'Agència",
+            "business": "Perfil de Negoci"
+        },
+        "sections": {
+            "overview": "Resum",
+            "properties": "Les Meves Propietats",
+            "contracts": "Els Meus Contractes",
+            "trustScore": "Puntuació de Confiança",
+            "settings": "Configuració"
+        },
+        "stats": {
+            "propertiesCount": "Propietats",
+            "contractsCount": "Contractes",
+            "trustScore": "Puntuació de Confiança"
+        },
+        "actions": {
+            "manageProperties": "Gestionar Propietats",
+            "viewContracts": "Veure Contractes",
+            "editProfile": "Editar Perfil",
+            "shareProfile": "Compartir Perfil",
+            "signOut": "Tancar Sessió"
+        },
+        "noProfilesTitle": "No s'han Trobat Perfils",
+        "noProfilesMessage": "Encara no tens perfils. Crea el teu primer perfil per començar!",
+        "errors": {
+            "loadFailed": "Error carregant perfils",
+            "updateFailed": "Error actualitzant perfil",
+            "deleteFailed": "Error eliminant perfil"
+        }
     },
     "notifications": {
         "title": "Notificacions",
@@ -204,6 +268,9 @@
         "share": "Compartir",
         "contact": "Contactar",
         "bookViewing": "Reservar Visita",
+        "Housing Authority": "Autoritat d'Habitatge",
+        "Apply on State Website": "Aplicar al Lloc Web de l'Estat",
+        "Contact Housing Authority": "Contactar Autoritat d'Habitatge",
         "my": {
             "title": "Les Meves Propietats",
             "edit": "Editar",
@@ -239,6 +306,18 @@
             "availability": "Disponibilitat",
             "apply": "Aplicar Filtres",
             "clear": "Netejar Tot"
+        },
+        "titles": {
+            "forRent": "en lloguer a",
+            "locationNotSpecified": "Ubicació no especificada",
+            "types": {
+                "apartment": "Apartament",
+                "house": "Casa",
+                "room": "Habitació",
+                "studio": "Estudi",
+                "duplex": "Dúplex",
+                "penthouse": "Àtic"
+            }
         }
     },
     "payments": {
@@ -393,6 +472,7 @@
         "loading": "Carregant...",
         "retry": "Tornar a provar",
         "save": "Guardar",
+        "saving": "Guardant...",
         "delete": "Eliminar",
         "edit": "Editar",
         "close": "Tancar",
@@ -423,6 +503,14 @@
         "view": "Veure",
         "details": "Detalls",
         "more": "Més",
+        "Sign in to save searches": "Inicia sessió per guardar cerques",
+        "Go to Search": "Anar a Cercar",
+        "No saved searches yet": "Encara no hi ha cerques guardades",
+        "Create New Search": "Crear Nova Cerca",
+        "View All": "Veure Tot",
+        "Sign in to create property alerts": "Inicia sessió per crear alertes de propietats",
+        "Creating...": "Creant...",
+        "Create Alert": "Crear Alerta",
         "less": "Menys",
         "all": "Tot",
         "none": "Cap",
@@ -544,6 +632,47 @@
         "errors": {
             "connection": "Error de Connexió",
             "connectionMessage": "Si us plau, verifiqueu la vostra connexió i intenteu-ho de nou."
+        },
+        "shared": {
+            "loading": "Carregant Conversació Compartida",
+            "loadingMessage": "Carregant conversació...",
+            "subtitle": "Conversació Compartida",
+            "badge": "Conversació Compartida",
+            "footer": "Impulsat per Sindi - El Vostre Defensor de Justícia Habitacional IA",
+            "error": {
+                "title": "Conversació No Trobada",
+                "notFound": "Aquesta conversació compartida no s'ha pogut trobar o ha caducat.",
+                "failed": "Error carregant conversació compartida. Si us plau, torneu-ho a provar.",
+                "description": "La conversació pot haver estat eliminada o l'enllaç pot ser invàlid."
+            },
+            "empty": {
+                "title": "Conversació Buida",
+                "subtitle": "Aquesta conversació compartida encara no té missatges."
+            }
+        },
+        "share": {
+            "text": "Mireu aquesta conversació amb Sindi, el vostre defensor de justícia habitacional IA",
+            "success": {
+                "title": "Conversació Compartida",
+                "copied": "Enllaç de compartir copiat al porta-retalls!"
+            },
+            "error": {
+                "title": "No es Pot Compartir Conversació",
+                "saveFirst": "Si us plau deseu la conversació enviant un missatge abans de compartir.",
+                "emptyConversation": "No es pot compartir una conversació buida. Si us plau afegiu alguns missatges primer.",
+                "failed": "Error generant enllaç de compartir. Si us plau, torneu-ho a provar."
+            }
+        },
+        "conversation": {
+            "title": "Conversació",
+            "subtitle": "Defensor de Justícia Habitacional IA",
+            "loading": "Carregant Conversació",
+            "loadingMessage": "Carregant conversació...",
+            "error": "Error de Conversació",
+            "empty": {
+                "title": "Inicieu la Vostra Conversació",
+                "subtitle": "Pregunteu a Sindi sobre drets de llogaters, cerca d'habitatge, o qualsevol pregunta relacionada amb habitatge. Estic aquí per ajudar-vos a lluitar per la justícia habitacional."
+            }
         }
     },
     "sidebar": {

@@ -11,7 +11,7 @@
   "Language": "Idioma",
   "Primary Color": "Color Principal",
   "Apply Settings": "Aplicar Configuración",
-  "Welcome to Mention! 👋": "¡Bienvenido a Mention! 👋",
+  "Welcome to Mention! 👋": "¡Bienvenido a Homiio! 👋",
   "Thanks for trying out our app. Start exploring now!": "Gracias por probar nuestra aplicación. ¡Comienza a explorar ahora!",
   "This screen doesn't exist.": "Esta pantalla no existe.",
   "Go to home screen!": "¡Ve a la pantalla de inicio!",
@@ -22,7 +22,7 @@
   "This is a sample post": "Esta es una publicación de ejemplo",
   "Another example post": "Otra publicación de ejemplo",
   "Customize your view": "Personaliza tu vista",
-  "These settings affect all the Mention accounts on this device.": "Esta configuración afecta a todas las cuentas de Mention en este dispositivo.",
+  "These settings affect all the Mention accounts on this device.": "Esta configuración afecta a todas las cuentas de Homiio en este dispositivo.",
   "Account": "Cuenta",
   "Manage your account settings": "Gestiona la configuración de tu cuenta",
   "Notification preferences": "Preferencias de notificaciones",
@@ -40,7 +40,7 @@
   "posts": "publicaciones",
   "File Manager": "Administrador de Archivos",
   "Filter files by name": "Filtrar archivos por nombre",
-  "Filter files by date (MM/DD/YYYY)": "Filtrar archivos por fecha (MM/DD/AAAA)",
+  "Filter files by date (MM/DD/YYYY)": "Filtrar archivos por fecha (DD/MM/AAAA)",
   "Filter files by type (e.g., image, video)": "Filtrar archivos por tipo (ej., imagen, video)",
   "Who to follow": "A quién seguir",
   "Search...": "Buscar...",
@@ -56,44 +56,31 @@
   "Sign Up": "Registrarse",
   "Sign In": "Iniciar Sesión",
   "Join the conversation": "Únete a la conversación",
-  "Ask Kaana Anything": "Pregunta lo que quieras a Kaana",
-  "Are you sure you want to delete this file?": "¿Estás seguro de que quieres eliminar este archivo?",
-  "No files found. Upload some files to get started!": "No se encontraron archivos. ¡Sube algunos archivos para comenzar!",
-  "Clear Logs": "Limpiar registros",
-  "Log": "Registro",
-  "All": "Todo",
-  "Users": "Usuarios",
-  "Posts": "Publicaciones",
-  "Profiles": "Perfiles",
-  "No results": "Sin resultados",
-  "mentioned you": "te mencionó",
-  "shared your post": "compartió tu publicación",
-  "Version": "Versión",
-  "copied to clipboard": "copiado al portapapeles",
-  "Invite link copied to clipboard": "Enlace de invitación copiado al portapapeles",
-  "Join": "Unirse",
-  "Privacy Settings": "Configuración de privacidad",
-  "Help Center": "Centro de ayuda",
-  "Report a problem": "Reportar un problema",
-  "Terms of Service": "Términos de servicio",
-  "Privacy Policy": "Política de privacidad",
-  "kaana.placeholder.fight_club": "¿Cuál es la primera regla del Club de la Lucha?",
-  "kaana.placeholder.adam_mosseri": "¿Quién es Adam Mosseri?",
-  "kaana.placeholder.enric_duran": "¿Dónde se esconde Enric Duran?",
-  "kaana.placeholder.javascript": "Escribe un método Javascript para invertir una cadena",
-  "kaana.placeholder.pc_build": "¿Cómo ensamblar tu propia PC?",
-  "kaana.placeholder.nate": "¿Cómo está Nate Isern?",
   "error.socket.not_connected": "No conectado al servidor de chat",
   "error.message.send_timeout": "Tiempo de espera al enviar mensaje. Por favor, inténtalo de nuevo.",
   "error.message.edit_timeout": "Tiempo de espera al editar. Por favor, inténtalo de nuevo.",
   "error.message.delete_timeout": "Tiempo de espera al eliminar. Por favor, inténtalo de nuevo.",
   "error.signup.missing_fields": "Por favor, completa todos los campos",
   "error.signup.failed": "Error en el registro:",
-  "error.signup.password_mismatch": "Las contraseñas no coinciden",
   "error.boundary.title": "¡Ups! Algo salió mal",
   "error.boundary.message": "Nos disculpamos por las molestias. Por favor, inténtalo de nuevo.",
   "error.boundary.retry": "Reintentar",
-  "notification.welcome.title": "¡Bienvenido a Mention! 👋",
+  "error.file_selection": "Error al procesar los archivos seleccionados. Por favor, inténtalo de nuevo.",
+  "error.login_required": "Por favor, inicia sesión para gestionar archivos",
+  "error.load_notifications": "Error al cargar notificaciones",
+  "error.fetch_trends": "Error al cargar tendencias",
+  "error.signup.password_mismatch": "Las contraseñas no coinciden",
+  "error.validation.token_expired": "El token ha expirado",
+  "error.validation.token_invalid": "El formato del token no es válido",
+  "error.validation.token_signature": "La firma del token no es válida",
+  "error.auth.invalid_token": "Token de autenticación inválido",
+  "error.chat.forward_failed": "No se pudo reenviar el mensaje",
+  "error.chat.delete_failed": "No se pudo eliminar el mensaje",
+  "error.chat.send_failed": "Error al enviar mensaje",
+  "error.chat.load_failed": "Error al cargar mensajes",
+  "error.data.fetch_failed": "Error al obtener datos: {{message}}",
+  "error.users.fetch_failed": "Error al obtener usuarios: {{message}}",
+  "notification.welcome.title": "¡Bienvenido a Homiio! 👋",
   "notification.welcome.body": "Gracias por probar nuestra aplicación. ¡Comienza a explorar ahora!",
   "success.signup": "Registro exitoso",
   "action.retry": "Reintentar",
@@ -109,23 +96,60 @@
   "state.downloading": "Descargando...",
   "state.processing": "Procesando...",
   "state.please_wait": "Por favor, espera...",
-  "error.file_selection": "Error al procesar los archivos seleccionados. Por favor, inténtalo de nuevo.",
-  "error.login_required": "Por favor, inicia sesión para gestionar archivos",
-  "error.load_notifications": "Error al cargar notificaciones",
-  "error.fetch_trends": "Error al cargar tendencias",
   "file.size_mb": "MB",
   "profile.edit": "Editar perfil",
   "profile.chat": "Chat",
-  "error.validation.token_expired": "El token ha expirado",
-  "error.validation.token_invalid": "El formato del token no es válido",
-  "error.validation.token_signature": "La firma del token no es válida",
-  "error.auth.invalid_token": "Token de autenticación inválido",
-  "error.chat.forward_failed": "No se pudo reenviar el mensaje",
-  "error.chat.delete_failed": "No se pudo eliminar el mensaje",
-  "error.chat.send_failed": "Error al enviar mensaje",
-  "error.chat.load_failed": "Error al cargar mensajes",
-  "error.data.fetch_failed": "Error al obtener datos: {{message}}",
-  "error.users.fetch_failed": "Error al obtener usuarios: {{message}}",
+  "home": {
+    "hero": {
+      "title": "Encuentra tu hogar ético",
+      "subtitle": "Alquileres transparentes con acuerdos justos y propiedades verificadas",
+      "searchPlaceholder": "¿Dónde quieres vivir?",
+      "searchButton": "Buscar"
+    },
+    "trust": {
+      "title": "Vivienda en la que Puedes Confiar",
+      "verifiedListings": {
+        "title": "Listados Verificados",
+        "description": "Todas las propiedades verificadas por autenticidad y condición"
+      },
+      "fairAgreements": {
+        "title": "Acuerdos Justos",
+        "description": "Contratos transparentes sin términos ocultos"
+      },
+      "trustScore": {
+        "title": "Puntuación de Confianza",
+        "description": "Sistema de reputación tanto para inquilinos como para propietarios"
+      }
+    },
+    "cities": {
+      "title": "Ciudades Destacadas",
+      "properties": "propiedades"
+    },
+    "categories": {
+      "title": "Navegar por Categoría",
+      "view": "Ver",
+      "types": {
+        "apartments": "Apartamentos",
+        "houses": "Casas",
+        "coLiving": "Convivencia",
+        "ecoFriendly": "Ecológico"
+      }
+    },
+    "horizon": {
+      "title": "Únete a Horizon",
+      "description": "Horizon es una iniciativa global que ofrece vivienda justa, atención médica y apoyo de viaje. Ahora integrado con Homiio.",
+      "learnMore": "Saber Más"
+    },
+    "eco": {
+      "title": "Propiedades Eco-Certificadas",
+      "description": "Encuentra propiedades sostenibles que cumplen nuestros estándares de eficiencia energética y ecológicos",
+      "viewEcoProperties": "Ver Propiedades Ecológicas"
+    },
+    "featured": {
+      "title": "Propiedades Destacadas"
+    },
+    "viewAll": "Ver Todo"
+  },
   "search": {
     "title": "Buscar",
     "searchPlaceholder": "Buscar por ubicación, tipo de propiedad...",
@@ -150,7 +174,7 @@
     "viewAllSaved": "Ver Todas Guardadas",
     "more": "más",
     "Eco-friendly": "Ecológico",
-    "Co-living": "Co-living",
+    "Co-living": "Convivencia",
     "Furnished": "Amueblado",
     "Pets Allowed": "Mascotas Permitidas",
     "Verified": "Verificado",
@@ -169,6 +193,72 @@
     "noPropertyTypes": "No hay tipos de propiedad disponibles",
     "searching": "Buscando..."
   },
+  "profile": {
+    "title": "Perfil",
+    "editProfile": "Editar Perfil",
+    "myProperties": "Mis Propiedades",
+    "savedProperties": "Propiedades Guardadas",
+    "myContracts": "Mis Contratos",
+    "trustScore": "Puntuación de Confianza",
+    "logOut": "Cerrar Sesión",
+    "loading": "Cargando perfil...",
+    "signInRequired": "Inicio de sesión requerido",
+    "signInMessage": "Por favor inicia sesión para ver tu perfil",
+    "createProfile": "Crear Perfil",
+    "deleteProfile": "Eliminar Perfil",
+    "types": {
+      "personal": "Perfil Personal",
+      "agency": "Perfil de Agencia",
+      "business": "Perfil de Negocio"
+    },
+    "sections": {
+      "overview": "Resumen",
+      "properties": "Mis Propiedades",
+      "contracts": "Mis Contratos",
+      "trustScore": "Puntuación de Confianza",
+      "settings": "Configuración"
+    },
+    "stats": {
+      "propertiesCount": "Propiedades",
+      "contractsCount": "Contratos",
+      "trustScore": "Puntuación de Confianza"
+    },
+    "actions": {
+      "manageProperties": "Gestionar Propiedades",
+      "viewContracts": "Ver Contratos",
+      "editProfile": "Editar Perfil",
+      "shareProfile": "Compartir Perfil",
+      "signOut": "Cerrar Sesión"
+    },
+    "noProfilesTitle": "No se Encontraron Perfiles",
+    "noProfilesMessage": "Aún no tienes perfiles. ¡Crea tu primer perfil para comenzar!",
+    "errors": {
+      "loadFailed": "Error al cargar perfiles",
+      "updateFailed": "Error al actualizar perfil",
+      "deleteFailed": "Error al eliminar perfil"
+    }
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "types": {
+      "message": {
+        "title": "Nuevo Mensaje",
+        "description": "Tienes un nuevo mensaje de tu propietario"
+      },
+      "contract": {
+        "title": "Actualización de Contrato",
+        "description": "Tu acuerdo de alquiler ha sido actualizado"
+      },
+      "payment": {
+        "title": "Recordatorio de Pago",
+        "description": "Tu pago de alquiler vence en 3 días"
+      }
+    },
+    "timeAgo": {
+      "hours": "horas atrás",
+      "days": "días atrás"
+    }
+  },
   "properties": {
     "title": "Propiedades",
     "filters": "Filtros",
@@ -178,6 +268,9 @@
     "share": "Compartir",
     "contact": "Contactar",
     "bookViewing": "Reservar Visita",
+    "Housing Authority": "Autoridad de Vivienda",
+    "Apply on State Website": "Aplicar en el Sitio Web del Estado",
+    "Contact Housing Authority": "Contactar Autoridad de Vivienda",
     "my": {
       "title": "Mis Propiedades",
       "edit": "Editar",
@@ -226,6 +319,75 @@
         "penthouse": "Ático"
       }
     }
+  },
+  "payments": {
+    "title": "Pagos",
+    "upcoming": "Pagos Próximos",
+    "history": "Historial de Pagos",
+    "dueDate": "Fecha de Vencimiento",
+    "amount": "Cantidad",
+    "status": {
+      "paid": "Pagado",
+      "pending": "Pendiente",
+      "overdue": "Vencido"
+    },
+    "actions": {
+      "payNow": "Pagar Ahora",
+      "viewDetails": "Ver Detalles",
+      "downloadReceipt": "Descargar Recibo"
+    }
+  },
+  "contracts": {
+    "title": "Contratos",
+    "active": "Contratos Activos",
+    "expired": "Contratos Vencidos",
+    "draft": "Borradores de Contratos",
+    "status": {
+      "active": "Activo",
+      "expired": "Vencido",
+      "pending": "Pendiente",
+      "draft": "Borrador"
+    },
+    "actions": {
+      "view": "Ver",
+      "download": "Descargar",
+      "sign": "Firmar",
+      "renew": "Renovar"
+    }
+  },
+  "roommates": {
+    "title": "Compañeros de Cuarto",
+    "find": "Encontrar Compañeros de Cuarto",
+    "myMatches": "Mis Coincidencias",
+    "preferences": "Preferencias",
+    "profile": "Perfil de Compañero de Cuarto",
+    "compatibility": "Puntuación de Compatibilidad",
+    "actions": {
+      "message": "Mensaje",
+      "connect": "Conectar",
+      "viewProfile": "Ver Perfil"
+    }
+  },
+  "safety": {
+    "title": "Seguridad",
+    "fraudReports": "Informes de Fraude",
+    "reportIssue": "Reportar Problema",
+    "safetyTips": "Consejos de Seguridad",
+    "emergencyContacts": "Contactos de Emergencia",
+    "reportTypes": {
+      "fraud": "Fraude",
+      "scam": "Estafa",
+      "fakeListing": "Listado Falso",
+      "harassment": "Acoso",
+      "other": "Otro"
+    }
+  },
+  "horizon": {
+    "title": "Iniciativa Horizon",
+    "description": "Iniciativa global para vivienda justa, atención médica y apoyo de viaje",
+    "benefits": "Beneficios",
+    "join": "Únete a Horizon",
+    "learnMore": "Saber Más"
   },
   "settings": {
     "title": "Configuración",
@@ -310,6 +472,7 @@
     "loading": "Cargando...",
     "retry": "Reintentar",
     "save": "Guardar",
+    "saving": "Guardando...",
     "delete": "Eliminar",
     "edit": "Editar",
     "close": "Cerrar",
@@ -340,6 +503,14 @@
     "view": "Ver",
     "details": "Detalles",
     "more": "Más",
+    "Sign in to save searches": "Inicia sesión para guardar búsquedas",
+    "Go to Search": "Ir a Buscar",
+    "No saved searches yet": "Aún no hay búsquedas guardadas",
+    "Create New Search": "Crear Nueva Búsqueda",
+    "View All": "Ver Todo",
+    "Sign in to create property alerts": "Inicia sesión para crear alertas de propiedades",
+    "Creating...": "Creando...",
+    "Create Alert": "Crear Alerta",
     "less": "Menos",
     "all": "Todo",
     "none": "Ninguno",
@@ -461,6 +632,47 @@
     "errors": {
       "connection": "Error de Conexión",
       "connectionMessage": "Por favor verifica tu conexión e inténtalo de nuevo."
+    },
+    "shared": {
+      "loading": "Cargando Conversación Compartida",
+      "loadingMessage": "Cargando conversación...",
+      "subtitle": "Conversación Compartida",
+      "badge": "Conversación Compartida",
+      "footer": "Impulsado por Sindi - Tu Defensor de Justicia Habitacional IA",
+      "error": {
+        "title": "Conversación No Encontrada",
+        "notFound": "Esta conversación compartida no se pudo encontrar o ha expirado.",
+        "failed": "Error al cargar conversación compartida. Por favor, inténtalo de nuevo.",
+        "description": "La conversación puede haber sido eliminada o el enlace puede ser inválido."
+      },
+      "empty": {
+        "title": "Conversación Vacía",
+        "subtitle": "Esta conversación compartida aún no tiene mensajes."
+      }
+    },
+    "share": {
+      "text": "Echa un vistazo a esta conversación con Sindi, tu defensor de justicia habitacional IA",
+      "success": {
+        "title": "Conversación Compartida",
+        "copied": "¡Enlace de compartir copiado al portapapeles!"
+      },
+      "error": {
+        "title": "No se Puede Compartir Conversación",
+        "saveFirst": "Por favor guarda la conversación enviando un mensaje antes de compartir.",
+        "emptyConversation": "No se puede compartir una conversación vacía. Por favor agrega algunos mensajes primero.",
+        "failed": "Error al generar enlace de compartir. Por favor, inténtalo de nuevo."
+      }
+    },
+    "conversation": {
+      "title": "Conversación",
+      "subtitle": "Defensor de Justicia Habitacional IA",
+      "loading": "Cargando Conversación",
+      "loadingMessage": "Cargando conversación...",
+      "error": "Error de Conversación",
+      "empty": {
+        "title": "Inicia Tu Conversación",
+        "subtitle": "Pregúntale a Sindi sobre derechos de inquilinos, búsqueda de vivienda, o cualquier pregunta relacionada con vivienda. Estoy aquí para ayudarte a luchar por la justicia habitacional."
+      }
     }
   },
   "sidebar": {
