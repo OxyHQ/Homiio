@@ -16,7 +16,8 @@ import { Header } from '@/components/Header';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as DocumentPicker from 'expo-document-picker';
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useConversationStore, type ConversationMessage, type Conversation } from '@/store/conversationStore';
 
 export default function sindi() {
   const { oxyServices, activeSessionId } = useOxy();
@@ -24,8 +25,16 @@ export default function sindi() {
   const { t } = useTranslation();
   const [attachedFile, setAttachedFile] = React.useState<any>(null);
 
+  // Zustand store
+  const {
+    conversations,
+    loading,
+    loadConversations,
+    createConversation,
+  } = useConversationStore();
+
   // Create a custom fetch function that includes authentication
-  const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
+  const authenticatedFetch = useCallback(async (url: string, options: RequestInit = {}) => {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string> || {}),
@@ -52,7 +61,7 @@ export default function sindi() {
     };
 
     return expoFetch(url, fetchOptions as any);
-  };
+  }, [oxyServices, activeSessionId]);
 
   // Always call useChat, but only enable it if authenticated
   const isAuthenticated = !!oxyServices && !!activeSessionId;
@@ -62,6 +71,30 @@ export default function sindi() {
     onError: (error: any) => console.error(error, 'ERROR'),
     enabled: isAuthenticated, // Only enable chat if authenticated
   } as any); // Cast to any to allow 'enabled' prop if not in type
+
+  // Create new conversation
+  const createNewConversation = useCallback(async () => {
+    if (!isAuthenticated) return;
+
+    try {
+      const newConversation = await createConversation('New Conversation', undefined, authenticatedFetch);
+      router.push(`/sindi/${newConversation.id}`);
+      // Refresh conversations list
+      loadConversations(authenticatedFetch);
+    } catch (error) {
+      console.error('Failed to create conversation:', error);
+      // Fallback to client-side ID generation
+      const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      router.push(`/sindi/${conversationId}`);
+    }
+  }, [isAuthenticated, authenticatedFetch, router, createConversation, loadConversations]);
+
+  // Load conversations on mount
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadConversations(authenticatedFetch);
+    }
+  }, [isAuthenticated, loadConversations, authenticatedFetch]);
 
   const handleAttachFile = async () => {
     try {
@@ -188,412 +221,256 @@ export default function sindi() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.messagesContent, webStyles.messagesContent]}
       >
-        {messages.length === 0 ? (
-          <View style={styles.welcomeContainer}>
+        <View style={styles.welcomeContainer}>
+          <LinearGradient
+            colors={[colors.primaryColor, colors.secondaryLight]}
+            style={styles.welcomeHeader}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <View style={styles.welcomeIconContainer}>
+              <View style={styles.welcomeIconBackground}>
+                <SindiIcon size={56} color="white" />
+              </View>
+              <View style={styles.welcomeIconGlow} />
+            </View>
+            <Text style={styles.welcomeTitle}>{t('sindi.welcome.title')}</Text>
+            <Text style={styles.welcomeSubtitle}>
+              {t('sindi.welcome.subtitle')}
+            </Text>
+            <View style={styles.welcomeFeatures}>
+              <View style={styles.welcomeFeature}>
+                <IconComponent name="shield-checkmark" size={16} color="rgba(255, 255, 255, 0.9)" />
+                <Text style={styles.welcomeFeatureText}>Tenant Rights Expert</Text>
+              </View>
+              <View style={styles.welcomeFeature}>
+                <IconComponent name="home" size={16} color="rgba(255, 255, 255, 0.9)" />
+                <Text style={styles.welcomeFeatureText}>Housing Search</Text>
+              </View>
+              <View style={styles.welcomeFeature}>
+                <IconComponent name="document-text" size={16} color="rgba(255, 255, 255, 0.9)" />
+                <Text style={styles.welcomeFeatureText}>Legal Guidance</Text>
+              </View>
+            </View>
+          </LinearGradient>
+
+          {/* New Conversation Button */}
+          <TouchableOpacity
+            style={styles.newConversationButton}
+            onPress={createNewConversation}
+            activeOpacity={0.8}
+          >
             <LinearGradient
               colors={[colors.primaryColor, colors.secondaryLight]}
-              style={styles.welcomeHeader}
+              style={styles.newConversationGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <SindiIcon size={48} color="white" />
-              <Text style={styles.welcomeTitle}>{t('sindi.welcome.title')}</Text>
-              <Text style={styles.welcomeSubtitle}>
-                {t('sindi.welcome.subtitle')}
-              </Text>
+              <View style={styles.newConversationIconContainer}>
+                <IconComponent name="add-circle" size={28} color="white" />
+              </View>
+              <View style={styles.newConversationTextContainer}>
+                <Text style={styles.newConversationText}>Start New Conversation</Text>
+                <Text style={styles.newConversationSubtext}>Get instant help with housing questions</Text>
+              </View>
+              <View style={styles.newConversationArrow}>
+                <IconComponent name="arrow-forward" size={20} color="rgba(255, 255, 255, 0.8)" />
+              </View>
             </LinearGradient>
+          </TouchableOpacity>
 
-            <View style={styles.quickActionsContainer}>
-              <Text style={styles.quickActionsTitle}>{t('sindi.actions.title')}</Text>
-              <View style={styles.quickActionsGrid}>
-                {quickActions.map((action, index) => (
+          {/* Conversation History */}
+          <View style={styles.conversationHistoryContainer}>
+            <Text style={styles.conversationHistoryTitle}>Recent Conversations</Text>
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Loading conversations...</Text>
+              </View>
+            ) : conversations.length === 0 ? (
+              <View style={styles.emptyStateContainer}>
+                <LinearGradient
+                  colors={['rgba(76, 175, 80, 0.1)', 'rgba(76, 175, 80, 0.05)']}
+                  style={styles.emptyStateCard}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <View style={styles.emptyStateIconContainer}>
+                    <IconComponent name="chatbubbles-outline" size={48} color={colors.primaryColor} />
+                  </View>
+                  <Text style={styles.emptyStateTitle}>No conversations yet</Text>
+                  <Text style={styles.emptyStateDescription}>
+                    Start a new conversation to get help with your tenant rights questions
+                  </Text>
                   <TouchableOpacity
-                    key={index}
-                    style={styles.quickActionButton}
-                    onPress={() => handleQuickAction(action.prompt)}
+                    style={styles.emptyStateButton}
+                    onPress={createNewConversation}
                   >
                     <LinearGradient
                       colors={[colors.primaryColor, colors.secondaryLight]}
-                      style={styles.quickActionGradient}
+                      style={styles.emptyStateButtonGradient}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                     >
-                      <IconComponent name={action.icon as any} size={20} color="white" />
-                      <Text style={styles.quickActionText}>{action.title}</Text>
+                      <IconComponent name="add-circle" size={20} color="white" />
+                      <Text style={styles.emptyStateButtonText}>Start First Chat</Text>
                     </LinearGradient>
                   </TouchableOpacity>
-                ))}
+                </LinearGradient>
               </View>
-            </View>
-
-            <View style={styles.propertySearchContainer}>
-              <Text style={styles.propertySearchTitle}>{t('sindi.housing.title')}</Text>
-              <Text style={styles.propertySearchSubtitle}>
-                {t('sindi.housing.subtitle')}
-              </Text>
-              <View style={styles.propertySearchGrid}>
-                {propertySearchExamples.map((example, index) => (
+            ) : (
+              <View style={styles.conversationsList}>
+                {conversations.map((conversation) => (
                   <TouchableOpacity
-                    key={index}
-                    style={styles.propertySearchButton}
-                    onPress={() => handleQuickAction(example.prompt)}
+                    key={conversation.id}
+                    style={styles.conversationItem}
+                    onPress={() => router.push(`/sindi/${conversation.id}`)}
+                    activeOpacity={0.7}
                   >
                     <LinearGradient
-                      colors={[colors.primaryColor, colors.secondaryLight]}
-                      style={styles.propertySearchGradient}
+                      colors={['#ffffff', '#f8f9fa']}
+                      style={styles.conversationCard}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                     >
-                      <IconComponent name={example.icon as any} size={18} color="white" />
-                      <Text style={styles.propertySearchText}>{example.title}</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <Text style={styles.propertySearchNote}>
-                {t('sindi.housing.naturalLanguage')}
-              </Text>
-            </View>
-
-            <LinearGradient
-              colors={[colors.primaryColor, colors.secondaryLight]}
-              style={styles.featuresContainer}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <Text style={styles.featuresTitle}>{t('sindi.features.title')}</Text>
-              <View style={styles.featureList}>
-                <Text style={styles.featureItem}>{t('sindi.features.rentIncreases')}</Text>
-                <Text style={styles.featureItem}>{t('sindi.features.evictions')}</Text>
-                <Text style={styles.featureItem}>{t('sindi.features.deposits')}</Text>
-                <Text style={styles.featureItem}>{t('sindi.features.conditions')}</Text>
-                <Text style={styles.featureItem}>{t('sindi.features.discrimination')}</Text>
-                <Text style={styles.featureItem}>{t('sindi.features.retaliation')}</Text>
-                <Text style={styles.featureItem}>{t('sindi.features.leases')}</Text>
-                <Text style={styles.featureItem}>{t('sindi.features.organizing')}</Text>
-                <Text style={styles.featureItem}>{t('sindi.features.updates')}</Text>
-                <Text style={styles.featureItem}>{t('sindi.features.organizations')}</Text>
-              </View>
-            </LinearGradient>
-          </View>
-        ) : (
-          messages.map(m => (
-            <View key={m.id} style={[
-              styles.messageContainer,
-              m.role === 'user' ? styles.userMessage : styles.assistantMessage
-            ]}>
-              <View style={[
-                styles.messageBubble,
-                m.role === 'user' ? styles.userBubble : styles.assistantBubble
-              ]}>
-                {
-                  // If this is a property search result system message, parse and render cards
-                  m.role === 'system' &&
-                    m.content.startsWith('PROPERTY SEARCH RESULTS:') ? (() => {
-                      // Extract property lines
-                      const lines = m.content.split('\n').filter(line => line.startsWith('- '));
-                      const properties = lines.map(line => {
-                        // Try to parse title, type, rent, city from the line
-                        const match = line.match(/^- (.*?) \((.*?), (.*?)\)(, (.*?))?$/);
-                        if (match) {
-                          return {
-                            title: match[1],
-                            type: match[2],
-                            rent: { amount: match[3] },
-                            address: { city: match[5] },
-                            _id: match[1] + '-' + (match[5] || ''), // Fallback unique id
-                            id: match[1] + '-' + (match[5] || ''),
-                          };
-                        }
-                        return undefined;
-                      }).filter((p): p is any => !!p);
-                      return (
-                        <View key={m.id || m.content} style={styles.propertyCardsContainer}>
-                          {properties.map((property, idx) => (
-                            <PropertyCard
-                              key={property._id || property.id || idx}
-                              property={property}
-                              variant={"featured"}
-                              onPress={() => router.push(`/properties/${property._id || property.id}`)}
-                            />
-                          ))}
+                      <View style={styles.conversationHeader}>
+                        <View style={styles.conversationTitleContainer}>
+                          <View style={styles.conversationIcon}>
+                            <IconComponent name="chatbubble-ellipses" size={16} color={colors.primaryColor} />
+                          </View>
+                          <Text style={styles.conversationTitle} numberOfLines={1}>
+                            {conversation.title}
+                          </Text>
                         </View>
-                      );
-                    })() : (
-                    <View style={{ flexShrink: 1, flexWrap: 'wrap', width: '100%' }}>
-                      <Markdown
-                        key={m.id}
-                        style={{
-                          body: {
-                            ...styles.markdownParagraph,
-                            color: m.role === 'user' ? 'white' : '#2c3e50',
-                            flexWrap: 'wrap',
-                            flexShrink: 1,
-                            width: '100%',
-                            ...(Platform.OS === 'web'
-                              ? ({
-                                overflowWrap: 'break-word',
-                                wordBreak: 'break-word',
-                                whiteSpace: 'pre-line',
-                              } as any)
-                              : {}),
-                          },
-                          paragraph: {
-                            width: '100%',
-                            flexWrap: 'wrap',
-                            ...(Platform.OS === 'web' ? ({
-                              overflowWrap: 'break-word',
-                              wordBreak: 'break-word',
-                              whiteSpace: 'pre-line',
-                            } as any) : {}),
-                          },
-                          heading1: {
-                            ...styles.markdownH1,
-                            flexWrap: 'wrap',
-                            width: '100%',
-                            ...(Platform.OS === 'web'
-                              ? ({
-                                overflowWrap: 'break-word',
-                                wordBreak: 'break-word',
-                                whiteSpace: 'pre-line',
-                              } as any)
-                              : {}),
-                          },
-                          heading2: {
-                            ...styles.markdownH2,
-                            flexWrap: 'wrap',
-                            width: '100%',
-                            ...(Platform.OS === 'web'
-                              ? ({
-                                overflowWrap: 'break-word',
-                                wordBreak: 'break-word',
-                                whiteSpace: 'pre-line',
-                              } as any)
-                              : {}),
-                          },
-                          heading3: {
-                            ...styles.markdownH3,
-                            flexWrap: 'wrap',
-                            width: '100%',
-                            ...(Platform.OS === 'web'
-                              ? ({
-                                overflowWrap: 'break-word',
-                                wordBreak: 'break-word',
-                                whiteSpace: 'pre-line',
-                              } as any)
-                              : {}),
-                          },
-                          heading4: {
-                            fontSize: 16,
-                            fontWeight: 'bold',
-                            marginBottom: 8,
-                            flexWrap: 'wrap',
-                            width: '100%',
-                            ...(Platform.OS === 'web' ? ({
-                              overflowWrap: 'break-word',
-                              wordBreak: 'break-word',
-                              whiteSpace: 'pre-line',
-                            } as any) : {}),
-                          },
-                          heading5: {
-                            fontSize: 14,
-                            fontWeight: 'bold',
-                            marginBottom: 8,
-                            flexWrap: 'wrap',
-                            width: '100%',
-                            ...(Platform.OS === 'web' ? ({
-                              overflowWrap: 'break-word',
-                              wordBreak: 'break-word',
-                              whiteSpace: 'pre-line',
-                            } as any) : {}),
-                          },
-                          heading6: {
-                            fontSize: 12,
-                            fontWeight: 'bold',
-                            marginBottom: 8,
-                            flexWrap: 'wrap',
-                            width: '100%',
-                            ...(Platform.OS === 'web' ? ({
-                              overflowWrap: 'break-word',
-                              wordBreak: 'break-word',
-                              whiteSpace: 'pre-line',
-                            } as any) : {}),
-                          },
-                          strong: styles.markdownBold,
-                          em: styles.markdownItalic,
-                          bullet_list: {
-                            ...styles.markdownListItem,
-                            flexWrap: 'wrap',
-                            width: '100%',
-                            ...(Platform.OS === 'web'
-                              ? ({
-                                overflowWrap: 'break-word',
-                                wordBreak: 'break-word',
-                              } as any)
-                              : {}),
-                          },
-                          ordered_list: {
-                            ...styles.markdownListItem,
-                            flexWrap: 'wrap',
-                            width: '100%',
-                            ...(Platform.OS === 'web'
-                              ? ({
-                                overflowWrap: 'break-word',
-                                wordBreak: 'break-word',
-                              } as any)
-                              : {}),
-                          },
-                          list_item: {
-                            flexDirection: 'row',
-                            alignItems: 'flex-start',
-                            marginBottom: 4,
-                            flexWrap: 'wrap',
-                            width: '100%',
-                            ...(Platform.OS === 'web' ? ({
-                              overflowWrap: 'break-word',
-                              wordBreak: 'break-word',
-                            } as any) : {}),
-                          },
-                          code_block: {
-                            ...styles.markdownCodeBlock,
-                            ...(Platform.OS === 'web'
-                              ? ({
-                                whiteSpace: 'pre-wrap',
-                                wordBreak: 'break-word',
-                                overflowX: 'auto',
-                                maxWidth: '100%',
-                                boxSizing: 'border-box',
-                              } as any)
-                              : {}),
-                          },
-                          code_inline: {
-                            ...styles.markdownInlineCode,
-                            ...(Platform.OS === 'web'
-                              ? ({
-                                whiteSpace: 'pre-wrap',
-                                wordBreak: 'break-word',
-                                maxWidth: '100%',
-                              } as any)
-                              : {}),
-                          },
-                          table: {
-                            width: '100%',
-                            ...(Platform.OS === 'web' ? ({
-                              tableLayout: 'fixed',
-                              wordBreak: 'break-word',
-                            } as any) : {}),
-                          },
-                          th: {
-                            fontWeight: 'bold',
-                            borderBottomWidth: 1,
-                            borderColor: '#ccc',
-                            padding: 4,
-                            width: '100%',
-                            ...(Platform.OS === 'web' ? ({
-                              wordBreak: 'break-word',
-                            } as any) : {}),
-                          },
-                          td: {
-                            padding: 4,
-                            width: '100%',
-                            ...(Platform.OS === 'web' ? ({
-                              wordBreak: 'break-word',
-                            } as any) : {}),
-                          },
-                          blockquote: {
-                            borderLeftWidth: 4,
-                            borderLeftColor: '#ccc',
-                            paddingLeft: 8,
-                            marginVertical: 8,
-                            width: '100%',
-                            ...(Platform.OS === 'web' ? ({
-                              wordBreak: 'break-word',
-                            } as any) : {}),
-                          },
-                          link: {
-                            color: '#007AFF',
-                            textDecorationLine: 'underline',
-                            width: '100%',
-                            ...(Platform.OS === 'web' ? ({
-                              wordBreak: 'break-word',
-                            } as any) : {}),
-                          },
-                          image: {
-                            maxWidth: '100%',
-                            height: 'auto',
-                            ...(Platform.OS === 'web' ? ({
-                              boxSizing: 'border-box',
-                            } as any) : {}),
-                          },
-                        }}
-                      >
-                        {m.content}
-                      </Markdown>
-                    </View>
-                  )
-                }
-              </View>
-              <Text style={styles.messageTime}>
-                {m.role === 'user' ? t('sindi.chat.you') : t('sindi.name')} • {new Date().toLocaleTimeString()}
-              </Text>
-            </View>
-          ))
-        )}
-      </ScrollView>
-
-      {/* Sticky Input */}
-      <View style={[styles.stickyInput, webStyles.stickyInput]}>
-        <LinearGradient
-          colors={[colors.primaryColor, colors.secondaryLight]}
-          style={styles.inputGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <View style={styles.inputContainer}>
-            {/* File preview */}
-            {attachedFile && (
-              <View style={styles.filePreviewContainer}>
-                <Text style={styles.filePreviewText}>{attachedFile.name}</Text>
-                <TouchableOpacity onPress={handleRemoveFile} style={styles.removeFileButton}>
-                  <IconComponent name="close-circle" size={18} color="#e74c3c" />
-                </TouchableOpacity>
+                        <Text style={styles.conversationDate}>
+                          {new Date(conversation.updatedAt).toLocaleDateString()}
+                        </Text>
+                      </View>
+                      <Text style={styles.conversationPreview} numberOfLines={2}>
+                        {conversation.messages.length > 0
+                          ? conversation.messages[conversation.messages.length - 1].content
+                          : 'No messages yet'
+                        }
+                      </Text>
+                      <View style={styles.conversationMeta}>
+                        <View style={styles.conversationStats}>
+                          <IconComponent name="chatbubbles" size={14} color={colors.primaryColor} />
+                          <Text style={styles.conversationStatsText}>
+                            {conversation.messages.length} messages
+                          </Text>
+                        </View>
+                        <View style={styles.conversationArrow}>
+                          <IconComponent name="chevron-forward" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
+                        </View>
+                      </View>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                ))}
               </View>
             )}
-            <View style={styles.inputWrapper}>
-              {/* Attach button */}
-              <TouchableOpacity onPress={handleAttachFile} style={styles.attachButton}>
-                <IconComponent name="attach" size={20} color="white" />
-              </TouchableOpacity>
-              <TextInput
-                style={styles.textInput}
-                placeholder={t('sindi.chat.placeholder')}
-                placeholderTextColor="rgba(255, 255, 255, 0.6)"
-                value={input}
-                onChangeText={(text) => handleInputChange({
-                  target: { value: text }
-                } as any)}
-                onSubmitEditing={handleSubmitWithFile}
-                multiline
-                maxLength={1000}
-              />
-              <TouchableOpacity
-                style={[styles.sendButton, !input.trim() && styles.sendButtonDisabled]}
-                onPress={handleSubmitWithFile}
-                disabled={!input.trim() || isLoading}
-              >
-                <IconComponent
-                  name={isLoading ? "hourglass" : "send"}
-                  size={20}
-                  color={input.trim() ? "white" : "rgba(255, 255, 255, 0.4)"}
-                />
-              </TouchableOpacity>
+          </View>
+
+          <View style={styles.quickActionsContainer}>
+            <Text style={styles.quickActionsTitle}>{t('sindi.actions.title')}</Text>
+            <View style={styles.quickActionsGrid}>
+              {quickActions.map((action, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.quickActionButton}
+                  onPress={async () => {
+                    if (!isAuthenticated) return;
+
+                    try {
+                      const newConversation = await createConversation(action.title, action.prompt, authenticatedFetch);
+                      router.push(`/sindi/${newConversation.id}?message=${encodeURIComponent(action.prompt)}`);
+                      // Refresh conversations list
+                      loadConversations(authenticatedFetch);
+                    } catch (error) {
+                      console.error('Failed to create conversation:', error);
+                      // Fallback
+                      const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                      router.push(`/sindi/${conversationId}?message=${encodeURIComponent(action.prompt)}`);
+                    }
+                  }}
+                >
+                  <LinearGradient
+                    colors={[colors.primaryColor, colors.secondaryLight]}
+                    style={styles.quickActionGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <IconComponent name={action.icon as any} size={20} color="white" />
+                    <Text style={styles.quickActionText}>{action.title}</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              ))}
             </View>
-            <Text style={styles.disclaimer}>
-              {t('sindi.chat.disclaimer')}
+          </View>
+
+          <View style={styles.propertySearchContainer}>
+            <Text style={styles.propertySearchTitle}>{t('sindi.housing.title')}</Text>
+            <Text style={styles.propertySearchSubtitle}>
+              {t('sindi.housing.subtitle')}
+            </Text>
+            <View style={styles.propertySearchGrid}>
+              {propertySearchExamples.map((example, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.propertySearchButton}
+                  onPress={async () => {
+                    if (!isAuthenticated) return;
+
+                    try {
+                      const newConversation = await createConversation(example.title, example.prompt, authenticatedFetch);
+                      router.push(`/sindi/${newConversation.id}?message=${encodeURIComponent(example.prompt)}`);
+                      // Refresh conversations list
+                      loadConversations(authenticatedFetch);
+                    } catch (error) {
+                      console.error('Failed to create conversation:', error);
+                      // Fallback
+                      const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                      router.push(`/sindi/${conversationId}?message=${encodeURIComponent(example.prompt)}`);
+                    }
+                  }}
+                >
+                  <LinearGradient
+                    colors={[colors.primaryColor, colors.secondaryLight]}
+                    style={styles.propertySearchGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <IconComponent name={example.icon as any} size={18} color="white" />
+                    <Text style={styles.propertySearchText}>{example.title}</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.propertySearchNote}>
+              {t('sindi.housing.naturalLanguage')}
             </Text>
           </View>
-        </LinearGradient>
-      </View>
+
+          <LinearGradient
+            colors={[colors.primaryColor, colors.secondaryLight]}
+            style={styles.featuresContainer}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Text style={styles.featuresTitle}>{t('sindi.features.title')}</Text>
+            <View style={styles.featureList}>
+              <Text style={styles.featureItem}>{t('sindi.features.rentIncreases')}</Text>
+              <Text style={styles.featureItem}>{t('sindi.features.evictions')}</Text>
+              <Text style={styles.featureItem}>{t('sindi.features.deposits')}</Text>
+              <Text style={styles.featureItem}>{t('sindi.features.conditions')}</Text>
+              <Text style={styles.featureItem}>{t('sindi.features.discrimination')}</Text>
+              <Text style={styles.featureItem}>{t('sindi.features.retaliation')}</Text>
+              <Text style={styles.featureItem}>{t('sindi.features.leases')}</Text>
+              <Text style={styles.featureItem}>{t('sindi.features.organizing')}</Text>
+              <Text style={styles.featureItem}>{t('sindi.features.updates')}</Text>
+              <Text style={styles.featureItem}>{t('sindi.features.organizations')}</Text>
+            </View>
+          </LinearGradient>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -617,19 +494,48 @@ const styles = StyleSheet.create({
   welcomeHeader: {
     alignItems: 'center',
     marginBottom: 30,
-    padding: 24,
-    borderRadius: 25,
+    padding: 32,
+    borderRadius: 28,
     borderWidth: 1,
     borderColor: colors.COLOR_BLACK,
     marginHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  welcomeIconContainer: {
+    position: 'relative',
+    marginBottom: 20,
+  },
+  welcomeIconBackground: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  welcomeIconGlow: {
+    position: 'absolute',
+    top: -8,
+    left: -8,
+    right: -8,
+    bottom: -8,
+    borderRadius: 52,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    zIndex: -1,
   },
   welcomeTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     color: 'white',
-    marginTop: 16,
-    marginBottom: 8,
+    marginBottom: 12,
     fontFamily: 'Phudu',
+    textAlign: 'center',
   },
   welcomeSubtitle: {
     fontSize: 16,
@@ -637,6 +543,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
     paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  welcomeFeatures: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    paddingHorizontal: 20,
+  },
+  welcomeFeature: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  welcomeFeatureText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 6,
+    textAlign: 'center',
+    fontWeight: '500',
   },
   quickActionsContainer: {
     marginBottom: 30,
@@ -658,21 +582,29 @@ const styles = StyleSheet.create({
   quickActionButton: {
     flex: 1,
     minWidth: '45%',
-    borderRadius: 25,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.COLOR_BLACK,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   quickActionGradient: {
-    padding: 16,
+    padding: 18,
     alignItems: 'center',
+    minHeight: 80,
+    justifyContent: 'center',
   },
   quickActionText: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
     color: 'white',
-    marginTop: 8,
+    marginTop: 10,
     textAlign: 'center',
+    lineHeight: 18,
   },
   propertySearchContainer: {
     marginBottom: 30,
@@ -702,21 +634,29 @@ const styles = StyleSheet.create({
   propertySearchButton: {
     flex: 1,
     minWidth: '45%',
-    borderRadius: 25,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.COLOR_BLACK,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 1,
   },
   propertySearchGradient: {
     padding: 16,
     alignItems: 'center',
+    minHeight: 70,
+    justifyContent: 'center',
   },
   propertySearchText: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
     color: 'white',
     marginTop: 8,
     textAlign: 'center',
+    lineHeight: 16,
   },
   propertySearchNote: {
     fontSize: 12,
@@ -1040,5 +980,195 @@ const styles = StyleSheet.create({
   attachButton: {
     marginRight: 8,
     padding: 4,
+  },
+  newConversationButton: {
+    marginHorizontal: 16,
+    marginBottom: 20,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: colors.COLOR_BLACK,
+    overflow: 'hidden',
+  },
+  newConversationGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  newConversationIconContainer: {
+    marginRight: 12,
+  },
+  newConversationTextContainer: {
+    flex: 1,
+  },
+  newConversationText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+    marginBottom: 2,
+  },
+  newConversationSubtext: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '400',
+  },
+  newConversationArrow: {
+    marginLeft: 12,
+  },
+  conversationHistoryContainer: {
+    marginBottom: 30,
+  },
+  conversationHistoryTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: colors.COLOR_BLACK,
+    marginBottom: 16,
+    fontFamily: 'Phudu',
+    paddingHorizontal: 16,
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  emptyStateContainer: {
+    marginHorizontal: 16,
+    marginBottom: 20,
+  },
+  emptyStateCard: {
+    alignItems: 'center',
+    padding: 32,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.2)',
+  },
+  emptyStateIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  emptyStateIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.COLOR_BLACK,
+    marginBottom: 12,
+    fontFamily: 'Phudu',
+    textAlign: 'center',
+  },
+  emptyStateDescription: {
+    fontSize: 15,
+    color: colors.COLOR_BLACK_LIGHT_2,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+    paddingHorizontal: 20,
+  },
+  emptyStateButton: {
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: colors.COLOR_BLACK,
+    overflow: 'hidden',
+  },
+  emptyStateButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+  },
+  emptyStateButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+    marginLeft: 8,
+  },
+  conversationsList: {
+    paddingHorizontal: 16,
+  },
+  conversationItem: {
+    marginBottom: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  conversationCard: {
+    padding: 16,
+  },
+  conversationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  conversationTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  conversationIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  conversationTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.COLOR_BLACK,
+    flex: 1,
+  },
+  conversationDate: {
+    fontSize: 12,
+    color: colors.COLOR_BLACK_LIGHT_3,
+    fontWeight: '500',
+  },
+  conversationPreview: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK_LIGHT_2,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  conversationMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  conversationStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  conversationStatsText: {
+    fontSize: 12,
+    color: colors.COLOR_BLACK_LIGHT_3,
+    marginLeft: 4,
+    fontWeight: '500',
+  },
+  conversationArrow: {
+    padding: 4,
+  },
+  conversationMessageCount: {
+    fontSize: 12,
+    color: colors.COLOR_BLACK_LIGHT_3,
   },
 });

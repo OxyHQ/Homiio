@@ -20,6 +20,7 @@ const RecentlyViewedModel = require('./schemas/RecentlyViewedSchema');
 const SavedPropertyModel = require('./schemas/SavedPropertySchema');
 const SavedSearchModel = require('./schemas/SavedSearchSchema');
 const Profile = require('./schemas/ProfileSchema');
+const Conversation = require('./schemas/ConversationSchema');
 
 module.exports = {
   // Class-based models (legacy)
@@ -38,5 +39,6 @@ module.exports = {
   RecentlyViewedModel,
   SavedPropertyModel,
   SavedSearchModel,
-  Profile
+  Profile,
+  Conversation
 };

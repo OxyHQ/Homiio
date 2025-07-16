@@ -85,7 +85,7 @@ const log = (level: string, message: string, meta: Record<string, unknown> = {})
 /**
  * Request logging middleware
  */
-const requestLogger = (req: Request, res: Response, next: NextFunction): void => {
+const requestLogger = (req: any, res: Response, next: NextFunction): void => {
   const start = Date.now();
   const userAgent = req.get('User-Agent') || '';
   const ip = req.ip || req.connection.remoteAddress;
@@ -104,9 +104,13 @@ const requestLogger = (req: Request, res: Response, next: NextFunction): void =>
   const originalSend = res.send;
   res.send = function(data) {
     const duration = Date.now() - start;
-    const contentLength = res.get('Content-Length') || 0;
-
-    // Log response
+    
+    // Call original send first
+    const result = originalSend.call(this, data);
+    
+    // Then log response (after Content-Length is set)
+    const contentLength = res.get('Content-Length') || (data ? Buffer.byteLength(data, 'utf8') : 0);
+    
     logger.info('Request completed', {
       method: req.method,
       url: req.originalUrl,
@@ -118,8 +122,7 @@ const requestLogger = (req: Request, res: Response, next: NextFunction): void =>
       requestId: req.id || null
     });
 
-    // Call original send
-    originalSend.call(this, data);
+    return result;
   };
 
   next();
@@ -128,7 +131,7 @@ const requestLogger = (req: Request, res: Response, next: NextFunction): void =>
 /**
  * Error logging middleware
  */
-const errorLogger = (err: any, req: Request, res: Response, next: NextFunction): void => {
+const errorLogger = (err: any, req: any, res: Response, next: NextFunction): void => {
   logger.error('Request error', {
     method: req.method,
     url: req.originalUrl,

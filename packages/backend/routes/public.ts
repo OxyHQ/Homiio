@@ -8,6 +8,7 @@ const propertyController = require('../controllers/propertyController');
 const telegramController = require('../controllers/telegramController');
 const { asyncHandler } = require('../middlewares');
 const performanceMonitor = require('../middlewares/performance').default;
+const Conversation = require('../models/schemas/ConversationSchema');
 
 export default function () {
   const router = express.Router();
@@ -153,6 +154,32 @@ export default function () {
   router.get('/telegram/groups/:city', asyncHandler(telegramController.getGroupMapping));
   router.get('/telegram/webhook', asyncHandler(telegramController.getWebhookInfo));
   router.post('/telegram/test', asyncHandler(telegramController.sendTestMessage));
+
+  // Public shared conversation endpoint (no authentication required)
+  router.get('/ai/shared/:token', asyncHandler(async (req, res) => {
+    try {
+      const conversation = await Conversation.findByShareToken(req.params.token);
+      
+      if (!conversation) {
+        return res.status(404).json({ error: 'Shared conversation not found or expired' });
+      }
+
+      // Return conversation without sensitive user data, including status field
+      const sharedConversation = {
+        _id: conversation._id,
+        title: conversation.title,
+        messages: conversation.messages,
+        createdAt: conversation.createdAt,
+        updatedAt: conversation.updatedAt,
+        status: conversation.status || 'active'
+      };
+
+      res.json({ success: true, conversation: sharedConversation });
+    } catch (error) {
+      console.error('Failed to get shared conversation:', error);
+      res.status(500).json({ error: 'Failed to get shared conversation' });
+    }
+  }));
 
   return router;
 }; 

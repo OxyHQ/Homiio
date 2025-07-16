@@ -9,6 +9,7 @@ import { streamText } from 'ai';
 import { PassThrough } from 'stream';
 // import Profile from '../models/schemas/ProfileSchema';
 const Profile = require('../models/schemas/ProfileSchema');
+const Conversation = require('../models/schemas/ConversationSchema');
 
 export default function() {
   const router = express.Router();
@@ -271,9 +272,30 @@ export default function() {
    */
   router.post('/stream', async (req, res) => {
     try {
-      const { messages } = req.body;
+      const { messages, conversationId } = req.body;
       
       console.log('Starting AI stream with messages:', messages);
+      console.log('Conversation ID:', conversationId);
+
+      // Get user ID for conversation lookup
+      const userId = (req as any).user?.oxyUserId || (req as any).user?._id || (req as any).user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      // Find the conversation if conversationId is provided
+      let conversation = null;
+      if (conversationId && !conversationId.startsWith('conv_')) {
+        try {
+          conversation = await Conversation.findOne({
+            _id: conversationId,
+            oxyUserId: userId
+          });
+          console.log('Found conversation:', conversation ? conversation._id : 'not found');
+        } catch (error) {
+          console.error('Error finding conversation:', error);
+        }
+      }
 
       // Enhanced system prompt for ethical tenant advocacy with web search
       const systemPrompt = `You are Sindi, an AI-powered tenant rights assistant for Homiio, an ethical housing platform. You help tenants find fair housing, understand their rights, and navigate rental processes with transparency and justice.
@@ -453,8 +475,67 @@ Remember: You're here to empower tenants and promote ethical housing practices. 
         messages: enhancedMessages,
       });
 
-      // Only handle streaming to the client. No buffering or chat history logic here.
+      // Save user message to conversation if we have one
+      if (conversation && messages.length > 0) {
+        const lastUserMessage = messages[messages.length - 1];
+        if (lastUserMessage.role === 'user') {
+          try {
+            await conversation.addMessage('user', lastUserMessage.content);
+            console.log('Saved user message to conversation');
+          } catch (error) {
+            console.error('Error saving user message:', error);
+          }
+        }
+      }
+
+      // Buffer the AI response to save it after streaming
+      let aiResponse = '';
+      
+      // Handle streaming to the client and buffer the response
       if (typeof result.pipeDataStreamToResponse === 'function') {
+        // Use the AI SDK's text stream to capture the response
+        const stream = result.textStream;
+        
+        // Create a transform stream to capture the AI response
+        const captureStream = new PassThrough();
+        let streamEnded = false;
+        
+        // Capture the streamed text
+        (async () => {
+          try {
+            for await (const chunk of stream) {
+              aiResponse += chunk;
+            }
+            
+            // Save AI response to conversation after streaming completes
+            if (conversation && aiResponse.trim() && !streamEnded) {
+              streamEnded = true;
+              try {
+                await conversation.addMessage('assistant', aiResponse.trim());
+                console.log('Saved AI response to conversation:', aiResponse.substring(0, 100) + '...');
+                
+                // Update conversation title if it's still "New Conversation"
+                if (conversation.title === 'New Conversation' && conversation.messages.length > 0) {
+                  const firstUserMessage = conversation.messages.find(m => m.role === 'user');
+                  if (firstUserMessage) {
+                    let newTitle = firstUserMessage.content.substring(0, 50).trim();
+                    if (firstUserMessage.content.length > 50) {
+                      newTitle += '...';
+                    }
+                    conversation.title = newTitle;
+                    await conversation.save();
+                    console.log('Updated conversation title to:', newTitle);
+                  }
+                }
+              } catch (error) {
+                console.error('Error saving AI response or updating title:', error);
+              }
+            }
+          } catch (error) {
+            console.error('Error processing AI stream:', error);
+          }
+        })();
+
         result.pipeDataStreamToResponse(res);
       } else {
         res.status(501).json({ error: 'Streaming not supported by this SDK.' });
@@ -483,7 +564,7 @@ Remember: You're here to empower tenants and promote ethical housing practices. 
   });
 
   // Get Sindi chat history for the authenticated user
-  router.get('/history', async (req, res) => {
+  router.get('/history', async (req: any, res) => {
     try {
       const user = req.user;
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
@@ -497,7 +578,7 @@ Remember: You're here to empower tenants and promote ethical housing practices. 
   });
 
   // Clear Sindi chat history for the authenticated user
-  router.delete('/history', async (req, res) => {
+  router.delete('/history', async (req: any, res) => {
     try {
       const user = req.user;
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
@@ -511,7 +592,7 @@ Remember: You're here to empower tenants and promote ethical housing practices. 
   });
 
   // Save Sindi chat history for the authenticated user (on personal profile)
-  router.post('/history', async (req, res) => {
+  router.post('/history', async (req: any, res) => {
     try {
       // Get userId from req.user
       const userId = req.user?.oxyUserId || req.user?._id || req.user?.id;
@@ -545,6 +626,258 @@ Remember: You're here to empower tenants and promote ethical housing practices. 
       res.status(500).json({ error: 'Failed to save chat history' });
     }
   });
+
+  // ===== CONVERSATION MANAGEMENT ENDPOINTS =====
+
+  // GET /api/ai/conversations - Get all conversations for authenticated user
+  router.get('/conversations', async (req, res) => {
+    try {
+      const userId = (req as any).user?.oxyUserId || (req as any).user?._id || (req as any).user?.id;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+      const conversations = await Conversation.find({ oxyUserId: userId })
+        .sort({ updatedAt: -1 });
+
+      // Transform conversations to include proper message count and last message
+      const transformedConversations = conversations.map(conv => {
+        const convObj = conv.toObject({ virtuals: true });
+        return {
+          _id: convObj._id,
+          id: convObj._id,
+          title: convObj.title,
+          status: convObj.status,
+          createdAt: convObj.createdAt,
+          updatedAt: convObj.updatedAt,
+          messageCount: convObj.messages ? convObj.messages.length : 0,
+          lastMessage: convObj.messages && convObj.messages.length > 0
+            ? convObj.messages[convObj.messages.length - 1]
+            : null,
+          messages: convObj.messages || []
+        };
+      });
+
+      const responseData = { success: true, conversations: transformedConversations };
+      console.log('GET /conversations response data:', JSON.stringify(responseData, null, 2));
+      res.json(responseData);
+    } catch (error) {
+      console.error('Failed to get conversations:', error);
+      res.status(500).json({ error: 'Failed to get conversations' });
+    }
+  });
+
+  // POST /api/ai/conversations - Create new conversation
+  router.post('/conversations', async (req, res) => {
+    try {
+      const userId = (req as any).user?.oxyUserId || (req as any).user?._id || (req as any).user?.id;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { title, initialMessage, messages } = req.body;
+      
+      // Handle both initialMessage (single message) and messages (array) formats
+      let conversationMessages = [];
+      if (messages && Array.isArray(messages)) {
+        conversationMessages = messages.map(msg => ({
+          role: msg.role,
+          content: msg.content,
+          timestamp: new Date(msg.timestamp || Date.now())
+        }));
+      } else if (initialMessage) {
+        conversationMessages = [{
+          role: 'user',
+          content: initialMessage,
+          timestamp: new Date()
+        }];
+      }
+      
+      const conversation = new Conversation({
+        oxyUserId: userId,
+        title: title || 'New Conversation',
+        messages: conversationMessages,
+        status: 'active'
+      });
+
+      const savedConversation = await conversation.save();
+      
+      // Return the saved conversation with proper structure
+      const responseData = {
+        success: true,
+        conversation: {
+          _id: savedConversation._id,
+          title: savedConversation.title,
+          messages: savedConversation.messages,
+          createdAt: savedConversation.createdAt,
+          updatedAt: savedConversation.updatedAt,
+          status: savedConversation.status
+        }
+      };
+      
+      console.log('POST /conversations response data:', JSON.stringify(responseData, null, 2));
+      res.json(responseData);
+    } catch (error) {
+      console.error('Failed to create conversation:', error);
+      res.status(500).json({ error: 'Failed to create conversation' });
+    }
+  });
+
+  // GET /api/ai/conversations/:id - Get specific conversation
+  router.get('/conversations/:id', async (req, res) => {
+    try {
+      const userId = (req as any).user?.oxyUserId || (req as any).user?._id || (req as any).user?.id;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+      const conversationId = req.params.id;
+      
+      // Validate conversation ID
+      if (!conversationId || conversationId === 'undefined' || conversationId === 'null') {
+        return res.status(400).json({ error: 'Invalid conversation ID' });
+      }
+
+      // Check if it's a valid MongoDB ObjectId
+      if (!/^[0-9a-fA-F]{24}$/.test(conversationId)) {
+        return res.status(400).json({ error: 'Invalid conversation ID format' });
+      }
+
+      const conversation = await Conversation.findOne({
+        _id: conversationId,
+        oxyUserId: userId
+      });
+
+      if (!conversation) {
+        return res.status(404).json({ error: 'Conversation not found' });
+      }
+
+      const responseData = { success: true, conversation };
+      console.log('GET /conversations/:id response data:', JSON.stringify(responseData, null, 2));
+      res.json(responseData);
+    } catch (error) {
+      console.error('Failed to get conversation:', error);
+      res.status(500).json({ error: 'Failed to get conversation' });
+    }
+  });
+
+  // PUT /api/ai/conversations/:id - Update conversation
+  router.put('/conversations/:id', async (req, res) => {
+    try {
+      const userId = (req as any).user?.oxyUserId || (req as any).user?._id || (req as any).user?.id;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { title, messages, status } = req.body;
+      
+      const conversation = await Conversation.findOne({
+        _id: req.params.id,
+        oxyUserId: userId
+      });
+
+      if (!conversation) {
+        return res.status(404).json({ error: 'Conversation not found' });
+      }
+
+      if (title !== undefined) conversation.title = title;
+      if (messages !== undefined) {
+        // Ensure messages are properly formatted
+        conversation.messages = messages.map(msg => ({
+          role: msg.role,
+          content: msg.content,
+          timestamp: new Date(msg.timestamp || Date.now())
+        }));
+      }
+      if (status !== undefined) conversation.status = status;
+
+      const savedConversation = await conversation.save();
+      
+      const responseData = { success: true, conversation: savedConversation };
+      console.log('PUT /conversations/:id response data:', JSON.stringify(responseData, null, 2));
+      res.json(responseData);
+    } catch (error) {
+      console.error('Failed to update conversation:', error);
+      res.status(500).json({ error: 'Failed to update conversation' });
+    }
+  });
+
+  // POST /api/ai/conversations/:id/messages - Add message to conversation
+  router.post('/conversations/:id/messages', async (req, res) => {
+    try {
+      const userId = (req as any).user?.oxyUserId || (req as any).user?._id || (req as any).user?.id;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { role, content, attachments } = req.body;
+      
+      if (!role || !content) {
+        return res.status(400).json({ error: 'Role and content are required' });
+      }
+
+      const conversation = await Conversation.findOne({
+        _id: req.params.id,
+        oxyUserId: userId
+      });
+
+      if (!conversation) {
+        return res.status(404).json({ error: 'Conversation not found' });
+      }
+
+      const newMessage = {
+        role,
+        content,
+        timestamp: new Date(),
+        attachments: attachments || []
+      };
+
+      conversation.messages.push(newMessage);
+      await conversation.save();
+
+      res.json({ success: true, message: newMessage, conversation });
+    } catch (error) {
+      console.error('Failed to add message:', error);
+      res.status(500).json({ error: 'Failed to add message' });
+    }
+  });
+
+  // DELETE /api/ai/conversations/:id - Delete conversation
+  router.delete('/conversations/:id', async (req, res) => {
+    try {
+      const userId = (req as any).user?.oxyUserId || (req as any).user?._id || (req as any).user?.id;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+      const conversation = await Conversation.findOneAndDelete({
+        _id: req.params.id,
+        oxyUserId: userId
+      });
+
+      if (!conversation) {
+        return res.status(404).json({ error: 'Conversation not found' });
+      }
+
+      res.json({ success: true, message: 'Conversation deleted' });
+    } catch (error) {
+      console.error('Failed to delete conversation:', error);
+      res.status(500).json({ error: 'Failed to delete conversation' });
+    }
+  });
+
+  // POST /api/ai/conversations/:id/share - Generate share token
+  router.post('/conversations/:id/share', async (req, res) => {
+    try {
+      const userId = (req as any).user?.oxyUserId || (req as any).user?._id || (req as any).user?.id;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+      const conversation = await Conversation.findOne({
+        _id: req.params.id,
+        oxyUserId: userId
+      });
+
+      if (!conversation) {
+        return res.status(404).json({ error: 'Conversation not found' });
+      }
+
+      await conversation.generateShareToken();
+      const shareToken = conversation.sharing.shareToken;
+      res.json({ success: true, shareToken, shareUrl: `/shared/${shareToken}` });
+    } catch (error) {
+      console.error('Failed to generate share token:', error);
+      res.status(500).json({ error: 'Failed to generate share token' });
+    }
+  });
+
 
   return router;
 }; 

@@ -632,6 +632,47 @@
         "errors": {
             "connection": "Connection Error",
             "connectionMessage": "Please check your connection and try again."
+        },
+        "shared": {
+            "loading": "Loading Shared Conversation",
+            "loadingMessage": "Loading conversation...",
+            "subtitle": "Shared Conversation",
+            "badge": "Shared Conversation",
+            "footer": "Powered by Sindi - Your AI Housing Justice Advocate",
+            "error": {
+                "title": "Conversation Not Found",
+                "notFound": "This shared conversation could not be found or has expired.",
+                "failed": "Failed to load shared conversation. Please try again.",
+                "description": "The conversation may have been removed or the link may be invalid."
+            },
+            "empty": {
+                "title": "Empty Conversation",
+                "subtitle": "This shared conversation doesn't have any messages yet."
+            }
+        },
+        "share": {
+            "text": "Check out this conversation with Sindi, your AI housing justice advocate",
+            "success": {
+                "title": "Conversation Shared",
+                "copied": "Share link copied to clipboard!"
+            },
+            "error": {
+                "title": "Cannot Share Conversation",
+                "saveFirst": "Please save the conversation by sending a message before sharing.",
+                "emptyConversation": "Cannot share an empty conversation. Please add some messages first.",
+                "failed": "Failed to generate share link. Please try again."
+            }
+        },
+        "conversation": {
+            "title": "Conversation",
+            "subtitle": "AI Housing Justice Advocate",
+            "loading": "Loading Conversation",
+            "loadingMessage": "Loading conversation...",
+            "error": "Conversation Error",
+            "empty": {
+                "title": "Start Your Conversation",
+                "subtitle": "Ask Sindi about tenant rights, housing search, or any housing-related questions. I'm here to help you fight for housing justice."
+            }
         }
     },
     "sidebar": {
