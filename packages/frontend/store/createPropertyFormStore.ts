@@ -11,6 +11,8 @@ interface CreatePropertyFormState {
       bedrooms: number;
       bathrooms: number;
       squareFootage: number;
+      floor?: number;
+      yearBuilt?: number;
     };
     location: {
       address: string;
@@ -20,18 +22,34 @@ interface CreatePropertyFormState {
       country: string;
       latitude: number;
       longitude: number;
+      availableFrom?: string;
+      leaseTerm?: string;
+      walkScore?: number;
+      transitScore?: number;
+      bikeScore?: number;
+      proximityToTransport?: boolean;
+      proximityToSchools?: boolean;
+      proximityToShopping?: boolean;
     };
     pricing: {
       rent: number;
       deposit: number;
       utilities: string[];
       includedUtilities: string[];
+      guestsAllowed?: boolean;
+      maxGuests?: number;
     };
     amenities: {
       features: string[];
       parking: string;
       pets: boolean;
       furnished: boolean;
+      petPolicy?: string;
+      petFee?: number;
+      parkingType?: string;
+      parkingSpaces?: number;
+      smokingAllowed?: boolean;
+      partiesAllowed?: boolean;
     };
     media: {
       images: File[];
@@ -67,6 +85,8 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()(
           bedrooms: 0,
           bathrooms: 0,
           squareFootage: 0,
+          floor: undefined,
+          yearBuilt: undefined,
         },
         location: {
           address: '',
@@ -76,18 +96,34 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()(
           country: '',
           latitude: 0,
           longitude: 0,
+          availableFrom: undefined,
+          leaseTerm: undefined,
+          walkScore: undefined,
+          transitScore: undefined,
+          bikeScore: undefined,
+          proximityToTransport: undefined,
+          proximityToSchools: undefined,
+          proximityToShopping: undefined,
         },
         pricing: {
           rent: 0,
           deposit: 0,
           utilities: [],
           includedUtilities: [],
+          guestsAllowed: undefined,
+          maxGuests: undefined,
         },
         amenities: {
           features: [],
           parking: '',
           pets: false,
           furnished: false,
+          petPolicy: undefined,
+          petFee: undefined,
+          parkingType: undefined,
+          parkingSpaces: undefined,
+          smokingAllowed: undefined,
+          partiesAllowed: undefined,
         },
         media: {
           images: [],

@@ -12,6 +12,7 @@ interface LocationState {
     country: string;
     zipCode: string;
   } | null;
+  searchResults: any[];
   searchHistory: Array<{
     query: string;
     timestamp: string;
@@ -24,8 +25,10 @@ interface LocationState {
   
   // Actions
   setCurrentLocation: (location: LocationState['currentLocation']) => void;
+  setSearchResults: (results: any[]) => void;
   addSearchHistory: (query: string, results: any[]) => void;
   clearSearchHistory: () => void;
+  clearSearchResults: () => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
@@ -34,12 +37,14 @@ interface LocationState {
 export const useLocationStore = create<LocationState>((set, get) => ({
   // Initial state
   currentLocation: null,
+  searchResults: [],
   searchHistory: [],
   isLoading: false,
   error: null,
   
   // Actions
   setCurrentLocation: (location) => set({ currentLocation: location }),
+  setSearchResults: (results) => set({ searchResults: results }),
   addSearchHistory: (query, results) => set((state) => ({
     searchHistory: [
       { query, results, timestamp: new Date().toISOString() },
@@ -47,6 +52,7 @@ export const useLocationStore = create<LocationState>((set, get) => ({
     ].slice(0, 20) // Keep last 20 searches
   })),
   clearSearchHistory: () => set({ searchHistory: [] }),
+  clearSearchResults: () => set({ searchResults: [] }),
   setLoading: (loading) => set({ isLoading: loading }),
   setError: (error) => set({ error }),
   clearError: () => set({ error: null }),
@@ -55,12 +61,14 @@ export const useLocationStore = create<LocationState>((set, get) => ({
 // Selector hooks for easier access
 export const useLocationSelectors = () => {
   const currentLocation = useLocationStore((state) => state.currentLocation);
+  const searchResults = useLocationStore((state) => state.searchResults);
   const searchHistory = useLocationStore((state) => state.searchHistory);
   const isLoading = useLocationStore((state) => state.isLoading);
   const error = useLocationStore((state) => state.error);
 
   return {
     currentLocation,
+    searchResults,
     searchHistory,
     isLoading,
     error,

@@ -35,7 +35,7 @@ export default function CreatePropertyScreen() {
   const { oxyServices, activeSessionId } = useOxy();
 
   // Use Zustand store for create property form
-  const { formData: reduxFormData, isVisible, setFormData, setIsVisible } = useCreatePropertyFormStore();
+  const { formData: reduxFormData, setFormData } = useCreatePropertyFormStore();
 
   // Use location hooks (now Zustand-based)
   const { search, results: searchResults, loading: searchLoading, clearResults } = useLocationSearch();
@@ -241,6 +241,62 @@ export default function CreatePropertyScreen() {
   // Error state management
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [hasValidationErrors, setHasValidationErrors] = useState(false);
+
+  // Sync local formData to Zustand store for live preview in RightBar
+  useEffect(() => {
+    // Map local formData to Zustand's structure
+    setFormData('basicInfo', {
+      title: formData.address.street,
+      description: formData.description,
+      propertyType: formData.type,
+      bedrooms: formData.bedrooms,
+      bathrooms: formData.bathrooms,
+      squareFootage: formData.squareFootage,
+      floor: formData.floor,
+      yearBuilt: formData.yearBuilt,
+    });
+    setFormData('location', {
+      address: formData.address.street,
+      city: formData.address.city,
+      state: formData.address.state,
+      zipCode: formData.address.zipCode,
+      country: formData.address.country,
+      latitude: selectedLocation?.latitude || 0,
+      longitude: selectedLocation?.longitude || 0,
+      availableFrom: formData.availableFrom,
+      leaseTerm: formData.leaseTerm,
+      walkScore: formData.walkScore,
+      transitScore: formData.transitScore,
+      bikeScore: formData.bikeScore,
+      proximityToTransport: formData.proximityToTransport,
+      proximityToSchools: formData.proximityToSchools,
+      proximityToShopping: formData.proximityToShopping,
+    });
+    setFormData('pricing', {
+      rent: formData.rent.amount,
+      deposit: formData.rent.deposit,
+      utilities: [formData.rent.utilities],
+      includedUtilities: formData.rent.utilities === 'included' ? ['all'] : [],
+      guestsAllowed: formData.guestsAllowed,
+      maxGuests: formData.maxGuests,
+    });
+    setFormData('amenities', {
+      features: formData.amenities,
+      parking: formData.parkingType,
+      pets: formData.petPolicy === 'allowed',
+      furnished: formData.furnishedStatus === 'furnished',
+      petPolicy: formData.petPolicy,
+      petFee: formData.petFee,
+      parkingType: formData.parkingType,
+      parkingSpaces: formData.parkingSpaces,
+      smokingAllowed: formData.smokingAllowed,
+      partiesAllowed: formData.partiesAllowed,
+    });
+    setFormData('media', {
+      images: formData.images,
+      videos: [],
+    });
+  }, [formData, selectedLocation, setFormData]);
 
   const fetchLocationScores = async (zipCode: string) => {
     try {

@@ -7,36 +7,11 @@ import { BaseWidget } from './BaseWidget';
 import { useCreatePropertyFormStore } from '@/store/createPropertyFormStore';
 
 const IconComponent = Ionicons as any;
-const { width: screenWidth } = Dimensions.get('window');
 
 export function PropertyPreviewWidget() {
-    // Only show on desktop (tablet and larger screens)
-    if (screenWidth < 768) {
-        console.log('PropertyPreviewWidget: Screen too small, not showing');
-        return null;
-    }
+    const { formData } = useCreatePropertyFormStore();
 
-    // Get form data from Zustand
-    const { formData, isVisible } = useCreatePropertyFormStore();
-
-    // Debug logging
-    console.log('PropertyPreviewWidget Debug:', {
-        screenWidth,
-        formData: !!formData,
-        isVisible,
-        formDataKeys: formData ? Object.keys(formData) : [],
-        address: formData?.address,
-        type: formData?.type,
-        rent: formData?.rent,
-        zustandState: { formData, isVisible }
-    });
-
-    // Always show the widget for debugging, even without form data
-    console.log('PropertyPreviewWidget: Rendering widget');
-
-    // For testing - show widget even without form data
     if (!formData) {
-        console.log('PropertyPreviewWidget: Showing test widget without form data');
         return (
             <BaseWidget
                 title="Live Preview"
@@ -61,40 +36,26 @@ export function PropertyPreviewWidget() {
         );
     }
 
-    // Don't show if not visible
-    if (!isVisible) {
-        console.log('PropertyPreviewWidget: Not showing - not visible');
-        return null;
-    }
-
-    console.log('PropertyPreviewWidget: Rendering with data');
-
     const generatePropertyTitle = () => {
-        const { type, address, bedrooms, bathrooms } = formData;
-
-        if (!type || !address?.city) return 'Property Preview';
-
-        const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
-        const location = address.city;
-
-        if (type === 'room') {
-            return `${bedrooms} Bedroom Room in ${location}`;
-        } else if (type === 'studio') {
-            return `Studio in ${location}`;
-        } else if (type === 'apartment') {
-            return `${bedrooms} Bedroom Apartment in ${location}`;
-        } else if (type === 'house') {
-            return `${bedrooms} Bedroom House in ${location}`;
+        const { propertyType, bedrooms, bathrooms } = formData.basicInfo;
+        const { city } = formData.location;
+        if (!propertyType || !city) return 'Property Preview';
+        const typeLabel = propertyType.charAt(0).toUpperCase() + propertyType.slice(1);
+        if (propertyType === 'room') {
+            return `${bedrooms} Bedroom Room in ${city}`;
+        } else if (propertyType === 'studio') {
+            return `Studio in ${city}`;
+        } else if (propertyType === 'apartment') {
+            return `${bedrooms} Bedroom Apartment in ${city}`;
+        } else if (propertyType === 'house') {
+            return `${bedrooms} Bedroom House in ${city}`;
         } else {
-            return `${typeLabel} in ${location}`;
+            return `${typeLabel} in ${city}`;
         }
     };
 
     const getPriceDisplay = () => {
-        if (formData.type === 'couchsurfing') {
-            return formData.rent.amount > 0 ? `$${formData.rent.amount}/night` : 'Free';
-        }
-        return `$${formData.rent.amount.toLocaleString()}/month`;
+        return `$${formData.pricing.rent.toLocaleString()}/month`;
     };
 
     const getAccommodationTypeLabel = () => {
@@ -114,20 +75,18 @@ export function PropertyPreviewWidget() {
             yurt: 'Yurt/Tent',
             other: 'Other'
         };
-        return typeLabels[formData.type] || 'Property';
+        return typeLabels[formData.basicInfo.propertyType] || 'Property';
     };
 
     const getAmenitiesDisplay = () => {
-        if (!formData.amenities || formData.amenities.length === 0) return [];
-
-        return formData.amenities.slice(0, 6).map(amenity => {
+        if (!formData.amenities.features || formData.amenities.features.length === 0) return [];
+        return formData.amenities.features.slice(0, 6).map((amenity: string) => {
             const amenityData = getAmenityById(amenity);
             return amenityData?.name || amenity;
         });
     };
 
     const getAmenityById = (id: string) => {
-        // This would come from your amenities constants
         const amenities = {
             wifi: { name: 'WiFi', icon: 'wifi' },
             parking: { name: 'Parking', icon: 'car' },
@@ -145,6 +104,8 @@ export function PropertyPreviewWidget() {
         return amenities[id as keyof typeof amenities];
     };
 
+    const yesNo = (val?: boolean) => val === true ? 'Yes' : val === false ? 'No' : '-';
+
     return (
         <BaseWidget
             title="Live Preview"
@@ -155,13 +116,11 @@ export function PropertyPreviewWidget() {
             }
         >
             <View style={styles.container}>
-                {/* Property Image */}
-                {formData.images.length > 0 ? (
-                    <Image
-                        source={{ uri: formData.images[formData.coverImageIndex] }}
-                        style={styles.previewImage}
-                        resizeMode="cover"
-                    />
+                {formData.media.images && formData.media.images.length > 0 ? (
+                    <View style={styles.placeholderImage}>
+                        <IconComponent name="home-outline" size={32} color={colors.COLOR_BLACK_LIGHT_3} />
+                        <ThemedText style={styles.placeholderText}>Image selected ({formData.media.images.length})</ThemedText>
+                    </View>
                 ) : (
                     <View style={styles.placeholderImage}>
                         <IconComponent name="home-outline" size={32} color={colors.COLOR_BLACK_LIGHT_3} />
@@ -169,272 +128,238 @@ export function PropertyPreviewWidget() {
                     </View>
                 )}
 
-                {/* Property Content */}
                 <View style={styles.previewContent}>
-                    {/* Title */}
                     <ThemedText style={styles.propertyTitle} numberOfLines={2}>
                         {generatePropertyTitle()}
                     </ThemedText>
 
-                    {/* Location */}
-                    {formData.address?.city && (
+                    {formData.location.city && (
                         <ThemedText style={styles.propertyLocation}>
-                            {formData.address.city}, {formData.address.state}
+                            {formData.location.city}, {formData.location.state}
                         </ThemedText>
                     )}
 
-                    {/* Property Details */}
                     <View style={styles.propertyDetails}>
-                        {(formData.bedrooms || formData.bedrooms === 0) && (
+                        {(formData.basicInfo.bedrooms || formData.basicInfo.bedrooms === 0) && (
                             <View style={styles.detailItem}>
                                 <IconComponent name="bed-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} />
-                                <ThemedText style={styles.detailText}>{formData.bedrooms} bed</ThemedText>
+                                <ThemedText style={styles.detailText}>{formData.basicInfo.bedrooms} bed</ThemedText>
                             </View>
                         )}
-                        {(formData.bathrooms || formData.bathrooms === 0) && (
+                        {(formData.basicInfo.bathrooms || formData.basicInfo.bathrooms === 0) && (
                             <View style={styles.detailItem}>
                                 <IconComponent name="water-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} />
-                                <ThemedText style={styles.detailText}>{formData.bathrooms} bath</ThemedText>
+                                <ThemedText style={styles.detailText}>{formData.basicInfo.bathrooms} bath</ThemedText>
                             </View>
                         )}
-                        {formData.squareFootage && formData.squareFootage > 0 && (
+                        {formData.basicInfo.squareFootage && formData.basicInfo.squareFootage > 0 && (
                             <View style={styles.detailItem}>
                                 <IconComponent name="resize-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} />
-                                <ThemedText style={styles.detailText}>{formData.squareFootage} sqft</ThemedText>
-                            </View>
-                        )}
-                        {formData.floor && (
-                            <View style={styles.detailItem}>
-                                <IconComponent name="layers-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} />
-                                <ThemedText style={styles.detailText}>Floor {formData.floor}</ThemedText>
+                                <ThemedText style={styles.detailText}>{formData.basicInfo.squareFootage} sqft</ThemedText>
                             </View>
                         )}
                     </View>
 
-                    {/* Price */}
-                    {formData.rent?.amount > 0 && (
+                    {formData.pricing.rent > 0 && (
                         <View style={styles.priceContainer}>
                             <ThemedText style={styles.price}>{getPriceDisplay()}</ThemedText>
-                            {formData.rent.deposit && formData.rent.deposit > 0 && (
+                            {formData.pricing.deposit > 0 && (
                                 <ThemedText style={styles.depositText}>
-                                    Deposit: ${formData.rent.deposit.toLocaleString()}
+                                    Deposit: ${formData.pricing.deposit.toLocaleString()}
                                 </ThemedText>
                             )}
-                            {formData.rent.utilities && formData.rent.utilities !== 'excluded' && (
+                            {formData.pricing.utilities && formData.pricing.utilities.length > 0 && (
                                 <ThemedText style={styles.utilitiesText}>
-                                    Utilities: {formData.rent.utilities === 'included' ? 'Included' : 'Partial'}
+                                    Utilities: {formData.pricing.utilities.join(', ')}
                                 </ThemedText>
                             )}
                         </View>
                     )}
 
-                    {/* Availability */}
-                    {formData.availableFrom && (
-                        <View style={styles.availabilityContainer}>
-                            <View style={styles.sectionHeader}>
-                                <IconComponent name="calendar-outline" size={16} color={colors.primaryColor} />
-                                <ThemedText style={styles.sectionTitle}>Availability</ThemedText>
-                            </View>
-                            <ThemedText style={styles.availabilityText}>
-                                Available from: {new Date(formData.availableFrom).toLocaleDateString()}
-                            </ThemedText>
-                            {formData.leaseTerm && (
-                                <ThemedText style={styles.leaseText}>
-                                    Lease: {formData.leaseTerm === '6_months' ? '6 Months' :
-                                        formData.leaseTerm === '12_months' ? '12 Months' :
-                                            formData.leaseTerm === 'monthly' ? 'Monthly' : 'Flexible'}
-                                </ThemedText>
-                            )}
-                        </View>
-                    )}
-
-                    {/* Features */}
                     <View style={styles.featuresContainer}>
                         <View style={styles.sectionHeader}>
                             <IconComponent name="star-outline" size={16} color={colors.primaryColor} />
                             <ThemedText style={styles.sectionTitle}>Features</ThemedText>
                         </View>
                         <View style={styles.featuresGrid}>
-                            {formData.furnishedStatus === 'furnished' && (
+                            {formData.amenities.furnished && (
                                 <View style={styles.featureTag}>
                                     <ThemedText style={styles.featureText}>Furnished</ThemedText>
                                 </View>
                             )}
-                            {formData.furnishedStatus === 'partially_furnished' && (
-                                <View style={styles.featureTag}>
-                                    <ThemedText style={styles.featureText}>Partially Furnished</ThemedText>
-                                </View>
-                            )}
-                            {formData.petPolicy === 'allowed' && (
+                            {formData.amenities.pets && (
                                 <View style={styles.featureTag}>
                                     <ThemedText style={styles.featureText}>Pet Friendly</ThemedText>
                                 </View>
                             )}
-                            {formData.parkingType && formData.parkingType !== 'none' && (
+                            {formData.amenities.parking && (
                                 <View style={styles.featureTag}>
-                                    <ThemedText style={styles.featureText}>Parking</ThemedText>
-                                </View>
-                            )}
-                            {formData.hasBalcony && (
-                                <View style={styles.featureTag}>
-                                    <ThemedText style={styles.featureText}>Balcony</ThemedText>
-                                </View>
-                            )}
-                            {formData.hasGarden && (
-                                <View style={styles.featureTag}>
-                                    <ThemedText style={styles.featureText}>Garden</ThemedText>
-                                </View>
-                            )}
-                            {formData.hasElevator && (
-                                <View style={styles.featureTag}>
-                                    <ThemedText style={styles.featureText}>Elevator</ThemedText>
+                                    <ThemedText style={styles.featureText}>Parking: {formData.amenities.parking}</ThemedText>
                                 </View>
                             )}
                         </View>
                     </View>
 
-                    {/* Amenities */}
-                    {formData.amenities && formData.amenities.length > 0 && (
+                    {formData.amenities.features && formData.amenities.features.length > 0 && (
                         <View style={styles.amenitiesContainer}>
                             <View style={styles.sectionHeader}>
                                 <IconComponent name="list-outline" size={16} color={colors.primaryColor} />
                                 <ThemedText style={styles.sectionTitle}>Amenities</ThemedText>
                             </View>
                             <View style={styles.amenitiesGrid}>
-                                {getAmenitiesDisplay().map((amenity, index) => (
+                                {getAmenitiesDisplay().map((amenity: string, index: number) => (
                                     <View key={index} style={styles.amenityItem}>
                                         <IconComponent name="checkmark-circle" size={12} color={colors.primaryColor} />
                                         <ThemedText style={styles.amenityText}>{amenity}</ThemedText>
                                     </View>
                                 ))}
-                                {formData.amenities.length > 6 && (
+                                {formData.amenities.features.length > 6 && (
                                     <ThemedText style={styles.moreAmenitiesText}>
-                                        +{formData.amenities.length - 6} more
+                                        +{formData.amenities.features.length - 6} more
                                     </ThemedText>
                                 )}
                             </View>
                         </View>
                     )}
 
-                    {/* House Rules */}
-                    {(formData.smokingAllowed !== undefined || formData.partiesAllowed !== undefined ||
-                        formData.guestsAllowed !== undefined || formData.maxGuests) && (
-                            <View style={styles.rulesContainer}>
-                                <View style={styles.sectionHeader}>
-                                    <IconComponent name="shield-outline" size={16} color={colors.primaryColor} />
-                                    <ThemedText style={styles.sectionTitle}>House Rules</ThemedText>
-                                </View>
-                                <View style={styles.rulesList}>
-                                    {formData.smokingAllowed !== undefined && (
-                                        <View style={styles.ruleItem}>
-                                            <IconComponent
-                                                name={formData.smokingAllowed ? "checkmark-circle" : "close-circle"}
-                                                size={14}
-                                                color={formData.smokingAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3}
-                                            />
-                                            <ThemedText style={styles.ruleText}>Smoking {formData.smokingAllowed ? 'Allowed' : 'Not Allowed'}</ThemedText>
-                                        </View>
-                                    )}
-                                    {formData.partiesAllowed !== undefined && (
-                                        <View style={styles.ruleItem}>
-                                            <IconComponent
-                                                name={formData.partiesAllowed ? "checkmark-circle" : "close-circle"}
-                                                size={14}
-                                                color={formData.partiesAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3}
-                                            />
-                                            <ThemedText style={styles.ruleText}>Parties {formData.partiesAllowed ? 'Allowed' : 'Not Allowed'}</ThemedText>
-                                        </View>
-                                    )}
-                                    {formData.guestsAllowed !== undefined && (
-                                        <View style={styles.ruleItem}>
-                                            <IconComponent
-                                                name={formData.guestsAllowed ? "checkmark-circle" : "close-circle"}
-                                                size={14}
-                                                color={formData.guestsAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3}
-                                            />
-                                            <ThemedText style={styles.ruleText}>Guests {formData.guestsAllowed ? 'Allowed' : 'Not Allowed'}</ThemedText>
-                                        </View>
-                                    )}
-                                    {formData.maxGuests && formData.maxGuests > 0 && (
-                                        <View style={styles.ruleItem}>
-                                            <IconComponent name="people-outline" size={14} color={colors.primaryColor} />
-                                            <ThemedText style={styles.ruleText}>Max {formData.maxGuests} guests</ThemedText>
-                                        </View>
-                                    )}
-                                </View>
-                            </View>
-                        )}
-
-                    {/* Accommodation-specific details */}
-                    {formData.accommodationDetails && (
-                        <View style={styles.accommodationDetails}>
-                            <View style={styles.sectionHeader}>
-                                <IconComponent name="heart-outline" size={16} color={colors.primaryColor} />
-                                <ThemedText style={styles.sectionTitle}>Special Features</ThemedText>
-                            </View>
-                            <View style={styles.specialFeaturesList}>
-                                {formData.accommodationDetails.culturalExchange && (
-                                    <View style={styles.specialFeature}>
-                                        <IconComponent name="heart-outline" size={14} color={colors.primaryColor} />
-                                        <ThemedText style={styles.specialFeatureText}>Cultural Exchange</ThemedText>
-                                    </View>
-                                )}
-                                {formData.accommodationDetails.mealsIncluded && (
-                                    <View style={styles.specialFeature}>
-                                        <IconComponent name="restaurant-outline" size={14} color={colors.primaryColor} />
-                                        <ThemedText style={styles.specialFeatureText}>Meals Included</ThemedText>
-                                    </View>
-                                )}
-                                {formData.accommodationDetails.languages && formData.accommodationDetails.languages.length > 0 && (
-                                    <View style={styles.specialFeature}>
-                                        <IconComponent name="language-outline" size={14} color={colors.primaryColor} />
-                                        <ThemedText style={styles.specialFeatureText}>
-                                            {formData.accommodationDetails.languages.slice(0, 2).join(', ')}
-                                            {formData.accommodationDetails.languages.length > 2 && ' +'}
-                                        </ThemedText>
-                                    </View>
-                                )}
-                                {formData.accommodationDetails.maxStay && (
-                                    <View style={styles.specialFeature}>
-                                        <IconComponent name="time-outline" size={14} color={colors.primaryColor} />
-                                        <ThemedText style={styles.specialFeatureText}>
-                                            Max stay: {formData.accommodationDetails.maxStay} days
-                                        </ThemedText>
-                                    </View>
-                                )}
-                                {formData.accommodationDetails.sleepingArrangement && (
-                                    <View style={styles.specialFeature}>
-                                        <IconComponent name="bed-outline" size={14} color={colors.primaryColor} />
-                                        <ThemedText style={styles.specialFeatureText}>
-                                            {formData.accommodationDetails.sleepingArrangement.replace('_', ' ')}
-                                        </ThemedText>
-                                    </View>
-                                )}
-                            </View>
-                        </View>
-                    )}
-
-                    {/* Description Preview */}
-                    {formData.description && (
+                    {formData.basicInfo.description && (
                         <View style={styles.descriptionContainer}>
                             <View style={styles.sectionHeader}>
                                 <IconComponent name="document-text-outline" size={16} color={colors.primaryColor} />
                                 <ThemedText style={styles.sectionTitle}>Description</ThemedText>
                             </View>
                             <ThemedText style={styles.descriptionText} numberOfLines={4}>
-                                {formData.description}
+                                {formData.basicInfo.description}
                             </ThemedText>
                         </View>
                     )}
 
-                    {/* Status Indicator */}
                     <View style={styles.statusContainer}>
                         <View style={styles.statusIndicator}>
                             <ThemedText style={styles.statusText}>
-                                {formData.isDraft ? 'Draft' : 'Ready to Publish'}
+                                Ready to Publish
                             </ThemedText>
                         </View>
                     </View>
+
+                    {/* --- Advanced Features Section --- */}
+                    <View style={styles.featuresContainer}>
+                        <View style={styles.sectionHeader}>
+                            <IconComponent name="settings-outline" size={16} color={colors.primaryColor} />
+                            <ThemedText style={styles.sectionTitle}>Advanced Features</ThemedText>
+                        </View>
+                        <View style={styles.featuresGrid}>
+                            {formData.basicInfo.floor !== undefined && (
+                                <View style={styles.featureTag}>
+                                    <ThemedText style={styles.featureText}>Floor: {formData.basicInfo.floor}</ThemedText>
+                                </View>
+                            )}
+                            {formData.basicInfo.yearBuilt !== undefined && (
+                                <View style={styles.featureTag}>
+                                    <ThemedText style={styles.featureText}>Year Built: {formData.basicInfo.yearBuilt}</ThemedText>
+                                </View>
+                            )}
+                            {formData.amenities.parkingType && (
+                                <View style={styles.featureTag}>
+                                    <ThemedText style={styles.featureText}>Parking Type: {formData.amenities.parkingType}</ThemedText>
+                                </View>
+                            )}
+                            {formData.amenities.parkingSpaces !== undefined && (
+                                <View style={styles.featureTag}>
+                                    <ThemedText style={styles.featureText}>Parking Spaces: {formData.amenities.parkingSpaces}</ThemedText>
+                                </View>
+                            )}
+                        </View>
+                    </View>
+
+                    {/* --- Policy & Rules Section --- */}
+                    <View style={styles.featuresContainer}>
+                        <View style={styles.sectionHeader}>
+                            <IconComponent name="alert-circle-outline" size={16} color={colors.primaryColor} />
+                            <ThemedText style={styles.sectionTitle}>Policies & Rules</ThemedText>
+                        </View>
+                        <View style={styles.featuresGrid}>
+                            {formData.amenities.petPolicy && (
+                                <View style={styles.featureTag}>
+                                    <ThemedText style={styles.featureText}>Pet Policy: {formData.amenities.petPolicy}</ThemedText>
+                                </View>
+                            )}
+                            {formData.amenities.petFee !== undefined && (
+                                <View style={styles.featureTag}>
+                                    <ThemedText style={styles.featureText}>Pet Fee: ${formData.amenities.petFee}</ThemedText>
+                                </View>
+                            )}
+                            <View style={styles.featureTag}>
+                                <ThemedText style={styles.featureText}>Smoking Allowed: {yesNo(formData.amenities.smokingAllowed)}</ThemedText>
+                            </View>
+                            <View style={styles.featureTag}>
+                                <ThemedText style={styles.featureText}>Parties Allowed: {yesNo(formData.amenities.partiesAllowed)}</ThemedText>
+                            </View>
+                            <View style={styles.featureTag}>
+                                <ThemedText style={styles.featureText}>Guests Allowed: {yesNo(formData.pricing.guestsAllowed)}</ThemedText>
+                            </View>
+                            {formData.pricing.maxGuests !== undefined && (
+                                <View style={styles.featureTag}>
+                                    <ThemedText style={styles.featureText}>Max Guests: {formData.pricing.maxGuests}</ThemedText>
+                                </View>
+                            )}
+                        </View>
+                    </View>
+
+                    {/* --- Availability Section --- */}
+                    <View style={styles.featuresContainer}>
+                        <View style={styles.sectionHeader}>
+                            <IconComponent name="calendar-outline" size={16} color={colors.primaryColor} />
+                            <ThemedText style={styles.sectionTitle}>Availability</ThemedText>
+                        </View>
+                        <View style={styles.featuresGrid}>
+                            {formData.location.availableFrom && (
+                                <View style={styles.featureTag}>
+                                    <ThemedText style={styles.featureText}>Available From: {formData.location.availableFrom}</ThemedText>
+                                </View>
+                            )}
+                            {formData.location.leaseTerm && (
+                                <View style={styles.featureTag}>
+                                    <ThemedText style={styles.featureText}>Lease Term: {formData.location.leaseTerm}</ThemedText>
+                                </View>
+                            )}
+                        </View>
+                    </View>
+
+                    {/* --- Location Intelligence Section --- */}
+                    <View style={styles.featuresContainer}>
+                        <View style={styles.sectionHeader}>
+                            <IconComponent name="map-outline" size={16} color={colors.primaryColor} />
+                            <ThemedText style={styles.sectionTitle}>Location Intelligence</ThemedText>
+                        </View>
+                        <View style={styles.featuresGrid}>
+                            {formData.location.walkScore !== undefined && (
+                                <View style={styles.featureTag}>
+                                    <ThemedText style={styles.featureText}>Walk Score: {formData.location.walkScore}</ThemedText>
+                                </View>
+                            )}
+                            {formData.location.transitScore !== undefined && (
+                                <View style={styles.featureTag}>
+                                    <ThemedText style={styles.featureText}>Transit Score: {formData.location.transitScore}</ThemedText>
+                                </View>
+                            )}
+                            {formData.location.bikeScore !== undefined && (
+                                <View style={styles.featureTag}>
+                                    <ThemedText style={styles.featureText}>Bike Score: {formData.location.bikeScore}</ThemedText>
+                                </View>
+                            )}
+                            <View style={styles.featureTag}>
+                                <ThemedText style={styles.featureText}>Near Transport: {yesNo(formData.location.proximityToTransport)}</ThemedText>
+                            </View>
+                            <View style={styles.featureTag}>
+                                <ThemedText style={styles.featureText}>Near Schools: {yesNo(formData.location.proximityToSchools)}</ThemedText>
+                            </View>
+                            <View style={styles.featureTag}>
+                                <ThemedText style={styles.featureText}>Near Shopping: {yesNo(formData.location.proximityToShopping)}</ThemedText>
+                            </View>
+                        </View>
+                    </View>
+
                 </View>
             </View>
         </BaseWidget>
