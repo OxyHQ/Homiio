@@ -602,7 +602,7 @@ export default function CreatePropertyScreen() {
               <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
                 <ThemedText style={styles.label}>Currency</ThemedText>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {['USD', 'EUR', 'GBP', 'CAD', 'MXN', 'Other'].map((currency) => (
+                  {(['USD', 'EUR', 'GBP', 'CAD', 'MXN', 'FAIR (FairCoin)', 'Other'] as string[]).map((currency: string) => (
                     <TouchableOpacity
                       key={currency}
                       style={[
