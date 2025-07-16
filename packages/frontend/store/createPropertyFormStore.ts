@@ -54,6 +54,12 @@ interface CreatePropertyFormState {
       images: any[];
       videos?: any[];
     };
+    colivingFeatures: {
+      sharedSpaces: boolean;
+      communityEvents: boolean;
+      sharedSpacesList?: string[];
+      otherFeatures?: string;
+    };
   };
   currentStep: number;
   isDirty: boolean;
@@ -128,6 +134,12 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()(
         media: {
           images: [],
           videos: [],
+        },
+        colivingFeatures: {
+          sharedSpaces: false,
+          communityEvents: false,
+          sharedSpacesList: [],
+          otherFeatures: '',
         },
       },
       currentStep: 0,
@@ -206,6 +218,12 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()(
           media: {
             images: [],
             videos: [],
+          },
+          colivingFeatures: {
+            sharedSpaces: false,
+            communityEvents: false,
+            sharedSpacesList: [],
+            otherFeatures: '',
           },
         },
         currentStep: 0,
