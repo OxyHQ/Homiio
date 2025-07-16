@@ -159,16 +159,15 @@ export const useSearchProperties = () => {
         setLoading('search', true);
         setError(null);
         
-        // Import the API function
-        const { propertyApi } = await import('@/utils/api');
-        const response = await propertyApi.searchProperties(query, filters);
+        // Use propertyService instead of propertyApi
+        const response = await propertyService.searchProperties(query, filters);
         
-        setSearchResults(response.data?.properties || response.data || []);
+        setSearchResults(response.properties || []);
         setPagination({
-          page: response.data?.page || 1,
-          total: response.data?.total || 0,
-          totalPages: response.data?.totalPages || 1,
-          limit: response.data?.limit || 10,
+          page: 1,
+          total: response.total || 0,
+          totalPages: Math.ceil((response.total || 0) / 10),
+          limit: 10,
         });
       } catch (error: any) {
         setError(error.message || 'Failed to search properties');
@@ -202,12 +201,11 @@ export const useCreateProperty = () => {
       setLoading('create', true);
       setError(null);
       
-      // Import the API function
-      const { propertyApi } = await import('@/utils/api');
-      const response = await propertyApi.createProperty(data, oxyServices, activeSessionId || '');
+      // Use the propertyService instead of propertyApi
+      const response = await propertyService.createProperty(data, oxyServices, activeSessionId || '');
       
       toast.success('Property created successfully');
-      return response.data;
+      return response;
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to create property';
       setError(errorMessage);
@@ -234,12 +232,11 @@ export const useUpdateProperty = () => {
       setLoading('update', true);
       setError(null);
       
-      // Import the API function
-      const { propertyApi } = await import('@/utils/api');
-      const response = await propertyApi.updateProperty(id, data);
+      // Use propertyService instead of propertyApi
+      const response = await propertyService.updateProperty(id, data);
       
       toast.success('Property updated successfully');
-      return response.data;
+      return response;
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to update property';
       setError(errorMessage);
@@ -266,9 +263,8 @@ export const useDeleteProperty = () => {
       setLoading('delete', true);
       setError(null);
       
-      // Import the API function
-      const { propertyApi } = await import('@/utils/api');
-      await propertyApi.deleteProperty(id);
+      // Use propertyService instead of propertyApi
+      await propertyService.deleteProperty(id);
       
       toast.success('Property deleted successfully');
     } catch (error: any) {
@@ -356,4 +352,4 @@ export const useUserProperties = () => {
     error,
     refetch: () => fetchUserProperties(),
   };
-}; 
+};

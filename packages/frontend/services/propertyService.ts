@@ -212,7 +212,21 @@ class PropertyService {
 
   async createProperty(data: CreatePropertyData, oxyServices: any, activeSessionId: string): Promise<Property> {
     const response = await api.post(this.baseUrl, data, { oxyServices, activeSessionId });
-    return response.data.data; // Backend returns { success, message, data }
+    
+    // Log the response for debugging
+    console.log('API response:', JSON.stringify(response.data));
+    
+    // Handle different response formats
+    if (response.data.data) {
+      return response.data.data; // Standard format: { success, message, data }
+    } else if (response.data.property) {
+      return response.data.property; // Alternative format
+    } else if (response.data._id) {
+      return response.data; // Direct property object
+    } else {
+      console.error('Unexpected API response format:', response.data);
+      throw new Error('Received unexpected response format from server');
+    }
   }
 
   async updateProperty(id: string, data: Partial<CreatePropertyData>): Promise<Property> {

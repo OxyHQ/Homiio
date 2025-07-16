@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator, Text } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { colors } from '@/styles/colors';
+import { ThemedText } from './ThemedText';
 
 interface PropertyMapProps {
     latitude?: number;
@@ -128,8 +129,8 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
     if (error) {
         return (
             <View style={[styles.container, { height }, styles.errorContainer]}>
-                <Text style={styles.errorText}>Failed to load map</Text>
-                <Text style={styles.errorSubtext}>{error}</Text>
+                <ThemedText style={styles.errorText}>Failed to load map</ThemedText>
+                <ThemedText style={styles.errorSubtext}>{error}</ThemedText>
             </View>
         );
     }
@@ -156,7 +157,7 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
             {loading && (
                 <View style={styles.loadingOverlay}>
                     <ActivityIndicator size="large" color={colors.primaryColor} />
-                    <Text style={styles.loadingText}>Loading map...</Text>
+                    <ThemedText style={styles.loadingText}>Loading map...</ThemedText>
                 </View>
             )}
         </View>
@@ -204,4 +205,4 @@ const styles = StyleSheet.create({
         color: colors.primaryDark_1,
         textAlign: 'center',
     },
-}); 
+});
