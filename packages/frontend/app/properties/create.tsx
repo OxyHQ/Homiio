@@ -479,12 +479,27 @@ export default function CreatePropertyScreen() {
 
               <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
                 <ThemedText style={styles.label}>State</ThemedText>
-                <TextInput
-                  style={[styles.input, validationErrors.state && styles.inputError]}
-                  value={formData.location.state}
-                  onChangeText={(text) => updateFormField('location', 'state', text)}
-                  placeholder="State"
-                />
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {['CA', 'NY', 'TX', 'FL', 'IL', 'Other'].map((state) => (
+                    <TouchableOpacity
+                      key={state}
+                      style={[
+                        styles.propertyTypeButton,
+                        formData.location.state === state && styles.propertyTypeButtonSelected
+                      ]}
+                      onPress={() => updateFormField('location', 'state', state)}
+                    >
+                      <ThemedText
+                        style={[
+                          styles.propertyTypeText,
+                          formData.location.state === state && styles.propertyTypeTextSelected
+                        ]}
+                      >
+                        {state}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </View>
                 {validationErrors.state && <ThemedText style={styles.errorText}>{validationErrors.state}</ThemedText>}
               </View>
             </View>
@@ -503,12 +518,27 @@ export default function CreatePropertyScreen() {
 
               <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
                 <ThemedText style={styles.label}>Country</ThemedText>
-                <TextInput
-                  style={styles.input}
-                  value={formData.location.country}
-                  onChangeText={(text) => updateFormField('location', 'country', text)}
-                  placeholder="Country"
-                />
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {['US', 'Canada', 'Mexico', 'Other'].map((country) => (
+                    <TouchableOpacity
+                      key={country}
+                      style={[
+                        styles.propertyTypeButton,
+                        formData.location.country === country && styles.propertyTypeButtonSelected
+                      ]}
+                      onPress={() => updateFormField('location', 'country', country)}
+                    >
+                      <ThemedText
+                        style={[
+                          styles.propertyTypeText,
+                          formData.location.country === country && styles.propertyTypeTextSelected
+                        ]}
+                      >
+                        {country}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
             </View>
 
@@ -525,12 +555,27 @@ export default function CreatePropertyScreen() {
 
               <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
                 <ThemedText style={styles.label}>Lease Term</ThemedText>
-                <TextInput
-                  style={styles.input}
-                  value={formData.location.leaseTerm}
-                  onChangeText={(text) => updateFormField('location', 'leaseTerm', text)}
-                  placeholder="e.g., 12 months"
-                />
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {['3 months', '6 months', '12 months', 'Month-to-month', 'Flexible'].map((term) => (
+                    <TouchableOpacity
+                      key={term}
+                      style={[
+                        styles.propertyTypeButton,
+                        formData.location.leaseTerm === term && styles.propertyTypeButtonSelected
+                      ]}
+                      onPress={() => updateFormField('location', 'leaseTerm', term)}
+                    >
+                      <ThemedText
+                        style={[
+                          styles.propertyTypeText,
+                          formData.location.leaseTerm === term && styles.propertyTypeTextSelected
+                        ]}
+                      >
+                        {term}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
             </View>
           </View>
@@ -556,12 +601,27 @@ export default function CreatePropertyScreen() {
 
               <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
                 <ThemedText style={styles.label}>Currency</ThemedText>
-                <TextInput
-                  style={styles.input}
-                  value={formData.pricing.currency}
-                  onChangeText={(text) => updateFormField('pricing', 'currency', text)}
-                  placeholder="USD"
-                />
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {['USD', 'EUR', 'GBP', 'CAD', 'MXN', 'Other'].map((currency) => (
+                    <TouchableOpacity
+                      key={currency}
+                      style={[
+                        styles.propertyTypeButton,
+                        formData.pricing.currency === currency && styles.propertyTypeButtonSelected
+                      ]}
+                      onPress={() => updateFormField('pricing', 'currency', currency)}
+                    >
+                      <ThemedText
+                        style={[
+                          styles.propertyTypeText,
+                          formData.pricing.currency === currency && styles.propertyTypeTextSelected
+                        ]}
+                      >
+                        {currency}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
             </View>
 
