@@ -93,10 +93,6 @@ We welcome contributions from ethical developers and activists who believe housi
 
 For bugs or feature suggestions, open an issue.
 
-## License
-
-[AGPL-3.0](LICENSE)
-
 ---
 
 Built with ❤️ by the Oxy team — creating ethical technology for a better world.
