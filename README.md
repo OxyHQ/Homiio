@@ -1,88 +1,104 @@
-# Oxy Stack
+# Homiio
 
-This monorepo contains the Oxy Stack mobile application and its backend services.
+Welcome to the Homiio repository — part of the Oxy ecosystem. Homiio is a platform for ethical housing, designed to help people find fair rentals, understand their rights, and connect with trustworthy landlords, all powered by AI and community-driven data.
+
+## Overview
+
+Homiio is built as a cross-platform mobile application using React Native (Expo) and a modular backend in Node.js with MongoDB. It integrates deeply with the Oxy ecosystem, including user authentication via `@oxyhq/services`, contract analysis through Sindi, and payment systems via OxyPay.
 
 ## Structure
 
 ```
-oxy-stack/
+homiio/
 ├── packages/
-│   ├── frontend/         # Oxy Stack React Native/Expo mobile app
-│   └── backend/          # Oxy Stack Node.js backend server
-├── package.json          # Root package.json with workspace configuration
-└── README.md            # This file
+│   ├── frontend/            # React Native app (Expo)
+│   └── backend/             # Node.js + Express backend API
+├── .env.example             # Example environment variables
+├── package.json             # Root workspace configuration
+└── README.md                # This file
 ```
+
+## Features
+
+- 🔍 **Search rentals** with filters, keywords, and verified landlords
+- 🧠 **AI assistant (Sindi)** for rights, legal doubts, and contract analysis
+- 🏘️ **Tenant-landlord reviews** and reputation system
+- 💸 **Rental payments with FairCoin** (via OxyPay, upcoming)
+- 📎 **Contract upload and analysis** with summaries and alerts
+- 📍 **Map view** with geolocated listings and insights by neighborhood
+- 🔐 **Secure login** with session sync via `@oxyhq/services`
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js (>= 16.0.0)
-- npm (>= 8.0.0)
-- Expo CLI (for mobile app development)
+- Node.js v18+
+- npm v9+
+- Expo CLI
+- MongoDB instance (local or remote)
 
 ### Installation
 
-1. Install all dependencies for the monorepo:
-   ```bash
-   npm run install:all
-   ```
-
-### Development
-
-#### Start both frontend and backend concurrently:
 ```bash
+git clone https://github.com/oxy-so/homiio.git
+cd homiio
+npm install
+```
+
+### Running Mobile App (Expo)
+
+```bash
+cd packages/frontend
+npm start
+```
+
+### Running Backend API
+
+```bash
+cd packages/backend
 npm run dev
 ```
 
-#### Start only the mobile app:
+### Environment Setup
+
+1. Copy `.env.example` to `.env` in both `packages/frontend` and `packages/backend`
+2. Fill in required values such as MongoDB URI, API base URL, etc.
+
+## Scripts
+
+Run everything at once:
 ```bash
-npm run start
+npm run dev         # Starts backend + mobile app (via concurrently)
 ```
 
-#### Start only the backend:
+Run individually:
 ```bash
+npm run start:frontend
 npm run start:backend
 ```
 
-### Individual Package Commands
+## Technologies Used
 
-#### Mobile App (packages/frontend)
-```bash
-cd packages/frontend
-npm start          # Start Expo development server
-npm run android    # Start Android development
-npm run ios        # Start iOS development
-npm run web        # Start web development
-```
-
-#### Backend (packages/backend)
-```bash
-cd packages/backend
-npm start          # Start backend server with nodemon
-```
-
-## Workspace Management
-
-This monorepo uses npm workspaces to manage dependencies and scripts across packages.
-
-- All packages are located in the `packages/` directory
-- Shared dependencies can be installed at the root level
-- Each package maintains its own `package.json` for specific dependencies
-
-## Features
-
-### Internationalization (i18n)
-
-The Oxy Notes app supports multiple languages with user-selectable language preferences:
-
-- **Supported Languages**: English (US), Spanish, French, German, Portuguese (Brazil), Chinese (Simplified)
-- **Language Selection**: Available in Settings → Preferences → Language
-- **Persistent Settings**: Language choice is automatically saved and restored
-- **Easy Expansion**: New languages can be easily added following the established structure
-
-For detailed information on using and contributing to translations, see [docs/i18n.md](docs/i18n.md).
+- **State Management**: Zustand
+- **Frontend**: React Native (Expo), Tailwind via NativeWind, React Navigation
+- **Backend**: Node.js, Express, MongoDB, JWT, Multer
+- **Types/Validation**: TypeScript, Zod
+- **i18n**: Built-in internationalization system
+- **Auth**: `@oxyhq/services` (session + user system)
+- **AI**: Integration with Sindi for AI-based legal help
 
 ## Contributing
 
-Please read the individual package READMEs for specific contribution guidelines.
+We welcome contributions from ethical developers and activists who believe housing is a right. Please fork the repo, create a new branch, and submit a pull request.
+
+For bugs or feature suggestions, open an issue.
+
+## License
+
+[AGPL-3.0](LICENSE)
+
+---
+
+Built with ❤️ by the Oxy team — creating ethical technology for a better world.
+
+🌐 [https://oxy.so](https://oxy.so)  |  🏠 [https://homiio.com](https://homiio.com)
