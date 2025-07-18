@@ -124,7 +124,6 @@ const conversationSchema = new mongoose.Schema({
 // Indexes for performance
 conversationSchema.index({ oxyUserId: 1, createdAt: -1 });
 conversationSchema.index({ oxyUserId: 1, status: 1, updatedAt: -1 });
-conversationSchema.index({ 'sharing.shareToken': 1 });
 conversationSchema.index({ 'sharing.expiresAt': 1 }, { expireAfterSeconds: 0 });
 
 // Virtual for message count
