@@ -214,6 +214,31 @@ async function startServer() {
   }
 }
 
+// Database connection middleware for serverless environments
+const ensureDatabaseConnection = async (req: any, res: any, next: any) => {
+  try {
+    if (!database.isConnectedStatus) {
+      await database.connect();
+    }
+    next();
+  } catch (error) {
+    console.error('❌ Database connection failed in middleware:', error.message);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Database connection failed',
+        code: 'DATABASE_ERROR',
+        statusCode: 500
+      }
+    });
+  }
+};
+
+// Apply database middleware in serverless environments
+if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  app.use(ensureDatabaseConnection);
+}
+
 // Export for serverless environments (Vercel)
 module.exports = app;
 

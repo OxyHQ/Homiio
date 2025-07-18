@@ -25,6 +25,8 @@ export interface Config {
       maxPoolSize: number;
       serverSelectionTimeoutMS: number;
       socketTimeoutMS: number;
+      connectTimeoutMS?: number;
+      bufferCommands?: boolean;
     };
   };
   jwt: {
@@ -55,7 +57,7 @@ export interface Config {
 const config: Config = {
   // Environment
   environment: process.env.NODE_ENV || 'development',
-  port: process.env.PORT || 4000,
+  port: parseInt(process.env.PORT || '4000', 10),
   
   // Oxy Services Configuration
   oxy: {
@@ -97,10 +99,12 @@ const config: Config = {
   database: {
     url: process.env.MONGODB_URI || process.env.DATABASE_URL || 'mongodb://localhost:27017/homiio',
     options: {
-      // Modern MongoDB driver doesn't need these deprecated options
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
+      // Optimized for serverless environments
+      maxPoolSize: process.env.VERCEL ? 1 : 10, // Smaller pool for serverless
+      serverSelectionTimeoutMS: process.env.VERCEL ? 30000 : 5000, // Longer timeout for serverless
+      socketTimeoutMS: process.env.VERCEL ? 60000 : 45000, // Longer socket timeout for serverless
+      connectTimeoutMS: process.env.VERCEL ? 30000 : 10000, // Connection timeout
+      bufferCommands: false, // Disable buffering for serverless
     }
   },
   
@@ -115,7 +119,7 @@ const config: Config = {
   // Redis Configuration (for caching and sessions)
   redis: {
     url: process.env.REDIS_URL || 'redis://localhost:6379',
-    ttl: process.env.REDIS_TTL || 3600, // 1 hour
+    ttl: parseInt(process.env.REDIS_TTL || '3600', 10), // 1 hour
   },
   
   // Email Configuration

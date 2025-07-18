@@ -7,6 +7,9 @@ import mongoose from 'mongoose';
 import config from '../config';
 
 class Database {
+  private connection: any;
+  private isConnected: boolean;
+
   constructor() {
     this.connection = null;
     this.isConnected = false;
@@ -28,8 +31,31 @@ class Database {
       // Set mongoose options
       mongoose.set('strictQuery', false);
 
-      // Connect to MongoDB
-      this.connection = await mongoose.connect(config.database.url, config.database.options);
+      // Connect to MongoDB with retry logic for serverless environments
+      const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+      const maxRetries = isServerless ? 3 : 1;
+      let lastError;
+
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(`📦 Database connection attempt ${attempt}/${maxRetries}`);
+          this.connection = await mongoose.connect(config.database.url, config.database.options);
+          break; // Success, exit retry loop
+        } catch (error) {
+          lastError = error;
+          console.error(`❌ Database connection attempt ${attempt} failed:`, error.message);
+          
+          if (attempt < maxRetries) {
+            const delay = attempt * 1000; // Exponential backoff
+            console.log(`📦 Retrying in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+        }
+      }
+
+      if (!this.connection) {
+        throw lastError || new Error('Database connection failed after all retries');
+      }
 
       this.isConnected = true;
 
@@ -97,6 +123,13 @@ class Database {
       port: mongoose.connection.port,
       name: mongoose.connection.name
     };
+  }
+
+  /**
+   * Check if database is connected
+   */
+  get isConnectedStatus(): boolean {
+    return this.isConnected;
   }
 
   /**
