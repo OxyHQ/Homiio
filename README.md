@@ -40,7 +40,7 @@ homiio/
 ### Installation
 
 ```bash
-git clone https://github.com/oxy-so/homiio.git
+git clone https://github.com/oxyhq/homiio.git
 cd homiio
 npm install
 ```
