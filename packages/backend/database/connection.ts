@@ -20,9 +20,17 @@ class Database {
    */
   async connect() {
     try {
-      if (this.isConnected) {
-        console.log('📦 Database already connected');
+      // Check if already connected and connection is healthy
+      if (this.isConnected && mongoose.connection.readyState === 1) {
+        console.log('📦 Database already connected and healthy');
         return this.connection;
+      }
+
+      // If connection exists but is not healthy, close it first
+      if (mongoose.connection.readyState !== 0) {
+        console.log('📦 Closing existing unhealthy connection...');
+        await mongoose.connection.close();
+        this.isConnected = false;
       }
 
       console.log('📦 Connecting to database...');
@@ -130,6 +138,21 @@ class Database {
    */
   get isConnectedStatus(): boolean {
     return this.isConnected;
+  }
+
+  /**
+   * Force reconnect to database
+   */
+  async forceReconnect() {
+    try {
+      console.log('📦 Force reconnecting to database...');
+      this.isConnected = false;
+      await mongoose.connection.close();
+      return await this.connect();
+    } catch (error) {
+      console.error('❌ Force reconnect failed:', error.message);
+      throw error;
+    }
   }
 
   /**

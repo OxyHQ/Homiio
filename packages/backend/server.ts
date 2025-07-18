@@ -86,10 +86,47 @@ const corsOptions = {
   maxAge: 86400 // 24 hours
 };
 
+// Database connection middleware for serverless environments
+const ensureDatabaseConnection = async (req: any, res: any, next: any) => {
+  try {
+    const status = database.getStatus();
+    console.log('📦 Database status check:', status);
+    
+    if (!status.isConnected || status.readyState !== 1) {
+      console.log('📦 Ensuring database connection for request...');
+      try {
+        await database.connect();
+        console.log('✅ Database connection established');
+      } catch (connectError) {
+        console.error('❌ Initial connection failed, trying force reconnect...');
+        await database.forceReconnect();
+        console.log('✅ Database force reconnection successful');
+      }
+    }
+    next();
+  } catch (error) {
+    console.error('❌ Database connection failed in middleware:', error.message);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Database connection failed',
+        code: 'DATABASE_ERROR',
+        statusCode: 500
+      }
+    });
+  }
+};
+
 // Middleware
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
 app.use(requestLogger);
+
+// Apply database middleware in serverless environments (before routes)
+if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  console.log('🔧 Applying database middleware for serverless environment');
+  app.use(ensureDatabaseConnection);
+}
 
 // Use OxyHQServices middleware for authentication
 const authenticateToken = oxy.createAuthenticateTokenMiddleware({
@@ -212,31 +249,6 @@ async function startServer() {
     console.error('❌ Failed to start server:', error.message);
     process.exit(1);
   }
-}
-
-// Database connection middleware for serverless environments
-const ensureDatabaseConnection = async (req: any, res: any, next: any) => {
-  try {
-    if (!database.isConnectedStatus) {
-      await database.connect();
-    }
-    next();
-  } catch (error) {
-    console.error('❌ Database connection failed in middleware:', error.message);
-    res.status(500).json({
-      success: false,
-      error: {
-        message: 'Database connection failed',
-        code: 'DATABASE_ERROR',
-        statusCode: 500
-      }
-    });
-  }
-};
-
-// Apply database middleware in serverless environments
-if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
-  app.use(ensureDatabaseConnection);
 }
 
 // Export for serverless environments (Vercel)
