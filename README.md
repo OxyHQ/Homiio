@@ -66,6 +66,28 @@ npm run dev
 
 ## Scripts
 
+Scripts available in the root `package.json`:
+
+```json
+{
+  "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+  "frontend": "cd packages/frontend && npm run start --tunnel --reset-cache",
+  "backend": "cd packages/backend && npm run dev",
+  "build": "npm run build --workspaces --if-present",
+  "build:web": "cd packages/frontend && npm run build-web:prod",
+  "build:web:dev": "cd packages/frontend && npm run build-web",
+  "build:frontend": "cd packages/frontend && npm run build-web:prod",
+  "build:backend": "cd packages/backend && npm run build",
+  "lint": "npm run lint --workspaces --if-present",
+  "lint:frontend": "cd packages/frontend && npm run lint",
+  "lint:backend": "cd packages/backend && npm run lint",
+  "install:all": "npm install && npm run install:frontend && npm run install:backend",
+  "install:frontend": "cd packages/frontend && npm install",
+  "install:backend": "cd packages/backend && npm install",
+  "clean": "npm run clean --workspaces"
+}
+```
+
 Run everything at once:
 ```bash
 npm run dev         # Starts backend + mobile app (via concurrently)
@@ -73,8 +95,8 @@ npm run dev         # Starts backend + mobile app (via concurrently)
 
 Run individually:
 ```bash
-npm run start:frontend
-npm run start:backend
+npm run frontend
+npm run backend
 ```
 
 ## Technologies Used
@@ -92,6 +114,10 @@ npm run start:backend
 We welcome contributions from ethical developers and activists who believe housing is a right. Please fork the repo, create a new branch, and submit a pull request.
 
 For bugs or feature suggestions, open an issue.
+
+## License
+
+[AGPL-3.0](LICENSE)
 
 ---
 
