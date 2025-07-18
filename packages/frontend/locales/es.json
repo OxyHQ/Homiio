@@ -191,7 +191,26 @@
     "noPropertyTypesAvailable": "No hay tipos de propiedad disponibles",
     "noCitiesAvailable": "No hay ciudades disponibles",
     "noPropertyTypes": "No hay tipos de propiedad disponibles",
-    "searching": "Buscando..."
+    "searching": "Buscando...",
+    "addressSuggestions": "Sugerencias de Dirección",
+    "popularAreas": "Áreas Populares",
+    "quickFilters": "Filtros Rápidos",
+    "searchingAddresses": "Buscando direcciones...",
+    "propertyTypes": "Tipos de Propiedad",
+    "propertyType": {
+      "apartments": "Apartamentos",
+      "houses": "Casas",
+      "rooms": "Habitaciones",
+      "studios": "Estudios",
+      "coliving": "Convivencia",
+      "publicHousing": "Vivienda Pública"
+    },
+    "areas": {
+      "downtown": "Centro",
+      "universityDistrict": "Distrito Universitario",
+      "businessDistrict": "Distrito Comercial",
+      "residentialArea": "Área Residencial"
+    }
   },
   "profile": {
     "title": "Perfil",
@@ -261,6 +280,7 @@
   },
   "properties": {
     "title": "Propiedades",
+    "map": "Mapa de Propiedades",
     "filters": "Filtros",
     "sort": "Ordenar",
     "view": "Ver",

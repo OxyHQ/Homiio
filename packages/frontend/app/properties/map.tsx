@@ -9,7 +9,6 @@ import {
     ActivityIndicator,
     RefreshControl,
     Dimensions,
-    Alert,
     Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -21,9 +20,8 @@ import { PropertyCard } from '@/components/PropertyCard';
 import { useProperties } from '@/hooks';
 import { Property, PropertyFilters } from '@/services/propertyService';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
-import { getPropertyImageSource } from '@/utils/propertyUtils';
 import { SearchBar } from '@/components/SearchBar';
-import { Button } from '@/components/Button';
+import { Ionicons } from '@expo/vector-icons';
 
 interface MapProperty extends Property {
     title: string;
@@ -31,6 +29,7 @@ interface MapProperty extends Property {
 }
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const IconComponent = Ionicons as any;
 
 const PROPERTY_TYPES = [
     { id: 'apartment', label: 'Apartments' },
@@ -48,7 +47,7 @@ export default function PropertiesMapScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const [filters, setFilters] = useState<PropertyFilters>({
         page: 1,
-        limit: 50, // Load more properties for map view
+        limit: 50,
     });
     const [showFilters, setShowFilters] = useState(false);
     const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
@@ -57,14 +56,19 @@ export default function PropertiesMapScreen() {
 
     // Data fetching
     const {
-        data: propertiesData,
-        isLoading,
+        properties,
+        loading: isLoading,
         error,
-        refetch,
-    } = useProperties(filters);
+        pagination,
+        loadProperties,
+    } = useProperties();
 
-    const properties = propertiesData?.properties || [];
-    const totalResults = propertiesData?.total || 0;
+    const totalResults = pagination.total || 0;
+
+    // Load properties on mount
+    useEffect(() => {
+        loadProperties(filters);
+    }, []);
 
     // Transform properties for map display
     const mapProperties: MapProperty[] = properties
@@ -72,7 +76,7 @@ export default function PropertiesMapScreen() {
         .map(property => ({
             ...property,
             title: generatePropertyTitle(property),
-            location: `${property.address.street}, ${property.address.city}, ${property.address.state}`,
+            location: `${property.address?.street || ''}, ${property.address?.city || ''}, ${property.address?.state || ''}`,
         }));
 
     // Auto-center map on first load
@@ -83,8 +87,8 @@ export default function PropertiesMapScreen() {
             );
 
             if (validProperties.length > 0) {
-                const avgLat = validProperties.reduce((sum, p) => sum + (p.address.coordinates!.lat), 0) / validProperties.length;
-                const avgLng = validProperties.reduce((sum, p) => sum + (p.address.coordinates!.lng), 0) / validProperties.length;
+                const avgLat = validProperties.reduce((sum, p) => sum + (p.address.coordinates?.lat || 0), 0) / validProperties.length;
+                const avgLng = validProperties.reduce((sum, p) => sum + (p.address.coordinates?.lng || 0), 0) / validProperties.length;
                 setMapCenter({ lat: avgLat, lng: avgLng });
             }
         }
@@ -97,18 +101,21 @@ export default function PropertiesMapScreen() {
             ...filters,
             search: query.trim() || undefined,
             type: selectedTypes.length > 0 ? selectedTypes.join(',') : undefined,
-            page: 1, // Reset to first page on new search
+            page: 1,
         };
         setFilters(newFilters);
-    }, [searchQuery, filters, selectedTypes]);
+        loadProperties(newFilters);
+    }, [filters, selectedTypes, loadProperties]);
 
     // Handle load more
     const handleLoadMore = () => {
         if (properties.length < totalResults) {
-            setFilters(prev => ({
-                ...prev,
-                page: (prev.page || 1) + 1,
-            }));
+            const newFilters = {
+                ...filters,
+                page: (filters.page || 1) + 1,
+            };
+            setFilters(newFilters);
+            loadProperties(newFilters);
         }
     };
 
@@ -124,10 +131,12 @@ export default function PropertiesMapScreen() {
     const clearFilters = () => {
         setSelectedTypes([]);
         setSearchQuery('');
-        setFilters({
+        const newFilters = {
             page: 1,
             limit: 50,
-        });
+        };
+        setFilters(newFilters);
+        loadProperties(newFilters);
     };
 
     // Property selection handlers
@@ -206,9 +215,9 @@ export default function PropertiesMapScreen() {
         <View style={styles.errorState}>
             <Text style={styles.errorStateTitle}>{t('Error Loading Properties')}</Text>
             <Text style={styles.errorStateSubtitle}>
-                {error?.message || t('Please try again later')}
+                {error || t('Please try again later')}
             </Text>
-            <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+            <TouchableOpacity style={styles.retryButton} onPress={() => loadProperties(filters)}>
                 <Text style={styles.retryButtonText}>{t('Retry')}</Text>
             </TouchableOpacity>
         </View>
@@ -221,9 +230,9 @@ export default function PropertiesMapScreen() {
                 <View style={styles.errorContainer}>
                     <Text style={styles.errorTitle}>Failed to load properties</Text>
                     <Text style={styles.errorMessage}>
-                        {error.message || 'An error occurred while loading the properties map.'}
+                        {error || 'An error occurred while loading the properties map.'}
                     </Text>
-                    <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+                    <TouchableOpacity style={styles.retryButton} onPress={() => loadProperties(filters)}>
                         <Text style={styles.retryButtonText}>Try Again</Text>
                     </TouchableOpacity>
                 </View>
@@ -236,22 +245,26 @@ export default function PropertiesMapScreen() {
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Text style={styles.backButtonText}>←</Text>
+                    <IconComponent name="arrow-back" size={24} color={colors.primaryDark} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>{t('Properties Map')}</Text>
+                <Text style={styles.headerTitle}>{t('properties.map')}</Text>
                 <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.filterButton}>
-                    <Text style={styles.filterButtonText}>⚙️</Text>
+                    <IconComponent name="options-outline" size={24} color={colors.primaryDark} />
                 </TouchableOpacity>
             </View>
 
             {/* Search Bar */}
             <View style={styles.searchContainer}>
-                <SearchBar
-                    placeholder="Search properties..."
-                    value={searchQuery}
-                    onChangeText={handleSearch}
-                    style={styles.searchBar}
-                />
+                <View style={styles.searchBar}>
+                    <IconComponent name="search" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder={t("Search properties")}
+                        value={searchQuery}
+                        onChangeText={handleSearch}
+                        returnKeyType="search"
+                    />
+                </View>
             </View>
 
             {/* View Mode Toggle */}
@@ -260,7 +273,7 @@ export default function PropertiesMapScreen() {
                     style={[styles.viewModeButton, viewMode === 'map' && styles.viewModeButtonActive]}
                     onPress={() => setViewMode('map')}
                 >
-                    <Text style={styles.viewModeButtonIcon}>🗺️</Text>
+                    <IconComponent name="map-outline" size={20} color={viewMode === 'map' ? 'white' : colors.primaryColor} />
                     <Text
                         style={[
                             styles.viewModeButtonText,
@@ -274,7 +287,7 @@ export default function PropertiesMapScreen() {
                     style={[styles.viewModeButton, viewMode === 'list' && styles.viewModeButtonActive]}
                     onPress={() => setViewMode('list')}
                 >
-                    <Text style={styles.viewModeButtonIcon}>📋</Text>
+                    <IconComponent name="list-outline" size={20} color={viewMode === 'list' ? 'white' : colors.primaryColor} />
                     <Text
                         style={[
                             styles.viewModeButtonText,
@@ -302,7 +315,7 @@ export default function PropertiesMapScreen() {
                 <View style={styles.mapContainer}>
                     <PropertiesMap
                         properties={mapProperties}
-                        center={mapCenter}
+                        center={mapCenter || undefined}
                         zoom={12}
                         height={screenHeight * 0.6}
                         onPropertySelect={handlePropertySelect}
@@ -321,7 +334,7 @@ export default function PropertiesMapScreen() {
                                 style={styles.closeSelectedButton}
                                 onPress={() => setSelectedProperty(null)}
                             >
-                                <Text style={styles.closeButtonText}>✕</Text>
+                                <IconComponent name="close" size={20} color="white" />
                             </TouchableOpacity>
                         </View>
                     )}
@@ -332,7 +345,7 @@ export default function PropertiesMapScreen() {
                             {t('Properties')} ({mapProperties.length})
                         </Text>
                         <FlatList
-                            data={mapProperties.slice(0, 5)} // Show first 5 properties
+                            data={mapProperties.slice(0, 5)}
                             renderItem={({ item }) => (
                                 <TouchableOpacity
                                     style={styles.propertyListItem}
@@ -342,7 +355,7 @@ export default function PropertiesMapScreen() {
                                         {item.title}
                                     </Text>
                                     <Text style={styles.propertyListItemPrice}>
-                                        ${item.rent.amount}/{item.rent.paymentFrequency}
+                                        ${item.rent?.amount || 0}/{item.rent?.paymentFrequency || 'month'}
                                     </Text>
                                 </TouchableOpacity>
                             )}
@@ -360,7 +373,7 @@ export default function PropertiesMapScreen() {
                     keyExtractor={(item) => item._id || item.id || ''}
                     contentContainerStyle={styles.listContainer}
                     refreshControl={
-                        <RefreshControl refreshing={isLoading} onRefresh={refetch} />
+                        <RefreshControl refreshing={isLoading} onRefresh={() => loadProperties(filters)} />
                     }
                     onEndReached={handleLoadMore}
                     onEndReachedThreshold={0.1}
@@ -373,29 +386,6 @@ export default function PropertiesMapScreen() {
                         ) : null
                     }
                 />
-            )}
-
-            {/* Selected Property Info */}
-            {selectedProperty && (
-                <View style={styles.selectedPropertyInfo}>
-                    <View style={styles.selectedPropertyContent}>
-                        <Text style={styles.selectedPropertyTitle}>
-                            {selectedProperty.title || `${selectedProperty.type} in ${selectedProperty.location}`}
-                        </Text>
-                        <Text style={styles.selectedPropertyLocation}>
-                            📍 {selectedProperty.location || 'Unknown location'}
-                        </Text>
-                        <Text style={styles.selectedPropertyPrice}>
-                            ${selectedProperty.rent.amount}/{selectedProperty.priceUnit || selectedProperty.rent.paymentFrequency}
-                        </Text>
-                    </View>
-                    <TouchableOpacity
-                        style={styles.viewPropertyButton}
-                        onPress={() => handlePropertyPress(selectedProperty)}
-                    >
-                        <Text style={styles.viewPropertyButtonText}>View Property</Text>
-                    </TouchableOpacity>
-                </View>
             )}
 
             {/* Debug Info (only in development) */}
@@ -429,11 +419,6 @@ const styles = StyleSheet.create({
     backButton: {
         padding: 8,
     },
-    backButtonText: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: colors.primaryDark,
-    },
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
@@ -442,18 +427,27 @@ const styles = StyleSheet.create({
     filterButton: {
         padding: 8,
     },
-    filterButtonText: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: colors.primaryDark,
-    },
     searchContainer: {
         paddingHorizontal: 16,
         paddingVertical: 12,
-        backgroundColor: colors.background,
+        backgroundColor: colors.primaryLight,
     },
     searchBar: {
         backgroundColor: colors.primaryLight_1,
+        borderRadius: 100,
+        height: 45,
+        flexDirection: 'row',
+        justifyContent: 'flex-start',
+        alignItems: 'center',
+        paddingStart: 15,
+        flex: 1,
+        width: '100%',
+    },
+    searchInput: {
+        fontSize: 16,
+        color: colors.COLOR_BLACK_LIGHT_4,
+        marginHorizontal: 17,
+        flex: 1,
     },
     viewModeToggle: {
         flexDirection: 'row',
@@ -483,11 +477,6 @@ const styles = StyleSheet.create({
     },
     viewModeButtonTextActive: {
         color: 'white',
-    },
-    viewModeButtonIcon: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: colors.primaryDark,
     },
     filterSection: {
         backgroundColor: colors.primaryLight_1,
@@ -576,11 +565,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    closeButtonText: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: 'white',
-    },
     propertiesListOverlay: {
         position: 'absolute',
         top: 20,
@@ -618,59 +602,6 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: colors.primaryColor,
         fontWeight: '600',
-    },
-    infoWindow: {
-        backgroundColor: 'white',
-        borderRadius: 8,
-        padding: 12,
-        minWidth: 200,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 4,
-    },
-    infoWindowTitle: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: colors.primaryDark,
-        marginBottom: 4,
-    },
-    infoWindowLocation: {
-        fontSize: 12,
-        color: colors.primaryLight_1,
-        marginBottom: 8,
-    },
-    infoWindowPrice: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: colors.primaryColor,
-        marginBottom: 12,
-    },
-    infoWindowActions: {
-        flexDirection: 'row',
-        gap: 8,
-    },
-    infoWindowButton: {
-        flex: 1,
-        backgroundColor: colors.primaryColor,
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 6,
-        alignItems: 'center',
-    },
-    infoWindowButtonSecondary: {
-        backgroundColor: 'transparent',
-        borderWidth: 1,
-        borderColor: colors.primaryColor,
-    },
-    infoWindowButtonText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: 'white',
-    },
-    infoWindowButtonTextSecondary: {
-        color: colors.primaryColor,
     },
     listContainer: {
         padding: 16,
@@ -743,45 +674,6 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: '600',
         fontSize: 16,
-    },
-    selectedPropertyInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: 16,
-        backgroundColor: colors.primaryLight,
-        borderTopWidth: 1,
-        borderTopColor: colors.primaryLight_1,
-    },
-    selectedPropertyContent: {
-        flex: 1,
-    },
-    selectedPropertyTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: colors.primaryDark,
-        marginBottom: 4,
-    },
-    selectedPropertyLocation: {
-        fontSize: 14,
-        color: colors.primaryDark_1,
-        marginBottom: 4,
-    },
-    selectedPropertyPrice: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: colors.primaryColor,
-    },
-    viewPropertyButton: {
-        backgroundColor: colors.primaryColor,
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 6,
-    },
-    viewPropertyButtonText: {
-        color: 'white',
-        fontSize: 14,
-        fontWeight: '600',
     },
     errorContainer: {
         flex: 1,

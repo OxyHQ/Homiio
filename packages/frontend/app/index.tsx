@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, RefreshControl } from 'react-native';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, RefreshControl, FlatList } from 'react-native';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 // Import real data hooks
 import { useProperties } from '@/hooks';
 import { useOxy } from '@oxyhq/services';
+import { useDebouncedAddressSearch, type AddressSuggestion } from '@/hooks/useAddressSearch';
 
 // Import components
 import { PropertyCard } from '@/components/PropertyCard';
@@ -33,6 +34,21 @@ export default function HomePage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionsFocused, setSuggestionsFocused] = useState(false);
+  // Use the reusable address search hook
+  const {
+    suggestions: addressSuggestions,
+    loading: isLoadingAddresses,
+    error: addressSearchError,
+    debouncedSearch: fetchAddressSuggestions,
+    clearSuggestions: clearAddressSuggestions
+  } = useDebouncedAddressSearch({
+    minQueryLength: 3,
+    debounceDelay: 500,
+    maxResults: 5,
+    includeAddressDetails: true
+  });
   const { oxyServices, activeSessionId } = useOxy();
 
   // Set enhanced SEO for home page
@@ -61,12 +77,12 @@ export default function HomePage() {
   }, [properties]);
 
   const propertyTypes = [
-    { id: 'apartment', name: 'Apartments', icon: 'business-outline', count: 0 },
-    { id: 'house', name: 'Houses', icon: 'home-outline', count: 0 },
-    { id: 'room', name: 'Rooms', icon: 'bed-outline', count: 0 },
-    { id: 'studio', name: 'Studios', icon: 'home-outline', count: 0 },
-    { id: 'coliving', name: 'Co-living', icon: 'people-outline', count: 0 },
-    { id: 'public_housing', name: 'Public Housing', icon: 'library-outline', count: 0 },
+    { id: 'apartment', name: t('search.propertyType.apartments'), icon: 'business-outline', count: 0 },
+    { id: 'house', name: t('search.propertyType.houses'), icon: 'home-outline', count: 0 },
+    { id: 'room', name: t('search.propertyType.rooms'), icon: 'bed-outline', count: 0 },
+    { id: 'studio', name: t('search.propertyType.studios'), icon: 'home-outline', count: 0 },
+    { id: 'coliving', name: t('search.propertyType.coliving'), icon: 'people-outline', count: 0 },
+    { id: 'public_housing', name: t('search.propertyType.publicHousing'), icon: 'library-outline', count: 0 },
   ];
 
   // Calculate property type counts
@@ -102,10 +118,118 @@ export default function HomePage() {
       .map(([city, count]) => ({ id: city, name: city, count }));
   }, [properties]);
 
+  const isAuthenticated = !!(oxyServices && activeSessionId);
+
+  // Generate suggestions data
+  const suggestionsData = useMemo(() => {
+    const suggestions = [];
+
+    // Address suggestions (when user is typing)
+    if (searchQuery.trim() && addressSuggestions.length > 0) {
+      suggestions.push({
+        type: 'addresses',
+        title: t('search.addressSuggestions') || 'Address Suggestions',
+        items: addressSuggestions.map(suggestion => ({
+          text: suggestion.text,
+          icon: suggestion.icon,
+          action: () => {
+            setSearchQuery(suggestion.text);
+            router.push(`/search/address/${encodeURIComponent(suggestion.text)}`);
+          }
+        }))
+      });
+    }
+
+    // Property types
+    suggestions.push({
+      type: 'propertyTypes',
+      title: t('search.propertyTypes'),
+      items: propertyTypes.slice(0, 4).map(type => ({
+        text: type.name,
+        icon: type.icon,
+        action: () => router.push(`/properties/type/${type.id}`)
+      }))
+    });
+
+    // Top cities (location-based)
+    if (topCities.length > 0) {
+      suggestions.push({
+        type: 'cities',
+        title: t('search.popularCities'),
+        items: topCities.map(city => ({
+          text: city.name,
+          icon: 'location-outline',
+          action: () => router.push(`/properties/city/${city.id}`)
+        }))
+      });
+    }
+
+    // Common neighborhoods/areas (if available)
+    const commonAreas = [
+      { text: t('search.areas.downtown'), icon: 'business-outline' },
+      { text: t('search.areas.universityDistrict'), icon: 'school-outline' },
+      { text: t('search.areas.businessDistrict'), icon: 'briefcase-outline' },
+      { text: t('search.areas.residentialArea'), icon: 'home-outline' }
+    ];
+
+    suggestions.push({
+      type: 'areas',
+      title: t('search.popularAreas') || 'Popular Areas',
+      items: commonAreas
+    });
+
+    // Quick filters
+    suggestions.push({
+      type: 'quickFilters',
+      title: t('search.quickFilters'),
+      items: [
+        { text: t('search.Furnished'), icon: 'bed-outline', filter: 'furnished' },
+        { text: t('search.Pets Allowed'), icon: 'paw-outline', filter: 'pets' },
+        { text: t('search.Eco-friendly'), icon: 'leaf-outline', filter: 'eco' },
+        { text: t('search.Co-living'), icon: 'people-outline', filter: 'coliving' }
+      ]
+    });
+
+    return suggestions;
+  }, [searchQuery, addressSuggestions, propertyTypes, topCities, t, router]);
+
   const handleSearch = () => {
     if (searchQuery.trim()) {
-      router.push(`/search/${encodeURIComponent(searchQuery)}`);
+      setShowSuggestions(false);
+      // Search by address/location
+      router.push(`/search/address/${encodeURIComponent(searchQuery)}`);
     }
+  };
+
+  const handleSuggestionPress = useCallback((suggestion: any) => {
+    if (suggestion.action) {
+      suggestion.action();
+    } else if (suggestion.filter) {
+      // For filters, search by the filter term
+      router.push(`/search/filter/${encodeURIComponent(suggestion.text)}`);
+    } else {
+      // For location-based suggestions, search by address
+      setSearchQuery(suggestion.text);
+      router.push(`/search/address/${encodeURIComponent(suggestion.text)}`);
+    }
+    setShowSuggestions(false);
+  }, [router]);
+
+
+
+  const handleSearchFocus = () => {
+    setShowSuggestions(true);
+    setSuggestionsFocused(true);
+  };
+
+  const handleSearchBlur = () => {
+    // Delay hiding suggestions to allow for touch events
+    setTimeout(() => {
+      setSuggestionsFocused(false);
+      if (!suggestionsFocused) {
+        setShowSuggestions(false);
+      }
+    }, 200);
   };
 
   const onRefresh = async () => {
@@ -121,8 +245,6 @@ export default function HomePage() {
       setRefreshing(false);
     }
   };
-
-  const isAuthenticated = !!(oxyServices && activeSessionId);
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={['top']}>
@@ -149,16 +271,65 @@ export default function HomePage() {
                 <IconComponent name="search" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
                 <TextInput
                   style={styles.searchInput}
-                  placeholder={t("home.hero.searchPlaceholder")}
+                  placeholder={t("home.hero.searchPlaceholder") || "Search by address, city, or neighborhood..."}
                   value={searchQuery}
-                  onChangeText={setSearchQuery}
+                  onChangeText={(text) => {
+                    setSearchQuery(text);
+                    fetchAddressSuggestions(text);
+                  }}
                   onSubmitEditing={handleSearch}
+                  onFocus={handleSearchFocus}
+                  onBlur={handleSearchBlur}
                 />
               </View>
               <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-                <Text style={styles.searchButtonText}>{t("home.hero.searchButton")}</Text>
+                <IconComponent name="search" size={20} color={colors.COLOR_BLACK} />
               </TouchableOpacity>
             </View>
+
+            {/* Search Suggestions Dropdown */}
+            {showSuggestions && (
+              <View style={styles.suggestionsContainer}>
+                {isLoadingAddresses && searchQuery.trim() && (
+                  <View style={styles.suggestionSection}>
+                    <View style={styles.suggestionItems}>
+                      <View style={styles.suggestionItem}>
+                        <LoadingSpinner size={16} />
+                        <Text style={styles.suggestionText}>{t('search.searchingAddresses')}</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+                <FlatList
+                  data={suggestionsData}
+                  keyExtractor={(item, index) => `${item.type}-${index}`}
+                  renderItem={({ item: section }) => (
+                    <View style={styles.suggestionSection}>
+                      <Text style={styles.suggestionSectionTitle}>{section.title}</Text>
+                      <View style={styles.suggestionItems}>
+                        {section.items.map((suggestion, index) => (
+                          <TouchableOpacity
+                            key={`${section.type}-${index}`}
+                            style={styles.suggestionItem}
+                            onPress={() => handleSuggestionPress(suggestion)}
+                            activeOpacity={0.7}
+                          >
+                            <IconComponent
+                              name={suggestion.icon}
+                              size={16}
+                              color={colors.COLOR_BLACK_LIGHT_4}
+                            />
+                            <Text style={styles.suggestionText}>{suggestion.text}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                  style={styles.suggestionsList}
+                  showsVerticalScrollIndicator={false}
+                />
+              </View>
+            )}
           </View>
         </LinearGradient>
 
@@ -412,6 +583,8 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderColor: colors.COLOR_BLACK,
     borderWidth: 1,
+    position: 'relative',
+    zIndex: 1000,
   },
   heroContent: {
     width: '100%',
@@ -758,9 +931,59 @@ const styles = StyleSheet.create({
   homeIncludedDot: {
     width: 6,
     height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.primaryColor,
-    marginLeft: 6,
+  },
+  // Search Suggestions Styles
+  suggestionsContainer: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.COLOR_BLACK_LIGHT_4,
+    maxHeight: 400,
+    zIndex: 1001,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 10,
+  },
+  suggestionsList: {
+    maxHeight: 400,
+  },
+  suggestionSection: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.COLOR_BLACK_LIGHT_4,
+  },
+  suggestionSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.COLOR_BLACK,
+    marginBottom: 8,
+    paddingHorizontal: 16,
+  },
+  suggestionItems: {
+    paddingHorizontal: 16,
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK,
+    marginLeft: 12,
+    flex: 1,
   },
   viewAllAmenitiesButton: {
     flexDirection: 'row',

@@ -310,6 +310,25 @@
       "houses": "Case",
       "rooms": "Camere",
       "studios": "Monolocali"
+    },
+    "addressSuggestions": "Suggerimenti Indirizzo",
+    "popularAreas": "Aree Popolari",
+    "quickFilters": "Filtri Rapidi",
+    "searchingAddresses": "Cercando indirizzi...",
+    "propertyTypes": "Tipi di Proprietà",
+    "propertyType": {
+      "apartments": "Appartamenti",
+      "houses": "Case",
+      "rooms": "Camere",
+      "studios": "Monolocali",
+      "coliving": "Co-living",
+      "publicHousing": "Edilizia Popolare"
+    },
+    "areas": {
+      "downtown": "Centro",
+      "universityDistrict": "Distretto Universitario",
+      "businessDistrict": "Distretto Commerciale",
+      "residentialArea": "Area Residenziale"
     }
   },
   "profile": {
@@ -343,6 +362,7 @@
   },
   "properties": {
     "title": "Proprietà",
+    "map": "Mappa delle Proprietà",
     "filters": "Filtri",
     "sort": "Ordina",
     "view": "Visualizza",

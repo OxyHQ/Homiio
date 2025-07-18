@@ -191,7 +191,26 @@
         "noPropertyTypesAvailable": "No hi ha tipus de propietat disponibles",
         "noCitiesAvailable": "No hi ha ciutats disponibles",
         "noPropertyTypes": "No hi ha tipus de propietat disponibles",
-        "searching": "Cercant..."
+        "searching": "Cercant...",
+        "addressSuggestions": "Suggeriments d'Adreça",
+        "popularAreas": "Àrees Populars",
+        "quickFilters": "Filtres Ràpids",
+        "searchingAddresses": "Cercant adreces...",
+        "propertyTypes": "Tipus de Propietats",
+        "propertyType": {
+            "apartments": "Apartaments",
+            "houses": "Cases",
+            "rooms": "Habitacions",
+            "studios": "Estudis",
+            "coliving": "Convivència",
+            "publicHousing": "Habitatge Públic"
+        },
+        "areas": {
+            "downtown": "Centre",
+            "universityDistrict": "Districte Universitari",
+            "businessDistrict": "Districte Comercial",
+            "residentialArea": "Àrea Residencial"
+        }
     },
     "profile": {
         "title": "Perfil",
@@ -261,6 +280,7 @@
     },
     "properties": {
         "title": "Propietats",
+        "map": "Mapa de Propietats",
         "filters": "Filtres",
         "sort": "Ordenar",
         "view": "Veure",

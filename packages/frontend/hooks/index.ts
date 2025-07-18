@@ -8,7 +8,6 @@ export {
   useCreateProperty,
   useUpdateProperty,
   useDeleteProperty,
-  usePropertySelectors,
   useUserProperties,
 } from './usePropertyQueries';
 
@@ -17,16 +16,13 @@ export {
   useEcoProperties,
   useCityProperties,
   useTypeProperties,
-  usePropertyListSelectors,
   useClearAllPropertyLists,
 } from './usePropertyListRedux';
 
 // Location Redux Hooks
 export {
   useLocationSearch,
-  useReverseGeocode,
   useLocation,
-  useLocationSelectors,
 } from './useLocationRedux';
 
 // Profile Zustand Hooks
@@ -65,4 +61,14 @@ export {
 // Neighborhood Redux Hooks
 export {
   useNeighborhood,
-} from './useNeighborhood'; 
+} from './useNeighborhood';
+
+// Address Search Hooks
+export {
+  useAddressSearch,
+  useDebouncedAddressSearch,
+  useReverseGeocode,
+  type AddressSuggestion,
+  type AddressSearchOptions,
+  type UseAddressSearchReturn,
+} from './useAddressSearch'; 

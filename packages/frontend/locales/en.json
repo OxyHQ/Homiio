@@ -191,7 +191,26 @@
         "noPropertyTypesAvailable": "No property types available",
         "noCitiesAvailable": "No cities available",
         "noPropertyTypes": "No property types available",
-        "searching": "Searching..."
+        "searching": "Searching...",
+        "addressSuggestions": "Address Suggestions",
+        "popularAreas": "Popular Areas",
+        "quickFilters": "Quick Filters",
+        "searchingAddresses": "Searching addresses...",
+        "propertyTypes": "Property Types",
+        "propertyType": {
+            "apartments": "Apartments",
+            "houses": "Houses",
+            "rooms": "Rooms",
+            "studios": "Studios",
+            "coliving": "Co-living",
+            "publicHousing": "Public Housing"
+        },
+        "areas": {
+            "downtown": "Downtown",
+            "universityDistrict": "University District",
+            "businessDistrict": "Business District",
+            "residentialArea": "Residential Area"
+        }
     },
     "profile": {
         "title": "Profile",
@@ -261,6 +280,7 @@
     },
     "properties": {
         "title": "Properties",
+        "map": "Properties Map",
         "filters": "Filters",
         "sort": "Sort",
         "view": "View",
