@@ -12,9 +12,14 @@ import config from '../config';
  * Ensure logs directory exists
  */
 const ensureLogDirectory = () => {
-  const logDir = path.dirname(config.logging.file);
-  if (!fs.existsSync(logDir)) {
-    fs.mkdirSync(logDir, { recursive: true });
+  try {
+    const logDir = path.dirname(config.logging.file);
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+  } catch (error) {
+    console.error('Failed to create log directory:', error);
+    // Don't throw - logging should not break the application
   }
 };
 
@@ -77,7 +82,9 @@ const log = (level: string, message: string, meta: Record<string, unknown> = {})
       const logLine = JSON.stringify(logEntry) + '\n';
       fs.appendFileSync(config.logging.file, logLine);
     } catch (error) {
+      // Log to console as fallback, but don't break the application
       console.error('Failed to write to log file:', error);
+      console.log('Log entry that failed to write:', logEntry);
     }
   }
 };

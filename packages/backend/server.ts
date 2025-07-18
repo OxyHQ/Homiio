@@ -214,11 +214,11 @@ async function startServer() {
   }
 }
 
-// Start the server
-startServer();
+// Export for serverless environments (Vercel)
+export default app;
 
-// Export app for testing purposes
-module.exports = {
-  app
-};
+// For local development, start the server
+if (process.env.NODE_ENV !== 'production' || process.env.VERCEL !== '1') {
+  startServer();
+}
 
