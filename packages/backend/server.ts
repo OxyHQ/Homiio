@@ -215,7 +215,7 @@ async function startServer() {
 }
 
 // Export for serverless environments (Vercel)
-export default app;
+module.exports = app;
 
 // For local development, start the server
 if (process.env.NODE_ENV !== 'production' || process.env.VERCEL !== '1') {
