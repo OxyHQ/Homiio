@@ -165,13 +165,13 @@ class TelegramController {
     try {
       const { city } = req.params;
       
-      const groupId = telegramService.getGroupIdForCity(city);
+      const groupConfig = telegramService.getGroupForCity(city);
       const groupsSummary = telegramService.getGroupsSummary();
 
       res.json(successResponse({
         city,
-        groupId,
-        configured: !!groupId,
+        groupId: groupConfig?.id,
+        configured: !!groupConfig?.id,
         allMappings: groupsSummary
       }, 'Group mapping retrieved successfully'));
     } catch (error) {
@@ -241,4 +241,4 @@ class TelegramController {
   }
 }
 
-export default new TelegramController();
+module.exports = new TelegramController();

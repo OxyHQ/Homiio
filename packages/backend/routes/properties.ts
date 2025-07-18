@@ -19,6 +19,9 @@ export default function () {
   // Protected routes (authentication required)
   router.post("/", validation.validateProperty, asyncHandler(propertyController.createProperty));
   router.post("/dev", validation.validateProperty, asyncHandler(propertyController.createPropertyDev));
+  
+  // Test route for Telegram notification (no auth required)
+  router.post("/test-telegram", validation.validateProperty, asyncHandler(propertyController.createPropertyDev));
   router.put("/:propertyId", validation.validateProperty, asyncHandler(propertyController.updateProperty));
   router.delete("/:propertyId", asyncHandler(propertyController.deleteProperty));
 

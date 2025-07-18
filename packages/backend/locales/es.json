@@ -21,7 +21,9 @@
             "apartment": "Apartamento",
             "house": "Casa",
             "room": "Habitación",
-            "studio": "Estudio"
+            "studio": "Estudio",
+            "duplex": "Dúplex",
+            "penthouse": "Ático"
         },
         "paymentFrequency": {
             "monthly": "mensual",

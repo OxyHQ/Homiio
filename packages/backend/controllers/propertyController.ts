@@ -76,11 +76,31 @@ class PropertyController {
       businessLogger.propertyCreated(savedProperty._id, savedProperty.profileId);
 
       // Send Telegram notification for new property (non-blocking)
+      logger.info('Attempting to send Telegram notification for new property', {
+        propertyId: savedProperty._id,
+        city: savedProperty.address?.city,
+        type: savedProperty.type
+      });
+      
       telegramService.sendPropertyNotification(savedProperty)
+        .then(success => {
+          if (success) {
+            logger.info('Telegram notification sent successfully', {
+              propertyId: savedProperty._id,
+              city: savedProperty.address?.city
+            });
+          } else {
+            logger.warn('Telegram notification failed (returned false)', {
+              propertyId: savedProperty._id,
+              city: savedProperty.address?.city
+            });
+          }
+        })
         .catch(error => {
-          logger.warn('Failed to send Telegram notification for new property', {
+          logger.error('Failed to send Telegram notification for new property', {
             propertyId: savedProperty._id,
-            error: error.message
+            error: error.message,
+            stack: error.stack
           });
         });
 
@@ -146,11 +166,31 @@ class PropertyController {
       businessLogger.propertyCreated(savedProperty._id, savedProperty.profileId);
 
       // Send Telegram notification for new property (non-blocking)
+      logger.info('Attempting to send Telegram notification for new property (dev mode)', {
+        propertyId: savedProperty._id,
+        city: savedProperty.address?.city,
+        type: savedProperty.type
+      });
+      
       telegramService.sendPropertyNotification(savedProperty)
+        .then(success => {
+          if (success) {
+            logger.info('Telegram notification sent successfully (dev mode)', {
+              propertyId: savedProperty._id,
+              city: savedProperty.address?.city
+            });
+          } else {
+            logger.warn('Telegram notification failed (returned false) (dev mode)', {
+              propertyId: savedProperty._id,
+              city: savedProperty.address?.city
+            });
+          }
+        })
         .catch(error => {
-          logger.warn('Failed to send Telegram notification for new property (dev mode)', {
+          logger.error('Failed to send Telegram notification for new property (dev mode)', {
             propertyId: savedProperty._id,
-            error: error.message
+            error: error.message,
+            stack: error.stack
           });
         });
 

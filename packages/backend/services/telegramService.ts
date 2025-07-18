@@ -79,6 +79,17 @@ class TelegramService {
   }
 
   /**
+   * Escape Markdown characters to prevent parsing errors
+   * @param {string} text - Text to escape
+   * @returns {string} - Escaped text
+   */
+  escapeMarkdown(text) {
+    if (!text) return '';
+    // Escape special Markdown characters: _ * [ ] ( ) ~ ` > # + - = | { } . !
+    return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
+  }
+
+  /**
    * Format property information for Telegram message
    * @param {Object} property - The property object
    * @param {string} language - Language code for translations
@@ -129,7 +140,7 @@ class TelegramService {
       location = address.state || t.__('telegram.locationNotSpecified');
     }
     
-    const dynamicTitle = `🏠 **${propertyType} ${forRentText} ${location}**`;
+    const dynamicTitle = `🏠 **${this.escapeMarkdown(propertyType)} ${this.escapeMarkdown(forRentText)} ${this.escapeMarkdown(location)}**`;
     
     // Format rent
     const paymentFreq = t.__(`telegram.paymentFrequency.${rent.paymentFrequency}`) || rent.paymentFrequency;
@@ -151,22 +162,22 @@ class TelegramService {
       const truncatedDescription = description.length > 200 
         ? description.substring(0, 200) + '...' 
         : description;
-      descriptionSection = `\n📝 **${t.__('telegram.description')}:**\n${truncatedDescription}\n`;
+      descriptionSection = `\n📝 **${t.__('telegram.description')}:**\n${this.escapeMarkdown(truncatedDescription)}\n`;
     }
 
     const message = `${dynamicTitle}
 
-💰 **${t.__('telegram.rent')}:** ${rentDisplay}
-📅 **${t.__('telegram.available')}:** ${availableDate}
+💰 **${t.__('telegram.rent')}:** ${this.escapeMarkdown(rentDisplay)}
+📅 **${t.__('telegram.available')}:** ${this.escapeMarkdown(availableDate)}
 
 🏡 **${t.__('telegram.details')}:**
 • ${bedrooms} ${t.__('telegram.bedrooms')}, ${bathrooms} ${t.__('telegram.bathrooms')}
-• ${removePropertyNumber(address.street)}, ${address.city}, ${address.state} ${address.zipCode}
-• ${t.__('telegram.type')}: ${propertyType}
-${property.squareFootage ? `• ${t.__('telegram.size')}: ${property.squareFootage} m²` : ''}
+• ${this.escapeMarkdown(removePropertyNumber(address.street))}, ${this.escapeMarkdown(address.city)}, ${this.escapeMarkdown(address.state)} ${this.escapeMarkdown(address.zipCode)}
+• ${t.__('telegram.type')}: ${this.escapeMarkdown(propertyType)}
+${property.squareFootage ? `• ${t.__('telegram.size')}: ${this.escapeMarkdown(property.squareFootage.toString())} m²` : ''}
 
-✨ **${t.__('telegram.amenities')}:** ${amenitiesText}${descriptionSection}
-${t.__('telegram.hashtags.newProperty')} #${address.city.replace(/\s+/g, '')} #${propertyType.replace(/\s+/g, '')}`;
+✨ **${t.__('telegram.amenities')}:** ${this.escapeMarkdown(amenitiesText)}${descriptionSection}
+${t.__('telegram.hashtags.newProperty')} #${this.escapeMarkdown(address.city.replace(/\s+/g, ''))} #${this.escapeMarkdown(propertyType.replace(/\s+/g, ''))}`;
 
     return message;
   }

@@ -3,16 +3,16 @@
  * Central export for all controller components
  */
 
-import propertyController from './propertyController';
-import roomController from './roomController';
-import analyticsController from './analyticsController';
-import deviceController from './deviceController';
-import notificationController from './notificationController';
-import leaseController from './leaseController';
-import profileController from './profileController';
-import telegramController from './telegramController';
+const propertyController = require('./propertyController');
+const roomController = require('./roomController');
+const analyticsController = require('./analyticsController');
+const deviceController = require('./deviceController');
+const notificationController = require('./notificationController');
+const leaseController = require('./leaseController');
+const profileController = require('./profileController');
+const telegramController = require('./telegramController');
 
-export default {
+module.exports = {
   propertyController,
   roomController,
   analyticsController,
