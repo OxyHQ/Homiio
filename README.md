@@ -90,7 +90,7 @@ Scripts available in the root `package.json`:
 
 Run everything at once:
 ```bash
-npm run dev         # Starts backend + mobile app (via concurrently)
+npm run dev         # Starts backend + frontend (via concurrently)
 ```
 
 Run individually:
