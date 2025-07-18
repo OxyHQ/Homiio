@@ -45,24 +45,14 @@ export function SideBar() {
             iconActive: <SindiIcon size={24} color={colors.primaryColor} />,
             route: '/sindi',
         },
-        {
-            title: t("sidebar.navigation.contracts"),
-            icon: <View><IconComponent name="document-text-outline" size={24} color={colors.COLOR_BLACK} /></View>,
-            iconActive: <View><IconComponent name="document-text" size={24} color={colors.primaryColor} /></View>,
-            route: '/contracts',
-        },
+
         {
             title: t("sidebar.navigation.profile"),
             icon: <View><IconComponent name="person-outline" size={24} color={colors.COLOR_BLACK} /></View>,
             iconActive: <View><IconComponent name="person" size={24} color={colors.primaryColor} /></View>,
             route: '/profile',
         },
-        {
-            title: t("sidebar.navigation.payments"),
-            icon: <View><IconComponent name="card-outline" size={24} color={colors.COLOR_BLACK} /></View>,
-            iconActive: <View><IconComponent name="card" size={24} color={colors.primaryColor} /></View>,
-            route: '/payments',
-        },
+
         {
             title: t("sidebar.navigation.roommates"),
             icon: <Hashtag color={colors.COLOR_BLACK} />,
