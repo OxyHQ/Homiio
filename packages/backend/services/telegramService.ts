@@ -19,6 +19,9 @@ i18n.configure({
 });
 
 class TelegramService {
+  private bot: TelegramBot | null;
+  private isInitialized: boolean;
+
   constructor() {
     this.bot = null;
     this.isInitialized = false;
@@ -87,6 +90,48 @@ class TelegramService {
     if (!text) return '';
     // Escape special Markdown characters: _ * [ ] ( ) ~ ` > # + - = | { } . !
     return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
+  }
+
+  /**
+   * Get the best image for a property
+   * @param {Object} property - The property object
+   * @returns {string} - Image URL (always returns a valid URL)
+   */
+  getPropertyImage(property) {
+    // Check if property has valid images array
+    if (!property.images || !Array.isArray(property.images) || property.images.length === 0) {
+      logger.info('No images found for property, using default placeholder', {
+        propertyId: property._id
+      });
+      return 'https://homiio.com/images/property-placeholder.jpg';
+    }
+
+    // Find primary image first
+    const primaryImage = property.images.find(img => img.isPrimary);
+    if (primaryImage && primaryImage.url) {
+      logger.debug('Using primary image for property', {
+        propertyId: property._id,
+        imageUrl: primaryImage.url
+      });
+      return primaryImage.url;
+    }
+
+    // Fall back to first image
+    const firstImage = property.images[0];
+    if (firstImage && firstImage.url) {
+      logger.debug('Using first image for property', {
+        propertyId: property._id,
+        imageUrl: firstImage.url
+      });
+      return firstImage.url;
+    }
+
+    // If no valid images found, return default
+    logger.warn('No valid image URLs found for property, using default placeholder', {
+      propertyId: property._id,
+      imageCount: property.images.length
+    });
+    return 'https://homiio.com/images/property-placeholder.jpg';
   }
 
   /**
@@ -222,20 +267,46 @@ ${t.__('telegram.hashtags.newProperty')} #${this.escapeMarkdown(address.city.rep
           ]
         ]
       };
-      
-      // Send message to the group
-      await this.bot.sendMessage(groupConfig.id, message, {
-        parse_mode: 'Markdown',
-        disable_web_page_preview: true,
-        reply_markup: keyboard
-      });
 
-      logger.info('Property notification sent to Telegram group', {
-        propertyId: property._id,
-        city: property.address?.city,
-        groupId: groupConfig.id,
-        language: groupConfig.language
-      });
+      // Get the best image for the property
+      const imageUrl = this.getPropertyImage(property);
+      
+      try {
+        // Send photo with caption instead of text message
+        await this.bot.sendPhoto(groupConfig.id, imageUrl, {
+          caption: message,
+          parse_mode: 'Markdown',
+          reply_markup: keyboard
+        });
+
+        logger.info('Property notification sent to Telegram group with image', {
+          propertyId: property._id,
+          city: property.address?.city,
+          groupId: groupConfig.id,
+          language: groupConfig.language,
+          imageUrl: imageUrl
+        });
+      } catch (imageError) {
+        // If image sending fails, fall back to text message
+        logger.warn('Failed to send image, falling back to text message', {
+          propertyId: property._id,
+          imageUrl: imageUrl,
+          error: imageError.message
+        });
+
+        await this.bot.sendMessage(groupConfig.id, message, {
+          parse_mode: 'Markdown',
+          disable_web_page_preview: true,
+          reply_markup: keyboard
+        });
+
+        logger.info('Property notification sent to Telegram group as text message (fallback)', {
+          propertyId: property._id,
+          city: property.address?.city,
+          groupId: groupConfig.id,
+          language: groupConfig.language
+        });
+      }
 
       return true;
     } catch (error) {
@@ -269,7 +340,7 @@ ${t.__('telegram.hashtags.newProperty')} #${this.escapeMarkdown(address.city.rep
       // Use provided message or default translated message
       const finalMessage = message || t.__('telegram.testMessage');
 
-      const options = {
+      const options: any = {
         parse_mode: 'Markdown'
       };
 
@@ -381,6 +452,100 @@ ${t.__('telegram.hashtags.newProperty')} #${this.escapeMarkdown(address.city.rep
     }
 
     return summary;
+  }
+
+  /**
+   * Test property image functionality
+   * @param {Object} testProperty - Test property object
+   * @returns {Object} - Test results
+   */
+  testPropertyImageFunctionality(testProperty = null) {
+    const testCases = [
+      {
+        name: 'Property with no images',
+        property: {
+          _id: 'test-no-images',
+          type: 'apartment',
+          address: { city: 'Barcelona', state: 'Catalunya' },
+          rent: { amount: 1200, currency: 'EUR', paymentFrequency: 'monthly' },
+          bedrooms: 2,
+          bathrooms: 1
+        },
+        expectedResult: 'https://homiio.com/images/property-placeholder.jpg'
+      },
+      {
+        name: 'Property with primary image',
+        property: {
+          _id: 'test-primary-image',
+          type: 'house',
+          address: { city: 'Madrid', state: 'Madrid' },
+          rent: { amount: 1500, currency: 'EUR', paymentFrequency: 'monthly' },
+          bedrooms: 3,
+          bathrooms: 2,
+          images: [
+            { url: 'https://example.com/image1.jpg', isPrimary: false },
+            { url: 'https://example.com/image2.jpg', isPrimary: true },
+            { url: 'https://example.com/image3.jpg', isPrimary: false }
+          ]
+        },
+        expectedResult: 'https://example.com/image2.jpg'
+      },
+      {
+        name: 'Property with images but no primary',
+        property: {
+          _id: 'test-no-primary',
+          type: 'studio',
+          address: { city: 'Valencia', state: 'Valencia' },
+          rent: { amount: 800, currency: 'EUR', paymentFrequency: 'monthly' },
+          bedrooms: 0,
+          bathrooms: 1,
+          images: [
+            { url: 'https://example.com/image1.jpg', isPrimary: false },
+            { url: 'https://example.com/image2.jpg', isPrimary: false }
+          ]
+        },
+        expectedResult: 'https://example.com/image1.jpg'
+      },
+      {
+        name: 'Property with invalid image URLs',
+        property: {
+          _id: 'test-invalid-urls',
+          type: 'room',
+          address: { city: 'Seville', state: 'Andalucia' },
+          rent: { amount: 600, currency: 'EUR', paymentFrequency: 'monthly' },
+          bedrooms: 0,
+          bathrooms: 1,
+          images: [
+            { url: '', isPrimary: false },
+            { url: null, isPrimary: true },
+            { url: undefined, isPrimary: false }
+          ]
+        },
+        expectedResult: 'https://homiio.com/images/property-placeholder.jpg'
+      }
+    ];
+
+    const results = testCases.map(testCase => {
+      const actualResult = this.getPropertyImage(testCase.property);
+      const passed = actualResult === testCase.expectedResult;
+      
+      return {
+        name: testCase.name,
+        expected: testCase.expectedResult,
+        actual: actualResult,
+        passed
+      };
+    });
+
+    const allPassed = results.every(result => result.passed);
+
+    return {
+      success: allPassed,
+      totalTests: results.length,
+      passedTests: results.filter(r => r.passed).length,
+      failedTests: results.filter(r => !r.passed).length,
+      results
+    };
   }
 }
 
