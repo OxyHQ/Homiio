@@ -16,7 +16,7 @@ import publicRoutes from './routes/public';
 import { OxyServices } from '@oxyhq/services/core';
 
 const oxy = new OxyServices({
-  baseURL: 'http://localhost:3001'
+  baseURL: process.env.OXY_API_URL || 'https://api.oxy.so'
 });
 
 // Initialize database connection
