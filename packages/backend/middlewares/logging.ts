@@ -8,10 +8,24 @@ import path from 'path';
 import { Request, Response, NextFunction } from 'express';
 import config from '../config';
 
+// Log environment information for debugging
+console.log('Logging environment:', {
+  environment: config.environment,
+  isVercel: !!process.env.VERCEL,
+  isLambda: !!process.env.AWS_LAMBDA_FUNCTION_NAME,
+  isFunction: !!process.env.FUNCTION_TARGET,
+  logFile: config.logging.file
+});
+
 /**
  * Ensure logs directory exists
  */
 const ensureLogDirectory = () => {
+  // Skip directory creation in serverless environments
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.FUNCTION_TARGET) {
+    return;
+  }
+  
   try {
     const logDir = path.dirname(config.logging.file);
     if (!fs.existsSync(logDir)) {
@@ -75,8 +89,9 @@ const log = (level: string, message: string, meta: Record<string, unknown> = {})
       console.log(consoleMessage, meta);
   }
 
-  // File output (in production)
-  if (config.environment === 'production') {
+  // File output (in production, but not in serverless environments)
+  const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.FUNCTION_TARGET;
+  if (config.environment === 'production' && !isServerless) {
     try {
       ensureLogDirectory();
       const logLine = JSON.stringify(logEntry) + '\n';
