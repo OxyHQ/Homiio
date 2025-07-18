@@ -12,6 +12,8 @@ import { PropertyMap } from '@/components/PropertyMap';
 import { PropertyPreviewWidget } from '@/components/widgets/PropertyPreviewWidget';
 import { useCreatePropertyFormStore, useCreatePropertyFormSelectors } from '@/store/createPropertyFormStore';
 import { useCreateProperty } from '@/hooks/usePropertyQueries';
+import { BottomSheetContext } from '@/app/_layout';
+import { SearchablePickerBottomSheet } from '@/components/SearchablePickerBottomSheet';
 
 // Define the property types
 const PROPERTY_TYPES = [
@@ -309,6 +311,12 @@ export default function CreatePropertyScreen() {
     setFormData('amenities', { selectedAmenities: updatedAmenities });
   };
 
+  const bottomSheet = React.useContext(BottomSheetContext);
+
+  // Predefined options
+  const COUNTRY_OPTIONS = ['US', 'Canada', 'Mexico', 'Other'];
+  const STATE_OPTIONS = ['CA', 'NY', 'TX', 'FL', 'IL', 'Other'];
+
   // Render step content based on current step name
   const renderStepContent = () => {
     const stepName = steps[currentStep];
@@ -479,27 +487,22 @@ export default function CreatePropertyScreen() {
 
               <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
                 <ThemedText style={styles.label}>State</ThemedText>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {['CA', 'NY', 'TX', 'FL', 'IL', 'Other'].map((state) => (
-                    <TouchableOpacity
-                      key={state}
-                      style={[
-                        styles.propertyTypeButton,
-                        formData.location.state === state && styles.propertyTypeButtonSelected
-                      ]}
-                      onPress={() => updateFormField('location', 'state', state)}
-                    >
-                      <ThemedText
-                        style={[
-                          styles.propertyTypeText,
-                          formData.location.state === state && styles.propertyTypeTextSelected
-                        ]}
-                      >
-                        {state}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                <TouchableOpacity
+                  style={[styles.input, { justifyContent: 'center' }]}
+                  onPress={() => bottomSheet.open(
+                    <SearchablePickerBottomSheet
+                      options={STATE_OPTIONS}
+                      selected={formData.location.state || ''}
+                      onSelect={(value) => updateFormField('location', 'state', value)}
+                      title="State"
+                      onClose={() => { }}
+                    />
+                  )}
+                >
+                  <ThemedText style={{ color: formData.location.state ? colors.primaryDark : colors.COLOR_BLACK_LIGHT_4 }}>
+                    {formData.location.state || 'Select state'}
+                  </ThemedText>
+                </TouchableOpacity>
                 {validationErrors.state && <ThemedText style={styles.errorText}>{validationErrors.state}</ThemedText>}
               </View>
             </View>
@@ -518,27 +521,22 @@ export default function CreatePropertyScreen() {
 
               <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
                 <ThemedText style={styles.label}>Country</ThemedText>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {['US', 'Canada', 'Mexico', 'Other'].map((country) => (
-                    <TouchableOpacity
-                      key={country}
-                      style={[
-                        styles.propertyTypeButton,
-                        formData.location.country === country && styles.propertyTypeButtonSelected
-                      ]}
-                      onPress={() => updateFormField('location', 'country', country)}
-                    >
-                      <ThemedText
-                        style={[
-                          styles.propertyTypeText,
-                          formData.location.country === country && styles.propertyTypeTextSelected
-                        ]}
-                      >
-                        {country}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                <TouchableOpacity
+                  style={[styles.input, { justifyContent: 'center' }]}
+                  onPress={() => bottomSheet.open(
+                    <SearchablePickerBottomSheet
+                      options={COUNTRY_OPTIONS}
+                      selected={formData.location.country || ''}
+                      onSelect={(value) => updateFormField('location', 'country', value)}
+                      title="Country"
+                      onClose={() => { }}
+                    />
+                  )}
+                >
+                  <ThemedText style={{ color: formData.location.country ? colors.primaryDark : colors.COLOR_BLACK_LIGHT_4 }}>
+                    {formData.location.country || 'Select country'}
+                  </ThemedText>
+                </TouchableOpacity>
               </View>
             </View>
 

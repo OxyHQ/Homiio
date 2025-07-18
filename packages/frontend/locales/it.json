@@ -385,6 +385,18 @@
       "availability": "Disponibilità",
       "apply": "Applica Filtri",
       "clear": "Cancella Tutto"
+    },
+    "titles": {
+      "forRent": "in affitto a",
+      "locationNotSpecified": "Posizione non specificata",
+      "types": {
+        "apartment": "Appartamento",
+        "house": "Casa",
+        "room": "Stanza",
+        "studio": "Monolocale",
+        "duplex": "Duplex",
+        "penthouse": "Attico"
+      }
     }
   },
   "payments": {

@@ -1,5 +1,5 @@
 // --- 1. Organized Imports ---
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useMemo, createContext, useRef } from "react";
 import { ScrollView, Keyboard, LogBox, Platform, View, StyleSheet } from "react-native";
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
@@ -25,9 +25,10 @@ import { initReactI18next, I18nextProvider, useTranslation } from "react-i18next
 import enUS from "@/locales/en.json";
 import esES from "@/locales/es.json";
 import caES from "@/locales/ca-ES.json";
+import itIT from "@/locales/it.json";
 import { BottomBar } from "@/components/BottomBar";
 import { MenuProvider } from 'react-native-popup-menu';
-import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { BottomSheetModalProvider, BottomSheetModal } from "@gorhom/bottom-sheet";
 import WebSplashScreen from "@/components/WebSplashScreen";
 import LoadingTopSpinner from "@/components/LoadingTopSpinner";
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -36,12 +37,45 @@ import { OxyLogo, OxyProvider, OxyServices, OxySignInButton, useOxy } from '@oxy
 import { generateWebsiteStructuredData, injectStructuredData } from '@/utils/structuredData';
 import "../styles/global.css";
 
+// BottomSheet context for global sheet control
+export const BottomSheetContext = createContext<{ open: (content: React.ReactNode) => void }>({ open: () => { } });
+
+function BottomSheetProvider({ children }: { children: React.ReactNode }) {
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const [sheetContent, setSheetContent] = React.useState<React.ReactNode>(null);
+
+  const open = useCallback((content: React.ReactNode) => {
+    setSheetContent(content);
+    setTimeout(() => {
+      bottomSheetModalRef.current?.present();
+    }, 0);
+  }, []);
+
+  const handleDismiss = () => setSheetContent(null);
+
+  return (
+    <BottomSheetContext.Provider value={{ open }}>
+      <BottomSheetModalProvider>
+        {children}
+        <BottomSheetModal
+          ref={bottomSheetModalRef}
+          snapPoints={["60%", "90%"]}
+          onDismiss={handleDismiss}
+        >
+          {sheetContent}
+        </BottomSheetModal>
+      </BottomSheetModalProvider>
+    </BottomSheetContext.Provider>
+  );
+}
+
 // --- 2. i18n Initialization ---
 i18n.use(initReactI18next).init({
   resources: {
     "en-US": { translation: enUS },
     "es-ES": { translation: esES },
     "ca-ES": { translation: caES },
+    "it-IT": { translation: itIT },
   },
   lng: "en-US",
   fallbackLng: "en-US",
@@ -196,25 +230,27 @@ export default function RootLayout() {
       theme="light"
     >
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <I18nextProvider i18n={i18n}>
-          <MenuProvider>
-            <ErrorBoundary>
-              <ProfileProvider>
-                <View style={styles.container}>
-                  <SideBar />
-                  <View style={styles.mainContentWrapper}>
-                    <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0 }} />
-                    <Slot />
+        <BottomSheetProvider>
+          <I18nextProvider i18n={i18n}>
+            <MenuProvider>
+              <ErrorBoundary>
+                <ProfileProvider>
+                  <View style={styles.container}>
+                    <SideBar />
+                    <View style={styles.mainContentWrapper}>
+                      <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0 }} />
+                      <Slot />
+                    </View>
+                    <RightBar />
                   </View>
-                  <RightBar />
-                </View>
-                <StatusBar style="auto" />
-                <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
-                {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
-              </ProfileProvider>
-            </ErrorBoundary>
-          </MenuProvider>
-        </I18nextProvider>
+                  <StatusBar style="auto" />
+                  <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
+                  {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
+                </ProfileProvider>
+              </ErrorBoundary>
+            </MenuProvider>
+          </I18nextProvider>
+        </BottomSheetProvider>
       </SafeAreaProvider>
     </OxyProvider>
   );

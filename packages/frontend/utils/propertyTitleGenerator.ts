@@ -31,6 +31,23 @@ function removePropertyNumber(street: string): string {
 }
 
 /**
+ * Safe translation function with fallbacks
+ * @param key - Translation key
+ * @param fallback - Fallback value if translation is missing
+ * @returns Translated text or fallback
+ */
+function safeTranslate(key: string, fallback: string): string {
+  try {
+    const translation = i18next.t(key);
+    // Check if translation exists and is not the same as the key (which means it failed)
+    return translation && translation !== key ? translation : fallback;
+  } catch (error) {
+    console.warn(`Translation failed for key: ${key}`, error);
+    return fallback;
+  }
+}
+
+/**
  * Generate a property title based on property data with dynamic localization
  * Format: "{PropertyType} for rent in {Street}, {City}, {State}"
  * @param propertyData - Property data object
@@ -45,11 +62,14 @@ export function generatePropertyTitle(propertyData: PropertyData): string {
   // Get current language from i18next
   const currentLanguage = i18next.language || 'en';
 
-  // Get translated property type
-  const propertyType = i18next.t(`properties.titles.types.${type}`) || i18next.t(`properties.titles.types.apartment`);
+  // Get translated property type with fallbacks
+  const propertyType = safeTranslate(
+    `properties.titles.types.${type}`, 
+    safeTranslate('properties.titles.types.apartment', 'Apartment')
+  );
   
-  // Get "for rent in" text in current language
-  const forRentText = i18next.t('properties.titles.forRent');
+  // Get "for rent in" text in current language with fallback
+  const forRentText = safeTranslate('properties.titles.forRent', 'for rent in');
 
   // Build location string (without property numbers for privacy)
   let location = '';
@@ -65,7 +85,7 @@ export function generatePropertyTitle(propertyData: PropertyData): string {
       location += `, ${address.state}`;
     }
   } else {
-    location = address.state || i18next.t('properties.titles.locationNotSpecified');
+    location = address.state || safeTranslate('properties.titles.locationNotSpecified', 'Location not specified');
   }
 
   // Generate the final title: "PropertyType for rent in Location"
@@ -104,16 +124,18 @@ export function generateDetailedPropertyTitle(
   if (bedrooms > 0 || bathrooms > 0) {
     const details = [];
     if (bedrooms > 0) {
-      const bedroomText = bedrooms === 1 ? 
-        i18next.t('properties.details.bedrooms').slice(0, -1) : // Remove 's' for singular
-        i18next.t('properties.details.bedrooms');
-      details.push(`${bedrooms} ${bedroomText.toLowerCase()}`);
+      const bedroomText = safeTranslate('properties.details.bedrooms', 'Bedrooms');
+      const bedroomLabel = bedrooms === 1 ? 
+        bedroomText.slice(0, -1) : // Remove 's' for singular
+        bedroomText;
+      details.push(`${bedrooms} ${bedroomLabel.toLowerCase()}`);
     }
     if (bathrooms > 0) {
-      const bathroomText = bathrooms === 1 ? 
-        i18next.t('properties.details.bathrooms').slice(0, -1) : // Remove 's' for singular  
-        i18next.t('properties.details.bathrooms');
-      details.push(`${bathrooms} ${bathroomText.toLowerCase()}`);
+      const bathroomText = safeTranslate('properties.details.bathrooms', 'Bathrooms');
+      const bathroomLabel = bathrooms === 1 ? 
+        bathroomText.slice(0, -1) : // Remove 's' for singular  
+        bathroomText;
+      details.push(`${bathrooms} ${bathroomLabel.toLowerCase()}`);
     }
     
     if (details.length > 0) {
@@ -145,4 +167,100 @@ export function previewPropertyTitle(propertyData: PropertyData): string | null 
   }
   
   return generatePropertyTitle(propertyData);
+}
+
+/**
+ * Test function to verify property title generation works correctly
+ * This function can be used for debugging and testing
+ * @param language - Language code to test with
+ * @returns Object with test results
+ */
+export function testPropertyTitleGeneration(language = 'en-US'): {
+  success: boolean;
+  tests: Array<{
+    name: string;
+    input: PropertyData;
+    expected: string;
+    actual: string;
+    passed: boolean;
+  }>;
+} {
+  const originalLanguage = i18next.language;
+  
+  try {
+    // Set language for testing
+    i18next.changeLanguage(language);
+    
+    const testCases: Array<{
+      name: string;
+      input: PropertyData;
+      expected: string;
+    }> = [
+      {
+        name: 'Basic apartment with address',
+        input: {
+          type: 'apartment' as const,
+          address: {
+            street: 'Calle de Vicente Blasco Ibáñez, 6',
+            city: 'Barcelona',
+            state: 'Catalunya'
+          }
+        },
+        expected: 'Apartment for rent in Calle de Vicente Blasco Ibáñez, Barcelona, Catalunya'
+      },
+      {
+        name: 'House with city only',
+        input: {
+          type: 'house' as const,
+          address: {
+            city: 'Madrid'
+          }
+        },
+        expected: 'House for rent in Madrid'
+      },
+      {
+        name: 'Studio with no address',
+        input: {
+          type: 'studio' as const,
+          address: {}
+        },
+        expected: 'Studio for rent in Location not specified'
+      },
+      {
+        name: 'Detailed apartment with bedrooms and bathrooms',
+        input: {
+          type: 'apartment' as const,
+          address: {
+            street: 'Gran Via, 123',
+            city: 'Valencia'
+          },
+          bedrooms: 2,
+          bathrooms: 1
+        },
+        expected: 'Apartment for rent in Gran Via, Valencia - 2 bedroom, 1 bathroom'
+      }
+    ];
+    
+    const results = testCases.map(testCase => {
+      const actual = generateDetailedPropertyTitle(testCase.input, true);
+      return {
+        name: testCase.name,
+        input: testCase.input,
+        expected: testCase.expected,
+        actual,
+        passed: actual.includes('Apartment') || actual.includes('House') || actual.includes('Studio')
+      };
+    });
+    
+    const success = results.every(result => result.passed);
+    
+    return {
+      success,
+      tests: results
+    };
+    
+  } finally {
+    // Restore original language
+    i18next.changeLanguage(originalLanguage);
+  }
 } 
