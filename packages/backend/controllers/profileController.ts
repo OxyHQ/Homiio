@@ -1011,18 +1011,18 @@ class ProfileController {
         );
       }
 
-      // Import PropertyModel
-      const { PropertyModel } = require('../models');
+          // Import Property
+    const { Property } = require('../models');
       
       // Query database for user's properties using profileId
       const skip = (parseInt(page) - 1) * parseInt(limit);
       const [properties, total] = await Promise.all([
-        PropertyModel.find({ profileId: activeProfile._id, status: { $ne: 'archived' } })
+        Property.find({ profileId: activeProfile._id, status: { $ne: 'archived' } })
           .skip(skip)
           .limit(parseInt(limit))
           .sort({ createdAt: -1 })
           .lean(),
-        PropertyModel.countDocuments({ profileId: activeProfile._id, status: { $ne: 'archived' } })
+        Property.countDocuments({ profileId: activeProfile._id, status: { $ne: 'archived' } })
       ]);
 
       const totalPages = Math.ceil(total / parseInt(limit));
@@ -1107,13 +1107,13 @@ class ProfileController {
         console.log(`[getRecentProperties] Created new profile with ID: ${activeProfile._id}`);
       }
 
-      // Import RecentlyViewedModel
-      const { RecentlyViewedModel } = require('../models');
+      // Import RecentlyViewed
+      const { RecentlyViewed } = require('../models');
       
-      console.log(`[getRecentProperties] Querying RecentlyViewedModel for profileId: ${activeProfile._id}`);
+      console.log(`[getRecentProperties] Querying RecentlyViewed for profileId: ${activeProfile._id}`);
       
       // Get recently viewed properties
-      const recentViews = await RecentlyViewedModel.find({ profileId: activeProfile._id })
+      const recentViews = await RecentlyViewed.find({ profileId: activeProfile._id })
         .sort({ viewedAt: -1 })
         .limit(parseInt(limit))
         .populate('propertyId')
@@ -1229,18 +1229,18 @@ class ProfileController {
         });
       }
 
-      // Import SavedPropertyModel
-      const { SavedPropertyModel } = require('../models');
+      // Import SavedProperty
+      const { SavedProperty } = require('../models');
       
-      console.log('[getSavedProperties] Querying SavedPropertyModel with profileId:', activeProfile._id);
+      console.log('[getSavedProperties] Querying SavedProperty with profileId:', activeProfile._id);
       
       // Get saved properties
-      const savedProperties = await SavedPropertyModel.find({ profileId: activeProfile._id })
+      const savedProperties = await SavedProperty.find({ profileId: activeProfile._id })
         .sort({ savedAt: -1 })
         .populate('propertyId')
         .lean();
 
-      console.log('[getSavedProperties] SavedPropertyModel query result:', {
+      console.log('[getSavedProperties] SavedProperty query result:', {
         count: savedProperties.length,
         firstItem: savedProperties[0] ? {
           id: savedProperties[0]._id,
@@ -1346,11 +1346,11 @@ class ProfileController {
         activeProfile = defaultPersonalProfile;
       }
 
-      // Import SavedPropertyModel
-      const { SavedPropertyModel } = require('../models');
+      // Import SavedProperty
+      const { SavedProperty } = require('../models');
       
       // Check if property is already saved
-      const existingSave = await SavedPropertyModel.findOne({ 
+      const existingSave = await SavedProperty.findOne({ 
         profileId: activeProfile._id, 
         propertyId 
       });
@@ -1368,7 +1368,7 @@ class ProfileController {
       }
 
       // Create new saved property
-      const savedProperty = new SavedPropertyModel({
+      const savedProperty = new SavedProperty({
         profileId: activeProfile._id,
         propertyId,
         notes: notes || '',
@@ -1416,11 +1416,11 @@ class ProfileController {
         );
       }
 
-      // Import SavedPropertyModel
-      const { SavedPropertyModel } = require('../models');
+      // Import SavedProperty
+      const { SavedProperty } = require('../models');
       
       // Remove saved property
-      const result = await SavedPropertyModel.deleteOne({ 
+      const result = await SavedProperty.deleteOne({ 
         profileId: activeProfile._id, 
         propertyId 
       });
@@ -1471,11 +1471,11 @@ class ProfileController {
         );
       }
 
-      // Import SavedPropertyModel
-      const { SavedPropertyModel } = require('../models');
+      // Import SavedProperty
+      const { SavedProperty } = require('../models');
       
       // Update saved property notes
-      const savedProperty = await SavedPropertyModel.findOneAndUpdate(
+      const savedProperty = await SavedProperty.findOneAndUpdate(
         { profileId: activeProfile._id, propertyId },
         { notes: notes || '' },
         { new: true }
@@ -1561,11 +1561,11 @@ class ProfileController {
         console.log(`[trackPropertyView] Created new profile with ID: ${activeProfile._id}`);
       }
 
-      // Import RecentlyViewedModel
-      const { RecentlyViewedModel } = require('../models');
+      // Import RecentlyViewed
+      const { RecentlyViewed } = require('../models');
       
       // Check if view already exists
-      const existingView = await RecentlyViewedModel.findOne({ 
+      const existingView = await RecentlyViewed.findOne({ 
         profileId: activeProfile._id, 
         propertyId 
       });
@@ -1577,7 +1577,7 @@ class ProfileController {
         console.log(`[trackPropertyView] Updated existing view for property ${propertyId}`);
       } else {
         // Create new view record
-        const propertyView = new RecentlyViewedModel({
+        const propertyView = new RecentlyViewed({
           profileId: activeProfile._id,
           propertyId,
           viewedAt: new Date()
@@ -1617,11 +1617,11 @@ class ProfileController {
         );
       }
 
-      // Import RecentlyViewedModel
-      const { RecentlyViewedModel } = require('../models');
+      // Import RecentlyViewed
+      const { RecentlyViewed } = require('../models');
       
       // Clear all recently viewed properties for this profile
-      const result = await RecentlyViewedModel.deleteMany({ 
+      const result = await RecentlyViewed.deleteMany({ 
         profileId: activeProfile._id 
       });
 
@@ -1668,16 +1668,16 @@ class ProfileController {
         );
       }
 
-      // Import RecentlyViewedModel and PropertyModel
-      const { RecentlyViewedModel, PropertyModel } = require('../models');
+      // Import RecentlyViewed and Property
+      const { RecentlyViewed, Property } = require('../models');
       
       // Get recently viewed records WITHOUT population
-      const rawRecentViews = await RecentlyViewedModel.find({ profileId: activeProfile._id })
+      const rawRecentViews = await RecentlyViewed.find({ profileId: activeProfile._id })
         .sort({ viewedAt: -1 })
         .lean();
 
       // Get recently viewed records WITH population
-      const populatedRecentViews = await RecentlyViewedModel.find({ profileId: activeProfile._id })
+      const populatedRecentViews = await RecentlyViewed.find({ profileId: activeProfile._id })
         .sort({ viewedAt: -1 })
         .populate('propertyId')
         .lean();
@@ -1685,7 +1685,7 @@ class ProfileController {
       // Check if properties exist
       const propertyChecks = await Promise.all(
         rawRecentViews.map(async (view) => {
-          const exists = await PropertyModel.findById(view.propertyId);
+          const exists = await Property.findById(view.propertyId);
           return {
             propertyId: view.propertyId,
             exists: !!exists,
@@ -1696,7 +1696,7 @@ class ProfileController {
       );
 
       // Get total count
-      const totalCount = await RecentlyViewedModel.countDocuments({ profileId: activeProfile._id });
+      const totalCount = await RecentlyViewed.countDocuments({ profileId: activeProfile._id });
 
       console.log(`[debugRecentProperties] Raw: ${rawRecentViews.length}, Populated: ${populatedRecentViews.length}, Total: ${totalCount}`);
 
@@ -1799,16 +1799,16 @@ class ProfileController {
       }
 
       // Import SavedSearchModel
-      const { SavedSearchModel } = require('../models');
+      const { SavedSearch } = require('../models');
       
-      console.log('[getSavedSearches] Querying SavedSearchModel with profileId:', activeProfile._id);
+      console.log('[getSavedSearches] Querying SavedSearch with profileId:', activeProfile._id);
       
       // Get saved searches
-      const savedSearches = await SavedSearchModel.find({ profileId: activeProfile._id })
+      const savedSearches = await SavedSearch.find({ profileId: activeProfile._id })
         .sort({ createdAt: -1 })
         .lean();
 
-      console.log('[getSavedSearches] SavedSearchModel query result:', {
+      console.log('[getSavedSearches] SavedSearch query result:', {
         count: savedSearches.length,
         firstItem: savedSearches[0] ? {
           id: savedSearches[0]._id,
@@ -1894,11 +1894,11 @@ class ProfileController {
         activeProfile = defaultPersonalProfile;
       }
 
-      // Import SavedSearchModel
-      const { SavedSearchModel } = require('../models');
+      // Import SavedSearch
+      const { SavedSearch } = require('../models');
       
       // Check if search with same name already exists
-      const existingSearch = await SavedSearchModel.findOne({ 
+      const existingSearch = await SavedSearch.findOne({ 
         profileId: activeProfile._id, 
         name: name.trim()
       });
@@ -1910,7 +1910,7 @@ class ProfileController {
       }
 
       // Create new saved search
-      const savedSearch = new SavedSearchModel({
+      const savedSearch = new SavedSearch({
         profileId: activeProfile._id,
         name: name.trim(),
         query: query.trim(),
@@ -1960,11 +1960,11 @@ class ProfileController {
         );
       }
 
-      // Import SavedSearchModel
-      const { SavedSearchModel } = require('../models');
+      // Import SavedSearch
+      const { SavedSearch } = require('../models');
       
       // Remove saved search
-      const result = await SavedSearchModel.deleteOne({ 
+      const result = await SavedSearch.deleteOne({ 
         _id: searchId,
         profileId: activeProfile._id
       });
@@ -2014,8 +2014,8 @@ class ProfileController {
         );
       }
 
-      // Import SavedSearchModel
-      const { SavedSearchModel } = require('../models');
+      // Import SavedSearch
+      const { SavedSearch } = require('../models');
       
       // Prepare update data
       const updateData = { updatedAt: new Date() };
@@ -2025,7 +2025,7 @@ class ProfileController {
       if (notificationsEnabled !== undefined) updateData.notificationsEnabled = !!notificationsEnabled;
 
       // Update saved search
-      const savedSearch = await SavedSearchModel.findOneAndUpdate(
+      const savedSearch = await SavedSearch.findOneAndUpdate(
         { _id: searchId, profileId: activeProfile._id },
         updateData,
         { new: true }
@@ -2076,11 +2076,11 @@ class ProfileController {
         );
       }
 
-      // Import SavedSearchModel
-      const { SavedSearchModel } = require('../models');
+      // Import SavedSearch
+      const { SavedSearch } = require('../models');
       
       // Update notifications setting
-      const savedSearch = await SavedSearchModel.findOneAndUpdate(
+      const savedSearch = await SavedSearch.findOneAndUpdate(
         { _id: searchId, profileId: activeProfile._id },
         { 
           notificationsEnabled: !!notificationsEnabled,

@@ -3,7 +3,7 @@
  * Handles property-related operations
  */
 
-const { Property, PropertyModel, RecentlyViewedModel } = require("../models");
+const { Property, RecentlyViewed } = require("../models");
 const { energyService, telegramService } = require("../services");
 const { logger, businessLogger } = require("../middlewares/logging");
 const {
@@ -70,7 +70,7 @@ class PropertyController {
       logger.info("Creating property with data", { propertyData });
 
       // Create and save property using Mongoose model
-      const property = new PropertyModel(propertyData);
+      const property = new Property(propertyData);
       const savedProperty = await property.save();
 
       businessLogger.propertyCreated(savedProperty._id, savedProperty.profileId);
@@ -160,7 +160,7 @@ class PropertyController {
       logger.info("Creating property with data (dev mode)", { propertyData });
 
       // Create and save property using Mongoose model
-      const property = new PropertyModel(propertyData);
+      const property = new Property(propertyData);
       const savedProperty = await property.save();
 
       businessLogger.propertyCreated(savedProperty._id, savedProperty.profileId);
@@ -274,13 +274,13 @@ class PropertyController {
 
       // Query database
       const [properties, total] = await Promise.all([
-        PropertyModel.find(filters)
+        Property.find(filters)
           .sort(sortOptions)
           .skip(skip)
           .limit(limitNumber)
           .populate("rooms", "name type status")
           .lean(),
-        PropertyModel.countDocuments(filters),
+        Property.countDocuments(filters),
       ]);
 
       const totalPages = Math.ceil(total / limitNumber);
@@ -306,13 +306,13 @@ class PropertyController {
     try {
       const { propertyId } = req.params;
       console.log('[getPropertyById] Called for propertyId:', propertyId);
-      const property = await PropertyModel.findById(propertyId).lean();
+      const property = await Property.findById(propertyId).lean();
       if (!property) {
         return next(new AppError('Property not found', 404, 'NOT_FOUND'));
       }
 
       // Increment view count
-      await PropertyModel.findByIdAndUpdate(propertyId, { $inc: { views: 1 } });
+              await Property.findByIdAndUpdate(propertyId, { $inc: { views: 1 } });
 
       // Update recently viewed list if authenticated
       if (req.userId && (req.user?.id || req.user?._id)) {
@@ -327,7 +327,7 @@ class PropertyController {
             console.log(`[getPropertyById] Found active profile: ${profileId} for Oxy user ${oxyUserId}`);
             
             // Track recently viewed property using profile ID
-            RecentlyViewedModel.findOneAndUpdate(
+            RecentlyViewed.findOneAndUpdate(
               { profileId, propertyId },
               { profileId, propertyId, viewedAt: new Date() },
               { upsert: true, new: true }
@@ -483,12 +483,12 @@ class PropertyController {
       // Query database for user's properties using profileId
       const skip = (parseInt(page) - 1) * parseInt(limit);
       const [properties, total] = await Promise.all([
-        PropertyModel.find({ profileId: activeProfile._id, status: { $ne: 'archived' } })
+        Property.find({ profileId: activeProfile._id, status: { $ne: 'archived' } })
           .skip(skip)
           .limit(parseInt(limit))
           .sort({ createdAt: -1 })
           .lean(),
-        PropertyModel.countDocuments({ profileId: activeProfile._id, status: { $ne: 'archived' } })
+        Property.countDocuments({ profileId: activeProfile._id, status: { $ne: 'archived' } })
       ]);
 
       res.json(
@@ -653,7 +653,7 @@ class PropertyController {
       // Execute search
       const skip = (parseInt(page) - 1) * parseInt(limit);
 
-      const queryOptions = PropertyModel.find(searchQuery)
+      const queryOptions = Property.find(searchQuery)
         .skip(skip)
         .limit(parseInt(limit));
 
@@ -671,7 +671,7 @@ class PropertyController {
 
       const [properties, total] = await Promise.all([
         queryOptions.lean(),
-        PropertyModel.countDocuments(searchQuery)
+        Property.countDocuments(searchQuery)
       ]);
 
       const totalPages = Math.ceil(total / parseInt(limit));
@@ -765,12 +765,12 @@ class PropertyController {
       const skip = (parseInt(page) - 1) * parseInt(limit);
 
       const [properties, total] = await Promise.all([
-        PropertyModel.find(searchQuery)
+        Property.find(searchQuery)
           .sort({ location: { $meta: 'geoNear' } })
           .skip(skip)
           .limit(parseInt(limit))
           .lean(),
-        PropertyModel.countDocuments(searchQuery)
+        Property.countDocuments(searchQuery)
       ]);
 
       const totalPages = Math.ceil(total / parseInt(limit));
@@ -860,12 +860,12 @@ class PropertyController {
       const skip = (parseInt(page) - 1) * parseInt(limit);
 
       const [properties, total] = await Promise.all([
-        PropertyModel.find(searchQuery)
+        Property.find(searchQuery)
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(parseInt(limit))
           .lean(),
-        PropertyModel.countDocuments(searchQuery)
+        Property.countDocuments(searchQuery)
       ]);
 
       const totalPages = Math.ceil(total / parseInt(limit));

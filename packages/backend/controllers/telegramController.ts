@@ -6,7 +6,7 @@
 import { telegramService } from '../services';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse } from '../middlewares/errorHandler';
-import { PropertyModel } from '../models';
+import { Property } from '../models';
 import config from '../config';
 
 class TelegramController {
@@ -83,7 +83,7 @@ class TelegramController {
       const { propertyId } = req.params;
 
       // Get the property from database
-      const property = await PropertyModel.findById(propertyId);
+      const property = await Property.findById(propertyId);
       if (!property) {
         return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));
       }
@@ -128,7 +128,7 @@ class TelegramController {
 
       if (propertyIds && propertyIds.length > 0) {
         // Send notifications for specific properties
-        properties = await PropertyModel.find({ _id: { $in: propertyIds } });
+        properties = await Property.find({ _id: { $in: propertyIds } });
       } else if (filters) {
         // Send notifications based on filters
         const query = {};
@@ -138,7 +138,7 @@ class TelegramController {
         if (filters.createdAfter) query.createdAt = { $gte: new Date(filters.createdAfter) };
         if (filters.status) query.status = filters.status;
 
-        properties = await PropertyModel.find(query).limit(50); // Limit to prevent abuse
+        properties = await Property.find(query).limit(50); // Limit to prevent abuse
       } else {
         return next(new AppError('Either propertyIds or filters must be provided', 400, 'MISSING_PARAMETERS'));
       }
@@ -188,7 +188,7 @@ class TelegramController {
       
       // Get recent properties
       const sinceDate = new Date(Date.now() - hours * 60 * 60 * 1000);
-      const recentProperties = await PropertyModel.find({
+      const recentProperties = await Property.find({
         createdAt: { $gte: sinceDate },
         status: 'active'
       })
