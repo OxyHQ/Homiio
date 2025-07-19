@@ -144,13 +144,6 @@ export default function PropertiesScreen() {
         </TouchableOpacity>
     );
 
-    // Map view button
-    const renderMapButton = () => (
-        <TouchableOpacity style={styles.mapButton} onPress={() => router.push('/properties/map')}>
-            <IconComponent name="map-outline" size={22} color={colors.primaryColor} />
-        </TouchableOpacity>
-    );
-
     // Floating action button
     const renderFAB = () => (
         <TouchableOpacity style={styles.fab} onPress={handleAddProperty}>
@@ -166,7 +159,6 @@ export default function PropertiesScreen() {
                     <SearchBar hideFilterIcon={true} />
                 </View>
                 {renderFilterButton()}
-                {renderMapButton()}
                 {renderRecentlyViewedButton()}
                 {renderViewModeToggle()}
             </View>
@@ -218,14 +210,6 @@ const styles = StyleSheet.create({
         borderColor: colors.primaryColor,
     },
     recentlyViewedButton: {
-        marginLeft: 8,
-        backgroundColor: colors.primaryLight_1,
-        borderRadius: 100,
-        padding: 8,
-        borderWidth: 1,
-        borderColor: colors.primaryColor,
-    },
-    mapButton: {
         marginLeft: 8,
         backgroundColor: colors.primaryLight_1,
         borderRadius: 100,

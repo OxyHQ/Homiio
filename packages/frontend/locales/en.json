@@ -280,7 +280,6 @@
     },
     "properties": {
         "title": "Properties",
-        "map": "Properties Map",
         "filters": "Filters",
         "sort": "Sort",
         "view": "View",
