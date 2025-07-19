@@ -66,7 +66,7 @@ const rentSchema = new mongoose.Schema({
   currency: {
     type: String,
     required: true,
-    enum: ['USD', 'EUR', 'GBP', 'CAD'],
+    enum: ['USD', 'EUR', 'GBP', 'CAD', 'FAIR'],
     default: 'USD'
   },
   paymentFrequency: {
@@ -357,15 +357,23 @@ const propertySchema = new mongoose.Schema({
     }
   }],
   location: {
-    latitude: {
-      type: Number,
-      min: [-90, 'Latitude must be between -90 and 90'],
-      max: [90, 'Latitude must be between -90 and 90']
+    type: {
+      type: String,
+      enum: ['Point'],
+      required: true,
+      default: 'Point'
     },
-    longitude: {
-      type: Number,
-      min: [-180, 'Longitude must be between -180 and 180'],
-      max: [180, 'Longitude must be between -180 and 180']
+    coordinates: {
+      type: [Number],
+      required: true,
+      validate: {
+        validator: function(coords) {
+          return coords.length === 2 && 
+                 coords[0] >= -180 && coords[0] <= 180 && // longitude
+                 coords[1] >= -90 && coords[1] <= 90;     // latitude
+        },
+        message: 'Coordinates must be an array [longitude, latitude] with valid ranges'
+      }
     }
   },
   // Accommodation-specific details
@@ -489,6 +497,8 @@ propertySchema.index({ 'rent.amount': 1 });
 propertySchema.index({ bedrooms: 1, bathrooms: 1 });
 propertySchema.index({ amenities: 1 });
 propertySchema.index({ createdAt: -1 });
+// GeoJSON 2dsphere index for geospatial queries
+propertySchema.index({ location: '2dsphere' });
 // Text index for search functionality across multiple fields
 propertySchema.index({
   title: 'text',
@@ -598,6 +608,50 @@ propertySchema.statics.search = function(searchParams) {
   return this.find(query);
 };
 
+// Geospatial query methods
+propertySchema.statics.findNearby = function(longitude, latitude, maxDistance = 10000) {
+  return this.find({
+    location: {
+      $near: {
+        $geometry: {
+          type: 'Point',
+          coordinates: [longitude, latitude]
+        },
+        $maxDistance: maxDistance
+      }
+    },
+    'availability.isAvailable': true,
+    status: 'active'
+  });
+};
+
+propertySchema.statics.findWithinRadius = function(longitude, latitude, radiusInMeters) {
+  return this.find({
+    location: {
+      $geoWithin: {
+        $centerSphere: [[longitude, latitude], radiusInMeters / 6371000] // Convert to radians
+      }
+    },
+    'availability.isAvailable': true,
+    status: 'active'
+  });
+};
+
+propertySchema.statics.findInPolygon = function(coordinates) {
+  return this.find({
+    location: {
+      $geoWithin: {
+        $geometry: {
+          type: 'Polygon',
+          coordinates: [coordinates]
+        }
+      }
+    },
+    'availability.isAvailable': true,
+    status: 'active'
+  });
+};
+
 // Instance methods
 propertySchema.methods.incrementViews = function() {
   this.views += 1;
@@ -609,6 +663,25 @@ propertySchema.methods.updateRating = function(newRating) {
   this.rating.count += 1;
   this.rating.average = totalRating / this.rating.count;
   return this.save();
+};
+
+// GeoJSON helper methods
+propertySchema.methods.setLocation = function(longitude, latitude) {
+  this.location = {
+    type: 'Point',
+    coordinates: [longitude, latitude]
+  };
+  return this;
+};
+
+propertySchema.methods.getCoordinates = function() {
+  if (this.location && this.location.coordinates && this.location.coordinates.length === 2) {
+    return {
+      longitude: this.location.coordinates[0],
+      latitude: this.location.coordinates[1]
+    };
+  }
+  return null;
 };
 
 module.exports = mongoose.model('Property', propertySchema);

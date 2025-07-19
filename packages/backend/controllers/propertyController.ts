@@ -563,6 +563,10 @@ class PropertyController {
         bathrooms,
         amenities,
         available,
+        // Location parameters
+        lat,
+        lng,
+        radius,
         page = 1, 
         limit = 10 
       } = req.query;
@@ -619,6 +623,33 @@ class PropertyController {
       // Only show active properties
       searchQuery.status = 'active';
 
+      // Add geospatial query if location parameters are provided
+      if (lat && lng && radius) {
+        const latitude = parseFloat(lat);
+        const longitude = parseFloat(lng);
+        const radiusInMeters = parseFloat(radius);
+
+        // Validate coordinates
+        if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid coordinates provided',
+            error: 'INVALID_COORDINATES'
+          });
+        }
+
+        // Add geospatial query
+        searchQuery.location = {
+          $near: {
+            $geometry: {
+              type: 'Point',
+              coordinates: [longitude, latitude] // GeoJSON format: [lng, lat]
+            },
+            $maxDistance: radiusInMeters
+          }
+        };
+      }
+
       // Execute search
       const skip = (parseInt(page) - 1) * parseInt(limit);
 
@@ -631,6 +662,9 @@ class PropertyController {
         queryOptions
           .sort({ score: { $meta: 'textScore' } })
           .select({ score: { $meta: 'textScore' } });
+      } else if (searchQuery.location) {
+        // If geospatial query is used, sort by distance (closest first)
+        queryOptions.sort({ location: { $meta: 'geoNear' } });
       } else {
         queryOptions.sort({ createdAt: -1 });
       }
@@ -649,6 +683,200 @@ class PropertyController {
           parseInt(limit),
           total,
           "Search completed successfully",
+        ),
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Find properties near a specific location
+   */
+  async findNearbyProperties(req, res, next) {
+    try {
+      const { 
+        longitude, 
+        latitude, 
+        maxDistance = 10000,
+        type, 
+        minRent, 
+        maxRent, 
+        bedrooms, 
+        bathrooms,
+        amenities,
+        available,
+        page = 1, 
+        limit = 10 
+      } = req.query;
+
+      // Validate required parameters
+      if (!longitude || !latitude) {
+        return res.status(400).json({
+          success: false,
+          message: 'Longitude and latitude are required',
+          error: 'MISSING_COORDINATES'
+        });
+      }
+
+      const lng = parseFloat(longitude);
+      const lat = parseFloat(latitude);
+      const distance = parseFloat(maxDistance);
+
+      // Validate coordinates
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid coordinates provided',
+          error: 'INVALID_COORDINATES'
+        });
+      }
+
+      // Build search query
+      const searchQuery = {
+        location: {
+          $near: {
+            $geometry: {
+              type: 'Point',
+              coordinates: [lng, lat]
+            },
+            $maxDistance: distance
+          }
+        },
+        'availability.isAvailable': available !== undefined ? available === 'true' : true,
+        status: 'active'
+      };
+
+      // Add additional filters
+      if (type) searchQuery.type = type;
+      if (minRent || maxRent) {
+        searchQuery['rent.amount'] = {};
+        if (minRent) searchQuery['rent.amount'].$gte = parseInt(minRent);
+        if (maxRent) searchQuery['rent.amount'].$lte = parseInt(maxRent);
+      }
+      if (bedrooms) searchQuery.bedrooms = parseInt(bedrooms);
+      if (bathrooms) searchQuery.bathrooms = parseInt(bathrooms);
+      if (amenities) {
+        const amenityList = amenities.split(',').map(a => a.trim());
+        searchQuery.amenities = { $in: amenityList };
+      }
+
+      // Execute search
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+
+      const [properties, total] = await Promise.all([
+        PropertyModel.find(searchQuery)
+          .sort({ location: { $meta: 'geoNear' } })
+          .skip(skip)
+          .limit(parseInt(limit))
+          .lean(),
+        PropertyModel.countDocuments(searchQuery)
+      ]);
+
+      const totalPages = Math.ceil(total / parseInt(limit));
+
+      res.json(
+        paginationResponse(
+          properties,
+          parseInt(page),
+          parseInt(limit),
+          total,
+          "Nearby properties found successfully",
+        ),
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Find properties within a specific radius
+   */
+  async findPropertiesInRadius(req, res, next) {
+    try {
+      const { 
+        longitude, 
+        latitude, 
+        radius,
+        type, 
+        minRent, 
+        maxRent, 
+        bedrooms, 
+        bathrooms,
+        amenities,
+        available,
+        page = 1, 
+        limit = 10 
+      } = req.query;
+
+      // Validate required parameters
+      if (!longitude || !latitude || !radius) {
+        return res.status(400).json({
+          success: false,
+          message: 'Longitude, latitude, and radius are required',
+          error: 'MISSING_PARAMETERS'
+        });
+      }
+
+      const lng = parseFloat(longitude);
+      const lat = parseFloat(latitude);
+      const radiusInMeters = parseFloat(radius);
+
+      // Validate coordinates
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid coordinates provided',
+          error: 'INVALID_COORDINATES'
+        });
+      }
+
+      // Build search query
+      const searchQuery = {
+        location: {
+          $geoWithin: {
+            $centerSphere: [[lng, lat], radiusInMeters / 6371000] // Convert to radians
+          }
+        },
+        'availability.isAvailable': available !== undefined ? available === 'true' : true,
+        status: 'active'
+      };
+
+      // Add additional filters
+      if (type) searchQuery.type = type;
+      if (minRent || maxRent) {
+        searchQuery['rent.amount'] = {};
+        if (minRent) searchQuery['rent.amount'].$gte = parseInt(minRent);
+        if (maxRent) searchQuery['rent.amount'].$lte = parseInt(maxRent);
+      }
+      if (bedrooms) searchQuery.bedrooms = parseInt(bedrooms);
+      if (bathrooms) searchQuery.bathrooms = parseInt(bathrooms);
+      if (amenities) {
+        const amenityList = amenities.split(',').map(a => a.trim());
+        searchQuery.amenities = { $in: amenityList };
+      }
+
+      // Execute search
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+
+      const [properties, total] = await Promise.all([
+        PropertyModel.find(searchQuery)
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(parseInt(limit))
+          .lean(),
+        PropertyModel.countDocuments(searchQuery)
+      ]);
+
+      const totalPages = Math.ceil(total / parseInt(limit));
+
+      res.json(
+        paginationResponse(
+          properties,
+          parseInt(page),
+          parseInt(limit),
+          total,
+          "Properties in radius found successfully",
         ),
       );
     } catch (error) {

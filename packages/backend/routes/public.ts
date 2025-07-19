@@ -19,6 +19,8 @@ export default function () {
   // Public property routes
   router.get('/properties', asyncHandler(propertyController.getProperties));
   router.get('/properties/search', asyncHandler(propertyController.searchProperties));
+  router.get('/properties/nearby', asyncHandler(propertyController.findNearbyProperties));
+  router.get('/properties/radius', asyncHandler(propertyController.findPropertiesInRadius));
   router.get('/properties/:propertyId', asyncHandler(propertyController.getPropertyById));
   router.get('/properties/:propertyId/stats', asyncHandler(propertyController.getPropertyStats));
 

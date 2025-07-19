@@ -116,7 +116,7 @@ class Property {
     }
     
     // Currency validation
-    const validCurrencies = ['USD', 'EUR', 'GBP', 'CAD'];
+    const validCurrencies = ['USD', 'EUR', 'GBP', 'CAD', 'FAIR'];
     if (this.rent.currency && !validCurrencies.includes(this.rent.currency)) {
       errors.push(`Currency must be one of: ${validCurrencies.join(', ')}`);
     }

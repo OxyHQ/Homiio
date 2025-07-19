@@ -14,6 +14,7 @@ import { useCreatePropertyFormStore, useCreatePropertyFormSelectors } from '@/st
 import { useCreateProperty } from '@/hooks/usePropertyQueries';
 import { BottomSheetContext } from '@/app/_layout';
 import { SearchablePickerBottomSheet } from '@/components/SearchablePickerBottomSheet';
+import { PropertyService } from '@/services/propertyService';
 
 // Define the property types
 const PROPERTY_TYPES = [
@@ -210,7 +211,7 @@ export default function CreatePropertyScreen() {
         yearBuilt: formData.basicInfo.yearBuilt ? parseInt(formData.basicInfo.yearBuilt.toString()) : undefined,
         rent: {
           amount: formData.pricing.monthlyRent ? parseFloat(formData.pricing.monthlyRent.toString()) : 0,
-          currency: formData.pricing.currency || 'USD',
+          currency: PropertyService.getCurrencyCode(formData.pricing.currency || 'USD'),
           paymentFrequency: 'monthly' as 'monthly',
           deposit: formData.pricing.securityDeposit ? parseFloat(formData.pricing.securityDeposit.toString()) : 0,
           utilities:
@@ -223,8 +224,8 @@ export default function CreatePropertyScreen() {
         images: formData.media.images || [],
         location: (formData.location.latitude && formData.location.longitude)
           ? {
-            latitude: formData.location.latitude,
-            longitude: formData.location.longitude,
+            type: 'Point',
+            coordinates: [formData.location.longitude, formData.location.latitude], // [longitude, latitude]
           }
           : undefined,
       };

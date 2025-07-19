@@ -47,7 +47,7 @@ const validateProperty = [
   body('address.state').notEmpty().withMessage('State is required'),
   body('address.zipCode').notEmpty().withMessage('ZIP code is required'),
   body('rent.amount').isFloat({ min: 0.01 }).withMessage('Rent amount must be greater than 0'),
-  body('rent.currency').optional().isIn(['USD', 'EUR', 'GBP', 'CAD']).withMessage('Invalid currency'),
+  body('rent.currency').optional().isIn(['USD', 'EUR', 'GBP', 'CAD', 'FAIR']).withMessage('Invalid currency'),
   body('bedrooms').optional().isInt({ min: 0 }).withMessage('Bedrooms must be a non-negative integer'),
   body('bathrooms').optional().isFloat({ min: 0 }).withMessage('Bathrooms must be a non-negative number'),
   body('squareFootage').optional().isFloat({ min: 0 }).withMessage('Square footage must be non-negative'),

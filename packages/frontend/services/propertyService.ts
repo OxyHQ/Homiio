@@ -37,6 +37,11 @@ export interface Property {
   createdAt: string;
   updatedAt: string;
   roomCount?: number;
+  // GeoJSON Point location field
+  location?: {
+    type: 'Point';
+    coordinates: [number, number]; // [longitude, latitude]
+  };
   energyStats?: {
     current: {
       voltage: number;
@@ -100,8 +105,8 @@ export interface CreatePropertyData {
   amenities?: string[];
   images?: string[];
   location?: {
-    latitude: number;
-    longitude: number;
+    type: 'Point';
+    coordinates: [number, number]; // [longitude, latitude]
   };
   // Additional comprehensive details for ethical pricing
   floor?: number;
@@ -145,6 +150,10 @@ export interface PropertyFilters {
   search?: string;
   page?: number;
   limit?: number;
+  // Location parameters
+  lat?: number;
+  lng?: number;
+  radius?: number;
 }
 
 export interface EthicalPricingRequest {
@@ -184,6 +193,64 @@ export interface EthicalPricingResponse {
 
 class PropertyService {
   private baseUrl = '/api/properties';
+
+  // Currency utility methods
+  static getCurrencyDisplayName(currencyCode: string): string {
+    const currencyMap: Record<string, string> = {
+      'USD': 'USD',
+      'EUR': 'EUR', 
+      'GBP': 'GBP',
+      'CAD': 'CAD',
+      'FAIR': 'FAIR (FairCoin)'
+    };
+    return currencyMap[currencyCode] || currencyCode;
+  }
+
+  static getCurrencyCode(displayName: string): string {
+    const reverseMap: Record<string, string> = {
+      'USD': 'USD',
+      'EUR': 'EUR',
+      'GBP': 'GBP', 
+      'CAD': 'CAD',
+      'FAIR (FairCoin)': 'FAIR'
+    };
+    return reverseMap[displayName] || displayName;
+  }
+
+  // Utility methods for working with GeoJSON location
+  static getCoordinates(property: Property): { longitude: number; latitude: number } | null {
+    if (property.location?.coordinates && property.location.coordinates.length === 2) {
+      const [longitude, latitude] = property.location.coordinates;
+      return { longitude, latitude };
+    }
+    return null;
+  }
+
+  static setLocation(longitude: number, latitude: number): Property['location'] {
+    return {
+      type: 'Point',
+      coordinates: [longitude, latitude]
+    };
+  }
+
+  static getDistanceFromPoint(
+    property: Property,
+    targetLongitude: number,
+    targetLatitude: number
+  ): number | null {
+    const coords = this.getCoordinates(property);
+    if (!coords) return null;
+
+    const R = 6371000; // Earth's radius in meters
+    const dLat = (targetLatitude - coords.latitude) * Math.PI / 180;
+    const dLng = (targetLongitude - coords.longitude) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(coords.latitude * Math.PI / 180) * Math.cos(targetLatitude * Math.PI / 180) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
 
   async getProperties(filters?: PropertyFilters): Promise<{
     properties: Property[];
@@ -276,6 +343,53 @@ class PropertyService {
       throw new Error('Failed to calculate ethical pricing');
     }
   }
+
+  async findNearbyProperties(
+    longitude: number,
+    latitude: number,
+    maxDistance: number = 10000,
+    filters?: Omit<PropertyFilters, 'search'>
+  ): Promise<{
+    properties: Property[];
+    total: number;
+  }> {
+    const response = await api.get(`${this.baseUrl}/nearby`, {
+      params: {
+        longitude,
+        latitude,
+        maxDistance,
+        ...filters
+      }
+    });
+    return {
+      properties: response.data.data || [],
+      total: response.data.pagination?.total || 0,
+    };
+  }
+
+  async findPropertiesInRadius(
+    longitude: number,
+    latitude: number,
+    radiusInMeters: number,
+    filters?: Omit<PropertyFilters, 'search'>
+  ): Promise<{
+    properties: Property[];
+    total: number;
+  }> {
+    const response = await api.get(`${this.baseUrl}/radius`, {
+      params: {
+        longitude,
+        latitude,
+        radius: radiusInMeters,
+        ...filters
+      }
+    });
+    return {
+      properties: response.data.data || [],
+      total: response.data.pagination?.total || 0,
+    };
+  }
 }
 
 export const propertyService = new PropertyService();
+export { PropertyService };
