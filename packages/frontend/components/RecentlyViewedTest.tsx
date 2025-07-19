@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     button: {
         backgroundColor: colors.primaryColor,
         padding: 12,
-        borderRadius: 6,
+        borderRadius: 25,
         marginBottom: 8,
         alignItems: 'center',
     },
@@ -184,6 +184,7 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: 'bold',
         fontSize: 16,
+        fontFamily: 'Phudu',
     },
     debugText: {
         fontSize: 12,

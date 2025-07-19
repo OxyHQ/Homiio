@@ -16,27 +16,27 @@ export default function HorizonPage() {
     title: string;
     description: string;
   }> = [
-    {
-      icon: 'home-outline',
-      title: t('Fair Housing'),
-      description: t('Access to affordable housing in 120+ cities worldwide with standardized ethical rental agreements')
-    },
-    {
-      icon: 'medkit-outline',
-      title: t('Healthcare Access'),
-      description: t('Universal healthcare coverage with partner clinics and telehealth services in every Horizon city')
-    },
-    {
-      icon: 'airplane-outline',
-      title: t('Travel Network'),
-      description: t('Discounted transportation and accommodation when traveling between Horizon locations')
-    },
-    {
-      icon: 'people-outline',
-      title: t('Community Support'),
-      description: t('Connect with local members for cultural integration, language exchange, and social activities')
-    }
-  ];
+      {
+        icon: 'home-outline',
+        title: t('Fair Housing'),
+        description: t('Access to affordable housing in 120+ cities worldwide with standardized ethical rental agreements')
+      },
+      {
+        icon: 'medkit-outline',
+        title: t('Healthcare Access'),
+        description: t('Universal healthcare coverage with partner clinics and telehealth services in every Horizon city')
+      },
+      {
+        icon: 'airplane-outline',
+        title: t('Travel Network'),
+        description: t('Discounted transportation and accommodation when traveling between Horizon locations')
+      },
+      {
+        icon: 'people-outline',
+        title: t('Community Support'),
+        description: t('Connect with local members for cultural integration, language exchange, and social activities')
+      }
+    ];
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -47,7 +47,7 @@ export default function HorizonPage() {
           titlePosition: 'center',
         }}
       />
-      
+
       <ScrollView style={styles.container}>
         {/* Hero Section */}
         <View style={styles.heroSection}>
@@ -74,7 +74,7 @@ export default function HorizonPage() {
         {/* Benefits Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("Member Benefits")}</Text>
-          
+
           {benefitItems.map((item, index) => (
             <View key={index} style={styles.benefitItem}>
               <View style={styles.benefitIcon}>
@@ -91,7 +91,7 @@ export default function HorizonPage() {
         {/* How It Works */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("How It Works")}</Text>
-          
+
           <View style={styles.stepContainer}>
             <View style={styles.stepCircle}>
               <Text style={styles.stepNumber}>1</Text>
@@ -103,7 +103,7 @@ export default function HorizonPage() {
               </Text>
             </View>
           </View>
-          
+
           <View style={styles.stepContainer}>
             <View style={styles.stepCircle}>
               <Text style={styles.stepNumber}>2</Text>
@@ -115,7 +115,7 @@ export default function HorizonPage() {
               </Text>
             </View>
           </View>
-          
+
           <View style={styles.stepContainer}>
             <View style={styles.stepCircle}>
               <Text style={styles.stepNumber}>3</Text>
@@ -135,7 +135,7 @@ export default function HorizonPage() {
           <Text style={styles.joinDescription}>
             {t("Apply today and take the first step toward ethical, accessible housing worldwide.")}
           </Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.joinButton}
             onPress={() => router.push('/horizon/apply')}
           >
@@ -146,7 +146,7 @@ export default function HorizonPage() {
         {/* Testimonials */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("Member Stories")}</Text>
-          
+
           <View style={styles.testimonialCard}>
             <View style={styles.testimonialHeader}>
               <View style={styles.testimonialAvatar}>
@@ -161,7 +161,7 @@ export default function HorizonPage() {
               {t("Horizon made my relocation so much easier. I found an ethical apartment in Berlin within a week and the healthcare coverage saved me when I needed emergency care.")}
             </Text>
           </View>
-          
+
           <View style={styles.testimonialCard}>
             <View style={styles.testimonialHeader}>
               <View style={styles.testimonialAvatar}>

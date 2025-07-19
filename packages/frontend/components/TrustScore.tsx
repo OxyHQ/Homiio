@@ -214,12 +214,13 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primaryColor,
         paddingHorizontal: 12,
         paddingVertical: 6,
-        borderRadius: 6,
+        borderRadius: 25,
     },
     recalculateButtonText: {
         color: 'white',
         fontSize: 12,
         fontWeight: '600',
+        fontFamily: 'Phudu',
     },
     factorsContainer: {
         maxHeight: 300,

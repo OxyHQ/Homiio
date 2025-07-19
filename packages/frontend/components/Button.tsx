@@ -7,13 +7,12 @@ interface ButtonProps {
     onLongPress?: () => void;
     children: React.ReactNode;
     disabled?: boolean;
-    style?: React.CSSProperties | ViewStyle;
-    className?: string;
+    style?: ViewStyle;
 }
 
-const Button: React.FC<ButtonProps> = ({ onPress, onLongPress, children, disabled = false, style, className }) => {
+const Button: React.FC<ButtonProps> = ({ onPress, onLongPress, children, disabled = false, style }) => {
     return (
-        <TouchableOpacity onPress={onPress} onLongPress={onLongPress} disabled={disabled} className={className} style={[styles.button, style]}>
+        <TouchableOpacity onPress={onPress} onLongPress={onLongPress} disabled={disabled} style={[styles.button, style]}>
             <Text style={styles.buttonText}>{children}</Text>
         </TouchableOpacity>
     );
@@ -25,7 +24,7 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         backgroundColor: colors.primaryColor,
         color: colors.primaryLight,
-        borderRadius: 35,
+        borderRadius: 25,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -33,6 +32,7 @@ const styles = StyleSheet.create({
         color: colors.primaryLight,
         fontSize: 16,
         fontWeight: '600',
+        fontFamily: 'Phudu',
     },
 });
 

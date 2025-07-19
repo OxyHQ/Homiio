@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingVertical: 12,
         paddingHorizontal: 16,
-        borderRadius: 6,
+        borderRadius: 25,
         alignItems: 'center',
     },
     selectorButtonActive: {
@@ -299,9 +299,11 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '500',
         color: '#666',
+        fontFamily: 'Phudu',
     },
     selectorButtonTextActive: {
         color: '#fff',
+        fontFamily: 'Phudu',
     },
     section: {
         backgroundColor: '#fff',
@@ -323,7 +325,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#007AFF',
         paddingVertical: 12,
         paddingHorizontal: 16,
-        borderRadius: 8,
+        borderRadius: 25,
         alignItems: 'center',
         marginBottom: 8,
     },
@@ -337,6 +339,7 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: '500',
+        fontFamily: 'Phudu',
     },
     profileDetails: {
         marginTop: 8,

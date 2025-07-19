@@ -37,11 +37,12 @@ const styles = StyleSheet.create({
     joinButton: {
         backgroundColor: '#c2e3ff',
         paddingVertical: 10,
-        borderRadius: 35,
+        borderRadius: 25,
         alignItems: 'center',
     },
     joinButtonText: {
         color: '#002646',
         fontWeight: 'bold',
+        fontFamily: 'Phudu',
     },
 }); 

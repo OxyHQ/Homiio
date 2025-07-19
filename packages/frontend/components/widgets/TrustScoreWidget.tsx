@@ -209,12 +209,13 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primaryColor,
         paddingVertical: 6,
         paddingHorizontal: 12,
-        borderRadius: 15,
+        borderRadius: 25,
     },
     retryButtonText: {
         color: colors.primaryLight,
         fontSize: 12,
         fontWeight: '600',
+        fontFamily: 'Phudu',
     },
     noProfileContainer: {
         alignItems: 'center',
@@ -230,12 +231,13 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primaryColor,
         paddingVertical: 6,
         paddingHorizontal: 12,
-        borderRadius: 15,
+        borderRadius: 25,
     },
     setupButtonText: {
         color: colors.primaryLight,
         fontSize: 12,
         fontWeight: '600',
+        fontFamily: 'Phudu',
     },
     trustScoreText: {
         fontSize: 14,

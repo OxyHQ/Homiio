@@ -83,7 +83,7 @@ export function SaveButton({
 const styles = StyleSheet.create({
     saveButton: {
         backgroundColor: colors.primaryLight,
-        borderRadius: 12,
+        borderRadius: 25,
         padding: 8,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },

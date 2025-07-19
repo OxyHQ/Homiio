@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        borderRadius: 8,
+        borderRadius: 25,
         minHeight: 36,
     },
     icon: {
@@ -182,6 +182,7 @@ const styles = StyleSheet.create({
     },
     text: {
         fontWeight: '500',
+        fontFamily: 'Phudu',
     },
     disabled: {
         opacity: 0.5,

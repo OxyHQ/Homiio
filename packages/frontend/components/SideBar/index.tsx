@@ -204,6 +204,7 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 14,
         fontWeight: 'bold',
+        fontFamily: 'Phudu',
     },
     signInButton: {
         justifyContent: 'center',
@@ -217,6 +218,7 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 14,
         fontWeight: 'bold',
+        fontFamily: 'Phudu',
     },
     navigationSection: {
         justifyContent: 'center',

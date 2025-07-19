@@ -1,5 +1,15 @@
 const { Profile } = require("../models");
-const { successResponse, errorResponse } = require("../utils/helpers");
+const { successResponse } = require("../middlewares/errorHandler");
+
+// Create a simple errorResponse function since it's not exported from errorHandler
+const errorResponse = (message = 'Error occurred', code = 'ERROR') => {
+  return {
+    success: false,
+    message,
+    code,
+    timestamp: new Date().toISOString()
+  };
+};
 
 // Simple in-memory cache for profile data
 const profileCache = new Map();

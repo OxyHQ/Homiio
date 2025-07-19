@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primaryLight,
         borderWidth: 1,
         borderColor: colors.primaryColor,
-        borderRadius: 20,
+        borderRadius: 25,
         paddingVertical: 6,
         paddingHorizontal: 12,
         marginRight: 12,
@@ -225,5 +225,6 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '500',
         marginLeft: 6,
+        fontFamily: 'Phudu',
     },
 }); 

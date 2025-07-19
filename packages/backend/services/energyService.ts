@@ -3,8 +3,8 @@
  * Provides mocked energy statistics and device configuration helpers
  */
 
-const { AppError } = require('../middlewares/errorHandler');
-const { logger } = require('../middlewares/logging');
+import { AppError } from '../middlewares/errorHandler';
+import { logger } from '../middlewares/logging';
 
 class EnergyService {
   async getEnergyStats(id, period = 'day') {
@@ -57,4 +57,4 @@ class EnergyService {
   }
 }
 
-module.exports = new EnergyService();
+export default new EnergyService();

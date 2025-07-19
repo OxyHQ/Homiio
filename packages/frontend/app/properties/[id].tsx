@@ -25,7 +25,10 @@ import { useRecentlyViewedStore } from '@/store/recentlyViewedStore';
 import { useFavorites } from '@/hooks/useFavorites';
 import { userApi } from '@/utils/api';
 import { SaveButton } from '@/components/SaveButton';
+import { ActionButton } from '@/components/ui/ActionButton';
+import Button from '@/components/Button';
 import type { Profile } from '@/services/profileService';
+import profileService from '@/services/profileService';
 
 type PropertyDetail = {
     id: string;
@@ -70,8 +73,8 @@ export default function PropertyDetailPage() {
 
     // TODO: Implement landlord profile fetching with Zustand
     // For now, we'll use placeholder values
-    const landlordProfile: Profile | null = null;
-    const landlordLoading = false;
+    const [landlordProfile, setLandlordProfile] = useState<Profile | null>(null);
+    const [landlordLoading, setLandlordLoading] = useState(false);
 
     // Normalize landlordProfileId to string if it's an object (MongoDB $oid)
     let normalizedLandlordProfileId: string | undefined = undefined;
@@ -83,13 +86,49 @@ export default function PropertyDetailPage() {
         }
     }
 
-    // TODO: Implement landlord profile fetching with Zustand
+    // Fetch landlord profile
     useEffect(() => {
-        if (normalizedLandlordProfileId && oxyServices && activeSessionId) {
-            // TODO: Implement fetchLandlordProfileById with Zustand
-            console.log('TODO: Fetch landlord profile with Zustand');
-        }
+        const fetchLandlordProfile = async () => {
+            if (normalizedLandlordProfileId && oxyServices && activeSessionId) {
+                try {
+                    setLandlordLoading(true);
+                    const profile = await profileService.getProfileById(normalizedLandlordProfileId, oxyServices, activeSessionId);
+                    setLandlordProfile(profile);
+                } catch (error) {
+                    console.error('Error fetching landlord profile:', error);
+                    setLandlordProfile(null);
+                } finally {
+                    setLandlordLoading(false);
+                }
+            }
+        };
+
+        fetchLandlordProfile();
     }, [normalizedLandlordProfileId, oxyServices, activeSessionId]);
+
+    // Helper function to safely get landlord display name
+    const getLandlordDisplayName = (profile: Profile | null): string => {
+        if (!profile) return '?';
+
+        switch (profile.profileType) {
+            case 'personal':
+                return profile.personalProfile?.personalInfo?.bio || profile.oxyUserId || '?';
+            case 'agency':
+                return profile.agencyProfile?.legalCompanyName || profile.oxyUserId || '?';
+            case 'business':
+                return profile.businessProfile?.legalCompanyName || profile.oxyUserId || '?';
+            case 'cooperative':
+                return profile.cooperativeProfile?.legalName || profile.oxyUserId || '?';
+            default:
+                return profile.oxyUserId || '?';
+        }
+    };
+
+    // Helper function to safely get landlord trust score
+    const getLandlordTrustScore = (profile: Profile | null): string => {
+        if (!profile || profile.profileType !== 'personal') return 'No rating yet';
+        return profile.personalProfile?.trustScore?.score ? `Trust Score: ${profile.personalProfile.trustScore.score}` : 'No rating yet';
+    };
 
     // Debug logging
     useEffect(() => {
@@ -343,12 +382,12 @@ ${propertyUrl}`;
                 />
                 <View style={styles.errorContainer}>
                     <Text style={styles.errorText}>{t("Property not found")}</Text>
-                    <TouchableOpacity
-                        style={styles.goBackButton}
+                    <Button
                         onPress={() => router.back()}
+                        style={styles.goBackButton}
                     >
-                        <Text style={styles.goBackButtonText}>{t("Go Back")}</Text>
-                    </TouchableOpacity>
+                        {t("Go Back")}
+                    </Button>
                 </View>
             </SafeAreaView>
         );
@@ -370,7 +409,7 @@ ${propertyUrl}`;
                         <SaveButton
                             key="save"
                             isSaved={isPropertyFavorite}
-                            onPress={() => toggleFavorite(property.id || '', property)}
+                            onPress={() => toggleFavorite(property.id || '', apiProperty || {})}
                             variant="heart"
                             color="#222"
                             activeColor="#EF4444"
@@ -458,7 +497,6 @@ ${propertyUrl}`;
                     {/* Eco Rating */}
                     {property.isEcoCertified && (
                         <>
-                            <View style={styles.divider} />
                             <View style={styles.ecoRatingContainer}>
                                 <View style={styles.ratingHeader}>
                                     <Text style={styles.ratingTitle}>{t("Energy Efficiency")}</Text>
@@ -478,7 +516,6 @@ ${propertyUrl}`;
                     {/* Description */}
                     {property.description && property.description.trim() !== '' && (
                         <>
-                            <View style={styles.divider} />
                             <View style={styles.descriptionContainer}>
                                 <Text style={styles.sectionTitle}>{t("About this property")}</Text>
                                 <View style={styles.descriptionCard}>
@@ -489,7 +526,6 @@ ${propertyUrl}`;
                     )}
 
                     {/* Availability */}
-                    <View style={styles.divider} />
                     <View style={styles.availabilityContainer}>
                         <View style={styles.availabilityItem}>
                             <Text style={styles.availabilityLabel}>{t("Available From")}</Text>
@@ -502,7 +538,6 @@ ${propertyUrl}`;
                     </View>
 
                     {/* Amenities */}
-                    <View style={styles.divider} />
                     <Text style={styles.sectionTitle}>{t("What's Included")}</Text>
 
                     <AmenitiesDisplay amenities={property.amenities} title="" />
@@ -510,7 +545,6 @@ ${propertyUrl}`;
                     {/* Map - Only show if location coordinates are available */}
                     {apiProperty?.address?.coordinates?.lat && apiProperty?.address?.coordinates?.lng && (
                         <>
-                            <View style={styles.divider} />
                             <Text style={styles.sectionTitle}>{t("Location")}</Text>
                             <PropertyMap
                                 latitude={apiProperty.address.coordinates.lat}
@@ -523,7 +557,6 @@ ${propertyUrl}`;
                     )}
 
                     {/* Landlord Info / Government Housing Authority */}
-                    <View style={styles.divider} />
                     <Text style={styles.sectionTitle}>
                         {apiProperty?.housingType === 'public' ? t("Housing Authority") : t("Landlord")}
                     </Text>
@@ -549,10 +582,14 @@ ${propertyUrl}`;
                                     </View>
                                 </View>
                                 <View style={styles.landlordActions}>
-                                    <TouchableOpacity style={[styles.messageButton, styles.governmentButton]} onPress={handlePublicHousingApply}>
-                                        <IconComponent name="globe" size={16} color="white" />
-                                        <Text style={styles.messageButtonText}>{t("Apply on State Website")}</Text>
-                                    </TouchableOpacity>
+                                    <ActionButton
+                                        icon="globe"
+                                        text={t("Apply on State Website")}
+                                        onPress={handlePublicHousingApply}
+                                        variant="primary"
+                                        size="medium"
+                                        style={{ flex: 1 }}
+                                    />
                                 </View>
                             </>
                         ) : (
@@ -560,49 +597,13 @@ ${propertyUrl}`;
                                 <View style={styles.landlordHeader}>
                                     <View style={styles.landlordAvatar}>
                                         <Text style={styles.landlordInitial}>
-                                            {landlordProfile ? (
-                                                landlordProfile.profileType === 'personal'
-                                                    ? (landlordProfile.personalProfile?.personalInfo?.bio
-                                                        || landlordProfile.oxyUserId
-                                                        || '?')
-                                                    : landlordProfile.profileType === 'agency'
-                                                        ? (landlordProfile.agencyProfile?.legalCompanyName
-                                                            || landlordProfile.oxyUserId
-                                                            || '?')
-                                                        : landlordProfile.profileType === 'business'
-                                                            ? (landlordProfile.businessProfile?.legalCompanyName
-                                                                || landlordProfile.oxyUserId
-                                                                || '?')
-                                                            : landlordProfile.profileType === 'cooperative'
-                                                                ? (landlordProfile.cooperativeProfile?.legalName
-                                                                    || landlordProfile.oxyUserId
-                                                                    || '?')
-                                                                : (landlordProfile.oxyUserId || '?')
-                                            ) : '?'}
+                                            {getLandlordDisplayName(landlordProfile)}
                                         </Text>
                                     </View>
                                     <View style={styles.landlordInfo}>
                                         <View style={styles.landlordNameRow}>
                                             <Text style={styles.landlordName}>
-                                                {landlordProfile ? (
-                                                    landlordProfile.profileType === 'personal'
-                                                        ? (landlordProfile.personalProfile?.personalInfo?.bio
-                                                            || landlordProfile.oxyUserId
-                                                            || '?')
-                                                        : landlordProfile.profileType === 'agency'
-                                                            ? (landlordProfile.agencyProfile?.legalCompanyName
-                                                                || landlordProfile.oxyUserId
-                                                                || '?')
-                                                            : landlordProfile.profileType === 'business'
-                                                                ? (landlordProfile.businessProfile?.legalCompanyName
-                                                                    || landlordProfile.oxyUserId
-                                                                    || '?')
-                                                                : landlordProfile.profileType === 'cooperative'
-                                                                    ? (landlordProfile.cooperativeProfile?.legalName
-                                                                        || landlordProfile.oxyUserId
-                                                                        || '?')
-                                                                    : (landlordProfile.oxyUserId || '?')
-                                                ) : '?'}
+                                                {getLandlordDisplayName(landlordProfile)}
                                             </Text>
                                             {landlordProfile?.isActive && (
                                                 <View style={styles.verifiedBadge}>
@@ -611,27 +612,38 @@ ${propertyUrl}`;
                                             )}
                                         </View>
                                         <Text style={styles.landlordRating}>
-                                            {landlordProfile?.personalProfile?.trustScore?.score ? `Trust Score: ${landlordProfile.personalProfile.trustScore.score}` : 'No rating yet'}
+                                            {getLandlordTrustScore(landlordProfile)}
                                         </Text>
                                     </View>
                                 </View>
                                 <View style={styles.landlordActions}>
-                                    <TouchableOpacity style={styles.messageButton} onPress={handleContact} disabled={!landlordProfile}>
-                                        <Text style={styles.messageButtonText}>{t("Message")}</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={styles.callButton} onPress={handleContact} disabled={!landlordProfile}>
-                                        <Text style={styles.callButtonText}>{t("Call")}</Text>
-                                    </TouchableOpacity>
+                                    <ActionButton
+                                        icon="chatbubble-outline"
+                                        text={t("Message")}
+                                        onPress={handleContact}
+                                        variant="primary"
+                                        size="medium"
+                                        disabled={!landlordProfile}
+                                        style={{ flex: 1, marginRight: 8 }}
+                                    />
+                                    <ActionButton
+                                        icon="call-outline"
+                                        text={t("Call")}
+                                        onPress={handleContact}
+                                        variant="secondary"
+                                        size="medium"
+                                        disabled={!landlordProfile}
+                                        style={{ flex: 1, marginLeft: 8 }}
+                                    />
                                 </View>
                             </>
                         )}
                     </View>
 
                     {/* Trust and Safety */}
-                    <View style={styles.divider} />
                     <View style={styles.trustContainer}>
                         <View style={styles.trustTextContainer}>
-                            <Text style={styles.trustTitle}>{t("Homio Verified")}</Text>
+                            <Text style={styles.trustTitle}>{t("Homiio Verified")}</Text>
                             <Text style={styles.trustDescription}>
                                 {t("This property has been personally verified by our team for authenticity and condition")}
                             </Text>
@@ -642,22 +654,42 @@ ${propertyUrl}`;
                     <View style={styles.actionButtonsContainer}>
                         {apiProperty?.housingType === 'public' ? (
                             <>
-                                <TouchableOpacity style={[styles.scheduleButton, styles.disabledButton]} disabled>
-                                    <Text style={[styles.scheduleButtonText, styles.disabledText]}>{t("Contact Housing Authority")}</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={[styles.applyButton, styles.governmentApplyButton]} onPress={handleApply}>
-                                    <IconComponent name="globe" size={16} color="white" />
-                                    <Text style={styles.applyButtonText}>{t("Apply on State Website")}</Text>
-                                </TouchableOpacity>
+                                <ActionButton
+                                    icon="chatbubble-outline"
+                                    text={t("Contact Housing Authority")}
+                                    onPress={() => { }}
+                                    variant="secondary"
+                                    size="large"
+                                    disabled={true}
+                                    style={{ flex: 1, marginRight: 10 }}
+                                />
+                                <ActionButton
+                                    icon="globe"
+                                    text={t("Apply on State Website")}
+                                    onPress={handleApply}
+                                    variant="primary"
+                                    size="large"
+                                    style={{ flex: 1 }}
+                                />
                             </>
                         ) : (
                             <>
-                                <TouchableOpacity style={styles.scheduleButton} onPress={handleScheduleViewing}>
-                                    <Text style={styles.scheduleButtonText}>{t("Schedule Viewing")}</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.applyButton} onPress={handleApply}>
-                                    <Text style={styles.applyButtonText}>{t("Apply Now")}</Text>
-                                </TouchableOpacity>
+                                <ActionButton
+                                    icon="calendar-outline"
+                                    text={t("Schedule Viewing")}
+                                    onPress={handleScheduleViewing}
+                                    variant="outline"
+                                    size="large"
+                                    style={{ flex: 1, marginRight: 10 }}
+                                />
+                                <ActionButton
+                                    icon="checkmark-circle-outline"
+                                    text={t("Apply Now")}
+                                    onPress={handleApply}
+                                    variant="primary"
+                                    size="large"
+                                    style={{ flex: 1 }}
+                                />
                             </>
                         )}
                     </View>
@@ -711,11 +743,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primaryColor,
         paddingVertical: 10,
         paddingHorizontal: 20,
-        borderRadius: 8,
-    },
-    goBackButtonText: {
-        color: 'white',
-        fontWeight: '600',
+        borderRadius: 25,
     },
     enhancedHeader: {
         backgroundColor: colors.primaryLight,
@@ -822,11 +850,6 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: colors.primaryColor,
     },
-    divider: {
-        height: 1,
-        backgroundColor: '#e0e0e0',
-        marginVertical: 20,
-    },
     ecoRatingContainer: {
         marginBottom: 15,
     },
@@ -904,12 +927,15 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     landlordCard: {
-        backgroundColor: '#fff',
         borderRadius: 16,
         padding: 20,
         marginBottom: 20,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
     landlordHeader: {
         flexDirection: 'row',
@@ -974,48 +1000,18 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
     },
-    messageButton: {
-        backgroundColor: '#4F46E5',
-        paddingVertical: 12,
-        paddingHorizontal: 24,
-        borderRadius: 12,
-        flex: 1,
-        marginRight: 8,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    governmentButton: {
-        backgroundColor: '#1E40AF',
-        marginRight: 0,
-        gap: 8,
-    },
-    messageButtonText: {
-        color: 'white',
-        fontWeight: '600',
-        textAlign: 'center',
-        fontSize: 14,
-    },
-    callButton: {
-        backgroundColor: '#10B981',
-        paddingVertical: 12,
-        paddingHorizontal: 24,
-        borderRadius: 12,
-        flex: 1,
-        marginLeft: 8,
-    },
-    callButtonText: {
-        color: 'white',
-        fontWeight: '600',
-        textAlign: 'center',
-        fontSize: 14,
-    },
+
     trustContainer: {
         flexDirection: 'row',
-        backgroundColor: '#f5f5f5',
         padding: 15,
         borderRadius: 10,
         marginBottom: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
     trustTextContainer: {
         flex: 1,
@@ -1032,41 +1028,6 @@ const styles = StyleSheet.create({
     actionButtonsContainer: {
         flexDirection: 'row',
         marginVertical: 20,
-    },
-    scheduleButton: {
-        flex: 1,
-        backgroundColor: colors.primaryLight,
-        paddingVertical: 12,
-        borderRadius: 8,
-        marginRight: 10,
-        alignItems: 'center',
-    },
-    scheduleButtonText: {
-        fontWeight: '600',
-        color: colors.primaryColor,
-    },
-    applyButton: {
-        flex: 1,
-        backgroundColor: colors.primaryColor,
-        paddingVertical: 12,
-        borderRadius: 8,
-        alignItems: 'center',
-        flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 8,
-    },
-    governmentApplyButton: {
-        backgroundColor: '#1E40AF',
-    },
-    disabledButton: {
-        backgroundColor: '#E5E7EB',
-    },
-    disabledText: {
-        color: '#9CA3AF',
-    },
-    applyButtonText: {
-        fontWeight: '600',
-        color: 'white',
     },
     fraudWarningContainer: {
         flexDirection: 'row',

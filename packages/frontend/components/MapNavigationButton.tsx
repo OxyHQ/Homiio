@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primaryColor,
         paddingHorizontal: 16,
         paddingVertical: 12,
-        borderRadius: 8,
+        borderRadius: 25,
         gap: 8,
     },
     icon: {
@@ -54,5 +54,6 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: '600',
         fontSize: 14,
+        fontFamily: 'Phudu',
     },
 }); 

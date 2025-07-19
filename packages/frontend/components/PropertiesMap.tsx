@@ -631,7 +631,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryColor,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 6,
+    borderRadius: 25,
   },
   retryButtonText: {
     color: 'white',

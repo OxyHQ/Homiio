@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingVertical: 10,
         paddingHorizontal: 16,
-        borderRadius: 24,
+        borderRadius: 25,
         flex: 1,
         marginHorizontal: 5,
     },
@@ -277,6 +277,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         marginLeft: 6,
+        fontFamily: 'Phudu',
     },
     secondaryButton: {
         backgroundColor: 'transparent',
@@ -288,5 +289,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         marginLeft: 6,
+        fontFamily: 'Phudu',
     },
 }); 

@@ -19,6 +19,7 @@ import { Header } from '@/components/Header';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { useProperty } from '@/hooks';
 import { Property } from '@/services/propertyService';
+import { ActionButton } from '@/components/ui/ActionButton';
 
 type PropertyData = {
   id: string;
@@ -39,7 +40,8 @@ export default function BookViewingPage() {
   const [message, setMessage] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
 
-  const { property: apiProperty, loading: apiLoading, error: apiError, loadProperty } = useProperty(id);
+  const normalizedId = Array.isArray(id) ? id[0] : id;
+  const { property: apiProperty, loading: apiLoading, error: apiError, loadProperty } = useProperty(normalizedId || '');
 
   useEffect(() => {
     loadProperty();
@@ -47,8 +49,23 @@ export default function BookViewingPage() {
 
   useEffect(() => {
     if (apiProperty) {
+      // Map API property type to PropertyData type
+      const mapPropertyType = (type: string): 'apartment' | 'house' | 'room' | 'studio' | 'duplex' | 'penthouse' | undefined => {
+        switch (type) {
+          case 'apartment':
+          case 'house':
+          case 'room':
+          case 'studio':
+          case 'duplex':
+          case 'penthouse':
+            return type;
+          default:
+            return 'apartment'; // Default fallback
+        }
+      };
+
       const generatedTitle = generatePropertyTitle({
-        type: apiProperty.type,
+        type: mapPropertyType(apiProperty.type),
         address: apiProperty.address,
         bedrooms: apiProperty.bedrooms,
         bathrooms: apiProperty.bathrooms
@@ -239,17 +256,16 @@ export default function BookViewingPage() {
           </Text>
         </View>
 
-        <TouchableOpacity
-          style={[styles.submitButton, !selectedDate || !selectedTime && styles.disabledButton]}
+        <ActionButton
+          icon="calendar-outline"
+          text={t("Request Viewing")}
           onPress={handleSubmit}
+          variant="primary"
+          size="large"
           disabled={!selectedDate || !selectedTime || submitting}
-        >
-          {submitting ? (
-            <ActivityIndicator color="white" size="small" />
-          ) : (
-            <Text style={styles.submitButtonText}>{t("Request Viewing")}</Text>
-          )}
-        </TouchableOpacity>
+          loading={submitting}
+          style={{ marginBottom: 30 }}
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -273,6 +289,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: colors.COLOR_BLACK_LIGHT_3,
+    fontFamily: 'Phudu',
   },
   propertyCard: {
     backgroundColor: 'white',
@@ -316,6 +333,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: colors.primaryColor,
+    fontFamily: 'Phudu',
   },
   landlordDetails: {
     flex: 1,
@@ -325,6 +343,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.COLOR_BLACK,
     marginBottom: 3,
+    fontFamily: 'Phudu',
   },
   ratingContainer: {
     flexDirection: 'row',
@@ -343,6 +362,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.COLOR_BLACK,
     marginBottom: 15,
+    fontFamily: 'Phudu',
   },
   datesContainer: {
     flexDirection: 'row',
@@ -374,6 +394,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.COLOR_BLACK,
     marginBottom: 5,
+    fontFamily: 'Phudu',
   },
   dateMonth: {
     fontSize: 12,
@@ -412,6 +433,7 @@ const styles = StyleSheet.create({
   selectedSlotText: {
     color: 'white',
     fontWeight: '600',
+    fontFamily: 'Phudu',
   },
   notesInput: {
     backgroundColor: 'white',
@@ -440,20 +462,5 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_3,
     lineHeight: 20,
   },
-  submitButton: {
-    backgroundColor: colors.primaryColor,
-    borderRadius: 10,
-    padding: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 30,
-  },
-  disabledButton: {
-    backgroundColor: '#cccccc',
-  },
-  submitButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+
 });
