@@ -1,69 +1,24 @@
-// Property Redux Hooks
-export {
-  useProperties,
-  useProperty,
-  usePropertyStats,
-  usePropertyEnergyStats,
-  useSearchProperties,
-  useCreateProperty,
-  useUpdateProperty,
-  useDeleteProperty,
-  useUserProperties,
-} from './usePropertyQueries';
+// Core hooks
+export { useLocationSearch } from './useLocation';
+export { useEcoProperties } from './usePropertyList';
+export { useSavedProperties } from './useSavedProperties';
+export { useProfile } from './useProfile';
 
-// Property List Redux Hooks
-export {
-  useEcoProperties,
-  useCityProperties,
-  useTypeProperties,
-  useClearAllPropertyLists,
-} from './usePropertyListRedux';
+// Property hooks
+export { useProperties, useProperty, usePropertyStats } from './usePropertyQueries';
 
-// Location Redux Hooks
-export {
-  useLocationSearch,
-  useLocation,
-} from './useLocationRedux';
+// Profile hooks
+export { useProfileRedux, useActiveProfile } from './useProfileQueries';
 
-// Profile Zustand Hooks
-export {
-  useProfileZustand,
-} from './useProfileZustand';
+// Favorites hooks
+export { useFavorites } from './useFavorites';
 
-// Lease Redux Hooks
-export {
-  useUserLeases,
-  useHasRentalProperties,
-} from './useLeaseQueries';
+// Utility hooks
+export { useDebounce } from './useDebounce';
+export { useDocumentTitle } from './useDocumentTitle';
+export { useSEO } from './useDocumentTitle';
 
-// Roommate Redux Hooks
-export {
-  useRoommateProfiles,
-  useHasRoommateMatching,
-  useToggleRoommateMatching,
-  useSendRoommateRequest,
-} from './useRoommateQueries';
-
-// Room Redux Hooks
-export {
-  useRooms,
-  useRoom,
-  useRoomStats,
-  useRoomEnergyStats,
-  useSearchRooms,
-  useCreateRoom,
-  useUpdateRoom,
-  useDeleteRoom,
-  useAssignTenant,
-  useUnassignTenant,
-} from './useRoomRedux';
-
-// Neighborhood Redux Hooks
-export {
-  useNeighborhood,
-} from './useNeighborhood';
-
-// Address Search Hooks
+// Address Search hooks
 export {
   useAddressSearch,
   useDebouncedAddressSearch,

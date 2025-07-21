@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { useProfileZustand } from '@/hooks/useProfileZustand';
+import { useProfile } from '@/hooks/useProfile';
 import { useOxy } from '@oxyhq/services';
 import type { CreateProfileData, UpdateProfileData } from '@/services/profileService';
 
@@ -14,7 +14,7 @@ export function ProfileManager() {
         createProfile,
         updateProfile,
         deleteProfile
-    } = useProfileZustand();
+    } = useProfile();
 
     const [selectedProfileType, setSelectedProfileType] = useState<'personal' | 'agency'>('personal');
 
@@ -89,7 +89,7 @@ export function ProfileManager() {
                     break;
             }
 
-            await createProfile(profileData, oxyServices, activeSessionId);
+            await createProfile(profileData);
             Alert.alert('Success', `${profileType} profile created successfully!`);
         } catch (error: any) {
             Alert.alert('Error', `Failed to create ${profileType} profile: ${error.message || 'Unknown error'}`);
@@ -98,7 +98,7 @@ export function ProfileManager() {
 
     const handleUpdateProfile = async (profileId: string, updateData: UpdateProfileData) => {
         try {
-            await updateProfile(profileId, updateData, oxyServices, activeSessionId);
+            await updateProfile(profileId, updateData as any);
             Alert.alert('Success', 'Profile updated successfully!');
         } catch (error: any) {
             Alert.alert('Error', `Failed to update profile: ${error.message || 'Unknown error'}`);
@@ -116,7 +116,7 @@ export function ProfileManager() {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            await deleteProfile(profileId, oxyServices, activeSessionId);
+                            await deleteProfile(profileId);
                             Alert.alert('Success', 'Profile deleted successfully!');
                         } catch (error: any) {
                             Alert.alert('Error', `Failed to delete profile: ${error.message || 'Unknown error'}`);

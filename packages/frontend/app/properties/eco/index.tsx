@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
 import { PropertyCard } from '@/components/PropertyCard';
-import { useEcoProperties } from '@/hooks/usePropertyListRedux';
+import { useEcoProperties } from '@/hooks/usePropertyList';
 import type { Property } from '@/services/propertyService';
 
 // Type assertion for Ionicons compatibility with React 19

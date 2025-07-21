@@ -17,7 +17,7 @@ import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { toast } from 'sonner';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import { useProfileZustand } from '@/hooks/useProfileZustand';
+import { useProfile } from '@/hooks/useProfile';
 import type { Profile } from '@/services/profileService';
 
 // Type assertion for Ionicons compatibility with React 19
@@ -82,11 +82,10 @@ export default function ProfileScreen() {
         primaryProfile,
         isLoading,
         error,
-        refetchProfiles,
+        loadProfiles,
         updateProfile,
-        deleteProfile,
-        activateProfile
-    } = useProfileZustand();
+        deleteProfile
+    } = useProfile();
 
     const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
     const [isSwitching, setIsSwitching] = useState(false);
@@ -143,8 +142,8 @@ export default function ProfileScreen() {
                         setIsSwitching(true);
 
                         try {
-                            // Use Redux action to activate the profile
-                            await activateProfile(finalProfileId);
+                            // TODO: Implement activateProfile functionality
+                            console.log('Activate profile functionality not implemented yet');
 
                             // Update local state immediately
                             setActiveProfileId(finalProfileId);
@@ -249,7 +248,7 @@ export default function ProfileScreen() {
                     <IconComponent name="alert-circle" size={48} color="#ff4757" />
                     <Text style={styles.errorTitle}>Failed to load profiles</Text>
                     <Text style={styles.errorMessage}>Please try again later</Text>
-                    <TouchableOpacity style={styles.retryButton} onPress={() => refetchProfiles()}>
+                    <TouchableOpacity style={styles.retryButton} onPress={() => loadProfiles()}>
                         <Text style={styles.retryButtonText}>Retry</Text>
                     </TouchableOpacity>
                 </View>

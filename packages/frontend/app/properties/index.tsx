@@ -12,7 +12,7 @@ import { SearchBar } from '@/components/SearchBar';
 import Button from '@/components/Button';
 import { Property } from '@/services/propertyService';
 import { Ionicons } from '@expo/vector-icons';
-import useSavedProperties from '@/hooks/useSavedPropertiesRedux';
+import { useSavedProperties } from '@/hooks/useSavedProperties';
 import { useOxy } from '@oxyhq/services';
 import { useFavorites } from '@/hooks/useFavorites';
 
@@ -34,7 +34,7 @@ export default function PropertiesScreen() {
     const { properties, loading: isLoading, error, loadProperties, pagination } = useProperties();
     const total = pagination.total || 0;
 
-    const { properties: savedProperties = [] } = useSavedProperties();
+    const { savedProperties = [] } = useSavedProperties();
     const { isFavorite, toggleFavorite } = useFavorites();
 
     // Refresh recently viewed list when screen loads

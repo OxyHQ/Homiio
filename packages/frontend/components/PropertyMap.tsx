@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { View, StyleSheet, Platform, ActivityIndicator, Text } from 'react-native';
 import { colors } from '@/styles/colors';
-import { useLocationSearch, useReverseGeocode } from '@/hooks/useLocationRedux';
+import { useLocationSearch, useReverseGeocode } from '@/hooks/useLocation';
 import { ThemedText } from './ThemedText';
 
 interface PropertyMapProps {
@@ -179,8 +179,8 @@ const WebMap: React.FC<PropertyMapProps> = ({
 
           // Handle reverse geocoding result
           if (reverseResult) {
-            const address = reverseResult.display_name || 'Unknown location';
-            selectLocation(parseFloat(reverseResult.lat), parseFloat(reverseResult.lon), address);
+            const address = reverseResult.address || 'Unknown location';
+            selectLocation(reverseResult.latitude, reverseResult.longitude, address);
           }
 
           // Close search results when clicking outside
@@ -256,11 +256,11 @@ const WebMap: React.FC<PropertyMapProps> = ({
         }}
       />
       {loading && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color={colors.primaryColor} />
-            <ThemedText style={styles.loadingText}>Loading map...</ThemedText>
-          </View>
-        )}
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={colors.primaryColor} />
+          <ThemedText style={styles.loadingText}>Loading map...</ThemedText>
+        </View>
+      )}
     </View>
   );
 };
