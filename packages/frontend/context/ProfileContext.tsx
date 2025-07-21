@@ -23,30 +23,33 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         error,
         setPrimaryProfile,
         setAllProfiles,
-        setLoading,
         setError
     } = useProfileStore();
 
     useEffect(() => {
+        const loadProfiles = async () => {
+            try {
+                await useProfileStore.getState().fetchPrimaryProfile(oxyServices, activeSessionId);
+                await useProfileStore.getState().fetchUserProfiles(oxyServices, activeSessionId);
+            } catch (err: any) {
+                setError(err.message || 'Failed to load profiles');
+            }
+        };
+
         if (oxyServices && activeSessionId) {
-            // TODO: Implement fetch logic with Zustand
-            // For now, just set loading state
-            setLoading(true);
-            // You'll need to implement the actual fetch logic here
-            // or use a separate service/hook for API calls
+            loadProfiles();
         } else {
             setPrimaryProfile(null);
             setAllProfiles([]);
         }
-    }, [oxyServices, activeSessionId, setPrimaryProfile, setAllProfiles, setLoading]);
+    }, [oxyServices, activeSessionId, setPrimaryProfile, setAllProfiles, setError]);
 
     const hasPrimaryProfile = !!primaryProfile;
 
     const refetch = () => {
         if (oxyServices && activeSessionId) {
-            // TODO: Implement refetch logic with Zustand
-            setLoading(true);
-            // You'll need to implement the actual fetch logic here
+            useProfileStore.getState().fetchPrimaryProfile(oxyServices, activeSessionId);
+            useProfileStore.getState().fetchUserProfiles(oxyServices, activeSessionId);
         }
     };
 
