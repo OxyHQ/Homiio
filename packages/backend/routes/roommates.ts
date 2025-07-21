@@ -36,4 +36,10 @@ router.get('/status', asyncHandler(roommateController.getCurrentUserRoommateStat
   // Decline roommate request
   router.post('/requests/:requestId/decline', asyncHandler(roommateController.declineRoommateRequest));
 
+  // Get current user's roommate relationships
+  router.get('/relationships', asyncHandler(roommateController.getMyRoommateRelationships));
+
+  // End a roommate relationship
+  router.delete('/relationships/:relationshipId', asyncHandler(roommateController.endRoommateRelationship));
+
 export default () => router; 

@@ -4,8 +4,8 @@
  */
 
 const Profile = require('../models').Profile;
-// Remove oxyServices and fetchOxyUserData related code
-// const oxyServices = require('../services/oxyServices');
+const RoommateRequest = require('../models').RoommateRequest;
+const RoommateRelationship = require('../models').RoommateRelationship;
 
 // Remove fetchOxyUserData helper function
 
@@ -235,12 +235,27 @@ const toggleRoommateMatching = async (req, res) => {
 // Get roommate requests
 const getRoommateRequests = async (req, res) => {
   try {
-    // This would typically involve a separate RoommateRequest model
-    // For now, return empty arrays
+    const oxyUserId = req.user?.id || req.user?._id;
+    
+    if (!oxyUserId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Get user's active profile
+    const profile = await Profile.findActiveByOxyUserId(oxyUserId);
+    
+    if (!profile) {
+      return res.status(404).json({ error: 'Profile not found' });
+    }
+
+    // Get sent and received requests
+    const sentRequests = await RoommateRequest.findSentRequests(profile._id);
+    const receivedRequests = await RoommateRequest.findReceivedRequests(profile._id);
+
     res.json({
       data: {
-        sent: [],
-        received: []
+        sent: sentRequests,
+        received: receivedRequests
       }
     });
   } catch (error) {
@@ -252,12 +267,56 @@ const getRoommateRequests = async (req, res) => {
 // Send roommate request
 const sendRoommateRequest = async (req, res) => {
   try {
+    const oxyUserId = req.user?.id || req.user?._id;
     const { profileId } = req.params;
     const { message } = req.body;
 
-    // This would typically involve creating a RoommateRequest document
-    // For now, just return success
-    res.json({ message: 'Roommate request sent successfully' });
+    if (!oxyUserId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Get sender's active profile
+    const senderProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    
+    if (!senderProfile) {
+      return res.status(404).json({ error: 'Sender profile not found' });
+    }
+
+    // Get receiver's profile
+    const receiverProfile = await Profile.findById(profileId);
+    
+    if (!receiverProfile) {
+      return res.status(404).json({ error: 'Receiver profile not found' });
+    }
+
+    // Check if receiver has roommate matching enabled
+    if (!receiverProfile.personalProfile?.settings?.roommate?.enabled) {
+      return res.status(400).json({ error: 'This user has roommate matching disabled' });
+    }
+
+    // Check if there's already an active request
+    const existingRequest = await RoommateRequest.findActiveRequest(senderProfile._id, profileId);
+    if (existingRequest) {
+      return res.status(400).json({ error: 'A roommate request already exists between these users' });
+    }
+
+    // Calculate match percentage
+    const senderPrefs = senderProfile.personalProfile?.settings?.roommate?.preferences;
+    const receiverPrefs = receiverProfile.personalProfile?.settings?.roommate?.preferences;
+    const matchPercentage = calculateMatchPercentage(senderPrefs, receiverPrefs);
+
+    // Create roommate request
+    const roommateRequest = await RoommateRequest.create({
+      senderProfileId: senderProfile._id,
+      receiverProfileId: profileId,
+      message,
+      matchPercentage
+    });
+
+    res.json({ 
+      message: 'Roommate request sent successfully',
+      data: roommateRequest
+    });
   } catch (error) {
     console.error('Error sending roommate request:', error);
     res.status(500).json({ error: 'Failed to send roommate request' });
@@ -267,11 +326,77 @@ const sendRoommateRequest = async (req, res) => {
 // Accept roommate request
 const acceptRoommateRequest = async (req, res) => {
   try {
+    const oxyUserId = req.user?.id || req.user?._id;
     const { requestId } = req.params;
+    const { responseMessage } = req.body;
 
-    // This would typically involve updating a RoommateRequest document
-    // For now, just return success
-    res.json({ message: 'Roommate request accepted successfully' });
+    if (!oxyUserId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Get user's active profile
+    const profile = await Profile.findActiveByOxyUserId(oxyUserId);
+    
+    if (!profile) {
+      return res.status(404).json({ error: 'Profile not found' });
+    }
+
+    // Get roommate request
+    const roommateRequest = await RoommateRequest.findById(requestId);
+    
+    if (!roommateRequest) {
+      return res.status(404).json({ error: 'Roommate request not found' });
+    }
+
+    // Verify the user is the receiver
+    if (roommateRequest.receiverProfileId.toString() !== profile._id.toString()) {
+      return res.status(403).json({ error: 'You can only accept requests sent to you' });
+    }
+
+    // Accept the request
+    await roommateRequest.accept(responseMessage);
+
+    // Create roommate relationship
+    const senderPrefs = roommateRequest.senderProfileId.personalProfile?.settings?.roommate?.preferences;
+    const receiverPrefs = profile.personalProfile?.settings?.roommate?.preferences;
+    
+    // Calculate shared preferences
+    const sharedPreferences = {
+      budget: {
+        min: Math.max(senderPrefs?.budget?.min || 0, receiverPrefs?.budget?.min || 0),
+        max: Math.min(senderPrefs?.budget?.max || Infinity, receiverPrefs?.budget?.max || Infinity),
+        currency: 'USD'
+      },
+      location: receiverPrefs?.location || senderPrefs?.location,
+      moveInDate: receiverPrefs?.moveInDate || senderPrefs?.moveInDate,
+      leaseDuration: receiverPrefs?.leaseDuration || senderPrefs?.leaseDuration,
+      lifestyle: {
+        smoking: receiverPrefs?.lifestyle?.smoking || senderPrefs?.lifestyle?.smoking,
+        pets: receiverPrefs?.lifestyle?.pets || senderPrefs?.lifestyle?.pets,
+        partying: receiverPrefs?.lifestyle?.partying || senderPrefs?.lifestyle?.partying,
+        cleanliness: receiverPrefs?.lifestyle?.cleanliness || senderPrefs?.lifestyle?.cleanliness,
+        schedule: receiverPrefs?.lifestyle?.schedule || senderPrefs?.lifestyle?.schedule
+      }
+    };
+
+    const roommateRelationship = await RoommateRelationship.createRelationship(
+      roommateRequest.senderProfileId._id,
+      profile._id,
+      roommateRequest.matchPercentage,
+      sharedPreferences
+    );
+
+    // Update the request with the relationship ID
+    roommateRequest.roommateRelationshipId = roommateRelationship._id;
+    await roommateRequest.save();
+
+    res.json({ 
+      message: 'Roommate request accepted successfully',
+      data: {
+        request: roommateRequest,
+        relationship: roommateRelationship
+      }
+    });
   } catch (error) {
     console.error('Error accepting roommate request:', error);
     res.status(500).json({ error: 'Failed to accept roommate request' });
@@ -281,11 +406,40 @@ const acceptRoommateRequest = async (req, res) => {
 // Decline roommate request
 const declineRoommateRequest = async (req, res) => {
   try {
+    const oxyUserId = req.user?.id || req.user?._id;
     const { requestId } = req.params;
+    const { responseMessage } = req.body;
 
-    // This would typically involve updating a RoommateRequest document
-    // For now, just return success
-    res.json({ message: 'Roommate request declined successfully' });
+    if (!oxyUserId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Get user's active profile
+    const profile = await Profile.findActiveByOxyUserId(oxyUserId);
+    
+    if (!profile) {
+      return res.status(404).json({ error: 'Profile not found' });
+    }
+
+    // Get roommate request
+    const roommateRequest = await RoommateRequest.findById(requestId);
+    
+    if (!roommateRequest) {
+      return res.status(404).json({ error: 'Roommate request not found' });
+    }
+
+    // Verify the user is the receiver
+    if (roommateRequest.receiverProfileId.toString() !== profile._id.toString()) {
+      return res.status(403).json({ error: 'You can only decline requests sent to you' });
+    }
+
+    // Decline the request
+    await roommateRequest.decline(responseMessage);
+
+    res.json({ 
+      message: 'Roommate request declined successfully',
+      data: roommateRequest
+    });
   } catch (error) {
     console.error('Error declining roommate request:', error);
     res.status(500).json({ error: 'Failed to decline roommate request' });
@@ -343,17 +497,95 @@ const getCurrentUserRoommateStatus = async (req, res) => {
     const profile = await Profile.findActiveByOxyUserId(oxyUserId);
     const hasRoommateMatching = profile?.personalProfile?.settings?.roommate?.enabled || false;
     
-    // Remove Oxy user data fetching and just return profile info
+    // Get active roommate relationships
+    const relationships = profile ? await RoommateRelationship.findByProfile(profile._id) : [];
+    
+    // Get pending requests count
+    const pendingRequests = profile ? await RoommateRequest.findPendingRequests(profile._id) : [];
+    
     res.json({
       hasRoommateMatching,
       profile: profile ? {
         id: profile._id,
         roommatePreferences: profile.personalProfile?.settings?.roommate?.preferences || null
-      } : null
+      } : null,
+      relationships: relationships.length,
+      pendingRequests: pendingRequests.length
     });
   } catch (error) {
     console.error('Error fetching current user roommate status:', error);
     res.status(500).json({ error: 'Failed to fetch roommate status' });
+  }
+};
+
+// Get current user's roommate relationships
+const getMyRoommateRelationships = async (req, res) => {
+  try {
+    const oxyUserId = req.user?.id || req.user?._id;
+    
+    if (!oxyUserId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Get user's active profile
+    const profile = await Profile.findActiveByOxyUserId(oxyUserId);
+    
+    if (!profile) {
+      return res.status(404).json({ error: 'Profile not found' });
+    }
+
+    // Get active roommate relationships
+    const relationships = await RoommateRelationship.findByProfile(profile._id);
+
+    res.json({
+      data: relationships
+    });
+  } catch (error) {
+    console.error('Error fetching roommate relationships:', error);
+    res.status(500).json({ error: 'Failed to fetch roommate relationships' });
+  }
+};
+
+// End a roommate relationship
+const endRoommateRelationship = async (req, res) => {
+  try {
+    const oxyUserId = req.user?.id || req.user?._id;
+    const { relationshipId } = req.params;
+
+    if (!oxyUserId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Get user's active profile
+    const profile = await Profile.findActiveByOxyUserId(oxyUserId);
+    
+    if (!profile) {
+      return res.status(404).json({ error: 'Profile not found' });
+    }
+
+    // Get roommate relationship
+    const relationship = await RoommateRelationship.findById(relationshipId);
+    
+    if (!relationship) {
+      return res.status(404).json({ error: 'Roommate relationship not found' });
+    }
+
+    // Verify the user is part of this relationship
+    if (relationship.profile1Id.toString() !== profile._id.toString() && 
+        relationship.profile2Id.toString() !== profile._id.toString()) {
+      return res.status(403).json({ error: 'You can only end relationships you are part of' });
+    }
+
+    // End the relationship
+    await relationship.endRelationship();
+
+    res.json({ 
+      message: 'Roommate relationship ended successfully',
+      data: relationship
+    });
+  } catch (error) {
+    console.error('Error ending roommate relationship:', error);
+    res.status(500).json({ error: 'Failed to end roommate relationship' });
   }
 };
 
@@ -366,5 +598,7 @@ module.exports = {
   sendRoommateRequest,
   acceptRoommateRequest,
   declineRoommateRequest,
-  getCurrentUserRoommateStatus
+  getCurrentUserRoommateStatus,
+  getMyRoommateRelationships,
+  endRoommateRelationship
 }; 

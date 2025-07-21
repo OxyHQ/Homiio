@@ -133,10 +133,25 @@ class RoommateService {
     }
   }
 
-  // Accept roommate request
-  async acceptRoommateRequest(requestId: string, oxyServices?: OxyServices, activeSessionId?: string): Promise<void> {
+
+
+  // Decline roommate request
+  async declineRoommateRequest(requestId: string, responseMessage?: string, oxyServices?: OxyServices, activeSessionId?: string): Promise<void> {
     try {
-      await api.post(`${this.baseUrl}/requests/${requestId}/accept`, {}, {
+      await api.post(`${this.baseUrl}/requests/${requestId}/decline`, { responseMessage }, {
+        oxyServices,
+        activeSessionId,
+      });
+    } catch (error) {
+      console.error('Error declining roommate request:', error);
+      throw error;
+    }
+  }
+
+  // Accept roommate request
+  async acceptRoommateRequest(requestId: string, responseMessage?: string, oxyServices?: OxyServices, activeSessionId?: string): Promise<void> {
+    try {
+      await api.post(`${this.baseUrl}/requests/${requestId}/accept`, { responseMessage }, {
         oxyServices,
         activeSessionId,
       });
@@ -146,15 +161,31 @@ class RoommateService {
     }
   }
 
-  // Decline roommate request
-  async declineRoommateRequest(requestId: string, oxyServices?: OxyServices, activeSessionId?: string): Promise<void> {
+  // Get roommate relationships
+  async getRoommateRelationships(oxyServices?: OxyServices, activeSessionId?: string): Promise<{
+    data: any[];
+  }> {
     try {
-      await api.post(`${this.baseUrl}/requests/${requestId}/decline`, {}, {
+      const response = await api.get(`${this.baseUrl}/relationships`, {
+        oxyServices,
+        activeSessionId,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching roommate relationships:', error);
+      return { data: [] };
+    }
+  }
+
+  // End roommate relationship
+  async endRoommateRelationship(relationshipId: string, oxyServices?: OxyServices, activeSessionId?: string): Promise<void> {
+    try {
+      await api.delete(`${this.baseUrl}/relationships/${relationshipId}`, {
         oxyServices,
         activeSessionId,
       });
     } catch (error) {
-      console.error('Error declining roommate request:', error);
+      console.error('Error ending roommate relationship:', error);
       throw error;
     }
   }

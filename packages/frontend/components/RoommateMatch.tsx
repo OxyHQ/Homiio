@@ -1,294 +1,325 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import React, { useState } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    TouchableOpacity,
+    Image,
+    Alert,
+    Platform,
+    TextInput
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
-import { TrustScore } from './TrustScore';
+import type { RoommateProfile } from '@/hooks/useRoommate';
+import Button from '@/components/Button';
 
-export type LifestylePreference = 'early_bird' | 'night_owl' | 'clean' | 'social' | 'quiet' | 'pets' | 'smoker' | 'non_smoker' | 'vegan' | 'creative';
+// Type assertion for Ionicons compatibility
+const IconComponent = Ionicons as any;
 
-export type MatchPercentage = number; // 0-100
+interface RoommateMatchProps {
+    profile: RoommateProfile;
+    onSendRequest: (profileId: string, message?: string) => Promise<boolean>;
+    onViewProfile: (profileId: string) => void;
+}
 
-type RoommateMatchProps = {
-    id: string;
-    name: string;
-    age: number;
-    occupation: string;
-    bio: string;
-    imageUrl: string;
-    matchPercentage: MatchPercentage;
-    trustScore: number;
-    lifestylePreferences: LifestylePreference[];
-    interests: string[];
-    onViewProfilePress?: () => void;
-    onMessagePress?: () => void;
-};
+export const RoommateMatch: React.FC<RoommateMatchProps> = ({
+    profile,
+    onSendRequest,
+    onViewProfile
+}) => {
+    const [isLoading, setIsLoading] = useState(false);
+    const [showMessageInput, setShowMessageInput] = useState(false);
+    const [message, setMessage] = useState('');
 
-const preferenceLabels: Record<LifestylePreference, { label: string; icon: string }> = {
-    early_bird: { label: 'Early Bird', icon: 'sunny-outline' },
-    night_owl: { label: 'Night Owl', icon: 'moon-outline' },
-    clean: { label: 'Clean', icon: 'sparkles-outline' },
-    social: { label: 'Social', icon: 'people-outline' },
-    quiet: { label: 'Quiet', icon: 'volume-low-outline' },
-    pets: { label: 'Pet Friendly', icon: 'paw-outline' },
-    smoker: { label: 'Smoker', icon: 'flame-outline' },
-    non_smoker: { label: 'Non-Smoker', icon: 'flame-outline' },
-    vegan: { label: 'Vegan', icon: 'leaf-outline' },
-    creative: { label: 'Creative', icon: 'color-palette-outline' },
-};
+    const handleSendRequest = async () => {
+        if (!showMessageInput) {
+            setShowMessageInput(true);
+            return;
+        }
 
-export function RoommateMatch({
-    name,
-    age,
-    occupation,
-    bio,
-    imageUrl,
-    matchPercentage,
-    trustScore,
-    lifestylePreferences,
-    interests,
-    onViewProfilePress,
-    onMessagePress,
-}: RoommateMatchProps) {
-    // Get match color based on percentage
-    const getMatchColor = (percentage: number) => {
-        if (percentage >= 90) return '#4CAF50';
-        if (percentage >= 70) return '#8BC34A';
-        if (percentage >= 50) return '#FFC107';
-        if (percentage >= 30) return '#FF9800';
-        return '#F44336';
+        setIsLoading(true);
+        try {
+            const success = await onSendRequest(profile.id, message);
+            if (success) {
+                setShowMessageInput(false);
+                setMessage('');
+                Alert.alert('Success', 'Roommate request sent successfully!');
+            }
+        } catch (error) {
+            Alert.alert('Error', 'Failed to send roommate request');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const matchColor = getMatchColor(matchPercentage);
+    const getDisplayName = () => {
+        const personal = profile.personalProfile;
+        if (personal?.firstName && personal?.lastName) {
+            return `${personal.firstName} ${personal.lastName}`;
+        }
+        if (personal?.firstName) {
+            return personal.firstName;
+        }
+        return 'User';
+    };
+
+    const getMatchScoreColor = (score: number) => {
+        if (score >= 80) return colors.success;
+        if (score >= 60) return colors.warning;
+        return colors.error;
+    };
+
+    const getMatchScoreText = (score: number) => {
+        if (score >= 80) return 'Excellent Match';
+        if (score >= 60) return 'Good Match';
+        return 'Fair Match';
+    };
 
     return (
         <View style={styles.container}>
+            {/* Header with avatar and basic info */}
             <View style={styles.header}>
-                <View style={styles.profileSection}>
-                    <Image
-                        source={{ uri: imageUrl }}
-                        style={styles.profileImage}
-                    />
-                    <View style={styles.profileInfo}>
-                        <View style={styles.nameRow}>
-                            <Text style={styles.name}>{name}, {age}</Text>
-                            <View style={[styles.matchBadge, { backgroundColor: matchColor }]}>
-                                <Text style={styles.matchText}>{matchPercentage}% Match</Text>
-                            </View>
+                <TouchableOpacity
+                    style={styles.avatarContainer}
+                    onPress={() => onViewProfile(profile.id)}
+                >
+                    {profile.personalProfile?.avatar ? (
+                        <Image
+                            source={{ uri: profile.personalProfile.avatar }}
+                            style={styles.avatar}
+                        />
+                    ) : (
+                        <View style={styles.avatarPlaceholder}>
+                            <IconComponent name="person" size={24} color={colors.gray[400]} />
                         </View>
-                        <Text style={styles.occupation}>{occupation}</Text>
-                        <View style={styles.trustScoreContainer}>
-                            <TrustScore score={trustScore} size="small" showLabel={false} />
-                            <Text style={styles.trustText}>Trust Score: {trustScore}</Text>
+                    )}
+                </TouchableOpacity>
+
+                <View style={styles.headerInfo}>
+                    <Text style={styles.name}>{getDisplayName()}</Text>
+                    <Text style={styles.age}>25 years old</Text>
+                    <Text style={styles.location}>Los Angeles, CA</Text>
+                </View>
+
+                {profile.matchScore && (
+                    <View style={styles.matchScore}>
+                        <Text style={[styles.matchScoreText, { color: getMatchScoreColor(profile.matchScore) }]}>
+                            {profile.matchScore}%
+                        </Text>
+                        <Text style={styles.matchScoreLabel}>
+                            {getMatchScoreText(profile.matchScore)}
+                        </Text>
+                    </View>
+                )}
+            </View>
+
+            {/* Bio */}
+            {profile.personalProfile?.bio && (
+                <View style={styles.bioSection}>
+                    <Text style={styles.bio}>{profile.personalProfile.bio}</Text>
+                </View>
+            )}
+
+            {/* Preferences */}
+            {profile.personalProfile?.settings?.roommate?.preferences && (
+                <View style={styles.preferencesSection}>
+                    <Text style={styles.sectionTitle}>Preferences</Text>
+                    <View style={styles.preferencesGrid}>
+                        <View style={styles.preferenceItem}>
+                            <IconComponent name="cash-outline" size={16} color={colors.gray[600]} />
+                            <Text style={styles.preferenceText}>
+                                ${profile.personalProfile.settings.roommate.preferences.maxRent}/mo
+                            </Text>
+                        </View>
+                        <View style={styles.preferenceItem}>
+                            <IconComponent name="calendar-outline" size={16} color={colors.gray[600]} />
+                            <Text style={styles.preferenceText}>
+                                {profile.personalProfile.settings.roommate.preferences.moveInDate}
+                            </Text>
+                        </View>
+                        <View style={styles.preferenceItem}>
+                            <IconComponent name="home-outline" size={16} color={colors.gray[600]} />
+                            <Text style={styles.preferenceText}>
+                                {profile.personalProfile.settings.roommate.preferences.leaseLength} months
+                            </Text>
                         </View>
                     </View>
                 </View>
-            </View>
+            )}
 
-            <Text style={styles.bioText} numberOfLines={3}>{bio}</Text>
+            {/* Message input */}
+            {showMessageInput && (
+                <View style={styles.messageSection}>
+                    <Text style={styles.messageLabel}>Add a message (optional):</Text>
+                    <TextInput
+                        style={styles.messageInput}
+                        value={message}
+                        onChangeText={setMessage}
+                        placeholder="Hi! I think we'd be great roommates..."
+                        multiline
+                        maxLength={500}
+                    />
+                </View>
+            )}
 
-            <View style={styles.sectionTitle}>
-                <Ionicons name="options-outline" size={16} color={colors.primaryDark_1} />
-                <Text style={styles.sectionTitleText}>Lifestyle</Text>
-            </View>
-
-            <View style={styles.preferencesContainer}>
-                {lifestylePreferences.map((preference, index) => (
-                    <View key={index} style={styles.preferenceTag}>
-                        <Ionicons
-                            name={preferenceLabels[preference].icon as any}
-                            size={14}
-                            color={colors.primaryDark_1}
-                        />
-                        <Text style={styles.preferenceText}>{preferenceLabels[preference].label}</Text>
-                    </View>
-                ))}
-            </View>
-
-            <View style={styles.sectionTitle}>
-                <Ionicons name="heart-outline" size={16} color={colors.primaryDark_1} />
-                <Text style={styles.sectionTitleText}>Interests</Text>
-            </View>
-
-            <View style={styles.interestsContainer}>
-                {interests.map((interest, index) => (
-                    <View key={index} style={styles.interestTag}>
-                        <Text style={styles.interestText}>{interest}</Text>
-                    </View>
-                ))}
-            </View>
-
-            <View style={styles.actionsContainer}>
+            {/* Actions */}
+            <View style={styles.actions}>
                 <TouchableOpacity
-                    style={[styles.actionButton, styles.primaryButton]}
-                    onPress={onMessagePress}
+                    style={styles.viewProfileButton}
+                    onPress={() => onViewProfile(profile.id)}
                 >
-                    <Ionicons name="chatbubble-outline" size={18} color="white" />
-                    <Text style={styles.primaryButtonText}>Message</Text>
+                    <IconComponent name="eye-outline" size={20} color={colors.primaryDark} />
+                    <Text style={styles.viewProfileText}>View Profile</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.actionButton, styles.secondaryButton]}
-                    onPress={onViewProfilePress}
-                >
-                    <Ionicons name="person-outline" size={18} color={colors.primaryColor} />
-                    <Text style={styles.secondaryButtonText}>View Profile</Text>
-                </TouchableOpacity>
+
+                <Button
+                    title={showMessageInput ? 'Send Request' : 'Send Request'}
+                    onPress={handleSendRequest}
+                    variant="primary"
+                    loading={isLoading}
+                    style={styles.sendRequestButton}
+                />
             </View>
         </View>
     );
-}
+};
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: colors.primaryLight,
+        backgroundColor: colors.white,
         borderRadius: 12,
         padding: 16,
-        marginHorizontal: 12,
         marginBottom: 16,
-        shadowColor: colors.primaryDark,
+        shadowColor: colors.black,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
-        elevation: 2,
+        elevation: 3,
     },
     header: {
-        marginBottom: 12,
-    },
-    profileSection: {
         flexDirection: 'row',
         alignItems: 'center',
+        marginBottom: 16,
     },
-    profileImage: {
-        width: 70,
-        height: 70,
-        borderRadius: 35,
+    avatarContainer: {
         marginRight: 12,
     },
-    profileInfo: {
-        flex: 1,
+    avatar: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
     },
-    nameRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+    avatarPlaceholder: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: colors.gray[200],
+        justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 4,
+    },
+    headerInfo: {
+        flex: 1,
     },
     name: {
         fontSize: 18,
         fontWeight: '600',
-        color: colors.primaryDark,
+        color: colors.gray[900],
+        marginBottom: 2,
     },
-    matchBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    matchText: {
-        color: 'white',
-        fontSize: 12,
-        fontWeight: '500',
-    },
-    occupation: {
+    age: {
         fontSize: 14,
-        color: colors.primaryDark_1,
-        marginBottom: 4,
+        color: colors.gray[600],
+        marginBottom: 2,
     },
-    trustScoreContainer: {
-        flexDirection: 'row',
+    location: {
+        fontSize: 14,
+        color: colors.gray[600],
+    },
+    matchScore: {
         alignItems: 'center',
     },
-    trustText: {
-        fontSize: 12,
-        color: colors.primaryDark_1,
-        marginLeft: 8,
+    matchScoreText: {
+        fontSize: 20,
+        fontWeight: '700',
     },
-    bioText: {
-        fontSize: 14,
-        color: colors.primaryDark,
+    matchScoreLabel: {
+        fontSize: 12,
+        color: colors.gray[600],
+        marginTop: 2,
+    },
+    bioSection: {
         marginBottom: 16,
+    },
+    bio: {
+        fontSize: 14,
+        color: colors.gray[700],
         lineHeight: 20,
     },
-    sectionTitle: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    sectionTitleText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: colors.primaryDark,
-        marginLeft: 6,
-    },
-    preferencesContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
+    preferencesSection: {
         marginBottom: 16,
     },
-    preferenceTag: {
+    sectionTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: colors.gray[900],
+        marginBottom: 8,
+    },
+    preferencesGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 12,
+    },
+    preferenceItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: colors.COLOR_BLACK_LIGHT_5,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 20,
-        marginRight: 8,
-        marginBottom: 8,
+        backgroundColor: colors.gray[100],
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
     },
     preferenceText: {
         fontSize: 12,
+        color: colors.gray[700],
+        marginLeft: 4,
+    },
+    messageSection: {
+        marginBottom: 16,
+    },
+    messageLabel: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: colors.gray[900],
+        marginBottom: 8,
+    },
+    messageInput: {
+        borderWidth: 1,
+        borderColor: colors.gray[300],
+        borderRadius: 8,
+        padding: 12,
+        fontSize: 14,
+        color: colors.gray[900],
+        minHeight: 80,
+        textAlignVertical: 'top',
+    },
+    actions: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    viewProfileButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+    },
+    viewProfileText: {
+        fontSize: 14,
         color: colors.primaryDark,
         marginLeft: 4,
     },
-    interestsContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        marginBottom: 16,
-    },
-    interestTag: {
-        backgroundColor: 'rgba(33, 150, 243, 0.1)',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-        marginRight: 8,
-        marginBottom: 8,
-    },
-    interestText: {
-        fontSize: 12,
-        color: '#2196F3',
-    },
-    actionsContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
-    actionButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        borderRadius: 25,
+    sendRequestButton: {
         flex: 1,
-        marginHorizontal: 5,
-    },
-    primaryButton: {
-        backgroundColor: colors.primaryColor,
-    },
-    primaryButtonText: {
-        color: 'white',
-        fontSize: 14,
-        fontWeight: '600',
-        marginLeft: 6,
-        fontFamily: 'Phudu',
-    },
-    secondaryButton: {
-        backgroundColor: 'transparent',
-        borderWidth: 1,
-        borderColor: colors.primaryColor,
-    },
-    secondaryButtonText: {
-        color: colors.primaryColor,
-        fontSize: 14,
-        fontWeight: '600',
-        marginLeft: 6,
-        fontFamily: 'Phudu',
+        marginLeft: 12,
     },
 }); 
