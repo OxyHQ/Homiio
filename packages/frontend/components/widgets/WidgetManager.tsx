@@ -5,7 +5,6 @@ import { FeaturedPropertiesWidget } from './FeaturedPropertiesWidget';
 import { EcoCertificationWidget } from './EcoCertificationWidget';
 import { HorizonInitiativeWidget } from './HorizonInitiativeWidget';
 import { SavedSearchesWidget } from './SavedSearchesWidget';
-import { PaymentSummaryWidget } from './PaymentSummaryWidget';
 import { PropertyAlertWidget } from './PropertyAlertWidget';
 import { NeighborhoodRatingWidget } from './NeighborhoodRatingWidget';
 import { RecentlyViewedWidget } from './RecentlyViewedWidget';
@@ -98,19 +97,14 @@ export function WidgetManager({
 
             case 'profile':
                 return [
-                    <TrustScoreWidget key="trust-score" />,
-                    <PaymentSummaryWidget key="payment-summary" />
+                    <TrustScoreWidget key="trust-score" />
                 ];
 
             case 'contracts':
-                return [
-                    <PaymentSummaryWidget key="payment-summary" />
-                ];
+                return [];
 
             case 'payments':
-                return [
-                    <PaymentSummaryWidget key="payment-summary" />
-                ];
+                return [];
 
             case 'messages':
                 return [];

@@ -96,10 +96,11 @@ const getStyles = (isScreenNotMobile: boolean) => StyleSheet.create({
     ...(!isScreenNotMobile && { flex: 1 }),
   },
   mainContentWrapper: {
-    marginVertical: isScreenNotMobile ? 20 : 0,
     flex: isScreenNotMobile ? 2.2 : 1,
     backgroundColor: colors.primaryLight,
-    borderRadius: isScreenNotMobile ? 35 : 0,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: colors.COLOR_BLACK_LIGHT_6,
   },
   contentContainer: {
     flex: 1,

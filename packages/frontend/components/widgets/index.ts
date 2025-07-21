@@ -11,7 +11,7 @@ export { TrustScoreCompact } from '../TrustScoreCompact';
 
 // Placeholder exports for widgets we'll implement
 export * from './SavedSearchesWidget';
-export * from './PaymentSummaryWidget';
+
 export * from './PropertyAlertWidget';
 export * from './NeighborhoodRatingWidget';
 export * from './RecentlyViewedWidget';

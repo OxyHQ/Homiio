@@ -1,6 +1,6 @@
 import React, { useContext } from 'react'
 import { Dimensions, Platform, Text, View, ViewStyle, TouchableOpacity, StyleSheet } from 'react-native'
-import { usePathname } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import { useMediaQuery } from 'react-responsive'
 import { useTranslation } from "react-i18next";
 import { SideBarItem } from './SideBarItem'
@@ -16,6 +16,7 @@ import { Compose } from '@/assets/icons/compose-icon';
 import { Ionicons } from '@expo/vector-icons';
 import { OxySignInButton, useOxy } from '@oxyhq/services';
 import { SindiIcon } from '@/assets/icons';
+import { webAlert } from '@/utils/api';
 
 const IconComponent = Ionicons as any;
 
@@ -23,8 +24,34 @@ const WindowHeight = Dimensions.get('window').height;
 
 export function SideBar() {
     const { t } = useTranslation();
+    const router = useRouter();
 
-    const { isAuthenticated, user, showBottomSheet } = useOxy();
+    const { isAuthenticated, user, showBottomSheet, logout } = useOxy();
+
+    const handleSignOut = () => {
+        webAlert(
+            t('settings.signOut'),
+            t('settings.signOutMessage'),
+            [
+                {
+                    text: t('cancel'),
+                    style: 'cancel',
+                },
+                {
+                    text: t('settings.signOut'),
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await logout();
+                            router.replace('/');
+                        } catch (error) {
+                            console.error('Logout failed:', error);
+                        }
+                    },
+                },
+            ]
+        );
+    };
 
     const sideBarData: { title: string; icon: React.ReactNode, iconActive: React.ReactNode, route: string }[] = [
         {
@@ -148,7 +175,19 @@ export function SideBar() {
                 </View>
                 <View style={styles.spacer}></View>
                 <View style={styles.footer}>
-                    <OxySignInButton />
+                    {user && user.id ? (
+                        <TouchableOpacity
+                            style={styles.signOutButton}
+                            onPress={handleSignOut}
+                        >
+                            <IconComponent name="log-out-outline" size={20} color={colors.COLOR_BLACK} />
+                            {isFullSideBar && (
+                                <Text style={styles.signOutText}>{t('settings.signOut')}</Text>
+                            )}
+                        </TouchableOpacity>
+                    ) : (
+                        <OxySignInButton />
+                    )}
                     {isFullSideBar && (<Text style={styles.brandName}>{t("sidebar.footer.brandName")}</Text>)}
                 </View>
             </View>
@@ -255,5 +294,20 @@ const styles = StyleSheet.create({
         marginTop: 8,
         fontSize: 14,
         color: colors.COLOR_BLACK,
+    },
+    signOutButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        backgroundColor: colors.primaryLight,
+        marginBottom: 8,
+    },
+    signOutText: {
+        marginLeft: 8,
+        fontSize: 14,
+        color: colors.COLOR_BLACK,
+        fontWeight: '500',
     },
 });
