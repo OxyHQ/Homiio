@@ -14,6 +14,9 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/colors';
 import { useProfile } from '@/context/ProfileContext';
+import { useOxy } from '@oxyhq/services';
+import { roommateService } from '@/services/roommateService';
+import { useProfileStore } from '@/store/profileStore';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import Button from '@/components/Button';
 
@@ -55,12 +58,14 @@ export default function RoommatePreferencesPage() {
         }
     }, [primaryProfile]);
 
+    const { oxyServices, activeSessionId } = useOxy();
+
     const handleToggleRoommateMatching = async (enabled: boolean) => {
         setIsSaving(true);
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await roommateService.toggleRoommateMatching(enabled, oxyServices, activeSessionId);
             setRoommateEnabled(enabled);
+            await useProfileStore.getState().fetchPrimaryProfile(oxyServices, activeSessionId);
             Alert.alert('Success', `Roommate matching ${enabled ? 'enabled' : 'disabled'}`);
         } catch (error) {
             Alert.alert('Error', 'Failed to update roommate matching settings');
@@ -72,8 +77,8 @@ export default function RoommatePreferencesPage() {
     const handleSavePreferences = async () => {
         setIsSaving(true);
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await roommateService.updateRoommatePreferences(preferences, oxyServices, activeSessionId);
+            await useProfileStore.getState().fetchPrimaryProfile(oxyServices, activeSessionId);
             Alert.alert('Success', 'Preferences saved successfully');
         } catch (error) {
             Alert.alert('Error', 'Failed to save preferences');
