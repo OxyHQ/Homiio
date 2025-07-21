@@ -50,12 +50,19 @@ class RoommateService {
     totalPages: number;
   }> {
     try {
-      const response = await api.get(this.baseUrl, { 
+      const response = await api.get(this.baseUrl, {
         params: filters,
         oxyServices,
         activeSessionId,
       });
-      return response.data;
+      const data = response.data;
+      if (Array.isArray(data?.profiles)) {
+        data.profiles = data.profiles.map((p: any) => ({
+          ...p,
+          matchScore: p.matchPercentage ?? p.matchScore,
+        }));
+      }
+      return data;
     } catch (error) {
       console.error('Error fetching roommate profiles:', error);
       return { profiles: [], total: 0, page: 1, totalPages: 1 };
@@ -126,7 +133,20 @@ class RoommateService {
         oxyServices,
         activeSessionId,
       });
-      return response.data.data;
+      const data = response.data.data;
+      if (Array.isArray(data?.sent)) {
+        data.sent = data.sent.map((r: any) => ({
+          ...r,
+          matchScore: r.matchPercentage ?? r.matchScore,
+        }));
+      }
+      if (Array.isArray(data?.received)) {
+        data.received = data.received.map((r: any) => ({
+          ...r,
+          matchScore: r.matchPercentage ?? r.matchScore,
+        }));
+      }
+      return data;
     } catch (error) {
       console.error('Error fetching roommate requests:', error);
       return { sent: [], received: [] };
@@ -170,7 +190,14 @@ class RoommateService {
         oxyServices,
         activeSessionId,
       });
-      return response.data;
+      const data = response.data;
+      if (Array.isArray(data?.data)) {
+        data.data = data.data.map((r: any) => ({
+          ...r,
+          matchScore: r.matchPercentage ?? r.matchScore,
+        }));
+      }
+      return data;
     } catch (error) {
       console.error('Error fetching roommate relationships:', error);
       return { data: [] };
