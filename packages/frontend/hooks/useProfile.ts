@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 
 export const useProfile = () => {
   const { primaryProfile, allProfiles, isLoading, error } = useProfileStore();
-  const { setPrimaryProfile, setAllProfiles, setLoading, setError, fetchPrimaryProfile, fetchUserProfiles, createProfile: storeCreateProfile, updateProfile: storeUpdateProfile, deleteProfile: storeDeleteProfile } = useProfileStore();
+  const { setPrimaryProfile, setAllProfiles, setLoading, setError } = useProfileStore();
   const { oxyServices, activeSessionId } = useOxy();
 
   const loadProfiles = useCallback(async () => {
@@ -16,15 +16,22 @@ export const useProfile = () => {
       setLoading(true);
       setError(null);
       
-      await fetchPrimaryProfile(oxyServices, activeSessionId);
-      await fetchUserProfiles(oxyServices, activeSessionId);
+      const profileService = await import('@/services/profileService');
+      
+      const [primaryProfile, allProfiles] = await Promise.all([
+        profileService.default.getOrCreatePrimaryProfile(oxyServices, activeSessionId),
+        profileService.default.getUserProfiles(oxyServices, activeSessionId)
+      ]);
+      
+      setPrimaryProfile(primaryProfile);
+      setAllProfiles(allProfiles || []);
     } catch (error: any) {
       setError(error.message || 'Failed to load profiles');
       toast.error('Failed to load profiles');
     } finally {
       setLoading(false);
     }
-  }, [fetchPrimaryProfile, fetchUserProfiles, setLoading, setError, oxyServices, activeSessionId]);
+  }, [oxyServices, activeSessionId, setLoading, setError, setPrimaryProfile, setAllProfiles]);
 
   const createProfile = useCallback(async (profileData: CreateProfileData) => {
     if (!oxyServices || !activeSessionId) return;
@@ -33,11 +40,14 @@ export const useProfile = () => {
       setLoading(true);
       setError(null);
       
-      const newProfile = await storeCreateProfile(profileData, oxyServices, activeSessionId);
+      const profileService = await import('@/services/profileService');
+      const newProfile = await profileService.default.createProfile(profileData, oxyServices, activeSessionId);
       
+      setAllProfiles([...allProfiles, newProfile]);
       if (newProfile.isPrimary) {
         setPrimaryProfile(newProfile);
       }
+      
       toast.success('Profile created successfully');
       return newProfile;
     } catch (error: any) {
@@ -47,20 +57,24 @@ export const useProfile = () => {
     } finally {
       setLoading(false);
     }
-  }, [storeCreateProfile, setPrimaryProfile, setLoading, setError, oxyServices, activeSessionId]);
+  }, [oxyServices, activeSessionId, setLoading, setError, setAllProfiles, setPrimaryProfile, allProfiles]);
 
-  const updateProfile = useCallback(async (profileId: string, updates: Partial<Profile>) => {
+  const updateProfile = useCallback(async (profileId: string, updateData: any) => {
     if (!oxyServices || !activeSessionId) return;
     
     try {
       setLoading(true);
       setError(null);
       
-      const updatedProfile = await storeUpdateProfile(profileId, updates as any, oxyServices, activeSessionId);
+      const profileService = await import('@/services/profileService');
+      const updatedProfile = await profileService.default.updateProfile(profileId, updateData, oxyServices, activeSessionId);
       
-      if (primaryProfile?.id === profileId || primaryProfile?._id === profileId) {
+      const updatedProfiles = allProfiles.map((p: Profile) => p.id === profileId || p._id === profileId ? updatedProfile : p);
+      setAllProfiles(updatedProfiles);
+      if (updatedProfile.isPrimary) {
         setPrimaryProfile(updatedProfile);
       }
+      
       toast.success('Profile updated successfully');
       return updatedProfile;
     } catch (error: any) {
@@ -70,7 +84,7 @@ export const useProfile = () => {
     } finally {
       setLoading(false);
     }
-  }, [primaryProfile, storeUpdateProfile, setPrimaryProfile, setLoading, setError, oxyServices, activeSessionId]);
+  }, [oxyServices, activeSessionId, setLoading, setError, setAllProfiles, setPrimaryProfile, allProfiles]);
 
   const deleteProfile = useCallback(async (profileId: string) => {
     if (!oxyServices || !activeSessionId) return;
@@ -79,12 +93,15 @@ export const useProfile = () => {
       setLoading(true);
       setError(null);
       
-      await storeDeleteProfile(profileId, oxyServices, activeSessionId);
+      const profileService = await import('@/services/profileService');
+      await profileService.default.deleteProfile(profileId, oxyServices, activeSessionId);
       
+      const filteredProfiles = allProfiles.filter((p: Profile) => p.id !== profileId && p._id !== profileId);
+      setAllProfiles(filteredProfiles);
       if (primaryProfile?.id === profileId || primaryProfile?._id === profileId) {
-        const remainingProfiles = allProfiles.filter(p => p.id !== profileId && p._id !== profileId);
-        setPrimaryProfile(remainingProfiles.length > 0 ? remainingProfiles[0] : null);
+        setPrimaryProfile(null);
       }
+      
       toast.success('Profile deleted successfully');
     } catch (error: any) {
       setError(error.message || 'Failed to delete profile');
@@ -93,7 +110,7 @@ export const useProfile = () => {
     } finally {
       setLoading(false);
     }
-  }, [primaryProfile, allProfiles, storeDeleteProfile, setPrimaryProfile, setLoading, setError, oxyServices, activeSessionId]);
+  }, [oxyServices, activeSessionId, setLoading, setError, setAllProfiles, setPrimaryProfile, primaryProfile, allProfiles]);
 
   return {
     primaryProfile,
@@ -103,6 +120,6 @@ export const useProfile = () => {
     loadProfiles,
     createProfile,
     updateProfile,
-    deleteProfile
+    deleteProfile,
   };
 }; 

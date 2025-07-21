@@ -94,6 +94,12 @@ export default function ProfileScreen() {
     const hasPrimaryProfile = !!primaryProfile;
 
     useEffect(() => {
+        if (oxyServices && activeSessionId) {
+            loadProfiles();
+        }
+    }, [oxyServices, activeSessionId, loadProfiles]);
+
+    useEffect(() => {
         if (profiles && profiles.length > 0) {
             const activeProfile = profiles.find(p => p.isActive);
             const profileId = activeProfile?.id || activeProfile?._id || profiles[0].id || profiles[0]._id;

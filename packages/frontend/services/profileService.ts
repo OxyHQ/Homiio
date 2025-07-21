@@ -232,14 +232,11 @@ class ProfileService {
    * Get or create user's primary profile
    */
   async getOrCreatePrimaryProfile(oxyServices?: OxyServices, activeSessionId?: string): Promise<Profile | null> {
-    console.log('ProfileService: Fetching profile data from server');
     const response = await api.get(`${this.baseUrl}/me`, {
       oxyServices,
       activeSessionId,
     });
     const profile = response.data.data; // This can now be null
-    
-    console.log('ProfileService: Received profile data:', profile);
     
     return profile;
   }
