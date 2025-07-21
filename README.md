@@ -26,6 +26,7 @@ homiio/
 - 💸 **Rental payments with FairCoin** (via OxyPay, upcoming)
 - 📎 **Contract upload and analysis** with summaries and alerts
 - 📍 **Map view** with geolocated listings and insights by neighborhood
+- 🤝 **Roommate matching** with preferences saved in the backend and compatibility scores
 - 🔐 **Secure login** with session sync via `@oxyhq/services`
 
 ## Getting Started
