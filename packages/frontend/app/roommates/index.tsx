@@ -6,8 +6,7 @@ import {
     ScrollView,
     TouchableOpacity,
     RefreshControl,
-    Alert,
-    Platform
+    Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -16,7 +15,10 @@ import { colors } from '@/styles/colors';
 import { useProfile } from '@/context/ProfileContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
-import Button from '@/components/Button';
+import { RoommateMatch } from '@/components/RoommateMatch';
+import { RoommateRequestComponent } from '@/components/RoommateRequest';
+import { RoommateRelationshipComponent } from '@/components/RoommateRelationship';
+import { useRoommate } from '@/hooks/useRoommate';
 
 // Type assertion for Ionicons compatibility
 const IconComponent = Ionicons as any;
@@ -25,28 +27,53 @@ export default function RoommatesPage() {
     const router = useRouter();
     const [refreshing, setRefreshing] = useState(false);
     const [activeTab, setActiveTab] = useState<'discover' | 'requests' | 'relationships'>('discover');
-    const [isLoading, setIsLoading] = useState(false);
-    const [profiles, setProfiles] = useState<any[]>([]);
+    const {
+        profiles,
+        requests,
+        relationships,
+        isLoading,
+        fetchProfiles,
+        fetchRequests,
+        fetchRelationships,
+        sendRequest,
+        acceptRequest,
+        declineRequest,
+        endRelationship,
+    } = useRoommate();
 
     const { primaryProfile } = useProfile();
     const hasRoommateMatching = primaryProfile?.personalProfile?.settings?.roommate?.enabled || false;
 
     useEffect(() => {
-        if (hasRoommateMatching) {
-            // Simulate loading profiles
-            setIsLoading(true);
-            setTimeout(() => {
-                setProfiles([]);
-                setIsLoading(false);
-            }, 1000);
+        if (!hasRoommateMatching) return;
+
+        switch (activeTab) {
+            case 'discover':
+                fetchProfiles();
+                break;
+            case 'requests':
+                fetchRequests();
+                break;
+            case 'relationships':
+                fetchRelationships();
+                break;
         }
-    }, [hasRoommateMatching]);
+    }, [activeTab, hasRoommateMatching, fetchProfiles, fetchRequests, fetchRelationships]);
 
     const onRefresh = async () => {
         setRefreshing(true);
         try {
-            // Simulate refresh
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            switch (activeTab) {
+                case 'discover':
+                    await fetchProfiles();
+                    break;
+                case 'requests':
+                    await fetchRequests();
+                    break;
+                case 'relationships':
+                    await fetchRelationships();
+                    break;
+            }
         } finally {
             setRefreshing(false);
         }
@@ -64,9 +91,6 @@ export default function RoommatesPage() {
         router.push(`/roommates/${profileId}`);
     };
 
-    const handleMessage = (profileId: string) => {
-        Alert.alert('Coming Soon', 'Messaging functionality will be available soon!');
-    };
 
     const renderDiscoverTab = () => {
         if (!hasRoommateMatching) {
@@ -106,36 +130,95 @@ export default function RoommatesPage() {
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
                 }
             >
-                <Text style={styles.comingSoonText}>
-                    Roommate matching functionality is coming soon!
-                </Text>
+                {profiles.map((profile) => (
+                    <RoommateMatch
+                        key={profile.id}
+                        profile={profile}
+                        onSendRequest={sendRequest}
+                        onViewProfile={handleViewProfile}
+                    />
+                ))}
             </ScrollView>
         );
     };
 
     const renderRequestsTab = () => {
+        if (isLoading) {
+            return <LoadingSpinner />;
+        }
+
+        if (requests.sent.length === 0 && requests.received.length === 0) {
+            return (
+                <EmptyState
+                    icon="mail-outline"
+                    title="No Requests Yet"
+                    description="When you send or receive roommate requests, they'll appear here."
+                    actionText="Discover Roommates"
+                    actionIcon="search"
+                    onAction={() => setActiveTab('discover')}
+                />
+            );
+        }
+
         return (
-            <EmptyState
-                icon="mail-outline"
-                title="No Requests Yet"
-                description="When you send or receive roommate requests, they'll appear here."
-                actionText="Discover Roommates"
-                actionIcon="search"
-                onAction={() => setActiveTab('discover')}
-            />
+            <ScrollView
+                style={styles.profilesList}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            >
+                {requests.received.map((request) => (
+                    <RoommateRequestComponent
+                        key={request.id}
+                        request={request}
+                        type="received"
+                        onAccept={acceptRequest}
+                        onDecline={declineRequest}
+                        onViewProfile={handleViewProfile}
+                    />
+                ))}
+                {requests.sent.map((request) => (
+                    <RoommateRequestComponent
+                        key={request.id}
+                        request={request}
+                        type="sent"
+                        onViewProfile={handleViewProfile}
+                    />
+                ))}
+            </ScrollView>
         );
     };
 
     const renderRelationshipsTab = () => {
+        if (isLoading) {
+            return <LoadingSpinner />;
+        }
+
+        if (relationships.length === 0) {
+            return (
+                <EmptyState
+                    icon="people-circle-outline"
+                    title="No Active Relationships"
+                    description="When you accept roommate requests, your relationships will appear here."
+                    actionText="Discover Roommates"
+                    actionIcon="search"
+                    onAction={() => setActiveTab('discover')}
+                />
+            );
+        }
+
         return (
-            <EmptyState
-                icon="people-circle-outline"
-                title="No Active Relationships"
-                description="When you accept roommate requests, your relationships will appear here."
-                actionText="Discover Roommates"
-                actionIcon="search"
-                onAction={() => setActiveTab('discover')}
-            />
+            <ScrollView
+                style={styles.profilesList}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            >
+                {relationships.map((relationship) => (
+                    <RoommateRelationshipComponent
+                        key={relationship.id}
+                        relationship={relationship}
+                        onEndRelationship={endRelationship}
+                        onViewProfile={handleViewProfile}
+                    />
+                ))}
+            </ScrollView>
         );
     };
 

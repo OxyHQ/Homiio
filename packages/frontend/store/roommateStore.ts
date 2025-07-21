@@ -4,6 +4,11 @@ import { create } from 'zustand';
 interface RoommateState {
   // Data
   roommates: any[];
+  requests: {
+    sent: any[];
+    received: any[];
+  };
+  relationships: any[];
   currentRoommate: any | null;
   filters: {
     ageRange: [number, number];
@@ -19,6 +24,8 @@ interface RoommateState {
   
   // Actions
   setRoommates: (roommates: any[]) => void;
+  setRequests: (requests: { sent: any[]; received: any[] }) => void;
+  setRelationships: (relationships: any[]) => void;
   setCurrentRoommate: (roommate: any | null) => void;
   setFilters: (filters: RoommateState['filters']) => void;
   clearFilters: () => void;
@@ -31,6 +38,8 @@ export const useRoommateStore = create<RoommateState>()(
   (set, get) => ({
     // Initial state
     roommates: [],
+    requests: { sent: [], received: [] },
+    relationships: [],
     currentRoommate: null,
     filters: null,
     isLoading: false,
@@ -38,6 +47,8 @@ export const useRoommateStore = create<RoommateState>()(
     
     // Actions
     setRoommates: (roommates) => set({ roommates }),
+    setRequests: (requests) => set({ requests }),
+    setRelationships: (relationships) => set({ relationships }),
     setCurrentRoommate: (roommate) => set({ currentRoommate: roommate }),
     setFilters: (filters) => set({ filters }),
     clearFilters: () => set({ filters: null }),
@@ -50,6 +61,8 @@ export const useRoommateStore = create<RoommateState>()(
 // Selector hooks for easier access
 export const useRoommateSelectors = () => {
   const roommates = useRoommateStore((state) => state.roommates);
+  const requests = useRoommateStore((state) => state.requests);
+  const relationships = useRoommateStore((state) => state.relationships);
   const currentRoommate = useRoommateStore((state) => state.currentRoommate);
   const filters = useRoommateStore((state) => state.filters);
   const isLoading = useRoommateStore((state) => state.isLoading);
@@ -57,6 +70,8 @@ export const useRoommateSelectors = () => {
 
   return {
     roommates,
+    requests,
+    relationships,
     currentRoommate,
     filters,
     isLoading,
