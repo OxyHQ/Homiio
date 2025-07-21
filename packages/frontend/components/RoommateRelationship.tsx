@@ -10,7 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import type { RoommateRelationship } from '@/hooks/useRoommate';
-import Button from '@/components/Button';
+import { ActionButton } from '@/components/ui/ActionButton';
 
 // Type assertion for Ionicons compatibility
 const IconComponent = Ionicons as any;
@@ -57,11 +57,12 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
 
     const getDisplayName = (profile: any) => {
         const personal = profile.personalProfile;
-        if (personal?.firstName && personal?.lastName) {
-            return `${personal.firstName} ${personal.lastName}`;
-        }
-        if (personal?.firstName) {
-            return personal.firstName;
+        // Try to get name from bio or use default
+        if (personal?.personalInfo?.bio) {
+            const bioWords = personal.personalInfo.bio.split(' ');
+            if (bioWords.length > 0 && bioWords[0].length > 2) {
+                return bioWords[0];
+            }
         }
         return 'User';
     };
@@ -144,16 +145,10 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
                         style={styles.profileContainer}
                         onPress={() => onViewProfile(relationship.profile1.id)}
                     >
-                        {relationship.profile1.personalProfile?.avatar ? (
-                            <Image
-                                source={{ uri: relationship.profile1.personalProfile.avatar }}
-                                style={styles.profileAvatar}
-                            />
-                        ) : (
-                            <View style={styles.avatarPlaceholder}>
-                                <IconComponent name="person" size={20} color={colors.gray[400]} />
-                            </View>
-                        )}
+                        {/* Avatar placeholder since avatar is not in PersonalProfile type */}
+                        <View style={styles.avatarPlaceholder}>
+                            <IconComponent name="person" size={20} color={colors.COLOR_BLACK_LIGHT_5} />
+                        </View>
                         <Text style={styles.profileName}>{getDisplayName(relationship.profile1)}</Text>
                     </TouchableOpacity>
 
@@ -165,16 +160,10 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
                         style={styles.profileContainer}
                         onPress={() => onViewProfile(relationship.profile2.id)}
                     >
-                        {relationship.profile2.personalProfile?.avatar ? (
-                            <Image
-                                source={{ uri: relationship.profile2.personalProfile.avatar }}
-                                style={styles.profileAvatar}
-                            />
-                        ) : (
-                            <View style={styles.avatarPlaceholder}>
-                                <IconComponent name="person" size={20} color={colors.gray[400]} />
-                            </View>
-                        )}
+                        {/* Avatar placeholder since avatar is not in PersonalProfile type */}
+                        <View style={styles.avatarPlaceholder}>
+                            <IconComponent name="person" size={20} color={colors.COLOR_BLACK_LIGHT_5} />
+                        </View>
                         <Text style={styles.profileName}>{getDisplayName(relationship.profile2)}</Text>
                     </TouchableOpacity>
                 </View>
@@ -183,8 +172,9 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
             {/* Actions */}
             {relationship.status === 'active' && (
                 <View style={styles.actions}>
-                    <Button
-                        title="End Relationship"
+                    <ActionButton
+                        icon="close-circle"
+                        text="End Relationship"
                         onPress={handleEndRelationship}
                         variant="secondary"
                         loading={isLoading}
@@ -206,11 +196,11 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: colors.white,
+        backgroundColor: colors.primaryLight,
         borderRadius: 12,
         padding: 16,
         marginBottom: 16,
-        shadowColor: colors.black,
+        shadowColor: colors.COLOR_BLACK,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
@@ -228,17 +218,17 @@ const styles = StyleSheet.create({
     relationshipTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: colors.gray[900],
+        color: colors.COLOR_BLACK_LIGHT_1,
         marginBottom: 4,
     },
     duration: {
         fontSize: 14,
-        color: colors.gray[700],
+        color: colors.COLOR_BLACK_LIGHT_3,
         marginBottom: 2,
     },
     startDate: {
         fontSize: 12,
-        color: colors.gray[600],
+        color: colors.COLOR_BLACK_LIGHT_5,
     },
     statusBadge: {
         paddingHorizontal: 8,
@@ -247,14 +237,14 @@ const styles = StyleSheet.create({
     },
     statusText: {
         fontSize: 12,
-        color: colors.white,
+        color: colors.primaryLight,
         fontWeight: '500',
     },
     matchScoreSection: {
         alignItems: 'center',
         marginBottom: 20,
         paddingVertical: 12,
-        backgroundColor: colors.gray[50],
+        backgroundColor: colors.COLOR_BLACK_LIGHT_8,
         borderRadius: 8,
     },
     matchScoreText: {
@@ -264,7 +254,7 @@ const styles = StyleSheet.create({
     },
     matchScoreLabel: {
         fontSize: 12,
-        color: colors.gray[600],
+        color: colors.COLOR_BLACK_LIGHT_5,
         marginTop: 2,
     },
     profilesSection: {
@@ -273,7 +263,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 16,
         fontWeight: '600',
-        color: colors.gray[900],
+        color: colors.COLOR_BLACK_LIGHT_1,
         marginBottom: 12,
     },
     profileRow: {
@@ -295,7 +285,7 @@ const styles = StyleSheet.create({
         width: 50,
         height: 50,
         borderRadius: 25,
-        backgroundColor: colors.gray[200],
+        backgroundColor: colors.COLOR_BLACK_LIGHT_6,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 8,
@@ -303,7 +293,7 @@ const styles = StyleSheet.create({
     profileName: {
         fontSize: 14,
         fontWeight: '500',
-        color: colors.gray[900],
+        color: colors.COLOR_BLACK_LIGHT_1,
         textAlign: 'center',
     },
     connectionLine: {
@@ -321,7 +311,7 @@ const styles = StyleSheet.create({
     },
     endedText: {
         fontSize: 14,
-        color: colors.gray[600],
+        color: colors.COLOR_BLACK_LIGHT_5,
         fontStyle: 'italic',
     },
 }); 

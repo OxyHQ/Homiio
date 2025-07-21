@@ -11,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import type { RoommateRequest } from '@/hooks/useRoommate';
-import Button from '@/components/Button';
+import { ActionButton } from '@/components/ui/ActionButton';
 
 // Type assertion for Ionicons compatibility
 const IconComponent = Ionicons as any;
@@ -83,11 +83,12 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
 
     const getDisplayName = (profile: any) => {
         const personal = profile.personalProfile;
-        if (personal?.firstName && personal?.lastName) {
-            return `${personal.firstName} ${personal.lastName}`;
-        }
-        if (personal?.firstName) {
-            return personal.firstName;
+        // Try to get name from bio or use default
+        if (personal?.personalInfo?.bio) {
+            const bioWords = personal.personalInfo.bio.split(' ');
+            if (bioWords.length > 0 && bioWords[0].length > 2) {
+                return bioWords[0];
+            }
         }
         return 'User';
     };
@@ -95,13 +96,13 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'accepted':
-                return colors.success;
+                return '#00C853'; // Green for success
             case 'declined':
-                return colors.error;
+                return '#FF3B30'; // Red for error
             case 'expired':
-                return colors.gray[500];
+                return colors.COLOR_BLACK_LIGHT_5;
             default:
-                return colors.warning;
+                return '#FFCC00'; // Yellow for warning
         }
     };
 
@@ -133,16 +134,10 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
                     style={styles.avatarContainer}
                     onPress={() => onViewProfile(otherProfile.id)}
                 >
-                    {otherProfile.personalProfile?.avatar ? (
-                        <Image
-                            source={{ uri: otherProfile.personalProfile.avatar }}
-                            style={styles.avatar}
-                        />
-                    ) : (
-                        <View style={styles.avatarPlaceholder}>
-                            <IconComponent name="person" size={24} color={colors.gray[400]} />
-                        </View>
-                    )}
+                    {/* Avatar placeholder since avatar is not in PersonalProfile type */}
+                    <View style={styles.avatarPlaceholder}>
+                        <IconComponent name="person" size={24} color={colors.COLOR_BLACK_LIGHT_5} />
+                    </View>
                 </TouchableOpacity>
 
                 <View style={styles.headerInfo}>
@@ -188,15 +183,17 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
                 <View style={styles.actions}>
                     {type === 'received' ? (
                         <>
-                            <Button
-                                title="Decline"
+                            <ActionButton
+                                icon="close-circle"
+                                text="Decline"
                                 onPress={handleDecline}
                                 variant="secondary"
                                 loading={isLoading}
                                 style={styles.declineButton}
                             />
-                            <Button
-                                title="Accept"
+                            <ActionButton
+                                icon="checkmark-circle"
+                                text="Accept"
                                 onPress={handleAccept}
                                 variant="primary"
                                 loading={isLoading}
@@ -228,11 +225,11 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: colors.white,
+        backgroundColor: colors.primaryLight,
         borderRadius: 12,
         padding: 16,
         marginBottom: 16,
-        shadowColor: colors.black,
+        shadowColor: colors.COLOR_BLACK,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
@@ -255,7 +252,7 @@ const styles = StyleSheet.create({
         width: 50,
         height: 50,
         borderRadius: 25,
-        backgroundColor: colors.gray[200],
+        backgroundColor: colors.COLOR_BLACK_LIGHT_6,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -265,12 +262,12 @@ const styles = StyleSheet.create({
     name: {
         fontSize: 16,
         fontWeight: '600',
-        color: colors.gray[900],
+        color: colors.COLOR_BLACK_LIGHT_1,
         marginBottom: 2,
     },
     date: {
         fontSize: 12,
-        color: colors.gray[600],
+        color: colors.COLOR_BLACK_LIGHT_5,
         marginBottom: 4,
     },
     matchScore: {
@@ -288,7 +285,7 @@ const styles = StyleSheet.create({
     },
     statusText: {
         fontSize: 12,
-        color: colors.white,
+        color: colors.primaryLight,
         fontWeight: '500',
     },
     messageSection: {
@@ -297,12 +294,12 @@ const styles = StyleSheet.create({
     messageLabel: {
         fontSize: 14,
         fontWeight: '500',
-        color: colors.gray[900],
+        color: colors.COLOR_BLACK_LIGHT_1,
         marginBottom: 4,
     },
     message: {
         fontSize: 14,
-        color: colors.gray[700],
+        color: colors.COLOR_BLACK_LIGHT_3,
         lineHeight: 20,
     },
     responseSection: {
@@ -311,16 +308,16 @@ const styles = StyleSheet.create({
     responseLabel: {
         fontSize: 14,
         fontWeight: '500',
-        color: colors.gray[900],
+        color: colors.COLOR_BLACK_LIGHT_1,
         marginBottom: 8,
     },
     responseInput: {
         borderWidth: 1,
-        borderColor: colors.gray[300],
+        borderColor: colors.COLOR_BLACK_LIGHT_6,
         borderRadius: 8,
         padding: 12,
         fontSize: 14,
-        color: colors.gray[900],
+        color: colors.COLOR_BLACK_LIGHT_1,
         minHeight: 80,
         textAlignVertical: 'top',
     },
@@ -342,7 +339,7 @@ const styles = StyleSheet.create({
     },
     sentStatusText: {
         fontSize: 14,
-        color: colors.gray[600],
+        color: colors.COLOR_BLACK_LIGHT_5,
         fontStyle: 'italic',
     },
     completedActions: {
