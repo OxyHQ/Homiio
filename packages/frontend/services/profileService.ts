@@ -1,4 +1,4 @@
-import { api } from '@/utils/api';
+import { api, ApiError } from '@/utils/api';
 import { OxyServices } from '@oxyhq/services';
 
 export interface PersonalProfile {
@@ -232,13 +232,25 @@ class ProfileService {
    * Get or create user's primary profile
    */
   async getOrCreatePrimaryProfile(oxyServices?: OxyServices, activeSessionId?: string): Promise<Profile | null> {
-    const response = await api.get(`${this.baseUrl}/me`, {
-      oxyServices,
-      activeSessionId,
-    });
-    const profile = response.data.data; // This can now be null
-    
-    return profile;
+    try {
+      const response = await api.get(`${this.baseUrl}/me`, {
+        oxyServices,
+        activeSessionId,
+      });
+      const profile = response.data.data; // Can be null if not created
+      return profile;
+    } catch (error: any) {
+      if (error instanceof ApiError && error.status === 404) {
+        // Create a basic personal profile if none exists
+        const createResponse = await api.post(`${this.baseUrl}`, { isPersonalProfile: true }, {
+          oxyServices,
+          activeSessionId,
+        });
+        return createResponse.data.data;
+      }
+      console.error('Error fetching primary profile:', error);
+      throw error;
+    }
   }
 
   /**

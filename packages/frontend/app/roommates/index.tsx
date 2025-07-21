@@ -19,6 +19,9 @@ import { RoommateMatch } from '@/components/RoommateMatch';
 import { RoommateRequestComponent } from '@/components/RoommateRequest';
 import { RoommateRelationshipComponent } from '@/components/RoommateRelationship';
 import { useRoommate } from '@/hooks/useRoommate';
+import { useOxy } from '@oxyhq/services';
+import { roommateService } from '@/services/roommateService';
+import { useProfileStore } from '@/store/profileStore';
 
 // Type assertion for Ionicons compatibility
 const IconComponent = Ionicons as any;
@@ -40,6 +43,8 @@ export default function RoommatesPage() {
         declineRequest,
         endRelationship,
     } = useRoommate();
+
+    const { oxyServices, activeSessionId } = useOxy();
 
     const { primaryProfile } = useProfile();
     const hasRoommateMatching = primaryProfile?.personalProfile?.settings?.roommate?.enabled || false;
@@ -80,8 +85,12 @@ export default function RoommatesPage() {
     };
 
     const handleToggleMatching = async () => {
+        if (!oxyServices || !activeSessionId) return;
         try {
-            Alert.alert('Coming Soon', 'Toggle functionality will be available soon!');
+            await roommateService.toggleRoommateMatching(true, oxyServices, activeSessionId);
+            await useProfileStore.getState().fetchPrimaryProfile(oxyServices, activeSessionId);
+            await fetchProfiles();
+            Alert.alert('Success', 'Roommate matching enabled');
         } catch (error) {
             Alert.alert('Error', 'Failed to toggle roommate matching');
         }
