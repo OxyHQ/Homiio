@@ -132,15 +132,15 @@ if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
 const authenticateToken = oxy.createAuthenticateTokenMiddleware({
   loadFullUser: true,
   onError: (error, req, res, next) => {
-  console.error('Auth error:', error);
-  let status = 403;
-  let message = 'Unknown error';
-  if (error && typeof error === 'object') {
-    if (typeof error.status === 'number') status = error.status;
-    if (typeof error.message === 'string') message = error.message;
+    console.error('Auth error:', error);
+    let status = 403;
+    let message = 'Unknown error';
+    if (error && typeof error === 'object') {
+      if (typeof error.status === 'number') status = error.status;
+      if (typeof error.message === 'string') message = error.message;
+    }
+    res.status(status).json({ error: message });
   }
-  res.status(status).json({ error: message });
-}
 });
 
 app.use((req, res, next) => {
