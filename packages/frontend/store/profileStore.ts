@@ -53,11 +53,21 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   // Async actions
   fetchPrimaryProfile: async (oxyServices, activeSessionId) => {
     try {
+      console.log(`[ProfileStore] Fetching primary profile...`);
       set({ isLoading: true, error: null });
+      
       const profile = await profileService.getOrCreatePrimaryProfile(oxyServices, activeSessionId);
+      
+      console.log(`[ProfileStore] Primary profile fetched:`, {
+        hasProfile: !!profile,
+        profileId: profile?.id || profile?._id,
+        profileType: profile?.profileType
+      });
+      
       set({ primaryProfile: profile, isLoading: false });
       return profile;
     } catch (error: any) {
+      console.error(`[ProfileStore] Error fetching primary profile:`, error);
       const errorMessage = error.message || 'Failed to fetch primary profile';
       set({ error: errorMessage, isLoading: false });
       throw error;

@@ -118,7 +118,19 @@ class ProfileController {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       
+      console.log(`[getOrCreateActiveProfile] Called for user: ${oxyUserId}`, {
+        hasUser: !!req.user,
+        userKeys: req.user ? Object.keys(req.user) : [],
+        headers: {
+          authorization: req.headers.authorization ? 'present' : 'missing'
+        }
+      });
+      
       if (!oxyUserId) {
+        console.error(`[getOrCreateActiveProfile] No user ID found`, {
+          user: req.user,
+          headers: req.headers.authorization
+        });
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
         );
@@ -128,55 +140,137 @@ class ProfileController {
       let profile = this.getCachedProfile(oxyUserId, 'active');
       
       if (!profile) {
+        console.log(`[getOrCreateActiveProfile] No cached profile, searching database for user: ${oxyUserId}`);
+        
         // Try to find existing active profile
         profile = await Profile.findActiveByOxyUserId(oxyUserId);
         
         if (!profile) {
+          console.log(`[getOrCreateActiveProfile] No active profile found, checking for any personal profile`);
+          
           // Check if there's a personal profile (even if not active)
           const personalProfile = await Profile.findOne({ oxyUserId, profileType: "personal" });
           
           if (personalProfile) {
-            // Make personal profile active but don't change active status
+            console.log(`[getOrCreateActiveProfile] Found inactive personal profile, activating it`);
+            // Make personal profile active
             personalProfile.isActive = true;
             await personalProfile.save();
             profile = personalProfile;
           } else {
-            // Create a default personal profile
-            const defaultPersonalProfile = new Profile({
-              oxyUserId,
-              profileType: "personal",
-              isActive: true,
-              isPrimary: true, // First profile is always primary
-              personalProfile: {
-                personalInfo: {
-                  bio: "",
-                  occupation: "",
-                  employer: "",
-                  annualIncome: null,
-                  employmentStatus: "employed",
-                  moveInDate: null,
-                  leaseDuration: "yearly",
-                },
-                preferences: {},
-                references: [],
-                rentalHistory: [],
-                verification: {},
-                trustScore: { score: 50, factors: [] },
-                settings: {
-                  notifications: { email: true, push: true, sms: false },
-                  privacy: { profileVisibility: "public", showContactInfo: true, showIncome: false },
-                  language: "en",
-                  timezone: "UTC"
-                }
-              }
-            });
+            console.log(`[getOrCreateActiveProfile] No personal profile exists, creating new default profile`);
             
-            // Calculate initial trust score
-            defaultPersonalProfile.calculateTrustScore();
-            await defaultPersonalProfile.save();
-            profile = defaultPersonalProfile;
+            try {
+              // Create a default personal profile
+              const defaultPersonalProfile = new Profile({
+                oxyUserId,
+                profileType: "personal",
+                isActive: true,
+                isPrimary: true, // First profile is always primary
+                personalProfile: {
+                  personalInfo: {
+                    bio: "",
+                    occupation: "",
+                    employer: "",
+                    annualIncome: null,
+                    employmentStatus: "employed",
+                    moveInDate: null,
+                    leaseDuration: "yearly",
+                  },
+                  preferences: {
+                    propertyTypes: [],
+                    maxRent: null,
+                    priceUnit: "month",
+                    minBedrooms: 0,
+                    minBathrooms: 0,
+                    preferredAmenities: [],
+                    preferredLocations: [],
+                    petFriendly: false,
+                    smokingAllowed: false,
+                    furnished: false,
+                    parkingRequired: false,
+                    accessibility: false,
+                  },
+                  references: [],
+                  rentalHistory: [],
+                  verification: {
+                    identity: false,
+                    income: false,
+                    background: false,
+                    rentalHistory: false,
+                    references: false,
+                  },
+                  trustScore: { score: 50, factors: [] },
+                  settings: {
+                    notifications: { 
+                      email: true, 
+                      push: true, 
+                      sms: false,
+                      propertyAlerts: true,
+                      viewingReminders: true,
+                      leaseUpdates: true 
+                    },
+                    privacy: { 
+                      profileVisibility: "public", 
+                      showContactInfo: true, 
+                      showIncome: false,
+                      showRentalHistory: false,
+                      showReferences: false 
+                    },
+                    roommate: {
+                      enabled: false,
+                      preferences: {
+                        ageRange: { min: 18, max: 35 },
+                        gender: "any",
+                        lifestyle: {
+                          smoking: "no",
+                          pets: "prefer_not",
+                          partying: "no",
+                          cleanliness: "clean",
+                          schedule: "flexible"
+                        },
+                        budget: { min: 800, max: 1500 },
+                        moveInDate: null,
+                        leaseDuration: "yearly"
+                      },
+                      history: []
+                    },
+                    language: "en",
+                    timezone: "UTC",
+                    currency: "USD"
+                  },
+                  chatHistory: []
+                }
+              });
+              
+              // Calculate initial trust score
+              defaultPersonalProfile.calculateTrustScore();
+              
+              // Save the new profile
+              await defaultPersonalProfile.save();
+              profile = defaultPersonalProfile;
+              
+              console.log(`[getOrCreateActiveProfile] Successfully created new profile with ID: ${profile._id}`);
+            } catch (createError) {
+              console.error(`[getOrCreateActiveProfile] Failed to create new profile:`, createError);
+              
+              // If profile creation failed, try one more time to find existing profile
+              // (in case of race condition with concurrent requests)
+              const existingProfile = await Profile.findOne({ oxyUserId, profileType: "personal" });
+              if (existingProfile) {
+                console.log(`[getOrCreateActiveProfile] Found existing profile after creation failure, using it`);
+                existingProfile.isActive = true;
+                await existingProfile.save();
+                profile = existingProfile;
+              } else {
+                // Re-throw the creation error if no existing profile found
+                throw createError;
+              }
+            }
           }
         } else {
+          console.log(`[getOrCreateActiveProfile] Found existing active profile: ${profile._id}`);
+          
           // Always return full profile data unless explicitly requesting minimal
           const minimal = req.query.minimal === 'true';
           if (!minimal) {
@@ -186,13 +280,22 @@ class ProfileController {
         
         // Cache the result
         this.setCachedProfile(oxyUserId, profile, 'active');
+      } else {
+        console.log(`[getOrCreateActiveProfile] Using cached profile`);
       }
+
+      console.log(`[getOrCreateActiveProfile] Returning profile:`, {
+        profileId: profile._id,
+        profileType: profile.profileType,
+        isActive: profile.isActive,
+        hasPersonalProfile: !!profile.personalProfile
+      });
 
       res.json(
         successResponse(profile, "Profile retrieved successfully")
       );
     } catch (error) {
-      console.error("Error getting active profile:", error);
+      console.error(`[getOrCreateActiveProfile] Error:`, error);
       next(error);
     }
   }

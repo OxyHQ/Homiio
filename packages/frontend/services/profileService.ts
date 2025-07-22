@@ -233,22 +233,74 @@ class ProfileService {
    */
   async getOrCreatePrimaryProfile(oxyServices?: OxyServices, activeSessionId?: string): Promise<Profile | null> {
     try {
+      console.log(`[ProfileService] Fetching primary profile...`, {
+        hasOxyServices: !!oxyServices,
+        hasActiveSessionId: !!activeSessionId
+      });
+      
       const response = await api.get(`${this.baseUrl}/me`, {
         oxyServices,
         activeSessionId,
       });
+      
       const profile = response.data.data; // Can be null if not created
+      console.log(`[ProfileService] Primary profile response:`, {
+        hasProfile: !!profile,
+        profileId: profile?.id || profile?._id,
+        profileType: profile?.profileType,
+        isActive: profile?.isActive
+      });
+      
       return profile;
     } catch (error: any) {
-      if (error instanceof ApiError && error.status === 404) {
-        // Create a basic personal profile if none exists
-        const createResponse = await api.post(`${this.baseUrl}`, { isPersonalProfile: true }, {
-          oxyServices,
-          activeSessionId,
-        });
-        return createResponse.data.data;
+      console.error(`[ProfileService] Error fetching primary profile:`, error);
+      
+      // If the error is authentication-related, don't retry
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+        console.error(`[ProfileService] Authentication error, not retrying`);
+        throw error;
       }
-      console.error('Error fetching primary profile:', error);
+      
+      // If it's a 404, it means no profile exists, but the backend should auto-create
+      // This shouldn't happen with the new backend logic, but handle it as a fallback
+      if (error instanceof ApiError && error.status === 404) {
+        console.warn(`[ProfileService] Got 404, profile should have been auto-created. This indicates a backend issue.`);
+        
+        // Still try to create one manually as a fallback
+        try {
+          console.log(`[ProfileService] Attempting manual profile creation as fallback...`);
+          const createResponse = await api.post(`${this.baseUrl}`, { 
+            profileType: 'personal',
+            data: {
+              preferences: {},
+              verification: {
+                identity: false,
+                income: false,
+                background: false,
+                rentalHistory: false,
+                references: false
+              },
+              settings: {
+                notifications: { email: true, push: true, sms: false },
+                privacy: { profileVisibility: "public", showContactInfo: true, showIncome: false },
+                language: "en",
+                timezone: "UTC"
+              }
+            }
+          }, {
+            oxyServices,
+            activeSessionId,
+          });
+          console.log(`[ProfileService] Manual profile creation successful`);
+          return createResponse.data.data;
+        } catch (createError) {
+          console.error(`[ProfileService] Manual profile creation also failed:`, createError);
+          throw createError;
+        }
+      }
+      
+      // For other errors, let them bubble up for retry logic
+      console.error(`[ProfileService] Unexpected error fetching primary profile:`, error);
       throw error;
     }
   }
