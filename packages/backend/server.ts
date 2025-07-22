@@ -132,19 +132,40 @@ if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
 const authenticateToken = oxy.createAuthenticateTokenMiddleware({
   loadFullUser: true,
   onError: (error, req, res, next) => {
-  console.error('Auth error:', error);
-  let status = 403;
-  let message = 'Unknown error';
-  if (error && typeof error === 'object') {
-    if (typeof error.status === 'number') status = error.status;
-    if (typeof error.message === 'string') message = error.message;
+    console.error('Auth error:', error);
+    
+    // Ensure res is available and is a valid response object
+    if (!res || typeof res.status !== 'function') {
+      console.error('Response object is invalid or undefined in onError callback');
+      if (next && typeof next === 'function') {
+        return next(error);
+      }
+      return;
+    }
+    
+    let status = 403;
+    let message = 'Authentication failed';
+    
+    if (error && typeof error === 'object') {
+      if (typeof error.status === 'number') status = error.status;
+      if (typeof error.message === 'string') message = error.message;
+    }
+    
+    try {
+      res.status(status).json({ error: message });
+    } catch (responseError) {
+      console.error('Error sending response in auth error handler:', responseError);
+      if (next && typeof next === 'function') {
+        next(error);
+      }
+    }
   }
-  res.status(status).json({ error: message });
-}
 });
 
 app.use((req, res, next) => {
   console.log('Authorization header:', req.headers.authorization);
+  console.log('Request URL:', req.url);
+  console.log('Request method:', req.method);
   next();
 });
 
