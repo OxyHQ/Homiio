@@ -2,10 +2,6 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    "skipLibCheck": true,
-    "typeRoots": [
-      "./node_modules/@types"
-    ],
     "paths": {
       "@/*": [
         "./*"
