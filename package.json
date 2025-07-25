@@ -35,17 +35,12 @@
     "typescript": "^5.8.3"
   },
   "engines": {
-    "node": ">=16.0.0",
-    "npm": ">=8.0.0"
+    "node": ">=24.4.1",
+    "npm": ">=11.4.0"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@babel/plugin-proposal-export-namespace-from": "^7.18.9",
-    "@gorhom/bottom-sheet": "^5.1.6",
-    "@oxyhq/services": "^5.7.3",
-    "expo-document-picker": "^13.1.6",
-    "expo-linear-gradient": "^14.1.5",
-    "sonner-native": "^0.21.0"
+    "@oxyhq/services": "^5.8.2"
   }
 }

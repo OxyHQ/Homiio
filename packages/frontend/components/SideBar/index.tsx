@@ -12,7 +12,7 @@ import { Bookmark, BookmarkActive } from '@/assets/icons/bookmark-icon';
 import { Gear, GearActive } from '@/assets/icons/gear-icon';
 import { Hashtag, HashtagActive } from '@/assets/icons/hashtag-icon';
 import { Search, SearchActive } from '@/assets/icons/search-icon';
-import { Compose } from '@/assets/icons/compose-icon';
+import { Compose } from '@/assets/icons';
 import { Ionicons } from '@expo/vector-icons';
 import { OxySignInButton, useOxy } from '@oxyhq/services';
 import { SindiIcon } from '@/assets/icons';
