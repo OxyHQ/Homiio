@@ -310,7 +310,7 @@ class ProfileController {
       const isFirstProfile = !existingActiveProfile;
 
       // Create profile based on type
-      const profileData = {
+      const profileData: any = {
         oxyUserId,
         profileType,
         isActive: true
