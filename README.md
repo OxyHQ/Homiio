@@ -1,127 +1,143 @@
-# Homiio
+# Homiio Monorepo
 
-Welcome to the Homiio repository — part of the Oxy ecosystem. Homiio is a platform for ethical housing, designed to help people find fair rentals, understand their rights, and connect with trustworthy landlords, all powered by AI and community-driven data.
+A monorepo containing the Homiio frontend and backend applications.
 
-## Overview
-
-Homiio is built as a cross-platform mobile application using React Native (Expo) and a modular backend in Node.js with MongoDB. It integrates deeply with the Oxy ecosystem, including user authentication via `@oxyhq/services`, contract analysis through Sindi, and payment systems via OxyPay.
-
-## Structure
+## 🏗️ Project Structure
 
 ```
-homiio/
+homiio-monorepo/
 ├── packages/
-│   ├── frontend/            # React Native app (Expo)
-│   └── backend/             # Node.js + Express backend API
-├── .env.example             # Example environment variables
-├── package.json             # Root workspace configuration
-└── README.md                # This file
+│   ├── frontend/          # React Native/Expo frontend application
+│   ├── backend/           # Node.js/Express backend API
+│   └── shared-types/      # Shared TypeScript types
+├── package.json           # Root package.json with workspace configuration
+└── README.md             # This file
 ```
 
-## Features
-
-- 🔍 **Search rentals** with filters, keywords, and verified landlords
-- 🧠 **AI assistant (Sindi)** for rights, legal doubts, and contract analysis
-- 🏘️ **Tenant-landlord reviews** and reputation system
-- 💸 **Rental payments with FairCoin** (via OxyPay, upcoming)
-- 📎 **Contract upload and analysis** with summaries and alerts
-- 📍 **Map view** with geolocated listings and insights by neighborhood
-- 🤝 **Roommate matching** with preferences saved in the backend and compatibility scores
-- 🔐 **Secure login** with session sync via `@oxyhq/services`
-
-## Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js v18+
-- npm v9+
-- Expo CLI
-- MongoDB instance (local or remote)
+- Node.js >= 18.0.0
+- npm >= 8.0.0
+- Expo CLI (for frontend development)
 
 ### Installation
 
+1. Clone the repository:
 ```bash
-git clone https://github.com/oxyhq/homiio.git
-cd homiio
-npm install
+git clone <repository-url>
+cd homiio-monorepo
 ```
 
-### Running Mobile App (Expo)
-
+2. Install all dependencies:
 ```bash
-cd packages/frontend
-npm start
+npm run install:all
 ```
 
-### Running Backend API
+### Development
 
+#### Start all services in development mode:
 ```bash
-cd packages/backend
 npm run dev
 ```
 
-### Environment Setup
+#### Start individual services:
 
-1. Copy `.env.example` to `.env` in both `packages/frontend` and `packages/backend`
-2. Fill in required values such as MongoDB URI, API base URL, etc.
-
-## Scripts
-
-Scripts available in the root `package.json`:
-
-```json
-{
-  "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
-  "frontend": "cd packages/frontend && npm run start --tunnel --reset-cache",
-  "backend": "cd packages/backend && npm run dev",
-  "build": "npm run build --workspaces --if-present",
-  "build:web": "cd packages/frontend && npm run build-web:prod",
-  "build:web:dev": "cd packages/frontend && npm run build-web",
-  "build:frontend": "cd packages/frontend && npm run build-web:prod",
-  "build:backend": "cd packages/backend && npm run build",
-  "lint": "npm run lint --workspaces --if-present",
-  "lint:frontend": "cd packages/frontend && npm run lint",
-  "lint:backend": "cd packages/backend && npm run lint",
-  "install:all": "npm install && npm run install:frontend && npm run install:backend",
-  "install:frontend": "cd packages/frontend && npm install",
-  "install:backend": "cd packages/backend && npm install",
-  "clean": "npm run clean --workspaces"
-}
-```
-
-Run everything at once:
+**Frontend (React Native/Expo):**
 ```bash
-npm run dev         # Starts backend + frontend (via concurrently)
+npm run dev:frontend
+# or
+npm run start:frontend
 ```
 
-Run individually:
+**Backend (Node.js/Express):**
 ```bash
-npm run frontend
-npm run backend
+npm run dev:backend
+# or
+npm run start:backend
 ```
 
-## Technologies Used
+### Building
 
-- **State Management**: Zustand
-- **Frontend**: React Native (Expo), Tailwind via NativeWind, React Navigation
-- **Backend**: Node.js, Express, MongoDB, JWT, Multer
-- **Types/Validation**: TypeScript, Zod
-- **i18n**: Built-in internationalization system
-- **Auth**: `@oxyhq/services` (session + user system)
-- **AI**: Integration with Sindi for AI-based legal help
+#### Build all packages:
+```bash
+npm run build
+```
 
-## Contributing
+#### Build individual packages:
+```bash
+npm run build:frontend
+npm run build:backend
+```
 
-We welcome contributions from ethical developers and activists who believe housing is a right. Please fork the repo, create a new branch, and submit a pull request.
+### Testing
 
-For bugs or feature suggestions, open an issue.
+Run tests for all packages:
+```bash
+npm run test
+```
 
-## License
+### Linting
 
-[AGPL-3.0](LICENSE)
+Run linting for all packages:
+```bash
+npm run lint
+```
 
----
+### Cleaning
 
-Built with ❤️ by the Oxy team — creating ethical technology for a better world.
+Clean all build artifacts and node_modules:
+```bash
+npm run clean
+```
 
-🌐 [https://oxy.so](https://oxy.so)  |  🏠 [https://homiio.com](https://homiio.com)
+## 📦 Packages
+
+### Frontend (`packages/frontend`)
+- React Native application built with Expo
+- Uses TypeScript, Tailwind CSS, and NativeWind
+- Includes mobile and web platforms
+
+### Backend (`packages/backend`)
+- Node.js/Express API server
+- TypeScript backend with MongoDB
+- Authentication and device management
+
+### Shared Types (`packages/shared-types`)
+- Common TypeScript interfaces and types
+- Shared between frontend and backend
+- Ensures type consistency across the application
+
+## 🔧 Workspace Scripts
+
+The root `package.json` includes several workspace scripts for managing the monorepo:
+
+- `dev`: Start all packages in development mode
+- `build`: Build all packages
+- `test`: Run tests for all packages
+- `lint`: Run linting for all packages
+- `clean`: Clean all build artifacts
+- `install:all`: Install dependencies for all packages
+
+## 🛠️ Development Workflow
+
+1. **Adding new packages**: Create a new directory in `packages/` and add a `package.json`
+2. **Shared dependencies**: Add common dependencies to the root `package.json`
+3. **Package-specific dependencies**: Add to individual package `package.json` files
+4. **Type sharing**: Use the `shared-types` package for common interfaces
+
+## 📝 Environment Variables
+
+Each package may have its own environment variables. Check the individual package READMEs for specific configuration requirements.
+
+## 🤝 Contributing
+
+1. Make changes in the appropriate package
+2. Test your changes locally
+3. Ensure all packages build successfully
+4. Submit a pull request
+
+## 📄 License
+
+This project is private and proprietary. 

@@ -1,46 +1,31 @@
 {
-  "name": "oxy-homiio",
-  "version": "1.0.0",
-  "description": "Oxy Homiio - A app with React Native frontend and Node.js backend",
-  "private": true,
-  "workspaces": [
-    "packages/*"
-  ],
-  "scripts": {
-    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
-    "frontend": "cd packages/frontend && npm run start --tunnel --reset-cache",
-    "backend": "cd packages/backend && npm run dev",
-    "build": "npm run build --workspaces --if-present",
-    "build:web": "cd packages/frontend && npm run build-web:prod",
-    "build:web:dev": "cd packages/frontend && npm run build-web",
-    "build:frontend": "cd packages/frontend && npm run build-web:prod",
-    "build:backend": "cd packages/backend && npm run build",
-    "lint": "npm run lint --workspaces --if-present",
-    "lint:frontend": "cd packages/frontend && npm run lint",
-    "lint:backend": "cd packages/backend && npm run lint",
-    "install:all": "npm install && npm run install:frontend && npm run install:backend",
-    "install:frontend": "cd packages/frontend && npm install",
-    "install:backend": "cd packages/backend && npm install",
-    "clean": "npm run clean --workspaces"
-  },
-  "devDependencies": {
-    "@types/body-parser": "^1.19.6",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.3",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/mongoose": "^5.11.96",
-    "@types/node": "^24.0.13",
-    "@types/node-fetch": "^2.6.12",
-    "concurrently": "^8.2.2",
-    "typescript": "^5.8.3"
-  },
-  "engines": {
-    "node": ">=24.4.1",
-    "npm": ">=11.4.0"
-  },
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "@oxyhq/services": "^5.8.2"
-  }
+    "name": "homiio-monorepo",
+    "version": "2.0.0",
+    "description": "Homiio Monorepo - Frontend and Backend",
+    "private": true,
+    "workspaces": [
+        "packages/*"
+    ],
+    "scripts": {
+        "dev": "npm run dev --workspaces",
+        "dev:frontend": "npm run dev --workspace=@homiio/frontend",
+        "dev:backend": "npm run dev --workspace=@homiio/backend",
+        "build": "npm run build --workspaces",
+        "build:frontend": "npm run build --workspace=@homiio/frontend",
+        "build:backend": "npm run build --workspace=@homiio/backend",
+        "test": "npm run test --workspaces",
+        "lint": "npm run lint --workspaces",
+        "clean": "npm run clean --workspaces && rm -rf node_modules",
+        "install:all": "npm install && npm install --workspaces",
+        "start:frontend": "npm run start --workspace=@homiio/frontend",
+        "start:backend": "npm run start --workspace=@homiio/backend"
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "typescript": "^5.8.3"
+    },
+    "engines": {
+        "node": ">=18.0.0",
+        "npm": ">=8.0.0"
+    }
 }

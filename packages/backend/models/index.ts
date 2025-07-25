@@ -13,8 +13,6 @@ const SavedPropertyModel = require('./schemas/SavedPropertySchema');
 const SavedSearchModel = require('./schemas/SavedSearchSchema');
 const ProfileModel = require('./schemas/ProfileSchema');
 const ConversationModel = require('./schemas/ConversationSchema');
-const RoommateRequestModel = require('./schemas/RoommateRequestSchema');
-const RoommateRelationshipModel = require('./schemas/RoommateRelationshipSchema');
 
 module.exports = {
   // Mongoose models
@@ -26,7 +24,5 @@ module.exports = {
   SavedProperty: SavedPropertyModel,
   SavedSearch: SavedSearchModel,
   Profile: ProfileModel,
-  Conversation: ConversationModel,
-  RoommateRequest: RoommateRequestModel,
-  RoommateRelationship: RoommateRelationshipModel
+  Conversation: ConversationModel
 };
