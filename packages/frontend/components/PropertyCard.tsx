@@ -3,13 +3,13 @@ import { View, Text, Image, StyleSheet, TouchableOpacity, ViewStyle, Dimensions 
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { IconButton } from './IconButton';
-import { Property } from '@/services/propertyService';
+import { Property, PropertyType, PriceUnit } from '@homiio/shared-types';
 import { getPropertyTitle, getPropertyImageSource } from '@/utils/propertyUtils';
 import { useFavorites } from '@/hooks/useFavorites';
 import { SaveButton } from './SaveButton';
 import { CurrencyFormatter } from './CurrencyFormatter';
 
-export type PropertyType = 'apartment' | 'house' | 'coliving' | 'eco';
+
 
 export type PropertyCardVariant = 'default' | 'compact' | 'featured' | 'saved';
 
@@ -21,7 +21,7 @@ type PropertyCardProps = {
     location?: string;
     price?: number;
     currency?: string;
-    priceUnit?: 'day' | 'night' | 'week' | 'month' | 'year';
+    priceUnit?: PriceUnit;
     type?: PropertyType;
     imageSource?: any;
     bedrooms?: number;
@@ -64,13 +64,13 @@ const { width: screenWidth } = Dimensions.get('window');
 
 const getPropertyTypeIcon = (type: PropertyType) => {
     switch (type) {
-        case 'apartment':
+        case PropertyType.APARTMENT:
             return 'business-outline';
-        case 'house':
+        case PropertyType.HOUSE:
             return 'home-outline';
-        case 'coliving':
+        case PropertyType.COLIVING:
             return 'people-outline';
-        case 'eco':
+        case PropertyType.OTHER:
             return 'leaf-outline';
         default:
             return 'home-outline';
@@ -111,7 +111,7 @@ export function PropertyCard({
     location,
     price,
     currency = '$',
-    priceUnit = 'month',
+    priceUnit = PriceUnit.MONTH,
     type,
     imageSource,
     bedrooms,

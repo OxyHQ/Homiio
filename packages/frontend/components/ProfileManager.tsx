@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useProfile } from '@/hooks/useProfile';
 import { useOxy } from '@oxyhq/services';
-import type { CreateProfileData, UpdateProfileData } from '@/services/profileService';
+import { CreateProfileData, UpdateProfileData, ProfileType, PropertyType, ProfileVisibility, BusinessType } from '@homiio/shared-types';
 
 export function ProfileManager() {
     const { oxyServices, activeSessionId } = useOxy();
@@ -16,11 +16,11 @@ export function ProfileManager() {
         deleteProfile
     } = useProfile();
 
-    const [selectedProfileType, setSelectedProfileType] = useState<'personal' | 'agency'>('personal');
+    const [selectedProfileType, setSelectedProfileType] = useState<ProfileType>(ProfileType.PERSONAL);
 
     // Get personal and agency profiles from allProfiles
-    const personalProfile = allProfiles.find((p: any) => p.profileType === 'personal');
-    const agencyProfiles = allProfiles.filter((p: any) => p.profileType === 'agency');
+    const personalProfile = allProfiles.find((p: any) => p.profileType === ProfileType.PERSONAL);
+    const agencyProfiles = allProfiles.filter((p: any) => p.profileType === ProfileType.AGENCY);
 
     if (!oxyServices || !activeSessionId) {
         return (
@@ -49,7 +49,7 @@ export function ProfileManager() {
         );
     }
 
-    const handleCreateProfile = async (profileType: 'personal' | 'agency') => {
+    const handleCreateProfile = async (profileType: ProfileType) => {
         try {
             const profileData: CreateProfileData = {
                 profileType,
@@ -58,10 +58,10 @@ export function ProfileManager() {
 
             // Add specific data based on profile type
             switch (profileType) {
-                case 'personal':
+                case ProfileType.PERSONAL:
                     profileData.data = {
                         preferences: {
-                            propertyTypes: ['apartment', 'house'],
+                            propertyTypes: [PropertyType.APARTMENT, PropertyType.HOUSE],
                             maxRent: 2000,
                             minBedrooms: 1,
                             minBathrooms: 1,
@@ -70,16 +70,16 @@ export function ProfileManager() {
                         },
                         settings: {
                             notifications: { email: true, push: true, sms: false },
-                            privacy: { profileVisibility: 'public', showContactInfo: true, showIncome: false },
+                            privacy: { profileVisibility: ProfileVisibility.PUBLIC, showContactInfo: true, showIncome: false },
                             language: 'en',
                             timezone: 'UTC'
                         }
                     };
                     break;
 
-                case 'agency':
+                case ProfileType.AGENCY:
                     profileData.data = {
-                        businessType: 'real_estate_agency',
+                        businessType: BusinessType.REAL_ESTATE_AGENCY,
                         description: 'Professional real estate services',
                         businessDetails: {
                             employeeCount: '1-10',
@@ -134,18 +134,18 @@ export function ProfileManager() {
             {/* Profile Type Selector */}
             <View style={styles.selector}>
                 <TouchableOpacity
-                    style={[styles.selectorButton, selectedProfileType === 'personal' && styles.selectorButtonActive]}
-                    onPress={() => setSelectedProfileType('personal')}
+                    style={[styles.selectorButton, selectedProfileType === ProfileType.PERSONAL && styles.selectorButtonActive]}
+                    onPress={() => setSelectedProfileType(ProfileType.PERSONAL)}
                 >
-                    <Text style={[styles.selectorButtonText, selectedProfileType === 'personal' && styles.selectorButtonTextActive]}>
+                    <Text style={[styles.selectorButtonText, selectedProfileType === ProfileType.PERSONAL && styles.selectorButtonTextActive]}>
                         Personal
                     </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={[styles.selectorButton, selectedProfileType === 'agency' && styles.selectorButtonActive]}
-                    onPress={() => setSelectedProfileType('agency')}
+                    style={[styles.selectorButton, selectedProfileType === ProfileType.AGENCY && styles.selectorButtonActive]}
+                    onPress={() => setSelectedProfileType(ProfileType.AGENCY)}
                 >
-                    <Text style={[styles.selectorButtonText, selectedProfileType === 'agency' && styles.selectorButtonTextActive]}>
+                    <Text style={[styles.selectorButtonText, selectedProfileType === ProfileType.AGENCY && styles.selectorButtonTextActive]}>
                         Agency
                     </Text>
                 </TouchableOpacity>

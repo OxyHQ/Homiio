@@ -1,10 +1,21 @@
 /**
  * Property Schema
  * Mongoose schema for Property model
+ * Uses shared types from @homiio/shared-types
  */
 
 const mongoose = require('mongoose');
 const validator = require('validator');
+const { 
+  PropertyType, 
+  PropertyStatus, 
+  HousingType, 
+  LayoutType, 
+  PaymentFrequency, 
+  UtilitiesIncluded, 
+  PriceUnit,
+  LeaseDuration
+} = require('@homiio/shared-types');
 
 const addressSchema = new mongoose.Schema({
   street: {
@@ -71,8 +82,8 @@ const rentSchema = new mongoose.Schema({
   },
   paymentFrequency: {
     type: String,
-    enum: ['monthly', 'weekly', 'daily'],
-    default: 'monthly'
+    enum: Object.values(PaymentFrequency),
+    default: PaymentFrequency.MONTHLY
   },
   deposit: {
     type: Number,
@@ -81,8 +92,8 @@ const rentSchema = new mongoose.Schema({
   },
   utilities: {
     type: String,
-    enum: ['included', 'excluded', 'partial'],
-    default: 'excluded'
+    enum: Object.values(UtilitiesIncluded),
+    default: UtilitiesIncluded.EXCLUDED
   },
   hasIncomeBasedPricing: {
     type: Boolean,
@@ -176,18 +187,18 @@ const propertySchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['apartment', 'house', 'room', 'studio', 'couchsurfing', 'roommates', 'coliving', 'hostel', 'guesthouse', 'campsite', 'boat', 'treehouse', 'yurt', 'other'],
-    default: 'apartment'
+    enum: Object.values(PropertyType),
+    default: PropertyType.APARTMENT
   },
   housingType: {
     type: String,
-    enum: ['private', 'public'],
-    default: 'private'
+    enum: Object.values(HousingType),
+    default: HousingType.PRIVATE
   },
   layoutType: {
     type: String,
-    enum: ['open', 'shared', 'partitioned', 'traditional', 'studio', 'other'],
-    default: 'traditional'
+    enum: Object.values(LayoutType),
+    default: LayoutType.TRADITIONAL
   },
   bedrooms: {
     type: Number,
@@ -279,8 +290,8 @@ const propertySchema = new mongoose.Schema({
   },
   leaseTerm: {
     type: String,
-    enum: ['monthly', '6_months', '12_months', 'flexible'],
-    default: 'monthly'
+    enum: Object.values(LeaseDuration),
+    default: LeaseDuration.MONTHLY
   },
   smokingAllowed: {
     type: Boolean,

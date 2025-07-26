@@ -1,4 +1,16 @@
 const mongoose = require('mongoose');
+const {
+  ProfileType,
+  EmploymentStatus,
+  LeaseDuration,
+  PriceUnit,
+  PropertyType,
+  ReferenceRelationship,
+  ReasonForLeaving,
+  ProfileVisibility,
+  TrustScoreFactorType,
+  GenderPreference
+} = require('@homiio/shared-types');
 
 // Personal Profile Schema - only app-specific data
 const personalProfileSchema = new mongoose.Schema({
@@ -22,22 +34,22 @@ const personalProfileSchema = new mongoose.Schema({
     },
     employmentStatus: {
       type: String,
-      enum: ["employed", "self_employed", "student", "retired", "unemployed", "other"],
+      enum: Object.values(EmploymentStatus),
     },
     moveInDate: {
       type: Date,
     },
     leaseDuration: {
       type: String,
-      enum: ["monthly", "3_months", "6_months", "yearly", "flexible"],
-      default: "yearly",
+      enum: Object.values(LeaseDuration),
+      default: LeaseDuration.YEARLY,
     },
   },
   // App-specific preferences and settings
   preferences: {
     propertyTypes: [{
       type: String,
-      enum: ["apartment", "house", "room", "studio"],
+      enum: Object.values(PropertyType),
     }],
     maxRent: {
       type: Number,
@@ -45,8 +57,8 @@ const personalProfileSchema = new mongoose.Schema({
     },
     priceUnit: {
       type: String,
-      enum: ["day", "night", "week", "month", "year"],
-      default: "month",
+      enum: Object.values(PriceUnit),
+      default: PriceUnit.MONTH,
     },
     minBedrooms: {
       type: Number,
@@ -103,7 +115,7 @@ const personalProfileSchema = new mongoose.Schema({
     },
     relationship: {
       type: String,
-      enum: ["landlord", "employer", "personal", "other"],
+      enum: Object.values(ReferenceRelationship),
       required: true,
     },
     phone: {
@@ -139,7 +151,7 @@ const personalProfileSchema = new mongoose.Schema({
     },
     reasonForLeaving: {
       type: String,
-      enum: ["lease_ended", "bought_home", "job_relocation", "family_reasons", "upgrade", "other"],
+      enum: Object.values(ReasonForLeaving),
     },
     landlordContact: {
       name: String,
@@ -185,21 +197,7 @@ const personalProfileSchema = new mongoose.Schema({
     factors: [{
       type: {
         type: String,
-        enum: [
-          "verification", 
-          "reviews", 
-          "payment_history", 
-          "communication", 
-          "rental_history",
-          "basic_info",
-          "employment",
-          "references",
-          "roommate_preferences",
-          "roommate_compatibility",
-          "agency_business",
-          "agency_verification",
-          "agency_members"
-        ],
+        enum: Object.values(TrustScoreFactorType),
       },
       value: {
         type: Number,
@@ -243,8 +241,8 @@ const personalProfileSchema = new mongoose.Schema({
     privacy: {
       profileVisibility: {
         type: String,
-        enum: ["public", "private", "contacts_only"],
-        default: "public",
+        enum: Object.values(ProfileVisibility),
+        default: ProfileVisibility.PUBLIC,
       },
       showContactInfo: {
         type: Boolean,
@@ -285,8 +283,8 @@ const personalProfileSchema = new mongoose.Schema({
         },
         gender: {
           type: String,
-          enum: ["male", "female", "any"],
-          default: "any",
+          enum: Object.values(GenderPreference),
+          default: GenderPreference.ANY,
         },
         lifestyle: {
           smoking: {
@@ -332,8 +330,8 @@ const personalProfileSchema = new mongoose.Schema({
         },
         leaseDuration: {
           type: String,
-          enum: ["monthly", "3_months", "6_months", "yearly", "flexible"],
-          default: "yearly",
+          enum: Object.values(LeaseDuration),
+          default: LeaseDuration.YEARLY,
         },
       },
       history: [{
@@ -574,7 +572,7 @@ const profileSchema = new mongoose.Schema({
   },
   profileType: {
     type: String,
-    enum: ['personal', 'agency', 'business', 'cooperative'],
+    enum: Object.values(ProfileType),
     required: true,
   },
   isActive: {
@@ -617,10 +615,10 @@ profileSchema.index({ updatedAt: -1 });
 
 // Virtual for verification status
 profileSchema.virtual("isVerified").get(function() {
-  if (this.profileType === "personal" && this.personalProfile) {
+  if (this.profileType === ProfileType.PERSONAL && this.personalProfile) {
     return this.personalProfile.verification.identity && this.personalProfile.verification.income;
   }
-  if (this.profileType === "agency" && this.agencyProfile) {
+  if (this.profileType === ProfileType.AGENCY && this.agencyProfile) {
     return this.agencyProfile.verification.businessLicense && this.agencyProfile.verification.insurance;
   }
   return false;
@@ -693,7 +691,7 @@ profileSchema.statics.findByOxyUserIdAndUpdate = function(oxyUserId, profileId, 
 
 profileSchema.statics.findAgencyMemberships = function(oxyUserId, select = null) {
   const query = this.find({
-    profileType: "agency",
+          profileType: ProfileType.AGENCY,
     "agencyProfile.members.oxyUserId": oxyUserId,
   });
   if (select) {
@@ -769,7 +767,7 @@ profileSchema.methods.calculateTrustScore = function(forceRecalculate = false) {
       totalScore += basicScore;
       maxScore += basicMax;
       factors.push({
-        type: "basic_info",
+        type: TrustScoreFactorType.BASIC_INFO,
         value: basicScore,
         maxValue: basicMax,
         label: "Basic Information"
@@ -792,7 +790,7 @@ profileSchema.methods.calculateTrustScore = function(forceRecalculate = false) {
       totalScore += employmentScore;
       maxScore += employmentMax;
       factors.push({
-        type: "employment",
+        type: TrustScoreFactorType.EMPLOYMENT,
         value: employmentScore,
         maxValue: employmentMax,
         label: "Employment Information"
@@ -816,7 +814,7 @@ profileSchema.methods.calculateTrustScore = function(forceRecalculate = false) {
       totalScore += referencesScore;
       maxScore += referencesMax;
       factors.push({
-        type: "references",
+        type: TrustScoreFactorType.REFERENCES,
         value: referencesScore,
         maxValue: referencesMax,
         label: "References"
@@ -843,7 +841,7 @@ profileSchema.methods.calculateTrustScore = function(forceRecalculate = false) {
       totalScore += rentalScore;
       maxScore += rentalMax;
       factors.push({
-        type: "rental_history",
+        type: TrustScoreFactorType.RENTAL_HISTORY,
         value: rentalScore,
         maxValue: rentalMax,
         label: "Rental History"
@@ -863,7 +861,7 @@ profileSchema.methods.calculateTrustScore = function(forceRecalculate = false) {
       totalScore += verificationScore;
       maxScore += verificationMax;
       factors.push({
-        type: "verification",
+        type: TrustScoreFactorType.VERIFICATION,
         value: verificationScore,
         maxValue: verificationMax,
         label: "Verification Status"
@@ -892,7 +890,7 @@ profileSchema.methods.calculateTrustScore = function(forceRecalculate = false) {
       totalScore += businessScore;
       maxScore += businessMax;
       factors.push({
-        type: "agency_business",
+        type: TrustScoreFactorType.AGENCY_BUSINESS,
         value: businessScore,
         maxValue: businessMax,
         label: "Business Information"
@@ -949,7 +947,7 @@ profileSchema.methods.calculateTrustScore = function(forceRecalculate = false) {
       maxScore: maxScore,
       lastCalculated: new Date()
     };
-  } else if (this.profileType === 'personal') {
+  } else if (this.profileType === ProfileType.PERSONAL) {
     // Initialize personalProfile if it doesn't exist but this is a personal profile
     this.personalProfile = {
       trustScore: {
@@ -1015,7 +1013,7 @@ profileSchema.methods.updateTrustScore = function(factor, value) {
 };
 
 profileSchema.methods.addAgencyMember = function(oxyUserId, role, addedBy) {
-  if (this.profileType !== "agency") {
+  if (this.profileType !== ProfileType.AGENCY) {
     throw new Error("Can only add members to agency profiles");
   }
   
@@ -1036,7 +1034,7 @@ profileSchema.methods.addAgencyMember = function(oxyUserId, role, addedBy) {
 };
 
 profileSchema.methods.removeAgencyMember = function(oxyUserId) {
-  if (this.profileType !== "agency") {
+  if (this.profileType !== ProfileType.AGENCY) {
     throw new Error("Can only remove members from agency profiles");
   }
   
@@ -1048,7 +1046,7 @@ profileSchema.methods.removeAgencyMember = function(oxyUserId) {
 };
 
 profileSchema.methods.updateAgencyMemberRole = function(oxyUserId, newRole) {
-  if (this.profileType !== "agency") {
+  if (this.profileType !== ProfileType.AGENCY) {
     throw new Error("Can only update member roles in agency profiles");
   }
   

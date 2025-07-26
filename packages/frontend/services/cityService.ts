@@ -1,62 +1,27 @@
 /**
  * City Service
  * Handles API calls for city-related operations
+ * Uses shared types from @homiio/shared-types
  */
 
 import api from '@/utils/api';
+import { 
+  City, 
+  CityFilters, 
+  CityPropertiesResponse, 
+  CitiesResponse,
+  Property
+} from '@homiio/shared-types';
 
-export interface City {
-  _id: string;
-  name: string;
-  state: string;
-  country: string;
-  coordinates?: {
-    lat: number;
-    lng: number;
-  };
-  timezone?: string;
-  population?: number;
-  description?: string;
-  popularNeighborhoods?: string[];
-  averageRent?: number;
-  currency: string;
-  isActive: boolean;
-  propertiesCount: number;
-  lastUpdated: string;
-  createdAt: string;
-  updatedAt: string;
-  fullLocation?: string;
-  displayName?: string;
-}
+// Re-export the types for backward compatibility
+export type { 
+  City, 
+  CityFilters, 
+  CityPropertiesResponse, 
+  CitiesResponse 
+};
 
-export interface CityFilters {
-  search?: string;
-  state?: string;
-  country?: string;
-  limit?: number;
-  page?: number;
-}
 
-export interface CityPropertiesResponse {
-  city: City;
-  properties: any[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
-}
-
-export interface CitiesResponse {
-  data: City[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
-}
 
 class CityService {
   /**

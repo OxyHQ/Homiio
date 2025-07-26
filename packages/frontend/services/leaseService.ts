@@ -1,110 +1,34 @@
 import { api } from '@/utils/api';
 import { OxyServices } from '@oxyhq/services';
 import { API_URL } from '@/config';
+import { 
+  Lease, 
+  CreateLeaseData, 
+  UpdateLeaseData,
+  LeaseStatus,
+  PaymentMethod,
+  PetPolicy,
+  SmokingPolicy,
+  MaintenanceResponsibility
+} from '@homiio/shared-types';
 
-export interface Lease {
-  id: string;
-  propertyId: string;
-  property?: {
-    id: string;
-    title: string;
-    address: {
-      street: string;
-      city: string;
-      state: string;
-      zipCode: string;
-    };
-  };
-  landlordId: string;
-  landlord?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone?: string;
-  };
-  tenantId: string;
-  tenant?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone?: string;
-  };
-  status: 'draft' | 'pending_signature' | 'partially_signed' | 'fully_signed' | 'active' | 'terminated' | 'expired';
-  startDate: string;
-  endDate: string;
-  rent: {
-    amount: number;
-    currency: string;
-    dueDay: number;
-    paymentMethod: 'bank_transfer' | 'faircoin' | 'credit_card' | 'cash';
-    lateFee?: {
-      amount: number;
-      gracePeriod: number;
-    };
-  };
-  deposit: {
-    amount: number;
-    currency: string;
-    status: 'pending' | 'paid' | 'refunded';
-    paidAt?: string;
-  };
-  terms: {
-    duration: number; // months
-    noticePeriod: number; // days
-    petPolicy: 'allowed' | 'not_allowed' | 'case_by_case';
-    smokingPolicy: 'allowed' | 'not_allowed' | 'outside_only';
-    maintenanceResponsibility: 'landlord' | 'tenant' | 'shared';
-    utilitiesIncluded?: string[];
-    additionalTerms?: string[];
-  };
-  signatures: {
-    landlord?: {
-      signedAt: string;
-      ipAddress: string;
-      signature?: string;
-    };
-    tenant?: {
-      signedAt: string;
-      ipAddress: string;
-      signature?: string;
-    };
-  };
-  documents?: LeaseDocument[];
-  createdAt: string;
-  updatedAt: string;
-}
+// Re-export the types for backward compatibility
+export type { 
+  Lease, 
+  CreateLeaseData, 
+  UpdateLeaseData 
+};
 
-export interface CreateLeaseData {
-  propertyId: string;
-  tenantId: string;
-  startDate: string;
-  endDate: string;
-  rent: {
-    amount: number;
-    currency: string;
-    dueDay: number;
-    paymentMethod: 'bank_transfer' | 'faircoin' | 'credit_card' | 'cash';
-    lateFee?: {
-      amount: number;
-      gracePeriod: number;
-    };
-  };
-  deposit: {
-    amount: number;
-    currency: string;
-  };
-  terms: {
-    duration: number;
-    noticePeriod: number;
-    petPolicy: 'allowed' | 'not_allowed' | 'case_by_case';
-    smokingPolicy: 'allowed' | 'not_allowed' | 'outside_only';
-    maintenanceResponsibility: 'landlord' | 'tenant' | 'shared';
-    utilitiesIncluded?: string[];
-    additionalTerms?: string[];
-  };
-}
+// Re-export enums for backward compatibility
+export { 
+  LeaseStatus,
+  PaymentMethod,
+  PetPolicy,
+  SmokingPolicy,
+  MaintenanceResponsibility
+};
+
+
 
 export interface LeaseFilters {
   status?: string;

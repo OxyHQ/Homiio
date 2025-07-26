@@ -1,18 +1,18 @@
 import { create } from 'zustand';
-import { Property } from '@/services/propertyService';
+import { Property, RecentlyViewedType } from '@homiio/shared-types';
 
 // Recently Viewed State Interface
 interface RecentlyViewedState {
   // Data
   items: Array<{
     id: string;
-    type: 'property' | 'room' | 'roommate';
+    type: RecentlyViewedType;
     data: any;
     viewedAt: string;
   }>;
   
   // Actions
-  addItem: (id: string, type: 'property' | 'room' | 'roommate', data: any) => void;
+  addItem: (id: string, type: RecentlyViewedType, data: any) => void;
   removeItem: (id: string) => void;
   clearAll: () => void;
   getRecentProperties: () => Property[];
@@ -53,21 +53,21 @@ export const useRecentlyViewedStore = create<RecentlyViewedState>()(
       getRecentProperties: () => {
         const state = get();
         return state.items
-          .filter(item => item.type === 'property')
+          .filter(item => item.type === RecentlyViewedType.PROPERTY)
           .map(item => item.data)
           .slice(0, 10);
       },
       getRecentRooms: () => {
         const state = get();
         return state.items
-          .filter(item => item.type === 'room')
+          .filter(item => item.type === RecentlyViewedType.ROOM)
           .map(item => item.data)
           .slice(0, 10);
       },
       getRecentRoommates: () => {
         const state = get();
         return state.items
-          .filter(item => item.type === 'roommate')
+          .filter(item => item.type === RecentlyViewedType.ROOMMATE)
           .map(item => item.data)
           .slice(0, 10);
       },

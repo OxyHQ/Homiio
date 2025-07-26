@@ -12,6 +12,7 @@ const {
   paginationResponse,
 } = require("../middlewares/errorHandler");
 const { Profile } = require("../models");
+const { ProfileType } = require("@homiio/shared-types");
 
 class PropertyController {
   /**
@@ -41,7 +42,7 @@ class PropertyController {
           // Auto-create a personal profile for the user
           activeProfile = await Profile.create({
             oxyUserId: oxyUserId,
-            profileType: 'personal',
+            profileType: ProfileType.PERSONAL,
             isPrimary: true,
             isActive: true,
             personalProfile: {}

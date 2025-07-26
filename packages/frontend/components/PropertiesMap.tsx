@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { View, StyleSheet, Platform, ActivityIndicator, Text, TouchableOpacity } from 'react-native';
 import { colors } from '@/styles/colors';
-import { Property } from '@/services/propertyService';
+import { Property } from '@homiio/shared-types';
 
 interface MapProperty extends Property {
   title: string;

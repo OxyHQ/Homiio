@@ -1,29 +1,20 @@
 import { api } from '@/utils/api';
 import { OxyServices } from '@oxyhq/services';
-import type { Profile, PersonalProfile } from './profileService';
+import { 
+  Profile, 
+  PersonalProfile,
+  RoommatePreferences,
+  LeaseDuration
+} from '@homiio/shared-types';
 
-export interface RoommatePreferences {
-  ageRange?: {
-    min: number;
-    max: number;
-  };
-  gender?: 'male' | 'female' | 'any';
-  lifestyle?: {
-    smoking: 'yes' | 'no' | 'prefer_not';
-    pets: 'yes' | 'no' | 'prefer_not';
-    partying: 'yes' | 'no' | 'prefer_not';
-    cleanliness: 'very_clean' | 'clean' | 'average' | 'relaxed';
-    schedule: 'early_bird' | 'night_owl' | 'flexible';
-  };
-  budget?: {
-    min: number;
-    max: number;
-  };
-  moveInDate?: string;
-  leaseDuration?: 'monthly' | '3_months' | '6_months' | 'yearly' | 'flexible';
-  interests?: string[];
-  location?: string;
-}
+// Re-export the types for backward compatibility
+export type { 
+  Profile, 
+  PersonalProfile,
+  RoommatePreferences
+};
+
+
 
 export interface RoommateFilters {
   minMatchPercentage?: number;

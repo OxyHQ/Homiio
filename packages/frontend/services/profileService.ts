@@ -1,229 +1,53 @@
 import { api, ApiError } from '@/utils/api';
 import { OxyServices } from '@oxyhq/services';
+import { 
+  Profile, 
+  PersonalProfile, 
+  AgencyProfile, 
+  BusinessProfile, 
+  CooperativeProfile,
+  CreateProfileData,
+  UpdateProfileData,
+  ProfileType,
+  EmploymentStatus,
+  LeaseDuration,
+  BusinessType,
+  ReferenceRelationship,
+  ReasonForLeaving,
+  ProfileVisibility,
+  AgencyRole,
+  CooperativeRole,
+  PriceUnit
+} from '@homiio/shared-types';
 
-export interface PersonalProfile {
-  personalInfo?: {
-    bio?: string;
-    occupation?: string;
-    employer?: string;
-    annualIncome?: number;
-    employmentStatus?: 'employed' | 'self_employed' | 'student' | 'retired' | 'unemployed' | 'other';
-    moveInDate?: string;
-    leaseDuration?: 'monthly' | '3_months' | '6_months' | 'yearly' | 'flexible';
-  };
-  preferences: {
-    propertyTypes?: string[];
-    maxRent?: number;
-    priceUnit?: 'day' | 'night' | 'week' | 'month' | 'year';
-    minBedrooms?: number;
-    minBathrooms?: number;
-    preferredAmenities?: string[];
-    preferredLocations?: Array<{
-      city: string;
-      state: string;
-      radius: number;
-    }>;
-    petFriendly?: boolean;
-    smokingAllowed?: boolean;
-    furnished?: boolean;
-    parkingRequired?: boolean;
-    accessibility?: boolean;
-  };
-  references?: Array<{
-    name: string;
-    relationship: 'landlord' | 'employer' | 'personal' | 'other';
-    phone?: string;
-    email?: string;
-    verified?: boolean;
-  }>;
-  rentalHistory?: Array<{
-    address: string;
-    startDate: string;
-    endDate?: string;
-    monthlyRent?: number;
-    reasonForLeaving?: 'lease_ended' | 'bought_home' | 'job_relocation' | 'family_reasons' | 'upgrade' | 'other';
-    landlordContact?: {
-      name?: string;
-      phone?: string;
-      email?: string;
-    };
-    verified?: boolean;
-  }>;
-  verification: {
-    identity: boolean;
-    income: boolean;
-    background: boolean;
-    rentalHistory: boolean;
-    references?: boolean;
-  };
-  trustScore: {
-    score: number;
-    factors: Array<{
-      type: string;
-      value: number;
-      updatedAt: string;
-    }>;
-  };
-  settings: {
-    notifications: {
-      email: boolean;
-      push: boolean;
-      sms: boolean;
-      propertyAlerts?: boolean;
-      viewingReminders?: boolean;
-      leaseUpdates?: boolean;
-    };
-    privacy: {
-      profileVisibility: 'public' | 'private' | 'contacts_only';
-      showContactInfo: boolean;
-      showIncome: boolean;
-      showRentalHistory?: boolean;
-      showReferences?: boolean;
-    };
-    roommate?: {
-      enabled: boolean;
-      preferences?: {
-        ageRange?: {
-          min: number;
-          max: number;
-        };
-        gender?: 'male' | 'female' | 'any';
-        lifestyle?: {
-          smoking: 'yes' | 'no' | 'prefer_not';
-          pets: 'yes' | 'no' | 'prefer_not';
-          partying: 'yes' | 'no' | 'prefer_not';
-          cleanliness: 'very_clean' | 'clean' | 'average' | 'relaxed';
-          schedule: 'early_bird' | 'night_owl' | 'flexible';
-        };
-        budget?: {
-          min: number;
-          max: number;
-        };
-        moveInDate?: string;
-        leaseDuration?: 'monthly' | '3_months' | '6_months' | 'yearly' | 'flexible';
-      };
-      history?: Array<{
-        startDate: string;
-        endDate?: string;
-        location: string;
-        roommateCount?: number;
-        reason?: string;
-      }>;
-    };
-    language: string;
-    timezone: string;
-    currency?: string;
-  };
-}
+// Re-export the types for backward compatibility
+export type { 
+  Profile, 
+  PersonalProfile, 
+  AgencyProfile, 
+  BusinessProfile, 
+  CooperativeProfile,
+  CreateProfileData,
+  UpdateProfileData
+};
 
-export interface AgencyProfile {
-  businessType: 'real_estate_agency' | 'property_management' | 'brokerage' | 'developer' | 'other';
-  legalCompanyName?: string;
-  description?: string;
-  businessDetails: {
-    licenseNumber?: string;
-    taxId?: string;
-    yearEstablished?: number;
-    employeeCount?: '1-10' | '11-50' | '51-200' | '200+';
-    specialties?: string[];
-    serviceAreas?: Array<{
-      city: string;
-      state: string;
-      radius: number;
-    }>;
-  };
-  verification: {
-    businessLicense: boolean;
-    insurance: boolean;
-    bonding: boolean;
-    backgroundCheck: boolean;
-  };
-  ratings: {
-    average: number;
-    count: number;
-  };
-  members: Array<{
-    oxyUserId: string;
-    role: 'owner' | 'admin' | 'agent' | 'viewer';
-    addedAt: string;
-    addedBy?: string;
-  }>;
-}
+// Re-export enums for backward compatibility
+export { 
+  ProfileType,
+  EmploymentStatus,
+  LeaseDuration,
+  BusinessType,
+  ReferenceRelationship,
+  ReasonForLeaving,
+  ProfileVisibility,
+  AgencyRole,
+  CooperativeRole,
+  PriceUnit
+};
 
-export interface BusinessProfile {
-  businessType: 'small_business' | 'startup' | 'freelancer' | 'consultant' | 'other';
-  legalCompanyName?: string;
-  description?: string;
-  businessDetails: {
-    licenseNumber?: string;
-    taxId?: string;
-    yearEstablished?: number;
-    employeeCount?: '1-5' | '6-10' | '11-25' | '26+';
-    industry?: string;
-    specialties?: string[];
-    serviceAreas?: Array<{
-      city: string;
-      state: string;
-      radius: number;
-    }>;
-  };
-  verification: {
-    businessLicense: boolean;
-    insurance: boolean;
-    backgroundCheck: boolean;
-  };
-  ratings: {
-    average: number;
-    count: number;
-  };
-}
 
-export interface CooperativeProfile {
-  legalName: string;
-  description?: string;
-  members: Array<{
-    oxyUserId: string;
-    role: 'owner' | 'admin' | 'member';
-    addedAt: string;
-  }>;
-}
 
-export interface Profile {
-  id: string;
-  _id?: string;
-  oxyUserId: string;
-  profileType: 'personal' | 'agency' | 'business' | 'cooperative';
-  isPrimary: boolean;
-  isActive: boolean;
-  personalProfile?: PersonalProfile;
-  agencyProfile?: AgencyProfile;
-  businessProfile?: BusinessProfile;
-  cooperativeProfile?: CooperativeProfile;
-  createdAt: string;
-  updatedAt: string;
-}
 
-export interface CreateProfileData {
-  profileType: 'personal' | 'agency' | 'business' | 'cooperative';
-  data: {
-    preferences?: PersonalProfile['preferences'];
-    verification?: PersonalProfile['verification'];
-    settings?: PersonalProfile['settings'];
-    businessType?: AgencyProfile['businessType'] | BusinessProfile['businessType'];
-    description?: string;
-    businessDetails?: AgencyProfile['businessDetails'] | BusinessProfile['businessDetails'];
-    legalCompanyName?: string;
-    legalName?: string;
-  };
-}
-
-export interface UpdateProfileData {
-  personalProfile?: Partial<PersonalProfile>;
-  agencyProfile?: Partial<AgencyProfile>;
-  businessProfile?: Partial<BusinessProfile>;
-  isPrimary?: boolean;
-  isActive?: boolean;
-}
 
 class ProfileService {
   private baseUrl = '/api/profiles';
@@ -273,7 +97,7 @@ class ProfileService {
   /**
    * Get profile by type
    */
-  async getProfileByType(profileType: 'personal' | 'agency' | 'business', oxyServices?: OxyServices, activeSessionId?: string): Promise<Profile> {
+  async getProfileByType(profileType: ProfileType, oxyServices?: OxyServices, activeSessionId?: string): Promise<Profile> {
     try {
       const response = await api.get(`${this.baseUrl}/me/${profileType}`, {
         oxyServices,
@@ -411,7 +235,7 @@ class ProfileService {
   /**
    * Add member to agency profile
    */
-  async addAgencyMember(profileId: string, memberOxyUserId: string, role: 'owner' | 'admin' | 'agent' | 'viewer', oxyServices?: OxyServices, activeSessionId?: string): Promise<Profile> {
+  async addAgencyMember(profileId: string, memberOxyUserId: string, role: AgencyRole, oxyServices?: OxyServices, activeSessionId?: string): Promise<Profile> {
     try {
       const response = await api.post(`${this.baseUrl}/${profileId}/members`, {
         memberOxyUserId,

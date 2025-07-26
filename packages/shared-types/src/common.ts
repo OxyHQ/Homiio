@@ -132,6 +132,32 @@ export enum CooperativeRole {
   MEMBER = 'member'
 }
 
+export enum RecentlyViewedType {
+  PROPERTY = 'property',
+  ROOM = 'room',
+  ROOMMATE = 'roommate'
+}
+
+export enum TrustScoreFactorType {
+  VERIFICATION = 'verification',
+  REVIEWS = 'reviews',
+  PAYMENT_HISTORY = 'payment_history',
+  COMMUNICATION = 'communication',
+  RENTAL_HISTORY = 'rental_history',
+  BASIC_INFO = 'basic_info',
+  EMPLOYMENT = 'employment',
+  REFERENCES = 'references',
+  ROOMMATE_PREFERENCES = 'roommate_preferences',
+  ROOMMATE_COMPATIBILITY = 'roommate_compatibility',
+  AGENCY_BUSINESS = 'agency_business'
+}
+
+export enum GenderPreference {
+  MALE = 'male',
+  FEMALE = 'female',
+  ANY = 'any'
+}
+
 // Common interfaces
 export interface Coordinates {
   lat: number;

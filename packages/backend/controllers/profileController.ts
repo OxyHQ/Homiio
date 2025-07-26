@@ -1,5 +1,6 @@
 const { Profile } = require("../models");
 const { successResponse } = require("../middlewares/errorHandler");
+const { ProfileType } = require("@homiio/shared-types");
 
 // Create a simple errorResponse function since it's not exported from errorHandler
 const errorResponse = (message = 'Error occurred', code = 'ERROR') => {
@@ -133,7 +134,7 @@ class ProfileController {
         
         if (!profile) {
           // Check if there's a personal profile (even if not active)
-          const personalProfile = await Profile.findOne({ oxyUserId, profileType: "personal" });
+          const personalProfile = await Profile.findOne({ oxyUserId, profileType: ProfileType.PERSONAL });
           
           if (personalProfile) {
             // Make personal profile active but don't change active status
@@ -144,7 +145,7 @@ class ProfileController {
             // Create a default personal profile
             const defaultPersonalProfile = new Profile({
               oxyUserId,
-              profileType: "personal",
+              profileType: ProfileType.PERSONAL,
               isActive: true,
               isPrimary: true, // First profile is always primary
               personalProfile: {
@@ -236,7 +237,7 @@ class ProfileController {
         );
       }
 
-      if (!["personal", "agency", "business", "cooperative"].includes(profileType)) {
+      if (!Object.values(ProfileType).includes(profileType)) {
         return res.status(400).json(
           errorResponse("Invalid profile type", "INVALID_PROFILE_TYPE")
         );
@@ -273,7 +274,7 @@ class ProfileController {
         );
       }
 
-      if (!["personal", "agency", "business", "cooperative"].includes(profileType)) {
+      if (!Object.values(ProfileType).includes(profileType)) {
         return res.status(400).json(
           errorResponse("Invalid profile type", "INVALID_PROFILE_TYPE")
         );
@@ -288,10 +289,10 @@ class ProfileController {
       }
 
       // Special handling for personal profiles - only one allowed per user
-      if (profileType === "personal") {
+      if (profileType === ProfileType.PERSONAL) {
         const existingPersonalProfile = await Profile.findOne({ 
           oxyUserId, 
-          profileType: "personal" 
+          profileType: ProfileType.PERSONAL 
         });
         if (existingPersonalProfile) {
           return res.status(409).json(
@@ -317,7 +318,7 @@ class ProfileController {
       };
 
       switch (profileType) {
-        case "personal":
+        case ProfileType.PERSONAL:
           profileData.personalProfile = {
             personalInfo: {
               bio: "",
@@ -342,7 +343,7 @@ class ProfileController {
           };
           break;
           
-        case "agency":
+        case ProfileType.AGENCY:
           profileData.agencyProfile = {
             businessType: data.businessType,
             description: data.description || "",
@@ -357,7 +358,7 @@ class ProfileController {
           };
           break;
           
-        case "business":
+        case ProfileType.BUSINESS:
           profileData.businessProfile = {
             businessType: data.businessType,
             legalCompanyName: data.legalCompanyName || "",
@@ -367,7 +368,7 @@ class ProfileController {
             ratings: { average: 0, count: 0 }
           };
           break;
-        case "cooperative":
+        case ProfileType.COOPERATIVE:
           profileData.cooperativeProfile = {
             legalName: data.legalName || "",
             description: data.description || "",
@@ -383,7 +384,7 @@ class ProfileController {
       const profile = new Profile(profileData);
       
       // Calculate initial trust score for personal profiles
-      if (profileType === "personal") {
+      if (profileType === ProfileType.PERSONAL) {
         profile.calculateTrustScore();
       }
       
@@ -447,7 +448,7 @@ class ProfileController {
         });
 
         // Recalculate trust score for personal profiles
-        if (profile.profileType === "personal") {
+        if (profile.profileType === ProfileType.PERSONAL) {
           profile.calculateTrustScore();
         }
 
@@ -501,7 +502,7 @@ class ProfileController {
       }
 
       // Prevent deletion of personal profiles as they are linked to the Oxy account
-      if (profile.profileType === "personal") {
+      if (profile.profileType === ProfileType.PERSONAL) {
         return res.status(400).json(
           errorResponse("Cannot delete personal profile as it is linked to your Oxy account", "CANNOT_DELETE_PERSONAL")
         );
@@ -565,7 +566,7 @@ class ProfileController {
         );
       }
 
-      if (profile.profileType !== "agency") {
+      if (profile.profileType !== ProfileType.AGENCY) {
         return res.status(400).json(
           errorResponse("Can only add members to agency profiles", "INVALID_PROFILE_TYPE")
         );
@@ -616,7 +617,7 @@ class ProfileController {
         );
       }
 
-      if (profile.profileType !== "agency") {
+      if (profile.profileType !== ProfileType.AGENCY) {
         return res.status(400).json(
           errorResponse("Can only remove members from agency profiles", "INVALID_PROFILE_TYPE")
         );
@@ -703,7 +704,7 @@ class ProfileController {
         }
 
         // Recalculate trust score for personal profiles
-        if (profile.profileType === "personal") {
+        if (profile.profileType === ProfileType.PERSONAL) {
           profile.calculateTrustScore();
         }
 
@@ -748,7 +749,7 @@ class ProfileController {
         );
       }
 
-      if (profile.profileType !== "personal") {
+      if (profile.profileType !== ProfileType.PERSONAL) {
         return res.status(400).json(
           errorResponse("Can only update trust score for personal profiles", "INVALID_PROFILE_TYPE")
         );
@@ -794,7 +795,7 @@ class ProfileController {
         );
       }
 
-      if (profile.profileType !== "personal") {
+      if (profile.profileType !== ProfileType.PERSONAL) {
         return res.status(400).json(
           errorResponse("Can only update trust score for personal profiles", "INVALID_PROFILE_TYPE")
         );
@@ -836,7 +837,7 @@ class ProfileController {
         'personalProfile.trustScore profileType'
       );
       
-      if (!profile || profile.profileType !== 'personal') {
+      if (!profile || profile.profileType !== ProfileType.PERSONAL) {
         return res.status(404).json(
           errorResponse("Personal profile not found", "PROFILE_NOT_FOUND")
         );
@@ -1082,7 +1083,7 @@ class ProfileController {
         // Create a default personal profile if none exists
         const defaultPersonalProfile = new Profile({
           oxyUserId,
-          profileType: "personal",
+          profileType: ProfileType.PERSONAL,
           isActive: true,
           isPrimary: true, // First profile is always primary
           personalProfile: {
@@ -1201,7 +1202,7 @@ class ProfileController {
         // Create a default personal profile if none exists
         const defaultPersonalProfile = new Profile({
           oxyUserId,
-          profileType: "personal",
+          profileType: ProfileType.PERSONAL,
           isActive: true,
           isPrimary: true, // First profile is always primary
           personalProfile: {
@@ -1323,7 +1324,7 @@ class ProfileController {
         // Create a default personal profile if none exists
         const defaultPersonalProfile = new Profile({
           oxyUserId,
-          profileType: "personal",
+          profileType: ProfileType.PERSONAL,
           isActive: true,
           isPrimary: true, // First profile is always primary
           personalProfile: {
@@ -1536,7 +1537,7 @@ class ProfileController {
         // Create a default personal profile if none exists
         const defaultPersonalProfile = new Profile({
           oxyUserId,
-          profileType: "personal",
+          profileType: ProfileType.PERSONAL,
           isActive: true,
           isPrimary: true, // First profile is always primary
           personalProfile: {
@@ -1771,7 +1772,7 @@ class ProfileController {
         // Create a default personal profile if none exists
         const defaultPersonalProfile = new Profile({
           oxyUserId,
-          profileType: "personal",
+          profileType: ProfileType.PERSONAL,
           isActive: true,
           isPrimary: true,
           personalProfile: {
@@ -1872,7 +1873,7 @@ class ProfileController {
         console.log('No active profile found, creating one...');
         const defaultPersonalProfile = new Profile({
           oxyUserId,
-          profileType: "personal",
+          profileType: ProfileType.PERSONAL,
           isActive: true,
           isPrimary: true,
           personalProfile: {

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import profileService, { Profile, UpdateProfileData } from '@/services/profileService';
+import profileService from '@/services/profileService';
+import { Profile, UpdateProfileData, ProfileType } from '@homiio/shared-types';
 import { OxyServices } from '@oxyhq/services';
 
 interface ProfileState {
@@ -93,7 +94,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   createProfile: async (profileData, oxyServices, activeSessionId) => {
     try {
       // Check if trying to create a personal profile
-      if (profileData.profileType === 'personal') {
+      if (profileData.profileType === ProfileType.PERSONAL) {
         throw new Error('Personal profiles cannot be created manually. They are created automatically when you first access the system.');
       }
 
