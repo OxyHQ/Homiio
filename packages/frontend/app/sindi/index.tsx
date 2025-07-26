@@ -18,6 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as DocumentPicker from 'expo-document-picker';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useConversationStore, type ConversationMessage, type Conversation } from '@/store/conversationStore';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export default function sindi() {
   const { oxyServices, activeSessionId } = useOxy();
@@ -287,36 +288,14 @@ export default function sindi() {
                 <Text style={styles.loadingText}>Loading conversations...</Text>
               </View>
             ) : conversations.length === 0 ? (
-              <View style={styles.emptyStateContainer}>
-                <LinearGradient
-                  colors={['rgba(76, 175, 80, 0.1)', 'rgba(76, 175, 80, 0.05)']}
-                  style={styles.emptyStateCard}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <View style={styles.emptyStateIconContainer}>
-                    <IconComponent name="chatbubbles-outline" size={48} color={colors.primaryColor} />
-                  </View>
-                  <Text style={styles.emptyStateTitle}>No conversations yet</Text>
-                  <Text style={styles.emptyStateDescription}>
-                    Start a new conversation to get help with your tenant rights questions
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.emptyStateButton}
-                    onPress={createNewConversation}
-                  >
-                    <LinearGradient
-                      colors={[colors.primaryColor, colors.secondaryLight]}
-                      style={styles.emptyStateButtonGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <IconComponent name="add-circle" size={20} color="white" />
-                      <Text style={styles.emptyStateButtonText}>Start First Chat</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </LinearGradient>
-              </View>
+              <EmptyState
+                icon="chatbubbles-outline"
+                title="No conversations yet"
+                description="Start a new conversation to get help with your tenant rights questions"
+                actionText="Start First Chat"
+                actionIcon="add-circle"
+                onAction={createNewConversation}
+              />
             ) : (
               <View style={styles.conversationsList}>
                 {conversations.map((conversation) => (
@@ -1034,65 +1013,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.COLOR_BLACK_LIGHT_3,
   },
-  emptyStateContainer: {
-    marginHorizontal: 16,
-    marginBottom: 20,
-  },
-  emptyStateCard: {
-    alignItems: 'center',
-    padding: 32,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(76, 175, 80, 0.2)',
-  },
-  emptyStateIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  emptyStateIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.COLOR_BLACK,
-    marginBottom: 12,
-    fontFamily: 'Phudu',
-    textAlign: 'center',
-  },
-  emptyStateDescription: {
-    fontSize: 15,
-    color: colors.COLOR_BLACK_LIGHT_2,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
-    paddingHorizontal: 20,
-  },
-  emptyStateButton: {
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK,
-    overflow: 'hidden',
-  },
-  emptyStateButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-  },
-  emptyStateButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: 'white',
-    marginLeft: 8,
-  },
+
   conversationsList: {
     paddingHorizontal: 16,
   },
