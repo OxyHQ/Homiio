@@ -9,6 +9,7 @@ import { colors } from '@/styles/colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUserLeases, useHasRentalProperties } from '@/hooks/useLeaseQueries';
 import type { Lease } from '@/services/leaseService';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 type FilterOptions = 'all' | 'active' | 'pending_signature' | 'expired' | 'draft';
 
@@ -31,19 +32,14 @@ export default function ContractsScreen() {
             titlePosition: 'center',
           }}
         />
-        <View style={styles.emptyContainer}>
-          <Ionicons name="document-text-outline" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
-          <Text style={styles.emptyText}>{t("No rental contracts")}</Text>
-          <Text style={styles.emptySubtext}>
-            {t("You don't have any rental properties yet. Start by browsing available properties or listing your own.")}
-          </Text>
-          <TouchableOpacity
-            style={styles.emptyButton}
-            onPress={() => router.push('/')}
-          >
-            <Text style={styles.emptyButtonText}>{t("Browse Properties")}</Text>
-          </TouchableOpacity>
-        </View>
+        <EmptyState
+          icon="document-text-outline"
+          title={t("No rental contracts")}
+          description={t("You don't have any rental properties yet. Start by browsing available properties or listing your own.")}
+          actionText={t("Browse Properties")}
+          actionIcon="home"
+          onAction={() => router.push('/')}
+        />
       </SafeAreaView>
     );
   }
