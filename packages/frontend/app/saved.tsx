@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Property } from '@/services/propertyService';
 import savedPropertyService, { SavedProperty } from '@/services/savedPropertyService';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 // Extended interface for saved properties
 interface SavedPropertyWithUI extends SavedProperty {
@@ -593,43 +594,29 @@ export default function SavedPropertiesScreen() {
     const renderEmptyState = () => {
         if (searchQuery || selectedCategory !== 'all') {
             return (
-                <View style={styles.emptyState}>
-                    <View style={styles.emptyStateIcon}>
-                        <IconComponent name="search" size={48} color={colors.COLOR_BLACK_LIGHT_4} />
-                    </View>
-                    <Text style={styles.emptyStateTitle}>No Properties Found</Text>
-                    <Text style={styles.emptyStateSubtitle}>
-                        Try adjusting your search or filter criteria
-                    </Text>
-                    <TouchableOpacity
-                        style={styles.emptyStateButton}
-                        onPress={() => {
-                            setSearchQuery('');
-                            setSelectedCategory('all');
-                        }}
-                    >
-                        <Text style={styles.emptyStateButtonText}>Clear Filters</Text>
-                    </TouchableOpacity>
-                </View>
+                <EmptyState
+                    icon="search"
+                    title="No Properties Found"
+                    description="Try adjusting your search or filter criteria"
+                    actionText="Clear Filters"
+                    actionIcon="refresh"
+                    onAction={() => {
+                        setSearchQuery('');
+                        setSelectedCategory('all');
+                    }}
+                />
             );
         }
 
         return (
-            <View style={styles.emptyState}>
-                <View style={styles.emptyStateIcon}>
-                    <IconComponent name="bookmark-outline" size={64} color={colors.COLOR_BLACK_LIGHT_4} />
-                </View>
-                <Text style={styles.emptyStateTitle}>No Saved Properties</Text>
-                <Text style={styles.emptyStateSubtitle}>
-                    Start saving properties you love by tapping the heart icon. They'll appear here for easy access.
-                </Text>
-                <TouchableOpacity
-                    style={styles.emptyStateButton}
-                    onPress={() => router.push('/properties')}
-                >
-                    <Text style={styles.emptyStateButtonText}>Browse Properties</Text>
-                </TouchableOpacity>
-            </View>
+            <EmptyState
+                icon="bookmark-outline"
+                title="No Saved Properties"
+                description="Start saving properties you love by tapping the heart icon. They'll appear here for easy access."
+                actionText="Browse Properties"
+                actionIcon="home"
+                onAction={() => router.push('/properties')}
+            />
         );
     };
 
@@ -638,15 +625,11 @@ export default function SavedPropertiesScreen() {
         return (
             <SafeAreaView style={styles.container} edges={['top']}>
                 <Header options={{ title: 'Saved Properties', showBackButton: true }} />
-                <View style={styles.emptyState}>
-                    <View style={styles.emptyStateIcon}>
-                        <IconComponent name="lock-closed" size={48} color={colors.COLOR_BLACK_LIGHT_4} />
-                    </View>
-                    <Text style={styles.emptyStateTitle}>Sign In Required</Text>
-                    <Text style={styles.emptyStateSubtitle}>
-                        Please sign in to view and manage your saved properties
-                    </Text>
-                </View>
+                <EmptyState
+                    icon="lock-closed"
+                    title="Sign In Required"
+                    description="Please sign in to view and manage your saved properties"
+                />
             </SafeAreaView>
         );
     }
@@ -672,14 +655,14 @@ export default function SavedPropertiesScreen() {
             {isLoading && savedProperties.length === 0 && <LoadingTopSpinner showLoading={true} />}
 
             {error && !isLoading && (
-                <View style={styles.errorState}>
-                    <IconComponent name="alert-circle" size={48} color="#EF4444" />
-                    <Text style={styles.errorTitle}>Something went wrong</Text>
-                    <Text style={styles.errorMessage}>{error}</Text>
-                    <TouchableOpacity style={styles.retryButton} onPress={handleRefresh}>
-                        <Text style={styles.retryButtonText}>Try Again</Text>
-                    </TouchableOpacity>
-                </View>
+                <EmptyState
+                    icon="alert-circle"
+                    title="Something went wrong"
+                    description={error}
+                    actionText="Try Again"
+                    actionIcon="refresh"
+                    onAction={handleRefresh}
+                />
             )}
 
             {!isLoading && !error && (
@@ -1107,83 +1090,7 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
 
-    // Empty States
-    emptyState: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 32,
-        paddingVertical: 64,
-    },
-    emptyStateIcon: {
-        marginBottom: 24,
-        opacity: 0.7,
-    },
-    emptyStateTitle: {
-        fontSize: 24,
-        fontWeight: '700',
-        color: colors.COLOR_BLACK,
-        marginBottom: 12,
-        textAlign: 'center',
-    },
-    emptyStateSubtitle: {
-        fontSize: 16,
-        color: colors.COLOR_BLACK_LIGHT_3,
-        textAlign: 'center',
-        lineHeight: 24,
-        marginBottom: 32,
-        maxWidth: 300,
-    },
-    emptyStateButton: {
-        backgroundColor: colors.primaryColor,
-        borderRadius: 16,
-        paddingHorizontal: 32,
-        paddingVertical: 16,
-        shadowColor: colors.primaryColor,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    emptyStateButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: '600',
-    },
 
-    // Error State
-    errorState: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 32,
-    },
-    errorTitle: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: colors.COLOR_BLACK,
-        marginTop: 16,
-        marginBottom: 8,
-        textAlign: 'center',
-    },
-    errorMessage: {
-        fontSize: 16,
-        color: colors.COLOR_BLACK_LIGHT_3,
-        textAlign: 'center',
-        lineHeight: 22,
-        marginBottom: 24,
-    },
-    retryButton: {
-        backgroundColor: '#EF4444',
-        borderRadius: 12,
-        paddingHorizontal: 24,
-        paddingVertical: 12,
-    },
-    retryButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: '600',
-    },
 
     // Modal
     modalOverlay: {

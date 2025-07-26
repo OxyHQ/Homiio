@@ -24,6 +24,7 @@ import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 import { SearchBar } from '@/components/SearchBar';
 import { Button } from '@/components/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 interface MapProperty extends Property {
     title: string;
@@ -193,40 +194,37 @@ export default function PropertiesMapScreen() {
 
     // Render empty state
     const renderEmptyState = () => (
-        <View style={styles.emptyState}>
-            <Text style={styles.emptyStateTitle}>{t('No Properties Found')}</Text>
-            <Text style={styles.emptyStateSubtitle}>
-                {t('Try adjusting your search criteria or filters')}
-            </Text>
-        </View>
+        <EmptyState
+            icon="map-outline"
+            title={t('No Properties Found')}
+            description={t('Try adjusting your search criteria or filters')}
+        />
     );
 
     // Render error state
     const renderErrorState = () => (
-        <View style={styles.errorState}>
-            <Text style={styles.errorStateTitle}>{t('Error Loading Properties')}</Text>
-            <Text style={styles.errorStateSubtitle}>
-                {error?.message || t('Please try again later')}
-            </Text>
-            <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-                <Text style={styles.retryButtonText}>{t('Retry')}</Text>
-            </TouchableOpacity>
-        </View>
+        <EmptyState
+            icon="alert-circle"
+            title={t('Error Loading Properties')}
+            description={error?.message || t('Please try again later')}
+            actionText={t('Retry')}
+            actionIcon="refresh"
+            onAction={() => refetch()}
+        />
     );
 
     // Show error state
     if (error) {
         return (
             <View style={styles.container}>
-                <View style={styles.errorContainer}>
-                    <Text style={styles.errorTitle}>Failed to load properties</Text>
-                    <Text style={styles.errorMessage}>
-                        {error.message || 'An error occurred while loading the properties map.'}
-                    </Text>
-                    <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-                        <Text style={styles.retryButtonText}>Try Again</Text>
-                    </TouchableOpacity>
-                </View>
+                <EmptyState
+                    icon="alert-circle"
+                    title="Failed to load properties"
+                    description={error.message || 'An error occurred while loading the properties map.'}
+                    actionText="Try Again"
+                    actionIcon="refresh"
+                    onAction={() => refetch()}
+                />
             </View>
         );
     }
@@ -694,56 +692,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: colors.primaryLight_1,
     },
-    emptyState: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 32,
-    },
-    emptyStateTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: colors.primaryDark,
-        marginTop: 16,
-        marginBottom: 8,
-    },
-    emptyStateSubtitle: {
-        fontSize: 14,
-        color: colors.primaryLight_1,
-        textAlign: 'center',
-        lineHeight: 20,
-    },
-    errorState: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 32,
-    },
-    errorStateTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: colors.primaryDark,
-        marginTop: 16,
-        marginBottom: 8,
-    },
-    errorStateSubtitle: {
-        fontSize: 14,
-        color: colors.primaryLight_1,
-        textAlign: 'center',
-        lineHeight: 20,
-        marginBottom: 16,
-    },
-    retryButton: {
-        backgroundColor: colors.primaryColor,
-        paddingHorizontal: 24,
-        paddingVertical: 12,
-        borderRadius: 8,
-    },
-    retryButtonText: {
-        color: 'white',
-        fontWeight: '600',
-        fontSize: 16,
-    },
+
     selectedPropertyInfo: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -783,12 +732,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
     },
-    errorContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 32,
-    },
+
     errorTitle: {
         fontSize: 20,
         fontWeight: 'bold',

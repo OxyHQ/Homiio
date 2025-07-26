@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/styles/colors';
@@ -9,6 +9,8 @@ import { Header } from '@/components/Header';
 import { PropertyCard } from '@/components/PropertyCard';
 import { Property } from '@/services/propertyService';
 import { cityService, City } from '@/services/cityService';
+import { LinearGradient } from 'expo-linear-gradient';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export default function CityPropertiesPage() {
   const { t } = useTranslation();
@@ -138,19 +140,19 @@ export default function CityPropertiesPage() {
     <TouchableOpacity
       key={option.id}
       style={[
-        styles.filterOption,
-        activeFilter === option.id && styles.activeFilterOption
+        styles.filterChip,
+        activeFilter === option.id && styles.activeFilterChip
       ]}
       onPress={() => toggleFilter(option.id)}
     >
       <Ionicons
         name={option.icon as any}
-        size={18}
+        size={16}
         color={activeFilter === option.id ? 'white' : colors.COLOR_BLACK}
       />
       <Text style={[
-        styles.filterText,
-        activeFilter === option.id && styles.activeFilterText
+        styles.filterChipText,
+        activeFilter === option.id && styles.activeFilterChipText
       ]}>
         {option.label}
       </Text>
@@ -193,16 +195,13 @@ export default function CityPropertiesPage() {
             titlePosition: 'center',
           }}
         />
-        <View style={styles.loadingContainer}>
-          <Ionicons name="alert-circle" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
-          <Text style={styles.loadingText}>{error || t("City not found")}</Text>
-          <TouchableOpacity
-            style={styles.resetButton}
-            onPress={() => router.back()}
-          >
-            <Text style={styles.resetButtonText}>{t("Go Back")}</Text>
-          </TouchableOpacity>
-        </View>
+        <EmptyState
+          icon="alert-circle"
+          title={error || t("City not found")}
+          actionText={t("Go Back")}
+          actionIcon="arrow-back"
+          onAction={() => router.back()}
+        />
       </SafeAreaView>
     );
   }
@@ -217,29 +216,42 @@ export default function CityPropertiesPage() {
         }}
       />
 
-      <View style={styles.container}>
-        {/* City Overview */}
-        <View style={styles.cityOverview}>
-          <Text style={styles.cityTitle}>
-            {city.name}, <Text style={styles.countryText}>{city.country}</Text>
-          </Text>
-          <Text style={styles.cityDescription}>{city.description}</Text>
-
-          <View style={styles.cityStats}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{city.propertiesCount}</Text>
-              <Text style={styles.statLabel}>{t("Properties")}</Text>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        {/* Hero Section */}
+        <View style={styles.heroSection}>
+          <LinearGradient
+            colors={[colors.primaryColor, colors.secondaryLight]}
+            style={styles.heroContainer}
+          >
+            <View style={styles.heroContent}>
+              <Text style={styles.heroTitle}>
+                {city.name}
+              </Text>
+              <Text style={styles.heroSubtitle}>
+                {city.country}
+              </Text>
+              <Text style={styles.heroDescription}>
+                {city.description}
+              </Text>
             </View>
+          </LinearGradient>
+        </View>
 
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{city.averageRent ? `⊜${city.averageRent.toLocaleString()}` : 'N/A'}</Text>
-              <Text style={styles.statLabel}>{t("Avg. Price")}</Text>
-            </View>
-
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{city.popularNeighborhoods?.length || 0}</Text>
-              <Text style={styles.statLabel}>{t("Neighborhoods")}</Text>
-            </View>
+        {/* City Stats Cards */}
+        <View style={styles.statsSection}>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{city.propertiesCount}</Text>
+            <Text style={styles.statLabel}>{t("Properties")}</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>
+              {city.averageRent ? `⊜${city.averageRent.toLocaleString()}` : 'N/A'}
+            </Text>
+            <Text style={styles.statLabel}>{t("Avg. Price")}</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{city.popularNeighborhoods?.length || 0}</Text>
+            <Text style={styles.statLabel}>{t("Neighborhoods")}</Text>
           </View>
         </View>
 
@@ -247,69 +259,99 @@ export default function CityPropertiesPage() {
         {city.popularNeighborhoods && city.popularNeighborhoods.length > 0 && (
           <View style={styles.neighborhoodSection}>
             <Text style={styles.sectionTitle}>{t("Popular Neighborhoods")}</Text>
-            <View style={styles.neighborhoodPills}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.neighborhoodScroll}
+            >
               {city.popularNeighborhoods.map((neighborhood, index) => (
                 <TouchableOpacity key={index} style={styles.neighborhoodPill}>
                   <Text style={styles.neighborhoodText}>{neighborhood}</Text>
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
           </View>
         )}
 
-        {/* Properties List */}
+        {/* Properties Section */}
         <View style={styles.propertiesSection}>
           <View style={styles.propertiesHeader}>
-            <Text style={styles.sectionTitle}>{t("Available Properties")}</Text>
+            <View>
+              <Text style={styles.sectionTitle}>{t("Available Properties")}</Text>
+              <Text style={styles.propertiesSubtitle}>
+                {getFilteredAndSortedProperties().length} {t("properties found")}
+              </Text>
+            </View>
+
             <View style={styles.sortContainer}>
-              <Text style={styles.sortLabel}>{t("Sort by:")}</Text>
               <TouchableOpacity
-                style={[styles.sortOption, activeSort === 'price_asc' && styles.activeSortOption]}
-                onPress={() => setActiveSort('price_asc')}
+                style={styles.sortButton}
+                onPress={() => setActiveSort(activeSort === 'price_asc' ? null : 'price_asc')}
               >
-                <Text style={styles.sortText}>⊜↑</Text>
+                <Ionicons
+                  name="arrow-up"
+                  size={16}
+                  color={activeSort === 'price_asc' ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3}
+                />
+                <Text style={[
+                  styles.sortButtonText,
+                  activeSort === 'price_asc' && styles.activeSortButtonText
+                ]}>
+                  {t("Price")}
+                </Text>
               </TouchableOpacity>
+
               <TouchableOpacity
-                style={[styles.sortOption, activeSort === 'price_desc' && styles.activeSortOption]}
-                onPress={() => setActiveSort('price_desc')}
+                style={styles.sortButton}
+                onPress={() => setActiveSort(activeSort === 'rating' ? null : 'rating')}
               >
-                <Text style={styles.sortText}>⊜↓</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.sortOption, activeSort === 'rating' && styles.activeSortOption]}
-                onPress={() => setActiveSort('rating')}
-              >
-                <Ionicons name="star" size={14} color={activeSort === 'rating' ? 'white' : colors.COLOR_BLACK} />
+                <Ionicons
+                  name="star"
+                  size={16}
+                  color={activeSort === 'rating' ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3}
+                />
+                <Text style={[
+                  styles.sortButtonText,
+                  activeSort === 'rating' && styles.activeSortButtonText
+                ]}>
+                  {t("Rating")}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          <View style={styles.filtersContainer}>
+          {/* Filters */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filtersScroll}
+          >
             {filterOptions.map(renderFilterOption)}
-          </View>
+          </ScrollView>
 
+          {/* Properties List */}
           <FlatList
             data={getFilteredAndSortedProperties()}
             renderItem={renderPropertyItem}
             keyExtractor={(item) => item._id || item.id || Math.random().toString()}
+            scrollEnabled={false}
             contentContainerStyle={styles.propertiesList}
             ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Ionicons name="home" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
-                <Text style={styles.emptyText}>
-                  {t("No properties match your filters")}
-                </Text>
-                <TouchableOpacity
-                  style={styles.resetButton}
-                  onPress={() => setActiveFilter(null)}
-                >
-                  <Text style={styles.resetButtonText}>{t("Reset Filters")}</Text>
-                </TouchableOpacity>
-              </View>
+              <EmptyState
+                icon="home-outline"
+                title={t("No properties found")}
+                description={t("Try adjusting your filters or check back later")}
+                actionText={t("Clear Filters")}
+                actionIcon="refresh"
+                onAction={() => {
+                  setActiveFilter(null);
+                  setActiveSort(null);
+                }}
+              />
             }
           />
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -317,258 +359,209 @@ export default function CityPropertiesPage() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    backgroundColor: '#f8f9fa',
   },
   container: {
     flex: 1,
-    padding: 15,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f8f9fa',
   },
   loadingText: {
-    marginTop: 10,
+    marginTop: 16,
     fontSize: 16,
     color: colors.COLOR_BLACK_LIGHT_3,
+    fontWeight: '500',
   },
-  cityOverview: {
+
+  // Hero Section
+  heroSection: {
+    marginBottom: 24,
+  },
+  heroContainer: {
+    height: 200,
+    justifyContent: 'flex-end',
+  },
+  heroContent: {
+    padding: 24,
+    paddingBottom: 20,
+  },
+  heroTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 4,
+    fontFamily: 'Phudu',
+  },
+  heroSubtitle: {
+    fontSize: 18,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginBottom: 12,
+  },
+  heroDescription: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    lineHeight: 22,
+  },
+
+  // Stats Section
+  statsSection: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    marginBottom: 32,
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
     backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 15,
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
     shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  cityTitle: {
+  statNumber: {
     fontSize: 24,
     fontWeight: 'bold',
     color: colors.COLOR_BLACK,
-    marginBottom: 5,
-  },
-  countryText: {
-    fontWeight: 'normal',
-  },
-  cityDescription: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    marginBottom: 15,
-    lineHeight: 20,
-  },
-  cityStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    paddingTop: 15,
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.primaryColor,
+    marginBottom: 4,
+    fontFamily: 'Phudu',
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 14,
     color: colors.COLOR_BLACK_LIGHT_3,
-    marginTop: 5,
+    fontWeight: '500',
   },
+
+  // Neighborhood Section
   neighborhoodSection: {
-    marginBottom: 15,
+    marginBottom: 32,
+    paddingHorizontal: 20,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: 'bold',
     color: colors.COLOR_BLACK,
-    marginBottom: 10,
+    marginBottom: 16,
+    fontFamily: 'Phudu',
   },
-  neighborhoodPills: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  neighborhoodScroll: {
+    paddingRight: 20,
   },
   neighborhoodPill: {
-    backgroundColor: colors.primaryLight,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    marginRight: 8,
-    marginBottom: 8,
+    backgroundColor: 'white',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 25,
+    marginRight: 12,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   neighborhoodText: {
     fontSize: 14,
-    color: colors.primaryColor,
+    color: colors.COLOR_BLACK,
+    fontWeight: '500',
   },
+
+  // Properties Section
   propertiesSection: {
-    flex: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
   },
   propertiesHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  propertiesSubtitle: {
+    fontSize: 16,
+    color: colors.COLOR_BLACK_LIGHT_3,
+    marginTop: 4,
   },
   sortContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    gap: 12,
   },
-  sortLabel: {
+  sortButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  sortButtonText: {
     fontSize: 14,
     color: colors.COLOR_BLACK_LIGHT_3,
-    marginRight: 8,
-  },
-  sortOption: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 5,
-  },
-  activeSortOption: {
-    backgroundColor: colors.primaryColor,
-  },
-  sortText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: colors.COLOR_BLACK,
-  },
-  filtersContainer: {
-    flexDirection: 'row',
-    marginBottom: 15,
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  filterOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: colors.primaryLight,
-    borderRadius: 20,
-  },
-  activeFilterOption: {
-    backgroundColor: colors.primaryColor,
-  },
-  filterText: {
     marginLeft: 6,
+    fontWeight: '500',
+  },
+  activeSortButtonText: {
+    color: colors.primaryColor,
+    fontWeight: '600',
+  },
+
+  // Filters
+  filtersScroll: {
+    paddingRight: 20,
+    marginBottom: 24,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: 'white',
+    borderRadius: 25,
+    marginRight: 12,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  activeFilterChip: {
+    backgroundColor: colors.primaryColor,
+  },
+  filterChipText: {
+    marginLeft: 8,
     fontSize: 14,
     color: colors.COLOR_BLACK,
+    fontWeight: '500',
   },
-  activeFilterText: {
+  activeFilterChipText: {
     color: 'white',
   },
+
+  // Properties List
   propertiesList: {
-    paddingBottom: 20,
+    gap: 16,
   },
   propertyCard: {
     backgroundColor: 'white',
-    borderRadius: 15,
-    marginBottom: 15,
+    borderRadius: 16,
     overflow: 'hidden',
     shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  propertyImage: {
-    width: '100%',
-    height: 150,
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
-  },
-  propertyContent: {
-    padding: 15,
-  },
-  propertyTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.COLOR_BLACK,
-    marginBottom: 5,
-  },
-  propertyLocation: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    marginBottom: 10,
-  },
-  propertyDetailsRow: {
-    flexDirection: 'row',
-    marginBottom: 10,
-  },
-  propertyDetail: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  detailText: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    marginLeft: 4,
-  },
-  propertyFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 5,
-  },
-  propertyPrice: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.COLOR_BLACK,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ratingText: {
-    marginLeft: 4,
-    fontSize: 14,
-    color: colors.COLOR_BLACK,
-  },
-  verifiedBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: colors.primaryColor,
-    borderRadius: 20,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  ecoBadge: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    backgroundColor: 'green',
-    borderRadius: 20,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  emptyContainer: {
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyText: {
-    fontSize: 16,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    textAlign: 'center',
-    marginTop: 10,
-    marginBottom: 15,
-  },
-  resetButton: {
-    backgroundColor: colors.primaryColor,
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-  },
-  resetButtonText: {
-    color: 'white',
-    fontWeight: '600',
-  },
+
+
 });

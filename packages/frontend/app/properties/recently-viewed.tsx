@@ -13,6 +13,7 @@ import { Property } from '@/services/propertyService';
 import { Ionicons } from '@expo/vector-icons';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { useOxy } from '@oxyhq/services';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 const screenWidth = Dimensions.get('window').width;
 const isMobile = screenWidth < 600;
@@ -70,25 +71,25 @@ export default function RecentlyViewedScreen() {
     };
 
     const renderEmptyState = () => (
-        <View style={styles.emptyState}>
-            <IconComponent name="time-outline" size={64} color={colors.COLOR_BLACK_LIGHT_4} />
-            <Text style={styles.emptyTitle}>{t('No Recently Viewed Properties')}</Text>
-            <Text style={styles.emptyDescription}>{t('Start browsing properties to see your recent activity here.')}</Text>
-            <Button onPress={() => router.push('/properties')} style={styles.browseButton}>
-                {t('Browse Properties')}
-            </Button>
-        </View>
+        <EmptyState
+            icon="time-outline"
+            title={t('No Recently Viewed Properties')}
+            description={t('Start browsing properties to see your recent activity here.')}
+            actionText={t('Browse Properties')}
+            actionIcon="home"
+            onAction={() => router.push('/properties')}
+        />
     );
 
     const renderErrorState = () => (
-        <View style={styles.errorState}>
-            <IconComponent name="alert-circle-outline" size={64} color="#ff4757" />
-            <Text style={styles.errorTitle}>{t('Error Loading Recently Viewed')}</Text>
-            <Text style={styles.errorDescription}>{error || t('Please try again.')}</Text>
-            <Button onPress={handleRefresh} style={styles.retryButton}>
-                {t('Retry')}
-            </Button>
-        </View>
+        <EmptyState
+            icon="alert-circle-outline"
+            title={t('Error Loading Recently Viewed')}
+            description={error || t('Please try again.')}
+            actionText={t('Retry')}
+            actionIcon="refresh"
+            onAction={handleRefresh}
+        />
     );
 
     // View mode toggle button
@@ -207,51 +208,5 @@ const styles = StyleSheet.create({
     listContent: {
         paddingBottom: 32,
     },
-    emptyState: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 32,
-    },
-    emptyTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: colors.primaryDark,
-        marginTop: 16,
-        marginBottom: 8,
-        textAlign: 'center',
-    },
-    emptyDescription: {
-        fontSize: 16,
-        color: colors.COLOR_BLACK_LIGHT_4,
-        marginBottom: 16,
-        textAlign: 'center',
-    },
-    browseButton: {
-        marginTop: 12,
-        alignSelf: 'center',
-    },
-    errorState: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 32,
-    },
-    errorTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: '#ff4757',
-        marginBottom: 8,
-        textAlign: 'center',
-    },
-    errorDescription: {
-        fontSize: 16,
-        color: colors.COLOR_BLACK_LIGHT_4,
-        marginBottom: 16,
-        textAlign: 'center',
-    },
-    retryButton: {
-        marginTop: 12,
-        alignSelf: 'center',
-    },
+
 }); 

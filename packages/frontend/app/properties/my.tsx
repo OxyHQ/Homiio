@@ -23,6 +23,7 @@ import { useOxy } from '@oxyhq/services';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 // Type assertion for Ionicons compatibility with React 19
 const IconComponent = Ionicons as any;
@@ -126,25 +127,25 @@ export default function MyPropertiesScreen() {
     };
 
     const renderEmptyState = () => (
-        <View style={styles.emptyState}>
-            <IconComponent name="home-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyTitle}>{t('properties.my.emptyTitle')}</Text>
-            <Text style={styles.emptyDescription}>{t('properties.my.emptyDescription')}</Text>
-            <Button onPress={handleCreateProperty} style={styles.createButton}>
-                {t('properties.my.createFirst')}
-            </Button>
-        </View>
+        <EmptyState
+            icon="home-outline"
+            title={t('properties.my.emptyTitle')}
+            description={t('properties.my.emptyDescription')}
+            actionText={t('properties.my.createFirst')}
+            actionIcon="add"
+            onAction={handleCreateProperty}
+        />
     );
 
     const renderErrorState = () => (
-        <View style={styles.errorState}>
-            <IconComponent name="alert-circle-outline" size={64} color="#ff4757" />
-            <Text style={styles.errorTitle}>{t('properties.my.errorTitle')}</Text>
-            <Text style={styles.errorDescription}>{t('properties.my.errorDescription')}</Text>
-            <Button onPress={handleRefresh} style={styles.retryButton}>
-                {t('common.retry')}
-            </Button>
-        </View>
+        <EmptyState
+            icon="alert-circle-outline"
+            title={t('properties.my.errorTitle')}
+            description={t('properties.my.errorDescription')}
+            actionText={t('common.retry')}
+            actionIcon="refresh"
+            onAction={handleRefresh}
+        />
     );
 
     if (isLoading && !data) {
@@ -261,52 +262,5 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: colors.primaryColor,
     },
-    emptyState: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 32,
-    },
-    emptyTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#333',
-        marginTop: 16,
-        marginBottom: 8,
-        textAlign: 'center',
-    },
-    emptyDescription: {
-        fontSize: 16,
-        color: '#666',
-        textAlign: 'center',
-        marginBottom: 32,
-        lineHeight: 24,
-    },
-    createButton: {
-        minWidth: 200,
-    },
-    errorState: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 32,
-    },
-    errorTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#333',
-        marginTop: 16,
-        marginBottom: 8,
-        textAlign: 'center',
-    },
-    errorDescription: {
-        fontSize: 16,
-        color: '#666',
-        textAlign: 'center',
-        marginBottom: 32,
-        lineHeight: 24,
-    },
-    retryButton: {
-        minWidth: 200,
-    },
+
 }); 

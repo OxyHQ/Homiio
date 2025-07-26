@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 const IconComponent = Ionicons as any;
 
@@ -256,20 +257,14 @@ export default function PropertyDraftsScreen() {
             <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
                 <View style={styles.content}>
                     {drafts.length === 0 ? (
-                        <View style={styles.emptyState}>
-                            <IconComponent name="folder-open-outline" size={64} color={colors.primaryDark_1} />
-                            <ThemedText style={styles.emptyStateTitle}>No Drafts Found</ThemedText>
-                            <ThemedText style={styles.emptyStateText}>
-                                You don't have any saved property drafts yet. Start creating a property to save drafts automatically.
-                            </ThemedText>
-                            <TouchableOpacity
-                                style={styles.createButton}
-                                onPress={() => router.push('/properties/create')}
-                            >
-                                <IconComponent name="add" size={20} color="white" />
-                                <ThemedText style={styles.createButtonText}>Create New Property</ThemedText>
-                            </TouchableOpacity>
-                        </View>
+                        <EmptyState
+                            icon="folder-open-outline"
+                            title="No Drafts Found"
+                            description="You don't have any saved property drafts yet. Start creating a property to save drafts automatically."
+                            actionText="Create New Property"
+                            actionIcon="add"
+                            onAction={() => router.push('/properties/create')}
+                        />
                     ) : (
                         <>
                             <View style={styles.header}>
@@ -318,40 +313,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: colors.primaryDark_1,
     },
-    emptyState: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 64,
-    },
-    emptyStateTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: colors.COLOR_BLACK,
-        marginTop: 16,
-        marginBottom: 8,
-    },
-    emptyStateText: {
-        fontSize: 16,
-        color: colors.primaryDark_1,
-        textAlign: 'center',
-        marginBottom: 32,
-        paddingHorizontal: 32,
-    },
-    createButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: colors.primaryColor,
-        paddingHorizontal: 24,
-        paddingVertical: 12,
-        borderRadius: 25,
-        gap: 8,
-    },
-    createButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: '600',
-    },
+
     header: {
         marginBottom: 24,
     },
