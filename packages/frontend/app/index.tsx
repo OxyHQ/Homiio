@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, RefreshControl, FlatList, Platform } from 'react-native';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, RefreshControl, FlatList, Platform, type NativeSyntheticEvent, type NativeScrollEvent } from 'react-native';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
@@ -20,6 +20,7 @@ import { tipsService, TipArticle } from '@/services/tipsService';
 
 // Import components
 import { PropertyCard } from '@/components/PropertyCard';
+import { HomePropertyCarouselSection } from '@/components/HomePropertyCarouselSection';
 
 // Type assertion for Ionicons compatibility with React 19
 const IconComponent = Ionicons as any;
@@ -280,6 +281,45 @@ export default function HomePage() {
     }
   }, [loadProperties]);
 
+  const carouselRef = useRef<ScrollView>(null);
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [cardWidth, setCardWidth] = useState(0);
+  const itemsPerPage = 2;
+  const maxCarouselIndex = Math.max(0, featuredProperties.length - itemsPerPage);
+
+  const handleScrollLeft = () => {
+    if (carouselIndex > 0) {
+      const newIndex = carouselIndex - 1;
+      setCarouselIndex(newIndex);
+      if (cardWidth > 0) {
+        carouselRef.current?.scrollTo({ x: newIndex * cardWidth, animated: true });
+      }
+    }
+  };
+
+  const handleScrollRight = () => {
+    if (carouselIndex < maxCarouselIndex) {
+      const newIndex = carouselIndex + 1;
+      setCarouselIndex(newIndex);
+      if (cardWidth > 0) {
+        carouselRef.current?.scrollTo({ x: newIndex * cardWidth, animated: true });
+      }
+    }
+  };
+
+  // Throttle scroll updates to avoid performance issues
+  const scrollUpdateTimeout = useRef<NodeJS.Timeout | null>(null);
+  const handleScroll = cardWidth > 0 ? (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (scrollUpdateTimeout.current) clearTimeout(scrollUpdateTimeout.current);
+    const x = e.nativeEvent.contentOffset.x;
+    // Subtract the left spacer (15px)
+    const index = Math.round((x - 15) / cardWidth);
+    // Use a short timeout to avoid rapid state updates
+    scrollUpdateTimeout.current = setTimeout(() => {
+      setCarouselIndex(Math.max(0, Math.min(index, maxCarouselIndex)));
+    }, 10);
+  } : undefined;
+
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
@@ -437,85 +477,12 @@ export default function HomePage() {
         </View>
 
         {/* Featured Properties */}
-        <View style={styles.featuredSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t("home.featured.title")}</Text>
-            <TouchableOpacity onPress={() => router.push('/properties')}>
-              <Text style={styles.viewAllText}>{t("home.viewAll")}</Text>
-            </TouchableOpacity>
-          </View>
-
-          {propertiesLoading ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.horizontalScroll}
-              contentContainerStyle={{ paddingHorizontal: 16 }}
-            >
-              {Array.from({ length: 4 }).map((_, index) => (
-                <View key={index} style={styles.propertyCardContainer}>
-                  <View style={styles.propertyCardSkeleton}>
-                    {/* Image skeleton */}
-                    <View style={styles.propertyCardImageSkeleton}>
-                      <LinearGradient
-                        colors={['#f0f0f0', '#e0e0e0']}
-                        style={{ width: '100%', height: '100%' }}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                      />
-                      {/* Save button skeleton */}
-                      <View style={styles.propertyCardSaveButtonSkeleton} />
-                      {/* Badge skeleton */}
-                      <View style={styles.propertyCardBadgeSkeleton} />
-                    </View>
-                    {/* Content skeleton */}
-                    <View style={styles.propertyCardContentSkeleton}>
-                      {/* Title skeleton */}
-                      <View style={{ backgroundColor: '#e0e0e0', height: 18, borderRadius: 4, width: '85%', marginBottom: 6 }} />
-                      {/* Location skeleton */}
-                      <View style={{ backgroundColor: '#f0f0f0', height: 14, borderRadius: 4, width: '70%', marginBottom: 8 }} />
-                      {/* Price and rating row */}
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <View style={{ backgroundColor: '#e0e0e0', height: 16, borderRadius: 4, width: '40%' }} />
-                        <View style={{ backgroundColor: '#f0f0f0', height: 14, borderRadius: 4, width: '25%' }} />
-                      </View>
-                    </View>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-          ) : featuredProperties.length > 0 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.horizontalScroll}
-              contentContainerStyle={{ paddingHorizontal: 16 }}
-            >
-              {featuredProperties.map((property) => (
-                <View key={property._id || property.id} style={styles.propertyCardContainer}>
-                  <PropertyCard
-                    property={property}
-                    variant="featured"
-                    onPress={() => router.push(`/properties/${property._id || property.id}`)}
-                    badgeContent={
-                      property.amenities?.includes('verified') && (
-                        <View style={styles.verifiedBadge}>
-                          <Text style={styles.verifiedBadgeText}>VERIFIED</Text>
-                        </View>
-                      )
-                    }
-                  />
-                </View>
-              ))}
-            </ScrollView>
-          ) : (
-            <View style={styles.emptyContainer}>
-              <IconComponent name="home-outline" size={48} color={colors.COLOR_BLACK_LIGHT_4} />
-              <Text style={styles.emptyText}>No properties available</Text>
-              <Text style={styles.emptySubtext}>Check back later for new listings</Text>
-            </View>
-          )}
-        </View>
+        <HomePropertyCarouselSection
+          title={t("home.featured.title")}
+          properties={featuredProperties}
+          loading={propertiesLoading}
+          onCardPress={(property) => router.push(`/properties/${property._id || property.id}`)}
+        />
 
         {/* Top Cities */}
         <View style={styles.citiesSection}>

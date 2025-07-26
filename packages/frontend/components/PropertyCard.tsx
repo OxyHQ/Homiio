@@ -399,14 +399,6 @@ export function PropertyCard({
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: '#ffffff',
-        borderRadius: 12,
-        overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 3,
         marginBottom: 12,
         width: '100%',
         maxWidth: 350,
@@ -415,19 +407,29 @@ const styles = StyleSheet.create({
         alignSelf: 'stretch',
     },
     featuredCard: {
-        borderWidth: 1,
-        borderColor: '#e0e0e0',
-        shadowOpacity: 0.12,
-        shadowRadius: 12,
-        elevation: 6,
+        // No border or shadow here
     },
     imageContainer: {
         position: 'relative',
         height: 120,
         backgroundColor: '#f8f8f8',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 3,
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
+        borderRadius: 12,
+        overflow: 'hidden',
     },
     featuredImageContainer: {
         height: 140,
+        shadowOpacity: 0.12,
+        shadowRadius: 12,
+        elevation: 6,
+        borderRadius: 12,
+        overflow: 'hidden',
     },
     image: {
         width: '100%',
@@ -463,15 +465,16 @@ const styles = StyleSheet.create({
         zIndex: 2,
     },
     content: {
-        padding: 10,
+        // padding: 10, // Remove padding for flush alignment
         flex: 1,
         justifyContent: 'space-between',
+        marginTop: 10, // Add gap between image and content
     },
     compactContent: {
-        padding: 8,
+        // padding: 8, // Remove padding for flush alignment
     },
     featuredContent: {
-        padding: 12,
+        // padding: 12, // Remove padding for flush alignment
     },
     title: {
         fontSize: 14,
