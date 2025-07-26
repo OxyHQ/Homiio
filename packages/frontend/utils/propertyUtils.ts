@@ -1,5 +1,5 @@
 import { generatePropertyTitle } from './propertyTitleGenerator';
-import { Property } from '@/services/propertyService';
+import { Property } from '@homiio/shared-types';
 import propertyPlaceholder from '@/assets/images/property_placeholder.jpg';
 
 /**

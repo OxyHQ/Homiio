@@ -1,5 +1,5 @@
 import { useRecentlyViewedStore } from '@/store/recentlyViewedStore';
-import type { Property } from '@/services/propertyService';
+import type { Property } from '@homiio/shared-types';
 
 /**
  * Add a property to the recently viewed list

@@ -1,5 +1,5 @@
 import { OxyServices } from '@oxyhq/services';
-import type { Property } from './propertyService';
+import type { Property } from '@homiio/shared-types';
 
 export interface SavedProperty extends Property {
   notes?: string;

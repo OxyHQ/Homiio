@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useSavedPropertiesStore } from '@/store/savedPropertiesStore';
-import { Property } from '@/services/propertyService';
+import { Property } from '@homiio/shared-types';
 import { useOxy } from '@oxyhq/services';
 import { toast } from 'sonner';
 

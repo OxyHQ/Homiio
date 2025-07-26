@@ -6,7 +6,7 @@ import { useOxy } from '@oxyhq/services';
 import { FavoritesErrorHandler, FavoritesError } from '@/utils/favoritesErrorHandler';
 import { FavoritesRetry } from '@/utils/favoritesRetry';
 import { FavoritesPerformance } from '@/utils/favoritesPerformance';
-import type { Property } from '@/services/propertyService';
+import type { Property } from '@homiio/shared-types';
 
 interface UseFavoritesReturn {
   favoriteIds: string[];

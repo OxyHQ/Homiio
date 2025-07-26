@@ -1,7 +1,7 @@
 import { useRecentlyViewedStore } from '@/store/recentlyViewedStore';
 import { useEffect } from 'react';
 import { useOxy } from '@oxyhq/services';
-import type { Property } from '@/services/propertyService';
+import type { Property } from '@homiio/shared-types';
 
 export function useRecentlyViewed() {
     const { 
