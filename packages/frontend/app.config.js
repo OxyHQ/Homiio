@@ -70,6 +70,7 @@ return {
                         category: ['BROWSABLE', 'DEFAULT'],
                     },
             ],
+            softwareKeyboardLayoutMode: "pan",
         },
         web: {
             bundler: "metro",

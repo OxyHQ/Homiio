@@ -29,6 +29,6 @@
         "npm": ">=8.0.0"
     },
     "dependencies": {
-        "@oxyhq/services": "^5.8.9"
+        "@oxyhq/services": "^5.8.11"
     }
 }

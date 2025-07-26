@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Platform, TextInput, Modal, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Platform, TextInput, Modal, Image, Share } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/styles/colors';
@@ -14,9 +14,9 @@ import { useOxy } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
 import { toast } from 'sonner';
 import * as Haptics from 'expo-haptics';
-import * as Sharing from 'expo-sharing';
 import * as Clipboard from 'expo-clipboard';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
+import { PropertyType } from '@homiio/shared-types';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 import { getAmenityById, getCategoryById } from '@/constants/amenities';
@@ -63,6 +63,7 @@ export default function PropertyDetailPage() {
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [landlordVerified, setLandlordVerified] = useState(true);
     const hasViewedRef = useRef(false);
+    const [headerHeight, setHeaderHeight] = useState(0);
 
     // Zustand stores
     const { primaryProfile } = useProfileStore();
@@ -176,7 +177,7 @@ export default function PropertyDetailPage() {
 
             // Generate title dynamically from property data
             const generatedTitle = generatePropertyTitle({
-                type: apiProperty.type as 'studio' | 'apartment' | 'house' | 'room' | 'duplex' | 'penthouse' | undefined,
+                type: Object.values(PropertyType).includes(apiProperty.type) ? apiProperty.type as PropertyType : PropertyType.APARTMENT,
                 address: apiProperty.address,
                 bedrooms: apiProperty.bedrooms,
                 bathrooms: apiProperty.bathrooms
@@ -314,27 +315,17 @@ export default function PropertyDetailPage() {
             // Create a deep link to the property
             const propertyUrl = `https://homiio.com/properties/${property.id}`;
 
-            // Full details for clipboard
-            const fullDetails = `🏠 ${property.title}
+            // Full details for clipboard and sharing
+            const fullDetails = `🏠 ${property.title}\n\n📍 ${property.location}\n💰 ${property.price}\n🛏️ ${property.bedrooms} Bedrooms\n🚿 ${property.bathrooms} Bathrooms\n📏 ${property.size}m²\n\n${propertyUrl}`;
 
-📍 ${property.location}
-💰 ${property.price}
-🛏️ ${property.bedrooms} Bedrooms
-🚿 ${property.bathrooms} Bathrooms
-📏 ${property.size}m²
-
-${propertyUrl}`;
-
-            const isAvailable = await Sharing.isAvailableAsync();
-
-            if (isAvailable) {
-                // Share only the link via native sharing
-                await Sharing.shareAsync(propertyUrl, {
-                    mimeType: 'text/plain',
-                    dialogTitle: 'Share Property',
+            try {
+                await Share.share({
+                    message: fullDetails,
+                    url: propertyUrl,
+                    title: 'Share Property',
                 });
-            } else {
-                // Copy full details to clipboard
+            } catch (shareError) {
+                // fallback to clipboard
                 await Clipboard.setStringAsync(fullDetails);
                 toast.success('Property details copied to clipboard!');
             }
@@ -354,14 +345,19 @@ ${propertyUrl}`;
 
     if (isLoading) {
         return (
-            <View style={styles.safeArea}>
-                <Header
-                    options={{
-                        showBackButton: true,
-                        title: t("Loading..."),
-                        titlePosition: 'center',
-                    }}
-                />
+            <View style={{ flex: 1 }}>
+                <View
+                    style={styles.stickyHeaderWrapper}
+                    onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+                >
+                    <Header
+                        options={{
+                            showBackButton: true,
+                            title: t("Loading..."),
+                            titlePosition: 'center',
+                        }}
+                    />
+                </View>
                 <SafeAreaView style={styles.contentArea} edges={['top']}>
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color={colors.primaryColor} />
@@ -374,14 +370,19 @@ ${propertyUrl}`;
 
     if (error || !property) {
         return (
-            <View style={styles.safeArea}>
-                <Header
-                    options={{
-                        showBackButton: true,
-                        title: t("Error"),
-                        titlePosition: 'center',
-                    }}
-                />
+            <View style={{ flex: 1 }}>
+                <View
+                    style={styles.stickyHeaderWrapper}
+                    onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+                >
+                    <Header
+                        options={{
+                            showBackButton: true,
+                            title: t("Error"),
+                            titlePosition: 'center',
+                        }}
+                    />
+                </View>
                 <SafeAreaView style={styles.contentArea} edges={['top']}>
                     <View style={styles.errorContainer}>
                         <Text style={styles.errorText}>{t("Property not found")}</Text>
@@ -400,50 +401,57 @@ ${propertyUrl}`;
     const isPropertyFavorite = isFavorite(property.id);
 
     return (
-        <View style={styles.safeArea}>
-            <Header
-                options={{
-                    showBackButton: true,
-                    title: '',
-                    titlePosition: 'center',
-                    rightComponents: [
-                        <TouchableOpacity key="share" style={styles.headerButton} onPress={handleShare}>
-                            <IconComponent name="share-outline" size={24} color={colors.COLOR_BLACK} />
-                        </TouchableOpacity>,
-                        <SaveButton
-                            key="save"
-                            isSaved={isPropertyFavorite}
-                            onPress={() => toggleFavorite(property.id || '', apiProperty || {})}
-                            variant="heart"
-                            color="#222"
-                            activeColor="#EF4444"
-                            isLoading={isPropertySaving(property.id || '')}
-                        />,
-                    ],
-                }}
-            />
-
-            <SafeAreaView style={styles.contentArea} edges={['top']}>
-                {/* Enhanced Header Section */}
-                <View style={styles.enhancedHeader}>
-                    <Text style={styles.headerTitle} numberOfLines={2}>{property.title}</Text>
-                    <View style={styles.headerLocation}>
-                        <Text style={styles.headerLocationText}>{property.location}</Text>
+        <View style={{ flex: 1 }}>
+            <View
+                style={styles.stickyHeaderWrapper}
+                onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+            >
+                <Header
+                    options={{
+                        showBackButton: true,
+                        title: '',
+                        titlePosition: 'center',
+                        rightComponents: [
+                            <TouchableOpacity key="share" style={styles.headerButton} onPress={handleShare}>
+                                <IconComponent name="share-outline" size={24} color={colors.COLOR_BLACK} />
+                            </TouchableOpacity>,
+                            <SaveButton
+                                key="save"
+                                isSaved={isPropertyFavorite}
+                                onPress={() => toggleFavorite(property.id || '', apiProperty || {})}
+                                variant="heart"
+                                color="#222"
+                                activeColor="#EF4444"
+                                isLoading={isPropertySaving(property.id || '')}
+                            />,
+                        ],
+                    }}
+                />
+            </View>
+            <ScrollView
+                style={styles.safeArea}
+                contentContainerStyle={{ paddingTop: headerHeight }}
+                showsVerticalScrollIndicator={false}
+            >
+                <View style={styles.container}>
+                    {/* Enhanced Header Section */}
+                    <View style={styles.enhancedHeader}>
+                        <Text style={styles.headerTitle} numberOfLines={2}>{property.title}</Text>
+                        <View style={styles.headerLocation}>
+                            <Text style={styles.headerLocationText}>{property.location}</Text>
+                        </View>
+                        <View style={styles.headerStats}>
+                            <View style={styles.headerStat}>
+                                <Text style={styles.headerStatText}>{property.bedrooms} {t("Bed")}</Text>
+                            </View>
+                            <View style={styles.headerStat}>
+                                <Text style={styles.headerStatText}>{property.bathrooms} {t("Bath")}</Text>
+                            </View>
+                            <View style={styles.headerStat}>
+                                <Text style={styles.headerStatText}>{property.size}m²</Text>
+                            </View>
+                        </View>
                     </View>
-                    <View style={styles.headerStats}>
-                        <View style={styles.headerStat}>
-                            <Text style={styles.headerStatText}>{property.bedrooms} {t("Bed")}</Text>
-                        </View>
-                        <View style={styles.headerStat}>
-                            <Text style={styles.headerStatText}>{property.bathrooms} {t("Bath")}</Text>
-                        </View>
-                        <View style={styles.headerStat}>
-                            <Text style={styles.headerStatText}>{property.size}m²</Text>
-                        </View>
-                    </View>
-                </View>
-
-                <ScrollView style={styles.container}>
                     {/* Property Images Grid */}
                     <View style={styles.imageGridContainer}>
                         <View style={styles.imageGrid}>
@@ -706,8 +714,8 @@ ${propertyUrl}`;
                             </Text>
                         </View>
                     </View>
-                </ScrollView>
-            </SafeAreaView>
+                </View>
+            </ScrollView>
         </View>
     );
 }
@@ -1050,5 +1058,13 @@ const styles = StyleSheet.create({
         color: colors.COLOR_BLACK_LIGHT_3,
         textAlign: 'center',
         fontStyle: 'italic',
+    },
+    stickyHeaderWrapper: {
+        zIndex: 100,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: colors.primaryLight,
     },
 }); 

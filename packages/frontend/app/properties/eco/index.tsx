@@ -17,6 +17,7 @@ export default function EcoPropertiesPage() {
   const { t } = useTranslation();
   const router = useRouter();
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
 
   // Use Redux hook instead of local state
   const { properties, loading, error, loadProperties } = useEcoProperties();
@@ -88,90 +89,96 @@ export default function EcoPropertiesPage() {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <Header
-        options={{
-          showBackButton: true,
-          title: t("Eco-Certified Properties"),
-          titlePosition: 'center',
-        }}
-      />
+    <View style={styles.safeArea}>
+      <View
+        style={styles.stickyHeaderWrapper}
+        onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+      >
+        <Header
+          options={{
+            showBackButton: true,
+            title: t("Eco-Certified Properties"),
+            titlePosition: 'center',
+          }}
+        />
+      </View>
+      <View style={{ paddingTop: headerHeight, flex: 1 }}>
+        <View style={styles.container}>
+          {/* Hero Banner */}
+          <View style={styles.ecoBanner}>
+            <View style={styles.ecoBannerContent}>
+              <Text style={styles.ecoBannerTitle}>{t("Sustainable Living")}</Text>
+              <Text style={styles.ecoBannerText}>
+                {t("All properties meet strict eco-friendly standards for energy efficiency, sustainable materials, and minimal environmental impact.")}
+              </Text>
+            </View>
+            <View style={styles.ecoBannerIcon}>
+              <IconComponent name="leaf" size={40} color="white" />
+            </View>
+          </View>
 
-      <View style={styles.container}>
-        {/* Hero Banner */}
-        <View style={styles.ecoBanner}>
-          <View style={styles.ecoBannerContent}>
-            <Text style={styles.ecoBannerTitle}>{t("Sustainable Living")}</Text>
-            <Text style={styles.ecoBannerText}>
-              {t("All properties meet strict eco-friendly standards for energy efficiency, sustainable materials, and minimal environmental impact.")}
-            </Text>
+          {/* Filters */}
+          <View style={styles.filtersContainer}>
+            <Text style={styles.filtersTitle}>{t("Filter by:")}</Text>
+            <View style={styles.filtersRow}>
+              {filterOptions.map(renderFilterOption)}
+            </View>
           </View>
-          <View style={styles.ecoBannerIcon}>
-            <IconComponent name="leaf" size={40} color="white" />
-          </View>
-        </View>
 
-        {/* Filters */}
-        <View style={styles.filtersContainer}>
-          <Text style={styles.filtersTitle}>{t("Filter by:")}</Text>
-          <View style={styles.filtersRow}>
-            {filterOptions.map(renderFilterOption)}
-          </View>
-        </View>
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="green" />
+              <Text style={styles.loadingText}>{t("Loading eco properties...")}</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={getFilteredProperties()}
+              renderItem={renderPropertyItem}
+              keyExtractor={(item) => (item._id || item.id || '').toString()}
+              contentContainerStyle={styles.listContainer}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <IconComponent name="leaf" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
+                  <Text style={styles.emptyText}>
+                    {t("No eco properties match your filters")}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.resetButton}
+                    onPress={() => setActiveFilter(null)}
+                  >
+                    <Text style={styles.resetButtonText}>{t("Reset Filters")}</Text>
+                  </TouchableOpacity>
+                </View>
+              }
+            />
+          )}
 
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="green" />
-            <Text style={styles.loadingText}>{t("Loading eco properties...")}</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={getFilteredProperties()}
-            renderItem={renderPropertyItem}
-            keyExtractor={(item) => (item._id || item.id || '').toString()}
-            contentContainerStyle={styles.listContainer}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <IconComponent name="leaf" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
-                <Text style={styles.emptyText}>
-                  {t("No eco properties match your filters")}
-                </Text>
-                <TouchableOpacity
-                  style={styles.resetButton}
-                  onPress={() => setActiveFilter(null)}
-                >
-                  <Text style={styles.resetButtonText}>{t("Reset Filters")}</Text>
-                </TouchableOpacity>
+          {/* Info Panel */}
+          <View style={styles.infoPanel}>
+            <View style={styles.infoItem}>
+              <View style={styles.infoIcon}>
+                <Text style={styles.energyLabel}>A+</Text>
               </View>
-            }
-          />
-        )}
-
-        {/* Info Panel */}
-        <View style={styles.infoPanel}>
-          <View style={styles.infoItem}>
-            <View style={styles.infoIcon}>
-              <Text style={styles.energyLabel}>A+</Text>
+              <Text style={styles.infoText}>{t("Top energy efficiency rating")}</Text>
             </View>
-            <Text style={styles.infoText}>{t("Top energy efficiency rating")}</Text>
-          </View>
 
-          <View style={styles.infoItem}>
-            <View style={styles.infoIcon}>
-              <IconComponent name="water-outline" size={22} color="green" />
+            <View style={styles.infoItem}>
+              <View style={styles.infoIcon}>
+                <IconComponent name="water-outline" size={22} color="green" />
+              </View>
+              <Text style={styles.infoText}>{t("Water conservation features")}</Text>
             </View>
-            <Text style={styles.infoText}>{t("Water conservation features")}</Text>
-          </View>
 
-          <View style={styles.infoItem}>
-            <View style={styles.infoIcon}>
-              <IconComponent name="leaf-outline" size={22} color="green" />
+            <View style={styles.infoItem}>
+              <View style={styles.infoIcon}>
+                <IconComponent name="leaf-outline" size={22} color="green" />
+              </View>
+              <Text style={styles.infoText}>{t("Sustainably sourced materials")}</Text>
             </View>
-            <Text style={styles.infoText}>{t("Sustainably sourced materials")}</Text>
           </View>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -179,6 +186,14 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.COLOR_BACKGROUND,
+  },
+  stickyHeaderWrapper: {
+    zIndex: 100,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.primaryLight,
   },
   container: {
     flex: 1,

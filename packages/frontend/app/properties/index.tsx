@@ -33,6 +33,7 @@ export default function PropertiesScreen() {
     const [properties, setProperties] = useState<Property[]>([]);
     const [total, setTotal] = useState(0);
     const [refreshing, setRefreshing] = useState(false);
+    const [headerHeight, setHeaderHeight] = useState(0);
 
     const { properties: allProperties, loading, loadProperties } = useProperties();
     const { savedProperties } = useSavedProperties();
@@ -134,8 +135,13 @@ export default function PropertiesScreen() {
 
     return (
         <View style={styles.container}>
-            <Header options={{ title: t('Properties'), titlePosition: 'left' }} />
-            <View style={styles.topBar}>
+            <View
+                style={styles.stickyHeaderWrapper}
+                onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+            >
+                <Header options={{ title: t('Properties'), titlePosition: 'left' }} />
+            </View>
+            <View style={[styles.topBar, { paddingTop: headerHeight }]}> {/* Move topBar below header */}
                 <View style={styles.searchBarContainer}>
                     <SearchBar hideFilterIcon={true} />
                 </View>
@@ -169,6 +175,14 @@ export default function PropertiesScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: colors.primaryLight,
+    },
+    stickyHeaderWrapper: {
+        zIndex: 100,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
         backgroundColor: colors.primaryLight,
     },
     topBar: {

@@ -1,10 +1,9 @@
 import { StyleSheet, View, Pressable, Text, ViewStyle, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Home, HomeActive, Search, SearchActive, Bookmark, BookmarkActive, SindiIcon, Gear, GearActive } from '@/assets/icons';
 import { useRouter, usePathname } from 'expo-router';
 import React from 'react';
 import Avatar from './Avatar';
 import { useOxy } from '@oxyhq/services';
-import { SindiIcon } from '@/assets/icons';
 import { useHasRentalProperties } from '@/hooks/useLeaseQueries';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -57,13 +56,25 @@ export const BottomBar = () => {
     return (
         <View style={styles.bottomBar}>
             <Pressable onPress={() => handlePress('/')} style={[styles.tab, activeRoute === '/' && styles.active]}>
-                <Ionicons name={activeRoute === '/' ? "home" : "home-outline"} size={28} color={activeRoute === '/' ? "#4E67EB" : "#000"} />
+                {activeRoute === '/' ? (
+                    <HomeActive size={28} color="#4E67EB" />
+                ) : (
+                    <Home size={28} color="#000" />
+                )}
             </Pressable>
             <Pressable onPress={() => handlePress('/properties')} style={[styles.tab, activeRoute === '/properties' && styles.active]}>
-                <Ionicons name={activeRoute === '/properties' ? "search" : "search-outline"} size={28} color={activeRoute === '/properties' ? "#4E67EB" : "#000"} />
+                {activeRoute === '/properties' ? (
+                    <SearchActive size={28} color="#4E67EB" />
+                ) : (
+                    <Search size={28} color="#000" />
+                )}
             </Pressable>
             <Pressable onPress={() => handlePress('/saved')} style={[styles.tab, activeRoute === '/saved' && styles.active]}>
-                <Ionicons name={activeRoute === '/saved' ? "bookmark" : "bookmark-outline"} size={28} color={activeRoute === '/saved' ? "#4E67EB" : "#000"} />
+                {activeRoute === '/saved' ? (
+                    <BookmarkActive size={28} color="#4E67EB" />
+                ) : (
+                    <Bookmark size={28} color="#000" />
+                )}
             </Pressable>
             <Pressable onPress={() => handlePress('/sindi')} style={[styles.tab, activeRoute === '/sindi' && styles.active]}>
                 <SindiIcon size={28} color={activeRoute === '/sindi' ? "#4E67EB" : "#000"} />
@@ -71,7 +82,12 @@ export const BottomBar = () => {
             {/* Only show contracts tab if user has rental properties */}
             {hasRentalProperties && (
                 <Pressable onPress={() => handlePress('/contracts')} style={[styles.tab, activeRoute === '/contracts' && styles.active]}>
-                    <Ionicons name={activeRoute === '/contracts' ? "document-text" : "document-text-outline"} size={28} color={activeRoute === '/contracts' ? "#4E67EB" : "#000"} />
+                    {/* No custom contract icon found, fallback to Gear/GearActive for demo */}
+                    {activeRoute === '/contracts' ? (
+                        <GearActive size={28} color="#4E67EB" />
+                    ) : (
+                        <Gear size={28} color="#000" />
+                    )}
                 </Pressable>
             )}
             <View style={styles.tab}>

@@ -34,6 +34,7 @@ export default function MyPropertiesScreen() {
     const { user } = useOxy();
     const { data, isLoading, error, refetch } = useUserProperties();
     const [refreshing, setRefreshing] = useState(false);
+    const [headerHeight, setHeaderHeight] = useState(0);
 
     // Set document title for web
     useDocumentTitle('My Properties');
@@ -150,48 +151,61 @@ export default function MyPropertiesScreen() {
 
     if (isLoading && !data) {
         return (
-            <SafeAreaView style={styles.container}>
-                <Header options={{ title: t('properties.my.title') }} />
-                <LoadingTopSpinner showLoading={true} />
-            </SafeAreaView>
+            <View style={styles.container}>
+                <View
+                    style={styles.stickyHeaderWrapper}
+                    onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+                >
+                    <Header options={{ title: t('properties.my.title') }} />
+                </View>
+                <View style={{ paddingTop: headerHeight, flex: 1 }}>
+                    <LoadingTopSpinner showLoading={true} />
+                </View>
+            </View>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            <Header
-                options={{
-                    title: t('properties.my.title'),
-                    rightComponents: [
-                        <TouchableOpacity key="add" onPress={handleCreateProperty} style={styles.addButton}>
-                            <IconComponent name="add" size={24} color={colors.primaryColor} />
-                        </TouchableOpacity>
-                    ]
-                }}
-            />
-
-            {error ? (
-                renderErrorState()
-            ) : data?.properties.length === 0 ? (
-                renderEmptyState()
-            ) : (
-                <FlatList
-                    data={data?.properties || []}
-                    renderItem={renderProperty}
-                    keyExtractor={(item) => (item._id || item.id) || ''}
-                    contentContainerStyle={styles.listContainer}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={refreshing}
-                            onRefresh={handleRefresh}
-                            colors={[colors.primaryColor]}
-                            tintColor={colors.primaryColor}
-                        />
-                    }
-                    showsVerticalScrollIndicator={false}
+        <View style={styles.container}>
+            <View
+                style={styles.stickyHeaderWrapper}
+                onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+            >
+                <Header
+                    options={{
+                        title: t('properties.my.title'),
+                        rightComponents: [
+                            <TouchableOpacity key="add" onPress={handleCreateProperty} style={styles.addButton}>
+                                <IconComponent name="add" size={24} color={colors.primaryColor} />
+                            </TouchableOpacity>
+                        ]
+                    }}
                 />
-            )}
-        </SafeAreaView>
+            </View>
+            <View style={{ paddingTop: headerHeight, flex: 1 }}>
+                {error ? (
+                    renderErrorState()
+                ) : data?.properties.length === 0 ? (
+                    renderEmptyState()
+                ) : (
+                    <FlatList
+                        data={data?.properties || []}
+                        renderItem={renderProperty}
+                        keyExtractor={(item) => (item._id || item.id) || ''}
+                        contentContainerStyle={styles.listContainer}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={refreshing}
+                                onRefresh={handleRefresh}
+                                colors={[colors.primaryColor]}
+                                tintColor={colors.primaryColor}
+                            />
+                        }
+                        showsVerticalScrollIndicator={false}
+                    />
+                )}
+            </View>
+        </View>
     );
 }
 
@@ -261,6 +275,14 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         borderWidth: 1,
         borderColor: colors.primaryColor,
+    },
+    stickyHeaderWrapper: {
+        zIndex: 100,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: colors.primaryLight,
     },
 
 }); 

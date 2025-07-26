@@ -25,6 +25,7 @@ export default function PropertyTypePage() {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
+  const [headerHeight, setHeaderHeight] = useState(0);
 
   // Use real API data instead of mock data
   const { properties: apiProperties, loading: isLoading, error, loadProperties } = useProperties();
@@ -184,61 +185,79 @@ export default function PropertyTypePage() {
 
   if (loading || !propertyType) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <Header
-          options={{
-            showBackButton: true,
-            title: t("Loading..."),
-            titlePosition: 'center',
-          }}
-        />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primaryColor} />
-          <Text style={styles.loadingText}>
-            {!propertyType ? t("Property type not found") : t("Loading properties...")}
-          </Text>
+      <View style={styles.safeArea}>
+        <View
+          style={styles.stickyHeaderWrapper}
+          onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+        >
+          <Header
+            options={{
+              showBackButton: true,
+              title: t("Loading..."),
+              titlePosition: 'center',
+            }}
+          />
         </View>
-      </SafeAreaView>
+        <View style={{ paddingTop: headerHeight, flex: 1 }}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primaryColor} />
+            <Text style={styles.loadingText}>
+              {!propertyType ? t("Property type not found") : t("Loading properties...")}
+            </Text>
+          </View>
+        </View>
+      </View>
     );
   }
 
   if (error) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <Header
-          options={{
-            showBackButton: true,
-            title: t("Error"),
-            titlePosition: 'center',
-          }}
-        />
-        <View style={styles.loadingContainer}>
-          <Ionicons name="alert-circle-outline" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
-          <Text style={styles.loadingText}>
-            {t("Failed to load properties")}
-          </Text>
-          <TouchableOpacity
-            style={styles.resetButton}
-            onPress={() => window.location.reload()}
-          >
-            <Text style={styles.resetButtonText}>{t("Try Again")}</Text>
-          </TouchableOpacity>
+      <View style={styles.safeArea}>
+        <View
+          style={styles.stickyHeaderWrapper}
+          onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+        >
+          <Header
+            options={{
+              showBackButton: true,
+              title: t("Error"),
+              titlePosition: 'center',
+            }}
+          />
         </View>
-      </SafeAreaView>
+        <View style={{ paddingTop: headerHeight, flex: 1 }}>
+          <View style={styles.loadingContainer}>
+            <Ionicons name="alert-circle-outline" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
+            <Text style={styles.loadingText}>
+              {t("Failed to load properties")}
+            </Text>
+            <TouchableOpacity
+              style={styles.resetButton}
+              onPress={() => window.location.reload()}
+            >
+              <Text style={styles.resetButtonText}>{t("Try Again")}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <Header
-        options={{
-          showBackButton: true,
-          title: propertyType.name,
-          titlePosition: 'center',
-        }}
-      />
-
-      <View style={styles.container}>
+    <View style={styles.safeArea}>
+      <View
+        style={styles.stickyHeaderWrapper}
+        onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+      >
+        <Header
+          options={{
+            showBackButton: true,
+            title: propertyType.name,
+            titlePosition: 'center',
+          }}
+        />
+      </View>
+      <View style={{ paddingTop: headerHeight, flex: 1 }}>
         {/* Type Overview */}
         <View style={styles.typeOverview}>
           <View style={styles.typeIconContainer}>
@@ -266,7 +285,7 @@ export default function PropertyTypePage() {
         <FlatList
           data={getFilteredProperties()}
           renderItem={renderPropertyItem}
-          keyExtractor={(item) => item._id || item.id}
+          keyExtractor={(item, index) => ((item._id || item.id) ? String(item._id || item.id) : String(index))}
           contentContainerStyle={styles.propertiesList}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
@@ -285,7 +304,7 @@ export default function PropertyTypePage() {
           }
         />
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -513,5 +532,13 @@ const styles = StyleSheet.create({
   resetButtonText: {
     color: 'white',
     fontWeight: '600',
+  },
+  stickyHeaderWrapper: {
+    zIndex: 100,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.primaryLight,
   },
 });

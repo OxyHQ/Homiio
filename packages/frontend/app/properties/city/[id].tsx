@@ -22,6 +22,7 @@ export default function CityPropertiesPage() {
   const [city, setCity] = useState<City | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
 
   // Load city and properties data
   useEffect(() => {
@@ -169,54 +170,72 @@ export default function CityPropertiesPage() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <Header
-          options={{
-            showBackButton: true,
-            title: t("Loading..."),
-            titlePosition: 'center',
-          }}
-        />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primaryColor} />
-          <Text style={styles.loadingText}>{t("Loading properties...")}</Text>
+      <View style={styles.safeArea}>
+        <View
+          style={styles.stickyHeaderWrapper}
+          onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+        >
+          <Header
+            options={{
+              showBackButton: true,
+              title: t("Loading..."),
+              titlePosition: 'center',
+            }}
+          />
         </View>
-      </SafeAreaView>
+        <View style={{ paddingTop: headerHeight, flex: 1 }}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primaryColor} />
+            <Text style={styles.loadingText}>{t("Loading properties...")}</Text>
+          </View>
+        </View>
+      </View>
     );
   }
 
   if (error || !city) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <Header
-          options={{
-            showBackButton: true,
-            title: t("Error"),
-            titlePosition: 'center',
-          }}
-        />
-        <EmptyState
-          icon="alert-circle"
-          title={error || t("City not found")}
-          actionText={t("Go Back")}
-          actionIcon="arrow-back"
-          onAction={() => router.back()}
-        />
-      </SafeAreaView>
+      <View style={styles.safeArea}>
+        <View
+          style={styles.stickyHeaderWrapper}
+          onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+        >
+          <Header
+            options={{
+              showBackButton: true,
+              title: t("Error"),
+              titlePosition: 'center',
+            }}
+          />
+        </View>
+        <View style={{ paddingTop: headerHeight, flex: 1 }}>
+          <EmptyState
+            icon="alert-circle"
+            title={error || t("City not found")}
+            actionText={t("Go Back")}
+            actionIcon="arrow-back"
+            onAction={() => router.back()}
+          />
+        </View>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <Header
-        options={{
-          showBackButton: true,
-          title: city.name,
-          titlePosition: 'center',
-        }}
-      />
-
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <View style={styles.safeArea}>
+      <View
+        style={styles.stickyHeaderWrapper}
+        onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+      >
+        <Header
+          options={{
+            showBackButton: true,
+            title: city?.name || '',
+            titlePosition: 'center',
+          }}
+        />
+      </View>
+      <View style={{ paddingTop: headerHeight, flex: 1 }}>
         {/* Hero Section */}
         <View style={styles.heroSection}>
           <LinearGradient
@@ -351,8 +370,8 @@ export default function CityPropertiesPage() {
             }
           />
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+    </View>
   );
 }
 
@@ -562,6 +581,13 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-
+  stickyHeaderWrapper: {
+    zIndex: 100,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.primaryLight,
+  },
 
 });

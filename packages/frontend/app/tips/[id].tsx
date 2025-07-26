@@ -17,6 +17,7 @@ export default function TipArticleScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const [tip, setTip] = useState<TipArticle | null>(null);
     const [loading, setLoading] = useState(true);
+    const [headerHeight, setHeaderHeight] = useState(0);
 
     // Set SEO for individual tip article
     useSEO({
@@ -121,45 +122,64 @@ export default function TipArticleScreen() {
 
     if (loading) {
         return (
-            <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-                <Header
-                    options={{
-                        title: t("tips.article"),
-                        showBackButton: true
-                    }}
-                />
-                <View style={styles.loadingContainer}>
-                    <Text style={styles.loadingText}>Loading article...</Text>
+            <View style={{ flex: 1 }}>
+                <View
+                    style={styles.stickyHeaderWrapper}
+                    onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+                >
+                    <Header
+                        options={{
+                            title: t("tips.article"),
+                            showBackButton: true
+                        }}
+                    />
                 </View>
-            </SafeAreaView>
+                <View style={{ paddingTop: headerHeight, flex: 1 }}>
+                    <View style={styles.loadingContainer}>
+                        <Text style={styles.loadingText}>Loading article...</Text>
+                    </View>
+                </View>
+            </View>
         );
     }
 
     if (!tip) {
         return (
-            <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+            <View style={{ flex: 1 }}>
+                <View
+                    style={styles.stickyHeaderWrapper}
+                    onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+                >
+                    <Header
+                        options={{
+                            title: t("tips.article"),
+                            showBackButton: true
+                        }}
+                    />
+                </View>
+                <View style={{ paddingTop: headerHeight, flex: 1 }}>
+                    <View style={styles.errorContainer}>
+                        <Text style={styles.errorText}>Article not found</Text>
+                    </View>
+                </View>
+            </View>
+        );
+    }
+
+    return (
+        <View style={{ flex: 1 }}>
+            <View
+                style={styles.stickyHeaderWrapper}
+                onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+            >
                 <Header
                     options={{
                         title: t("tips.article"),
                         showBackButton: true
                     }}
                 />
-                <View style={styles.errorContainer}>
-                    <Text style={styles.errorText}>Article not found</Text>
-                </View>
-            </SafeAreaView>
-        );
-    }
-
-    return (
-        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-            <Header
-                options={{
-                    title: t("tips.article"),
-                    showBackButton: true
-                }}
-            />
-            <ScrollView style={styles.container}>
+            </View>
+            <ScrollView style={[styles.container, { paddingTop: headerHeight }]}>
                 {/* Article Content */}
                 <View style={styles.articleContainer}>
                     {/* Article Header */}
@@ -200,7 +220,7 @@ export default function TipArticleScreen() {
                     </View>
                 </View>
             </ScrollView>
-        </SafeAreaView>
+        </View>
     );
 }
 
@@ -342,5 +362,13 @@ const styles = StyleSheet.create({
     },
     articleBody: {
         marginBottom: 32,
+    },
+    stickyHeaderWrapper: {
+        zIndex: 100,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: colors.primaryLight,
     },
 }); 

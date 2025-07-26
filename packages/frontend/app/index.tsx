@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { phuduFontWeights } from '@/styles/fonts';
 import { Ionicons } from '@expo/vector-icons';
+import { Search } from '@/assets/icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSEO } from '@/hooks/useDocumentTitle';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -287,6 +288,7 @@ export default function HomePage() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        showsVerticalScrollIndicator={false}
       >
         {/* Hero Section */}
         <LinearGradient
@@ -302,7 +304,6 @@ export default function HomePage() {
 
             <View style={styles.searchContainer}>
               <View style={styles.searchBar}>
-                <IconComponent name="search" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
                 <TextInput
                   style={styles.searchInput}
                   placeholder={t("home.hero.searchPlaceholder") || "Search by address, city, or neighborhood..."}
@@ -315,10 +316,10 @@ export default function HomePage() {
                   onFocus={handleSearchFocus}
                   onBlur={handleSearchBlur}
                 />
+                <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+                  <IconComponent name="search" size={20} color={colors.COLOR_BLACK} />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-                <IconComponent name="search" size={20} color={colors.COLOR_BLACK} />
-              </TouchableOpacity>
             </View>
 
             {/* Search Suggestions Dropdown */}
@@ -919,9 +920,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'white',
     borderRadius: 30,
-    paddingHorizontal: 15,
-    height: 50,
-    marginRight: 10,
+    paddingLeft: 20,
+    paddingTop: 8,
+    paddingBottom: 8,
+    paddingRight: 8,
+    height: 52,
+    marginRight: 12,
   },
   searchInput: {
     flex: 1,
@@ -931,9 +935,11 @@ const styles = StyleSheet.create({
   searchButton: {
     backgroundColor: colors.secondaryColor,
     borderRadius: 30,
-    padding: 15,
-    height: 50,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    height: 44,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   searchButtonText: {
     color: colors.COLOR_BLACK,

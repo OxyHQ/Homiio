@@ -28,6 +28,7 @@ export default function RecentlyViewedScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState<'list' | 'grid'>(isMobile ? 'grid' : 'list');
     const fadeAnim = React.useRef(new Animated.Value(0)).current;
+    const [headerHeight, setHeaderHeight] = useState(0);
 
     const { properties: recentProperties, isLoading, error, refetch, clear } = useRecentlyViewed();
 
@@ -112,50 +113,65 @@ export default function RecentlyViewedScreen() {
     );
 
     return (
-        <SafeAreaView style={styles.container}>
-            <Header options={{ title: t('Recently Viewed'), titlePosition: 'left' }} />
-            <View style={styles.topBar}>
-                <View style={styles.searchBarContainer}>
-                    <SearchBar hideFilterIcon={true} />
+        <View style={styles.container}>
+            <View
+                style={styles.stickyHeaderWrapper}
+                onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+            >
+                <Header options={{ title: t('Recently Viewed'), titlePosition: 'left' }} />
+            </View>
+            <View style={{ paddingTop: headerHeight, flex: 1 }}>
+                <View style={styles.topBar}>
+                    <View style={styles.searchBarContainer}>
+                        <SearchBar hideFilterIcon={true} />
+                    </View>
+                    {recentProperties.length > 0 && (
+                        <TouchableOpacity style={styles.clearButton} onPress={handleClearHistory}>
+                            <IconComponent name="trash-outline" size={20} color="#ff4757" />
+                        </TouchableOpacity>
+                    )}
+                    {renderViewModeToggle()}
                 </View>
-                {recentProperties.length > 0 && (
-                    <TouchableOpacity style={styles.clearButton} onPress={handleClearHistory}>
-                        <IconComponent name="trash-outline" size={20} color="#ff4757" />
-                    </TouchableOpacity>
+                <View style={styles.resultCountBar}>
+                    <Text style={styles.resultCountText}>
+                        {t('Results')}: {filteredProperties.length} {searchQuery && `(${t('filtered')})`}
+                    </Text>
+                </View>
+                {isLoading && !recentProperties.length ? (
+                    <LoadingTopSpinner showLoading={true} />
+                ) : error ? (
+                    renderErrorState()
+                ) : filteredProperties.length === 0 ? (
+                    renderEmptyState()
+                ) : (
+                    <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+                        <PropertyList
+                            key={viewMode}
+                            properties={filteredProperties}
+                            onPropertyPress={handlePropertyPress}
+                            style={styles.list}
+                            contentContainerStyle={styles.listContent}
+                            numColumns={viewMode === 'grid' ? 2 : 1}
+                            variant={viewMode === 'grid' ? 'compact' : 'default'}
+                        />
+                    </Animated.View>
                 )}
-                {renderViewModeToggle()}
             </View>
-            <View style={styles.resultCountBar}>
-                <Text style={styles.resultCountText}>
-                    {t('Results')}: {filteredProperties.length} {searchQuery && `(${t('filtered')})`}
-                </Text>
-            </View>
-            {isLoading && !recentProperties.length ? (
-                <LoadingTopSpinner showLoading={true} />
-            ) : error ? (
-                renderErrorState()
-            ) : filteredProperties.length === 0 ? (
-                renderEmptyState()
-            ) : (
-                <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-                    <PropertyList
-                        key={viewMode}
-                        properties={filteredProperties}
-                        onPropertyPress={handlePropertyPress}
-                        style={styles.list}
-                        contentContainerStyle={styles.listContent}
-                        numColumns={viewMode === 'grid' ? 2 : 1}
-                        variant={viewMode === 'grid' ? 'compact' : 'default'}
-                    />
-                </Animated.View>
-            )}
-        </SafeAreaView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: colors.primaryLight,
+    },
+    stickyHeaderWrapper: {
+        zIndex: 100,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
         backgroundColor: colors.primaryLight,
     },
     topBar: {

@@ -17,6 +17,7 @@ export default function TipsScreen() {
     const router = useRouter();
     const [tipsData, setTipsData] = useState<TipArticle[]>([]);
     const [loading, setLoading] = useState(true);
+    const [headerHeight, setHeaderHeight] = useState(0);
 
     // Set SEO for tips page
     useSEO({
@@ -56,14 +57,19 @@ export default function TipsScreen() {
     };
 
     return (
-        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-            <Header
-                options={{
-                    title: t("home.tips.title"),
-                    showBackButton: true
-                }}
-            />
-            <ScrollView style={styles.container}>
+        <View style={{ flex: 1 }}>
+            <View
+                style={styles.stickyHeaderWrapper}
+                onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+            >
+                <Header
+                    options={{
+                        title: t("home.tips.title"),
+                        showBackButton: true
+                    }}
+                />
+            </View>
+            <ScrollView style={[styles.container, { paddingTop: headerHeight }]}>
 
                 {/* Tips Grid */}
                 <View style={styles.tipsGrid}>
@@ -125,7 +131,7 @@ export default function TipsScreen() {
                     )}
                 </View>
             </ScrollView>
-        </SafeAreaView>
+        </View>
     );
 }
 
@@ -206,5 +212,13 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: colors.COLOR_BLACK_LIGHT_4,
         marginLeft: 4,
+    },
+    stickyHeaderWrapper: {
+        zIndex: 100,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: colors.primaryLight,
     },
 }); 
