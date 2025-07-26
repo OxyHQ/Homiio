@@ -579,7 +579,7 @@ propertySchema.statics.search = function(searchParams) {
     available = true
   } = searchParams;
 
-  const query = {};
+  const query: any = {};
 
   if (available) {
     query['availability.isAvailable'] = true;

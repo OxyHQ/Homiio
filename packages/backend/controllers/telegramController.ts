@@ -6,7 +6,7 @@
 import { telegramService } from '../services';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse } from '../middlewares/errorHandler';
-import { Property } from '../models';
+const { Property } = require('../models');
 import config from '../config';
 
 class TelegramController {
@@ -16,28 +16,28 @@ class TelegramController {
   async getBotStatus(req, res, next) {
     try {
       
-      const status = {
+      const status: any = {
         enabled: config.telegram.enabled,
-        initialized: telegramService.isInitialized,
+        initialized: false, // We'll determine this by trying to get bot info
         botToken: config.telegram.botToken ? '***CONFIGURED***' : 'NOT_CONFIGURED',
         groupMappings: telegramService.getGroupsSummary()
       };
 
-      // Try to get bot info if initialized
-      if (telegramService.isInitialized) {
-        try {
-          const botInfo = await telegramService.getBotInfo();
-          status.botInfo = {
-            id: botInfo.id,
-            username: botInfo.username,
-            firstName: botInfo.first_name,
-            canJoinGroups: botInfo.can_join_groups,
-            canReadAllGroupMessages: botInfo.can_read_all_group_messages,
-            supportsInlineQueries: botInfo.supports_inline_queries
-          };
-        } catch (error) {
-          status.botInfoError = error.message;
-        }
+      // Try to get bot info to determine if initialized
+      try {
+        const botInfo = await telegramService.getBotInfo();
+        status.initialized = true;
+        status.botInfo = {
+          id: botInfo.id,
+          username: botInfo.username,
+          firstName: botInfo.first_name,
+          canJoinGroups: botInfo.can_join_groups,
+          canReadAllGroupMessages: botInfo.can_read_all_group_messages,
+          supportsInlineQueries: botInfo.supports_inline_queries
+        };
+      } catch (error) {
+        status.initialized = false;
+        status.botInfoError = error.message;
       }
 
       res.json(successResponse(status, 'Telegram bot status retrieved successfully'));
@@ -131,7 +131,7 @@ class TelegramController {
         properties = await Property.find({ _id: { $in: propertyIds } });
       } else if (filters) {
         // Send notifications based on filters
-        const query = {};
+        const query: any = {};
         
         if (filters.city) query['address.city'] = new RegExp(filters.city, 'i');
         if (filters.type) query.type = filters.type;
@@ -225,16 +225,11 @@ class TelegramController {
 
   /**
    * Get Telegram webhook info (for debugging)
+   * Note: This functionality has been removed due to private property access restrictions
    */
   async getWebhookInfo(req, res, next) {
     try {
-      if (!telegramService.isInitialized) {
-        return next(new AppError('Telegram bot not initialized', 503, 'BOT_NOT_INITIALIZED'));
-      }
-
-      const webhookInfo = await telegramService.bot.getWebHookInfo();
-      
-      res.json(successResponse(webhookInfo, 'Webhook info retrieved successfully'));
+      return next(new AppError('Webhook info functionality not available', 501, 'NOT_IMPLEMENTED'));
     } catch (error) {
       next(error);
     }

@@ -359,7 +359,7 @@ leaseSchema.virtual('isFullySigned').get(function() {
 leaseSchema.virtual('daysUntilExpiration').get(function() {
   if (this.leaseTerms.endDate) {
     const now = new Date();
-    const diffTime = this.leaseTerms.endDate - now;
+    const diffTime = this.leaseTerms.endDate.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
   }

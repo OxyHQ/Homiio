@@ -274,7 +274,7 @@ roomSchema.statics.findByProperty = function(propertyId, options = {}) {
 };
 
 roomSchema.statics.findAvailable = function(propertyId = null) {
-  const query = {
+  const query: any = {
     status: 'available',
     'availability.isAvailable': true
   };

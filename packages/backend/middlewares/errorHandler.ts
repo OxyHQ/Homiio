@@ -56,7 +56,7 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
 
   // Mongoose validation error
   if (err.name === 'ValidationError') {
-    const message = Object.values(err.errors).map(val => val.message).join(', ');
+    const message = Object.values(err.errors).map((val: any) => val.message).join(', ');
     error = new AppError(message, 400, 'VALIDATION_ERROR');
   }
 
@@ -117,7 +117,7 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
   const code = error.code || 'INTERNAL_SERVER_ERROR';
 
   // Error response object
-  const errorResponse = {
+  const errorResponse: any = {
     success: false,
     error: {
       message: error.message || 'Internal server error',
@@ -209,8 +209,8 @@ const paginationResponse = (
     message,
     data,
     pagination: {
-      page: parseInt(page),
-      limit: parseInt(limit),
+      page: page,
+      limit: limit,
       total: total,
       totalPages: totalPages,
       hasNext: hasNext,

@@ -21,7 +21,7 @@ const handleValidationErrors = (req: Request, res: Response, next: NextFunction)
       query: req.query
     });
     
-    const formattedErrors = errors.array().map(error => ({
+    const formattedErrors = errors.array().map((error: any) => ({
       field: error.path || error.param,
       message: error.msg,
       value: error.value,
@@ -120,7 +120,7 @@ const validateUser = [
   body('username').isLength({ min: 3, max: 30 }).withMessage('Username must be 3-30 characters'),
   body('profile.firstName').notEmpty().withMessage('First name is required'),
   body('profile.lastName').notEmpty().withMessage('Last name is required'),
-  body('profile.phoneNumber').optional().isMobilePhone().withMessage('Invalid phone number'),
+  body('profile.phoneNumber').optional().isMobilePhone('any').withMessage('Invalid phone number'),
   body('role').isIn(['tenant', 'landlord', 'property_manager', 'admin']).withMessage('Invalid role'),
   handleValidationErrors
 ];
