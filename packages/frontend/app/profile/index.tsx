@@ -284,7 +284,7 @@ export default function ProfileScreen() {
                                 <View style={styles.settingTextContainer}>
                                     <Text style={styles.settingLabel}>No Profile Found</Text>
                                     <Text style={styles.settingDescription}>
-                                        You don't have any profiles yet. Create your first profile to get started.
+                                        You don&apos;t have any profiles yet. Create your first profile to get started.
                                     </Text>
                                 </View>
                             </View>

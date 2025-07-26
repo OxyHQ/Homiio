@@ -236,7 +236,7 @@ export default function AmenitiesByCategoryPage() {
                     <Text style={styles.infoText}>
                         The values shown represent the estimated monthly rental value each amenity adds to a property.
                         These are based on market research and help landlords price their properties fairly while
-                        giving tenants insight into what they're paying for.
+                        giving tenants insight into what they&apos;re paying for.
                     </Text>
                 </View>
             </ScrollView>

@@ -6,7 +6,7 @@ import { useOxy } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
 const IconComponent = Ionicons as any;
 import { colors } from '@/styles/colors';
-import Markdown from 'react-native-markdown-display';
+
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { PropertyCard } from '@/components/PropertyCard';
 import { SindiIcon } from '@/assets/icons';

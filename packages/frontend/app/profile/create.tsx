@@ -495,7 +495,7 @@ export default function ProfileCreateScreen() {
                 {/* Profile Type Info */}
                 {selectedType && (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>What's Next?</Text>
+                        <Text style={styles.sectionTitle}>What&apos;s Next?</Text>
                         <View style={[styles.settingItem, styles.firstSettingItem, styles.lastSettingItem]}>
                             <View style={styles.settingInfo}>
                                 <IconComponent name="information-circle" size={20} color="#666" style={styles.settingIcon} />

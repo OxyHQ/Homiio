@@ -174,7 +174,7 @@ export function TrustScoreManager() {
                 <View style={styles.tipCard}>
                     <Text style={styles.tipTitle}>Complete Verification</Text>
                     <Text style={styles.tipText}>
-                        Verify your identity and income to show you're a reliable tenant.
+                        Verify your identity and income to show you&apos;re a reliable tenant.
                     </Text>
                 </View>
 

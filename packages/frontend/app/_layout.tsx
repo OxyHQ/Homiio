@@ -8,7 +8,6 @@ import { Slot } from 'expo-router';
 // Redux store removed - now using Zustand
 import { useMediaQuery } from 'react-responsive';
 import { StatusBar } from "expo-status-bar";
-import "react-native-reanimated";
 import { SideBar } from '@/components/SideBar';
 import { RightBar } from '@/components/RightBar';
 import { colors } from '@/styles/colors';

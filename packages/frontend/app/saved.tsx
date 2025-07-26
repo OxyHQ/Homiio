@@ -710,7 +710,7 @@ export default function SavedPropertiesScreen() {
                         </View>
 
                         <Text style={styles.modalSubtitle}>
-                            Add personal notes for "{selectedProperty ? getPropertyTitle(selectedProperty) : 'this property'}"
+                            Add personal notes for &quot;{selectedProperty ? getPropertyTitle(selectedProperty) : 'this property'}&quot;
                         </Text>
 
                         <TextInput

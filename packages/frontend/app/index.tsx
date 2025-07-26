@@ -1,32 +1,23 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, RefreshControl, FlatList } from 'react-native';
+import React, { useState, useMemo, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, RefreshControl, FlatList } from 'react-native';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useDocumentTitle, useSEO } from '@/hooks/useDocumentTitle';
-import { useColorScheme } from "@/hooks/useColorScheme";
-import { Toaster } from '@/lib/sonner';
+import { useSEO } from '@/hooks/useDocumentTitle';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // Import real data hooks
 import { useProperties } from '@/hooks';
 import { useOxy } from '@oxyhq/services';
-import { useDebouncedAddressSearch, type AddressSuggestion } from '@/hooks/useAddressSearch';
+import { useDebouncedAddressSearch } from '@/hooks/useAddressSearch';
 import { cityService } from '@/services/cityService';
 import { tipsService, TipArticle } from '@/services/tipsService';
 
 // Import components
 import { PropertyCard } from '@/components/PropertyCard';
-import { RecentlyViewedWidget } from '@/components/widgets/RecentlyViewedWidget';
-import { FeaturedPropertiesWidget } from '@/components/widgets/FeaturedPropertiesWidget';
-
-// Import utils
-import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
-import { getPropertyImageSource } from '@/utils/propertyUtils';
-import { AMENITY_CATEGORIES, getAmenitiesByCategory, ESSENTIAL_AMENITIES } from '@/constants/amenities';
 
 // Type assertion for Ionicons compatibility with React 19
 const IconComponent = Ionicons as any;
@@ -43,19 +34,19 @@ export default function HomePage() {
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
   const [tips, setTips] = useState<TipArticle[]>([]);
   const [tipsLoading, setTipsLoading] = useState(false);
+
   // Use the reusable address search hook
   const {
     suggestions: addressSuggestions,
     loading: isLoadingAddresses,
-    error: addressSearchError,
-    debouncedSearch: fetchAddressSuggestions,
-    clearSuggestions: clearAddressSuggestions
+    debouncedSearch: fetchAddressSuggestions
   } = useDebouncedAddressSearch({
     minQueryLength: 3,
     debounceDelay: 500,
     maxResults: 5,
     includeAddressDetails: true
   });
+
   const { oxyServices, activeSessionId } = useOxy();
 
   // Set enhanced SEO for home page
@@ -121,14 +112,15 @@ export default function HomePage() {
     return properties.slice(0, 4);
   }, [properties]);
 
-  const propertyTypes = [
+  // Memoize property types to prevent unnecessary re-renders
+  const propertyTypes = useMemo(() => [
     { id: 'apartment', name: t('search.propertyType.apartments'), icon: 'business-outline', count: 0 },
     { id: 'house', name: t('search.propertyType.houses'), icon: 'home-outline', count: 0 },
     { id: 'room', name: t('search.propertyType.rooms'), icon: 'bed-outline', count: 0 },
     { id: 'studio', name: t('search.propertyType.studios'), icon: 'home-outline', count: 0 },
     { id: 'coliving', name: t('search.propertyType.coliving'), icon: 'people-outline', count: 0 },
     { id: 'public_housing', name: t('search.propertyType.publicHousing'), icon: 'library-outline', count: 0 },
-  ];
+  ], [t]);
 
   // Calculate property type counts
   const propertyTypeCounts = useMemo(() => {
@@ -160,8 +152,6 @@ export default function HomePage() {
         country: city.country
       }));
   }, [cities]);
-
-  const isAuthenticated = !!(oxyServices && activeSessionId);
 
   // Generate suggestions data
   const suggestionsData = useMemo(() => {
@@ -236,13 +226,13 @@ export default function HomePage() {
     return suggestions;
   }, [searchQuery, addressSuggestions, propertyTypes, topCities, t, router]);
 
-  const handleSearch = () => {
+  const handleSearch = useCallback(() => {
     if (searchQuery.trim()) {
       setShowSuggestions(false);
       // Search by address/location
       router.push(`/search/address/${encodeURIComponent(searchQuery)}`);
     }
-  };
+  }, [searchQuery, router]);
 
   const handleSuggestionPress = useCallback((suggestion: any) => {
     if (suggestion.action) {
@@ -258,14 +248,12 @@ export default function HomePage() {
     setShowSuggestions(false);
   }, [router]);
 
-
-
-  const handleSearchFocus = () => {
+  const handleSearchFocus = useCallback(() => {
     setShowSuggestions(true);
     setSuggestionsFocused(true);
-  };
+  }, []);
 
-  const handleSearchBlur = () => {
+  const handleSearchBlur = useCallback(() => {
     // Delay hiding suggestions to allow for touch events
     setTimeout(() => {
       setSuggestionsFocused(false);
@@ -273,9 +261,9 @@ export default function HomePage() {
         setShowSuggestions(false);
       }
     }, 200);
-  };
+  }, [suggestionsFocused]);
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
       await loadProperties({
@@ -287,7 +275,7 @@ export default function HomePage() {
     } finally {
       setRefreshing(false);
     }
-  };
+  }, [loadProperties]);
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={['top']}>

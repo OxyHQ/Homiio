@@ -27,8 +27,5 @@
     "engines": {
         "node": ">=18.0.0",
         "npm": ">=8.0.0"
-    },
-    "dependencies": {
-        "react-native-markdown-display": "^7.0.2"
     }
 }

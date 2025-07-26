@@ -47,4 +47,4 @@ export * from './widgets';
 export * from './SideBar';
 
 // AppQR Components
-export * from './appQR'; 
+export { default as QRcode } from './appQR'; 
