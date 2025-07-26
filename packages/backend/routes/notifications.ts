@@ -3,36 +3,19 @@
  * API routes for notification management
  */
 
-import controllers from '../controllers';
+const controllers = require('../controllers');
 import express from 'express';
+import { asyncHandler } from '../middlewares';
 const { notificationController } = controllers;
-const { validation, asyncHandler } = require('../middlewares');
 
 module.exports = function() {
   const router = express.Router();
 
-  // Notification management
   router.get('/', asyncHandler(notificationController.getNotifications));
-  router.get('/:notificationId', 
-    validation.validateId('notificationId'),
-    asyncHandler(notificationController.getNotificationById)
-  );
-  router.patch('/:notificationId/read', 
-    validation.validateId('notificationId'),
-    asyncHandler(notificationController.markAsRead)
-  );
-  router.delete('/:notificationId', 
-    validation.validateId('notificationId'),
-    asyncHandler(notificationController.deleteNotification)
-  );
-
-  // Bulk operations
-  router.patch('/read-all', asyncHandler(notificationController.markAllAsRead));
-  router.delete('/clear-all', asyncHandler(notificationController.clearAllNotifications));
-
-  // Notification preferences
-  router.get('/preferences/settings', asyncHandler(notificationController.getNotificationSettings));
-  router.put('/preferences/settings', asyncHandler(notificationController.updateNotificationSettings));
+  router.post('/', asyncHandler(notificationController.createNotification));
+  router.get('/:id', asyncHandler(notificationController.getNotificationById));
+  router.put('/:id', asyncHandler(notificationController.updateNotification));
+  router.delete('/:id', asyncHandler(notificationController.deleteNotification));
 
   return router;
 };

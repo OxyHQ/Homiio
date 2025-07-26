@@ -71,7 +71,7 @@ class RoomController {
       } = req.query;
 
       // Build filters
-      const filters = { propertyId };
+      const filters: any = { propertyId };
       if (type) filters.type = type;
       if (available !== undefined) filters.available = available === 'true';
       if (minRent) filters.minRent = parseFloat(minRent);
@@ -260,7 +260,7 @@ class RoomController {
       } = req.query;
 
       // Build search filters
-      const filters = {};
+      const filters: any = {};
       if (city) filters.city = city;
       if (state) filters.state = state;
       if (minRent) filters.minRent = parseFloat(minRent);

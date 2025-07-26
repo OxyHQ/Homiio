@@ -1,4 +1,4 @@
-import controllers from '../controllers';
+const controllers = require('../controllers');
 import express from 'express';
 import { asyncHandler } from '../middlewares';
 const { analyticsController } = controllers;

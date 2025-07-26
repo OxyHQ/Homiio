@@ -4,9 +4,10 @@
  */
 
 import i18next from 'i18next';
+import { PropertyType } from '@homiio/shared-types';
 
 export interface PropertyData {
-  type?: 'apartment' | 'house' | 'room' | 'studio' | 'duplex' | 'penthouse';
+  type?: PropertyType;
   address?: {
     street?: string;
     city?: string;
@@ -55,7 +56,7 @@ function safeTranslate(key: string, fallback: string): string {
  */
 export function generatePropertyTitle(propertyData: PropertyData): string {
   const {
-    type = 'apartment',
+    type = PropertyType.APARTMENT,
     address = {},
   } = propertyData;
 
@@ -199,7 +200,7 @@ export function testPropertyTitleGeneration(language = 'en-US'): {
       {
         name: 'Basic apartment with address',
         input: {
-          type: 'apartment' as const,
+          type: PropertyType.APARTMENT,
           address: {
             street: 'Calle de Vicente Blasco Ibáñez, 6',
             city: 'Barcelona',
@@ -211,7 +212,7 @@ export function testPropertyTitleGeneration(language = 'en-US'): {
       {
         name: 'House with city only',
         input: {
-          type: 'house' as const,
+          type: PropertyType.HOUSE,
           address: {
             city: 'Madrid'
           }
@@ -221,7 +222,7 @@ export function testPropertyTitleGeneration(language = 'en-US'): {
       {
         name: 'Studio with no address',
         input: {
-          type: 'studio' as const,
+          type: PropertyType.STUDIO,
           address: {}
         },
         expected: 'Studio for rent in Location not specified'
@@ -229,7 +230,7 @@ export function testPropertyTitleGeneration(language = 'en-US'): {
       {
         name: 'Detailed apartment with bedrooms and bathrooms',
         input: {
-          type: 'apartment' as const,
+          type: PropertyType.APARTMENT,
           address: {
             street: 'Gran Via, 123',
             city: 'Valencia'

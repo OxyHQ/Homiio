@@ -2029,7 +2029,7 @@ class ProfileController {
       const { SavedSearch } = require('../models');
       
       // Prepare update data
-      const updateData = { updatedAt: new Date() };
+      const updateData: any = { updatedAt: new Date() };
       if (name !== undefined) updateData.name = name.trim();
       if (query !== undefined) updateData.query = query.trim();
       if (filters !== undefined) updateData.filters = filters;

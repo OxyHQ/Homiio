@@ -3,66 +3,19 @@
  * API routes for lease management
  */
 
-import controllers from '../controllers';
+const controllers = require('../controllers');
 import express from 'express';
+import { asyncHandler } from '../middlewares';
 const { leaseController } = controllers;
-const { validation, asyncHandler } = require('../middlewares');
 
 module.exports = function() {
   const router = express.Router();
 
-  // Lease CRUD operations
   router.get('/', asyncHandler(leaseController.getLeases));
-  router.post('/', validation.validateLease, asyncHandler(leaseController.createLease));
-  router.get('/:leaseId', 
-    validation.validateId('leaseId'),
-    asyncHandler(leaseController.getLeaseById)
-  );
-  router.put('/:leaseId', 
-    validation.validateId('leaseId'),
-    validation.validateLease,
-    asyncHandler(leaseController.updateLease)
-  );
-  router.delete('/:leaseId', 
-    validation.validateId('leaseId'),
-    asyncHandler(leaseController.deleteLease)
-  );
-
-  // Lease lifecycle management
-  router.post('/:leaseId/sign', 
-    validation.validateId('leaseId'),
-    asyncHandler(leaseController.signLease)
-  );
-  router.post('/:leaseId/terminate', 
-    validation.validateId('leaseId'),
-    asyncHandler(leaseController.terminateLease)
-  );
-  router.post('/:leaseId/renew', 
-    validation.validateId('leaseId'),
-    asyncHandler(leaseController.renewLease)
-  );
-
-  // Lease payments
-  router.get('/:leaseId/payments', 
-    validation.validateId('leaseId'),
-    asyncHandler(leaseController.getLeasePayments)
-  );
-  router.post('/:leaseId/payments', 
-    validation.validateId('leaseId'),
-    validation.validatePayment,
-    asyncHandler(leaseController.createPayment)
-  );
-
-  // Lease documents
-  router.get('/:leaseId/documents', 
-    validation.validateId('leaseId'),
-    asyncHandler(leaseController.getLeaseDocuments)
-  );
-  router.post('/:leaseId/documents', 
-    validation.validateId('leaseId'),
-    validation.validateFileUpload,
-    asyncHandler(leaseController.uploadLeaseDocument)
-  );
+  router.post('/', asyncHandler(leaseController.createLease));
+  router.get('/:id', asyncHandler(leaseController.getLeaseById));
+  router.put('/:id', asyncHandler(leaseController.updateLease));
+  router.delete('/:id', asyncHandler(leaseController.deleteLease));
 
   return router;
 };

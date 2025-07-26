@@ -4,16 +4,16 @@
  */
 
 import express from 'express';
-import properties from './properties';
-import rooms from './rooms';
-import devices from './devices';
-import leases from './leases';
-import notifications from './notifications';
-import analytics from './analytics';
-import profiles from './profiles';
-import ai from './ai';
-import roommates from './roommates';
-import telegram from './telegram';
+const properties = require('./properties');
+const rooms = require('./rooms');
+const devices = require('./devices');
+const leases = require('./leases');
+const notifications = require('./notifications');
+const analytics = require('./analytics');
+const profiles = require('./profiles');
+const ai = require('./ai');
+const roommates = require('./roommates');
+const telegram = require('./telegram');
 const { asyncHandler } = require('../middlewares');
 
 export default function() {

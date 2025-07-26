@@ -116,7 +116,7 @@ class PropertyController {
     } catch (error) {
       if (error.name === "ValidationError") {
         const validationErrors = Object.values(error.errors).map(
-          (err) => err.message,
+          (err: any) => err.message,
         );
         const validationError = new AppError(
           "Property validation failed",
@@ -206,7 +206,7 @@ class PropertyController {
     } catch (error) {
       if (error.name === "ValidationError") {
         const validationErrors = Object.values(error.errors).map(
-          (err) => err.message,
+          (err: any) => err.message,
         );
         const validationError = new AppError(
           "Property validation failed",
@@ -241,7 +241,7 @@ class PropertyController {
       } = req.query;
 
       // Build filters
-      const filters = {};
+      const filters: any = {};
       if (type) filters.type = type;
       if (city) filters["address.city"] = new RegExp(city, "i");
       if (bedrooms) filters.bedrooms = parseInt(bedrooms);
@@ -573,7 +573,7 @@ class PropertyController {
       } = req.query;
 
       // Build search query
-      const searchQuery = {};
+      const searchQuery: any = {};
 
       // Use MongoDB text search when a query string is provided
       if (query) {
@@ -734,7 +734,7 @@ class PropertyController {
       }
 
       // Build search query
-      const searchQuery = {
+      const searchQuery: any = {
         location: {
           $near: {
             $geometry: {
@@ -833,7 +833,7 @@ class PropertyController {
       }
 
       // Build search query
-      const searchQuery = {
+      const searchQuery: any = {
         location: {
           $geoWithin: {
             $centerSphere: [[lng, lat], radiusInMeters / 6371000] // Convert to radians
