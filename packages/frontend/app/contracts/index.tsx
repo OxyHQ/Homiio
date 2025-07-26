@@ -146,21 +146,16 @@ export default function ContractsScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         {filteredContracts.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="document-text-outline" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
-            <Text style={styles.emptyText}>{t("No contracts found")}</Text>
-            <Text style={styles.emptySubtext}>
-              {filter === 'all' ?
-                t("You don't have any rental contracts yet") :
-                t(`You don't have any ${filter} contracts`)}
-            </Text>
-            <TouchableOpacity
-              style={styles.emptyButton}
-              onPress={handleAddNewContract}
-            >
-              <Text style={styles.emptyButtonText}>{t("Create New Contract")}</Text>
-            </TouchableOpacity>
-          </View>
+          <EmptyState
+            icon="document-text-outline"
+            title={t("No contracts found")}
+            description={filter === 'all' ?
+              t("You don't have any rental contracts yet") :
+              t(`You don't have any ${filter} contracts`)}
+            actionText={t("Create New Contract")}
+            actionIcon="add"
+            onAction={handleAddNewContract}
+          />
         ) : (
           filteredContracts.map((contract) => (
             <ContractCard
