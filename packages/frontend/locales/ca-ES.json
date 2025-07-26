@@ -148,7 +148,54 @@
         "featured": {
             "title": "Propietats Destacades"
         },
-        "viewAll": "Veure Tot"
+        "viewAll": "Veure Tot",
+        "tips": {
+            "title": "Consells i Guies de Lloguer",
+            "categories": {
+                "search": "Cerca",
+                "safety": "Seguretat",
+                "legal": "Legal",
+                "inspection": "Inspecció"
+            },
+            "firstTimeRenting": {
+                "title": "Primera vegada llogant? Aquí tens la teva guia completa",
+                "description": "Tot el que necessites saber sobre trobar, veure i assegurar la teva primera propietat de lloguer."
+            },
+            "avoidScams": {
+                "title": "Com evitar estafes de lloguer: Senyals d'advertència",
+                "description": "Aprèn a identificar estafes comunes de lloguer i protegeix-te del frau en buscar una nova casa."
+            },
+            "rentalAgreement": {
+                "title": "Entenent el teu contracte de lloguer: Termes clau explicats",
+                "description": "Descomposa termes legals complexos i entén el que estàs signant abans de comprometre't amb un lloguer."
+            },
+            "propertyInspection": {
+                "title": "Llista de verificació d'inspecció de propietats: Què buscar",
+                "description": "Una guia completa per inspeccionar propietats de lloguer potencials i identificar possibles problemes."
+            }
+        },
+        "faq": {
+            "title": "Preguntes Freqüents",
+            "scheduleViewing": {
+                "question": "Com programo una visita a la propietat?",
+                "answer": "Pots programar una visita fent clic al botó \"Programar Visita\" en qualsevol llistat de propietat. El nostre sistema et connectarà amb el propietari o administrador de la propietat per acordar un horari convenient."
+            },
+            "verifiedProperty": {
+                "question": "Què significa \"Propietat Verificada\"?",
+                "answer": "Les propietats verificades han estat inspeccionades personalment pel nostre equip per assegurar que compleixin amb els nostres estàndards de qualitat. Això inclou verificar l'estat de la propietat, les comoditats i verificar les credencials del propietari."
+            },
+            "reportSuspicious": {
+                "question": "Com reporto un llistat sospitós?",
+                "answer": "Si trobes un llistat sospitós, fes clic al botó \"Reportar\" a la pàgina de la propietat. El nostre equip de seguretat investigarà i prendrà les mesures apropiades per protegir la nostra comunitat."
+            },
+            "applicationRequirements": {
+                "question": "Quins són els requisits de la sol·licitud de lloguer?",
+                "answer": "Els requisits varien segons la propietat, però típicament inclouen comprovant d'ingressos, historial de lloguer, verificació de crèdit i referències. Cada llistat especificarà els requisits exactes necessaris."
+            }
+        },
+        "tips": {
+            "article": "Article"
+        }
     },
     "search": {
         "title": "Cercar",

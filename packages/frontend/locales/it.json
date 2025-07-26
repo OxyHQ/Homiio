@@ -294,7 +294,58 @@
       "title": "Proprietà Eco-Certificate",
       "description": "Trova proprietà sostenibili che soddisfano i nostri standard di efficienza energetica e rispetto dell'ambiente",
       "viewEcoProperties": "Visualizza Proprietà Eco"
+    },
+    "featured": {
+      "title": "Proprietà in Evidenza"
+    },
+    "viewAll": "Visualizza Tutto",
+    "tips": {
+      "title": "Consigli e Guide per l'Affitto",
+      "categories": {
+        "search": "Ricerca",
+        "safety": "Sicurezza",
+        "legal": "Legale",
+        "inspection": "Ispezione"
+      },
+      "firstTimeRenting": {
+        "title": "Prima volta che affitti? Ecco la tua guida completa",
+        "description": "Tutto quello che devi sapere su come trovare, visitare e assicurarti la tua prima proprietà in affitto."
+      },
+      "avoidScams": {
+        "title": "Come evitare le truffe immobiliari: Segnali da tenere d'occhio",
+        "description": "Impara a identificare le truffe comuni degli affitti e proteggiti dalle frodi quando cerchi una nuova casa."
+      },
+      "rentalAgreement": {
+        "title": "Comprendere il tuo contratto di affitto: Termini chiave spiegati",
+        "description": "Analizza termini legali complessi e comprendi cosa stai firmando prima di impegnarti in un affitto."
+      },
+      "propertyInspection": {
+        "title": "Lista di controllo per l'ispezione della proprietà: Cosa cercare",
+        "description": "Una guida completa per ispezionare potenziali proprietà in affitto e identificare possibili problemi."
+      }
+    },
+    "faq": {
+      "title": "Domande Frequenti",
+      "scheduleViewing": {
+        "question": "Come posso programmare una visita alla proprietà?",
+        "answer": "Puoi programmare una visita cliccando sul pulsante \"Programma Visita\" su qualsiasi annuncio di proprietà. Il nostro sistema ti metterà in contatto con il proprietario o il gestore della proprietà per concordare un orario conveniente."
+      },
+      "verifiedProperty": {
+        "question": "Cosa significa \"Proprietà Verificata\"?",
+        "answer": "Le proprietà verificate sono state ispezionate personalmente dal nostro team per garantire che soddisfino i nostri standard di qualità. Questo include il controllo delle condizioni della proprietà, dei servizi e la verifica delle credenziali del proprietario."
+      },
+      "reportSuspicious": {
+        "question": "Come segnalo un annuncio sospetto?",
+        "answer": "Se incontri un annuncio sospetto, clicca sul pulsante \"Segnala\" nella pagina della proprietà. Il nostro team di sicurezza investigherà e intraprenderà le azioni appropriate per proteggere la nostra comunità."
+      },
+      "applicationRequirements": {
+        "question": "Quali sono i requisiti per la domanda di affitto?",
+        "answer": "I requisiti variano per proprietà, ma tipicamente includono prova di reddito, storia di affitto, controllo del credito e referenze. Ogni annuncio specificherà i requisiti esatti necessari."
+      }
     }
+  },
+  "tips": {
+    "article": "Articolo"
   },
   "search": {
     "title": "Cerca",

@@ -16,6 +16,7 @@ import { useProperties } from '@/hooks';
 import { useOxy } from '@oxyhq/services';
 import { useDebouncedAddressSearch, type AddressSuggestion } from '@/hooks/useAddressSearch';
 import { cityService } from '@/services/cityService';
+import { tipsService, TipArticle } from '@/services/tipsService';
 
 // Import components
 import { PropertyCard } from '@/components/PropertyCard';
@@ -39,6 +40,9 @@ export default function HomePage() {
   const [suggestionsFocused, setSuggestionsFocused] = useState(false);
   const [cities, setCities] = useState<any[]>([]);
   const [citiesLoading, setCitiesLoading] = useState(false);
+  const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
+  const [tips, setTips] = useState<TipArticle[]>([]);
+  const [tipsLoading, setTipsLoading] = useState(false);
   // Use the reusable address search hook
   const {
     suggestions: addressSuggestions,
@@ -90,6 +94,25 @@ export default function HomePage() {
     };
 
     loadCities();
+  }, []);
+
+  // Load tips on component mount
+  React.useEffect(() => {
+    const loadTips = async () => {
+      try {
+        setTipsLoading(true);
+        // Temporarily use fallback data while debugging API
+        const tipsData = await tipsService.getHomePageTipsFallback();
+        setTips(tipsData);
+      } catch (error) {
+        console.error('Failed to load tips:', error);
+        setTips([]);
+      } finally {
+        setTipsLoading(false);
+      }
+    };
+
+    loadTips();
   }, []);
 
   // Memoized data processing
@@ -653,6 +676,189 @@ export default function HomePage() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Tips Section */}
+        <View style={styles.tipsSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{t("home.tips.title")}</Text>
+            <TouchableOpacity onPress={() => router.push('/tips')}>
+              <Text style={styles.viewAllText}>{t("home.viewAll")}</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.horizontalScroll}
+            contentContainerStyle={{ paddingHorizontal: 16 }}
+          >
+            {tipsLoading ? (
+              <View style={styles.tipCardContainer}>
+                <View style={styles.tipCard}>
+                  <View style={styles.tipImageContainer}>
+                    <View style={[styles.tipImagePlaceholder, { backgroundColor: colors.COLOR_BLACK_LIGHT_4 }]}>
+                      <IconComponent name="hourglass-outline" size={32} color="white" />
+                    </View>
+                  </View>
+                  <View style={styles.tipCardContent}>
+                    <View style={[styles.tipCardTitle, { backgroundColor: colors.COLOR_BLACK_LIGHT_4, height: 20, borderRadius: 4 }]} />
+                    <View style={[styles.tipCardDescription, { backgroundColor: colors.COLOR_BLACK_LIGHT_4, height: 16, borderRadius: 4, marginBottom: 8 }]} />
+                    <View style={[styles.tipCardDescription, { backgroundColor: colors.COLOR_BLACK_LIGHT_4, height: 16, borderRadius: 4, width: '60%' }]} />
+                  </View>
+                </View>
+              </View>
+            ) : (
+              tips.map((tip) => (
+                <TouchableOpacity
+                  key={tip.id}
+                  style={styles.tipCardContainer}
+                  onPress={() => router.push('/tips')}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.tipCard}>
+                    <View style={styles.tipImageContainer}>
+                      <LinearGradient
+                        colors={tip.gradientColors as [string, string]}
+                        style={styles.tipImagePlaceholder}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      >
+                        <IconComponent name={tip.icon} size={32} color="white" />
+                      </LinearGradient>
+                      <View style={styles.tipCategoryBadge}>
+                        <Text style={styles.tipCategoryText}>{t(`home.tips.categories.${tip.category}`)}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.tipCardContent}>
+                      <Text style={styles.tipCardTitle}>{tip.title}</Text>
+                      <Text style={styles.tipCardDescription}>
+                        {tip.description}
+                      </Text>
+                      <View style={styles.tipCardMeta}>
+                        <View style={styles.tipCardMetaItem}>
+                          <IconComponent name="time-outline" size={14} color={colors.COLOR_BLACK_LIGHT_4} />
+                          <Text style={styles.tipCardMetaText}>{tip.readTime}</Text>
+                        </View>
+                        <View style={styles.tipCardMetaItem}>
+                          <IconComponent name="calendar-outline" size={14} color={colors.COLOR_BLACK_LIGHT_4} />
+                          <Text style={styles.tipCardMetaText}>{tip.publishDate}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
+          </ScrollView>
+        </View>
+
+        {/* FAQ Section */}
+        <View style={styles.faqSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{t("home.faq.title")}</Text>
+          </View>
+          <View style={styles.faqContainer}>
+            <View style={styles.faqItem}>
+              <TouchableOpacity
+                style={styles.faqQuestion}
+                onPress={() => {
+                  // Toggle FAQ answer visibility
+                  const faqId = 'faq1';
+                  setExpandedFaq(expandedFaq === faqId ? null : faqId);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.faqQuestionText}>{t("home.faq.scheduleViewing.question")}</Text>
+                <IconComponent
+                  name={expandedFaq === 'faq1' ? 'chevron-up' : 'chevron-down'}
+                  size={20}
+                  color={colors.COLOR_BLACK_LIGHT_3}
+                />
+              </TouchableOpacity>
+              {expandedFaq === 'faq1' && (
+                <View style={styles.faqAnswer}>
+                  <Text style={styles.faqAnswerText}>
+                    {t("home.faq.scheduleViewing.answer")}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.faqItem}>
+              <TouchableOpacity
+                style={styles.faqQuestion}
+                onPress={() => {
+                  const faqId = 'faq2';
+                  setExpandedFaq(expandedFaq === faqId ? null : faqId);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.faqQuestionText}>{t("home.faq.verifiedProperty.question")}</Text>
+                <IconComponent
+                  name={expandedFaq === 'faq2' ? 'chevron-up' : 'chevron-down'}
+                  size={20}
+                  color={colors.COLOR_BLACK_LIGHT_3}
+                />
+              </TouchableOpacity>
+              {expandedFaq === 'faq2' && (
+                <View style={styles.faqAnswer}>
+                  <Text style={styles.faqAnswerText}>
+                    {t("home.faq.verifiedProperty.answer")}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.faqItem}>
+              <TouchableOpacity
+                style={styles.faqQuestion}
+                onPress={() => {
+                  const faqId = 'faq3';
+                  setExpandedFaq(expandedFaq === faqId ? null : faqId);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.faqQuestionText}>{t("home.faq.reportSuspicious.question")}</Text>
+                <IconComponent
+                  name={expandedFaq === 'faq3' ? 'chevron-up' : 'chevron-down'}
+                  size={20}
+                  color={colors.COLOR_BLACK_LIGHT_3}
+                />
+              </TouchableOpacity>
+              {expandedFaq === 'faq3' && (
+                <View style={styles.faqAnswer}>
+                  <Text style={styles.faqAnswerText}>
+                    {t("home.faq.reportSuspicious.answer")}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.faqItem}>
+              <TouchableOpacity
+                style={styles.faqQuestion}
+                onPress={() => {
+                  const faqId = 'faq4';
+                  setExpandedFaq(expandedFaq === faqId ? null : faqId);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.faqQuestionText}>{t("home.faq.applicationRequirements.question")}</Text>
+                <IconComponent
+                  name={expandedFaq === 'faq4' ? 'chevron-up' : 'chevron-down'}
+                  size={20}
+                  color={colors.COLOR_BLACK_LIGHT_3}
+                />
+              </TouchableOpacity>
+              {expandedFaq === 'faq4' && (
+                <View style={styles.faqAnswer}>
+                  <Text style={styles.faqAnswerText}>
+                    {t("home.faq.applicationRequirements.answer")}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -1175,5 +1381,128 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.primaryColor,
     marginRight: 6,
+  },
+  // Tips Section Styles
+  tipsSection: {
+    paddingVertical: 24,
+    marginTop: 16,
+  },
+  tipCardContainer: {
+    marginRight: 15,
+    width: 280,
+  },
+  tipCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    height: 320,
+  },
+  tipImageContainer: {
+    height: 140,
+    position: 'relative',
+  },
+  tipImagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tipCategoryBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  tipCategoryText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.COLOR_BLACK,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  tipCardContent: {
+    padding: 12,
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  tipCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.COLOR_BLACK,
+    marginBottom: 6,
+    fontFamily: 'Phudu',
+    lineHeight: 20,
+  },
+  tipCardDescription: {
+    fontSize: 13,
+    color: colors.COLOR_BLACK_LIGHT_3,
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  tipCardMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  tipCardMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tipCardMetaText: {
+    fontSize: 11,
+    color: colors.COLOR_BLACK_LIGHT_4,
+    marginLeft: 4,
+  },
+  // FAQ Section Styles
+  faqSection: {
+    paddingVertical: 24,
+    marginTop: 16,
+  },
+  faqContainer: {
+    paddingHorizontal: 16,
+  },
+  faqItem: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  faqQuestion: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#ffffff',
+  },
+  faqQuestionText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.COLOR_BLACK,
+    flex: 1,
+    marginRight: 12,
+    fontFamily: 'Phudu',
+  },
+  faqAnswer: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    backgroundColor: '#f8f9fa',
+  },
+  faqAnswerText: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK_LIGHT_3,
+    lineHeight: 20,
   },
 });

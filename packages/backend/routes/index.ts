@@ -14,6 +14,7 @@ const profiles = require('./profiles');
 const ai = require('./ai');
 const roommates = require('./roommates');
 const telegram = require('./telegram');
+const tips = require('./tips');
 const { asyncHandler } = require('../middlewares');
 
 export default function() {
@@ -27,6 +28,7 @@ export default function() {
   const aiRoutes = ai();
   const roommateRoutes = roommates();
   const telegramRoutes = telegram();
+  const tipsRoutes = tips();
 
   const router = express.Router();
 
@@ -41,6 +43,7 @@ export default function() {
   router.use('/ai', aiRoutes);
   router.use('/roommates', roommateRoutes);
   router.use('/telegram', telegramRoutes);
+  router.use('/tips', tipsRoutes);
 
   // Admin-only city routes (authenticated)
   router.post('/cities', asyncHandler(require('../controllers/cityController').default.createCity));

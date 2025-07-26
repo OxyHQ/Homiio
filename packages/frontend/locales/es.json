@@ -148,7 +148,54 @@
     "featured": {
       "title": "Propiedades Destacadas"
     },
-    "viewAll": "Ver Todo"
+    "viewAll": "Ver Todo",
+    "tips": {
+      "title": "Consejos y Guías de Alquiler",
+      "categories": {
+        "search": "Búsqueda",
+        "safety": "Seguridad",
+        "legal": "Legal",
+        "inspection": "Inspección"
+      },
+      "firstTimeRenting": {
+        "title": "¿Primera vez alquilando? Aquí tienes tu guía completa",
+        "description": "Todo lo que necesitas saber sobre encontrar, ver y asegurar tu primera propiedad de alquiler."
+      },
+      "avoidScams": {
+        "title": "Cómo evitar estafas de alquiler: Señales de advertencia",
+        "description": "Aprende a identificar estafas comunes de alquiler y protégete del fraude al buscar una nueva casa."
+      },
+      "rentalAgreement": {
+        "title": "Entendiendo tu contrato de alquiler: Términos clave explicados",
+        "description": "Desglosa términos legales complejos y entiende lo que estás firmando antes de comprometerte con un alquiler."
+      },
+      "propertyInspection": {
+        "title": "Lista de verificación de inspección de propiedades: Qué buscar",
+        "description": "Una guía completa para inspeccionar propiedades de alquiler potenciales e identificar posibles problemas."
+      }
+    },
+    "faq": {
+      "title": "Preguntas Frecuentes",
+      "scheduleViewing": {
+        "question": "¿Cómo programo una visita a la propiedad?",
+        "answer": "Puedes programar una visita haciendo clic en el botón \"Programar Visita\" en cualquier listado de propiedad. Nuestro sistema te conectará con el propietario o administrador de la propiedad para acordar un horario conveniente."
+      },
+      "verifiedProperty": {
+        "question": "¿Qué significa \"Propiedad Verificada\"?",
+        "answer": "Las propiedades verificadas han sido inspeccionadas personalmente por nuestro equipo para asegurar que cumplan con nuestros estándares de calidad. Esto incluye verificar el estado de la propiedad, las comodidades y verificar las credenciales del propietario."
+      },
+      "reportSuspicious": {
+        "question": "¿Cómo reporto un listado sospechoso?",
+        "answer": "Si encuentras un listado sospechoso, haz clic en el botón \"Reportar\" en la página de la propiedad. Nuestro equipo de seguridad investigará y tomará las medidas apropiadas para proteger a nuestra comunidad."
+      },
+      "applicationRequirements": {
+        "question": "¿Cuáles son los requisitos de la aplicación de alquiler?",
+        "answer": "Los requisitos varían según la propiedad, pero típicamente incluyen comprobante de ingresos, historial de alquiler, verificación de crédito y referencias. Cada listado especificará los requisitos exactos necesarios."
+      }
+    },
+    "tips": {
+      "article": "Artículo"
+    }
   },
   "search": {
     "title": "Buscar",

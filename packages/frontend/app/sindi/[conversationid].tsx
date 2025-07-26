@@ -18,6 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as DocumentPicker from 'expo-document-picker';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useConversationStore, type ConversationMessage, type Conversation } from '@/store/conversationStore';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export default function ConversationDetail() {
     const { oxyServices, activeSessionId } = useOxy();
@@ -212,24 +213,15 @@ export default function ConversationDetail() {
                         </TouchableOpacity>
                     ]
                 }} />
-                <View style={styles.authRequiredContainer}>
-                    <LinearGradient
-                        colors={[colors.primaryColor, colors.secondaryLight]}
-                        style={styles.authRequiredCard}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                    >
-                        <View style={styles.authRequiredContent}>
-                            <View style={styles.authRequiredIconContainer}>
-                                <Text style={styles.authRequiredIcon}>🔒</Text>
-                            </View>
-                            <Text style={styles.authRequiredTitle}>{t('sindi.auth.required')}</Text>
-                            <Text style={styles.authRequiredSubtitle}>
-                                {t('sindi.auth.message')}
-                            </Text>
-                        </View>
-                    </LinearGradient>
-                </View>
+                <EmptyState
+                    icon="lock-closed"
+                    title={t('sindi.auth.required')}
+                    description={t('sindi.auth.message')}
+                    actionText="Sign In"
+                    actionIcon="log-in"
+                    onAction={() => router.push('/profile')}
+                    iconColor={colors.primaryColor}
+                />
             </ThemedView>
         );
     }
@@ -733,45 +725,7 @@ const styles = StyleSheet.create({
         marginVertical: 12,
         gap: 12,
     },
-    authRequiredContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 40,
-    },
-    authRequiredCard: {
-        padding: 24,
-        borderRadius: 25,
-        borderWidth: 1,
-        borderColor: colors.COLOR_BLACK,
-        backgroundColor: 'white',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    authRequiredContent: {
-        alignItems: 'center',
-    },
-    authRequiredIconContainer: {
-        marginBottom: 16,
-    },
-    authRequiredIcon: {
-        fontSize: 48,
-    },
-    authRequiredTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 8,
-        fontFamily: 'Phudu',
-        color: colors.COLOR_BLACK,
-    },
-    authRequiredSubtitle: {
-        fontSize: 14,
-        color: colors.COLOR_BLACK_LIGHT_3,
-        textAlign: 'center',
-    },
+
     filePreviewContainer: {
         flexDirection: 'row',
         alignItems: 'center',

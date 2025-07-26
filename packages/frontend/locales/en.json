@@ -148,7 +148,54 @@
         "featured": {
             "title": "Featured Properties"
         },
-        "viewAll": "View All"
+        "viewAll": "View All",
+        "tips": {
+            "title": "Rental Tips & Guides",
+            "categories": {
+                "search": "Search",
+                "safety": "Safety",
+                "legal": "Legal",
+                "inspection": "Inspection"
+            },
+            "firstTimeRenting": {
+                "title": "First Time Renting? Here's Your Complete Guide",
+                "description": "Everything you need to know about finding, viewing, and securing your first rental property."
+            },
+            "avoidScams": {
+                "title": "How to Avoid Rental Scams: Red Flags to Watch For",
+                "description": "Learn to identify common rental scams and protect yourself from fraud when searching for a new home."
+            },
+            "rentalAgreement": {
+                "title": "Understanding Your Rental Agreement: Key Terms Explained",
+                "description": "Break down complex legal terms and understand what you're signing before committing to a rental."
+            },
+            "propertyInspection": {
+                "title": "Property Inspection Checklist: What to Look For",
+                "description": "A comprehensive guide to inspecting potential rental properties and identifying potential issues."
+            }
+        },
+        "faq": {
+            "title": "Frequently Asked Questions",
+            "scheduleViewing": {
+                "question": "How do I schedule a property viewing?",
+                "answer": "You can schedule a viewing by clicking the \"Schedule Viewing\" button on any property listing. Our system will connect you with the landlord or property manager to arrange a convenient time."
+            },
+            "verifiedProperty": {
+                "question": "What does \"Verified Property\" mean?",
+                "answer": "Verified properties have been personally inspected by our team to ensure they meet our quality standards. This includes checking the property condition, amenities, and verifying the landlord's credentials."
+            },
+            "reportSuspicious": {
+                "question": "How do I report a suspicious listing?",
+                "answer": "If you encounter a suspicious listing, click the \"Report\" button on the property page. Our safety team will investigate and take appropriate action to protect our community."
+            },
+            "applicationRequirements": {
+                "question": "What are the rental application requirements?",
+                "answer": "Requirements vary by property, but typically include proof of income, rental history, credit check, and references. Each listing will specify the exact requirements needed."
+            }
+        }
+    },
+    "tips": {
+        "article": "Article"
     },
     "search": {
         "title": "Search",

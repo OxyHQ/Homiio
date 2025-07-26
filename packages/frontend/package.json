@@ -20,11 +20,11 @@
     "preset": "jest-expo"
   },
   "dependencies": {
-    "@homiio/shared-types": "file:../shared-types",
     "@ai-sdk/react": "^1.2.12",
     "@bitdrift/react-native": "^0.6.14",
     "@expo/vector-icons": "^14.1.0",
     "@gorhom/bottom-sheet": "^5.1.6",
+    "@homiio/shared-types": "file:../shared-types",
     "@oxyhq/services": "^5.8.2",
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.3.8",
