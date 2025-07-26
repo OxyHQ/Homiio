@@ -882,7 +882,7 @@ class ProfileController {
         );
       }
 
-      if (profile.profileType !== "personal") {
+      if (profile.profileType !== ProfileType.PERSONAL) {
         return res.status(400).json(
           errorResponse("Can only recalculate trust score for personal profiles", "INVALID_PROFILE_TYPE")
         );
