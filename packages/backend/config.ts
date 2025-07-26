@@ -63,7 +63,7 @@ const config: Config = {
   oxy: {
     baseURL: process.env.NODE_ENV === 'production' 
       ? process.env.OXY_API_URL || 'https://api.oxy.so'
-      : 'http://localhost:3001',
+      : 'http://192.168.86.44:3001',
   },
   
   // OpenAI Configuration

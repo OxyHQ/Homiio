@@ -1,7 +1,8 @@
 import { generateAPIUrl } from '@/utils/generateAPIUrl';
 import { useChat } from '@ai-sdk/react';
 import { fetch as expoFetch } from 'expo/fetch';
-import { View, TextInput, ScrollView, Text, SafeAreaView, TouchableOpacity, StyleSheet, Platform, Alert } from 'react-native';
+import { View, TextInput, ScrollView, Text, TouchableOpacity, StyleSheet, Platform, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOxy } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
 const IconComponent = Ionicons as any;

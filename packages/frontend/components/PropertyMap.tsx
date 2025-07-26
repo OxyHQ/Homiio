@@ -247,14 +247,14 @@ const WebMap: React.FC<PropertyMapProps> = ({
 
   return (
     <View style={[styles.container, { height }]}>
-      <div
-        ref={mapRef}
-        style={{
+      {React.createElement('div', {
+        ref: mapRef,
+        style: {
           width: '100%',
           height: '100%',
           borderRadius: 8,
-        }}
-      />
+        }
+      })}
       {loading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color={colors.primaryColor} />

@@ -1,18 +1,17 @@
 // --- 1. Organized Imports ---
 import React, { useEffect, useState, useCallback, useMemo, createContext, useRef } from "react";
-import { ScrollView, Keyboard, LogBox, Platform, View, StyleSheet } from "react-native";
+import { Keyboard, Platform, View, StyleSheet } from "react-native";
+import { SafeAreaProvider, initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
-import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { useFonts } from "expo-font";
 import { Slot } from 'expo-router';
-// Redux store removed - now using Zustand
 import { useMediaQuery } from 'react-responsive';
 import { StatusBar } from "expo-status-bar";
 import { SideBar } from '@/components/SideBar';
 import { RightBar } from '@/components/RightBar';
 import { colors } from '@/styles/colors';
-import { useColorScheme } from "@/hooks/useColorScheme";
-import { useDocumentTitle, useSEO } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useDocumentTitle";
 import { Toaster } from '@/lib/sonner';
 import {
   setupNotifications,
@@ -32,7 +31,7 @@ import WebSplashScreen from "@/components/WebSplashScreen";
 import LoadingTopSpinner from "@/components/LoadingTopSpinner";
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { ProfileProvider } from '@/context/ProfileContext';
-import { OxyLogo, OxyProvider, OxyServices, OxySignInButton, useOxy } from '@oxyhq/services';
+import { OxyProvider, OxyServices } from '@oxyhq/services';
 import { generateWebsiteStructuredData, injectStructuredData } from '@/utils/structuredData';
 import "../styles/global.css";
 
@@ -84,7 +83,7 @@ i18n.use(initReactI18next).init({
 });
 
 // --- 3. Styles (outside component) ---
-const getStyles = (isScreenNotMobile: boolean) => StyleSheet.create({
+const getStyles = (isScreenNotMobile: boolean, insets: any) => StyleSheet.create({
   container: {
     maxWidth: 1800,
     width: '100%',
@@ -115,9 +114,9 @@ export default function RootLayout() {
     startFade: false,
   });
   const { i18n } = useTranslation();
-  const colorScheme = useColorScheme();
   const isScreenNotMobile = useMediaQuery({ minWidth: 500 });
-  const styles = useMemo(() => getStyles(isScreenNotMobile), [isScreenNotMobile]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => getStyles(isScreenNotMobile, insets), [isScreenNotMobile, insets]);
 
   // --- Font Loading ---
   const [loaded] = useFonts({
@@ -130,7 +129,11 @@ export default function RootLayout() {
     "Inter-Regular": require("@/assets/fonts/inter/Inter-Regular.otf"),
     "Inter-SemiBold": require("@/assets/fonts/inter/Inter-SemiBold.otf"),
     "Inter-Thin": require("@/assets/fonts/inter/Inter-Thin.otf"),
-    "Phudu": require("@/assets/fonts/Phudu-VariableFont_wght.ttf"),
+    "Phudu-Thin": require("@/assets/fonts/Phudu-VariableFont_wght.ttf"),
+    "Phudu-Regular": require("@/assets/fonts/Phudu-VariableFont_wght.ttf"),
+    "Phudu-Medium": require("@/assets/fonts/Phudu-VariableFont_wght.ttf"),
+    "Phudu-SemiBold": require("@/assets/fonts/Phudu-VariableFont_wght.ttf"),
+    "Phudu-Bold": require("@/assets/fonts/Phudu-VariableFont_wght.ttf"),
   });
 
   // --- Keyboard State ---
@@ -162,7 +165,7 @@ export default function RootLayout() {
   const oxyServices = useMemo(() => new OxyServices({
     baseURL: process.env.NODE_ENV === 'production'
       ? 'https://api.oxy.so'
-      : 'http://localhost:3001',
+      : 'http://192.168.86.44:3001',
   }), []);
 
   // --- Auth Handlers ---
@@ -208,50 +211,43 @@ export default function RootLayout() {
     }
   }, [loaded, splashState.initializationComplete, splashState.startFade]);
 
-  // --- Early Returns: Loading/Splash ---
-  if (!loaded) return null;
-  if (!appIsReady) {
-    if (Platform.OS === 'web') {
-      return <WebSplashScreen onFadeComplete={handleSplashFadeComplete} startFade={splashState.startFade} />;
-    }
-    return null;
-  }
-
   // --- Main Render ---
   return (
-    <OxyProvider
-      oxyServices={oxyServices}
-      initialScreen="SignIn"
-      autoPresent={false}
-      onClose={() => console.log('Sheet closed')}
-      onAuthenticated={handleAuthenticated}
-      onAuthStateChange={user => console.log('Auth state changed:', user?.username || 'logged out')}
-      storageKeyPrefix="oxy_example"
-      theme="light"
-    >
-      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <BottomSheetProvider>
-          <I18nextProvider i18n={i18n}>
-            <MenuProvider>
-              <ErrorBoundary>
-                <ProfileProvider>
-                  <View style={styles.container}>
-                    <SideBar />
-                    <View style={styles.mainContentWrapper}>
-                      <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0 }} />
-                      <Slot />
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <OxyProvider
+          oxyServices={oxyServices}
+          initialScreen="SignIn"
+          autoPresent={false}
+          onClose={() => console.log('Sheet closed')}
+          onAuthenticated={handleAuthenticated}
+          onAuthStateChange={user => console.log('Auth state changed:', user?.username || 'logged out')}
+          storageKeyPrefix="oxy_example"
+          theme="light"
+        >
+          <BottomSheetProvider>
+            <I18nextProvider i18n={i18n}>
+              <MenuProvider>
+                <ErrorBoundary>
+                  <ProfileProvider>
+                    <View style={styles.container}>
+                      <SideBar />
+                      <View style={styles.mainContentWrapper}>
+                        <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0 }} />
+                        <Slot />
+                      </View>
+                      <RightBar />
                     </View>
-                    <RightBar />
-                  </View>
-                  <StatusBar style="auto" />
-                  <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
-                  {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
-                </ProfileProvider>
-              </ErrorBoundary>
-            </MenuProvider>
-          </I18nextProvider>
-        </BottomSheetProvider>
-      </SafeAreaProvider>
-    </OxyProvider>
+                    <StatusBar style="auto" />
+                    <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
+                    {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
+                  </ProfileProvider>
+                </ErrorBoundary>
+              </MenuProvider>
+            </I18nextProvider>
+          </BottomSheetProvider>
+        </OxyProvider>
+      </GestureHandlerRootView>
+    </SafeAreaProvider >
   );
 }

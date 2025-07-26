@@ -1,6 +1,7 @@
 import { colors } from '@/styles/colors';
 import React from 'react';
 import { StyleSheet, ViewStyle, TouchableOpacity, Text } from 'react-native';
+import { phuduFontWeights } from '@/styles/fonts';
 
 interface ButtonProps {
     onPress: () => void;
@@ -31,8 +32,7 @@ const styles = StyleSheet.create({
     buttonText: {
         color: colors.primaryLight,
         fontSize: 16,
-        fontWeight: '600',
-        fontFamily: 'Phudu',
+        fontFamily: phuduFontWeights.bold,
     },
 });
 

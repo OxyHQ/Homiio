@@ -6,6 +6,7 @@ import Avatar from './Avatar';
 import { useOxy } from '@oxyhq/services';
 import { SindiIcon } from '@/assets/icons';
 import { useHasRentalProperties } from '@/hooks/useLeaseQueries';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const BottomBar = () => {
     const router = useRouter();
@@ -13,6 +14,7 @@ export const BottomBar = () => {
     const pathname = usePathname();
     const { showBottomSheet, hideBottomSheet } = useOxy();
     const { hasRentalProperties, isLoading } = useHasRentalProperties();
+    const insets = useSafeAreaInsets();
 
     const handlePress = (route: '/' | '/properties' | '/saved' | '/sindi' | '/contracts' | '/profile') => {
         setActiveRoute(route);
@@ -22,7 +24,7 @@ export const BottomBar = () => {
     const styles = StyleSheet.create({
         bottomBar: {
             width: '100%',
-            height: 60,
+            height: 60 + insets.bottom,
             backgroundColor: '#ffffff',
             flexDirection: 'row',
             justifyContent: 'space-around',
@@ -30,11 +32,14 @@ export const BottomBar = () => {
             borderTopWidth: 1,
             borderTopColor: '#eeeeee',
             elevation: 8,
+            paddingBottom: insets.bottom,
             ...Platform.select({
                 web: {
                     position: 'sticky',
                     bottom: 0,
                     left: 0,
+                    height: 60,
+                    paddingBottom: 0,
                 },
             }),
         } as ViewStyle,

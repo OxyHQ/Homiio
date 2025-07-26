@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, RefreshControl, Text, TouchableOpacity, Platform, Animated, Dimensions } from 'react-native';
+import { View, StyleSheet, RefreshControl, Text, TouchableOpacity, Platform, Animated, Dimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
@@ -23,57 +24,33 @@ const IconComponent = Ionicons as any;
 export default function PropertiesScreen() {
     const { t } = useTranslation();
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const { oxyServices, activeSessionId } = useOxy();
-    const [refreshing, setRefreshing] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [filters, setFilters] = useState({ page: 1, limit: 20 });
     const [viewMode, setViewMode] = useState<'list' | 'grid'>(isMobile ? 'grid' : 'list');
-    const [showFilters, setShowFilters] = useState(false);
-    const fadeAnim = React.useRef(new Animated.Value(0)).current;
+    const [fadeAnim] = useState(new Animated.Value(1));
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [properties, setProperties] = useState<Property[]>([]);
+    const [total, setTotal] = useState(0);
+    const [refreshing, setRefreshing] = useState(false);
 
-    const { properties, loading: isLoading, error, loadProperties, pagination } = useProperties();
-    const total = pagination.total || 0;
-
-    const { savedProperties = [] } = useSavedProperties();
+    const { properties: allProperties, loading, loadProperties } = useProperties();
+    const { savedProperties } = useSavedProperties();
     const { isFavorite, toggleFavorite } = useFavorites();
 
-    // Refresh recently viewed list when screen loads
+    // Combine properties with favorite status
+    const propertiesWithFavorite = allProperties.map(property => ({
+        ...property,
+        isFavorite: isFavorite(property._id || property.id || ''),
+    }));
+
     useEffect(() => {
-        if (oxyServices && activeSessionId) {
-            // TODO: Refresh recently viewed with Zustand if needed
-        }
-    }, [oxyServices, activeSessionId]);
-
-    const getPropertyId = (property: Property) => property._id || property.id || '';
-    const isPropertySaved = (property: Property) => {
-        const id = getPropertyId(property);
-        if (!id) return false;
-        return savedProperties.some(p => getPropertyId(p) === id);
-    };
-
-    const handleFavoritePress = (property: Property) => {
-        if (!property.id) return;
-        toggleFavorite(property.id, property);
-    };
-
-    // Memoize properties with isFavorite injected
-    const propertiesWithFavorite = React.useMemo(() =>
-        properties.map((property) => ({
-            ...property,
-            isFavorite: isFavorite(property.id || ''),
-        })), [properties, isFavorite]);
-
-    React.useEffect(() => {
-        Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 400,
-            useNativeDriver: true,
-        }).start();
-    }, [properties]);
+        loadProperties();
+    }, []);
 
     const handleRefresh = async () => {
         setRefreshing(true);
-        await loadProperties({ ...filters, search: searchQuery || undefined });
+        await loadProperties();
         setRefreshing(false);
     };
 
@@ -81,78 +58,82 @@ export default function PropertiesScreen() {
         router.push(`/properties/${property._id || property.id}`);
     };
 
-    const handleSearch = (query: string) => {
-        setSearchQuery(query);
-        setFilters((prev) => ({ ...prev, page: 1 }));
+    const toggleViewMode = () => {
+        setViewMode(prev => prev === 'list' ? 'grid' : 'list');
+        Animated.sequence([
+            Animated.timing(fadeAnim, {
+                toValue: 0,
+                duration: 150,
+                useNativeDriver: true,
+            }),
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 150,
+                useNativeDriver: true,
+            }),
+        ]).start();
     };
 
-    const handleAddProperty = () => {
-        router.push('/properties/create');
-    };
+    const renderFilterButton = () => (
+        <TouchableOpacity
+            style={styles.filterButton}
+            onPress={() => router.push('/properties/filters')}
+        >
+            <IconComponent name="filter" size={20} color={colors.COLOR_BLACK} />
+        </TouchableOpacity>
+    );
 
-    const renderEmptyState = () => (
-        <View style={styles.emptyState}>
-            <IconComponent name="home-outline" size={64} color={colors.COLOR_BLACK_LIGHT_4} />
-            <Text style={styles.emptyTitle}>{t('No Properties Found')}</Text>
-            <Text style={styles.emptyDescription}>{t('Try adjusting your search criteria or filters.')}</Text>
-            <Button onPress={handleAddProperty} style={styles.createButton}>
-                {t('Create Property')}
-            </Button>
-        </View>
+    const renderRecentlyViewedButton = () => (
+        <TouchableOpacity
+            style={styles.recentlyViewedButton}
+            onPress={() => router.push('/properties/recently-viewed')}
+        >
+            <IconComponent name="time" size={20} color={colors.COLOR_BLACK} />
+        </TouchableOpacity>
+    );
+
+    const renderViewModeToggle = () => (
+        <TouchableOpacity
+            style={styles.viewModeToggle}
+            onPress={toggleViewMode}
+        >
+            <IconComponent
+                name={viewMode === 'grid' ? 'list' : 'grid'}
+                size={20}
+                color={colors.COLOR_BLACK}
+            />
+        </TouchableOpacity>
+    );
+
+    const renderFAB = () => (
+        <TouchableOpacity
+            style={styles.fab}
+            onPress={() => router.push('/properties/create')}
+        >
+            <IconComponent name="add" size={24} color="white" />
+        </TouchableOpacity>
     );
 
     const renderErrorState = () => (
         <View style={styles.errorState}>
-            <IconComponent name="alert-circle-outline" size={64} color="#ff4757" />
-            <Text style={styles.errorTitle}>{t('Error Loading Properties')}</Text>
-            <Text style={styles.errorDescription}>{error || t('Please try again.')}</Text>
-            <Button onPress={handleRefresh} style={styles.retryButton}>
-                {t('Retry')}
+            <IconComponent name="alert-circle" size={48} color={colors.COLOR_BLACK_LIGHT_4} />
+            <Text style={styles.errorTitle}>{error}</Text>
+            <Button onPress={() => loadProperties()}>
+                Try Again
             </Button>
         </View>
     );
 
-    // View mode toggle button
-    const renderViewModeToggle = () => (
-        <View style={styles.viewModeToggle}>
-            <TouchableOpacity
-                style={[styles.toggleButton, viewMode === 'grid' && styles.toggleButtonActive]}
-                onPress={() => setViewMode('grid')}
-            >
-                <IconComponent name="grid-outline" size={20} color={viewMode === 'grid' ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4} />
-            </TouchableOpacity>
-            <TouchableOpacity
-                style={[styles.toggleButton, viewMode === 'list' && styles.toggleButtonActive]}
-                onPress={() => setViewMode('list')}
-            >
-                <IconComponent name="list-outline" size={22} color={viewMode === 'list' ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4} />
-            </TouchableOpacity>
+    const renderEmptyState = () => (
+        <View style={styles.emptyState}>
+            <IconComponent name="home-outline" size={48} color={colors.COLOR_BLACK_LIGHT_4} />
+            <Text style={styles.emptyTitle}>No properties found</Text>
+            <Text style={styles.emptyDescription}>Try adjusting your search criteria</Text>
         </View>
     );
 
-    // Filter button
-    const renderFilterButton = () => (
-        <TouchableOpacity style={styles.filterButton} onPress={() => setShowFilters(!showFilters)}>
-            <IconComponent name="options-outline" size={22} color={colors.primaryColor} />
-        </TouchableOpacity>
-    );
-
-    // Recently viewed button
-    const renderRecentlyViewedButton = () => (
-        <TouchableOpacity style={styles.recentlyViewedButton} onPress={() => router.push('/properties/recently-viewed')}>
-            <IconComponent name="time-outline" size={22} color={colors.primaryColor} />
-        </TouchableOpacity>
-    );
-
-    // Floating action button
-    const renderFAB = () => (
-        <TouchableOpacity style={styles.fab} onPress={handleAddProperty}>
-            <IconComponent name="add" size={32} color={colors.primaryLight} />
-        </TouchableOpacity>
-    );
-
     return (
-        <SafeAreaView style={styles.container}>
+        <View style={styles.container}>
             <Header options={{ title: t('Properties'), titlePosition: 'left' }} />
             <View style={styles.topBar}>
                 <View style={styles.searchBarContainer}>
@@ -165,11 +146,11 @@ export default function PropertiesScreen() {
             <View style={styles.resultCountBar}>
                 <Text style={styles.resultCountText}>{t('Results')}: {total}</Text>
             </View>
-            {isLoading && !properties.length ? (
+            {loading && !allProperties.length ? (
                 <LoadingTopSpinner showLoading={true} />
             ) : error ? (
                 renderErrorState()
-            ) : properties.length === 0 ? (
+            ) : allProperties.length === 0 ? (
                 renderEmptyState()
             ) : (
                 <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
@@ -181,7 +162,7 @@ export default function PropertiesScreen() {
                 </Animated.View>
             )}
             {renderFAB()}
-        </SafeAreaView>
+        </View>
     );
 }
 

@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, RefreshControl, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, RefreshControl, FlatList, Platform } from 'react-native';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
+import { phuduFontWeights } from '@/styles/fonts';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSEO } from '@/hooks/useDocumentTitle';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -25,6 +26,7 @@ const IconComponent = Ionicons as any;
 export default function HomePage() {
   const { t } = useTranslation();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -278,9 +280,10 @@ export default function HomePage() {
   }, [loadProperties]);
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+    <View style={{ flex: 1 }}>
       <ScrollView
         style={styles.container}
+        contentContainerStyle={{ paddingTop: insets.top }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -848,7 +851,7 @@ export default function HomePage() {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -857,11 +860,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   heroSection: {
-    height: 300,
+    ...Platform.select({
+      web: { height: 300 },
+      default: {},
+    }),
     backgroundColor: colors.primaryColor,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
+    paddingVertical: Platform.select({
+      web: 0,
+      ios: 20,
+      android: 20,
+    }),
     borderRadius: 35,
     marginHorizontal: 16,
     marginBottom: 8,
@@ -878,8 +889,7 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
-    fontFamily: 'Phudu',
+    fontFamily: phuduFontWeights.bold,
     color: 'white',
     textAlign: 'center',
     marginBottom: 10,
@@ -889,7 +899,11 @@ const styles = StyleSheet.create({
     color: 'white',
     opacity: 0.9,
     textAlign: 'center',
-    marginBottom: 30,
+    marginBottom: Platform.select({
+      web: 30,
+      ios: 8,
+      android: 8,
+    }),
     maxWidth: 400,
   },
   searchContainer: {
@@ -934,9 +948,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 24,
-    fontWeight: '600',
     color: colors.COLOR_BLACK,
-    fontFamily: 'Phudu',
+    fontFamily: phuduFontWeights.semiBold,
     letterSpacing: -0.3,
   },
   viewAllText: {
@@ -1097,10 +1110,9 @@ const styles = StyleSheet.create({
   },
   propertyCountText: {
     fontSize: 11,
-    fontWeight: 'bold',
     color: colors.COLOR_BLACK,
     marginLeft: 4,
-    fontFamily: 'Phudu',
+    fontFamily: phuduFontWeights.medium,
   },
   cityIconContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.25)',
@@ -1117,8 +1129,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cityName: {
-    fontFamily: 'Phudu',
-    fontWeight: '600',
+    fontFamily: phuduFontWeights.semiBold,
     fontSize: 22,
     color: 'white',
     textAlign: 'left',
@@ -1129,7 +1140,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   cityLocation: {
-    fontFamily: 'Phudu',
+    fontFamily: phuduFontWeights.regular,
     fontSize: 14,
     color: 'white',
     textAlign: 'left',
@@ -1148,8 +1159,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   propertyChip: {
-    flex: 1,
-    minWidth: '45%',
+    width: Platform.select({
+      web: '31%', // 3 columns on web/larger screens
+      default: '48%', // 2 columns on mobile
+    }),
     borderRadius: 25,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -1166,8 +1179,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   propertyChipName: {
-    fontFamily: 'Phudu',
-    fontWeight: 'bold',
+    fontFamily: phuduFontWeights.medium,
     fontSize: 14,
     color: 'white',
     flex: 1,
@@ -1218,9 +1230,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   statChipNumber: {
-    fontFamily: 'Phudu',
+    fontFamily: phuduFontWeights.bold,
     fontSize: 20,
-    fontWeight: 'bold',
     color: 'white',
     marginBottom: 2,
   },
@@ -1423,10 +1434,9 @@ const styles = StyleSheet.create({
   },
   tipCardTitle: {
     fontSize: 16,
-    fontWeight: '600',
     color: colors.COLOR_BLACK,
     marginBottom: 6,
-    fontFamily: 'Phudu',
+    fontFamily: phuduFontWeights.medium,
     lineHeight: 20,
   },
   tipCardDescription: {
@@ -1477,11 +1487,10 @@ const styles = StyleSheet.create({
   },
   faqQuestionText: {
     fontSize: 16,
-    fontWeight: '500',
     color: colors.COLOR_BLACK,
     flex: 1,
     marginRight: 12,
-    fontFamily: 'Phudu',
+    fontFamily: phuduFontWeights.medium,
   },
   faqAnswer: {
     paddingHorizontal: 16,

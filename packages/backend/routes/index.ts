@@ -4,17 +4,17 @@
  */
 
 import express from 'express';
-const properties = require('./properties');
+const properties = require('./properties').default;
 const rooms = require('./rooms');
-const devices = require('./devices');
+const devices = require('./devices').default;
 const leases = require('./leases');
 const notifications = require('./notifications');
 const analytics = require('./analytics');
-const profiles = require('./profiles');
-const ai = require('./ai');
-const roommates = require('./roommates');
+const profiles = require('./profiles').default;
+const ai = require('./ai').default;
+const roommates = require('./roommates').default;
 const telegram = require('./telegram');
-const tips = require('./tips');
+const tips = require('./tips').default;
 const { asyncHandler } = require('../middlewares');
 
 export default function() {

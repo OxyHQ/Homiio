@@ -6,8 +6,9 @@
     "start": "expo start --reset-cache --tunnel --clear",
     "dev": "expo start --reset-cache --tunnel --clear",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo run:android",
-    "ios": "expo run:ios",
+    "clear-cache": "node ./scripts/clear-cache.js",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
     "web": "expo start --web",
     "build": "expo export --platform web --output-dir dist",
     "build-web": "expo export --platform web --output-dir dist",
@@ -62,7 +63,7 @@
     "react-native-gesture-handler": "~2.24.0",
     "react-native-popup-menu": "^0.18.0",
     "react-native-screens": "~4.11.1",
-    "react-native-svg": "^15.11.2",
+    "react-native-svg": "15.11.2",
     "react-native-web": "~0.20.0",
     "react-native-web-hover": "^0.2.9",
     "react-native-webview": "13.13.5",
@@ -71,7 +72,8 @@
     "react-responsive": "^10.0.1",
     "sonner": "^2.0.6",
     "sonner-native": "^0.21.0",
-    "zustand": "^5.0.6"
+    "zustand": "^5.0.6",
+    "react-native-safe-area-context": "5.4.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
@@ -86,10 +88,16 @@
     "postcss-import": "^16.1.1",
     "react-native-dotenv": "^3.4.11",
     "react-native-reanimated": "~3.17.4",
-    "react-native-safe-area-context": "^5.4.0",
     "react-native-svg-transformer": "^1.5.1",
     "tailwindcss": "^3.4.17",
     "typescript": "~5.8.3"
+  },
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "listUnknownPackages": false
+      }
+    }
   },
   "private": true
 }

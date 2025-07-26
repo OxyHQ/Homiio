@@ -42,8 +42,8 @@ export function AddressDisplay({
 }: AddressDisplayProps) {
     const { t } = useTranslation();
 
-    const formattedAddress = `${address.street}, ${address.city}, ${address.state} ${address.zipCode}`;
-    const shortAddress = `${address.city}, ${address.state}`;
+    const formattedAddress = `${address.street || ''}, ${address.city || ''}, ${address.state || ''} ${address.zipCode || ''}`;
+    const shortAddress = `${address.city || ''}, ${address.state || ''}`;
 
     const handleCopyAddress = async () => {
         try {

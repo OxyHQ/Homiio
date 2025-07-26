@@ -29,6 +29,7 @@ return {
         scheme: "homiio",
         userInterfaceStyle: "automatic",
         newArchEnabled: true,
+        jsEngine: "jsc",
         ios: {
             supportsTablet: true,
             bundleIdentifier: "earth.mention.android"
@@ -68,7 +69,7 @@ return {
                         ],
                         category: ['BROWSABLE', 'DEFAULT'],
                     },
-                ],
+            ],
         },
         web: {
             bundler: "metro",
@@ -92,6 +93,7 @@ return {
             }
         },
         plugins: [
+            "expo-router",
             [
                 "expo-splash-screen",
                 {
@@ -160,7 +162,6 @@ return {
                   },
                 },
             ],
-            "expo-router",
     "expo-web-browser",
         ],
         extra: {

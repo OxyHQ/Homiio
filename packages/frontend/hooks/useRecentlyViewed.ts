@@ -1,11 +1,10 @@
 import { useRecentlyViewedStore } from '@/store/recentlyViewedStore';
-import { useEffect } from 'react';
 import { useOxy } from '@oxyhq/services';
 import type { Property } from '@homiio/shared-types';
+import { RecentlyViewedType } from '@homiio/shared-types';
 
 export function useRecentlyViewed() {
     const { 
-        items,
         addItem,
         removeItem,
         clearAll,
@@ -36,7 +35,7 @@ export function useRecentlyViewed() {
         const propertyId = property._id || property.id;
         console.log('useRecentlyViewed: Adding property to recently viewed:', propertyId);
         if (propertyId) {
-            addItem(propertyId, 'property', property);
+            addItem(propertyId, RecentlyViewedType.PROPERTY, property);
         }
     };
 

@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { OxySignInButton, useOxy } from '@oxyhq/services';
 import { SindiIcon } from '@/assets/icons';
 import { webAlert } from '@/utils/api';
+import { phuduFontWeights } from '@/styles/fonts';
 
 const IconComponent = Ionicons as any;
 
@@ -309,5 +310,23 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: colors.COLOR_BLACK,
         fontWeight: '500',
+    },
+    title: {
+        fontSize: 24,
+        fontFamily: phuduFontWeights.bold,
+        color: colors.primaryDark,
+        marginBottom: 16,
+    },
+    menuItemText: {
+        fontSize: 16,
+        fontFamily: phuduFontWeights.medium,
+        color: colors.primaryDark,
+        marginLeft: 12,
+    },
+    footerText: {
+        fontSize: 14,
+        fontFamily: phuduFontWeights.regular,
+        color: colors.primaryDark_2,
+        textAlign: 'center',
     },
 });

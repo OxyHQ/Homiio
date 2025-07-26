@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { View, FlatList, StyleSheet, Dimensions, Alert, TouchableOpacity, TextInput, ScrollView, Text, Modal } from 'react-native';
+import { View, FlatList, StyleSheet, Dimensions, Alert, TouchableOpacity, TextInput, ScrollView, Text, Modal, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { ThemedView } from '@/components/ThemedView';
@@ -120,7 +120,7 @@ export default function SavedPropertiesScreen() {
         if (debouncedSearchQuery.trim()) {
             const query = debouncedSearchQuery.toLowerCase().trim();
             filtered = filtered.filter(property => {
-                const title = getPropertyTitle(property).toLowerCase() || '';
+                const title = (getPropertyTitle(property) || '').toLowerCase();
                 const city = property.address?.city?.toLowerCase() || '';
                 const street = property.address?.street?.toLowerCase() || '';
                 const notes = property.notes?.toLowerCase() || '';
@@ -623,32 +623,47 @@ export default function SavedPropertiesScreen() {
     // Auth check
     if (!oxyServices || !activeSessionId) {
         return (
-            <SafeAreaView style={styles.container} edges={['top']}>
+            <View style={styles.container}>
                 <Header options={{ title: 'Saved Properties', showBackButton: true }} />
                 <EmptyState
                     icon="lock-closed"
                     title="Sign In Required"
                     description="Please sign in to view and manage your saved properties"
                 />
-            </SafeAreaView>
+            </View>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.container}>
             <Header
                 options={{
-                    title: 'Saved Properties',
-                    showBackButton: true,
+                    title: t('saved.title'),
+                    titlePosition: 'left',
                     rightComponents: [
                         <TouchableOpacity
-                            key="refresh"
+                            key="viewMode"
                             style={styles.headerButton}
-                            onPress={handleRefresh}
+                            onPress={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
                         >
-                            <IconComponent name="refresh" size={22} color={colors.primaryColor} />
-                        </TouchableOpacity>
-                    ]
+                            <IconComponent
+                                name={viewMode === 'grid' ? 'list' : 'grid'}
+                                size={24}
+                                color={colors.COLOR_BLACK}
+                            />
+                        </TouchableOpacity>,
+                        <TouchableOpacity
+                            key="search"
+                            style={styles.headerButton}
+                            onPress={() => setSearchQuery('')}
+                        >
+                            <IconComponent
+                                name="search"
+                                size={24}
+                                color={colors.COLOR_BLACK}
+                            />
+                        </TouchableOpacity>,
+                    ],
                 }}
             />
 
@@ -681,12 +696,14 @@ export default function SavedPropertiesScreen() {
                     columnWrapperStyle={viewMode === 'grid' ? styles.gridRow : undefined}
                     ListHeaderComponent={renderHeader}
                     ListEmptyComponent={renderEmptyState}
-                    refreshing={isLoading && savedProperties.length > 0}
-                    onRefresh={handleRefresh}
-                    maxToRenderPerBatch={viewMode === 'grid' ? 6 : 4}
-                    windowSize={8}
-                    initialNumToRender={viewMode === 'grid' ? 6 : 4}
-                    removeClippedSubviews={true}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={isLoading}
+                            onRefresh={handleRefresh}
+                            colors={[colors.primaryColor]}
+                            tintColor={colors.primaryColor}
+                        />
+                    }
                 />
             )}
 
@@ -740,7 +757,7 @@ export default function SavedPropertiesScreen() {
                     </View>
                 </View>
             </Modal>
-        </SafeAreaView>
+        </View>
     );
 }
 

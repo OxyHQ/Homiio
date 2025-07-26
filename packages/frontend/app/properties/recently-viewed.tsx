@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, RefreshControl, Text, TouchableOpacity, Platform, Animated, Dimensions } from 'react-native';
+import { View, StyleSheet, RefreshControl, Text, TouchableOpacity, Platform, Animated, Dimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
@@ -36,8 +37,8 @@ export default function RecentlyViewedScreen() {
 
         const query = searchQuery.toLowerCase();
         return recentProperties.filter(property => {
-            const title = getPropertyTitle(property).toLowerCase();
-            const location = `${property.address.city}, ${property.address.state}`.toLowerCase();
+            const title = (getPropertyTitle(property) || '').toLowerCase();
+            const location = `${property.address?.city || ''}, ${property.address?.state || ''}`.toLowerCase();
             const description = property.description?.toLowerCase() || '';
 
             return title.includes(query) || location.includes(query) || description.includes(query);

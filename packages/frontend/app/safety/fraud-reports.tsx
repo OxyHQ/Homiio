@@ -124,8 +124,8 @@ export default function FraudReportsScreen() {
             return (
                 report.title.toLowerCase().includes(query) ||
                 report.description.toLowerCase().includes(query) ||
-                report.propertyInfo?.name.toLowerCase().includes(query) ||
-                report.propertyInfo?.address.toLowerCase().includes(query)
+                (report.propertyInfo?.name?.toLowerCase() || '').includes(query) ||
+                (report.propertyInfo?.address?.toLowerCase() || '').includes(query)
             );
         });
 

@@ -11,6 +11,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors } from '@/styles/colors'
 import { useRouter } from 'expo-router'
 import { ReactNode } from 'react'
+import { phuduFontWeights } from '@/styles/fonts';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const IconComponent = Ionicons as any;
 
@@ -30,6 +32,7 @@ export const Header: React.FC<Props> = ({ options }) => {
     const router = useRouter();
     const [isSticky, setIsSticky] = useState(false);
     const [canGoBack, setCanGoBack] = useState(false);
+    const insets = useSafeAreaInsets();
 
     const titlePosition = options?.titlePosition || 'left';
 
@@ -56,20 +59,36 @@ export const Header: React.FC<Props> = ({ options }) => {
     }, []);
 
     return (
-        <View style={[styles.topRow, isSticky && styles.stickyHeader]}>
-            <View style={styles.leftContainer}>
-                {options?.showBackButton && canGoBack && (
-                    <Pressable onPress={() => router.back()} style={styles.backButton}>
-                        <IconComponent name="arrow-back" size={24} color={colors.COLOR_BLACK} />
-                    </Pressable>
-                )}
-                {options?.leftComponents?.map((component, index) => (
-                    <React.Fragment key={index}>{component}</React.Fragment>
-                ))}
-                {titlePosition === 'left' && (
-                    <View>
+        <View style={[styles.topRow, isSticky && styles.stickyHeader, {
+            minHeight: 60 + insets.top
+        }]}>
+            <View style={[styles.contentContainer, { paddingTop: insets.top }]}>
+                <View style={styles.leftContainer}>
+                    {options?.showBackButton && canGoBack && (
+                        <Pressable onPress={() => router.back()} style={styles.backButton}>
+                            <IconComponent name="arrow-back" size={24} color={colors.COLOR_BLACK} />
+                        </Pressable>
+                    )}
+                    {options?.leftComponents?.map((component, index) => (
+                        <React.Fragment key={index}>{component}</React.Fragment>
+                    ))}
+                    {titlePosition === 'left' && (
+                        <View>
+                            {options?.title && (
+                                <Text style={[styles.topRowText, { fontFamily: phuduFontWeights.bold }, options?.subtitle && { fontSize: 14 }]}>
+                                    {options.title}
+                                </Text>
+                            )}
+                            {options?.subtitle && (
+                                <Text style={styles.subtitleText}>{options.subtitle}</Text>
+                            )}
+                        </View>
+                    )}
+                </View>
+                {titlePosition === 'center' && (
+                    <View style={styles.centerContainer}>
                         {options?.title && (
-                            <Text style={[styles.topRowText, { fontFamily: 'Phudu' }, options?.subtitle && { fontSize: 14 }]}>
+                            <Text style={[styles.topRowText, { fontFamily: phuduFontWeights.bold }, options?.subtitle && { fontSize: 14 }]}>
                                 {options.title}
                             </Text>
                         )}
@@ -78,24 +97,11 @@ export const Header: React.FC<Props> = ({ options }) => {
                         )}
                     </View>
                 )}
-
-            </View>
-            {titlePosition === 'center' && (
-                <View style={styles.centerContainer}>
-                    {options?.title && (
-                        <Text style={[styles.topRowText, { fontFamily: 'Phudu' }, options?.subtitle && { fontSize: 14 }]}>
-                            {options.title}
-                        </Text>
-                    )}
-                    {options?.subtitle && (
-                        <Text style={styles.subtitleText}>{options.subtitle}</Text>
-                    )}
+                <View style={styles.rightContainer}>
+                    {options?.rightComponents?.map((component, index) => (
+                        <React.Fragment key={index}>{component}</React.Fragment>
+                    ))}
                 </View>
-            )}
-            <View style={styles.rightContainer}>
-                {options?.rightComponents?.map((component, index) => (
-                    <React.Fragment key={index}>{component}</React.Fragment>
-                ))}
             </View>
         </View>
     )
@@ -107,26 +113,43 @@ const styles = StyleSheet.create({
         paddingBottom: 10,
     },
     topRow: {
-        minHeight: 60,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
         borderBottomWidth: 0.01,
-        paddingHorizontal: 15,
         borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
-        paddingVertical: 5,
         position: 'relative',
         ...Platform.select({
             web: {
                 position: 'sticky',
             },
+            default: {
+                shadowColor: colors.COLOR_BLACK,
+                shadowOffset: {
+                    width: 0,
+                    height: 2,
+                },
+                shadowOpacity: 0.1,
+                shadowRadius: 3,
+                elevation: 3,
+            },
         }),
         top: 0,
         backgroundColor: colors.primaryLight,
         zIndex: 100,
-        borderTopLeftRadius: 35,
-        borderTopRightRadius: 35,
     } as ViewStyle,
+    contentContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 15,
+        paddingTop: Platform.select({
+            web: 5,
+            default: 12,
+        }),
+        paddingBottom: Platform.select({
+            web: 5,
+            default: 4,
+        }),
+    },
     topRowText: {
         fontSize: 20,
         color: colors.COLOR_BLACK,

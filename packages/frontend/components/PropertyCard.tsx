@@ -155,11 +155,11 @@ export function PropertyCard({
     const propertyData = property ? {
         id: property._id || property.id,
         title: getPropertyTitle(property),
-        location: `${property.address.city}, ${property.address.state}`,
+        location: `${property.address?.city || ''}, ${property.address?.state || ''}`,
         price: property.rent.amount,
         currency: property.rent.currency,
         type: property.type === 'room' ? 'apartment' : property.type === 'studio' ? 'apartment' : property.type === 'house' ? 'house' : 'apartment' as PropertyType,
-        imageSource: getPropertyImageSource(property.images),
+        imageSource: getPropertyImageSource(property),
         bedrooms: property.bedrooms || 0,
         bathrooms: property.bathrooms || 0,
         size: property.squareFootage || 0,
@@ -222,7 +222,9 @@ export function PropertyCard({
                 ...propertyData,
                 type: (propertyData.type === 'eco' ? 'apartment' :
                     propertyData.type === 'coliving' ? 'coliving' :
-                        propertyData.type === 'house' ? 'house' : 'apartment') as any
+                        propertyData.type === 'house' ? 'house' : 'apartment') as any,
+                // Remove the location string since Property interface expects GeoJSONPoint
+                location: undefined
             };
             toggleFavorite(propertyData.id || '', propertyForToggle);
         }

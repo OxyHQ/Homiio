@@ -354,7 +354,7 @@ ${propertyUrl}`;
 
     if (isLoading) {
         return (
-            <SafeAreaView style={styles.safeArea} edges={['top']}>
+            <View style={styles.safeArea}>
                 <Header
                     options={{
                         showBackButton: true,
@@ -362,17 +362,19 @@ ${propertyUrl}`;
                         titlePosition: 'center',
                     }}
                 />
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={colors.primaryColor} />
-                    <Text style={styles.loadingText}>{t("Loading property details...")}</Text>
-                </View>
-            </SafeAreaView>
+                <SafeAreaView style={styles.contentArea} edges={['top']}>
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color={colors.primaryColor} />
+                        <Text style={styles.loadingText}>{t("Loading property details...")}</Text>
+                    </View>
+                </SafeAreaView>
+            </View>
         );
     }
 
     if (error || !property) {
         return (
-            <SafeAreaView style={styles.safeArea} edges={['top']}>
+            <View style={styles.safeArea}>
                 <Header
                     options={{
                         showBackButton: true,
@@ -380,23 +382,25 @@ ${propertyUrl}`;
                         titlePosition: 'center',
                     }}
                 />
-                <View style={styles.errorContainer}>
-                    <Text style={styles.errorText}>{t("Property not found")}</Text>
-                    <Button
-                        onPress={() => router.back()}
-                        style={styles.goBackButton}
-                    >
-                        {t("Go Back")}
-                    </Button>
-                </View>
-            </SafeAreaView>
+                <SafeAreaView style={styles.contentArea} edges={['top']}>
+                    <View style={styles.errorContainer}>
+                        <Text style={styles.errorText}>{t("Property not found")}</Text>
+                        <Button
+                            onPress={() => router.back()}
+                            style={styles.goBackButton}
+                        >
+                            {t("Go Back")}
+                        </Button>
+                    </View>
+                </SafeAreaView>
+            </View>
         );
     }
 
     const isPropertyFavorite = isFavorite(property.id);
 
     return (
-        <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <View style={styles.safeArea}>
             <Header
                 options={{
                     showBackButton: true,
@@ -419,295 +423,300 @@ ${propertyUrl}`;
                 }}
             />
 
-            {/* Enhanced Header Section */}
-            <View style={styles.enhancedHeader}>
-                <Text style={styles.headerTitle} numberOfLines={2}>{property.title}</Text>
-                <View style={styles.headerLocation}>
-                    <Text style={styles.headerLocationText}>{property.location}</Text>
-                </View>
-                <View style={styles.headerStats}>
-                    <View style={styles.headerStat}>
-                        <Text style={styles.headerStatText}>{property.bedrooms} {t("Bed")}</Text>
+            <SafeAreaView style={styles.contentArea} edges={['top']}>
+                {/* Enhanced Header Section */}
+                <View style={styles.enhancedHeader}>
+                    <Text style={styles.headerTitle} numberOfLines={2}>{property.title}</Text>
+                    <View style={styles.headerLocation}>
+                        <Text style={styles.headerLocationText}>{property.location}</Text>
                     </View>
-                    <View style={styles.headerStat}>
-                        <Text style={styles.headerStatText}>{property.bathrooms} {t("Bath")}</Text>
-                    </View>
-                    <View style={styles.headerStat}>
-                        <Text style={styles.headerStatText}>{property.size}m²</Text>
-                    </View>
-                </View>
-            </View>
-
-            <ScrollView style={styles.container}>
-                {/* Property Images Grid */}
-                <View style={styles.imageGridContainer}>
-                    <View style={styles.imageGrid}>
-                        {/* Left Column */}
-                        <View style={styles.mainImageContainer}>
-                            <Image
-                                source={getPropertyImageSource(property.images)}
-                                style={styles.mainImage}
-                                resizeMode="cover"
-                            />
+                    <View style={styles.headerStats}>
+                        <View style={styles.headerStat}>
+                            <Text style={styles.headerStatText}>{property.bedrooms} {t("Bed")}</Text>
                         </View>
+                        <View style={styles.headerStat}>
+                            <Text style={styles.headerStatText}>{property.bathrooms} {t("Bath")}</Text>
+                        </View>
+                        <View style={styles.headerStat}>
+                            <Text style={styles.headerStatText}>{property.size}m²</Text>
+                        </View>
+                    </View>
+                </View>
 
-                        {/* Right Column */}
-                        <View style={styles.rightColumn}>
-                            <View style={styles.sideImageContainer}>
+                <ScrollView style={styles.container}>
+                    {/* Property Images Grid */}
+                    <View style={styles.imageGridContainer}>
+                        <View style={styles.imageGrid}>
+                            {/* Left Column */}
+                            <View style={styles.mainImageContainer}>
                                 <Image
-                                    source={getPropertyImageSource(property.images.length > 1 ? property.images.slice(1) : property.images)}
-                                    style={styles.sideImage}
+                                    source={getPropertyImageSource(property.images)}
+                                    style={styles.mainImage}
                                     resizeMode="cover"
                                 />
                             </View>
-                            <View style={styles.mapPreviewContainer}>
-                                <PropertyMap
-                                    latitude={apiProperty?.address?.coordinates?.lat || 40.7128}
-                                    longitude={apiProperty?.address?.coordinates?.lng || -74.0060}
-                                    address={property.location}
-                                    height={96}
-                                    interactive={false}
-                                />
-                                <View style={styles.mapOverlay}>
-                                    <Text style={styles.mapOverlayText}>Location</Text>
-                                </View>
-                            </View>
-                        </View>
-                    </View>
-                </View>
 
-                {/* Basic Info */}
-                <View style={styles.infoContainer}>
-                    <View style={styles.priceContainer}>
-                        <Text style={styles.priceLabel}>
-                            {property.priceUnit === 'day' ? t("Daily Rent") :
-                                property.priceUnit === 'night' ? t("Nightly Rent") :
-                                    property.priceUnit === 'week' ? t("Weekly Rent") :
-                                        property.priceUnit === 'month' ? t("Monthly Rent") :
-                                            property.priceUnit === 'year' ? t("Yearly Rent") :
-                                                t("Rent")}
-                        </Text>
-                        <CurrencyFormatter
-                            amount={parseFloat(property.price) || 0}
-                            originalCurrency={apiProperty?.rent?.currency || 'USD'}
-                            showConversion={true}
-                        />
-                    </View>
-
-                    {/* Eco Rating */}
-                    {property.isEcoCertified && (
-                        <>
-                            <View style={styles.ecoRatingContainer}>
-                                <View style={styles.ratingHeader}>
-                                    <Text style={styles.ratingTitle}>{t("Energy Efficiency")}</Text>
+                            {/* Right Column */}
+                            <View style={styles.rightColumn}>
+                                <View style={styles.sideImageContainer}>
+                                    <Image
+                                        source={getPropertyImageSource(property.images.length > 1 ? property.images.slice(1) : property.images)}
+                                        style={styles.sideImage}
+                                        resizeMode="cover"
+                                    />
                                 </View>
-                                <View style={styles.energyRatingContainer}>
-                                    <View style={[styles.energyRatingBadge, { backgroundColor: '#2e7d32' }]}>
-                                        <Text style={styles.energyRatingText}>{property.energyRating}</Text>
+                                <View style={styles.mapPreviewContainer}>
+                                    <PropertyMap
+                                        latitude={apiProperty?.address?.coordinates?.lat || 40.7128}
+                                        longitude={apiProperty?.address?.coordinates?.lng || -74.0060}
+                                        address={property.location}
+                                        height={96}
+                                        interactive={false}
+                                    />
+                                    <View style={styles.mapOverlay}>
+                                        <Text style={styles.mapOverlayText}>Location</Text>
                                     </View>
-                                    <Text style={styles.energyRatingDesc}>
-                                        {t("This property meets high standards for energy efficiency")}
-                                    </Text>
                                 </View>
                             </View>
-                        </>
-                    )}
-
-                    {/* Description */}
-                    {property.description && property.description.trim() !== '' && (
-                        <>
-                            <View style={styles.descriptionContainer}>
-                                <Text style={styles.sectionTitle}>{t("About this property")}</Text>
-                                <View style={styles.descriptionCard}>
-                                    <Text style={styles.descriptionText}>{property.description}</Text>
-                                </View>
-                            </View>
-                        </>
-                    )}
-
-                    {/* Availability */}
-                    <View style={styles.availabilityContainer}>
-                        <View style={styles.availabilityItem}>
-                            <Text style={styles.availabilityLabel}>{t("Available From")}</Text>
-                            <Text style={styles.availabilityValue}>{new Date(property.availableFrom).toLocaleDateString()}</Text>
-                        </View>
-                        <View style={styles.availabilityItem}>
-                            <Text style={styles.availabilityLabel}>{t("Minimum Stay")}</Text>
-                            <Text style={styles.availabilityValue}>{property.minStay}</Text>
                         </View>
                     </View>
 
-                    {/* Amenities */}
-                    <Text style={styles.sectionTitle}>{t("What's Included")}</Text>
-
-                    <AmenitiesDisplay amenities={property.amenities} title="" />
-
-                    {/* Map - Only show if location coordinates are available */}
-                    {apiProperty?.address?.coordinates?.lat && apiProperty?.address?.coordinates?.lng && (
-                        <>
-                            <Text style={styles.sectionTitle}>{t("Location")}</Text>
-                            <PropertyMap
-                                latitude={apiProperty.address.coordinates.lat}
-                                longitude={apiProperty.address.coordinates.lng}
-                                address={property.location}
-                                height={200}
-                                interactive={false}
+                    {/* Basic Info */}
+                    <View style={styles.infoContainer}>
+                        <View style={styles.priceContainer}>
+                            <Text style={styles.priceLabel}>
+                                {property.priceUnit === 'day' ? t("Daily Rent") :
+                                    property.priceUnit === 'night' ? t("Nightly Rent") :
+                                        property.priceUnit === 'week' ? t("Weekly Rent") :
+                                            property.priceUnit === 'month' ? t("Monthly Rent") :
+                                                property.priceUnit === 'year' ? t("Yearly Rent") :
+                                                    t("Rent")}
+                            </Text>
+                            <CurrencyFormatter
+                                amount={parseFloat(property.price) || 0}
+                                originalCurrency={apiProperty?.rent?.currency || 'USD'}
+                                showConversion={true}
                             />
-                        </>
-                    )}
+                        </View>
 
-                    {/* Landlord Info / Government Housing Authority */}
-                    <Text style={styles.sectionTitle}>
-                        {apiProperty?.housingType === 'public' ? t("Housing Authority") : t("Landlord")}
-                    </Text>
-                    <View style={styles.landlordCard}>
-                        {apiProperty?.housingType === 'public' ? (
+                        {/* Eco Rating */}
+                        {property.isEcoCertified && (
                             <>
-                                <View style={styles.landlordHeader}>
-                                    <View style={[styles.landlordAvatar, styles.governmentAvatar]}>
-                                        <IconComponent name="library" size={28} color="white" />
+                                <View style={styles.ecoRatingContainer}>
+                                    <View style={styles.ratingHeader}>
+                                        <Text style={styles.ratingTitle}>{t("Energy Efficiency")}</Text>
                                     </View>
-                                    <View style={styles.landlordInfo}>
-                                        <View style={styles.landlordNameRow}>
-                                            <Text style={styles.landlordName}>
-                                                {apiProperty?.address?.state ? `${apiProperty.address.state} Housing Authority` : 'Public Housing Authority'}
-                                            </Text>
-                                            <View style={[styles.verifiedBadge, styles.governmentBadge]}>
-                                                <Text style={styles.verifiedText}>GOV</Text>
-                                            </View>
+                                    <View style={styles.energyRatingContainer}>
+                                        <View style={[styles.energyRatingBadge, { backgroundColor: '#2e7d32' }]}>
+                                            <Text style={styles.energyRatingText}>{property.energyRating}</Text>
                                         </View>
-                                        <Text style={styles.landlordRating}>
-                                            Government-managed affordable housing
+                                        <Text style={styles.energyRatingDesc}>
+                                            {t("This property meets high standards for energy efficiency")}
                                         </Text>
                                     </View>
                                 </View>
-                                <View style={styles.landlordActions}>
+                            </>
+                        )}
+
+                        {/* Description */}
+                        {property.description && property.description.trim() !== '' && (
+                            <>
+                                <View style={styles.descriptionContainer}>
+                                    <Text style={styles.sectionTitle}>{t("About this property")}</Text>
+                                    <View style={styles.descriptionCard}>
+                                        <Text style={styles.descriptionText}>{property.description}</Text>
+                                    </View>
+                                </View>
+                            </>
+                        )}
+
+                        {/* Availability */}
+                        <View style={styles.availabilityContainer}>
+                            <View style={styles.availabilityItem}>
+                                <Text style={styles.availabilityLabel}>{t("Available From")}</Text>
+                                <Text style={styles.availabilityValue}>{new Date(property.availableFrom).toLocaleDateString()}</Text>
+                            </View>
+                            <View style={styles.availabilityItem}>
+                                <Text style={styles.availabilityLabel}>{t("Minimum Stay")}</Text>
+                                <Text style={styles.availabilityValue}>{property.minStay}</Text>
+                            </View>
+                        </View>
+
+                        {/* Amenities */}
+                        <Text style={styles.sectionTitle}>{t("What's Included")}</Text>
+
+                        <AmenitiesDisplay amenities={property.amenities} title="" />
+
+                        {/* Map - Only show if location coordinates are available */}
+                        {apiProperty?.address?.coordinates?.lat && apiProperty?.address?.coordinates?.lng && (
+                            <>
+                                <Text style={styles.sectionTitle}>{t("Location")}</Text>
+                                <PropertyMap
+                                    latitude={apiProperty.address.coordinates.lat}
+                                    longitude={apiProperty.address.coordinates.lng}
+                                    address={property.location}
+                                    height={200}
+                                    interactive={false}
+                                />
+                            </>
+                        )}
+
+                        {/* Landlord Info / Government Housing Authority */}
+                        <Text style={styles.sectionTitle}>
+                            {apiProperty?.housingType === 'public' ? t("Housing Authority") : t("Landlord")}
+                        </Text>
+                        <View style={styles.landlordCard}>
+                            {apiProperty?.housingType === 'public' ? (
+                                <>
+                                    <View style={styles.landlordHeader}>
+                                        <View style={[styles.landlordAvatar, styles.governmentAvatar]}>
+                                            <IconComponent name="library" size={28} color="white" />
+                                        </View>
+                                        <View style={styles.landlordInfo}>
+                                            <View style={styles.landlordNameRow}>
+                                                <Text style={styles.landlordName}>
+                                                    {apiProperty?.address?.state ? `${apiProperty.address.state} Housing Authority` : 'Public Housing Authority'}
+                                                </Text>
+                                                <View style={[styles.verifiedBadge, styles.governmentBadge]}>
+                                                    <Text style={styles.verifiedText}>GOV</Text>
+                                                </View>
+                                            </View>
+                                            <Text style={styles.landlordRating}>
+                                                Government-managed affordable housing
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    <View style={styles.landlordActions}>
+                                        <ActionButton
+                                            icon="globe"
+                                            text={t("Apply on State Website")}
+                                            onPress={handlePublicHousingApply}
+                                            variant="primary"
+                                            size="medium"
+                                            style={{ flex: 1 }}
+                                        />
+                                    </View>
+                                </>
+                            ) : (
+                                <>
+                                    <View style={styles.landlordHeader}>
+                                        <View style={styles.landlordAvatar}>
+                                            <Text style={styles.landlordInitial}>
+                                                {getLandlordDisplayName(landlordProfile)}
+                                            </Text>
+                                        </View>
+                                        <View style={styles.landlordInfo}>
+                                            <View style={styles.landlordNameRow}>
+                                                <Text style={styles.landlordName}>
+                                                    {getLandlordDisplayName(landlordProfile)}
+                                                </Text>
+                                                {landlordProfile?.isActive && (
+                                                    <View style={styles.verifiedBadge}>
+                                                        <Text style={styles.verifiedText}>✓</Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                            <Text style={styles.landlordRating}>
+                                                {getLandlordTrustScore(landlordProfile)}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    <View style={styles.landlordActions}>
+                                        <ActionButton
+                                            icon="chatbubble-outline"
+                                            text={t("Message")}
+                                            onPress={handleContact}
+                                            variant="primary"
+                                            size="medium"
+                                            disabled={!landlordProfile}
+                                            style={{ flex: 1, marginRight: 8 }}
+                                        />
+                                        <ActionButton
+                                            icon="call-outline"
+                                            text={t("Call")}
+                                            onPress={handleContact}
+                                            variant="secondary"
+                                            size="medium"
+                                            disabled={!landlordProfile}
+                                            style={{ flex: 1, marginLeft: 8 }}
+                                        />
+                                    </View>
+                                </>
+                            )}
+                        </View>
+
+                        {/* Trust and Safety */}
+                        <View style={styles.trustContainer}>
+                            <View style={styles.trustTextContainer}>
+                                <Text style={styles.trustTitle}>{t("Homiio Verified")}</Text>
+                                <Text style={styles.trustDescription}>
+                                    {t("This property has been personally verified by our team for authenticity and condition")}
+                                </Text>
+                            </View>
+                        </View>
+
+                        {/* Action Buttons */}
+                        <View style={styles.actionButtonsContainer}>
+                            {apiProperty?.housingType === 'public' ? (
+                                <>
+                                    <ActionButton
+                                        icon="chatbubble-outline"
+                                        text={t("Contact Housing Authority")}
+                                        onPress={() => { }}
+                                        variant="secondary"
+                                        size="large"
+                                        disabled={true}
+                                        style={{ flex: 1, marginRight: 10 }}
+                                    />
                                     <ActionButton
                                         icon="globe"
                                         text={t("Apply on State Website")}
-                                        onPress={handlePublicHousingApply}
+                                        onPress={handleApply}
                                         variant="primary"
-                                        size="medium"
+                                        size="large"
                                         style={{ flex: 1 }}
                                     />
-                                </View>
-                            </>
-                        ) : (
-                            <>
-                                <View style={styles.landlordHeader}>
-                                    <View style={styles.landlordAvatar}>
-                                        <Text style={styles.landlordInitial}>
-                                            {getLandlordDisplayName(landlordProfile)}
-                                        </Text>
-                                    </View>
-                                    <View style={styles.landlordInfo}>
-                                        <View style={styles.landlordNameRow}>
-                                            <Text style={styles.landlordName}>
-                                                {getLandlordDisplayName(landlordProfile)}
-                                            </Text>
-                                            {landlordProfile?.isActive && (
-                                                <View style={styles.verifiedBadge}>
-                                                    <Text style={styles.verifiedText}>✓</Text>
-                                                </View>
-                                            )}
-                                        </View>
-                                        <Text style={styles.landlordRating}>
-                                            {getLandlordTrustScore(landlordProfile)}
-                                        </Text>
-                                    </View>
-                                </View>
-                                <View style={styles.landlordActions}>
+                                </>
+                            ) : (
+                                <>
                                     <ActionButton
-                                        icon="chatbubble-outline"
-                                        text={t("Message")}
-                                        onPress={handleContact}
+                                        icon="calendar-outline"
+                                        text={t("Schedule Viewing")}
+                                        onPress={handleScheduleViewing}
+                                        variant="outline"
+                                        size="large"
+                                        style={{ flex: 1, marginRight: 10 }}
+                                    />
+                                    <ActionButton
+                                        icon="checkmark-circle-outline"
+                                        text={t("Apply Now")}
+                                        onPress={handleApply}
                                         variant="primary"
-                                        size="medium"
-                                        disabled={!landlordProfile}
-                                        style={{ flex: 1, marginRight: 8 }}
+                                        size="large"
+                                        style={{ flex: 1 }}
                                     />
-                                    <ActionButton
-                                        icon="call-outline"
-                                        text={t("Call")}
-                                        onPress={handleContact}
-                                        variant="secondary"
-                                        size="medium"
-                                        disabled={!landlordProfile}
-                                        style={{ flex: 1, marginLeft: 8 }}
-                                    />
-                                </View>
-                            </>
-                        )}
-                    </View>
+                                </>
+                            )}
+                        </View>
 
-                    {/* Trust and Safety */}
-                    <View style={styles.trustContainer}>
-                        <View style={styles.trustTextContainer}>
-                            <Text style={styles.trustTitle}>{t("Homiio Verified")}</Text>
-                            <Text style={styles.trustDescription}>
-                                {t("This property has been personally verified by our team for authenticity and condition")}
+                        {/* Fraud Warning */}
+                        <View style={styles.fraudWarningContainer}>
+                            <Text style={styles.fraudWarningText}>
+                                {t("Never pay or transfer funds outside the Homio platform")}
                             </Text>
                         </View>
                     </View>
-
-                    {/* Action Buttons */}
-                    <View style={styles.actionButtonsContainer}>
-                        {apiProperty?.housingType === 'public' ? (
-                            <>
-                                <ActionButton
-                                    icon="chatbubble-outline"
-                                    text={t("Contact Housing Authority")}
-                                    onPress={() => { }}
-                                    variant="secondary"
-                                    size="large"
-                                    disabled={true}
-                                    style={{ flex: 1, marginRight: 10 }}
-                                />
-                                <ActionButton
-                                    icon="globe"
-                                    text={t("Apply on State Website")}
-                                    onPress={handleApply}
-                                    variant="primary"
-                                    size="large"
-                                    style={{ flex: 1 }}
-                                />
-                            </>
-                        ) : (
-                            <>
-                                <ActionButton
-                                    icon="calendar-outline"
-                                    text={t("Schedule Viewing")}
-                                    onPress={handleScheduleViewing}
-                                    variant="outline"
-                                    size="large"
-                                    style={{ flex: 1, marginRight: 10 }}
-                                />
-                                <ActionButton
-                                    icon="checkmark-circle-outline"
-                                    text={t("Apply Now")}
-                                    onPress={handleApply}
-                                    variant="primary"
-                                    size="large"
-                                    style={{ flex: 1 }}
-                                />
-                            </>
-                        )}
-                    </View>
-
-                    {/* Fraud Warning */}
-                    <View style={styles.fraudWarningContainer}>
-                        <Text style={styles.fraudWarningText}>
-                            {t("Never pay or transfer funds outside the Homio platform")}
-                        </Text>
-                    </View>
-                </View>
-            </ScrollView>
-        </SafeAreaView>
+                </ScrollView>
+            </SafeAreaView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     safeArea: {
+        flex: 1,
+    },
+    contentArea: {
         flex: 1,
     },
     container: {
