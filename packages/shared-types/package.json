@@ -1,0 +1,29 @@
+{
+    "name": "@homiio/shared-types",
+    "version": "1.0.0",
+    "description": "Shared TypeScript types for Homiio frontend and backend",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "clean": "rm -rf dist",
+        "lint": "eslint src --ext .ts",
+        "test": "echo \"No tests specified\" && exit 0"
+    },
+    "keywords": [
+        "typescript",
+        "types",
+        "shared",
+        "homiio"
+    ],
+    "author": "Homiio Team",
+    "license": "UNLICENSED",
+    "devDependencies": {
+        "typescript": "^5.0.0",
+        "@types/node": "^20.0.0"
+    },
+    "files": [
+        "dist/**/*"
+    ]
+}

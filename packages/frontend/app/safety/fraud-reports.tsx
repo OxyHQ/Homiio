@@ -254,23 +254,18 @@ export default function FraudReportsScreen() {
                 contentContainerStyle={styles.scrollContent}
             >
                 {sortedReports.length === 0 ? (
-                    <View style={styles.emptyContainer}>
-                        <IconComponent name="shield-outline" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
-                        <Text style={styles.emptyText}>{t("No fraud reports found")}</Text>
-                        <Text style={styles.emptySubtext}>
-                            {searchQuery
-                                ? t("Try adjusting your search criteria")
-                                : filter === 'all'
-                                    ? t("You don't have any reported fraud cases")
-                                    : t(`You don't have any ${filter} reports`)}
-                        </Text>
-                        <TouchableOpacity
-                            style={styles.emptyButton}
-                            onPress={handleReportFraud}
-                        >
-                            <Text style={styles.emptyButtonText}>{t("Report Fraud")}</Text>
-                        </TouchableOpacity>
-                    </View>
+                    <EmptyState
+                        icon="shield-outline"
+                        title={t("No fraud reports found")}
+                        description={searchQuery
+                            ? t("Try adjusting your search criteria")
+                            : filter === 'all'
+                                ? t("You don't have any reported fraud cases")
+                                : t(`You don't have any ${filter} reports`)}
+                        actionText={t("Report Fraud")}
+                        actionIcon="alert-circle"
+                        onAction={handleReportFraud}
+                    />
                 ) : (
                     <>
                         <View style={styles.statsContainer}>
@@ -639,36 +634,7 @@ const styles = StyleSheet.create({
         color: colors.primaryColor,
         marginLeft: 8,
     },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 40,
-        marginTop: 20,
-    },
-    emptyText: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: colors.primaryDark,
-        marginTop: 16,
-        marginBottom: 8,
-    },
-    emptySubtext: {
-        fontSize: 14,
-        color: colors.primaryDark_1,
-        textAlign: 'center',
-        marginBottom: 24,
-    },
-    emptyButton: {
-        backgroundColor: colors.primaryColor,
-        paddingVertical: 12,
-        paddingHorizontal: 24,
-        borderRadius: 24,
-    },
-    emptyButtonText: {
-        color: 'white',
-        fontWeight: '600',
-    },
+
     reportFraudButton: {
         position: 'absolute',
         bottom: 16,

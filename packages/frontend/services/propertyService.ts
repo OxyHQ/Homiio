@@ -1,160 +1,35 @@
 import api from '@/utils/api';
+import { 
+  Property, 
+  CreatePropertyData, 
+  PropertyFilters, 
+  PropertyType, 
+  PropertyStatus, 
+  HousingType, 
+  LayoutType, 
+  PaymentFrequency, 
+  UtilitiesIncluded, 
+  PriceUnit,
+  GeoJSONPoint
+} from '@homiio/shared-types';
 
-export interface Property {
-  _id: string; // MongoDB ObjectId
-  id?: string; // Optional fallback
-  profileId?: string; // Add profileId for landlord info
-  address: {
-    street: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country: string;
-    coordinates?: {
-      lat: number | null;
-      lng: number | null;
-    };
-  };
-  type: 'apartment' | 'house' | 'room' | 'studio' | 'couchsurfing' | 'roommates' | 'coliving' | 'hostel' | 'guesthouse' | 'campsite' | 'boat' | 'treehouse' | 'yurt' | 'other';
-  housingType?: 'private' | 'public'; // Distinguishes private vs public housing
-  layoutType?: 'open' | 'shared' | 'partitioned' | 'traditional' | 'studio' | 'other';
-  description?: string;
-  squareFootage?: number;
-  bedrooms?: number;
-  bathrooms?: number;
-  rent: {
-    amount: number;
-    currency: string;
-    paymentFrequency: 'monthly' | 'weekly' | 'daily';
-    deposit: number;
-    utilities: 'included' | 'excluded' | 'partial';
-  };
-  priceUnit?: 'day' | 'night' | 'week' | 'month' | 'year';
-  amenities?: string[];
-  images?: string[];
-  status: 'available' | 'occupied' | 'maintenance' | 'offline';
-  ownerId: string;
-  createdAt: string;
-  updatedAt: string;
-  roomCount?: number;
-  // GeoJSON Point location field
-  location?: {
-    type: 'Point';
-    coordinates: [number, number]; // [longitude, latitude]
-  };
-  energyStats?: {
-    current: {
-      voltage: number;
-      current: number;
-      power: number;
-      powerFactor: number;
-      frequency: number;
-    };
-    consumption: {
-      daily: number;
-      weekly: number;
-      monthly: number;
-      cost: {
-        daily: number;
-        weekly: number;
-        monthly: number;
-        currency: string;
-      };
-    };
-  };
-  // Accommodation-specific details
-  accommodationDetails?: {
-    sleepingArrangement?: 'couch' | 'air_mattress' | 'floor' | 'tent' | 'hammock';
-    roommatePreferences?: string[];
-    colivingFeatures?: string[];
-    hostelRoomType?: 'dormitory' | 'private_room' | 'mixed_dorm' | 'female_dorm' | 'male_dorm';
-    campsiteType?: 'tent_site' | 'rv_site' | 'cabin' | 'glamping' | 'backcountry';
-    maxStay?: number;
-    minAge?: number;
-    maxAge?: number;
-    languages?: string[];
-    culturalExchange?: boolean;
-    mealsIncluded?: boolean;
-    wifiPassword?: string;
-    houseRules?: string[];
-  };
-}
+// Re-export the types for backward compatibility
+export type { 
+  Property, 
+  CreatePropertyData, 
+  PropertyFilters 
+};
 
-export interface CreatePropertyData {
-  // Title removed - will be generated dynamically when displaying properties
-  address: {
-    street: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country?: string;
-  };
-  type: 'apartment' | 'house' | 'room' | 'studio' | 'couchsurfing' | 'roommates' | 'coliving' | 'hostel' | 'guesthouse' | 'campsite' | 'boat' | 'treehouse' | 'yurt' | 'other';
-  description?: string;
-  squareFootage?: number;
-  bedrooms?: number;
-  bathrooms?: number;
-  rent: {
-    amount: number;
-    currency?: string;
-    paymentFrequency?: 'monthly' | 'weekly' | 'daily';
-    deposit?: number;
-    utilities?: 'included' | 'excluded' | 'partial';
-  };
-  priceUnit?: 'day' | 'night' | 'week' | 'month' | 'year';
-  amenities?: string[];
-  images?: string[];
-  location?: {
-    type: 'Point';
-    coordinates: [number, number]; // [longitude, latitude]
-  };
-  // Additional comprehensive details for ethical pricing
-  floor?: number;
-  hasElevator?: boolean;
-  parkingSpaces?: number;
-  yearBuilt?: number;
-  isFurnished?: boolean;
-  utilitiesIncluded?: boolean;
-  petFriendly?: boolean;
-  hasBalcony?: boolean;
-  hasGarden?: boolean;
-  proximityToTransport?: boolean;
-  proximityToSchools?: boolean;
-  proximityToShopping?: boolean;
-  // Accommodation-specific details
-  accommodationDetails?: {
-    sleepingArrangement?: 'couch' | 'air_mattress' | 'floor' | 'tent' | 'hammock';
-    roommatePreferences?: string[];
-    colivingFeatures?: string[];
-    hostelRoomType?: 'dormitory' | 'private_room' | 'mixed_dorm' | 'female_dorm' | 'male_dorm';
-    campsiteType?: 'tent_site' | 'rv_site' | 'cabin' | 'glamping' | 'backcountry';
-    maxStay?: number;
-    minAge?: number;
-    maxAge?: number;
-    languages?: string[];
-    culturalExchange?: boolean;
-    mealsIncluded?: boolean;
-    wifiPassword?: string;
-    houseRules?: string[];
-  };
-}
-
-export interface PropertyFilters {
-  type?: string;
-  status?: string;
-  available?: boolean;
-  minRent?: number;
-  maxRent?: number;
-  bedrooms?: number;
-  bathrooms?: number;
-  search?: string;
-  page?: number;
-  limit?: number;
-  // Location parameters
-  lat?: number;
-  lng?: number;
-  radius?: number;
-}
+// Re-export enums for backward compatibility
+export { 
+  PropertyType, 
+  PropertyStatus, 
+  HousingType, 
+  LayoutType, 
+  PaymentFrequency, 
+  UtilitiesIncluded, 
+  PriceUnit 
+};
 
 export interface EthicalPricingRequest {
   localMedianIncome: number;

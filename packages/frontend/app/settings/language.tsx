@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/colors';
 import { Ionicons } from '@expo/vector-icons';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 const IconComponent = Ionicons as any;
 
@@ -81,7 +82,11 @@ export default function LanguageSettingsScreen() {
                             );
                         })}
                         {LANGUAGES.length === 0 && (
-                            <Text style={{ textAlign: 'center', color: '#888', marginTop: 24 }}>{t('No languages found')}</Text>
+                            <EmptyState
+                                icon="language-outline"
+                                title={t('No languages found')}
+                                description={t('No language options are currently available')}
+                            />
                         )}
                     </View>
                 </View>
