@@ -6,6 +6,7 @@
 const express = require('express');
 const propertyController = require('../controllers/propertyController');
 const telegramController = require('../controllers/telegramController');
+const cityController = require('../controllers/cityController').default;
 const { asyncHandler } = require('../middlewares');
 const performanceMonitor = require('../middlewares/performance').default;
 const Conversation = require('../models/schemas/ConversationSchema');
@@ -23,6 +24,14 @@ export default function () {
   router.get('/properties/radius', asyncHandler(propertyController.findPropertiesInRadius));
   router.get('/properties/:propertyId', asyncHandler(propertyController.getPropertyById));
   router.get('/properties/:propertyId/stats', asyncHandler(propertyController.getPropertyStats));
+
+  // Public city routes
+  router.get('/cities', asyncHandler(cityController.getCities));
+  router.get('/cities/popular', asyncHandler(cityController.getPopularCities));
+  router.get('/cities/search', asyncHandler(cityController.searchCities));
+  router.get('/cities/lookup', asyncHandler(cityController.getCityByLocation));
+  router.get('/cities/:id', asyncHandler(cityController.getCityById));
+  router.get('/cities/:id/properties', asyncHandler(cityController.getPropertiesByCity));
 
   // Ethical pricing calculation endpoint (public - no authentication required)
   router.post('/properties/calculate-ethical-pricing', asyncHandler(async (req, res) => {

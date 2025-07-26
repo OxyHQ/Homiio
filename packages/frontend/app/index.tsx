@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useProperties } from '@/hooks';
 import { useOxy } from '@oxyhq/services';
 import { useDebouncedAddressSearch, type AddressSuggestion } from '@/hooks/useAddressSearch';
+import { cityService } from '@/services/cityService';
 
 // Import components
 import { PropertyCard } from '@/components/PropertyCard';
@@ -36,6 +37,8 @@ export default function HomePage() {
   const [refreshing, setRefreshing] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestionsFocused, setSuggestionsFocused] = useState(false);
+  const [cities, setCities] = useState<any[]>([]);
+  const [citiesLoading, setCitiesLoading] = useState(false);
   // Use the reusable address search hook
   const {
     suggestions: addressSuggestions,
@@ -70,6 +73,25 @@ export default function HomePage() {
     });
   }, [loadProperties]);
 
+  // Load cities on component mount
+  React.useEffect(() => {
+    const loadCities = async () => {
+      try {
+        setCitiesLoading(true);
+        const response = await cityService.getPopularCities(8);
+        setCities(response.data || []);
+      } catch (error) {
+        console.error('Failed to load cities:', error);
+        // Fallback to empty array
+        setCities([]);
+      } finally {
+        setCitiesLoading(false);
+      }
+    };
+
+    loadCities();
+  }, []);
+
   // Memoized data processing
   const featuredProperties = useMemo(() => {
     if (!properties) return [];
@@ -100,23 +122,21 @@ export default function HomePage() {
     }));
   }, [properties, propertyTypes]);
 
-  // Get top cities from real data
+  // Get top cities from API
   const topCities = useMemo(() => {
-    if (!properties) return [];
+    if (!cities || cities.length === 0) return [];
 
-    const cityCounts = properties.reduce((acc: Record<string, number>, property: any) => {
-      const city = property.address?.city;
-      if (city) {
-        acc[city] = (acc[city] || 0) + 1;
-      }
-      return acc;
-    }, {} as Record<string, number>);
-
-    return Object.entries(cityCounts)
-      .sort(([, a], [, b]) => (b as number) - (a as number))
+    return cities
+      .sort((a, b) => (b.propertiesCount || 0) - (a.propertiesCount || 0))
       .slice(0, 4)
-      .map(([city, count]) => ({ id: city, name: city, count }));
-  }, [properties]);
+      .map((city) => ({
+        id: city._id || city.id,
+        name: city.name,
+        count: city.propertiesCount || 0,
+        state: city.state,
+        country: city.country
+      }));
+  }, [cities]);
 
   const isAuthenticated = !!(oxyServices && activeSessionId);
 
@@ -411,10 +431,44 @@ export default function HomePage() {
           </View>
 
           {propertiesLoading ? (
-            <View style={styles.loadingContainer}>
-              <LoadingSpinner size={32} />
-              <Text style={styles.loadingText}>Loading properties...</Text>
-            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.horizontalScroll}
+              contentContainerStyle={{ paddingHorizontal: 16 }}
+            >
+              {Array.from({ length: 4 }).map((_, index) => (
+                <View key={index} style={styles.propertyCardContainer}>
+                  <View style={styles.propertyCardSkeleton}>
+                    {/* Image skeleton */}
+                    <View style={styles.propertyCardImageSkeleton}>
+                      <LinearGradient
+                        colors={['#f0f0f0', '#e0e0e0']}
+                        style={{ width: '100%', height: '100%' }}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      />
+                      {/* Save button skeleton */}
+                      <View style={styles.propertyCardSaveButtonSkeleton} />
+                      {/* Badge skeleton */}
+                      <View style={styles.propertyCardBadgeSkeleton} />
+                    </View>
+                    {/* Content skeleton */}
+                    <View style={styles.propertyCardContentSkeleton}>
+                      {/* Title skeleton */}
+                      <View style={{ backgroundColor: '#e0e0e0', height: 18, borderRadius: 4, width: '85%', marginBottom: 6 }} />
+                      {/* Location skeleton */}
+                      <View style={{ backgroundColor: '#f0f0f0', height: 14, borderRadius: 4, width: '70%', marginBottom: 8 }} />
+                      {/* Price and rating row */}
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <View style={{ backgroundColor: '#e0e0e0', height: 16, borderRadius: 4, width: '40%' }} />
+                        <View style={{ backgroundColor: '#f0f0f0', height: 14, borderRadius: 4, width: '25%' }} />
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
           ) : featuredProperties.length > 0 ? (
             <ScrollView
               horizontal
@@ -459,35 +513,72 @@ export default function HomePage() {
             style={styles.horizontalScroll}
             contentContainerStyle={{ paddingHorizontal: 16 }}
           >
-            {topCities.map((city, index) => (
-              <TouchableOpacity
-                key={city.id}
-                style={styles.cityCard}
-                onPress={() => router.push(`/properties/city/${city.id}`)}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={[colors.primaryColor, colors.secondaryLight]}
-                  style={styles.cityImagePlaceholder}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
+            {citiesLoading ? (
+              // Loading state
+              Array.from({ length: 4 }).map((_, index) => (
+                <View key={index} style={styles.cityCard}>
+                  <LinearGradient
+                    colors={['#f0f0f0', '#e0e0e0']}
+                    style={styles.cityImagePlaceholder}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    {/* Subtle overlay */}
+                    <View style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                      borderRadius: 25,
+                    }} />
+                    {/* City Info at bottom */}
+                    <View style={{ width: '100%' }}>
+                      <View style={{ backgroundColor: '#d0d0d0', height: 22, borderRadius: 4, width: '70%', marginBottom: 4 }} />
+                      <View style={{ backgroundColor: '#e0e0e0', height: 14, borderRadius: 4, width: '50%' }} />
+                    </View>
+                  </LinearGradient>
+                </View>
+              ))
+            ) : (
+              topCities.map((city, index) => (
+                <TouchableOpacity
+                  key={city.id}
+                  style={styles.cityCard}
+                  onPress={() => router.push(`/properties/city/${city.id}`)}
+                  activeOpacity={0.85}
                 >
-                  {/* Location Icon */}
-                  <View style={styles.cityIconContainer}>
-                    <IconComponent name="location" size={24} color="white" />
-                  </View>
+                  <LinearGradient
+                    colors={[colors.primaryColor, colors.secondaryLight]}
+                    style={styles.cityImagePlaceholder}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    {/* Subtle overlay for better text readability */}
+                    <View style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: 'rgba(0, 0, 0, 0.15)',
+                      borderRadius: 25,
+                    }} />
 
-                  {/* City Name */}
-                  <Text style={styles.cityName}>{city.name}</Text>
-
-                  {/* Property Count Badge */}
-                  <View style={styles.propertyCountBadge}>
-                    <IconComponent name="home" size={12} color={colors.COLOR_BLACK} />
-                    <Text style={styles.propertyCountText}>{city.count}</Text>
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            ))}
+                    {/* City Info at bottom */}
+                    <View style={{ width: '100%' }}>
+                      <Text style={styles.cityName}>{city.name}</Text>
+                      {(city.state || city.country) && (
+                        <Text style={styles.cityLocation}>
+                          {[city.state, city.country].filter(Boolean).join(', ')}
+                        </Text>
+                      )}
+                    </View>
+                  </LinearGradient>
+                </TouchableOpacity>
+              ))
+            )}
           </ScrollView>
         </View>
 
@@ -648,10 +739,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '600',
     color: colors.COLOR_BLACK,
     fontFamily: 'Phudu',
+    letterSpacing: -0.3,
   },
   viewAllText: {
     color: colors.primaryColor,
@@ -726,55 +818,131 @@ const styles = StyleSheet.create({
     marginRight: 15,
     width: 280,
   },
+  propertyCardSkeleton: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    width: '100%',
+    height: 280,
+  },
+  propertyCardImageSkeleton: {
+    height: 140,
+    backgroundColor: '#f0f0f0',
+    position: 'relative',
+  },
+  propertyCardContentSkeleton: {
+    padding: 12,
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  propertyCardSaveButtonSkeleton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#d0d0d0',
+  },
+  propertyCardBadgeSkeleton: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    width: 60,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#d0d0d0',
+  },
   citiesSection: {
-    paddingVertical: 12,
+    paddingVertical: 24,
+    marginTop: 16,
   },
   cityCard: {
-    width: 170,
-    marginRight: 15,
-    backgroundColor: 'white',
-    borderRadius: 12,
+    width: 200,
+    marginRight: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 25,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   cityImagePlaceholder: {
     width: '100%',
-    height: 120,
-    justifyContent: 'center',
-    alignItems: 'center',
+    height: 160,
+    justifyContent: 'flex-end',
+    alignItems: 'flex-start',
     position: 'relative',
-    paddingVertical: 0,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK,
-    borderRadius: 35,
+    padding: 16,
+    borderRadius: 25,
     overflow: 'hidden',
   },
   propertyCountBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 15,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    alignSelf: 'flex-end',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   propertyCountText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 'bold',
     color: colors.COLOR_BLACK,
     marginLeft: 4,
+    fontFamily: 'Phudu',
   },
   cityIconContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 20,
-    padding: 8,
-    marginBottom: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderRadius: 24,
+    padding: 10,
+    alignSelf: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   cityName: {
     fontFamily: 'Phudu',
-    fontWeight: 'bold',
-    fontSize: 18,
+    fontWeight: '600',
+    fontSize: 22,
     color: 'white',
-    textAlign: 'center',
-    letterSpacing: 0.5,
+    textAlign: 'left',
+    letterSpacing: -0.2,
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+    marginBottom: 4,
+  },
+  cityLocation: {
+    fontFamily: 'Phudu',
+    fontSize: 14,
+    color: 'white',
+    textAlign: 'left',
+    opacity: 0.9,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   typesSection: {
     paddingVertical: 12,
@@ -789,9 +957,12 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: '45%',
     borderRadius: 25,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   propertyChipGradient: {
     flexDirection: 'row',
@@ -834,9 +1005,12 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: '45%',
     borderRadius: 25,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   statChipGradient: {
     flexDirection: 'row',

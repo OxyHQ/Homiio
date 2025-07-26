@@ -13,6 +13,7 @@ const SavedPropertyModel = require('./schemas/SavedPropertySchema');
 const SavedSearchModel = require('./schemas/SavedSearchSchema');
 const ProfileModel = require('./schemas/ProfileSchema');
 const ConversationModel = require('./schemas/ConversationSchema');
+const CityModel = require('./schemas/CitySchema');
 
 module.exports = {
   // Mongoose models
@@ -24,5 +25,6 @@ module.exports = {
   SavedProperty: SavedPropertyModel,
   SavedSearch: SavedSearchModel,
   Profile: ProfileModel,
-  Conversation: ConversationModel
+  Conversation: ConversationModel,
+  City: CityModel
 };

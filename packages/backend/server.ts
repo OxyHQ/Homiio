@@ -131,15 +131,15 @@ if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
 // Use OxyHQServices middleware for authentication
 const authenticateToken = oxy.createAuthenticateTokenMiddleware({
   loadFullUser: true,
-  onError: (error, req, res, next) => {
+  onError: (error) => {
   console.error('Auth error:', error);
   let status = 403;
   let message = 'Unknown error';
   if (error && typeof error === 'object') {
-    if (typeof error.status === 'number') status = error.status;
-    if (typeof error.message === 'string') message = error.message;
+    if ('status' in error && typeof error.status === 'number') status = error.status;
+    if ('message' in error && typeof error.message === 'string') message = error.message;
   }
-  res.status(status).json({ error: message });
+  return { statusCode: status, message };
 }
 });
 

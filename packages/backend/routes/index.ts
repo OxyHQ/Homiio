@@ -14,6 +14,7 @@ import profiles from './profiles';
 import ai from './ai';
 import roommates from './roommates';
 import telegram from './telegram';
+const { asyncHandler } = require('../middlewares');
 
 export default function() {
   const propertyRoutes = properties();
@@ -40,6 +41,10 @@ export default function() {
   router.use('/ai', aiRoutes);
   router.use('/roommates', roommateRoutes);
   router.use('/telegram', telegramRoutes);
+
+  // Admin-only city routes (authenticated)
+  router.post('/cities', asyncHandler(require('../controllers/cityController').default.createCity));
+  router.put('/cities/:id/update-count', asyncHandler(require('../controllers/cityController').default.updateCityPropertiesCount));
 
   // Health check route
   router.get('/health', (req, res) => {

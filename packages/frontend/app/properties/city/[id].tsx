@@ -7,18 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
 import { PropertyCard } from '@/components/PropertyCard';
-import { useProperties } from '@/hooks';
 import { Property } from '@/services/propertyService';
-
-type City = {
-  id: string;
-  name: string;
-  country: string;
-  description: string;
-  propertiesCount: number;
-  averagePrice: string;
-  popularNeighborhoods: string[];
-};
+import { cityService, City } from '@/services/cityService';
 
 export default function CityPropertiesPage() {
   const { t } = useTranslation();
@@ -27,67 +17,48 @@ export default function CityPropertiesPage() {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [activeSort, setActiveSort] = useState<string | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
+  const [city, setCity] = useState<City | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Use real API data instead of mock data
-  const { properties: apiProperties, loading: isLoading, error, loadProperties } = useProperties();
-
-  // Load properties on component mount
-  React.useEffect(() => {
-    loadProperties({
-      search: id as string // Use search instead of city since PropertyFilters doesn't have city
-    });
-  }, [loadProperties, id]);
-
-  // City data definitions
-  const cities: { [key: string]: City } = {
-    'barcelona': {
-      id: 'barcelona',
-      name: 'Barcelona',
-      country: 'Spain',
-      description: t('Cosmopolitan city with stunning architecture and vibrant culture'),
-      propertiesCount: apiProperties?.length || 0,
-      averagePrice: '⊜1,200',
-      popularNeighborhoods: ['Eixample', 'Gràcia', 'Sant Martí', 'Sants-Montjuïc', 'Sarrià-Sant Gervasi'],
-    },
-    'berlin': {
-      id: 'berlin',
-      name: 'Berlin',
-      country: 'Germany',
-      description: t('Creative capital with rich history and diverse neighborhoods'),
-      propertiesCount: apiProperties?.length || 0,
-      averagePrice: '⊜1,100',
-      popularNeighborhoods: ['Kreuzberg', 'Neukölln', 'Mitte', 'Friedrichshain', 'Prenzlauer Berg'],
-    },
-    'amsterdam': {
-      id: 'amsterdam',
-      name: 'Amsterdam',
-      country: 'Netherlands',
-      description: t('Charming canals and bike-friendly city with international appeal'),
-      propertiesCount: apiProperties?.length || 0,
-      averagePrice: '⊜1,400',
-      popularNeighborhoods: ['Jordaan', 'De Pijp', 'Oud-West', 'Centrum', 'Oost'],
-    },
-    'stockholm': {
-      id: 'stockholm',
-      name: 'Stockholm',
-      country: 'Sweden',
-      description: t('Scandinavian beauty with islands and modern sustainability'),
-      propertiesCount: apiProperties?.length || 0,
-      averagePrice: '⊜1,300',
-      popularNeighborhoods: ['Södermalm', 'Östermalm', 'Vasastan', 'Kungsholmen', 'Norrmalm'],
-    },
-  };
-
-  const city = cities[id as string];
-
-  // Update properties when API data changes
+  // Load city and properties data
   useEffect(() => {
-    if (apiProperties) {
-      setProperties(apiProperties);
-      setLoading(false);
+    const loadCityData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Get city data by slug
+        const cityResponse = await cityService.getCityBySlug(id as string);
+        if (!cityResponse) {
+          setError('City not found');
+          setLoading(false);
+          return;
+        }
+
+        setCity(cityResponse.data);
+
+        // Get properties for this city using the city service
+        const propertiesResponse = await cityService.getPropertiesByCity(cityResponse.data._id, {
+          limit: 50,
+          sort: 'createdAt'
+        });
+
+        // Ensure we always set an array
+        setProperties(propertiesResponse?.properties || []);
+      } catch (err) {
+        console.error('Error loading city data:', err);
+        setError('Failed to load city data');
+        setProperties([]); // Ensure properties is always an array
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      loadCityData();
     }
-  }, [apiProperties]);
+  }, [id]);
 
   const filterOptions = [
     { id: 'verified', label: t('Verified'), icon: 'shield-checkmark' },
@@ -103,6 +74,11 @@ export default function CityPropertiesPage() {
   ];
 
   const getFilteredAndSortedProperties = () => {
+    // Ensure properties is an array
+    if (!properties || !Array.isArray(properties)) {
+      return [];
+    }
+
     let result = [...properties];
 
     // Apply filters
@@ -189,7 +165,7 @@ export default function CityPropertiesPage() {
     />
   );
 
-  if (loading || !city) {
+  if (loading) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <Header
@@ -202,6 +178,30 @@ export default function CityPropertiesPage() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primaryColor} />
           <Text style={styles.loadingText}>{t("Loading properties...")}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !city) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <Header
+          options={{
+            showBackButton: true,
+            title: t("Error"),
+            titlePosition: 'center',
+          }}
+        />
+        <View style={styles.loadingContainer}>
+          <Ionicons name="alert-circle" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
+          <Text style={styles.loadingText}>{error || t("City not found")}</Text>
+          <TouchableOpacity
+            style={styles.resetButton}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.resetButtonText}>{t("Go Back")}</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -232,28 +232,30 @@ export default function CityPropertiesPage() {
             </View>
 
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{city.averagePrice}</Text>
+              <Text style={styles.statValue}>{city.averageRent ? `⊜${city.averageRent.toLocaleString()}` : 'N/A'}</Text>
               <Text style={styles.statLabel}>{t("Avg. Price")}</Text>
             </View>
 
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{city.popularNeighborhoods.length}</Text>
+              <Text style={styles.statValue}>{city.popularNeighborhoods?.length || 0}</Text>
               <Text style={styles.statLabel}>{t("Neighborhoods")}</Text>
             </View>
           </View>
         </View>
 
         {/* Neighborhood Pills */}
-        <View style={styles.neighborhoodSection}>
-          <Text style={styles.sectionTitle}>{t("Popular Neighborhoods")}</Text>
-          <View style={styles.neighborhoodPills}>
-            {city.popularNeighborhoods.map((neighborhood, index) => (
-              <TouchableOpacity key={index} style={styles.neighborhoodPill}>
-                <Text style={styles.neighborhoodText}>{neighborhood}</Text>
-              </TouchableOpacity>
-            ))}
+        {city.popularNeighborhoods && city.popularNeighborhoods.length > 0 && (
+          <View style={styles.neighborhoodSection}>
+            <Text style={styles.sectionTitle}>{t("Popular Neighborhoods")}</Text>
+            <View style={styles.neighborhoodPills}>
+              {city.popularNeighborhoods.map((neighborhood, index) => (
+                <TouchableOpacity key={index} style={styles.neighborhoodPill}>
+                  <Text style={styles.neighborhoodText}>{neighborhood}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Properties List */}
         <View style={styles.propertiesSection}>
@@ -289,7 +291,7 @@ export default function CityPropertiesPage() {
           <FlatList
             data={getFilteredAndSortedProperties()}
             renderItem={renderPropertyItem}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => item._id || item.id || Math.random().toString()}
             contentContainerStyle={styles.propertiesList}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>

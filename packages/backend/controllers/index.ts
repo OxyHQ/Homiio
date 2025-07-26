@@ -11,6 +11,7 @@ const notificationController = require('./notificationController');
 const leaseController = require('./leaseController');
 const profileController = require('./profileController');
 const telegramController = require('./telegramController');
+const cityController = require('./cityController');
 
 module.exports = {
   propertyController,
@@ -21,4 +22,5 @@ module.exports = {
   leaseController,
   profileController,
   telegramController,
+  cityController,
 };
