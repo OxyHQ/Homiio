@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, TextInput, ScrollView } from 'react-native';
+import { ThemedText } from '@/components/ThemedText';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/colors';
@@ -128,16 +129,16 @@ export default function ProfileCreateScreen() {
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                     <IconComponent name="arrow-back" size={24} color="#000" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Create Profile</Text>
+                <ThemedText style={styles.headerTitle}>Create Profile</ThemedText>
                 <TouchableOpacity
                     onPress={handleCreateProfile}
                     style={[styles.createButton, !selectedType && styles.createButtonDisabled]}
                     disabled={!selectedType || isCreating}
                 >
                     {isCreating ? (
-                        <ActivityIndicator size="small" color="#fff" />
+                        <IconComponent name="refresh" size={20} color="#fff" />
                     ) : (
-                        <Text style={styles.createButtonText}>Create</Text>
+                        <ThemedText style={styles.createButtonText}>Create</ThemedText>
                     )}
                 </TouchableOpacity>
             </View>
@@ -145,7 +146,7 @@ export default function ProfileCreateScreen() {
             <ScrollView style={styles.content}>
                 {/* Profile Type Selection */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Choose Business Profile Type</Text>
+                    <ThemedText style={styles.sectionTitle}>Choose Business Profile Type</ThemedText>
 
                     {profileTypes.map((profileType, index) => (
                         <TouchableOpacity
@@ -166,15 +167,15 @@ export default function ProfileCreateScreen() {
                                     style={styles.settingIcon}
                                 />
                                 <View>
-                                    <Text style={[
+                                    <ThemedText style={[
                                         styles.settingLabel,
                                         selectedType === profileType.type && styles.selectedLabel
                                     ]}>
                                         {profileType.title}
-                                    </Text>
-                                    <Text style={styles.settingDescription}>
+                                    </ThemedText>
+                                    <ThemedText style={styles.settingDescription}>
                                         {profileType.description}
-                                    </Text>
+                                    </ThemedText>
                                 </View>
                             </View>
                             {selectedType === profileType.type && (
@@ -187,10 +188,10 @@ export default function ProfileCreateScreen() {
                 {/* Agency-specific form */}
                 {selectedType === 'agency' && (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Agency Information</Text>
+                        <ThemedText style={styles.sectionTitle}>Agency Information</ThemedText>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Business Type *</Text>
+                            <ThemedText style={styles.label}>Business Type *</ThemedText>
                             <View style={styles.radioGroup}>
                                 {['real_estate_agency', 'property_management', 'brokerage', 'developer', 'other'].map((type) => (
                                     <TouchableOpacity
@@ -201,19 +202,19 @@ export default function ProfileCreateScreen() {
                                         ]}
                                         onPress={() => setFormData(prev => ({ ...prev, businessType: type }))}
                                     >
-                                        <Text style={[
+                                        <ThemedText style={[
                                             styles.radioButtonText,
                                             formData.businessType === type && styles.radioButtonTextSelected
                                         ]}>
                                             {type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                        </Text>
+                                        </ThemedText>
                                     </TouchableOpacity>
                                 ))}
                             </View>
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Description</Text>
+                            <ThemedText style={styles.label}>Description</ThemedText>
                             <TextInput
                                 style={[styles.input, styles.textArea]}
                                 value={formData.description}
@@ -225,7 +226,7 @@ export default function ProfileCreateScreen() {
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>License Number</Text>
+                            <ThemedText style={styles.label}>License Number</ThemedText>
                             <TextInput
                                 style={styles.input}
                                 value={formData.businessDetails.licenseNumber}
@@ -238,7 +239,7 @@ export default function ProfileCreateScreen() {
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Tax ID</Text>
+                            <ThemedText style={styles.label}>Tax ID</ThemedText>
                             <TextInput
                                 style={styles.input}
                                 value={formData.businessDetails.taxId}
@@ -251,7 +252,7 @@ export default function ProfileCreateScreen() {
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Year Established</Text>
+                            <ThemedText style={styles.label}>Year Established</ThemedText>
                             <TextInput
                                 style={styles.input}
                                 value={formData.businessDetails.yearEstablished}
@@ -265,7 +266,7 @@ export default function ProfileCreateScreen() {
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Number of Employees</Text>
+                            <ThemedText style={styles.label}>Number of Employees</ThemedText>
                             <View style={styles.radioGroup}>
                                 {employeeCountOptions.map((count) => (
                                     <TouchableOpacity
@@ -279,19 +280,19 @@ export default function ProfileCreateScreen() {
                                             businessDetails: { ...prev.businessDetails, employeeCount: count }
                                         }))}
                                     >
-                                        <Text style={[
+                                        <ThemedText style={[
                                             styles.radioButtonText,
                                             formData.businessDetails.employeeCount === count && styles.radioButtonTextSelected
                                         ]}>
                                             {count}
-                                        </Text>
+                                        </ThemedText>
                                     </TouchableOpacity>
                                 ))}
                             </View>
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Specialties</Text>
+                            <ThemedText style={styles.label}>Specialties</ThemedText>
                             <View style={styles.checkboxGroup}>
                                 {['residential', 'commercial', 'investment', 'rental', 'new_construction'].map((specialty) => (
                                     <TouchableOpacity
@@ -302,19 +303,19 @@ export default function ProfileCreateScreen() {
                                         ]}
                                         onPress={() => toggleSpecialty(specialty)}
                                     >
-                                        <Text style={[
+                                        <ThemedText style={[
                                             styles.checkboxText,
                                             formData.businessDetails.specialties.includes(specialty) && styles.checkboxTextSelected
                                         ]}>
                                             {specialty.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                        </Text>
+                                        </ThemedText>
                                     </TouchableOpacity>
                                 ))}
                             </View>
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Legal Company Name *</Text>
+                            <ThemedText style={styles.label}>Legal Company Name *</ThemedText>
                             <TextInput
                                 style={styles.input}
                                 value={formData.legalCompanyName}
@@ -328,10 +329,10 @@ export default function ProfileCreateScreen() {
                 {/* Business-specific form */}
                 {selectedType === 'business' && (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Business Information</Text>
+                        <ThemedText style={styles.sectionTitle}>Business Information</ThemedText>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Business Type *</Text>
+                            <ThemedText style={styles.label}>Business Type *</ThemedText>
                             <View style={styles.radioGroup}>
                                 {['small_business', 'startup', 'freelancer', 'consultant', 'other'].map((type) => (
                                     <TouchableOpacity
@@ -342,19 +343,19 @@ export default function ProfileCreateScreen() {
                                         ]}
                                         onPress={() => setFormData(prev => ({ ...prev, businessType: type }))}
                                     >
-                                        <Text style={[
+                                        <ThemedText style={[
                                             styles.radioButtonText,
                                             formData.businessType === type && styles.radioButtonTextSelected
                                         ]}>
                                             {type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                        </Text>
+                                        </ThemedText>
                                     </TouchableOpacity>
                                 ))}
                             </View>
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Description</Text>
+                            <ThemedText style={styles.label}>Description</ThemedText>
                             <TextInput
                                 style={[styles.input, styles.textArea]}
                                 value={formData.description}
@@ -366,7 +367,7 @@ export default function ProfileCreateScreen() {
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>License Number</Text>
+                            <ThemedText style={styles.label}>License Number</ThemedText>
                             <TextInput
                                 style={styles.input}
                                 value={formData.businessDetails.licenseNumber}
@@ -379,7 +380,7 @@ export default function ProfileCreateScreen() {
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Tax ID</Text>
+                            <ThemedText style={styles.label}>Tax ID</ThemedText>
                             <TextInput
                                 style={styles.input}
                                 value={formData.businessDetails.taxId}
@@ -392,7 +393,7 @@ export default function ProfileCreateScreen() {
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Year Established</Text>
+                            <ThemedText style={styles.label}>Year Established</ThemedText>
                             <TextInput
                                 style={styles.input}
                                 value={formData.businessDetails.yearEstablished}
@@ -406,7 +407,7 @@ export default function ProfileCreateScreen() {
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Number of Employees</Text>
+                            <ThemedText style={styles.label}>Number of Employees</ThemedText>
                             <View style={styles.radioGroup}>
                                 {['1-5', '6-10', '11-25', '26+'].map((count) => (
                                     <TouchableOpacity
@@ -420,19 +421,19 @@ export default function ProfileCreateScreen() {
                                             businessDetails: { ...prev.businessDetails, employeeCount: count }
                                         }))}
                                     >
-                                        <Text style={[
+                                        <ThemedText style={[
                                             styles.radioButtonText,
                                             formData.businessDetails.employeeCount === count && styles.radioButtonTextSelected
                                         ]}>
                                             {count}
-                                        </Text>
+                                        </ThemedText>
                                     </TouchableOpacity>
                                 ))}
                             </View>
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Specialties</Text>
+                            <ThemedText style={styles.label}>Specialties</ThemedText>
                             <View style={styles.checkboxGroup}>
                                 {['consulting', 'technology', 'design', 'marketing', 'finance', 'healthcare', 'education', 'retail', 'services'].map((specialty) => (
                                     <TouchableOpacity
@@ -443,19 +444,19 @@ export default function ProfileCreateScreen() {
                                         ]}
                                         onPress={() => toggleSpecialty(specialty)}
                                     >
-                                        <Text style={[
+                                        <ThemedText style={[
                                             styles.checkboxText,
                                             formData.businessDetails.specialties.includes(specialty) && styles.checkboxTextSelected
                                         ]}>
                                             {specialty.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                        </Text>
+                                        </ThemedText>
                                     </TouchableOpacity>
                                 ))}
                             </View>
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Legal Company Name *</Text>
+                            <ThemedText style={styles.label}>Legal Company Name *</ThemedText>
                             <TextInput
                                 style={styles.input}
                                 value={formData.legalCompanyName}
@@ -469,9 +470,9 @@ export default function ProfileCreateScreen() {
                 {/* Cooperative-specific form */}
                 {selectedType === 'cooperative' && (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Cooperative Information</Text>
+                        <ThemedText style={styles.sectionTitle}>Cooperative Information</ThemedText>
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Legal Name *</Text>
+                            <ThemedText style={styles.label}>Legal Name *</ThemedText>
                             <TextInput
                                 style={styles.input}
                                 value={formData.legalName}
@@ -480,7 +481,7 @@ export default function ProfileCreateScreen() {
                             />
                         </View>
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Description</Text>
+                            <ThemedText style={styles.label}>Description</ThemedText>
                             <TextInput
                                 style={[styles.input, { height: 80 }]}
                                 value={formData.description}
@@ -495,15 +496,15 @@ export default function ProfileCreateScreen() {
                 {/* Profile Type Info */}
                 {selectedType && (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>What&apos;s Next?</Text>
+                        <ThemedText style={styles.sectionTitle}>What&apos;s Next?</ThemedText>
                         <View style={[styles.settingItem, styles.firstSettingItem, styles.lastSettingItem]}>
                             <View style={styles.settingInfo}>
                                 <IconComponent name="information-circle" size={20} color="#666" style={styles.settingIcon} />
                                 <View style={styles.infoContent}>
-                                    <Text style={styles.settingLabel}>Profile Setup</Text>
-                                    <Text style={styles.settingDescription}>
+                                    <ThemedText style={styles.settingLabel}>Profile Setup</ThemedText>
+                                    <ThemedText style={styles.settingDescription}>
                                         After creating your {selectedType} profile, you can customize preferences, add verification documents, and build your trust score.
-                                    </Text>
+                                    </ThemedText>
                                 </View>
                             </View>
                         </View>

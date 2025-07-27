@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
     View,
-    Text,
+    StyleSheet,
     ScrollView,
     TouchableOpacity,
-    StyleSheet,
-    Alert,
     ActivityIndicator,
     Platform,
 } from 'react-native';
@@ -19,6 +17,7 @@ import { toast } from 'sonner';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useProfile } from '@/hooks/useProfile';
 import type { Profile } from '@/services/profileService';
+import { ThemedText } from '@/components/ThemedText';
 
 // Type assertion for Ionicons compatibility with React 19
 const IconComponent = Ionicons as any;
@@ -235,7 +234,7 @@ export default function ProfileScreen() {
         return (
             <SafeAreaView style={styles.container} edges={['top']}>
                 <View style={styles.header}>
-                    <Text style={styles.headerTitle}>Profile Management</Text>
+                    <ThemedText style={styles.headerTitle}>Profile Management</ThemedText>
                 </View>
                 <View style={styles.loadingContainer}>
                     <LoadingSpinner size={32} text="Loading profiles..." />
@@ -248,14 +247,14 @@ export default function ProfileScreen() {
         return (
             <SafeAreaView style={styles.container} edges={['top']}>
                 <View style={styles.header}>
-                    <Text style={styles.headerTitle}>Profile Management</Text>
+                    <ThemedText style={styles.headerTitle}>Profile Management</ThemedText>
                 </View>
                 <View style={styles.errorContainer}>
                     <IconComponent name="alert-circle" size={48} color="#ff4757" />
-                    <Text style={styles.errorTitle}>Failed to load profiles</Text>
-                    <Text style={styles.errorMessage}>Please try again later</Text>
+                    <ThemedText style={styles.errorTitle}>Failed to load profiles</ThemedText>
+                    <ThemedText style={styles.errorMessage}>Please try again later</ThemedText>
                     <TouchableOpacity style={styles.retryButton} onPress={() => loadProfiles()}>
-                        <Text style={styles.retryButtonText}>Retry</Text>
+                        <ThemedText style={styles.retryButtonText}>Retry</ThemedText>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
@@ -271,7 +270,7 @@ export default function ProfileScreen() {
         <SafeAreaView style={styles.container} edges={['top']}>
             {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Profile Management</Text>
+                <ThemedText style={styles.headerTitle}>Profile Management</ThemedText>
             </View>
 
             <ScrollView style={styles.content}>
@@ -282,17 +281,17 @@ export default function ProfileScreen() {
                             <View style={styles.settingInfo}>
                                 <IconComponent name="person-add" size={24} color={colors.primaryColor} style={styles.settingIcon} />
                                 <View style={styles.settingTextContainer}>
-                                    <Text style={styles.settingLabel}>No Profile Found</Text>
-                                    <Text style={styles.settingDescription}>
+                                    <ThemedText style={styles.settingLabel}>No Profile Found</ThemedText>
+                                    <ThemedText style={styles.settingDescription}>
                                         You don&apos;t have any profiles yet. Create your first profile to get started.
-                                    </Text>
+                                    </ThemedText>
                                 </View>
                             </View>
                             <TouchableOpacity
                                 style={styles.createProfileButton}
                                 onPress={() => router.push('/profile/create')}
                             >
-                                <Text style={styles.createProfileButtonText}>Create Profile</Text>
+                                <ThemedText style={styles.createProfileButtonText}>Create Profile</ThemedText>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -301,7 +300,7 @@ export default function ProfileScreen() {
                 {/* Active Profile Section */}
                 {activeProfile && (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Active Profile</Text>
+                        <ThemedText style={styles.sectionTitle}>Active Profile</ThemedText>
 
                         <View style={[styles.settingItem, styles.firstSettingItem, styles.lastSettingItem]}>
                             <View style={styles.settingInfo}>
@@ -312,16 +311,16 @@ export default function ProfileScreen() {
                                     style={styles.settingIcon}
                                 />
                                 <View>
-                                    <Text style={styles.settingLabel}>{getProfileDisplayName(activeProfile)}</Text>
-                                    <Text style={styles.settingDescription}>
+                                    <ThemedText style={styles.settingLabel}>{getProfileDisplayName(activeProfile)}</ThemedText>
+                                    <ThemedText style={styles.settingDescription}>
                                         {activeProfile.profileType === 'personal' ? 'Personal Profile' :
                                             activeProfile.profileType === 'agency' ? 'Agency Profile' : 'Business Profile'}
                                         {getProfileDescription(activeProfile) && ` • ${getProfileDescription(activeProfile)}`}
-                                    </Text>
+                                    </ThemedText>
                                 </View>
                             </View>
                             <View style={styles.activeBadge}>
-                                <Text style={styles.activeBadgeText}>Active</Text>
+                                <ThemedText style={styles.activeBadgeText}>Active</ThemedText>
                             </View>
                         </View>
                     </View>
@@ -333,10 +332,10 @@ export default function ProfileScreen() {
                         <View style={styles.settingInfo}>
                             <IconComponent name="information-circle" size={20} color="#666" style={styles.settingIcon} />
                             <View style={styles.settingTextContainer}>
-                                <Text style={styles.settingLabel}>Profile Management</Text>
-                                <Text style={styles.settingDescription}>
+                                <ThemedText style={styles.settingLabel}>Profile Management</ThemedText>
+                                <ThemedText style={styles.settingDescription}>
                                     Personal profiles are unique and linked to your Oxy account. You can have multiple business or agency profiles. Inactive profiles are shown and can be reactivated.
-                                </Text>
+                                </ThemedText>
                             </View>
                         </View>
                     </View>
@@ -345,7 +344,7 @@ export default function ProfileScreen() {
                 {/* Personal Profiles Section */}
                 {personalProfiles.length > 0 && (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Personal Profiles</Text>
+                        <ThemedText style={styles.sectionTitle}>Personal Profiles</ThemedText>
                         {personalProfiles.map((profile, index) => {
                             return (
                                 <TouchableOpacity
@@ -368,19 +367,19 @@ export default function ProfileScreen() {
                                     <View style={styles.settingInfo}>
                                         <IconComponent name="person" size={20} color="#666" style={styles.settingIcon} />
                                         <View style={styles.settingTextContainer}>
-                                            <Text style={styles.settingLabel}>{getProfileDisplayName(profile)}</Text>
-                                            <Text style={styles.settingDescription}>
+                                            <ThemedText style={styles.settingLabel}>{getProfileDisplayName(profile)}</ThemedText>
+                                            <ThemedText style={styles.settingDescription}>
                                                 Personal Profile
                                                 {getProfileDescription(profile) && ` • ${getProfileDescription(profile)}`}
                                                 {' • Linked to Oxy Account'}
                                                 {!profile.isActive && ' • Inactive'}
-                                            </Text>
+                                            </ThemedText>
                                         </View>
                                     </View>
                                     <View style={styles.itemActions}>
                                         {profile.isActive && (
                                             <View style={styles.activeBadge}>
-                                                <Text style={styles.activeBadgeText}>Active</Text>
+                                                <ThemedText style={styles.activeBadgeText}>Active</ThemedText>
                                             </View>
                                         )}
                                         {isSwitching && (profile.id || profile._id) === activeProfileId && (
@@ -397,7 +396,7 @@ export default function ProfileScreen() {
                 {/* Business Profiles Section */}
                 {businessProfiles.length > 0 && (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Business Profiles</Text>
+                        <ThemedText style={styles.sectionTitle}>Business Profiles</ThemedText>
                         {businessProfiles.map((profile, index) => {
                             return (
                                 <TouchableOpacity
@@ -420,18 +419,18 @@ export default function ProfileScreen() {
                                     <View style={styles.settingInfo}>
                                         <IconComponent name="business" size={20} color="#666" style={styles.settingIcon} />
                                         <View style={styles.settingTextContainer}>
-                                            <Text style={styles.settingLabel}>{getProfileDisplayName(profile)}</Text>
-                                            <Text style={styles.settingDescription}>
+                                            <ThemedText style={styles.settingLabel}>{getProfileDisplayName(profile)}</ThemedText>
+                                            <ThemedText style={styles.settingDescription}>
                                                 Business Profile
                                                 {getProfileDescription(profile) && ` • ${getProfileDescription(profile)}`}
                                                 {!profile.isActive && ' • Inactive'}
-                                            </Text>
+                                            </ThemedText>
                                         </View>
                                     </View>
                                     <View style={styles.itemActions}>
                                         {profile.isActive && (
                                             <View style={styles.activeBadge}>
-                                                <Text style={styles.activeBadgeText}>Active</Text>
+                                                <ThemedText style={styles.activeBadgeText}>Active</ThemedText>
                                             </View>
                                         )}
                                         {isSwitching && (profile.id || profile._id) === activeProfileId && (
@@ -448,7 +447,7 @@ export default function ProfileScreen() {
                 {/* Agency Profiles Section */}
                 {agencyProfiles.length > 0 && (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Agency Profiles</Text>
+                        <ThemedText style={styles.sectionTitle}>Agency Profiles</ThemedText>
                         {agencyProfiles.map((profile, index) => {
                             return (
                                 <TouchableOpacity
@@ -471,18 +470,18 @@ export default function ProfileScreen() {
                                     <View style={styles.settingInfo}>
                                         <IconComponent name="business" size={20} color="#666" style={styles.settingIcon} />
                                         <View style={styles.settingTextContainer}>
-                                            <Text style={styles.settingLabel}>{getProfileDisplayName(profile)}</Text>
-                                            <Text style={styles.settingDescription}>
+                                            <ThemedText style={styles.settingLabel}>{getProfileDisplayName(profile)}</ThemedText>
+                                            <ThemedText style={styles.settingDescription}>
                                                 Agency Profile
                                                 {getProfileDescription(profile) && ` • ${getProfileDescription(profile)}`}
                                                 {!profile.isActive && ' • Inactive'}
-                                            </Text>
+                                            </ThemedText>
                                         </View>
                                     </View>
                                     <View style={styles.itemActions}>
                                         {profile.isActive && (
                                             <View style={styles.activeBadge}>
-                                                <Text style={styles.activeBadgeText}>Active</Text>
+                                                <ThemedText style={styles.activeBadgeText}>Active</ThemedText>
                                             </View>
                                         )}
                                         {isSwitching && (profile.id || profile._id) === activeProfileId && (
@@ -498,7 +497,7 @@ export default function ProfileScreen() {
 
                 {/* Actions Section */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Actions</Text>
+                    <ThemedText style={styles.sectionTitle}>Actions</ThemedText>
 
                     <TouchableOpacity
                         style={[styles.settingItem, styles.firstSettingItem]}
@@ -507,8 +506,8 @@ export default function ProfileScreen() {
                         <View style={styles.settingInfo}>
                             <IconComponent name="create" size={20} color="#666" style={styles.settingIcon} />
                             <View>
-                                <Text style={styles.settingLabel}>Edit Current Profile</Text>
-                                <Text style={styles.settingDescription}>Modify profile information</Text>
+                                <ThemedText style={styles.settingLabel}>Edit Current Profile</ThemedText>
+                                <ThemedText style={styles.settingDescription}>Modify profile information</ThemedText>
                             </View>
                         </View>
                         <IconComponent name="chevron-forward" size={16} color="#ccc" />
@@ -521,8 +520,8 @@ export default function ProfileScreen() {
                         <View style={styles.settingInfo}>
                             <IconComponent name="add-circle" size={20} color="#666" style={styles.settingIcon} />
                             <View>
-                                <Text style={styles.settingLabel}>Create New Profile</Text>
-                                <Text style={styles.settingDescription}>Add a new business or agency profile</Text>
+                                <ThemedText style={styles.settingLabel}>Create New Profile</ThemedText>
+                                <ThemedText style={styles.settingDescription}>Add a new business or agency profile</ThemedText>
                             </View>
                         </View>
                         <IconComponent name="chevron-forward" size={16} color="#ccc" />
@@ -538,8 +537,8 @@ export default function ProfileScreen() {
                         <View style={styles.settingInfo}>
                             <IconComponent name="log-out" size={20} color="#ff4757" style={styles.settingIcon} />
                             <View>
-                                <Text style={[styles.settingLabel, { color: '#ff4757' }]}>Sign Out</Text>
-                                <Text style={styles.settingDescription}>Sign out of your account</Text>
+                                <ThemedText style={[styles.settingLabel, { color: '#ff4757' }]}>Sign Out</ThemedText>
+                                <ThemedText style={styles.settingDescription}>Sign out of your account</ThemedText>
                             </View>
                         </View>
                     </TouchableOpacity>

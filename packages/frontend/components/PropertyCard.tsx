@@ -8,6 +8,7 @@ import { getPropertyTitle, getPropertyImageSource } from '@/utils/propertyUtils'
 import { useFavorites } from '@/hooks/useFavorites';
 import { SaveButton } from './SaveButton';
 import { CurrencyFormatter } from './CurrencyFormatter';
+import { ThemedText } from '@/components/ThemedText';
 
 
 
@@ -324,46 +325,46 @@ export function PropertyCard({
                 isFeatured ? styles.featuredContent : null,
             ]}>
                 {/* Title - Airbnb style */}
-                <Text style={[
+                <ThemedText style={[
                     styles.title,
                     variant === 'compact' ? styles.compactTitle : null,
                     isFeatured ? styles.featuredTitle : null,
                 ]} numberOfLines={finalTitleLines}>
                     {propertyData.title}
-                </Text>
+                </ThemedText>
 
                 {/* Location */}
                 {showLocation && propertyData.location && (
-                    <Text style={[
+                    <ThemedText style={[
                         styles.location,
                         variant === 'compact' ? styles.compactLocation : null,
                         isFeatured ? styles.featuredLocation : null,
                     ]} numberOfLines={finalLocationLines}>
                         {propertyData.location}
-                    </Text>
+                    </ThemedText>
                 )}
 
                 {/* Features */}
                 {shouldShowFeatures && (
                     <View style={styles.features}>
                         <View style={styles.feature}>
-                            <Text style={styles.featureText}>
+                            <ThemedText style={styles.featureText}>
                                 {`${propertyData.bedrooms} bed${propertyData.bedrooms !== 1 ? 's' : ''}`}
-                            </Text>
+                            </ThemedText>
                         </View>
-                        <Text style={styles.featureSeparator}>•</Text>
+                        <ThemedText style={styles.featureSeparator}>•</ThemedText>
                         <View style={styles.feature}>
-                            <Text style={styles.featureText}>
+                            <ThemedText style={styles.featureText}>
                                 {`${propertyData.bathrooms} bath${propertyData.bathrooms !== 1 ? 's' : ''}`}
-                            </Text>
+                            </ThemedText>
                         </View>
                         {propertyData.size && propertyData.size > 0 && (
                             <>
-                                <Text style={styles.featureSeparator}>•</Text>
+                                <ThemedText style={styles.featureSeparator}>•</ThemedText>
                                 <View style={styles.feature}>
-                                    <Text style={styles.featureText}>
+                                    <ThemedText style={styles.featureText}>
                                         {`${propertyData.size} ${sizeUnit}`}
-                                    </Text>
+                                    </ThemedText>
                                 </View>
                             </>
                         )}
@@ -373,7 +374,7 @@ export function PropertyCard({
                 {/* Price - Airbnb style at bottom */}
                 {showPrice && propertyData.price && (
                     <View style={styles.priceContainer}>
-                        <Text style={[
+                        <ThemedText style={[
                             styles.price,
                             variant === 'compact' ? styles.compactPrice : null,
                             isFeatured ? styles.featuredPrice : null,
@@ -383,8 +384,8 @@ export function PropertyCard({
                                 originalCurrency={propertyData.currency}
                                 showConversion={false}
                             />
-                            <Text style={styles.priceUnit}> / {priceUnit}</Text>
-                        </Text>
+                            <ThemedText style={styles.priceUnit}> / {priceUnit}</ThemedText>
+                        </ThemedText>
                     </View>
                 )}
             </View>

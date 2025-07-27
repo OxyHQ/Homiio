@@ -361,7 +361,7 @@ export default function PropertyDetailPage() {
                 <SafeAreaView style={styles.contentArea} edges={['top']}>
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color={colors.primaryColor} />
-                        <Text style={styles.loadingText}>{t("Loading property details...")}</Text>
+                        <ThemedText style={styles.loadingText}>{t("Loading property details...")}</ThemedText>
                     </View>
                 </SafeAreaView>
             </View>
@@ -385,7 +385,7 @@ export default function PropertyDetailPage() {
                 </View>
                 <SafeAreaView style={styles.contentArea} edges={['top']}>
                     <View style={styles.errorContainer}>
-                        <Text style={styles.errorText}>{t("Property not found")}</Text>
+                        <ThemedText style={styles.errorText}>{t("Property not found")}</ThemedText>
                         <Button
                             onPress={() => router.back()}
                             style={styles.goBackButton}
@@ -436,19 +436,19 @@ export default function PropertyDetailPage() {
                 <View style={styles.container}>
                     {/* Enhanced Header Section */}
                     <View style={styles.enhancedHeader}>
-                        <Text style={styles.headerTitle} numberOfLines={2}>{property.title}</Text>
+                        <ThemedText style={styles.headerTitle} numberOfLines={2}>{property.title}</ThemedText>
                         <View style={styles.headerLocation}>
-                            <Text style={styles.headerLocationText}>{property.location}</Text>
+                            <ThemedText style={styles.headerLocationText}>{property.location}</ThemedText>
                         </View>
                         <View style={styles.headerStats}>
                             <View style={styles.headerStat}>
-                                <Text style={styles.headerStatText}>{property.bedrooms} {t("Bed")}</Text>
+                                <ThemedText style={styles.headerStatText}>{property.bedrooms} {t("Bed")}</ThemedText>
                             </View>
                             <View style={styles.headerStat}>
-                                <Text style={styles.headerStatText}>{property.bathrooms} {t("Bath")}</Text>
+                                <ThemedText style={styles.headerStatText}>{property.bathrooms} {t("Bath")}</ThemedText>
                             </View>
                             <View style={styles.headerStat}>
-                                <Text style={styles.headerStatText}>{property.size}m²</Text>
+                                <ThemedText style={styles.headerStatText}>{property.size}m²</ThemedText>
                             </View>
                         </View>
                     </View>
@@ -482,7 +482,7 @@ export default function PropertyDetailPage() {
                                         interactive={false}
                                     />
                                     <View style={styles.mapOverlay}>
-                                        <Text style={styles.mapOverlayText}>Location</Text>
+                                        <ThemedText style={styles.mapOverlayText}>Location</ThemedText>
                                     </View>
                                 </View>
                             </View>
@@ -492,14 +492,14 @@ export default function PropertyDetailPage() {
                     {/* Basic Info */}
                     <View style={styles.infoContainer}>
                         <View style={styles.priceContainer}>
-                            <Text style={styles.priceLabel}>
+                            <ThemedText style={styles.priceLabel}>
                                 {property.priceUnit === 'day' ? t("Daily Rent") :
                                     property.priceUnit === 'night' ? t("Nightly Rent") :
                                         property.priceUnit === 'week' ? t("Weekly Rent") :
                                             property.priceUnit === 'month' ? t("Monthly Rent") :
                                                 property.priceUnit === 'year' ? t("Yearly Rent") :
                                                     t("Rent")}
-                            </Text>
+                            </ThemedText>
                             <CurrencyFormatter
                                 amount={parseFloat(property.price) || 0}
                                 originalCurrency={apiProperty?.rent?.currency || 'USD'}
@@ -512,15 +512,15 @@ export default function PropertyDetailPage() {
                             <>
                                 <View style={styles.ecoRatingContainer}>
                                     <View style={styles.ratingHeader}>
-                                        <Text style={styles.ratingTitle}>{t("Energy Efficiency")}</Text>
+                                        <ThemedText style={styles.ratingTitle}>{t("Energy Efficiency")}</ThemedText>
                                     </View>
                                     <View style={styles.energyRatingContainer}>
                                         <View style={[styles.energyRatingBadge, { backgroundColor: '#2e7d32' }]}>
-                                            <Text style={styles.energyRatingText}>{property.energyRating}</Text>
+                                            <ThemedText style={styles.energyRatingText}>{property.energyRating}</ThemedText>
                                         </View>
-                                        <Text style={styles.energyRatingDesc}>
+                                        <ThemedText style={styles.energyRatingDesc}>
                                             {t("This property meets high standards for energy efficiency")}
-                                        </Text>
+                                        </ThemedText>
                                     </View>
                                 </View>
                             </>
@@ -530,9 +530,9 @@ export default function PropertyDetailPage() {
                         {property.description && property.description.trim() !== '' && (
                             <>
                                 <View style={styles.descriptionContainer}>
-                                    <Text style={styles.sectionTitle}>{t("About this property")}</Text>
+                                    <ThemedText style={styles.sectionTitle}>{t("About this property")}</ThemedText>
                                     <View style={styles.descriptionCard}>
-                                        <Text style={styles.descriptionText}>{property.description}</Text>
+                                        <ThemedText style={styles.descriptionText}>{property.description}</ThemedText>
                                     </View>
                                 </View>
                             </>
@@ -541,24 +541,24 @@ export default function PropertyDetailPage() {
                         {/* Availability */}
                         <View style={styles.availabilityContainer}>
                             <View style={styles.availabilityItem}>
-                                <Text style={styles.availabilityLabel}>{t("Available From")}</Text>
-                                <Text style={styles.availabilityValue}>{new Date(property.availableFrom).toLocaleDateString()}</Text>
+                                <ThemedText style={styles.availabilityLabel}>{t("Available From")}</ThemedText>
+                                <ThemedText style={styles.availabilityValue}>{new Date(property.availableFrom).toLocaleDateString()}</ThemedText>
                             </View>
                             <View style={styles.availabilityItem}>
-                                <Text style={styles.availabilityLabel}>{t("Minimum Stay")}</Text>
-                                <Text style={styles.availabilityValue}>{property.minStay}</Text>
+                                <ThemedText style={styles.availabilityLabel}>{t("Minimum Stay")}</ThemedText>
+                                <ThemedText style={styles.availabilityValue}>{property.minStay}</ThemedText>
                             </View>
                         </View>
 
                         {/* Amenities */}
-                        <Text style={styles.sectionTitle}>{t("What's Included")}</Text>
+                        <ThemedText style={styles.sectionTitle}>{t("What's Included")}</ThemedText>
 
                         <AmenitiesDisplay amenities={property.amenities} title="" />
 
                         {/* Map - Only show if location coordinates are available */}
                         {apiProperty?.address?.coordinates?.lat && apiProperty?.address?.coordinates?.lng && (
                             <>
-                                <Text style={styles.sectionTitle}>{t("Location")}</Text>
+                                <ThemedText style={styles.sectionTitle}>{t("Location")}</ThemedText>
                                 <PropertyMap
                                     latitude={apiProperty.address.coordinates.lat}
                                     longitude={apiProperty.address.coordinates.lng}
@@ -570,9 +570,9 @@ export default function PropertyDetailPage() {
                         )}
 
                         {/* Landlord Info / Government Housing Authority */}
-                        <Text style={styles.sectionTitle}>
+                        <ThemedText style={styles.sectionTitle}>
                             {apiProperty?.housingType === 'public' ? t("Housing Authority") : t("Landlord")}
-                        </Text>
+                        </ThemedText>
                         <View style={styles.landlordCard}>
                             {apiProperty?.housingType === 'public' ? (
                                 <>
@@ -582,16 +582,16 @@ export default function PropertyDetailPage() {
                                         </View>
                                         <View style={styles.landlordInfo}>
                                             <View style={styles.landlordNameRow}>
-                                                <Text style={styles.landlordName}>
+                                                <ThemedText style={styles.landlordName}>
                                                     {apiProperty?.address?.state ? `${apiProperty.address.state} Housing Authority` : 'Public Housing Authority'}
-                                                </Text>
+                                                </ThemedText>
                                                 <View style={[styles.verifiedBadge, styles.governmentBadge]}>
-                                                    <Text style={styles.verifiedText}>GOV</Text>
+                                                    <ThemedText style={styles.verifiedText}>GOV</ThemedText>
                                                 </View>
                                             </View>
-                                            <Text style={styles.landlordRating}>
+                                            <ThemedText style={styles.landlordRating}>
                                                 Government-managed affordable housing
-                                            </Text>
+                                            </ThemedText>
                                         </View>
                                     </View>
                                     <View style={styles.landlordActions}>
@@ -609,24 +609,24 @@ export default function PropertyDetailPage() {
                                 <>
                                     <View style={styles.landlordHeader}>
                                         <View style={styles.landlordAvatar}>
-                                            <Text style={styles.landlordInitial}>
+                                            <ThemedText style={styles.landlordInitial}>
                                                 {getLandlordDisplayName(landlordProfile)}
-                                            </Text>
+                                            </ThemedText>
                                         </View>
                                         <View style={styles.landlordInfo}>
                                             <View style={styles.landlordNameRow}>
-                                                <Text style={styles.landlordName}>
+                                                <ThemedText style={styles.landlordName}>
                                                     {getLandlordDisplayName(landlordProfile)}
-                                                </Text>
+                                                </ThemedText>
                                                 {landlordProfile?.isActive && (
                                                     <View style={styles.verifiedBadge}>
-                                                        <Text style={styles.verifiedText}>✓</Text>
+                                                        <ThemedText style={styles.verifiedText}>✓</ThemedText>
                                                     </View>
                                                 )}
                                             </View>
-                                            <Text style={styles.landlordRating}>
+                                            <ThemedText style={styles.landlordRating}>
                                                 {getLandlordTrustScore(landlordProfile)}
-                                            </Text>
+                                            </ThemedText>
                                         </View>
                                     </View>
                                     <View style={styles.landlordActions}>
@@ -656,10 +656,10 @@ export default function PropertyDetailPage() {
                         {/* Trust and Safety */}
                         <View style={styles.trustContainer}>
                             <View style={styles.trustTextContainer}>
-                                <Text style={styles.trustTitle}>{t("Homiio Verified")}</Text>
-                                <Text style={styles.trustDescription}>
+                                <ThemedText style={styles.trustTitle}>{t("Homiio Verified")}</ThemedText>
+                                <ThemedText style={styles.trustDescription}>
                                     {t("This property has been personally verified by our team for authenticity and condition")}
-                                </Text>
+                                </ThemedText>
                             </View>
                         </View>
 
@@ -709,9 +709,9 @@ export default function PropertyDetailPage() {
 
                         {/* Fraud Warning */}
                         <View style={styles.fraudWarningContainer}>
-                            <Text style={styles.fraudWarningText}>
+                            <ThemedText style={styles.fraudWarningText}>
                                 {t("Never pay or transfer funds outside the Homio platform")}
-                            </Text>
+                            </ThemedText>
                         </View>
                     </View>
                 </View>
