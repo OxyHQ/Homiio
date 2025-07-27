@@ -4,6 +4,7 @@ import { PropertyCard } from './PropertyCard';
 import { Property } from '@/services/propertyService';
 
 const { width: screenWidth } = Dimensions.get('window');
+const AIRBNB_CARD_WIDTH = 180;
 
 type PropertyListProps = {
     properties: Property[];
@@ -31,7 +32,7 @@ export function PropertyList({
         const cardStyle = {
             ...styles.card,
             ...(isGrid ? {
-                width: (screenWidth - 48) / numColumns, // Account for padding and gaps
+                width: Math.min((screenWidth - 48) / numColumns, AIRBNB_CARD_WIDTH),
                 marginHorizontal: 4,
             } : {}),
             ...(horizontal ? styles.horizontalCard : {}),
@@ -83,7 +84,7 @@ const styles = StyleSheet.create({
         alignSelf: 'stretch',
     },
     horizontalCard: {
-        width: 280,
+        width: AIRBNB_CARD_WIDTH,
         marginRight: 12,
     },
 }); 

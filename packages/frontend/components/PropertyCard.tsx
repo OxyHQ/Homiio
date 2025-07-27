@@ -62,6 +62,8 @@ type PropertyCardProps = {
 };
 
 const { width: screenWidth } = Dimensions.get('window');
+const CARD_MAX_WIDTH = 350;
+const CARD_WIDTH = Math.min(screenWidth * 0.95, CARD_MAX_WIDTH);
 
 const getPropertyTypeIcon = (type: PropertyType) => {
     switch (type) {
@@ -244,7 +246,6 @@ export function PropertyCard({
         >
             <View style={[
                 styles.imageContainer,
-                { height: finalImageHeight },
                 isFeatured ? styles.featuredImageContainer : null,
             ]}>
                 <Image
@@ -402,7 +403,7 @@ const styles = StyleSheet.create({
     container: {
         marginBottom: 12,
         width: '100%',
-        maxWidth: 350,
+        maxWidth: 180,
         height: 'auto',
         flex: 1,
         alignSelf: 'stretch',
@@ -412,7 +413,8 @@ const styles = StyleSheet.create({
     },
     imageContainer: {
         position: 'relative',
-        height: 120,
+        width: '100%',
+        aspectRatio: 1,
         backgroundColor: '#f8f8f8',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
@@ -425,7 +427,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
     },
     featuredImageContainer: {
-        height: 140,
+        aspectRatio: 1,
         shadowOpacity: 0.12,
         shadowRadius: 12,
         elevation: 6,
@@ -435,6 +437,7 @@ const styles = StyleSheet.create({
     image: {
         width: '100%',
         height: '100%',
+        aspectRatio: 1,
     },
     saveButton: {
         position: 'absolute',

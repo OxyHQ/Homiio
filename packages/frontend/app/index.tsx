@@ -23,7 +23,6 @@ import { useSavedProperties } from '@/hooks/useSavedProperties';
 
 // Import components
 import { PropertyCard } from '@/components/PropertyCard';
-import { HomePropertyCarouselSection } from '@/components/HomePropertyCarouselSection';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';
 import { ThemedText } from '@/components/ThemedText';
 
@@ -614,42 +613,74 @@ export default function HomePage() {
         </View>
 
         {/* Featured Properties */}
-        <HomePropertyCarouselSection
+        <HomeCarouselSection
           title={t("home.featured.title")}
-          properties={featuredProperties}
+          items={featuredProperties}
           loading={propertiesLoading}
-          onCardPress={(property) => router.push(`/properties/${property._id || property.id}`)}
+          cardWidth={180}
+          cardGap={15}
+          renderItem={(property) => (
+            <PropertyCard
+              property={property}
+              variant="featured"
+              onPress={() => router.push(`/properties/${property._id || property.id}`)}
+            />
+          )}
         />
 
         {/* Recently Viewed Properties */}
         {recentlyViewedProperties && recentlyViewedProperties.length > 0 && (
-          <HomePropertyCarouselSection
+          <HomeCarouselSection
             title={t('home.recentlyViewed.title') || 'Recently Viewed'}
-            properties={recentlyViewedProperties}
+            items={recentlyViewedProperties}
             loading={false}
-            onCardPress={(property) => router.push(`/properties/${property._id || property.id}`)}
+            cardWidth={180}
+            cardGap={15}
+            renderItem={(property) => (
+              <PropertyCard
+                property={property}
+                variant="featured"
+                onPress={() => router.push(`/properties/${property._id || property.id}`)}
+              />
+            )}
           />
         )}
 
         {/* Saved Properties */}
         {savedProperties && savedProperties.length > 0 && (
-          <HomePropertyCarouselSection
+          <HomeCarouselSection
             title={t('home.saved.title') || 'Saved Properties'}
-            properties={savedProperties}
+            items={savedProperties}
             loading={savedLoading}
-            onCardPress={(property) => router.push(`/properties/${property._id || property.id}`)}
+            cardWidth={180}
+            cardGap={15}
+            renderItem={(property) => (
+              <PropertyCard
+                property={property}
+                variant="featured"
+                onPress={() => router.push(`/properties/${property._id || property.id}`)}
+              />
+            )}
           />
         )}
 
         {/* Nearby Cities Sections */}
         {nearbyCities.map((city, idx) => (
           nearbyProperties[city._id || city.id] && nearbyProperties[city._id || city.id].length > 0 && (
-            <HomePropertyCarouselSection
+            <HomeCarouselSection
               key={city._id || city.id}
               title={t('home.nearby.title', { city: city.name }) || `Properties in ${city.name}`}
-              properties={nearbyProperties[city._id || city.id]}
+              items={nearbyProperties[city._id || city.id]}
               loading={nearbyLoading}
-              onCardPress={(property) => router.push(`/properties/${property._id || property.id}`)}
+              cardWidth={180}
+              cardGap={15}
+              renderItem={(property) => (
+                <PropertyCard
+                  property={property}
+                  variant="featured"
+                  onPress={() => router.push(`/properties/${property._id || property.id}`)}
+                />
+              )}
             />
           )
         ))}

@@ -29,6 +29,7 @@ export function HomeCarouselSection<T>({
     const carouselRef = useRef<ScrollView>(null);
     const [carouselIndex, setCarouselIndex] = useState(0);
     const [containerWidth, setContainerWidth] = useState(0);
+    const [scrollX, setScrollX] = useState(0);
     // Use cardWidth + cardGap for scroll calculations
     const leftSpacer = cardGap;
     const totalContentWidth = items.length * (cardWidth + cardGap) + leftSpacer;
@@ -37,34 +38,37 @@ export function HomeCarouselSection<T>({
     const maxCarouselIndex = cardWidth > 0 ? Math.max(0, Math.ceil((totalContentWidth - containerWidth) / (cardWidth + cardGap))) : 0;
 
     const handleScrollLeft = () => {
-        if (carouselIndex > 0) {
-            const newIndex = Math.max(0, carouselIndex - 1);
+        if (!disableLeftArrow) {
+            const newScrollX = Math.max(0, scrollX - (cardWidth + cardGap));
+            carouselRef.current?.scrollTo({ x: newScrollX, animated: true });
+            setScrollX(newScrollX);
+            const newIndex = Math.max(0, Math.round(newScrollX / (cardWidth + cardGap)));
             setCarouselIndex(newIndex);
-            if (cardWidth > 0) {
-                const scrollX = Math.min(newIndex * (cardWidth + cardGap), maxScroll);
-                carouselRef.current?.scrollTo({ x: scrollX, animated: true });
-            }
         }
     };
 
     const handleScrollRight = () => {
-        if (carouselIndex < maxCarouselIndex) {
-            const newIndex = Math.min(maxCarouselIndex, carouselIndex + 1);
+        if (!disableRightArrow) {
+            const newIndex = carouselIndex + 1;
             setCarouselIndex(newIndex);
             if (cardWidth > 0) {
                 const scrollX = Math.min(newIndex * (cardWidth + cardGap), maxScroll);
                 carouselRef.current?.scrollTo({ x: scrollX, animated: true });
+                setScrollX(scrollX);
             }
         }
     };
 
     const handleScroll = cardWidth > 0 ? (e: NativeSyntheticEvent<NativeScrollEvent>) => {
         const x = e.nativeEvent.contentOffset.x;
+        setScrollX(x);
         const clampedScroll = Math.min(x, maxScroll);
         const clampedIndex = Math.max(0, Math.round(clampedScroll / (cardWidth + cardGap)));
         setCarouselIndex(clampedIndex);
     } : undefined;
 
+    const disableRightArrow = (scrollX + containerWidth) >= (totalContentWidth - cardGap - 1); // -1 for floating point tolerance
+    const disableLeftArrow = scrollX <= 0;
     return (
         <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -77,20 +81,20 @@ export function HomeCarouselSection<T>({
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <TouchableOpacity
                         onPress={handleScrollLeft}
-                        disabled={carouselIndex === 0}
+                        disabled={disableLeftArrow}
                         style={[
                             styles.arrowButton,
-                            { opacity: carouselIndex === 0 ? 0.3 : 1, marginRight: 8 },
+                            { opacity: disableLeftArrow ? 0.3 : 1, marginRight: 8 },
                         ]}
                     >
                         <Ionicons name="chevron-back" size={20} color={colors.primaryColor} />
                     </TouchableOpacity>
                     <TouchableOpacity
                         onPress={handleScrollRight}
-                        disabled={carouselIndex >= maxCarouselIndex}
+                        disabled={disableRightArrow}
                         style={[
                             styles.arrowButton,
-                            { opacity: carouselIndex >= maxCarouselIndex ? 0.3 : 1 },
+                            { opacity: disableRightArrow ? 0.3 : 1 },
                         ]}
                     >
                         <Ionicons name="chevron-forward" size={20} color={colors.primaryColor} />
