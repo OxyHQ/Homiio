@@ -1,6 +1,6 @@
 {
-  "name": "oxy-notes-frontend",
-  "buildCommand": "cd packages/frontend && npm run build-web:prod",
+  "name": "homiio-monorepo",
+  "buildCommand": "npm run build:shared-types && npm run build:frontend",
   "outputDirectory": "packages/frontend/dist",
   "installCommand": "npm install",
   "framework": null,
