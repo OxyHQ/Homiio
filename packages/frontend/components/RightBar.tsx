@@ -71,13 +71,9 @@ export function RightBar() {
 
     return (
         <View style={styles.container}>
-            {/* Sticky Search Bar */}
-            <View style={styles.stickySearchContainer}>
-                <SearchBar hideFilterIcon={isSearchScreen} />
-            </View>
-
             {/* Sticky Widgets Container */}
             <View style={styles.stickyWidgetsContainer}>
+                <SearchBar hideFilterIcon={isSearchScreen} />
                 <WidgetManager
                     screenId={getScreenId()}
                     propertyId={propertyInfo.propertyId}
@@ -96,24 +92,15 @@ const styles = StyleSheet.create({
         paddingStart: 20,
         flexDirection: 'column',
         gap: 10,
+    },
+    stickyWidgetsContainer: {
         ...Platform.select({
             web: {
                 position: 'sticky' as any,
                 top: 0,
-                height: '100vh' as any,
+                zIndex: 10,
+                paddingVertical: 20,
             },
         }),
-    },
-    stickySearchContainer: {
-        //...Platform.select({
-        //    web: {
-        //        position: 'sticky' as any,
-        //        top: 0,
-        //        zIndex: 10,
-        //    },
-        //}),
-    },
-    stickyWidgetsContainer: {
-        flex: 1,
     },
 });

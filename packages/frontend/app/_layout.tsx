@@ -85,20 +85,21 @@ i18n.use(initReactI18next).init({
 // --- 3. Styles (outside component) ---
 const getStyles = (isScreenNotMobile: boolean, insets: any) => StyleSheet.create({
   container: {
-    maxWidth: 1800,
+    maxWidth: 1300,
     width: '100%',
     paddingHorizontal: isScreenNotMobile ? 10 : 0,
     marginHorizontal: 'auto',
     justifyContent: 'space-between',
     flexDirection: isScreenNotMobile ? 'row' : 'column',
-    ...(!isScreenNotMobile && { flex: 1 }),
+    ...(!isScreenNotMobile && {
+      flex: 1,
+    }),
   },
   mainContentWrapper: {
+    marginVertical: isScreenNotMobile ? 20 : 0,
     flex: isScreenNotMobile ? 2.2 : 1,
     backgroundColor: colors.primaryLight,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
+    borderRadius: isScreenNotMobile ? 35 : 0,
   },
   contentContainer: {
     flex: 1,
@@ -236,19 +237,17 @@ export default function RootLayout() {
             <I18nextProvider i18n={i18n}>
               <MenuProvider>
                 <ErrorBoundary>
-                  <ProfileProvider>
-                    <View style={styles.container}>
-                      <SideBar />
-                      <View style={styles.mainContentWrapper}>
-                        <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0 }} />
-                        <Slot />
-                      </View>
-                      <RightBar />
+                  <View style={styles.container}>
+                    <SideBar />
+                    <View style={styles.mainContentWrapper}>
+                      <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0 }} />
+                      <Slot />
                     </View>
-                    <StatusBar style="auto" />
-                    <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
-                    {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
-                  </ProfileProvider>
+                    <RightBar />
+                  </View>
+                  <StatusBar style="auto" />
+                  <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
+                  {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
                 </ErrorBoundary>
               </MenuProvider>
             </I18nextProvider>

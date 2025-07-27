@@ -53,10 +53,6 @@ export const SearchBar = ({ hideFilterIcon = false }: SearchBarProps) => {
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
-            ...Platform.select({
-                web: { position: 'sticky' },
-            }),
-            marginTop: 20,
             top: 0,
             zIndex: 1000,
             paddingVertical: 4,
