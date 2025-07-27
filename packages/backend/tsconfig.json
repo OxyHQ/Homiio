@@ -10,9 +10,24 @@
     "strict": false,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
-    "composite": true
+    "composite": true,
+    "baseUrl": ".",
+    "paths": {
+      "@homiio/shared-types": [
+        "../shared-types/src"
+      ],
+      "@homiio/shared-types/*": [
+        "../shared-types/src/*"
+      ]
+    }
   },
   "include": [
-    "**/*.ts"
+    "**/*.ts",
+    "package.json"
+  ],
+  "references": [
+    {
+      "path": "../shared-types"
+    }
   ]
 }

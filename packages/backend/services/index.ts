@@ -7,4 +7,3 @@ import energyService from './energyService';
 import telegramService from './telegramService';
 
 export { energyService, telegramService };
-export default { energyService, telegramService };

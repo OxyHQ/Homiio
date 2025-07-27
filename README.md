@@ -92,6 +92,24 @@ Clean all build artifacts and node_modules:
 npm run clean
 ```
 
+## 🚀 Deployment
+
+### Vercel Deployment
+
+The monorepo is configured for deployment to Vercel with proper shared-types handling.
+
+#### Frontend Deployment
+```bash
+./scripts/deploy-frontend.sh
+```
+
+#### Backend Deployment
+```bash
+./scripts/deploy-backend.sh
+```
+
+For detailed deployment instructions, see [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md).
+
 ## 📦 Packages
 
 ### Frontend (`packages/frontend`)

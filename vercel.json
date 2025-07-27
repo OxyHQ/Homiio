@@ -1,6 +1,6 @@
 {
   "name": "homiio-monorepo",
-  "buildCommand": "npm run build:shared-types && npm run build:frontend",
+  "buildCommand": "VERCEL_TARGET=frontend node scripts/build-for-vercel.js",
   "outputDirectory": "packages/frontend/dist",
   "installCommand": "npm install",
   "framework": null,

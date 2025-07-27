@@ -11,6 +11,7 @@
         "dev:frontend": "npm run dev --workspace=@homiio/frontend",
         "dev:backend": "npm run dev --workspace=@homiio/backend",
         "build": "npm run build --workspaces",
+        "build:shared-types": "npm run build --workspace=@homiio/shared-types",
         "build:frontend": "npm run build --workspace=@homiio/frontend",
         "build:backend": "npm run build --workspace=@homiio/backend",
         "test": "npm run test --workspaces",
@@ -18,7 +19,8 @@
         "clean": "npm run clean --workspaces && rm -rf node_modules",
         "install:all": "npm install && npm install --workspaces",
         "start:frontend": "npm run start --workspace=@homiio/frontend",
-        "start:backend": "npm run start --workspace=@homiio/backend"
+        "start:backend": "npm run start --workspace=@homiio/backend",
+        "postinstall": "npm run build:shared-types"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",
