@@ -401,12 +401,8 @@ export function PropertyCard({
 
 const styles = StyleSheet.create({
     container: {
-        marginBottom: 12,
         width: '100%',
-        maxWidth: 180,
         height: 'auto',
-        flex: 1,
-        alignSelf: 'stretch',
     },
     featuredCard: {
         // No border or shadow here
@@ -416,23 +412,10 @@ const styles = StyleSheet.create({
         width: '100%',
         aspectRatio: 1,
         backgroundColor: '#f8f8f8',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 3,
-        borderWidth: 1,
-        borderColor: '#e0e0e0',
-        borderRadius: 12,
+        borderRadius: 25,
         overflow: 'hidden',
     },
     featuredImageContainer: {
-        aspectRatio: 1,
-        shadowOpacity: 0.12,
-        shadowRadius: 12,
-        elevation: 6,
-        borderRadius: 12,
-        overflow: 'hidden',
     },
     image: {
         width: '100%',

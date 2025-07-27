@@ -355,44 +355,6 @@ export default function HomePage() {
     }
   }, [loadProperties]);
 
-  const carouselRef = useRef<ScrollView>(null);
-  const [carouselIndex, setCarouselIndex] = useState(0);
-  const [cardWidth, setCardWidth] = useState(0);
-  const itemsPerPage = 2;
-  const maxCarouselIndex = Math.max(0, featuredProperties.length - itemsPerPage);
-
-  const handleScrollLeft = () => {
-    if (carouselIndex > 0) {
-      const newIndex = carouselIndex - 1;
-      setCarouselIndex(newIndex);
-      if (cardWidth > 0) {
-        carouselRef.current?.scrollTo({ x: newIndex * cardWidth, animated: true });
-      }
-    }
-  };
-
-  const handleScrollRight = () => {
-    if (carouselIndex < maxCarouselIndex) {
-      const newIndex = carouselIndex + 1;
-      setCarouselIndex(newIndex);
-      if (cardWidth > 0) {
-        carouselRef.current?.scrollTo({ x: newIndex * cardWidth, animated: true });
-      }
-    }
-  };
-
-  // Throttle scroll updates to avoid performance issues
-  const scrollUpdateTimeout = useRef<NodeJS.Timeout | null>(null);
-  const handleScroll = cardWidth > 0 ? (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (scrollUpdateTimeout.current) clearTimeout(scrollUpdateTimeout.current);
-    const x = e.nativeEvent.contentOffset.x;
-    // Subtract the left spacer (15px)
-    const index = Math.round((x - 15) / cardWidth);
-    // Use a short timeout to avoid rapid state updates
-    scrollUpdateTimeout.current = setTimeout(() => {
-      setCarouselIndex(Math.max(0, Math.min(index, maxCarouselIndex)));
-    }, 10);
-  } : undefined;
 
   // Tip card styles for carousel (StyleSheet)
   const tipCarouselCardStyles = StyleSheet.create({
@@ -617,8 +579,6 @@ export default function HomePage() {
           title={t("home.featured.title")}
           items={featuredProperties}
           loading={propertiesLoading}
-          cardWidth={180}
-          cardGap={15}
           renderItem={(property) => (
             <PropertyCard
               property={property}
@@ -634,8 +594,6 @@ export default function HomePage() {
             title={t('home.recentlyViewed.title') || 'Recently Viewed'}
             items={recentlyViewedProperties}
             loading={false}
-            cardWidth={180}
-            cardGap={15}
             renderItem={(property) => (
               <PropertyCard
                 property={property}
@@ -652,8 +610,6 @@ export default function HomePage() {
             title={t('home.saved.title') || 'Saved Properties'}
             items={savedProperties}
             loading={savedLoading}
-            cardWidth={180}
-            cardGap={15}
             renderItem={(property) => (
               <PropertyCard
                 property={property}
@@ -672,8 +628,6 @@ export default function HomePage() {
               title={t('home.nearby.title', { city: city.name }) || `Properties in ${city.name}`}
               items={nearbyProperties[city._id || city.id]}
               loading={nearbyLoading}
-              cardWidth={180}
-              cardGap={15}
               renderItem={(property) => (
                 <PropertyCard
                   property={property}
@@ -690,8 +644,7 @@ export default function HomePage() {
           title={t('home.cities.title')}
           items={topCities}
           loading={citiesLoading}
-          cardWidth={200}
-          cardGap={16}
+          minItemsToShow={1}
           renderItem={(city, index) => (
             <TouchableOpacity
               key={city.id}
@@ -806,8 +759,6 @@ export default function HomePage() {
           title={t('home.tips.title')}
           items={tips}
           loading={tipsLoading}
-          cardWidth={220}
-          cardGap={16}
           onViewAll={() => router.push('/tips')}
           viewAllText={t('home.viewAll')}
           renderItem={(tip, idx) => (
@@ -1181,8 +1132,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   cityCard: {
-    width: 200,
-    marginRight: 16,
+    width: '100%',
     backgroundColor: '#ffffff',
     borderRadius: 25,
     overflow: 'hidden',
