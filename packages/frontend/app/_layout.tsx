@@ -96,10 +96,8 @@ const getStyles = (isScreenNotMobile: boolean, insets: any) => StyleSheet.create
     }),
   },
   mainContentWrapper: {
-    marginVertical: isScreenNotMobile ? 20 : 0,
     flex: isScreenNotMobile ? 2.2 : 1,
     backgroundColor: colors.primaryLight,
-    borderRadius: isScreenNotMobile ? 35 : 0,
   },
   contentContainer: {
     flex: 1,
