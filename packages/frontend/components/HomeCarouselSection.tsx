@@ -219,7 +219,7 @@ export function HomeCarouselSection<T>({
                     <View style={{ flexDirection: 'row', gap: 16 }}>
                         {loading
                             ? Array.from({ length: 4 }).map((_, idx) => (
-                                <View key={idx} style={{ width: calculatedCardWidth }}>{/* Skeleton */}</View>
+                                <View key={idx} style={{ width: calculatedCardWidth, height: 200, backgroundColor: '#f0f0f0', borderRadius: 8 }} />
                             ))
                             : items.map((item, idx) => (
                                 <View key={idx} style={{ width: calculatedCardWidth }}>
