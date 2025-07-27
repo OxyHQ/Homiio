@@ -134,6 +134,8 @@ const styles = StyleSheet.create({
         top: 0,
         backgroundColor: colors.primaryLight,
         zIndex: 100,
+        borderTopLeftRadius: 35,
+        borderTopRightRadius: 35,
     } as ViewStyle,
     contentContainer: {
         flex: 1,

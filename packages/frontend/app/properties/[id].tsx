@@ -402,32 +402,27 @@ export default function PropertyDetailPage() {
 
     return (
         <View style={{ flex: 1 }}>
-            <View
-                style={styles.stickyHeaderWrapper}
-                onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
-            >
-                <Header
-                    options={{
-                        showBackButton: true,
-                        title: '',
-                        titlePosition: 'center',
-                        rightComponents: [
-                            <TouchableOpacity key="share" style={styles.headerButton} onPress={handleShare}>
-                                <IconComponent name="share-outline" size={24} color={colors.COLOR_BLACK} />
-                            </TouchableOpacity>,
-                            <SaveButton
-                                key="save"
-                                isSaved={isPropertyFavorite}
-                                onPress={() => toggleFavorite(property.id || '', apiProperty || {})}
-                                variant="heart"
-                                color="#222"
-                                activeColor="#EF4444"
-                                isLoading={isPropertySaving(property.id || '')}
-                            />,
-                        ],
-                    }}
-                />
-            </View>
+            <Header
+                options={{
+                    showBackButton: true,
+                    title: '',
+                    titlePosition: 'center',
+                    rightComponents: [
+                        <TouchableOpacity key="share" style={styles.headerButton} onPress={handleShare}>
+                            <IconComponent name="share-outline" size={24} color={colors.COLOR_BLACK} />
+                        </TouchableOpacity>,
+                        <SaveButton
+                            key="save"
+                            isSaved={isPropertyFavorite}
+                            onPress={() => toggleFavorite(property.id || '', apiProperty || {})}
+                            variant="heart"
+                            color="#222"
+                            activeColor="#EF4444"
+                            isLoading={isPropertySaving(property.id || '')}
+                        />,
+                    ],
+                }}
+            />
             <ScrollView
                 style={styles.safeArea}
                 contentContainerStyle={{ paddingTop: headerHeight }}
@@ -1058,13 +1053,5 @@ const styles = StyleSheet.create({
         color: colors.COLOR_BLACK_LIGHT_3,
         textAlign: 'center',
         fontStyle: 'italic',
-    },
-    stickyHeaderWrapper: {
-        zIndex: 100,
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: colors.primaryLight,
     },
 }); 

@@ -85,7 +85,7 @@ i18n.use(initReactI18next).init({
 // --- 3. Styles (outside component) ---
 const getStyles = (isScreenNotMobile: boolean, insets: any) => StyleSheet.create({
   container: {
-    maxWidth: 1300,
+    maxWidth: 1600,
     width: '100%',
     paddingHorizontal: isScreenNotMobile ? 10 : 0,
     marginHorizontal: 'auto',
