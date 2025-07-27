@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Platform, TextInput, Modal, Image, Share } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Platform, TextInput, Modal, Image, Share, Animated } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/styles/colors';
@@ -63,7 +63,7 @@ export default function PropertyDetailPage() {
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [landlordVerified, setLandlordVerified] = useState(true);
     const hasViewedRef = useRef(false);
-    const [headerHeight, setHeaderHeight] = useState(0);
+    const scrollY = new Animated.Value(0);
 
     // Zustand stores
     const { primaryProfile } = useProfileStore();
@@ -346,18 +346,13 @@ export default function PropertyDetailPage() {
     if (isLoading) {
         return (
             <View style={{ flex: 1 }}>
-                <View
-                    style={styles.stickyHeaderWrapper}
-                    onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
-                >
-                    <Header
-                        options={{
-                            showBackButton: true,
-                            title: t("Loading..."),
-                            titlePosition: 'center',
-                        }}
-                    />
-                </View>
+                <Header
+                    options={{
+                        showBackButton: true,
+                        title: t("Loading..."),
+                        titlePosition: 'center',
+                    }}
+                />
                 <SafeAreaView style={styles.contentArea} edges={['top']}>
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color={colors.primaryColor} />
@@ -371,18 +366,13 @@ export default function PropertyDetailPage() {
     if (error || !property) {
         return (
             <View style={{ flex: 1 }}>
-                <View
-                    style={styles.stickyHeaderWrapper}
-                    onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
-                >
-                    <Header
-                        options={{
-                            showBackButton: true,
-                            title: t("Error"),
-                            titlePosition: 'center',
-                        }}
-                    />
-                </View>
+                <Header
+                    options={{
+                        showBackButton: true,
+                        title: t("Error"),
+                        titlePosition: 'center',
+                    }}
+                />
                 <SafeAreaView style={styles.contentArea} edges={['top']}>
                     <View style={styles.errorContainer}>
                         <ThemedText style={styles.errorText}>{t("Property not found")}</ThemedText>
@@ -401,52 +391,71 @@ export default function PropertyDetailPage() {
     const isPropertyFavorite = isFavorite(property.id);
 
     return (
-        <View style={{ flex: 1 }}>
-            <Header
-                options={{
-                    showBackButton: true,
-                    title: '',
-                    titlePosition: 'center',
-                    rightComponents: [
-                        <TouchableOpacity key="share" style={styles.headerButton} onPress={handleShare}>
-                            <IconComponent name="share-outline" size={24} color={colors.COLOR_BLACK} />
-                        </TouchableOpacity>,
-                        <SaveButton
-                            key="save"
-                            isSaved={isPropertyFavorite}
-                            onPress={() => toggleFavorite(property.id || '', apiProperty || {})}
-                            variant="heart"
-                            color="#222"
-                            activeColor="#EF4444"
-                            isLoading={isPropertySaving(property.id || '')}
-                        />,
-                    ],
-                }}
-            />
-            <ScrollView
-                style={styles.safeArea}
-                contentContainerStyle={{ paddingTop: headerHeight }}
+        <View style={styles.safeArea}>
+            {/* Header positioned absolutely to overlay the image */}
+            <View style={styles.headerOverlay}>
+                <Header
+                    options={{
+                        showBackButton: true, // Disable default back button
+                        title: '',
+                        titlePosition: 'center',
+                        transparent: true,
+                        scrollThreshold: 100,
+                        rightComponents: [
+                            <TouchableOpacity key="share" style={styles.headerButton} onPress={handleShare}>
+                                <IconComponent name="share-outline" size={24} color="#222" />
+                            </TouchableOpacity>,
+                            <SaveButton
+                                key="save"
+                                isSaved={isPropertyFavorite}
+                                onPress={() => toggleFavorite(property.id || '', apiProperty || {})}
+                                variant="heart"
+                                color="#222"
+                                activeColor="#EF4444"
+                                isLoading={isPropertySaving(property.id || '')}
+                            />,
+                        ],
+                    }}
+                    scrollY={scrollY}
+                />
+            </View>
+
+            <Animated.ScrollView
+                style={styles.scrollView}
                 showsVerticalScrollIndicator={false}
+                onScroll={Animated.event(
+                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                    { useNativeDriver: false }
+                )}
+                scrollEventThrottle={16}
             >
-                <View style={styles.container}>
-                    {/* Enhanced Header Section */}
-                    <View style={styles.enhancedHeader}>
-                        <ThemedText style={styles.headerTitle} numberOfLines={2}>{property.title}</ThemedText>
-                        <View style={styles.headerLocation}>
-                            <ThemedText style={styles.headerLocationText}>{property.location}</ThemedText>
+                {/* Main Image - Starts from very top, behind safe area */}
+                <Image
+                    source={getPropertyImageSource(property.images)}
+                    style={styles.mainImage}
+                    resizeMode="cover"
+                />
+
+                {/* Enhanced Header Section */}
+                <View style={styles.enhancedHeader}>
+                    <ThemedText style={styles.headerTitle} numberOfLines={2}>{property.title}</ThemedText>
+                    <View style={styles.headerLocation}>
+                        <ThemedText style={styles.headerLocationText}>{property.location}</ThemedText>
+                    </View>
+                    <View style={styles.headerStats}>
+                        <View style={styles.headerStat}>
+                            <ThemedText style={styles.headerStatText}>{property.bedrooms} {t("Bed")}</ThemedText>
                         </View>
-                        <View style={styles.headerStats}>
-                            <View style={styles.headerStat}>
-                                <ThemedText style={styles.headerStatText}>{property.bedrooms} {t("Bed")}</ThemedText>
-                            </View>
-                            <View style={styles.headerStat}>
-                                <ThemedText style={styles.headerStatText}>{property.bathrooms} {t("Bath")}</ThemedText>
-                            </View>
-                            <View style={styles.headerStat}>
-                                <ThemedText style={styles.headerStatText}>{property.size}m²</ThemedText>
-                            </View>
+                        <View style={styles.headerStat}>
+                            <ThemedText style={styles.headerStatText}>{property.bathrooms} {t("Bath")}</ThemedText>
+                        </View>
+                        <View style={styles.headerStat}>
+                            <ThemedText style={styles.headerStatText}>{property.size}m²</ThemedText>
                         </View>
                     </View>
+                </View>
+                <View style={styles.container}>
+
                     {/* Property Images Grid */}
                     <View style={styles.imageGridContainer}>
                         <View style={styles.imageGrid}>
@@ -454,7 +463,7 @@ export default function PropertyDetailPage() {
                             <View style={styles.mainImageContainer}>
                                 <Image
                                     source={getPropertyImageSource(property.images)}
-                                    style={styles.mainImage}
+                                    style={styles.mainImageInside}
                                     resizeMode="cover"
                                 />
                             </View>
@@ -710,13 +719,17 @@ export default function PropertyDetailPage() {
                         </View>
                     </View>
                 </View>
-            </ScrollView>
+            </Animated.ScrollView>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     safeArea: {
+        flex: 1,
+        position: 'relative',
+    },
+    scrollView: {
         flex: 1,
     },
     contentArea: {
@@ -835,6 +848,18 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     mainImage: {
+        width: '100%',
+        height: 300,
+        marginTop: -50, // Start behind the safe area
+    },
+    headerOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 1000,
+    },
+    mainImageInside: {
         width: '100%',
         height: '100%',
         borderRadius: 12,
