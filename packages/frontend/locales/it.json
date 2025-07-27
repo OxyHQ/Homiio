@@ -298,6 +298,20 @@
     "featured": {
       "title": "Proprietà in Evidenza"
     },
+    "recentlyViewed": {
+      "title": "Visualizzate di Recente",
+      "noProperties": "Nessuna proprietà visualizzata di recente",
+      "noPropertiesDescription": "Inizia a navigare per vedere la tua attività recente qui",
+      "browseProperties": "Sfoglia Proprietà",
+      "errorTitle": "Errore nel Caricamento delle Visualizzate di Recente",
+      "errorDescription": "Per favore, riprova.",
+      "retry": "Riprova",
+      "results": "Risultati",
+      "filtered": "filtrati"
+    },
+    "saved": {
+      "title": "Proprietà Salvate"
+    },
     "viewAll": "Visualizza Tutto",
     "tips": {
       "title": "Consigli e Guide per l'Affitto",

@@ -75,9 +75,9 @@ export default function RecentlyViewedScreen() {
     const renderEmptyState = () => (
         <EmptyState
             icon="time-outline"
-            title={t('No Recently Viewed Properties')}
-            description={t('Start browsing properties to see your recent activity here.')}
-            actionText={t('Browse Properties')}
+            title={t('home.recentlyViewed.noProperties')}
+            description={t('home.recentlyViewed.noPropertiesDescription')}
+            actionText={t('home.recentlyViewed.browseProperties')}
             actionIcon="home"
             onAction={() => router.push('/properties')}
         />
@@ -86,9 +86,9 @@ export default function RecentlyViewedScreen() {
     const renderErrorState = () => (
         <EmptyState
             icon="alert-circle-outline"
-            title={t('Error Loading Recently Viewed')}
-            description={error || t('Please try again.')}
-            actionText={t('Retry')}
+            title={t('home.recentlyViewed.errorTitle')}
+            description={error || t('home.recentlyViewed.errorDescription')}
+            actionText={t('home.recentlyViewed.retry')}
             actionIcon="refresh"
             onAction={handleRefresh}
         />
@@ -118,7 +118,7 @@ export default function RecentlyViewedScreen() {
                 style={styles.stickyHeaderWrapper}
                 onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
             >
-                <Header options={{ title: t('Recently Viewed'), titlePosition: 'left' }} />
+                <Header options={{ title: t('home.recentlyViewed.title'), titlePosition: 'left' }} />
             </View>
             <View style={{ paddingTop: headerHeight, flex: 1 }}>
                 <View style={styles.topBar}>
@@ -134,7 +134,7 @@ export default function RecentlyViewedScreen() {
                 </View>
                 <View style={styles.resultCountBar}>
                     <Text style={styles.resultCountText}>
-                        {t('Results')}: {filteredProperties.length} {searchQuery && `(${t('filtered')})`}
+                        {t('home.recentlyViewed.results')}: {filteredProperties.length} {searchQuery && `(${t('home.recentlyViewed.filtered')})`}
                     </Text>
                 </View>
                 {isLoading && !recentProperties.length ? (

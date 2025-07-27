@@ -44,7 +44,7 @@ export function RecentlyViewedWidget() {
     if (error) {
         console.log('RecentlyViewedWidget Error:', error);
         return (
-            <BaseWidget title={t("Recently Viewed")}
+            <BaseWidget title={t("home.recentlyViewed.title")}
                 icon={<IconComponent name="time-outline" size={22} color={colors.primaryColor} />}>
                 <View style={styles.errorContainer}>
                     <Text style={styles.errorText}>{error || 'Failed to load properties'}</Text>
@@ -57,7 +57,7 @@ export function RecentlyViewedWidget() {
 
     return (
         <BaseWidget
-            title={t("Recently Viewed")}
+            title={t("home.recentlyViewed.title")}
             icon={<IconComponent name="time-outline" size={22} color={colors.primaryColor} />}
         >
             <ScrollView
@@ -73,8 +73,8 @@ export function RecentlyViewedWidget() {
                 ) : recentProperties.length === 0 ? (
                     <View style={styles.emptyContainer}>
                         <IconComponent name="time-outline" size={32} color={colors.COLOR_BLACK_LIGHT_4} />
-                        <Text style={styles.emptyText}>No recently viewed properties</Text>
-                        <Text style={styles.emptySubtext}>Start browsing to see your recent activity here</Text>
+                        <Text style={styles.emptyText}>{t('home.recentlyViewed.noProperties')}</Text>
+                        <Text style={styles.emptySubtext}>{t('home.recentlyViewed.noPropertiesDescription')}</Text>
                     </View>
                 ) : recentProperties.map((property) => (
                     <View key={property._id || property.id} style={styles.propertyCard}>
@@ -93,7 +93,7 @@ export function RecentlyViewedWidget() {
                     style={styles.viewAllButton}
                     onPress={() => router.push('/properties/recently-viewed')}
                 >
-                    <Text style={styles.viewAllText}>View All</Text>
+                    <Text style={styles.viewAllText}>{t('home.viewAll')}</Text>
                     <IconComponent name="chevron-forward" size={16} color={colors.primaryColor} />
                 </TouchableOpacity>
             </ScrollView>

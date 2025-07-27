@@ -148,6 +148,20 @@
     "featured": {
       "title": "Propiedades Destacadas"
     },
+    "recentlyViewed": {
+      "title": "Vistas Recientemente",
+      "noProperties": "No hay propiedades vistas recientemente",
+      "noPropertiesDescription": "Comienza a navegar para ver tu actividad reciente aquí",
+      "browseProperties": "Navegar Propiedades",
+      "errorTitle": "Error al Cargar Vistas Recientes",
+      "errorDescription": "Por favor, inténtalo de nuevo.",
+      "retry": "Reintentar",
+      "results": "Resultados",
+      "filtered": "filtrados"
+    },
+    "saved": {
+      "title": "Propiedades Guardadas"
+    },
     "viewAll": "Ver Todo",
     "tips": {
       "title": "Consejos y Guías de Alquiler",

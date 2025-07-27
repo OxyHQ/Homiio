@@ -148,6 +148,20 @@
         "featured": {
             "title": "Propietats Destacades"
         },
+        "recentlyViewed": {
+            "title": "Vistes Recentment",
+            "noProperties": "No hi ha propietats vistes recentment",
+            "noPropertiesDescription": "Comença a navegar per veure la teva activitat recent aquí",
+            "browseProperties": "Navegar Propietats",
+            "errorTitle": "Error al Carregar Vistes Recents",
+            "errorDescription": "Si us plau, torna-ho a provar.",
+            "retry": "Tornar a provar",
+            "results": "Resultats",
+            "filtered": "filtrades"
+        },
+        "saved": {
+            "title": "Propietats Desades"
+        },
         "viewAll": "Veure Tot",
         "tips": {
             "title": "Consells i Guies de Lloguer",

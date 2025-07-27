@@ -148,6 +148,20 @@
         "featured": {
             "title": "Featured Properties"
         },
+        "recentlyViewed": {
+            "title": "Recently Viewed",
+            "noProperties": "No recently viewed properties",
+            "noPropertiesDescription": "Start browsing to see your recent activity here",
+            "browseProperties": "Browse Properties",
+            "errorTitle": "Error Loading Recently Viewed",
+            "errorDescription": "Please try again.",
+            "retry": "Retry",
+            "results": "Results",
+            "filtered": "filtered"
+        },
+        "saved": {
+            "title": "Saved Properties"
+        },
         "viewAll": "View All",
         "tips": {
             "title": "Rental Tips & Guides",
