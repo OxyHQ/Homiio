@@ -29,6 +29,7 @@
         "npm": ">=8.0.0"
     },
     "dependencies": {
-        "@oxyhq/services": "^5.8.11"
+        "@oxyhq/services": "^5.8.11",
+        "expo-location": "^18.1.6"
     }
 }

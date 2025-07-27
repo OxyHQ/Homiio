@@ -130,6 +130,12 @@ return {
                 'expo-font',
                 {
                   fonts: [
+                    './assets/fonts/Cereal/Cereal_W_Lt.otf',
+                    './assets/fonts/Cereal/Cereal_W_Bk.otf',
+                    './assets/fonts/Cereal/Cereal_W_Blk.otf',
+                    './assets/fonts/Cereal/Cereal_W_Md.otf',
+                    './assets/fonts/Cereal/Cereal_W_XBd.otf',
+                    './assets/fonts/Cereal/Cereal_W_Bd.otf',
                     './assets/fonts/inter/InterVariable.woff2',
                     './assets/fonts/inter/InterVariable-Italic.woff2',
                     // Android only

@@ -120,6 +120,13 @@ export default function RootLayout() {
 
   // --- Font Loading ---
   const [loaded] = useFonts({
+    "Cereal-Light": require("@/assets/fonts/Cereal/Cereal_W_Lt.otf"),
+    "Cereal-Book": require("@/assets/fonts/Cereal/Cereal_W_Bk.otf"),
+    "Cereal-Black": require("@/assets/fonts/Cereal/Cereal_W_Blk.otf"),
+    "Cereal-Medium": require("@/assets/fonts/Cereal/Cereal_W_Md.otf"),
+    "Cereal-ExtraBold": require("@/assets/fonts/Cereal/Cereal_W_XBd.otf"),
+    "Cereal-Bold": require("@/assets/fonts/Cereal/Cereal_W_Bd.otf"),
+    // ... keep Inter and Phudu fonts for fallback or legacy
     "Inter-Black": require("@/assets/fonts/inter/Inter-Black.otf"),
     "Inter-Bold": require("@/assets/fonts/inter/Inter-Bold.otf"),
     "Inter-ExtraBold": require("@/assets/fonts/inter/Inter-ExtraBold.otf"),

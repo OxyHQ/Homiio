@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, RefreshControl, FlatList, Platform, type NativeSyntheticEvent, type NativeScrollEvent } from 'react-native';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { View, StyleSheet, ScrollView, TextInput, TouchableOpacity, RefreshControl, FlatList, Platform, type NativeSyntheticEvent, type NativeScrollEvent } from 'react-native';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
@@ -10,6 +10,7 @@ import { Search } from '@/assets/icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSEO } from '@/hooks/useDocumentTitle';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Location from 'expo-location';
 
 // Import real data hooks
 import { useProperties } from '@/hooks';
@@ -17,10 +18,14 @@ import { useOxy } from '@oxyhq/services';
 import { useDebouncedAddressSearch } from '@/hooks/useAddressSearch';
 import { cityService } from '@/services/cityService';
 import { tipsService, TipArticle } from '@/services/tipsService';
+import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
+import { useSavedProperties } from '@/hooks/useSavedProperties';
 
 // Import components
 import { PropertyCard } from '@/components/PropertyCard';
 import { HomePropertyCarouselSection } from '@/components/HomePropertyCarouselSection';
+import { HomeCarouselSection } from '@/components/HomeCarouselSection';
+import { ThemedText } from '@/components/ThemedText';
 
 // Type assertion for Ionicons compatibility with React 19
 const IconComponent = Ionicons as any;
@@ -38,6 +43,72 @@ export default function HomePage() {
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
   const [tips, setTips] = useState<TipArticle[]>([]);
   const [tipsLoading, setTipsLoading] = useState(false);
+
+  // Nearby cities state
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [nearbyCities, setNearbyCities] = useState<any[]>([]);
+  const [nearbyProperties, setNearbyProperties] = useState<{ [cityId: string]: any[] }>({});
+  const [nearbyLoading, setNearbyLoading] = useState(false);
+
+  // Get user location on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') return;
+        let location = await Location.getCurrentPositionAsync({});
+        setUserLocation({ latitude: location.coords.latitude, longitude: location.coords.longitude });
+      } catch (e) {
+        // Permission denied or error
+      }
+    })();
+  }, []);
+
+  // Find two closest cities and fetch their properties
+  useEffect(() => {
+    if (!userLocation || !cities || cities.length === 0) return;
+    // Calculate distance to each city
+    function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+      const toRad = (v: number) => (v * Math.PI) / 180;
+      const R = 6371; // km
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+    const withDistance = cities
+      .filter(city => city.latitude && city.longitude)
+      .map(city => ({
+        ...city,
+        distance: getDistance(userLocation.latitude, userLocation.longitude, city.latitude, city.longitude)
+      }));
+    const sorted = withDistance.sort((a, b) => a.distance - b.distance);
+    setNearbyCities(sorted.slice(0, 2));
+  }, [userLocation, cities]);
+
+  // Fetch properties for nearby cities
+  useEffect(() => {
+    if (!nearbyCities || nearbyCities.length === 0) return;
+    setNearbyLoading(true);
+    Promise.all(
+      nearbyCities.map(async (city) => {
+        try {
+          const res = await cityService.getPropertiesByCity(city._id || city.id, { limit: 8 });
+          return { cityId: city._id || city.id, properties: res.properties || [] };
+        } catch {
+          return { cityId: city._id || city.id, properties: [] };
+        }
+      })
+    ).then(results => {
+      const map: { [cityId: string]: any[] } = {};
+      results.forEach(r => { map[r.cityId] = r.properties; });
+      setNearbyProperties(map);
+      setNearbyLoading(false);
+    });
+  }, [nearbyCities]);
 
   // Use the reusable address search hook
   const {
@@ -63,6 +134,10 @@ export default function HomePage() {
 
   // Fetch real data
   const { properties, loading: propertiesLoading, loadProperties } = useProperties();
+
+  // Recently viewed and saved properties
+  const { properties: recentlyViewedProperties } = useRecentlyViewed();
+  const { savedProperties, isLoading: savedLoading } = useSavedProperties();
 
   // Load properties on component mount
   React.useEffect(() => {
@@ -320,6 +395,68 @@ export default function HomePage() {
     }, 10);
   } : undefined;
 
+  // Tip card styles for carousel (StyleSheet)
+  const tipCarouselCardStyles = StyleSheet.create({
+    card: {
+      backgroundColor: '#fff',
+      borderRadius: 16,
+      padding: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      elevation: 3,
+      minHeight: 180,
+      flex: 1,
+      justifyContent: 'space-between',
+    },
+    iconContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 12,
+    },
+    title: {
+      fontSize: 16,
+      fontWeight: '700' as any,
+      color: colors.COLOR_BLACK,
+      marginBottom: 6,
+      textAlign: 'center' as any,
+    },
+    description: {
+      fontSize: 13,
+      color: colors.COLOR_BLACK_LIGHT_3,
+      marginBottom: 10,
+      textAlign: 'center' as any,
+    },
+    metaRow: {
+      flexDirection: 'row' as const,
+      justifyContent: 'center' as const,
+      marginTop: 4,
+    },
+    metaItem: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      marginRight: 12,
+    },
+    metaText: {
+      fontSize: 12,
+      color: colors.COLOR_BLACK_LIGHT_4,
+    },
+    badge: {
+      alignSelf: 'center' as const,
+      backgroundColor: colors.primaryColor,
+      borderRadius: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      marginBottom: 8,
+    },
+    badgeText: {
+      color: '#fff',
+      fontSize: 11,
+      fontWeight: '600' as any,
+    },
+  });
+
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
@@ -337,10 +474,10 @@ export default function HomePage() {
           style={styles.heroSection}
         >
           <View style={styles.heroContent}>
-            <Text style={styles.heroTitle}>{t("home.hero.title")}</Text>
-            <Text style={styles.heroSubtitle}>
+            <ThemedText style={styles.heroTitle}>{t("home.hero.title")}</ThemedText>
+            <ThemedText style={styles.heroSubtitle}>
               {t("home.hero.subtitle")}
-            </Text>
+            </ThemedText>
 
             <View style={styles.searchContainer}>
               <View style={styles.searchBar}>
@@ -370,7 +507,7 @@ export default function HomePage() {
                     <View style={styles.suggestionItems}>
                       <View style={styles.suggestionItem}>
                         <LoadingSpinner size={16} />
-                        <Text style={styles.suggestionText}>{t('search.searchingAddresses')}</Text>
+                        <ThemedText style={styles.suggestionText}>{t('search.searchingAddresses')}</ThemedText>
                       </View>
                     </View>
                   </View>
@@ -380,7 +517,7 @@ export default function HomePage() {
                   keyExtractor={(item, index) => `${item.type}-${index}`}
                   renderItem={({ item: section }) => (
                     <View style={styles.suggestionSection}>
-                      <Text style={styles.suggestionSectionTitle}>{section.title}</Text>
+                      <ThemedText style={styles.suggestionSectionTitle}>{section.title}</ThemedText>
                       <View style={styles.suggestionItems}>
                         {section.items.map((suggestion, index) => (
                           <TouchableOpacity
@@ -394,7 +531,7 @@ export default function HomePage() {
                               size={16}
                               color={colors.COLOR_BLACK_LIGHT_4}
                             />
-                            <Text style={styles.suggestionText}>{suggestion.text}</Text>
+                            <ThemedText style={styles.suggestionText}>{suggestion.text}</ThemedText>
                           </TouchableOpacity>
                         ))}
                       </View>
@@ -411,7 +548,7 @@ export default function HomePage() {
         {/* Property Types */}
         <View style={styles.typesSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t("home.categories.title")}</Text>
+            <ThemedText style={styles.sectionTitle}>{t("home.categories.title")}</ThemedText>
           </View>
           <View style={styles.propertyChipsContainer}>
             {propertyTypeCounts.map((type) => (
@@ -428,9 +565,9 @@ export default function HomePage() {
                   end={{ x: 1, y: 1 }}
                 >
                   <IconComponent name={type.icon as keyof typeof IconComponent.glyphMap} size={20} color="white" />
-                  <Text style={styles.propertyChipName}>{type.name}</Text>
+                  <ThemedText style={styles.propertyChipName}>{type.name}</ThemedText>
                   <View style={styles.propertyChipCountBadge}>
-                    <Text style={styles.propertyChipCountText}>{type.count}</Text>
+                    <ThemedText style={styles.propertyChipCountText}>{type.count}</ThemedText>
                   </View>
                 </LinearGradient>
               </TouchableOpacity>
@@ -441,37 +578,37 @@ export default function HomePage() {
         {/* Trust Features */}
         <View style={styles.trustSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t("home.trust.title")}</Text>
+            <ThemedText style={styles.sectionTitle}>{t("home.trust.title")}</ThemedText>
           </View>
           <View style={styles.trustFeatures}>
             <View style={styles.trustFeature}>
               <View style={styles.featureIconCircle}>
                 <IconComponent name="shield-checkmark" size={24} color={colors.primaryColor} />
               </View>
-              <Text style={styles.featureTitle}>{t("home.trust.verifiedListings.title")}</Text>
-              <Text style={styles.featureDescription}>
+              <ThemedText style={styles.featureTitle}>{t("home.trust.verifiedListings.title")}</ThemedText>
+              <ThemedText style={styles.featureDescription}>
                 {t("home.trust.verifiedListings.description")}
-              </Text>
+              </ThemedText>
             </View>
 
             <View style={styles.trustFeature}>
               <View style={styles.featureIconCircle}>
                 <IconComponent name="document-text" size={24} color={colors.primaryColor} />
               </View>
-              <Text style={styles.featureTitle}>{t("home.trust.fairAgreements.title")}</Text>
-              <Text style={styles.featureDescription}>
+              <ThemedText style={styles.featureTitle}>{t("home.trust.fairAgreements.title")}</ThemedText>
+              <ThemedText style={styles.featureDescription}>
                 {t("home.trust.fairAgreements.description")}
-              </Text>
+              </ThemedText>
             </View>
 
             <View style={styles.trustFeature}>
               <View style={styles.featureIconCircle}>
                 <IconComponent name="star" size={24} color={colors.primaryColor} />
               </View>
-              <Text style={styles.featureTitle}>{t("home.trust.trustScore.title")}</Text>
-              <Text style={styles.featureDescription}>
+              <ThemedText style={styles.featureTitle}>{t("home.trust.trustScore.title")}</ThemedText>
+              <ThemedText style={styles.featureDescription}>
                 {t("home.trust.trustScore.description")}
-              </Text>
+              </ThemedText>
             </View>
           </View>
         </View>
@@ -484,90 +621,87 @@ export default function HomePage() {
           onCardPress={(property) => router.push(`/properties/${property._id || property.id}`)}
         />
 
-        {/* Top Cities */}
-        <View style={styles.citiesSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t("home.cities.title")}</Text>
-          </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.horizontalScroll}
-            contentContainerStyle={{ paddingHorizontal: 16 }}
-          >
-            {citiesLoading ? (
-              // Loading state
-              Array.from({ length: 4 }).map((_, index) => (
-                <View key={index} style={styles.cityCard}>
-                  <LinearGradient
-                    colors={['#f0f0f0', '#e0e0e0']}
-                    style={styles.cityImagePlaceholder}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    {/* Subtle overlay */}
-                    <View style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                      borderRadius: 25,
-                    }} />
-                    {/* City Info at bottom */}
-                    <View style={{ width: '100%' }}>
-                      <View style={{ backgroundColor: '#d0d0d0', height: 22, borderRadius: 4, width: '70%', marginBottom: 4 }} />
-                      <View style={{ backgroundColor: '#e0e0e0', height: 14, borderRadius: 4, width: '50%' }} />
-                    </View>
-                  </LinearGradient>
-                </View>
-              ))
-            ) : (
-              topCities.map((city, index) => (
-                <TouchableOpacity
-                  key={city.id}
-                  style={styles.cityCard}
-                  onPress={() => router.push(`/properties/city/${city.id}`)}
-                  activeOpacity={0.85}
-                >
-                  <LinearGradient
-                    colors={[colors.primaryColor, colors.secondaryLight]}
-                    style={styles.cityImagePlaceholder}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    {/* Subtle overlay for better text readability */}
-                    <View style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      backgroundColor: 'rgba(0, 0, 0, 0.15)',
-                      borderRadius: 25,
-                    }} />
+        {/* Recently Viewed Properties */}
+        {recentlyViewedProperties && recentlyViewedProperties.length > 0 && (
+          <HomePropertyCarouselSection
+            title={t('home.recentlyViewed.title') || 'Recently Viewed'}
+            properties={recentlyViewedProperties}
+            loading={false}
+            onCardPress={(property) => router.push(`/properties/${property._id || property.id}`)}
+          />
+        )}
 
-                    {/* City Info at bottom */}
-                    <View style={{ width: '100%' }}>
-                      <Text style={styles.cityName}>{city.name}</Text>
-                      {(city.state || city.country) && (
-                        <Text style={styles.cityLocation}>
-                          {[city.state, city.country].filter(Boolean).join(', ')}
-                        </Text>
-                      )}
-                    </View>
-                  </LinearGradient>
-                </TouchableOpacity>
-              ))
-            )}
-          </ScrollView>
-        </View>
+        {/* Saved Properties */}
+        {savedProperties && savedProperties.length > 0 && (
+          <HomePropertyCarouselSection
+            title={t('home.saved.title') || 'Saved Properties'}
+            properties={savedProperties}
+            loading={savedLoading}
+            onCardPress={(property) => router.push(`/properties/${property._id || property.id}`)}
+          />
+        )}
+
+        {/* Nearby Cities Sections */}
+        {nearbyCities.map((city, idx) => (
+          nearbyProperties[city._id || city.id] && nearbyProperties[city._id || city.id].length > 0 && (
+            <HomePropertyCarouselSection
+              key={city._id || city.id}
+              title={t('home.nearby.title', { city: city.name }) || `Properties in ${city.name}`}
+              properties={nearbyProperties[city._id || city.id]}
+              loading={nearbyLoading}
+              onCardPress={(property) => router.push(`/properties/${property._id || property.id}`)}
+            />
+          )
+        ))}
+
+        {/* Top Cities (Carousel) */}
+        <HomeCarouselSection
+          title={t('home.cities.title')}
+          items={topCities}
+          loading={citiesLoading}
+          cardWidth={200}
+          cardGap={16}
+          renderItem={(city, index) => (
+            <TouchableOpacity
+              key={city.id}
+              style={styles.cityCard}
+              onPress={() => router.push(`/properties/city/${city.id}`)}
+              activeOpacity={0.85}
+            >
+              <LinearGradient
+                colors={[colors.primaryColor, colors.secondaryLight]}
+                style={styles.cityImagePlaceholder}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                {/* Subtle overlay for better text readability */}
+                <View style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: 'rgba(0, 0, 0, 0.15)',
+                  borderRadius: 25,
+                }} />
+                {/* City Info at bottom */}
+                <View style={{ width: '100%' }}>
+                  <ThemedText style={styles.cityName}>{city.name}</ThemedText>
+                  {(city.state || city.country) && (
+                    <ThemedText style={styles.cityLocation}>
+                      {[city.state, city.country].filter(Boolean).join(', ')}
+                    </ThemedText>
+                  )}
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
+        />
 
         {/* Stats Section */}
         <View style={styles.statsSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Platform Statistics</Text>
+            <ThemedText style={styles.sectionTitle}>Platform Statistics</ThemedText>
           </View>
           <View style={styles.statsChipsContainer}>
             <TouchableOpacity style={styles.statChip} activeOpacity={0.8}>
@@ -579,8 +713,8 @@ export default function HomePage() {
               >
                 <IconComponent name="home" size={20} color="white" />
                 <View style={styles.statChipContent}>
-                  <Text style={styles.statChipNumber}>{properties?.length || 0}</Text>
-                  <Text style={styles.statChipLabel}>Total Properties</Text>
+                  <ThemedText style={styles.statChipNumber}>{properties?.length || 0}</ThemedText>
+                  <ThemedText style={styles.statChipLabel}>Total Properties</ThemedText>
                 </View>
               </LinearGradient>
             </TouchableOpacity>
@@ -594,8 +728,8 @@ export default function HomePage() {
               >
                 <IconComponent name="people" size={20} color="white" />
                 <View style={styles.statChipContent}>
-                  <Text style={styles.statChipNumber}>{properties?.filter(p => p.status === 'available').length || 0}</Text>
-                  <Text style={styles.statChipLabel}>Available Now</Text>
+                  <ThemedText style={styles.statChipNumber}>{properties?.filter(p => p.status === 'available').length || 0}</ThemedText>
+                  <ThemedText style={styles.statChipLabel}>Available Now</ThemedText>
                 </View>
               </LinearGradient>
             </TouchableOpacity>
@@ -609,12 +743,12 @@ export default function HomePage() {
               >
                 <IconComponent name="leaf" size={20} color="white" />
                 <View style={styles.statChipContent}>
-                  <Text style={styles.statChipNumber}>
+                  <ThemedText style={styles.statChipNumber}>
                     {properties?.filter(p =>
                       p.amenities?.some(a => a.includes('eco') || a.includes('green') || a.includes('solar'))
                     ).length || 0}
-                  </Text>
-                  <Text style={styles.statChipLabel}>Eco-Friendly</Text>
+                  </ThemedText>
+                  <ThemedText style={styles.statChipLabel}>Eco-Friendly</ThemedText>
                 </View>
               </LinearGradient>
             </TouchableOpacity>
@@ -628,92 +762,65 @@ export default function HomePage() {
               >
                 <IconComponent name="star" size={20} color="white" />
                 <View style={styles.statChipContent}>
-                  <Text style={styles.statChipNumber}>{topCities.length}</Text>
-                  <Text style={styles.statChipLabel}>Cities Covered</Text>
+                  <ThemedText style={styles.statChipNumber}>{topCities.length}</ThemedText>
+                  <ThemedText style={styles.statChipLabel}>Cities Covered</ThemedText>
                 </View>
               </LinearGradient>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Tips Section */}
-        <View style={styles.tipsSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t("home.tips.title")}</Text>
-            <TouchableOpacity onPress={() => router.push('/tips')}>
-              <Text style={styles.viewAllText}>{t("home.viewAll")}</Text>
-            </TouchableOpacity>
-          </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.horizontalScroll}
-            contentContainerStyle={{ paddingHorizontal: 16 }}
-          >
-            {tipsLoading ? (
-              <View style={styles.tipCardContainer}>
-                <View style={styles.tipCard}>
-                  <View style={styles.tipImageContainer}>
-                    <View style={[styles.tipImagePlaceholder, { backgroundColor: colors.COLOR_BLACK_LIGHT_4 }]}>
-                      <IconComponent name="hourglass-outline" size={32} color="white" />
-                    </View>
+        {/* Tips Section (Carousel) */}
+        <HomeCarouselSection
+          title={t('home.tips.title')}
+          items={tips}
+          loading={tipsLoading}
+          cardWidth={220}
+          cardGap={16}
+          onViewAll={() => router.push('/tips')}
+          viewAllText={t('home.viewAll')}
+          renderItem={(tip, idx) => (
+            <TouchableOpacity
+              key={tip.id}
+              style={{ flex: 1 }}
+              onPress={() => router.push('/tips')}
+              activeOpacity={0.85}
+            >
+              <View style={tipCarouselCardStyles.card}>
+                <View style={tipCarouselCardStyles.iconContainer}>
+                  <LinearGradient
+                    colors={tip.gradientColors as [string, string]}
+                    style={{ borderRadius: 16, padding: 10, marginBottom: 4 }}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <Ionicons name={tip.icon as any} size={28} color="#fff" />
+                  </LinearGradient>
+                </View>
+                <View style={tipCarouselCardStyles.badge}>
+                  <ThemedText style={tipCarouselCardStyles.badgeText}>{t(`home.tips.categories.${tip.category}`)}</ThemedText>
+                </View>
+                <ThemedText style={tipCarouselCardStyles.title} numberOfLines={2}>{tip.title}</ThemedText>
+                <ThemedText style={tipCarouselCardStyles.description} numberOfLines={2}>{tip.description}</ThemedText>
+                <View style={tipCarouselCardStyles.metaRow}>
+                  <View style={tipCarouselCardStyles.metaItem}>
+                    <Ionicons name="time-outline" size={14} color={colors.COLOR_BLACK_LIGHT_4} />
+                    <ThemedText style={tipCarouselCardStyles.metaText}>{tip.readTime}</ThemedText>
                   </View>
-                  <View style={styles.tipCardContent}>
-                    <View style={[styles.tipCardTitle, { backgroundColor: colors.COLOR_BLACK_LIGHT_4, height: 20, borderRadius: 4 }]} />
-                    <View style={[styles.tipCardDescription, { backgroundColor: colors.COLOR_BLACK_LIGHT_4, height: 16, borderRadius: 4, marginBottom: 8 }]} />
-                    <View style={[styles.tipCardDescription, { backgroundColor: colors.COLOR_BLACK_LIGHT_4, height: 16, borderRadius: 4, width: '60%' }]} />
+                  <View style={tipCarouselCardStyles.metaItem}>
+                    <Ionicons name="calendar-outline" size={14} color={colors.COLOR_BLACK_LIGHT_4} />
+                    <ThemedText style={tipCarouselCardStyles.metaText}>{tip.publishDate}</ThemedText>
                   </View>
                 </View>
               </View>
-            ) : (
-              tips.map((tip) => (
-                <TouchableOpacity
-                  key={tip.id}
-                  style={styles.tipCardContainer}
-                  onPress={() => router.push('/tips')}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.tipCard}>
-                    <View style={styles.tipImageContainer}>
-                      <LinearGradient
-                        colors={tip.gradientColors as [string, string]}
-                        style={styles.tipImagePlaceholder}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                      >
-                        <IconComponent name={tip.icon} size={32} color="white" />
-                      </LinearGradient>
-                      <View style={styles.tipCategoryBadge}>
-                        <Text style={styles.tipCategoryText}>{t(`home.tips.categories.${tip.category}`)}</Text>
-                      </View>
-                    </View>
-                    <View style={styles.tipCardContent}>
-                      <Text style={styles.tipCardTitle}>{tip.title}</Text>
-                      <Text style={styles.tipCardDescription}>
-                        {tip.description}
-                      </Text>
-                      <View style={styles.tipCardMeta}>
-                        <View style={styles.tipCardMetaItem}>
-                          <IconComponent name="time-outline" size={14} color={colors.COLOR_BLACK_LIGHT_4} />
-                          <Text style={styles.tipCardMetaText}>{tip.readTime}</Text>
-                        </View>
-                        <View style={styles.tipCardMetaItem}>
-                          <IconComponent name="calendar-outline" size={14} color={colors.COLOR_BLACK_LIGHT_4} />
-                          <Text style={styles.tipCardMetaText}>{tip.publishDate}</Text>
-                        </View>
-                      </View>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))
-            )}
-          </ScrollView>
-        </View>
+            </TouchableOpacity>
+          )}
+        />
 
         {/* FAQ Section */}
         <View style={styles.faqSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t("home.faq.title")}</Text>
+            <ThemedText style={styles.sectionTitle}>{t("home.faq.title")}</ThemedText>
           </View>
           <View style={styles.faqContainer}>
             <View style={styles.faqItem}>
@@ -726,7 +833,7 @@ export default function HomePage() {
                 }}
                 activeOpacity={0.7}
               >
-                <Text style={styles.faqQuestionText}>{t("home.faq.scheduleViewing.question")}</Text>
+                <ThemedText style={styles.faqQuestionText}>{t("home.faq.scheduleViewing.question")}</ThemedText>
                 <IconComponent
                   name={expandedFaq === 'faq1' ? 'chevron-up' : 'chevron-down'}
                   size={20}
@@ -735,9 +842,9 @@ export default function HomePage() {
               </TouchableOpacity>
               {expandedFaq === 'faq1' && (
                 <View style={styles.faqAnswer}>
-                  <Text style={styles.faqAnswerText}>
+                  <ThemedText style={styles.faqAnswerText}>
                     {t("home.faq.scheduleViewing.answer")}
-                  </Text>
+                  </ThemedText>
                 </View>
               )}
             </View>
@@ -751,7 +858,7 @@ export default function HomePage() {
                 }}
                 activeOpacity={0.7}
               >
-                <Text style={styles.faqQuestionText}>{t("home.faq.verifiedProperty.question")}</Text>
+                <ThemedText style={styles.faqQuestionText}>{t("home.faq.verifiedProperty.question")}</ThemedText>
                 <IconComponent
                   name={expandedFaq === 'faq2' ? 'chevron-up' : 'chevron-down'}
                   size={20}
@@ -760,9 +867,9 @@ export default function HomePage() {
               </TouchableOpacity>
               {expandedFaq === 'faq2' && (
                 <View style={styles.faqAnswer}>
-                  <Text style={styles.faqAnswerText}>
+                  <ThemedText style={styles.faqAnswerText}>
                     {t("home.faq.verifiedProperty.answer")}
-                  </Text>
+                  </ThemedText>
                 </View>
               )}
             </View>
@@ -776,7 +883,7 @@ export default function HomePage() {
                 }}
                 activeOpacity={0.7}
               >
-                <Text style={styles.faqQuestionText}>{t("home.faq.reportSuspicious.question")}</Text>
+                <ThemedText style={styles.faqQuestionText}>{t("home.faq.reportSuspicious.question")}</ThemedText>
                 <IconComponent
                   name={expandedFaq === 'faq3' ? 'chevron-up' : 'chevron-down'}
                   size={20}
@@ -785,9 +892,9 @@ export default function HomePage() {
               </TouchableOpacity>
               {expandedFaq === 'faq3' && (
                 <View style={styles.faqAnswer}>
-                  <Text style={styles.faqAnswerText}>
+                  <ThemedText style={styles.faqAnswerText}>
                     {t("home.faq.reportSuspicious.answer")}
-                  </Text>
+                  </ThemedText>
                 </View>
               )}
             </View>
@@ -801,7 +908,7 @@ export default function HomePage() {
                 }}
                 activeOpacity={0.7}
               >
-                <Text style={styles.faqQuestionText}>{t("home.faq.applicationRequirements.question")}</Text>
+                <ThemedText style={styles.faqQuestionText}>{t("home.faq.applicationRequirements.question")}</ThemedText>
                 <IconComponent
                   name={expandedFaq === 'faq4' ? 'chevron-up' : 'chevron-down'}
                   size={20}
@@ -810,9 +917,9 @@ export default function HomePage() {
               </TouchableOpacity>
               {expandedFaq === 'faq4' && (
                 <View style={styles.faqAnswer}>
-                  <Text style={styles.faqAnswerText}>
+                  <ThemedText style={styles.faqAnswerText}>
                     {t("home.faq.applicationRequirements.answer")}
-                  </Text>
+                  </ThemedText>
                 </View>
               )}
             </View>

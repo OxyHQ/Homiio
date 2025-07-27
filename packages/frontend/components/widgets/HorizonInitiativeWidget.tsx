@@ -1,9 +1,10 @@
 import React from 'react';
-import { Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
+import { ThemedText } from '../ThemedText';
 
 export function HorizonInitiativeWidget() {
     const { t } = useTranslation();
@@ -13,9 +14,9 @@ export function HorizonInitiativeWidget() {
             title={t("Horizon Initiative")}
             icon={<Ionicons name="star" size={22} color="#FFD700" />}
         >
-            <Text style={styles.membershipText}>
+            <ThemedText style={styles.membershipText}>
                 Horizon is a global initiative offering fair housing, healthcare, and travel support. Integrated with Homiio, it ensures affordable living within a connected, sustainable network.
-            </Text>
+            </ThemedText>
             <TouchableOpacity
                 style={styles.joinButton}
                 onPress={() => {
@@ -23,7 +24,7 @@ export function HorizonInitiativeWidget() {
                     window.open(url, "_blank");
                 }}
             >
-                <Text style={styles.joinButtonText}>Learn More</Text>
+                <ThemedText style={styles.joinButtonText}>Learn More</ThemedText>
             </TouchableOpacity>
         </BaseWidget>
     );

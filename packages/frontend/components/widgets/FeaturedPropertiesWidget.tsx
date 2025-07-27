@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import LoadingSpinner from '../LoadingSpinner';
 import { Link, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,7 @@ import { useProperties } from '@/hooks';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 import { Ionicons } from '@expo/vector-icons';
+import { ThemedText } from '../ThemedText';
 
 const IconComponent = Ionicons as any;
 
@@ -33,9 +34,9 @@ export function FeaturedPropertiesWidget() {
         return (
             <BaseWidget title={t("Featured Properties")}>
                 <View style={styles.errorContainer}>
-                    <Text style={styles.errorText}>
+                    <ThemedText style={styles.errorText}>
                         {typeof error === 'string' ? error : (error as Error)?.message || 'Failed to load properties'}
-                    </Text>
+                    </ThemedText>
                 </View>
             </BaseWidget>
         );
@@ -47,7 +48,7 @@ export function FeaturedPropertiesWidget() {
                 {loading ? (
                     <View style={styles.loadingContainer}>
                         <LoadingSpinner size={16} showText={false} />
-                        <Text style={styles.loadingText}>Loading properties...</Text>
+                        <ThemedText style={styles.loadingText}>Loading properties...</ThemedText>
                     </View>
                 ) : (
                     <FeaturedProperties properties={featured} />
@@ -92,7 +93,7 @@ function FeaturedProperties({ properties }: { properties: any[] }) {
     if (propertyItems.length === 0) {
         return (
             <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No featured properties available at the moment</Text>
+                <ThemedText style={styles.emptyText}>No featured properties available at the moment</ThemedText>
             </View>
         );
     }
@@ -108,17 +109,17 @@ function FeaturedProperties({ properties }: { properties: any[] }) {
                         />
                         <View style={styles.propertyContent}>
                             <View style={styles.propertyHeader}>
-                                <Text style={styles.propertyTitle} numberOfLines={2}>{property.title}</Text>
+                                <ThemedText style={styles.propertyTitle} numberOfLines={2}>{property.title}</ThemedText>
                                 {property.isEcoCertified && (
-                                    <Text style={styles.ecoIcon}>🌿</Text>
+                                    <ThemedText style={styles.ecoIcon}>🌿</ThemedText>
                                 )}
                             </View>
-                            <Text style={styles.propertyLocation}>{property.location}</Text>
+                            <ThemedText style={styles.propertyLocation}>{property.location}</ThemedText>
                             <View style={styles.propertyFooter}>
-                                <Text style={styles.propertyPrice}>{property.price}</Text>
+                                <ThemedText style={styles.propertyPrice}>{property.price}</ThemedText>
                                 <View style={styles.ratingContainer}>
                                     <IconComponent name="star" size={14} color="#FFD700" />
-                                    <Text style={styles.ratingText}>{property.rating}</Text>
+                                    <ThemedText style={styles.ratingText}>{property.rating}</ThemedText>
                                 </View>
                             </View>
                         </View>
@@ -129,9 +130,9 @@ function FeaturedProperties({ properties }: { properties: any[] }) {
                 onPress={() => router.push('/properties')}
                 style={styles.showMoreButton}
                 activeOpacity={0.7}>
-                <Text style={styles.showMoreText}>
+                <ThemedText style={styles.showMoreText}>
                     View All Properties
-                </Text>
+                </ThemedText>
             </TouchableOpacity>
         </>
     );

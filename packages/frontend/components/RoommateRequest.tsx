@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
     View,
-    Text,
     StyleSheet,
     TouchableOpacity,
     Image,
@@ -12,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import type { RoommateRequest } from '@/hooks/useRoommate';
 import { ActionButton } from '@/components/ui/ActionButton';
+import { ThemedText } from './ThemedText';
 
 // Type assertion for Ionicons compatibility
 const IconComponent = Ionicons as any;
@@ -141,32 +141,32 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
                 </TouchableOpacity>
 
                 <View style={styles.headerInfo}>
-                    <Text style={styles.name}>{getDisplayName(otherProfile)}</Text>
-                    <Text style={styles.date}>{formatDate(request.createdAt)}</Text>
+                    <ThemedText style={styles.name}>{getDisplayName(otherProfile)}</ThemedText>
+                    <ThemedText style={styles.date}>{formatDate(request.createdAt)}</ThemedText>
                     <View style={styles.matchScore}>
-                        <Text style={styles.matchScoreText}>{request.matchScore}% Match</Text>
+                        <ThemedText style={styles.matchScoreText}>{request.matchScore}% Match</ThemedText>
                     </View>
                 </View>
 
                 <View style={[styles.statusBadge, { backgroundColor: getStatusColor(request.status) }]}>
-                    <Text style={styles.statusText}>{getStatusText(request.status)}</Text>
+                    <ThemedText style={styles.statusText}>{getStatusText(request.status)}</ThemedText>
                 </View>
             </View>
 
             {/* Message */}
             {request.message && (
                 <View style={styles.messageSection}>
-                    <Text style={styles.messageLabel}>
+                    <ThemedText style={styles.messageLabel}>
                         {type === 'sent' ? 'Your message:' : 'Message:'}
-                    </Text>
-                    <Text style={styles.message}>{request.message}</Text>
+                    </ThemedText>
+                    <ThemedText style={styles.message}>{request.message}</ThemedText>
                 </View>
             )}
 
             {/* Response input */}
             {showResponseInput && type === 'received' && request.status === 'pending' && (
                 <View style={styles.responseSection}>
-                    <Text style={styles.responseLabel}>Add a response (optional):</Text>
+                    <ThemedText style={styles.responseLabel}>Add a response (optional):</ThemedText>
                     <TextInput
                         style={styles.responseInput}
                         value={responseMessage}
@@ -202,7 +202,7 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
                         </>
                     ) : (
                         <View style={styles.sentActions}>
-                            <Text style={styles.sentStatusText}>Waiting for response...</Text>
+                            <ThemedText style={styles.sentStatusText}>Waiting for response...</ThemedText>
                         </View>
                     )}
                 </View>
@@ -215,7 +215,7 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
                         onPress={() => onViewProfile(otherProfile.id)}
                     >
                         <IconComponent name="eye-outline" size={16} color={colors.primaryDark} />
-                        <Text style={styles.viewProfileText}>View Profile</Text>
+                        <ThemedText style={styles.viewProfileText}>View Profile</ThemedText>
                     </TouchableOpacity>
                 </View>
             )}

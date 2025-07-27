@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { colors } from '@/styles/colors';
+import { ThemedText } from '@/components/ThemedText';
 
 type BaseWidgetProps = {
     title?: string;
@@ -13,7 +14,7 @@ export function BaseWidget({ title, icon, children }: BaseWidgetProps) {
         <View style={styles.widgetContainer}>
             {title && (
                 <View style={styles.widgetHeader}>
-                    <Text style={styles.widgetTitle}>{title}</Text>
+                    <ThemedText style={styles.widgetTitle}>{title}</ThemedText>
                     {icon && <View>{icon}</View>}
                 </View>
             )}

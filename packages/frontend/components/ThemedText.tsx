@@ -15,7 +15,7 @@ export function ThemedText({
   type = 'default',
   ...rest
 }: ThemedTextProps) {
-  const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
+  const color = 'black'; // Temporarily disable theme color
 
   return (
     <Text
@@ -37,29 +37,29 @@ const styles = StyleSheet.create({
   default: {
     fontSize: 16,
     lineHeight: 24,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Cereal-Book',
   },
   defaultSemiBold: {
     fontSize: 16,
     lineHeight: 24,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Cereal-Bold',
     fontWeight: '600',
   },
   title: {
     fontSize: 32,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Cereal-Bold',
     fontWeight: 'bold',
     lineHeight: 32,
   },
   subtitle: {
     fontSize: 20,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Cereal-Bold',
     fontWeight: 'bold',
   },
   link: {
     lineHeight: 30,
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Cereal-Book',
     color: '#0a7ea4',
   },
 });

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Text, TextProps } from 'react-native';
+import { TextProps } from 'react-native';
+import { ThemedText } from './ThemedText';
 import { useCurrency } from '@/hooks/useCurrency';
 
 interface CurrencyFormatterProps extends TextProps {
@@ -53,8 +54,8 @@ export const CurrencyFormatter: React.FC<CurrencyFormatterProps> = ({
     };
 
     return (
-        <Text style={style} {...textProps}>
+        <ThemedText style={style} {...textProps}>
             {formatValue()}
-        </Text>
+        </ThemedText>
     );
 }; 

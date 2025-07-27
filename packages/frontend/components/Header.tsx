@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
     StyleSheet,
     View,
-    Text,
     ViewStyle,
     Platform,
 } from 'react-native'
@@ -13,6 +12,7 @@ import { useRouter } from 'expo-router'
 import { ReactNode } from 'react'
 import { phuduFontWeights } from '@/styles/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ThemedText } from './ThemedText';
 
 const IconComponent = Ionicons as any;
 
@@ -75,12 +75,12 @@ export const Header: React.FC<Props> = ({ options }) => {
                     {titlePosition === 'left' && (
                         <View>
                             {options?.title && (
-                                <Text style={[styles.topRowText, { fontFamily: phuduFontWeights.bold }, options?.subtitle && { fontSize: 14 }]}>
+                                <ThemedText style={[styles.topRowText, { fontFamily: phuduFontWeights.bold }, options?.subtitle && { fontSize: 14 }]}>
                                     {options.title}
-                                </Text>
+                                </ThemedText>
                             )}
                             {options?.subtitle && (
-                                <Text style={styles.subtitleText}>{options.subtitle}</Text>
+                                <ThemedText style={styles.subtitleText}>{options.subtitle}</ThemedText>
                             )}
                         </View>
                     )}
@@ -88,12 +88,12 @@ export const Header: React.FC<Props> = ({ options }) => {
                 {titlePosition === 'center' && (
                     <View style={styles.centerContainer}>
                         {options?.title && (
-                            <Text style={[styles.topRowText, { fontFamily: phuduFontWeights.bold }, options?.subtitle && { fontSize: 14 }]}>
+                            <ThemedText style={[styles.topRowText, { fontFamily: phuduFontWeights.bold }, options?.subtitle && { fontSize: 14 }]}>
                                 {options.title}
-                            </Text>
+                            </ThemedText>
                         )}
                         {options?.subtitle && (
-                            <Text style={styles.subtitleText}>{options.subtitle}</Text>
+                            <ThemedText style={styles.subtitleText}>{options.subtitle}</ThemedText>
                         )}
                     </View>
                 )}
