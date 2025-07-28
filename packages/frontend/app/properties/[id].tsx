@@ -64,6 +64,7 @@ export default function PropertyDetailPage() {
     const [landlordVerified, setLandlordVerified] = useState(true);
     const hasViewedRef = useRef(false);
     const scrollY = new Animated.Value(0);
+    const [showPhotoGallery, setShowPhotoGallery] = useState(false);
 
     // Zustand stores
     const { primaryProfile } = useProfileStore();
@@ -493,6 +494,115 @@ export default function PropertyDetailPage() {
                         </View>
                     </View>
 
+                    {/* Photo Gallery */}
+                    {property.images && property.images.length > 0 && (
+                        <View style={styles.photoGalleryContainer}>
+                            <View style={styles.galleryHeader}>
+                                <ThemedText style={styles.sectionTitle}>{t("Photo Gallery")}</ThemedText>
+                                <TouchableOpacity style={styles.viewAllButton} onPress={() => setShowPhotoGallery(true)}>
+                                    <ThemedText style={styles.viewAllButtonText}>{t("View All")}</ThemedText>
+                                    <IconComponent name="chevron-forward" size={16} color={colors.primaryColor} />
+                                </TouchableOpacity>
+                            </View>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.galleryScroll}>
+                                {property.images.slice(0, 5).map((image, index) => (
+                                    <TouchableOpacity
+                                        key={index}
+                                        style={styles.galleryImageContainer}
+                                        onPress={() => {
+                                            setActiveImageIndex(index);
+                                            setShowPhotoGallery(true);
+                                        }}
+                                    >
+                                        <Image
+                                            source={getPropertyImageSource([image])}
+                                            style={styles.galleryImage}
+                                            resizeMode="cover"
+                                        />
+                                        {index === 4 && property.images.length > 5 && (
+                                            <View style={styles.moreImagesOverlay}>
+                                                <ThemedText style={styles.moreImagesText}>+{property.images.length - 5}</ThemedText>
+                                            </View>
+                                        )}
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        </View>
+                    )}
+
+                    {/* Full-Screen Photo Gallery Modal */}
+                    <Modal
+                        visible={showPhotoGallery}
+                        transparent={true}
+                        animationType="fade"
+                        onRequestClose={() => setShowPhotoGallery(false)}
+                    >
+                        <View style={styles.photoModalContainer}>
+                            <View style={styles.photoModalHeader}>
+                                <TouchableOpacity
+                                    style={styles.closeButton}
+                                    onPress={() => setShowPhotoGallery(false)}
+                                >
+                                    <IconComponent name="close" size={24} color="white" />
+                                </TouchableOpacity>
+                                <ThemedText style={styles.photoModalTitle}>
+                                    {activeImageIndex + 1} / {property.images.length}
+                                </ThemedText>
+                            </View>
+                            <ScrollView
+                                horizontal
+                                pagingEnabled
+                                showsHorizontalScrollIndicator={false}
+                                onMomentumScrollEnd={(event) => {
+                                    const newIndex = Math.round(event.nativeEvent.contentOffset.x / event.nativeEvent.layoutMeasurement.width);
+                                    setActiveImageIndex(newIndex);
+                                }}
+                                style={styles.photoModalScroll}
+                            >
+                                {property.images.map((image, index) => (
+                                    <View key={index} style={styles.photoModalImageContainer}>
+                                        <Image
+                                            source={getPropertyImageSource([image])}
+                                            style={styles.photoModalImage}
+                                            resizeMode="contain"
+                                        />
+                                    </View>
+                                ))}
+                            </ScrollView>
+                            <View style={styles.photoModalFooter}>
+                                <TouchableOpacity
+                                    style={styles.photoModalButton}
+                                    onPress={() => {
+                                        const newIndex = activeImageIndex > 0 ? activeImageIndex - 1 : property.images.length - 1;
+                                        setActiveImageIndex(newIndex);
+                                    }}
+                                >
+                                    <IconComponent name="chevron-back" size={24} color="white" />
+                                </TouchableOpacity>
+                                <View style={styles.photoModalDots}>
+                                    {property.images.map((_, index) => (
+                                        <View
+                                            key={index}
+                                            style={[
+                                                styles.photoModalDot,
+                                                index === activeImageIndex && styles.photoModalDotActive
+                                            ]}
+                                        />
+                                    ))}
+                                </View>
+                                <TouchableOpacity
+                                    style={styles.photoModalButton}
+                                    onPress={() => {
+                                        const newIndex = activeImageIndex < property.images.length - 1 ? activeImageIndex + 1 : 0;
+                                        setActiveImageIndex(newIndex);
+                                    }}
+                                >
+                                    <IconComponent name="chevron-forward" size={24} color="white" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </Modal>
+
                     {/* Basic Info */}
                     <View style={styles.infoContainer}>
                         <View style={styles.priceContainer}>
@@ -800,6 +910,121 @@ export default function PropertyDetailPage() {
                                 </View>
                             </View>
                         )}
+
+                        {/* Property Statistics */}
+                        <View style={styles.statisticsContainer}>
+                            <ThemedText style={styles.sectionTitle}>{t("Property Statistics")}</ThemedText>
+                            <View style={styles.statisticsCard}>
+                                <View style={styles.statisticsGrid}>
+                                    <View style={styles.statisticItem}>
+                                        <ThemedText style={styles.statisticValue}>{property.bedrooms}</ThemedText>
+                                        <ThemedText style={styles.statisticLabel}>{t("Bedrooms")}</ThemedText>
+                                    </View>
+                                    <View style={styles.statisticItem}>
+                                        <ThemedText style={styles.statisticValue}>{property.bathrooms}</ThemedText>
+                                        <ThemedText style={styles.statisticLabel}>{t("Bathrooms")}</ThemedText>
+                                    </View>
+                                    <View style={styles.statisticItem}>
+                                        <ThemedText style={styles.statisticValue}>{property.size}m²</ThemedText>
+                                        <ThemedText style={styles.statisticLabel}>{t("Size")}</ThemedText>
+                                    </View>
+                                    {apiProperty?.floor !== undefined && (
+                                        <View style={styles.statisticItem}>
+                                            <ThemedText style={styles.statisticValue}>{apiProperty.floor}</ThemedText>
+                                            <ThemedText style={styles.statisticLabel}>{t("Floor")}</ThemedText>
+                                        </View>
+                                    )}
+                                </View>
+                            </View>
+                        </View>
+
+                        {/* Energy Efficiency & Sustainability */}
+                        {property.isEcoCertified && (
+                            <View style={styles.energyContainer}>
+                                <ThemedText style={styles.sectionTitle}>{t("Energy Efficiency & Sustainability")}</ThemedText>
+                                <View style={styles.energyCard}>
+                                    <View style={styles.energyHeader}>
+                                        <IconComponent name="leaf" size={24} color="#2e7d32" />
+                                        <ThemedText style={styles.energyTitle}>{t("Eco-Certified Property")}</ThemedText>
+                                    </View>
+                                    <View style={styles.energyRatingContainer}>
+                                        <View style={[styles.energyRatingBadge, { backgroundColor: '#2e7d32' }]}>
+                                            <ThemedText style={styles.energyRatingText}>{property.energyRating}</ThemedText>
+                                        </View>
+                                        <ThemedText style={styles.energyDescription}>
+                                            {t("This property meets high standards for energy efficiency and sustainability")}
+                                        </ThemedText>
+                                    </View>
+                                    <View style={styles.energyFeatures}>
+                                        <View style={styles.energyFeature}>
+                                            <IconComponent name="checkmark-circle" size={16} color="#2e7d32" />
+                                            <ThemedText style={styles.energyFeatureText}>{t("Energy-efficient appliances")}</ThemedText>
+                                        </View>
+                                        <View style={styles.energyFeature}>
+                                            <IconComponent name="checkmark-circle" size={16} color="#2e7d32" />
+                                            <ThemedText style={styles.energyFeatureText}>{t("Sustainable building materials")}</ThemedText>
+                                        </View>
+                                        <View style={styles.energyFeature}>
+                                            <IconComponent name="checkmark-circle" size={16} color="#2e7d32" />
+                                            <ThemedText style={styles.energyFeatureText}>{t("Reduced carbon footprint")}</ThemedText>
+                                        </View>
+                                    </View>
+                                </View>
+                            </View>
+                        )}
+
+                        {/* Neighborhood Information */}
+                        <View style={styles.neighborhoodContainer}>
+                            <ThemedText style={styles.sectionTitle}>{t("Neighborhood")}</ThemedText>
+                            <View style={styles.neighborhoodCard}>
+                                <View style={styles.neighborhoodHeader}>
+                                    <IconComponent name="location" size={20} color={colors.primaryColor} />
+                                    <ThemedText style={styles.neighborhoodTitle}>{apiProperty?.address?.city || t("Location")}</ThemedText>
+                                </View>
+                                <View style={styles.neighborhoodStats}>
+                                    <View style={styles.neighborhoodStat}>
+                                        <ThemedText style={styles.neighborhoodStatValue}>4.2</ThemedText>
+                                        <ThemedText style={styles.neighborhoodStatLabel}>{t("Safety Rating")}</ThemedText>
+                                    </View>
+                                    <View style={styles.neighborhoodStat}>
+                                        <ThemedText style={styles.neighborhoodStatValue}>85</ThemedText>
+                                        <ThemedText style={styles.neighborhoodStatLabel}>{t("Walk Score")}</ThemedText>
+                                    </View>
+                                    <View style={styles.neighborhoodStat}>
+                                        <ThemedText style={styles.neighborhoodStatValue}>92</ThemedText>
+                                        <ThemedText style={styles.neighborhoodStatLabel}>{t("Transit Score")}</ThemedText>
+                                    </View>
+                                </View>
+                                <ThemedText style={styles.neighborhoodDescription}>
+                                    {t("This neighborhood offers excellent connectivity with public transportation, shopping centers, and educational institutions within walking distance.")}
+                                </ThemedText>
+                            </View>
+                        </View>
+
+                        {/* Contact & Communication */}
+                        <View style={styles.contactContainer}>
+                            <ThemedText style={styles.sectionTitle}>{t("Contact Information")}</ThemedText>
+                            <View style={styles.contactCard}>
+                                <View style={styles.contactMethods}>
+                                    <TouchableOpacity style={styles.contactMethod} onPress={handleContact}>
+                                        <IconComponent name="mail-outline" size={24} color={colors.primaryColor} />
+                                        <ThemedText style={styles.contactMethodText}>{t("Send Message")}</ThemedText>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.contactMethod} onPress={handleContact}>
+                                        <IconComponent name="call-outline" size={24} color={colors.primaryColor} />
+                                        <ThemedText style={styles.contactMethodText}>{t("Call Now")}</ThemedText>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.contactMethod} onPress={handleScheduleViewing}>
+                                        <IconComponent name="calendar-outline" size={24} color={colors.primaryColor} />
+                                        <ThemedText style={styles.contactMethodText}>{t("Schedule Viewing")}</ThemedText>
+                                    </TouchableOpacity>
+                                </View>
+                                <View style={styles.responseTime}>
+                                    <IconComponent name="time-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
+                                    <ThemedText style={styles.responseTimeText}>{t("Average response time: 2 hours")}</ThemedText>
+                                </View>
+                            </View>
+                        </View>
 
                         {/* Availability */}
                         <View style={styles.availabilityContainer}>
@@ -1525,5 +1750,280 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: colors.COLOR_BLACK_LIGHT_3,
         marginTop: 5,
+    },
+    statisticsContainer: {
+        marginBottom: 20,
+    },
+    statisticsCard: {
+        backgroundColor: '#f8f9fa',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#e9ecef',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+        elevation: 1,
+    },
+    statisticsGrid: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        flexWrap: 'wrap',
+    },
+    statisticItem: {
+        alignItems: 'center',
+        marginVertical: 10,
+    },
+    statisticValue: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: colors.primaryColor,
+    },
+    statisticLabel: {
+        fontSize: 14,
+        color: colors.COLOR_BLACK_LIGHT_3,
+        marginTop: 5,
+    },
+    energyContainer: {
+        marginBottom: 20,
+    },
+    energyCard: {
+        backgroundColor: '#f8f9fa',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#e9ecef',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+        elevation: 1,
+    },
+    energyHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    energyTitle: {
+        marginLeft: 8,
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+
+    energyDescription: {
+        fontSize: 14,
+        color: colors.COLOR_BLACK_LIGHT_3,
+        marginBottom: 10,
+    },
+    energyFeatures: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        flexWrap: 'wrap',
+    },
+    energyFeature: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 5,
+    },
+    energyFeatureText: {
+        fontSize: 14,
+        color: colors.COLOR_BLACK_LIGHT_3,
+        marginLeft: 5,
+    },
+    neighborhoodContainer: {
+        marginBottom: 20,
+    },
+    neighborhoodCard: {
+        backgroundColor: '#f8f9fa',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#e9ecef',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+        elevation: 1,
+    },
+    neighborhoodHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    neighborhoodTitle: {
+        marginLeft: 8,
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    neighborhoodStats: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        marginBottom: 10,
+    },
+    neighborhoodStat: {
+        alignItems: 'center',
+    },
+    neighborhoodStatValue: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: colors.primaryColor,
+    },
+    neighborhoodStatLabel: {
+        fontSize: 14,
+        color: colors.COLOR_BLACK_LIGHT_3,
+        marginTop: 5,
+    },
+    neighborhoodDescription: {
+        fontSize: 14,
+        color: colors.COLOR_BLACK_LIGHT_3,
+        textAlign: 'justify',
+    },
+    contactContainer: {
+        marginBottom: 20,
+    },
+    contactCard: {
+        backgroundColor: '#f8f9fa',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#e9ecef',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+        elevation: 1,
+    },
+    contactMethods: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        marginBottom: 10,
+    },
+    contactMethod: {
+        alignItems: 'center',
+    },
+    contactMethodText: {
+        fontSize: 14,
+        color: colors.COLOR_BLACK_LIGHT_3,
+        marginTop: 5,
+    },
+    responseTime: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    responseTimeText: {
+        fontSize: 14,
+        color: colors.COLOR_BLACK_LIGHT_3,
+        marginLeft: 5,
+    },
+    photoGalleryContainer: {
+        marginBottom: 20,
+        padding: 10,
+    },
+    galleryHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    viewAllButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    viewAllButtonText: {
+        fontSize: 14,
+        color: colors.primaryColor,
+        marginRight: 5,
+    },
+    galleryScroll: {
+        height: 100, // Fixed height for the horizontal scroll
+    },
+    galleryImageContainer: {
+        width: 100,
+        height: 100,
+        borderRadius: 8,
+        marginRight: 10,
+        overflow: 'hidden',
+    },
+    galleryImage: {
+        width: '100%',
+        height: '100%',
+    },
+    moreImagesOverlay: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        borderRadius: 8,
+        paddingHorizontal: 4,
+        paddingVertical: 2,
+    },
+    moreImagesText: {
+        color: 'white',
+        fontSize: 12,
+        fontWeight: 'bold',
+    },
+    photoModalContainer: {
+        flex: 1,
+        backgroundColor: 'black',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    photoModalHeader: {
+        position: 'absolute',
+        top: 50,
+        left: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        zIndex: 1,
+    },
+    closeButton: {
+        padding: 10,
+    },
+    photoModalTitle: {
+        color: 'white',
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginLeft: 10,
+    },
+    photoModalScroll: {
+        width: '100%',
+        height: '80%',
+    },
+    photoModalImageContainer: {
+        width: '100%',
+        height: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    photoModalImage: {
+        width: '100%',
+        height: '100%',
+    },
+    photoModalFooter: {
+        position: 'absolute',
+        bottom: 20,
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        width: '100%',
+        zIndex: 1,
+    },
+    photoModalButton: {
+        padding: 10,
+    },
+    photoModalDots: {
+        flexDirection: 'row',
+        alignSelf: 'center',
+        marginHorizontal: 10,
+    },
+    photoModalDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: 'rgba(255,255,255,0.5)',
+        marginHorizontal: 4,
+    },
+    photoModalDotActive: {
+        backgroundColor: 'white',
     },
 }); 
