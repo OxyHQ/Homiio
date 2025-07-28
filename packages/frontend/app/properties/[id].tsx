@@ -393,817 +393,1631 @@ export default function PropertyDetailPage() {
 
     return (
         <View style={styles.safeArea}>
-            {/* Header positioned absolutely to overlay the image */}
-            <View style={styles.headerOverlay}>
-                <Header
-                    options={{
-                        showBackButton: true, // Disable default back button
-                        title: '',
-                        titlePosition: 'center',
-                        transparent: true,
-                        scrollThreshold: 100,
-                        rightComponents: [
-                            <TouchableOpacity key="share" style={styles.headerButton} onPress={handleShare}>
-                                <IconComponent name="share-outline" size={24} color="#222" />
-                            </TouchableOpacity>,
-                            <SaveButton
-                                key="save"
-                                isSaved={isPropertyFavorite}
-                                onPress={() => toggleFavorite(property.id || '', apiProperty || {})}
-                                variant="heart"
-                                color="#222"
-                                activeColor="#EF4444"
-                                isLoading={isPropertySaving(property.id || '')}
-                            />,
-                        ],
-                    }}
-                    scrollY={scrollY}
-                />
-            </View>
+            {Platform.OS === 'web' ? (
+                // Web: Sticky header structure
+                <>
+                    <Header
+                        options={{
+                            showBackButton: true,
+                            title: '',
+                            titlePosition: 'center',
+                            transparent: true,
+                            scrollThreshold: 100,
+                            rightComponents: [
+                                <TouchableOpacity key="share" style={styles.headerButton} onPress={handleShare}>
+                                    <IconComponent name="share-outline" size={24} color="#222" />
+                                </TouchableOpacity>,
+                                <SaveButton
+                                    key="save"
+                                    isSaved={isPropertyFavorite}
+                                    onPress={() => toggleFavorite(property.id || '', apiProperty || {})}
+                                    variant="heart"
+                                    color="#222"
+                                    activeColor="#EF4444"
+                                    isLoading={isPropertySaving(property.id || '')}
+                                />,
+                            ],
+                        }}
+                        scrollY={scrollY}
+                    />
+                    <Animated.ScrollView
+                        style={styles.scrollView}
+                        showsVerticalScrollIndicator={false}
+                        onScroll={Animated.event(
+                            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                            { useNativeDriver: false }
+                        )}
+                        scrollEventThrottle={16}
+                    >
+                        {/* Main Image - Starts from very top, behind header */}
+                        <Image
+                            source={getPropertyImageSource(property.images)}
+                            style={styles.mainImageWeb}
+                            resizeMode="cover"
+                        />
 
-            <Animated.ScrollView
-                style={styles.scrollView}
-                showsVerticalScrollIndicator={false}
-                onScroll={Animated.event(
-                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-                    { useNativeDriver: false }
-                )}
-                scrollEventThrottle={16}
-            >
-                {/* Main Image - Starts from very top, behind safe area */}
-                <Image
-                    source={getPropertyImageSource(property.images)}
-                    style={styles.mainImage}
-                    resizeMode="cover"
-                />
-
-                {/* Enhanced Header Section */}
-                <View style={styles.enhancedHeader}>
-                    <ThemedText style={styles.headerTitle} numberOfLines={2}>{property.title}</ThemedText>
-                    <View style={styles.headerLocation}>
-                        <ThemedText style={styles.headerLocationText}>{property.location}</ThemedText>
-                    </View>
-                    <View style={styles.headerStats}>
-                        <View style={styles.headerStat}>
-                            <ThemedText style={styles.headerStatText}>{property.bedrooms} {t("Bed")}</ThemedText>
-                        </View>
-                        <View style={styles.headerStat}>
-                            <ThemedText style={styles.headerStatText}>{property.bathrooms} {t("Bath")}</ThemedText>
-                        </View>
-                        <View style={styles.headerStat}>
-                            <ThemedText style={styles.headerStatText}>{property.size}m²</ThemedText>
-                        </View>
-                    </View>
-                </View>
-                <View style={styles.container}>
-
-                    {/* Property Images Grid */}
-                    <View style={styles.imageGridContainer}>
-                        <View style={styles.imageGrid}>
-                            {/* Left Column */}
-                            <View style={styles.mainImageContainer}>
-                                <Image
-                                    source={getPropertyImageSource(property.images)}
-                                    style={styles.mainImageInside}
-                                    resizeMode="cover"
-                                />
+                        {/* Enhanced Header Section */}
+                        <View style={styles.enhancedHeader}>
+                            <ThemedText style={styles.headerTitle} numberOfLines={2}>{property.title}</ThemedText>
+                            <View style={styles.headerLocation}>
+                                <ThemedText style={styles.headerLocationText}>{property.location}</ThemedText>
                             </View>
-
-                            {/* Right Column */}
-                            <View style={styles.rightColumn}>
-                                <View style={styles.sideImageContainer}>
-                                    <Image
-                                        source={getPropertyImageSource(property.images.length > 1 ? property.images.slice(1) : property.images)}
-                                        style={styles.sideImage}
-                                        resizeMode="cover"
-                                    />
+                            <View style={styles.headerStats}>
+                                <View style={styles.headerStat}>
+                                    <ThemedText style={styles.headerStatText}>{property.bedrooms} {t("Bed")}</ThemedText>
                                 </View>
-                                <View style={styles.mapPreviewContainer}>
-                                    <PropertyMap
-                                        latitude={apiProperty?.address?.coordinates?.lat || 40.7128}
-                                        longitude={apiProperty?.address?.coordinates?.lng || -74.0060}
-                                        address={property.location}
-                                        height={96}
-                                        interactive={false}
-                                    />
-                                    <View style={styles.mapOverlay}>
-                                        <ThemedText style={styles.mapOverlayText}>Location</ThemedText>
-                                    </View>
+                                <View style={styles.headerStat}>
+                                    <ThemedText style={styles.headerStatText}>{property.bathrooms} {t("Bath")}</ThemedText>
+                                </View>
+                                <View style={styles.headerStat}>
+                                    <ThemedText style={styles.headerStatText}>{property.size}m²</ThemedText>
                                 </View>
                             </View>
                         </View>
-                    </View>
+                        <View style={styles.container}>
 
-                    {/* Photo Gallery */}
-                    {property.images && property.images.length > 0 && (
-                        <View style={styles.photoGalleryContainer}>
-                            <View style={styles.galleryHeader}>
-                                <ThemedText style={styles.sectionTitle}>{t("Photo Gallery")}</ThemedText>
-                                <TouchableOpacity style={styles.viewAllButton} onPress={() => setShowPhotoGallery(true)}>
-                                    <ThemedText style={styles.viewAllButtonText}>{t("View All")}</ThemedText>
-                                    <IconComponent name="chevron-forward" size={16} color={colors.primaryColor} />
-                                </TouchableOpacity>
-                            </View>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.galleryScroll}>
-                                {property.images.slice(0, 5).map((image, index) => (
-                                    <TouchableOpacity
-                                        key={index}
-                                        style={styles.galleryImageContainer}
-                                        onPress={() => {
-                                            setActiveImageIndex(index);
-                                            setShowPhotoGallery(true);
-                                        }}
-                                    >
+                            {/* Property Images Grid */}
+                            <View style={styles.imageGridContainer}>
+                                <View style={styles.imageGrid}>
+                                    {/* Left Column */}
+                                    <View style={styles.mainImageContainer}>
                                         <Image
-                                            source={getPropertyImageSource([image])}
-                                            style={styles.galleryImage}
+                                            source={getPropertyImageSource(property.images)}
+                                            style={styles.mainImageInside}
                                             resizeMode="cover"
                                         />
-                                        {index === 4 && property.images.length > 5 && (
-                                            <View style={styles.moreImagesOverlay}>
-                                                <ThemedText style={styles.moreImagesText}>+{property.images.length - 5}</ThemedText>
-                                            </View>
-                                        )}
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
-                        </View>
-                    )}
+                                    </View>
 
-                    {/* Full-Screen Photo Gallery Modal */}
-                    <Modal
-                        visible={showPhotoGallery}
-                        transparent={true}
-                        animationType="fade"
-                        onRequestClose={() => setShowPhotoGallery(false)}
-                    >
-                        <View style={styles.photoModalContainer}>
-                            <View style={styles.photoModalHeader}>
-                                <TouchableOpacity
-                                    style={styles.closeButton}
-                                    onPress={() => setShowPhotoGallery(false)}
-                                >
-                                    <IconComponent name="close" size={24} color="white" />
-                                </TouchableOpacity>
-                                <ThemedText style={styles.photoModalTitle}>
-                                    {activeImageIndex + 1} / {property.images.length}
-                                </ThemedText>
+                                    {/* Right Column */}
+                                    <View style={styles.rightColumn}>
+                                        <View style={styles.sideImageContainer}>
+                                            <Image
+                                                source={getPropertyImageSource(property.images.length > 1 ? property.images.slice(1) : property.images)}
+                                                style={styles.sideImage}
+                                                resizeMode="cover"
+                                            />
+                                        </View>
+                                        <View style={styles.mapPreviewContainer}>
+                                            <PropertyMap
+                                                latitude={apiProperty?.address?.coordinates?.lat || 40.7128}
+                                                longitude={apiProperty?.address?.coordinates?.lng || -74.0060}
+                                                address={property.location}
+                                                height={96}
+                                                interactive={false}
+                                            />
+                                            <View style={styles.mapOverlay}>
+                                                <ThemedText style={styles.mapOverlayText}>Location</ThemedText>
+                                            </View>
+                                        </View>
+                                    </View>
+                                </View>
                             </View>
-                            <ScrollView
-                                horizontal
-                                pagingEnabled
-                                showsHorizontalScrollIndicator={false}
-                                onMomentumScrollEnd={(event) => {
-                                    const newIndex = Math.round(event.nativeEvent.contentOffset.x / event.nativeEvent.layoutMeasurement.width);
-                                    setActiveImageIndex(newIndex);
-                                }}
-                                style={styles.photoModalScroll}
+
+                            {/* Photo Gallery */}
+                            {property.images && property.images.length > 0 && (
+                                <View style={styles.photoGalleryContainer}>
+                                    <View style={styles.galleryHeader}>
+                                        <ThemedText style={styles.sectionTitle}>{t("Photo Gallery")}</ThemedText>
+                                        <TouchableOpacity style={styles.viewAllButton} onPress={() => setShowPhotoGallery(true)}>
+                                            <ThemedText style={styles.viewAllButtonText}>{t("View All")}</ThemedText>
+                                            <IconComponent name="chevron-forward" size={16} color={colors.primaryColor} />
+                                        </TouchableOpacity>
+                                    </View>
+                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.galleryScroll}>
+                                        {property.images.slice(0, 5).map((image, index) => (
+                                            <TouchableOpacity
+                                                key={index}
+                                                style={styles.galleryImageContainer}
+                                                onPress={() => {
+                                                    setActiveImageIndex(index);
+                                                    setShowPhotoGallery(true);
+                                                }}
+                                            >
+                                                <Image
+                                                    source={getPropertyImageSource([image])}
+                                                    style={styles.galleryImage}
+                                                    resizeMode="cover"
+                                                />
+                                                {index === 4 && property.images.length > 5 && (
+                                                    <View style={styles.moreImagesOverlay}>
+                                                        <ThemedText style={styles.moreImagesText}>+{property.images.length - 5}</ThemedText>
+                                                    </View>
+                                                )}
+                                            </TouchableOpacity>
+                                        ))}
+                                    </ScrollView>
+                                </View>
+                            )}
+
+                            {/* Full-Screen Photo Gallery Modal */}
+                            <Modal
+                                visible={showPhotoGallery}
+                                transparent={true}
+                                animationType="fade"
+                                onRequestClose={() => setShowPhotoGallery(false)}
                             >
-                                {property.images.map((image, index) => (
-                                    <View key={index} style={styles.photoModalImageContainer}>
-                                        <Image
-                                            source={getPropertyImageSource([image])}
-                                            style={styles.photoModalImage}
-                                            resizeMode="contain"
-                                        />
-                                    </View>
-                                ))}
-                            </ScrollView>
-                            <View style={styles.photoModalFooter}>
-                                <TouchableOpacity
-                                    style={styles.photoModalButton}
-                                    onPress={() => {
-                                        const newIndex = activeImageIndex > 0 ? activeImageIndex - 1 : property.images.length - 1;
-                                        setActiveImageIndex(newIndex);
-                                    }}
-                                >
-                                    <IconComponent name="chevron-back" size={24} color="white" />
-                                </TouchableOpacity>
-                                <View style={styles.photoModalDots}>
-                                    {property.images.map((_, index) => (
-                                        <View
-                                            key={index}
-                                            style={[
-                                                styles.photoModalDot,
-                                                index === activeImageIndex && styles.photoModalDotActive
-                                            ]}
-                                        />
-                                    ))}
-                                </View>
-                                <TouchableOpacity
-                                    style={styles.photoModalButton}
-                                    onPress={() => {
-                                        const newIndex = activeImageIndex < property.images.length - 1 ? activeImageIndex + 1 : 0;
-                                        setActiveImageIndex(newIndex);
-                                    }}
-                                >
-                                    <IconComponent name="chevron-forward" size={24} color="white" />
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </Modal>
-
-                    {/* Basic Info */}
-                    <View style={styles.infoContainer}>
-                        <View style={styles.priceContainer}>
-                            <ThemedText style={styles.priceLabel}>
-                                {property.priceUnit === 'day' ? t("Daily Rent") :
-                                    property.priceUnit === 'night' ? t("Nightly Rent") :
-                                        property.priceUnit === 'week' ? t("Weekly Rent") :
-                                            property.priceUnit === 'month' ? t("Monthly Rent") :
-                                                property.priceUnit === 'year' ? t("Yearly Rent") :
-                                                    t("Rent")}
-                            </ThemedText>
-                            <CurrencyFormatter
-                                amount={parseFloat(property.price) || 0}
-                                originalCurrency={apiProperty?.rent?.currency || 'USD'}
-                                showConversion={true}
-                            />
-                        </View>
-
-                        {/* Eco Rating */}
-                        {property.isEcoCertified && (
-                            <>
-                                <View style={styles.ecoRatingContainer}>
-                                    <View style={styles.ratingHeader}>
-                                        <ThemedText style={styles.ratingTitle}>{t("Energy Efficiency")}</ThemedText>
-                                    </View>
-                                    <View style={styles.energyRatingContainer}>
-                                        <View style={[styles.energyRatingBadge, { backgroundColor: '#2e7d32' }]}>
-                                            <ThemedText style={styles.energyRatingText}>{property.energyRating}</ThemedText>
-                                        </View>
-                                        <ThemedText style={styles.energyRatingDesc}>
-                                            {t("This property meets high standards for energy efficiency")}
+                                <View style={styles.photoModalContainer}>
+                                    <View style={styles.photoModalHeader}>
+                                        <TouchableOpacity
+                                            style={styles.closeButton}
+                                            onPress={() => setShowPhotoGallery(false)}
+                                        >
+                                            <IconComponent name="close" size={24} color="white" />
+                                        </TouchableOpacity>
+                                        <ThemedText style={styles.photoModalTitle}>
+                                            {activeImageIndex + 1} / {property.images.length}
                                         </ThemedText>
                                     </View>
-                                </View>
-                            </>
-                        )}
-
-                        {/* Description */}
-                        {property.description && property.description.trim() !== '' && (
-                            <>
-                                <View style={styles.descriptionContainer}>
-                                    <ThemedText style={styles.sectionTitle}>{t("About this property")}</ThemedText>
-                                    <View style={styles.descriptionCard}>
-                                        <ThemedText style={styles.descriptionText}>{property.description}</ThemedText>
+                                    <ScrollView
+                                        horizontal
+                                        pagingEnabled
+                                        showsHorizontalScrollIndicator={false}
+                                        onMomentumScrollEnd={(event) => {
+                                            const newIndex = Math.round(event.nativeEvent.contentOffset.x / event.nativeEvent.layoutMeasurement.width);
+                                            setActiveImageIndex(newIndex);
+                                        }}
+                                        style={styles.photoModalScroll}
+                                    >
+                                        {property.images.map((image, index) => (
+                                            <View key={index} style={styles.photoModalImageContainer}>
+                                                <Image
+                                                    source={getPropertyImageSource([image])}
+                                                    style={styles.photoModalImage}
+                                                    resizeMode="contain"
+                                                />
+                                            </View>
+                                        ))}
+                                    </ScrollView>
+                                    <View style={styles.photoModalFooter}>
+                                        <TouchableOpacity
+                                            style={styles.photoModalButton}
+                                            onPress={() => {
+                                                const newIndex = activeImageIndex > 0 ? activeImageIndex - 1 : property.images.length - 1;
+                                                setActiveImageIndex(newIndex);
+                                            }}
+                                        >
+                                            <IconComponent name="chevron-back" size={24} color="white" />
+                                        </TouchableOpacity>
+                                        <View style={styles.photoModalDots}>
+                                            {property.images.map((_, index) => (
+                                                <View
+                                                    key={index}
+                                                    style={[
+                                                        styles.photoModalDot,
+                                                        index === activeImageIndex && styles.photoModalDotActive
+                                                    ]}
+                                                />
+                                            ))}
+                                        </View>
+                                        <TouchableOpacity
+                                            style={styles.photoModalButton}
+                                            onPress={() => {
+                                                const newIndex = activeImageIndex < property.images.length - 1 ? activeImageIndex + 1 : 0;
+                                                setActiveImageIndex(newIndex);
+                                            }}
+                                        >
+                                            <IconComponent name="chevron-forward" size={24} color="white" />
+                                        </TouchableOpacity>
                                     </View>
                                 </View>
-                            </>
-                        )}
+                            </Modal>
 
-                        {/* Detailed Property Information */}
-                        <View style={styles.detailedInfoContainer}>
-                            <ThemedText style={styles.sectionTitle}>{t("Property Details")}</ThemedText>
-                            <View style={styles.detailedInfoCard}>
-                                <View style={styles.detailedInfoRow}>
-                                    <View style={styles.detailedInfoItem}>
-                                        <ThemedText style={styles.detailedInfoLabel}>{t("Property Type")}</ThemedText>
-                                        <ThemedText style={styles.detailedInfoValue}>
-                                            {apiProperty?.type ? apiProperty.type.charAt(0).toUpperCase() + apiProperty.type.slice(1) : t("Not specified")}
-                                        </ThemedText>
-                                    </View>
-                                    {apiProperty?.floor !== undefined && (
-                                        <View style={styles.detailedInfoItem}>
-                                            <ThemedText style={styles.detailedInfoLabel}>{t("Floor")}</ThemedText>
-                                            <ThemedText style={styles.detailedInfoValue}>{apiProperty.floor}</ThemedText>
-                                        </View>
-                                    )}
-                                </View>
-                                <View style={styles.detailedInfoRow}>
-                                    {apiProperty?.yearBuilt && (
-                                        <View style={styles.detailedInfoItem}>
-                                            <ThemedText style={styles.detailedInfoLabel}>{t("Year Built")}</ThemedText>
-                                            <ThemedText style={styles.detailedInfoValue}>{apiProperty.yearBuilt}</ThemedText>
-                                        </View>
-                                    )}
-                                    {apiProperty?.parkingSpaces !== undefined && (
-                                        <View style={styles.detailedInfoItem}>
-                                            <ThemedText style={styles.detailedInfoLabel}>{t("Parking Spaces")}</ThemedText>
-                                            <ThemedText style={styles.detailedInfoValue}>{apiProperty.parkingSpaces}</ThemedText>
-                                        </View>
-                                    )}
-                                </View>
-                            </View>
-                        </View>
-
-                        {/* Property Features */}
-                        {(apiProperty?.isFurnished !== undefined || apiProperty?.hasBalcony !== undefined || apiProperty?.hasGarden !== undefined || apiProperty?.hasElevator !== undefined) && (
-                            <View style={styles.featuresContainer}>
-                                <ThemedText style={styles.sectionTitle}>{t("Property Features")}</ThemedText>
-                                <View style={styles.featuresCard}>
-                                    <View style={styles.featuresGrid}>
-                                        {apiProperty?.isFurnished !== undefined && (
-                                            <View style={styles.featureItem}>
-                                                <IconComponent
-                                                    name={apiProperty.isFurnished ? "checkmark-circle" : "close-circle"}
-                                                    size={20}
-                                                    color={apiProperty.isFurnished ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
-                                                />
-                                                <ThemedText style={styles.featureText}>{t("Furnished")}</ThemedText>
-                                            </View>
-                                        )}
-                                        {apiProperty?.hasBalcony !== undefined && (
-                                            <View style={styles.featureItem}>
-                                                <IconComponent
-                                                    name={apiProperty.hasBalcony ? "checkmark-circle" : "close-circle"}
-                                                    size={20}
-                                                    color={apiProperty.hasBalcony ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
-                                                />
-                                                <ThemedText style={styles.featureText}>{t("Balcony")}</ThemedText>
-                                            </View>
-                                        )}
-                                        {apiProperty?.hasGarden !== undefined && (
-                                            <View style={styles.featureItem}>
-                                                <IconComponent
-                                                    name={apiProperty.hasGarden ? "checkmark-circle" : "close-circle"}
-                                                    size={20}
-                                                    color={apiProperty.hasGarden ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
-                                                />
-                                                <ThemedText style={styles.featureText}>{t("Garden")}</ThemedText>
-                                            </View>
-                                        )}
-                                        {apiProperty?.hasElevator !== undefined && (
-                                            <View style={styles.featureItem}>
-                                                <IconComponent
-                                                    name={apiProperty.hasElevator ? "checkmark-circle" : "close-circle"}
-                                                    size={20}
-                                                    color={apiProperty.hasElevator ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
-                                                />
-                                                <ThemedText style={styles.featureText}>{t("Elevator")}</ThemedText>
-                                            </View>
-                                        )}
-                                    </View>
-                                </View>
-                            </View>
-                        )}
-
-                        {/* Pricing Details */}
-                        <View style={styles.pricingDetailsContainer}>
-                            <ThemedText style={styles.sectionTitle}>{t("Pricing Details")}</ThemedText>
-                            <View style={styles.pricingDetailsCard}>
-                                <View style={styles.pricingDetailRow}>
-                                    <ThemedText style={styles.pricingDetailLabel}>{t("Monthly Rent")}</ThemedText>
+                            {/* Basic Info */}
+                            <View style={styles.infoContainer}>
+                                <View style={styles.priceContainer}>
+                                    <ThemedText style={styles.priceLabel}>
+                                        {property.priceUnit === 'day' ? t("Daily Rent") :
+                                            property.priceUnit === 'night' ? t("Nightly Rent") :
+                                                property.priceUnit === 'week' ? t("Weekly Rent") :
+                                                    property.priceUnit === 'month' ? t("Monthly Rent") :
+                                                        property.priceUnit === 'year' ? t("Yearly Rent") :
+                                                            t("Rent")}
+                                    </ThemedText>
                                     <CurrencyFormatter
-                                        amount={apiProperty?.rent?.amount || 0}
+                                        amount={parseFloat(property.price) || 0}
                                         originalCurrency={apiProperty?.rent?.currency || 'USD'}
                                         showConversion={true}
                                     />
                                 </View>
-                                {apiProperty?.rent?.deposit && apiProperty.rent.deposit > 0 && (
-                                    <View style={styles.pricingDetailRow}>
-                                        <ThemedText style={styles.pricingDetailLabel}>{t("Security Deposit")}</ThemedText>
-                                        <CurrencyFormatter
-                                            amount={apiProperty.rent.deposit}
-                                            originalCurrency={apiProperty.rent.currency || 'USD'}
-                                            showConversion={true}
-                                        />
-                                    </View>
-                                )}
-                                {apiProperty?.rent?.utilities && (
-                                    <View style={styles.pricingDetailRow}>
-                                        <ThemedText style={styles.pricingDetailLabel}>{t("Utilities")}</ThemedText>
-                                        <ThemedText style={styles.pricingDetailValue}>
-                                            {apiProperty.rent.utilities === 'included' ? t("Included") :
-                                                apiProperty.rent.utilities === 'partial' ? t("Partially included") :
-                                                    t("Not included")}
-                                        </ThemedText>
-                                    </View>
-                                )}
 
-                            </View>
-                        </View>
-
-                        {/* Rules & Policies */}
-                        {(apiProperty?.rules?.petsAllowed !== undefined || apiProperty?.rules?.smokingAllowed !== undefined ||
-                            apiProperty?.rules?.partiesAllowed !== undefined || apiProperty?.rules?.guestsAllowed !== undefined) && (
-                                <View style={styles.rulesContainer}>
-                                    <ThemedText style={styles.sectionTitle}>{t("House Rules")}</ThemedText>
-                                    <View style={styles.rulesCard}>
-                                        <View style={styles.rulesGrid}>
-                                            {apiProperty?.rules?.petsAllowed !== undefined && (
-                                                <View style={styles.ruleItem}>
-                                                    <IconComponent
-                                                        name={apiProperty.rules.petsAllowed ? "checkmark-circle" : "close-circle"}
-                                                        size={20}
-                                                        color={apiProperty.rules.petsAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
-                                                    />
-                                                    <ThemedText style={styles.ruleText}>{t("Pets Allowed")}</ThemedText>
-                                                </View>
-                                            )}
-                                            {apiProperty?.rules?.smokingAllowed !== undefined && (
-                                                <View style={styles.ruleItem}>
-                                                    <IconComponent
-                                                        name={apiProperty.rules.smokingAllowed ? "checkmark-circle" : "close-circle"}
-                                                        size={20}
-                                                        color={apiProperty.rules.smokingAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
-                                                    />
-                                                    <ThemedText style={styles.ruleText}>{t("Smoking Allowed")}</ThemedText>
-                                                </View>
-                                            )}
-                                            {apiProperty?.rules?.partiesAllowed !== undefined && (
-                                                <View style={styles.ruleItem}>
-                                                    <IconComponent
-                                                        name={apiProperty.rules.partiesAllowed ? "checkmark-circle" : "close-circle"}
-                                                        size={20}
-                                                        color={apiProperty.rules.partiesAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
-                                                    />
-                                                    <ThemedText style={styles.ruleText}>{t("Parties Allowed")}</ThemedText>
-                                                </View>
-                                            )}
-                                            {apiProperty?.rules?.guestsAllowed !== undefined && (
-                                                <View style={styles.ruleItem}>
-                                                    <IconComponent
-                                                        name={apiProperty.rules.guestsAllowed ? "checkmark-circle" : "close-circle"}
-                                                        size={20}
-                                                        color={apiProperty.rules.guestsAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
-                                                    />
-                                                    <ThemedText style={styles.ruleText}>{t("Guests Allowed")}</ThemedText>
-                                                </View>
-                                            )}
-                                        </View>
-                                        {apiProperty?.rules?.guestsAllowed && apiProperty?.rules?.maxGuests && (
-                                            <View style={styles.maxGuestsContainer}>
-                                                <ThemedText style={styles.maxGuestsLabel}>{t("Maximum Guests")}: {apiProperty.rules.maxGuests}</ThemedText>
+                                {/* Eco Rating */}
+                                {property.isEcoCertified && (
+                                    <>
+                                        <View style={styles.ecoRatingContainer}>
+                                            <View style={styles.ratingHeader}>
+                                                <ThemedText style={styles.ratingTitle}>{t("Energy Efficiency")}</ThemedText>
                                             </View>
-                                        )}
-                                    </View>
-                                </View>
-                            )}
-
-                        {/* Location Details */}
-                        <View style={styles.locationDetailsContainer}>
-                            <ThemedText style={styles.sectionTitle}>{t("Location Details")}</ThemedText>
-                            <View style={styles.locationDetailsCard}>
-                                {apiProperty?.address?.street && (
-                                    <View style={styles.locationDetailRow}>
-                                        <ThemedText style={styles.locationDetailLabel}>{t("Address")}</ThemedText>
-                                        <ThemedText style={styles.locationDetailValue}>
-                                            {apiProperty.address.street}
-                                        </ThemedText>
-                                    </View>
-                                )}
-                                {apiProperty?.address?.city && (
-                                    <View style={styles.locationDetailRow}>
-                                        <ThemedText style={styles.locationDetailLabel}>{t("City")}</ThemedText>
-                                        <ThemedText style={styles.locationDetailValue}>{apiProperty.address.city}</ThemedText>
-                                    </View>
-                                )}
-                                {apiProperty?.address?.state && (
-                                    <View style={styles.locationDetailRow}>
-                                        <ThemedText style={styles.locationDetailLabel}>{t("State/Province")}</ThemedText>
-                                        <ThemedText style={styles.locationDetailValue}>{apiProperty.address.state}</ThemedText>
-                                    </View>
-                                )}
-                                {apiProperty?.address?.zipCode && (
-                                    <View style={styles.locationDetailRow}>
-                                        <ThemedText style={styles.locationDetailLabel}>{t("ZIP/Postal Code")}</ThemedText>
-                                        <ThemedText style={styles.locationDetailValue}>{apiProperty.address.zipCode}</ThemedText>
-                                    </View>
-                                )}
-                                {apiProperty?.address?.country && (
-                                    <View style={styles.locationDetailRow}>
-                                        <ThemedText style={styles.locationDetailLabel}>{t("Country")}</ThemedText>
-                                        <ThemedText style={styles.locationDetailValue}>{apiProperty.address.country}</ThemedText>
-                                    </View>
-                                )}
-                            </View>
-                        </View>
-
-                        {/* Proximity Features */}
-                        {(apiProperty?.proximityToTransport !== undefined || apiProperty?.proximityToSchools !== undefined || apiProperty?.proximityToShopping !== undefined) && (
-                            <View style={styles.proximityContainer}>
-                                <ThemedText style={styles.sectionTitle}>{t("Nearby Amenities")}</ThemedText>
-                                <View style={styles.proximityCard}>
-                                    <View style={styles.proximityGrid}>
-                                        {apiProperty?.proximityToTransport !== undefined && (
-                                            <View style={styles.proximityItem}>
-                                                <IconComponent
-                                                    name={apiProperty.proximityToTransport ? "checkmark-circle" : "close-circle"}
-                                                    size={20}
-                                                    color={apiProperty.proximityToTransport ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
-                                                />
-                                                <ThemedText style={styles.proximityText}>{t("Public Transport")}</ThemedText>
-                                            </View>
-                                        )}
-                                        {apiProperty?.proximityToSchools !== undefined && (
-                                            <View style={styles.proximityItem}>
-                                                <IconComponent
-                                                    name={apiProperty.proximityToSchools ? "checkmark-circle" : "close-circle"}
-                                                    size={20}
-                                                    color={apiProperty.proximityToSchools ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
-                                                />
-                                                <ThemedText style={styles.proximityText}>{t("Schools")}</ThemedText>
-                                            </View>
-                                        )}
-                                        {apiProperty?.proximityToShopping !== undefined && (
-                                            <View style={styles.proximityItem}>
-                                                <IconComponent
-                                                    name={apiProperty.proximityToShopping ? "checkmark-circle" : "close-circle"}
-                                                    size={20}
-                                                    color={apiProperty.proximityToShopping ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
-                                                />
-                                                <ThemedText style={styles.proximityText}>{t("Shopping")}</ThemedText>
-                                            </View>
-                                        )}
-                                    </View>
-                                </View>
-                            </View>
-                        )}
-
-                        {/* Property Statistics */}
-                        <View style={styles.statisticsContainer}>
-                            <ThemedText style={styles.sectionTitle}>{t("Property Statistics")}</ThemedText>
-                            <View style={styles.statisticsCard}>
-                                <View style={styles.statisticsGrid}>
-                                    <View style={styles.statisticItem}>
-                                        <ThemedText style={styles.statisticValue}>{property.bedrooms}</ThemedText>
-                                        <ThemedText style={styles.statisticLabel}>{t("Bedrooms")}</ThemedText>
-                                    </View>
-                                    <View style={styles.statisticItem}>
-                                        <ThemedText style={styles.statisticValue}>{property.bathrooms}</ThemedText>
-                                        <ThemedText style={styles.statisticLabel}>{t("Bathrooms")}</ThemedText>
-                                    </View>
-                                    <View style={styles.statisticItem}>
-                                        <ThemedText style={styles.statisticValue}>{property.size}m²</ThemedText>
-                                        <ThemedText style={styles.statisticLabel}>{t("Size")}</ThemedText>
-                                    </View>
-                                    {apiProperty?.floor !== undefined && (
-                                        <View style={styles.statisticItem}>
-                                            <ThemedText style={styles.statisticValue}>{apiProperty.floor}</ThemedText>
-                                            <ThemedText style={styles.statisticLabel}>{t("Floor")}</ThemedText>
-                                        </View>
-                                    )}
-                                </View>
-                            </View>
-                        </View>
-
-                        {/* Energy Efficiency & Sustainability */}
-                        {property.isEcoCertified && (
-                            <View style={styles.energyContainer}>
-                                <ThemedText style={styles.sectionTitle}>{t("Energy Efficiency & Sustainability")}</ThemedText>
-                                <View style={styles.energyCard}>
-                                    <View style={styles.energyHeader}>
-                                        <IconComponent name="leaf" size={24} color="#2e7d32" />
-                                        <ThemedText style={styles.energyTitle}>{t("Eco-Certified Property")}</ThemedText>
-                                    </View>
-                                    <View style={styles.energyRatingContainer}>
-                                        <View style={[styles.energyRatingBadge, { backgroundColor: '#2e7d32' }]}>
-                                            <ThemedText style={styles.energyRatingText}>{property.energyRating}</ThemedText>
-                                        </View>
-                                        <ThemedText style={styles.energyDescription}>
-                                            {t("This property meets high standards for energy efficiency and sustainability")}
-                                        </ThemedText>
-                                    </View>
-                                    <View style={styles.energyFeatures}>
-                                        <View style={styles.energyFeature}>
-                                            <IconComponent name="checkmark-circle" size={16} color="#2e7d32" />
-                                            <ThemedText style={styles.energyFeatureText}>{t("Energy-efficient appliances")}</ThemedText>
-                                        </View>
-                                        <View style={styles.energyFeature}>
-                                            <IconComponent name="checkmark-circle" size={16} color="#2e7d32" />
-                                            <ThemedText style={styles.energyFeatureText}>{t("Sustainable building materials")}</ThemedText>
-                                        </View>
-                                        <View style={styles.energyFeature}>
-                                            <IconComponent name="checkmark-circle" size={16} color="#2e7d32" />
-                                            <ThemedText style={styles.energyFeatureText}>{t("Reduced carbon footprint")}</ThemedText>
-                                        </View>
-                                    </View>
-                                </View>
-                            </View>
-                        )}
-
-                        {/* Neighborhood Information */}
-                        <View style={styles.neighborhoodContainer}>
-                            <ThemedText style={styles.sectionTitle}>{t("Neighborhood")}</ThemedText>
-                            <View style={styles.neighborhoodCard}>
-                                <View style={styles.neighborhoodHeader}>
-                                    <IconComponent name="location" size={20} color={colors.primaryColor} />
-                                    <ThemedText style={styles.neighborhoodTitle}>{apiProperty?.address?.city || t("Location")}</ThemedText>
-                                </View>
-                                <View style={styles.neighborhoodStats}>
-                                    <View style={styles.neighborhoodStat}>
-                                        <ThemedText style={styles.neighborhoodStatValue}>4.2</ThemedText>
-                                        <ThemedText style={styles.neighborhoodStatLabel}>{t("Safety Rating")}</ThemedText>
-                                    </View>
-                                    <View style={styles.neighborhoodStat}>
-                                        <ThemedText style={styles.neighborhoodStatValue}>85</ThemedText>
-                                        <ThemedText style={styles.neighborhoodStatLabel}>{t("Walk Score")}</ThemedText>
-                                    </View>
-                                    <View style={styles.neighborhoodStat}>
-                                        <ThemedText style={styles.neighborhoodStatValue}>92</ThemedText>
-                                        <ThemedText style={styles.neighborhoodStatLabel}>{t("Transit Score")}</ThemedText>
-                                    </View>
-                                </View>
-                                <ThemedText style={styles.neighborhoodDescription}>
-                                    {t("This neighborhood offers excellent connectivity with public transportation, shopping centers, and educational institutions within walking distance.")}
-                                </ThemedText>
-                            </View>
-                        </View>
-
-                        {/* Contact & Communication */}
-                        <View style={styles.contactContainer}>
-                            <ThemedText style={styles.sectionTitle}>{t("Contact Information")}</ThemedText>
-                            <View style={styles.contactCard}>
-                                <View style={styles.contactMethods}>
-                                    <TouchableOpacity style={styles.contactMethod} onPress={handleContact}>
-                                        <IconComponent name="mail-outline" size={24} color={colors.primaryColor} />
-                                        <ThemedText style={styles.contactMethodText}>{t("Send Message")}</ThemedText>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={styles.contactMethod} onPress={handleContact}>
-                                        <IconComponent name="call-outline" size={24} color={colors.primaryColor} />
-                                        <ThemedText style={styles.contactMethodText}>{t("Call Now")}</ThemedText>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={styles.contactMethod} onPress={handleScheduleViewing}>
-                                        <IconComponent name="calendar-outline" size={24} color={colors.primaryColor} />
-                                        <ThemedText style={styles.contactMethodText}>{t("Schedule Viewing")}</ThemedText>
-                                    </TouchableOpacity>
-                                </View>
-                                <View style={styles.responseTime}>
-                                    <IconComponent name="time-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
-                                    <ThemedText style={styles.responseTimeText}>{t("Average response time: 2 hours")}</ThemedText>
-                                </View>
-                            </View>
-                        </View>
-
-                        {/* Availability */}
-                        <View style={styles.availabilityContainer}>
-                            <View style={styles.availabilityItem}>
-                                <ThemedText style={styles.availabilityLabel}>{t("Available From")}</ThemedText>
-                                <ThemedText style={styles.availabilityValue}>{new Date(property.availableFrom).toLocaleDateString()}</ThemedText>
-                            </View>
-                            <View style={styles.availabilityItem}>
-                                <ThemedText style={styles.availabilityLabel}>{t("Minimum Stay")}</ThemedText>
-                                <ThemedText style={styles.availabilityValue}>{property.minStay}</ThemedText>
-                            </View>
-                        </View>
-
-                        {/* Amenities */}
-                        <ThemedText style={styles.sectionTitle}>{t("What's Included")}</ThemedText>
-
-                        <AmenitiesDisplay amenities={property.amenities} title="" />
-
-                        {/* Map - Only show if location coordinates are available */}
-                        {apiProperty?.address?.coordinates?.lat && apiProperty?.address?.coordinates?.lng && (
-                            <>
-                                <ThemedText style={styles.sectionTitle}>{t("Location")}</ThemedText>
-                                <PropertyMap
-                                    latitude={apiProperty.address.coordinates.lat}
-                                    longitude={apiProperty.address.coordinates.lng}
-                                    address={property.location}
-                                    height={200}
-                                    interactive={false}
-                                />
-                            </>
-                        )}
-
-                        {/* Landlord Info / Government Housing Authority */}
-                        <ThemedText style={styles.sectionTitle}>
-                            {apiProperty?.housingType === 'public' ? t("Housing Authority") : t("Landlord")}
-                        </ThemedText>
-                        <View style={styles.landlordCard}>
-                            {apiProperty?.housingType === 'public' ? (
-                                <>
-                                    <View style={styles.landlordHeader}>
-                                        <View style={[styles.landlordAvatar, styles.governmentAvatar]}>
-                                            <IconComponent name="library" size={28} color="white" />
-                                        </View>
-                                        <View style={styles.landlordInfo}>
-                                            <View style={styles.landlordNameRow}>
-                                                <ThemedText style={styles.landlordName}>
-                                                    {apiProperty?.address?.state ? `${apiProperty.address.state} Housing Authority` : 'Public Housing Authority'}
+                                            <View style={styles.energyRatingContainer}>
+                                                <View style={[styles.energyRatingBadge, { backgroundColor: '#2e7d32' }]}>
+                                                    <ThemedText style={styles.energyRatingText}>{property.energyRating}</ThemedText>
+                                                </View>
+                                                <ThemedText style={styles.energyRatingDesc}>
+                                                    {t("This property meets high standards for energy efficiency")}
                                                 </ThemedText>
-                                                <View style={[styles.verifiedBadge, styles.governmentBadge]}>
-                                                    <ThemedText style={styles.verifiedText}>GOV</ThemedText>
-                                                </View>
                                             </View>
-                                            <ThemedText style={styles.landlordRating}>
-                                                Government-managed affordable housing
-                                            </ThemedText>
                                         </View>
-                                    </View>
-                                    <View style={styles.landlordActions}>
-                                        <ActionButton
-                                            icon="globe"
-                                            text={t("Apply on State Website")}
-                                            onPress={handlePublicHousingApply}
-                                            variant="primary"
-                                            size="medium"
-                                            style={{ flex: 1 }}
-                                        />
-                                    </View>
-                                </>
-                            ) : (
-                                <>
-                                    <View style={styles.landlordHeader}>
-                                        <View style={styles.landlordAvatar}>
-                                            <ThemedText style={styles.landlordInitial}>
-                                                {getLandlordDisplayName(landlordProfile)}
-                                            </ThemedText>
+                                    </>
+                                )}
+
+                                {/* Description */}
+                                {property.description && property.description.trim() !== '' && (
+                                    <>
+                                        <View style={styles.descriptionContainer}>
+                                            <ThemedText style={styles.sectionTitle}>{t("About this property")}</ThemedText>
+                                            <View style={styles.descriptionCard}>
+                                                <ThemedText style={styles.descriptionText}>{property.description}</ThemedText>
+                                            </View>
                                         </View>
-                                        <View style={styles.landlordInfo}>
-                                            <View style={styles.landlordNameRow}>
-                                                <ThemedText style={styles.landlordName}>
-                                                    {getLandlordDisplayName(landlordProfile)}
+                                    </>
+                                )}
+
+                                {/* Detailed Property Information */}
+                                <View style={styles.detailedInfoContainer}>
+                                    <ThemedText style={styles.sectionTitle}>{t("Property Details")}</ThemedText>
+                                    <View style={styles.detailedInfoCard}>
+                                        <View style={styles.detailedInfoRow}>
+                                            <View style={styles.detailedInfoItem}>
+                                                <ThemedText style={styles.detailedInfoLabel}>{t("Property Type")}</ThemedText>
+                                                <ThemedText style={styles.detailedInfoValue}>
+                                                    {apiProperty?.type ? apiProperty.type.charAt(0).toUpperCase() + apiProperty.type.slice(1) : t("Not specified")}
                                                 </ThemedText>
-                                                {landlordProfile?.isActive && (
-                                                    <View style={styles.verifiedBadge}>
-                                                        <ThemedText style={styles.verifiedText}>✓</ThemedText>
+                                            </View>
+                                            {apiProperty?.floor !== undefined && (
+                                                <View style={styles.detailedInfoItem}>
+                                                    <ThemedText style={styles.detailedInfoLabel}>{t("Floor")}</ThemedText>
+                                                    <ThemedText style={styles.detailedInfoValue}>{apiProperty.floor}</ThemedText>
+                                                </View>
+                                            )}
+                                        </View>
+                                        <View style={styles.detailedInfoRow}>
+                                            {apiProperty?.yearBuilt && (
+                                                <View style={styles.detailedInfoItem}>
+                                                    <ThemedText style={styles.detailedInfoLabel}>{t("Year Built")}</ThemedText>
+                                                    <ThemedText style={styles.detailedInfoValue}>{apiProperty.yearBuilt}</ThemedText>
+                                                </View>
+                                            )}
+                                            {apiProperty?.parkingSpaces !== undefined && (
+                                                <View style={styles.detailedInfoItem}>
+                                                    <ThemedText style={styles.detailedInfoLabel}>{t("Parking Spaces")}</ThemedText>
+                                                    <ThemedText style={styles.detailedInfoValue}>{apiProperty.parkingSpaces}</ThemedText>
+                                                </View>
+                                            )}
+                                        </View>
+                                    </View>
+                                </View>
+
+                                {/* Property Features */}
+                                {(apiProperty?.isFurnished !== undefined || apiProperty?.hasBalcony !== undefined || apiProperty?.hasGarden !== undefined || apiProperty?.hasElevator !== undefined) && (
+                                    <View style={styles.featuresContainer}>
+                                        <ThemedText style={styles.sectionTitle}>{t("Property Features")}</ThemedText>
+                                        <View style={styles.featuresCard}>
+                                            <View style={styles.featuresGrid}>
+                                                {apiProperty?.isFurnished !== undefined && (
+                                                    <View style={styles.featureItem}>
+                                                        <IconComponent
+                                                            name={apiProperty.isFurnished ? "checkmark-circle" : "close-circle"}
+                                                            size={20}
+                                                            color={apiProperty.isFurnished ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                        />
+                                                        <ThemedText style={styles.featureText}>{t("Furnished")}</ThemedText>
+                                                    </View>
+                                                )}
+                                                {apiProperty?.hasBalcony !== undefined && (
+                                                    <View style={styles.featureItem}>
+                                                        <IconComponent
+                                                            name={apiProperty.hasBalcony ? "checkmark-circle" : "close-circle"}
+                                                            size={20}
+                                                            color={apiProperty.hasBalcony ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                        />
+                                                        <ThemedText style={styles.featureText}>{t("Balcony")}</ThemedText>
+                                                    </View>
+                                                )}
+                                                {apiProperty?.hasGarden !== undefined && (
+                                                    <View style={styles.featureItem}>
+                                                        <IconComponent
+                                                            name={apiProperty.hasGarden ? "checkmark-circle" : "close-circle"}
+                                                            size={20}
+                                                            color={apiProperty.hasGarden ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                        />
+                                                        <ThemedText style={styles.featureText}>{t("Garden")}</ThemedText>
+                                                    </View>
+                                                )}
+                                                {apiProperty?.hasElevator !== undefined && (
+                                                    <View style={styles.featureItem}>
+                                                        <IconComponent
+                                                            name={apiProperty.hasElevator ? "checkmark-circle" : "close-circle"}
+                                                            size={20}
+                                                            color={apiProperty.hasElevator ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                        />
+                                                        <ThemedText style={styles.featureText}>{t("Elevator")}</ThemedText>
                                                     </View>
                                                 )}
                                             </View>
-                                            <ThemedText style={styles.landlordRating}>
-                                                {getLandlordTrustScore(landlordProfile)}
-                                            </ThemedText>
                                         </View>
                                     </View>
-                                    <View style={styles.landlordActions}>
-                                        <ActionButton
-                                            icon="chatbubble-outline"
-                                            text={t("Message")}
-                                            onPress={handleContact}
-                                            variant="primary"
-                                            size="medium"
-                                            disabled={!landlordProfile}
-                                            style={{ flex: 1, marginRight: 8 }}
-                                        />
-                                        <ActionButton
-                                            icon="call-outline"
-                                            text={t("Call")}
-                                            onPress={handleContact}
-                                            variant="secondary"
-                                            size="medium"
-                                            disabled={!landlordProfile}
-                                            style={{ flex: 1, marginLeft: 8 }}
-                                        />
-                                    </View>
-                                </>
-                            )}
-                        </View>
+                                )}
 
-                        {/* Trust and Safety */}
-                        <View style={styles.trustContainer}>
-                            <View style={styles.trustTextContainer}>
-                                <ThemedText style={styles.trustTitle}>{t("Homiio Verified")}</ThemedText>
-                                <ThemedText style={styles.trustDescription}>
-                                    {t("This property has been personally verified by our team for authenticity and condition")}
+                                {/* Pricing Details */}
+                                <View style={styles.pricingDetailsContainer}>
+                                    <ThemedText style={styles.sectionTitle}>{t("Pricing Details")}</ThemedText>
+                                    <View style={styles.pricingDetailsCard}>
+                                        <View style={styles.pricingDetailRow}>
+                                            <ThemedText style={styles.pricingDetailLabel}>{t("Monthly Rent")}</ThemedText>
+                                            <CurrencyFormatter
+                                                amount={apiProperty?.rent?.amount || 0}
+                                                originalCurrency={apiProperty?.rent?.currency || 'USD'}
+                                                showConversion={true}
+                                            />
+                                        </View>
+                                        {apiProperty?.rent?.deposit && apiProperty.rent.deposit > 0 && (
+                                            <View style={styles.pricingDetailRow}>
+                                                <ThemedText style={styles.pricingDetailLabel}>{t("Security Deposit")}</ThemedText>
+                                                <CurrencyFormatter
+                                                    amount={apiProperty.rent.deposit}
+                                                    originalCurrency={apiProperty.rent.currency || 'USD'}
+                                                    showConversion={true}
+                                                />
+                                            </View>
+                                        )}
+                                        {apiProperty?.rent?.utilities && (
+                                            <View style={styles.pricingDetailRow}>
+                                                <ThemedText style={styles.pricingDetailLabel}>{t("Utilities")}</ThemedText>
+                                                <ThemedText style={styles.pricingDetailValue}>
+                                                    {apiProperty.rent.utilities === 'included' ? t("Included") :
+                                                        apiProperty.rent.utilities === 'partial' ? t("Partially included") :
+                                                            t("Not included")}
+                                                </ThemedText>
+                                            </View>
+                                        )}
+
+                                    </View>
+                                </View>
+
+                                {/* Rules & Policies */}
+                                {(apiProperty?.rules?.petsAllowed !== undefined || apiProperty?.rules?.smokingAllowed !== undefined ||
+                                    apiProperty?.rules?.partiesAllowed !== undefined || apiProperty?.rules?.guestsAllowed !== undefined) && (
+                                        <View style={styles.rulesContainer}>
+                                            <ThemedText style={styles.sectionTitle}>{t("House Rules")}</ThemedText>
+                                            <View style={styles.rulesCard}>
+                                                <View style={styles.rulesGrid}>
+                                                    {apiProperty?.rules?.petsAllowed !== undefined && (
+                                                        <View style={styles.ruleItem}>
+                                                            <IconComponent
+                                                                name={apiProperty.rules.petsAllowed ? "checkmark-circle" : "close-circle"}
+                                                                size={20}
+                                                                color={apiProperty.rules.petsAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                            />
+                                                            <ThemedText style={styles.ruleText}>{t("Pets Allowed")}</ThemedText>
+                                                        </View>
+                                                    )}
+                                                    {apiProperty?.rules?.smokingAllowed !== undefined && (
+                                                        <View style={styles.ruleItem}>
+                                                            <IconComponent
+                                                                name={apiProperty.rules.smokingAllowed ? "checkmark-circle" : "close-circle"}
+                                                                size={20}
+                                                                color={apiProperty.rules.smokingAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                            />
+                                                            <ThemedText style={styles.ruleText}>{t("Smoking Allowed")}</ThemedText>
+                                                        </View>
+                                                    )}
+                                                    {apiProperty?.rules?.partiesAllowed !== undefined && (
+                                                        <View style={styles.ruleItem}>
+                                                            <IconComponent
+                                                                name={apiProperty.rules.partiesAllowed ? "checkmark-circle" : "close-circle"}
+                                                                size={20}
+                                                                color={apiProperty.rules.partiesAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                            />
+                                                            <ThemedText style={styles.ruleText}>{t("Parties Allowed")}</ThemedText>
+                                                        </View>
+                                                    )}
+                                                    {apiProperty?.rules?.guestsAllowed !== undefined && (
+                                                        <View style={styles.ruleItem}>
+                                                            <IconComponent
+                                                                name={apiProperty.rules.guestsAllowed ? "checkmark-circle" : "close-circle"}
+                                                                size={20}
+                                                                color={apiProperty.rules.guestsAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                            />
+                                                            <ThemedText style={styles.ruleText}>{t("Guests Allowed")}</ThemedText>
+                                                        </View>
+                                                    )}
+                                                </View>
+                                                {apiProperty?.rules?.guestsAllowed && apiProperty?.rules?.maxGuests && (
+                                                    <View style={styles.maxGuestsContainer}>
+                                                        <ThemedText style={styles.maxGuestsLabel}>{t("Maximum Guests")}: {apiProperty.rules.maxGuests}</ThemedText>
+                                                    </View>
+                                                )}
+                                            </View>
+                                        </View>
+                                    )}
+
+                                {/* Location Details */}
+                                <View style={styles.locationDetailsContainer}>
+                                    <ThemedText style={styles.sectionTitle}>{t("Location Details")}</ThemedText>
+                                    <View style={styles.locationDetailsCard}>
+                                        {apiProperty?.address?.street && (
+                                            <View style={styles.locationDetailRow}>
+                                                <ThemedText style={styles.locationDetailLabel}>{t("Address")}</ThemedText>
+                                                <ThemedText style={styles.locationDetailValue}>
+                                                    {apiProperty.address.street}
+                                                </ThemedText>
+                                            </View>
+                                        )}
+                                        {apiProperty?.address?.city && (
+                                            <View style={styles.locationDetailRow}>
+                                                <ThemedText style={styles.locationDetailLabel}>{t("City")}</ThemedText>
+                                                <ThemedText style={styles.locationDetailValue}>{apiProperty.address.city}</ThemedText>
+                                            </View>
+                                        )}
+                                        {apiProperty?.address?.state && (
+                                            <View style={styles.locationDetailRow}>
+                                                <ThemedText style={styles.locationDetailLabel}>{t("State/Province")}</ThemedText>
+                                                <ThemedText style={styles.locationDetailValue}>{apiProperty.address.state}</ThemedText>
+                                            </View>
+                                        )}
+                                        {apiProperty?.address?.zipCode && (
+                                            <View style={styles.locationDetailRow}>
+                                                <ThemedText style={styles.locationDetailLabel}>{t("ZIP/Postal Code")}</ThemedText>
+                                                <ThemedText style={styles.locationDetailValue}>{apiProperty.address.zipCode}</ThemedText>
+                                            </View>
+                                        )}
+                                        {apiProperty?.address?.country && (
+                                            <View style={styles.locationDetailRow}>
+                                                <ThemedText style={styles.locationDetailLabel}>{t("Country")}</ThemedText>
+                                                <ThemedText style={styles.locationDetailValue}>{apiProperty.address.country}</ThemedText>
+                                            </View>
+                                        )}
+                                    </View>
+                                </View>
+
+                                {/* Proximity Features */}
+                                {(apiProperty?.proximityToTransport !== undefined || apiProperty?.proximityToSchools !== undefined || apiProperty?.proximityToShopping !== undefined) && (
+                                    <View style={styles.proximityContainer}>
+                                        <ThemedText style={styles.sectionTitle}>{t("Nearby Amenities")}</ThemedText>
+                                        <View style={styles.proximityCard}>
+                                            <View style={styles.proximityGrid}>
+                                                {apiProperty?.proximityToTransport !== undefined && (
+                                                    <View style={styles.proximityItem}>
+                                                        <IconComponent
+                                                            name={apiProperty.proximityToTransport ? "checkmark-circle" : "close-circle"}
+                                                            size={20}
+                                                            color={apiProperty.proximityToTransport ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                        />
+                                                        <ThemedText style={styles.proximityText}>{t("Public Transport")}</ThemedText>
+                                                    </View>
+                                                )}
+                                                {apiProperty?.proximityToSchools !== undefined && (
+                                                    <View style={styles.proximityItem}>
+                                                        <IconComponent
+                                                            name={apiProperty.proximityToSchools ? "checkmark-circle" : "close-circle"}
+                                                            size={20}
+                                                            color={apiProperty.proximityToSchools ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                        />
+                                                        <ThemedText style={styles.proximityText}>{t("Schools")}</ThemedText>
+                                                    </View>
+                                                )}
+                                                {apiProperty?.proximityToShopping !== undefined && (
+                                                    <View style={styles.proximityItem}>
+                                                        <IconComponent
+                                                            name={apiProperty.proximityToShopping ? "checkmark-circle" : "close-circle"}
+                                                            size={20}
+                                                            color={apiProperty.proximityToShopping ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                        />
+                                                        <ThemedText style={styles.proximityText}>{t("Shopping")}</ThemedText>
+                                                    </View>
+                                                )}
+                                            </View>
+                                        </View>
+                                    </View>
+                                )}
+
+                                {/* Property Statistics */}
+                                <View style={styles.statisticsContainer}>
+                                    <ThemedText style={styles.sectionTitle}>{t("Property Statistics")}</ThemedText>
+                                    <View style={styles.statisticsCard}>
+                                        <View style={styles.statisticsGrid}>
+                                            <View style={styles.statisticItem}>
+                                                <ThemedText style={styles.statisticValue}>{property.bedrooms}</ThemedText>
+                                                <ThemedText style={styles.statisticLabel}>{t("Bedrooms")}</ThemedText>
+                                            </View>
+                                            <View style={styles.statisticItem}>
+                                                <ThemedText style={styles.statisticValue}>{property.bathrooms}</ThemedText>
+                                                <ThemedText style={styles.statisticLabel}>{t("Bathrooms")}</ThemedText>
+                                            </View>
+                                            <View style={styles.statisticItem}>
+                                                <ThemedText style={styles.statisticValue}>{property.size}m²</ThemedText>
+                                                <ThemedText style={styles.statisticLabel}>{t("Size")}</ThemedText>
+                                            </View>
+                                            {apiProperty?.floor !== undefined && (
+                                                <View style={styles.statisticItem}>
+                                                    <ThemedText style={styles.statisticValue}>{apiProperty.floor}</ThemedText>
+                                                    <ThemedText style={styles.statisticLabel}>{t("Floor")}</ThemedText>
+                                                </View>
+                                            )}
+                                        </View>
+                                    </View>
+                                </View>
+
+                                {/* Energy Efficiency & Sustainability */}
+                                {property.isEcoCertified && (
+                                    <View style={styles.energyContainer}>
+                                        <ThemedText style={styles.sectionTitle}>{t("Energy Efficiency & Sustainability")}</ThemedText>
+                                        <View style={styles.energyCard}>
+                                            <View style={styles.energyHeader}>
+                                                <IconComponent name="leaf" size={24} color="#2e7d32" />
+                                                <ThemedText style={styles.energyTitle}>{t("Eco-Certified Property")}</ThemedText>
+                                            </View>
+                                            <View style={styles.energyRatingContainer}>
+                                                <View style={[styles.energyRatingBadge, { backgroundColor: '#2e7d32' }]}>
+                                                    <ThemedText style={styles.energyRatingText}>{property.energyRating}</ThemedText>
+                                                </View>
+                                                <ThemedText style={styles.energyDescription}>
+                                                    {t("This property meets high standards for energy efficiency and sustainability")}
+                                                </ThemedText>
+                                            </View>
+                                            <View style={styles.energyFeatures}>
+                                                <View style={styles.energyFeature}>
+                                                    <IconComponent name="checkmark-circle" size={16} color="#2e7d32" />
+                                                    <ThemedText style={styles.energyFeatureText}>{t("Energy-efficient appliances")}</ThemedText>
+                                                </View>
+                                                <View style={styles.energyFeature}>
+                                                    <IconComponent name="checkmark-circle" size={16} color="#2e7d32" />
+                                                    <ThemedText style={styles.energyFeatureText}>{t("Sustainable building materials")}</ThemedText>
+                                                </View>
+                                                <View style={styles.energyFeature}>
+                                                    <IconComponent name="checkmark-circle" size={16} color="#2e7d32" />
+                                                    <ThemedText style={styles.energyFeatureText}>{t("Reduced carbon footprint")}</ThemedText>
+                                                </View>
+                                            </View>
+                                        </View>
+                                    </View>
+                                )}
+
+                                {/* Neighborhood Information */}
+                                <View style={styles.neighborhoodContainer}>
+                                    <ThemedText style={styles.sectionTitle}>{t("Neighborhood")}</ThemedText>
+                                    <View style={styles.neighborhoodCard}>
+                                        <View style={styles.neighborhoodHeader}>
+                                            <IconComponent name="location" size={20} color={colors.primaryColor} />
+                                            <ThemedText style={styles.neighborhoodTitle}>{apiProperty?.address?.city || t("Location")}</ThemedText>
+                                        </View>
+                                        <View style={styles.neighborhoodStats}>
+                                            <View style={styles.neighborhoodStat}>
+                                                <ThemedText style={styles.neighborhoodStatValue}>4.2</ThemedText>
+                                                <ThemedText style={styles.neighborhoodStatLabel}>{t("Safety Rating")}</ThemedText>
+                                            </View>
+                                            <View style={styles.neighborhoodStat}>
+                                                <ThemedText style={styles.neighborhoodStatValue}>85</ThemedText>
+                                                <ThemedText style={styles.neighborhoodStatLabel}>{t("Walk Score")}</ThemedText>
+                                            </View>
+                                            <View style={styles.neighborhoodStat}>
+                                                <ThemedText style={styles.neighborhoodStatValue}>92</ThemedText>
+                                                <ThemedText style={styles.neighborhoodStatLabel}>{t("Transit Score")}</ThemedText>
+                                            </View>
+                                        </View>
+                                        <ThemedText style={styles.neighborhoodDescription}>
+                                            {t("This neighborhood offers excellent connectivity with public transportation, shopping centers, and educational institutions within walking distance.")}
+                                        </ThemedText>
+                                    </View>
+                                </View>
+
+                                {/* Contact & Communication */}
+                                <View style={styles.contactContainer}>
+                                    <ThemedText style={styles.sectionTitle}>{t("Contact Information")}</ThemedText>
+                                    <View style={styles.contactCard}>
+                                        <View style={styles.contactMethods}>
+                                            <TouchableOpacity style={styles.contactMethod} onPress={handleContact}>
+                                                <IconComponent name="mail-outline" size={24} color={colors.primaryColor} />
+                                                <ThemedText style={styles.contactMethodText}>{t("Send Message")}</ThemedText>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity style={styles.contactMethod} onPress={handleContact}>
+                                                <IconComponent name="call-outline" size={24} color={colors.primaryColor} />
+                                                <ThemedText style={styles.contactMethodText}>{t("Call Now")}</ThemedText>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity style={styles.contactMethod} onPress={handleScheduleViewing}>
+                                                <IconComponent name="calendar-outline" size={24} color={colors.primaryColor} />
+                                                <ThemedText style={styles.contactMethodText}>{t("Schedule Viewing")}</ThemedText>
+                                            </TouchableOpacity>
+                                        </View>
+                                        <View style={styles.responseTime}>
+                                            <IconComponent name="time-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
+                                            <ThemedText style={styles.responseTimeText}>{t("Average response time: 2 hours")}</ThemedText>
+                                        </View>
+                                    </View>
+                                </View>
+
+                                {/* Availability */}
+                                <View style={styles.availabilityContainer}>
+                                    <View style={styles.availabilityItem}>
+                                        <ThemedText style={styles.availabilityLabel}>{t("Available From")}</ThemedText>
+                                        <ThemedText style={styles.availabilityValue}>{new Date(property.availableFrom).toLocaleDateString()}</ThemedText>
+                                    </View>
+                                    <View style={styles.availabilityItem}>
+                                        <ThemedText style={styles.availabilityLabel}>{t("Minimum Stay")}</ThemedText>
+                                        <ThemedText style={styles.availabilityValue}>{property.minStay}</ThemedText>
+                                    </View>
+                                </View>
+
+                                {/* Amenities */}
+                                <ThemedText style={styles.sectionTitle}>{t("What's Included")}</ThemedText>
+
+                                <AmenitiesDisplay amenities={property.amenities} title="" />
+
+                                {/* Map - Only show if location coordinates are available */}
+                                {apiProperty?.address?.coordinates?.lat && apiProperty?.address?.coordinates?.lng && (
+                                    <>
+                                        <ThemedText style={styles.sectionTitle}>{t("Location")}</ThemedText>
+                                        <PropertyMap
+                                            latitude={apiProperty.address.coordinates.lat}
+                                            longitude={apiProperty.address.coordinates.lng}
+                                            address={property.location}
+                                            height={200}
+                                            interactive={false}
+                                        />
+                                    </>
+                                )}
+
+                                {/* Landlord Info / Government Housing Authority */}
+                                <ThemedText style={styles.sectionTitle}>
+                                    {apiProperty?.housingType === 'public' ? t("Housing Authority") : t("Landlord")}
                                 </ThemedText>
+                                <View style={styles.landlordCard}>
+                                    {apiProperty?.housingType === 'public' ? (
+                                        <>
+                                            <View style={styles.landlordHeader}>
+                                                <View style={[styles.landlordAvatar, styles.governmentAvatar]}>
+                                                    <IconComponent name="library" size={28} color="white" />
+                                                </View>
+                                                <View style={styles.landlordInfo}>
+                                                    <View style={styles.landlordNameRow}>
+                                                        <ThemedText style={styles.landlordName}>
+                                                            {apiProperty?.address?.state ? `${apiProperty.address.state} Housing Authority` : 'Public Housing Authority'}
+                                                        </ThemedText>
+                                                        <View style={[styles.verifiedBadge, styles.governmentBadge]}>
+                                                            <ThemedText style={styles.verifiedText}>GOV</ThemedText>
+                                                        </View>
+                                                    </View>
+                                                    <ThemedText style={styles.landlordRating}>
+                                                        Government-managed affordable housing
+                                                    </ThemedText>
+                                                </View>
+                                            </View>
+                                            <View style={styles.landlordActions}>
+                                                <ActionButton
+                                                    icon="globe"
+                                                    text={t("Apply on State Website")}
+                                                    onPress={handlePublicHousingApply}
+                                                    variant="primary"
+                                                    size="medium"
+                                                    style={{ flex: 1 }}
+                                                />
+                                            </View>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <View style={styles.landlordHeader}>
+                                                <View style={styles.landlordAvatar}>
+                                                    <ThemedText style={styles.landlordInitial}>
+                                                        {getLandlordDisplayName(landlordProfile)}
+                                                    </ThemedText>
+                                                </View>
+                                                <View style={styles.landlordInfo}>
+                                                    <View style={styles.landlordNameRow}>
+                                                        <ThemedText style={styles.landlordName}>
+                                                            {getLandlordDisplayName(landlordProfile)}
+                                                        </ThemedText>
+                                                        {landlordProfile?.isActive && (
+                                                            <View style={styles.verifiedBadge}>
+                                                                <ThemedText style={styles.verifiedText}>✓</ThemedText>
+                                                            </View>
+                                                        )}
+                                                    </View>
+                                                    <ThemedText style={styles.landlordRating}>
+                                                        {getLandlordTrustScore(landlordProfile)}
+                                                    </ThemedText>
+                                                </View>
+                                            </View>
+                                            <View style={styles.landlordActions}>
+                                                <ActionButton
+                                                    icon="chatbubble-outline"
+                                                    text={t("Message")}
+                                                    onPress={handleContact}
+                                                    variant="primary"
+                                                    size="medium"
+                                                    disabled={!landlordProfile}
+                                                    style={{ flex: 1, marginRight: 8 }}
+                                                />
+                                                <ActionButton
+                                                    icon="call-outline"
+                                                    text={t("Call")}
+                                                    onPress={handleContact}
+                                                    variant="secondary"
+                                                    size="medium"
+                                                    disabled={!landlordProfile}
+                                                    style={{ flex: 1, marginLeft: 8 }}
+                                                />
+                                            </View>
+                                        </>
+                                    )}
+                                </View>
+
+                                {/* Trust and Safety */}
+                                <View style={styles.trustContainer}>
+                                    <View style={styles.trustTextContainer}>
+                                        <ThemedText style={styles.trustTitle}>{t("Homiio Verified")}</ThemedText>
+                                        <ThemedText style={styles.trustDescription}>
+                                            {t("This property has been personally verified by our team for authenticity and condition")}
+                                        </ThemedText>
+                                    </View>
+                                </View>
+
+                                {/* Action Buttons */}
+                                <View style={styles.actionButtonsContainer}>
+                                    {apiProperty?.housingType === 'public' ? (
+                                        <>
+                                            <ActionButton
+                                                icon="chatbubble-outline"
+                                                text={t("Contact Housing Authority")}
+                                                onPress={() => { }}
+                                                variant="secondary"
+                                                size="large"
+                                                disabled={true}
+                                                style={{ flex: 1, marginRight: 10 }}
+                                            />
+                                            <ActionButton
+                                                icon="globe"
+                                                text={t("Apply on State Website")}
+                                                onPress={handleApply}
+                                                variant="primary"
+                                                size="large"
+                                                style={{ flex: 1 }}
+                                            />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <ActionButton
+                                                icon="calendar-outline"
+                                                text={t("Schedule Viewing")}
+                                                onPress={handleScheduleViewing}
+                                                variant="outline"
+                                                size="large"
+                                                style={{ flex: 1, marginRight: 10 }}
+                                            />
+                                            <ActionButton
+                                                icon="checkmark-circle-outline"
+                                                text={t("Apply Now")}
+                                                onPress={handleApply}
+                                                variant="primary"
+                                                size="large"
+                                                style={{ flex: 1 }}
+                                            />
+                                        </>
+                                    )}
+                                </View>
+
+                                {/* Fraud Warning */}
+                                <View style={styles.fraudWarningContainer}>
+                                    <ThemedText style={styles.fraudWarningText}>
+                                        {t("Never pay or transfer funds outside the Homio platform")}
+                                    </ThemedText>
+                                </View>
                             </View>
                         </View>
-
-                        {/* Action Buttons */}
-                        <View style={styles.actionButtonsContainer}>
-                            {apiProperty?.housingType === 'public' ? (
-                                <>
-                                    <ActionButton
-                                        icon="chatbubble-outline"
-                                        text={t("Contact Housing Authority")}
-                                        onPress={() => { }}
-                                        variant="secondary"
-                                        size="large"
-                                        disabled={true}
-                                        style={{ flex: 1, marginRight: 10 }}
-                                    />
-                                    <ActionButton
-                                        icon="globe"
-                                        text={t("Apply on State Website")}
-                                        onPress={handleApply}
-                                        variant="primary"
-                                        size="large"
-                                        style={{ flex: 1 }}
-                                    />
-                                </>
-                            ) : (
-                                <>
-                                    <ActionButton
-                                        icon="calendar-outline"
-                                        text={t("Schedule Viewing")}
-                                        onPress={handleScheduleViewing}
-                                        variant="outline"
-                                        size="large"
-                                        style={{ flex: 1, marginRight: 10 }}
-                                    />
-                                    <ActionButton
-                                        icon="checkmark-circle-outline"
-                                        text={t("Apply Now")}
-                                        onPress={handleApply}
-                                        variant="primary"
-                                        size="large"
-                                        style={{ flex: 1 }}
-                                    />
-                                </>
-                            )}
-                        </View>
-
-                        {/* Fraud Warning */}
-                        <View style={styles.fraudWarningContainer}>
-                            <ThemedText style={styles.fraudWarningText}>
-                                {t("Never pay or transfer funds outside the Homio platform")}
-                            </ThemedText>
-                        </View>
+                    </Animated.ScrollView>
+                </>
+            ) : (
+                // Native: Absolute positioned header structure
+                <>
+                    <View style={styles.headerOverlay}>
+                        <Header
+                            options={{
+                                showBackButton: true,
+                                title: '',
+                                titlePosition: 'center',
+                                transparent: true,
+                                scrollThreshold: 100,
+                                rightComponents: [
+                                    <TouchableOpacity key="share" style={styles.headerButton} onPress={handleShare}>
+                                        <IconComponent name="share-outline" size={24} color="#222" />
+                                    </TouchableOpacity>,
+                                    <SaveButton
+                                        key="save"
+                                        isSaved={isPropertyFavorite}
+                                        onPress={() => toggleFavorite(property.id || '', apiProperty || {})}
+                                        variant="heart"
+                                        color="#222"
+                                        activeColor="#EF4444"
+                                        isLoading={isPropertySaving(property.id || '')}
+                                    />,
+                                ],
+                            }}
+                            scrollY={scrollY}
+                        />
                     </View>
-                </View>
-            </Animated.ScrollView>
+                    <Animated.ScrollView
+                        style={styles.scrollView}
+                        showsVerticalScrollIndicator={false}
+                        onScroll={Animated.event(
+                            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                            { useNativeDriver: false }
+                        )}
+                        scrollEventThrottle={16}
+                    >
+                        {/* Main Image - Starts from very top, behind safe area */}
+                        <Image
+                            source={getPropertyImageSource(property.images)}
+                            style={styles.mainImage}
+                            resizeMode="cover"
+                        />
+
+                        {/* Enhanced Header Section */}
+                        <View style={styles.enhancedHeader}>
+                            <ThemedText style={styles.headerTitle} numberOfLines={2}>{property.title}</ThemedText>
+                            <View style={styles.headerLocation}>
+                                <ThemedText style={styles.headerLocationText}>{property.location}</ThemedText>
+                            </View>
+                            <View style={styles.headerStats}>
+                                <View style={styles.headerStat}>
+                                    <ThemedText style={styles.headerStatText}>{property.bedrooms} {t("Bed")}</ThemedText>
+                                </View>
+                                <View style={styles.headerStat}>
+                                    <ThemedText style={styles.headerStatText}>{property.bathrooms} {t("Bath")}</ThemedText>
+                                </View>
+                                <View style={styles.headerStat}>
+                                    <ThemedText style={styles.headerStatText}>{property.size}m²</ThemedText>
+                                </View>
+                            </View>
+                        </View>
+                        <View style={styles.container}>
+
+                            {/* Property Images Grid */}
+                            <View style={styles.imageGridContainer}>
+                                <View style={styles.imageGrid}>
+                                    {/* Left Column */}
+                                    <View style={styles.mainImageContainer}>
+                                        <Image
+                                            source={getPropertyImageSource(property.images)}
+                                            style={styles.mainImageInside}
+                                            resizeMode="cover"
+                                        />
+                                    </View>
+
+                                    {/* Right Column */}
+                                    <View style={styles.rightColumn}>
+                                        <View style={styles.sideImageContainer}>
+                                            <Image
+                                                source={getPropertyImageSource(property.images.length > 1 ? property.images.slice(1) : property.images)}
+                                                style={styles.sideImage}
+                                                resizeMode="cover"
+                                            />
+                                        </View>
+                                        <View style={styles.mapPreviewContainer}>
+                                            <PropertyMap
+                                                latitude={apiProperty?.address?.coordinates?.lat || 40.7128}
+                                                longitude={apiProperty?.address?.coordinates?.lng || -74.0060}
+                                                address={property.location}
+                                                height={96}
+                                                interactive={false}
+                                            />
+                                            <View style={styles.mapOverlay}>
+                                                <ThemedText style={styles.mapOverlayText}>Location</ThemedText>
+                                            </View>
+                                        </View>
+                                    </View>
+                                </View>
+                            </View>
+
+                            {/* Photo Gallery */}
+                            {property.images && property.images.length > 0 && (
+                                <View style={styles.photoGalleryContainer}>
+                                    <View style={styles.galleryHeader}>
+                                        <ThemedText style={styles.sectionTitle}>{t("Photo Gallery")}</ThemedText>
+                                        <TouchableOpacity style={styles.viewAllButton} onPress={() => setShowPhotoGallery(true)}>
+                                            <ThemedText style={styles.viewAllButtonText}>{t("View All")}</ThemedText>
+                                            <IconComponent name="chevron-forward" size={16} color={colors.primaryColor} />
+                                        </TouchableOpacity>
+                                    </View>
+                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.galleryScroll}>
+                                        {property.images.slice(0, 5).map((image, index) => (
+                                            <TouchableOpacity
+                                                key={index}
+                                                style={styles.galleryImageContainer}
+                                                onPress={() => {
+                                                    setActiveImageIndex(index);
+                                                    setShowPhotoGallery(true);
+                                                }}
+                                            >
+                                                <Image
+                                                    source={getPropertyImageSource([image])}
+                                                    style={styles.galleryImage}
+                                                    resizeMode="cover"
+                                                />
+                                                {index === 4 && property.images.length > 5 && (
+                                                    <View style={styles.moreImagesOverlay}>
+                                                        <ThemedText style={styles.moreImagesText}>+{property.images.length - 5}</ThemedText>
+                                                    </View>
+                                                )}
+                                            </TouchableOpacity>
+                                        ))}
+                                    </ScrollView>
+                                </View>
+                            )}
+
+                            {/* Full-Screen Photo Gallery Modal */}
+                            <Modal
+                                visible={showPhotoGallery}
+                                transparent={true}
+                                animationType="fade"
+                                onRequestClose={() => setShowPhotoGallery(false)}
+                            >
+                                <View style={styles.photoModalContainer}>
+                                    <View style={styles.photoModalHeader}>
+                                        <TouchableOpacity
+                                            style={styles.closeButton}
+                                            onPress={() => setShowPhotoGallery(false)}
+                                        >
+                                            <IconComponent name="close" size={24} color="white" />
+                                        </TouchableOpacity>
+                                        <ThemedText style={styles.photoModalTitle}>
+                                            {activeImageIndex + 1} / {property.images.length}
+                                        </ThemedText>
+                                    </View>
+                                    <ScrollView
+                                        horizontal
+                                        pagingEnabled
+                                        showsHorizontalScrollIndicator={false}
+                                        onMomentumScrollEnd={(event) => {
+                                            const newIndex = Math.round(event.nativeEvent.contentOffset.x / event.nativeEvent.layoutMeasurement.width);
+                                            setActiveImageIndex(newIndex);
+                                        }}
+                                        style={styles.photoModalScroll}
+                                    >
+                                        {property.images.map((image, index) => (
+                                            <View key={index} style={styles.photoModalImageContainer}>
+                                                <Image
+                                                    source={getPropertyImageSource([image])}
+                                                    style={styles.photoModalImage}
+                                                    resizeMode="contain"
+                                                />
+                                            </View>
+                                        ))}
+                                    </ScrollView>
+                                    <View style={styles.photoModalFooter}>
+                                        <TouchableOpacity
+                                            style={styles.photoModalButton}
+                                            onPress={() => {
+                                                const newIndex = activeImageIndex > 0 ? activeImageIndex - 1 : property.images.length - 1;
+                                                setActiveImageIndex(newIndex);
+                                            }}
+                                        >
+                                            <IconComponent name="chevron-back" size={24} color="white" />
+                                        </TouchableOpacity>
+                                        <View style={styles.photoModalDots}>
+                                            {property.images.map((_, index) => (
+                                                <View
+                                                    key={index}
+                                                    style={[
+                                                        styles.photoModalDot,
+                                                        index === activeImageIndex && styles.photoModalDotActive
+                                                    ]}
+                                                />
+                                            ))}
+                                        </View>
+                                        <TouchableOpacity
+                                            style={styles.photoModalButton}
+                                            onPress={() => {
+                                                const newIndex = activeImageIndex < property.images.length - 1 ? activeImageIndex + 1 : 0;
+                                                setActiveImageIndex(newIndex);
+                                            }}
+                                        >
+                                            <IconComponent name="chevron-forward" size={24} color="white" />
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            </Modal>
+
+                            {/* Basic Info */}
+                            <View style={styles.infoContainer}>
+                                <View style={styles.priceContainer}>
+                                    <ThemedText style={styles.priceLabel}>
+                                        {property.priceUnit === 'day' ? t("Daily Rent") :
+                                            property.priceUnit === 'night' ? t("Nightly Rent") :
+                                                property.priceUnit === 'week' ? t("Weekly Rent") :
+                                                    property.priceUnit === 'month' ? t("Monthly Rent") :
+                                                        property.priceUnit === 'year' ? t("Yearly Rent") :
+                                                            t("Rent")}
+                                    </ThemedText>
+                                    <CurrencyFormatter
+                                        amount={parseFloat(property.price) || 0}
+                                        originalCurrency={apiProperty?.rent?.currency || 'USD'}
+                                        showConversion={true}
+                                    />
+                                </View>
+
+                                {/* Eco Rating */}
+                                {property.isEcoCertified && (
+                                    <>
+                                        <View style={styles.ecoRatingContainer}>
+                                            <View style={styles.ratingHeader}>
+                                                <ThemedText style={styles.ratingTitle}>{t("Energy Efficiency")}</ThemedText>
+                                            </View>
+                                            <View style={styles.energyRatingContainer}>
+                                                <View style={[styles.energyRatingBadge, { backgroundColor: '#2e7d32' }]}>
+                                                    <ThemedText style={styles.energyRatingText}>{property.energyRating}</ThemedText>
+                                                </View>
+                                                <ThemedText style={styles.energyRatingDesc}>
+                                                    {t("This property meets high standards for energy efficiency")}
+                                                </ThemedText>
+                                            </View>
+                                        </View>
+                                    </>
+                                )}
+
+                                {/* Description */}
+                                {property.description && property.description.trim() !== '' && (
+                                    <>
+                                        <View style={styles.descriptionContainer}>
+                                            <ThemedText style={styles.sectionTitle}>{t("About this property")}</ThemedText>
+                                            <View style={styles.descriptionCard}>
+                                                <ThemedText style={styles.descriptionText}>{property.description}</ThemedText>
+                                            </View>
+                                        </View>
+                                    </>
+                                )}
+
+                                {/* Detailed Property Information */}
+                                <View style={styles.detailedInfoContainer}>
+                                    <ThemedText style={styles.sectionTitle}>{t("Property Details")}</ThemedText>
+                                    <View style={styles.detailedInfoCard}>
+                                        <View style={styles.detailedInfoRow}>
+                                            <View style={styles.detailedInfoItem}>
+                                                <ThemedText style={styles.detailedInfoLabel}>{t("Property Type")}</ThemedText>
+                                                <ThemedText style={styles.detailedInfoValue}>
+                                                    {apiProperty?.type ? apiProperty.type.charAt(0).toUpperCase() + apiProperty.type.slice(1) : t("Not specified")}
+                                                </ThemedText>
+                                            </View>
+                                            {apiProperty?.floor !== undefined && (
+                                                <View style={styles.detailedInfoItem}>
+                                                    <ThemedText style={styles.detailedInfoLabel}>{t("Floor")}</ThemedText>
+                                                    <ThemedText style={styles.detailedInfoValue}>{apiProperty.floor}</ThemedText>
+                                                </View>
+                                            )}
+                                        </View>
+                                        <View style={styles.detailedInfoRow}>
+                                            {apiProperty?.yearBuilt && (
+                                                <View style={styles.detailedInfoItem}>
+                                                    <ThemedText style={styles.detailedInfoLabel}>{t("Year Built")}</ThemedText>
+                                                    <ThemedText style={styles.detailedInfoValue}>{apiProperty.yearBuilt}</ThemedText>
+                                                </View>
+                                            )}
+                                            {apiProperty?.parkingSpaces !== undefined && (
+                                                <View style={styles.detailedInfoItem}>
+                                                    <ThemedText style={styles.detailedInfoLabel}>{t("Parking Spaces")}</ThemedText>
+                                                    <ThemedText style={styles.detailedInfoValue}>{apiProperty.parkingSpaces}</ThemedText>
+                                                </View>
+                                            )}
+                                        </View>
+                                    </View>
+                                </View>
+
+                                {/* Property Features */}
+                                {(apiProperty?.isFurnished !== undefined || apiProperty?.hasBalcony !== undefined || apiProperty?.hasGarden !== undefined || apiProperty?.hasElevator !== undefined) && (
+                                    <View style={styles.featuresContainer}>
+                                        <ThemedText style={styles.sectionTitle}>{t("Property Features")}</ThemedText>
+                                        <View style={styles.featuresCard}>
+                                            <View style={styles.featuresGrid}>
+                                                {apiProperty?.isFurnished !== undefined && (
+                                                    <View style={styles.featureItem}>
+                                                        <IconComponent
+                                                            name={apiProperty.isFurnished ? "checkmark-circle" : "close-circle"}
+                                                            size={20}
+                                                            color={apiProperty.isFurnished ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                        />
+                                                        <ThemedText style={styles.featureText}>{t("Furnished")}</ThemedText>
+                                                    </View>
+                                                )}
+                                                {apiProperty?.hasBalcony !== undefined && (
+                                                    <View style={styles.featureItem}>
+                                                        <IconComponent
+                                                            name={apiProperty.hasBalcony ? "checkmark-circle" : "close-circle"}
+                                                            size={20}
+                                                            color={apiProperty.hasBalcony ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                        />
+                                                        <ThemedText style={styles.featureText}>{t("Balcony")}</ThemedText>
+                                                    </View>
+                                                )}
+                                                {apiProperty?.hasGarden !== undefined && (
+                                                    <View style={styles.featureItem}>
+                                                        <IconComponent
+                                                            name={apiProperty.hasGarden ? "checkmark-circle" : "close-circle"}
+                                                            size={20}
+                                                            color={apiProperty.hasGarden ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                        />
+                                                        <ThemedText style={styles.featureText}>{t("Garden")}</ThemedText>
+                                                    </View>
+                                                )}
+                                                {apiProperty?.hasElevator !== undefined && (
+                                                    <View style={styles.featureItem}>
+                                                        <IconComponent
+                                                            name={apiProperty.hasElevator ? "checkmark-circle" : "close-circle"}
+                                                            size={20}
+                                                            color={apiProperty.hasElevator ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                        />
+                                                        <ThemedText style={styles.featureText}>{t("Elevator")}</ThemedText>
+                                                    </View>
+                                                )}
+                                            </View>
+                                        </View>
+                                    </View>
+                                )}
+
+                                {/* Pricing Details */}
+                                <View style={styles.pricingDetailsContainer}>
+                                    <ThemedText style={styles.sectionTitle}>{t("Pricing Details")}</ThemedText>
+                                    <View style={styles.pricingDetailsCard}>
+                                        <View style={styles.pricingDetailRow}>
+                                            <ThemedText style={styles.pricingDetailLabel}>{t("Monthly Rent")}</ThemedText>
+                                            <CurrencyFormatter
+                                                amount={apiProperty?.rent?.amount || 0}
+                                                originalCurrency={apiProperty?.rent?.currency || 'USD'}
+                                                showConversion={true}
+                                            />
+                                        </View>
+                                        {apiProperty?.rent?.deposit && apiProperty.rent.deposit > 0 && (
+                                            <View style={styles.pricingDetailRow}>
+                                                <ThemedText style={styles.pricingDetailLabel}>{t("Security Deposit")}</ThemedText>
+                                                <CurrencyFormatter
+                                                    amount={apiProperty.rent.deposit}
+                                                    originalCurrency={apiProperty.rent.currency || 'USD'}
+                                                    showConversion={true}
+                                                />
+                                            </View>
+                                        )}
+                                        {apiProperty?.rent?.utilities && (
+                                            <View style={styles.pricingDetailRow}>
+                                                <ThemedText style={styles.pricingDetailLabel}>{t("Utilities")}</ThemedText>
+                                                <ThemedText style={styles.pricingDetailValue}>
+                                                    {apiProperty.rent.utilities === 'included' ? t("Included") :
+                                                        apiProperty.rent.utilities === 'partial' ? t("Partially included") :
+                                                            t("Not included")}
+                                                </ThemedText>
+                                            </View>
+                                        )}
+
+                                    </View>
+                                </View>
+
+                                {/* Rules & Policies */}
+                                {(apiProperty?.rules?.petsAllowed !== undefined || apiProperty?.rules?.smokingAllowed !== undefined ||
+                                    apiProperty?.rules?.partiesAllowed !== undefined || apiProperty?.rules?.guestsAllowed !== undefined) && (
+                                        <View style={styles.rulesContainer}>
+                                            <ThemedText style={styles.sectionTitle}>{t("House Rules")}</ThemedText>
+                                            <View style={styles.rulesCard}>
+                                                <View style={styles.rulesGrid}>
+                                                    {apiProperty?.rules?.petsAllowed !== undefined && (
+                                                        <View style={styles.ruleItem}>
+                                                            <IconComponent
+                                                                name={apiProperty.rules.petsAllowed ? "checkmark-circle" : "close-circle"}
+                                                                size={20}
+                                                                color={apiProperty.rules.petsAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                            />
+                                                            <ThemedText style={styles.ruleText}>{t("Pets Allowed")}</ThemedText>
+                                                        </View>
+                                                    )}
+                                                    {apiProperty?.rules?.smokingAllowed !== undefined && (
+                                                        <View style={styles.ruleItem}>
+                                                            <IconComponent
+                                                                name={apiProperty.rules.smokingAllowed ? "checkmark-circle" : "close-circle"}
+                                                                size={20}
+                                                                color={apiProperty.rules.smokingAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                            />
+                                                            <ThemedText style={styles.ruleText}>{t("Smoking Allowed")}</ThemedText>
+                                                        </View>
+                                                    )}
+                                                    {apiProperty?.rules?.partiesAllowed !== undefined && (
+                                                        <View style={styles.ruleItem}>
+                                                            <IconComponent
+                                                                name={apiProperty.rules.partiesAllowed ? "checkmark-circle" : "close-circle"}
+                                                                size={20}
+                                                                color={apiProperty.rules.partiesAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                            />
+                                                            <ThemedText style={styles.ruleText}>{t("Parties Allowed")}</ThemedText>
+                                                        </View>
+                                                    )}
+                                                    {apiProperty?.rules?.guestsAllowed !== undefined && (
+                                                        <View style={styles.ruleItem}>
+                                                            <IconComponent
+                                                                name={apiProperty.rules.guestsAllowed ? "checkmark-circle" : "close-circle"}
+                                                                size={20}
+                                                                color={apiProperty.rules.guestsAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                            />
+                                                            <ThemedText style={styles.ruleText}>{t("Guests Allowed")}</ThemedText>
+                                                        </View>
+                                                    )}
+                                                </View>
+                                                {apiProperty?.rules?.guestsAllowed && apiProperty?.rules?.maxGuests && (
+                                                    <View style={styles.maxGuestsContainer}>
+                                                        <ThemedText style={styles.maxGuestsLabel}>{t("Maximum Guests")}: {apiProperty.rules.maxGuests}</ThemedText>
+                                                    </View>
+                                                )}
+                                            </View>
+                                        </View>
+                                    )}
+
+                                {/* Location Details */}
+                                <View style={styles.locationDetailsContainer}>
+                                    <ThemedText style={styles.sectionTitle}>{t("Location Details")}</ThemedText>
+                                    <View style={styles.locationDetailsCard}>
+                                        {apiProperty?.address?.street && (
+                                            <View style={styles.locationDetailRow}>
+                                                <ThemedText style={styles.locationDetailLabel}>{t("Address")}</ThemedText>
+                                                <ThemedText style={styles.locationDetailValue}>
+                                                    {apiProperty.address.street}
+                                                </ThemedText>
+                                            </View>
+                                        )}
+                                        {apiProperty?.address?.city && (
+                                            <View style={styles.locationDetailRow}>
+                                                <ThemedText style={styles.locationDetailLabel}>{t("City")}</ThemedText>
+                                                <ThemedText style={styles.locationDetailValue}>{apiProperty.address.city}</ThemedText>
+                                            </View>
+                                        )}
+                                        {apiProperty?.address?.state && (
+                                            <View style={styles.locationDetailRow}>
+                                                <ThemedText style={styles.locationDetailLabel}>{t("State/Province")}</ThemedText>
+                                                <ThemedText style={styles.locationDetailValue}>{apiProperty.address.state}</ThemedText>
+                                            </View>
+                                        )}
+                                        {apiProperty?.address?.zipCode && (
+                                            <View style={styles.locationDetailRow}>
+                                                <ThemedText style={styles.locationDetailLabel}>{t("ZIP/Postal Code")}</ThemedText>
+                                                <ThemedText style={styles.locationDetailValue}>{apiProperty.address.zipCode}</ThemedText>
+                                            </View>
+                                        )}
+                                        {apiProperty?.address?.country && (
+                                            <View style={styles.locationDetailRow}>
+                                                <ThemedText style={styles.locationDetailLabel}>{t("Country")}</ThemedText>
+                                                <ThemedText style={styles.locationDetailValue}>{apiProperty.address.country}</ThemedText>
+                                            </View>
+                                        )}
+                                    </View>
+                                </View>
+
+                                {/* Proximity Features */}
+                                {(apiProperty?.proximityToTransport !== undefined || apiProperty?.proximityToSchools !== undefined || apiProperty?.proximityToShopping !== undefined) && (
+                                    <View style={styles.proximityContainer}>
+                                        <ThemedText style={styles.sectionTitle}>{t("Nearby Amenities")}</ThemedText>
+                                        <View style={styles.proximityCard}>
+                                            <View style={styles.proximityGrid}>
+                                                {apiProperty?.proximityToTransport !== undefined && (
+                                                    <View style={styles.proximityItem}>
+                                                        <IconComponent
+                                                            name={apiProperty.proximityToTransport ? "checkmark-circle" : "close-circle"}
+                                                            size={20}
+                                                            color={apiProperty.proximityToTransport ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                        />
+                                                        <ThemedText style={styles.proximityText}>{t("Public Transport")}</ThemedText>
+                                                    </View>
+                                                )}
+                                                {apiProperty?.proximityToSchools !== undefined && (
+                                                    <View style={styles.proximityItem}>
+                                                        <IconComponent
+                                                            name={apiProperty.proximityToSchools ? "checkmark-circle" : "close-circle"}
+                                                            size={20}
+                                                            color={apiProperty.proximityToSchools ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                        />
+                                                        <ThemedText style={styles.proximityText}>{t("Schools")}</ThemedText>
+                                                    </View>
+                                                )}
+                                                {apiProperty?.proximityToShopping !== undefined && (
+                                                    <View style={styles.proximityItem}>
+                                                        <IconComponent
+                                                            name={apiProperty.proximityToShopping ? "checkmark-circle" : "close-circle"}
+                                                            size={20}
+                                                            color={apiProperty.proximityToShopping ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                        />
+                                                        <ThemedText style={styles.proximityText}>{t("Shopping")}</ThemedText>
+                                                    </View>
+                                                )}
+                                            </View>
+                                        </View>
+                                    </View>
+                                )}
+
+                                {/* Property Statistics */}
+                                <View style={styles.statisticsContainer}>
+                                    <ThemedText style={styles.sectionTitle}>{t("Property Statistics")}</ThemedText>
+                                    <View style={styles.statisticsCard}>
+                                        <View style={styles.statisticsGrid}>
+                                            <View style={styles.statisticItem}>
+                                                <ThemedText style={styles.statisticValue}>{property.bedrooms}</ThemedText>
+                                                <ThemedText style={styles.statisticLabel}>{t("Bedrooms")}</ThemedText>
+                                            </View>
+                                            <View style={styles.statisticItem}>
+                                                <ThemedText style={styles.statisticValue}>{property.bathrooms}</ThemedText>
+                                                <ThemedText style={styles.statisticLabel}>{t("Bathrooms")}</ThemedText>
+                                            </View>
+                                            <View style={styles.statisticItem}>
+                                                <ThemedText style={styles.statisticValue}>{property.size}m²</ThemedText>
+                                                <ThemedText style={styles.statisticLabel}>{t("Size")}</ThemedText>
+                                            </View>
+                                            {apiProperty?.floor !== undefined && (
+                                                <View style={styles.statisticItem}>
+                                                    <ThemedText style={styles.statisticValue}>{apiProperty.floor}</ThemedText>
+                                                    <ThemedText style={styles.statisticLabel}>{t("Floor")}</ThemedText>
+                                                </View>
+                                            )}
+                                        </View>
+                                    </View>
+                                </View>
+
+                                {/* Energy Efficiency & Sustainability */}
+                                {property.isEcoCertified && (
+                                    <View style={styles.energyContainer}>
+                                        <ThemedText style={styles.sectionTitle}>{t("Energy Efficiency & Sustainability")}</ThemedText>
+                                        <View style={styles.energyCard}>
+                                            <View style={styles.energyHeader}>
+                                                <IconComponent name="leaf" size={24} color="#2e7d32" />
+                                                <ThemedText style={styles.energyTitle}>{t("Eco-Certified Property")}</ThemedText>
+                                            </View>
+                                            <View style={styles.energyRatingContainer}>
+                                                <View style={[styles.energyRatingBadge, { backgroundColor: '#2e7d32' }]}>
+                                                    <ThemedText style={styles.energyRatingText}>{property.energyRating}</ThemedText>
+                                                </View>
+                                                <ThemedText style={styles.energyDescription}>
+                                                    {t("This property meets high standards for energy efficiency and sustainability")}
+                                                </ThemedText>
+                                            </View>
+                                            <View style={styles.energyFeatures}>
+                                                <View style={styles.energyFeature}>
+                                                    <IconComponent name="checkmark-circle" size={16} color="#2e7d32" />
+                                                    <ThemedText style={styles.energyFeatureText}>{t("Energy-efficient appliances")}</ThemedText>
+                                                </View>
+                                                <View style={styles.energyFeature}>
+                                                    <IconComponent name="checkmark-circle" size={16} color="#2e7d32" />
+                                                    <ThemedText style={styles.energyFeatureText}>{t("Sustainable building materials")}</ThemedText>
+                                                </View>
+                                                <View style={styles.energyFeature}>
+                                                    <IconComponent name="checkmark-circle" size={16} color="#2e7d32" />
+                                                    <ThemedText style={styles.energyFeatureText}>{t("Reduced carbon footprint")}</ThemedText>
+                                                </View>
+                                            </View>
+                                        </View>
+                                    </View>
+                                )}
+
+                                {/* Neighborhood Information */}
+                                <View style={styles.neighborhoodContainer}>
+                                    <ThemedText style={styles.sectionTitle}>{t("Neighborhood")}</ThemedText>
+                                    <View style={styles.neighborhoodCard}>
+                                        <View style={styles.neighborhoodHeader}>
+                                            <IconComponent name="location" size={20} color={colors.primaryColor} />
+                                            <ThemedText style={styles.neighborhoodTitle}>{apiProperty?.address?.city || t("Location")}</ThemedText>
+                                        </View>
+                                        <View style={styles.neighborhoodStats}>
+                                            <View style={styles.neighborhoodStat}>
+                                                <ThemedText style={styles.neighborhoodStatValue}>4.2</ThemedText>
+                                                <ThemedText style={styles.neighborhoodStatLabel}>{t("Safety Rating")}</ThemedText>
+                                            </View>
+                                            <View style={styles.neighborhoodStat}>
+                                                <ThemedText style={styles.neighborhoodStatValue}>85</ThemedText>
+                                                <ThemedText style={styles.neighborhoodStatLabel}>{t("Walk Score")}</ThemedText>
+                                            </View>
+                                            <View style={styles.neighborhoodStat}>
+                                                <ThemedText style={styles.neighborhoodStatValue}>92</ThemedText>
+                                                <ThemedText style={styles.neighborhoodStatLabel}>{t("Transit Score")}</ThemedText>
+                                            </View>
+                                        </View>
+                                        <ThemedText style={styles.neighborhoodDescription}>
+                                            {t("This neighborhood offers excellent connectivity with public transportation, shopping centers, and educational institutions within walking distance.")}
+                                        </ThemedText>
+                                    </View>
+                                </View>
+
+                                {/* Contact & Communication */}
+                                <View style={styles.contactContainer}>
+                                    <ThemedText style={styles.sectionTitle}>{t("Contact Information")}</ThemedText>
+                                    <View style={styles.contactCard}>
+                                        <View style={styles.contactMethods}>
+                                            <TouchableOpacity style={styles.contactMethod} onPress={handleContact}>
+                                                <IconComponent name="mail-outline" size={24} color={colors.primaryColor} />
+                                                <ThemedText style={styles.contactMethodText}>{t("Send Message")}</ThemedText>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity style={styles.contactMethod} onPress={handleContact}>
+                                                <IconComponent name="call-outline" size={24} color={colors.primaryColor} />
+                                                <ThemedText style={styles.contactMethodText}>{t("Call Now")}</ThemedText>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity style={styles.contactMethod} onPress={handleScheduleViewing}>
+                                                <IconComponent name="calendar-outline" size={24} color={colors.primaryColor} />
+                                                <ThemedText style={styles.contactMethodText}>{t("Schedule Viewing")}</ThemedText>
+                                            </TouchableOpacity>
+                                        </View>
+                                        <View style={styles.responseTime}>
+                                            <IconComponent name="time-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
+                                            <ThemedText style={styles.responseTimeText}>{t("Average response time: 2 hours")}</ThemedText>
+                                        </View>
+                                    </View>
+                                </View>
+
+                                {/* Availability */}
+                                <View style={styles.availabilityContainer}>
+                                    <View style={styles.availabilityItem}>
+                                        <ThemedText style={styles.availabilityLabel}>{t("Available From")}</ThemedText>
+                                        <ThemedText style={styles.availabilityValue}>{new Date(property.availableFrom).toLocaleDateString()}</ThemedText>
+                                    </View>
+                                    <View style={styles.availabilityItem}>
+                                        <ThemedText style={styles.availabilityLabel}>{t("Minimum Stay")}</ThemedText>
+                                        <ThemedText style={styles.availabilityValue}>{property.minStay}</ThemedText>
+                                    </View>
+                                </View>
+
+                                {/* Amenities */}
+                                <ThemedText style={styles.sectionTitle}>{t("What's Included")}</ThemedText>
+
+                                <AmenitiesDisplay amenities={property.amenities} title="" />
+
+                                {/* Map - Only show if location coordinates are available */}
+                                {apiProperty?.address?.coordinates?.lat && apiProperty?.address?.coordinates?.lng && (
+                                    <>
+                                        <ThemedText style={styles.sectionTitle}>{t("Location")}</ThemedText>
+                                        <PropertyMap
+                                            latitude={apiProperty.address.coordinates.lat}
+                                            longitude={apiProperty.address.coordinates.lng}
+                                            address={property.location}
+                                            height={200}
+                                            interactive={false}
+                                        />
+                                    </>
+                                )}
+
+                                {/* Landlord Info / Government Housing Authority */}
+                                <ThemedText style={styles.sectionTitle}>
+                                    {apiProperty?.housingType === 'public' ? t("Housing Authority") : t("Landlord")}
+                                </ThemedText>
+                                <View style={styles.landlordCard}>
+                                    {apiProperty?.housingType === 'public' ? (
+                                        <>
+                                            <View style={styles.landlordHeader}>
+                                                <View style={[styles.landlordAvatar, styles.governmentAvatar]}>
+                                                    <IconComponent name="library" size={28} color="white" />
+                                                </View>
+                                                <View style={styles.landlordInfo}>
+                                                    <View style={styles.landlordNameRow}>
+                                                        <ThemedText style={styles.landlordName}>
+                                                            {apiProperty?.address?.state ? `${apiProperty.address.state} Housing Authority` : 'Public Housing Authority'}
+                                                        </ThemedText>
+                                                        <View style={[styles.verifiedBadge, styles.governmentBadge]}>
+                                                            <ThemedText style={styles.verifiedText}>GOV</ThemedText>
+                                                        </View>
+                                                    </View>
+                                                    <ThemedText style={styles.landlordRating}>
+                                                        Government-managed affordable housing
+                                                    </ThemedText>
+                                                </View>
+                                            </View>
+                                            <View style={styles.landlordActions}>
+                                                <ActionButton
+                                                    icon="globe"
+                                                    text={t("Apply on State Website")}
+                                                    onPress={handlePublicHousingApply}
+                                                    variant="primary"
+                                                    size="medium"
+                                                    style={{ flex: 1 }}
+                                                />
+                                            </View>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <View style={styles.landlordHeader}>
+                                                <View style={styles.landlordAvatar}>
+                                                    <ThemedText style={styles.landlordInitial}>
+                                                        {getLandlordDisplayName(landlordProfile)}
+                                                    </ThemedText>
+                                                </View>
+                                                <View style={styles.landlordInfo}>
+                                                    <View style={styles.landlordNameRow}>
+                                                        <ThemedText style={styles.landlordName}>
+                                                            {getLandlordDisplayName(landlordProfile)}
+                                                        </ThemedText>
+                                                        {landlordProfile?.isActive && (
+                                                            <View style={styles.verifiedBadge}>
+                                                                <ThemedText style={styles.verifiedText}>✓</ThemedText>
+                                                            </View>
+                                                        )}
+                                                    </View>
+                                                    <ThemedText style={styles.landlordRating}>
+                                                        {getLandlordTrustScore(landlordProfile)}
+                                                    </ThemedText>
+                                                </View>
+                                            </View>
+                                            <View style={styles.landlordActions}>
+                                                <ActionButton
+                                                    icon="chatbubble-outline"
+                                                    text={t("Message")}
+                                                    onPress={handleContact}
+                                                    variant="primary"
+                                                    size="medium"
+                                                    disabled={!landlordProfile}
+                                                    style={{ flex: 1, marginRight: 8 }}
+                                                />
+                                                <ActionButton
+                                                    icon="call-outline"
+                                                    text={t("Call")}
+                                                    onPress={handleContact}
+                                                    variant="secondary"
+                                                    size="medium"
+                                                    disabled={!landlordProfile}
+                                                    style={{ flex: 1, marginLeft: 8 }}
+                                                />
+                                            </View>
+                                        </>
+                                    )}
+                                </View>
+
+                                {/* Trust and Safety */}
+                                <View style={styles.trustContainer}>
+                                    <View style={styles.trustTextContainer}>
+                                        <ThemedText style={styles.trustTitle}>{t("Homiio Verified")}</ThemedText>
+                                        <ThemedText style={styles.trustDescription}>
+                                            {t("This property has been personally verified by our team for authenticity and condition")}
+                                        </ThemedText>
+                                    </View>
+                                </View>
+
+                                {/* Action Buttons */}
+                                <View style={styles.actionButtonsContainer}>
+                                    {apiProperty?.housingType === 'public' ? (
+                                        <>
+                                            <ActionButton
+                                                icon="chatbubble-outline"
+                                                text={t("Contact Housing Authority")}
+                                                onPress={() => { }}
+                                                variant="secondary"
+                                                size="large"
+                                                disabled={true}
+                                                style={{ flex: 1, marginRight: 10 }}
+                                            />
+                                            <ActionButton
+                                                icon="globe"
+                                                text={t("Apply on State Website")}
+                                                onPress={handleApply}
+                                                variant="primary"
+                                                size="large"
+                                                style={{ flex: 1 }}
+                                            />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <ActionButton
+                                                icon="calendar-outline"
+                                                text={t("Schedule Viewing")}
+                                                onPress={handleScheduleViewing}
+                                                variant="outline"
+                                                size="large"
+                                                style={{ flex: 1, marginRight: 10 }}
+                                            />
+                                            <ActionButton
+                                                icon="checkmark-circle-outline"
+                                                text={t("Apply Now")}
+                                                onPress={handleApply}
+                                                variant="primary"
+                                                size="large"
+                                                style={{ flex: 1 }}
+                                            />
+                                        </>
+                                    )}
+                                </View>
+
+                                {/* Fraud Warning */}
+                                <View style={styles.fraudWarningContainer}>
+                                    <ThemedText style={styles.fraudWarningText}>
+                                        {t("Never pay or transfer funds outside the Homio platform")}
+                                    </ThemedText>
+                                </View>
+                            </View>
+                        </View>
+                    </Animated.ScrollView>
+                </>
+            )}
         </View>
     );
 }
@@ -1215,6 +2029,11 @@ const styles = StyleSheet.create({
     },
     scrollView: {
         flex: 1,
+        ...Platform.select({
+            web: {
+                marginTop: -80, // Compensate for header height on web
+            },
+        }),
     },
     contentArea: {
         flex: 1,
@@ -1335,6 +2154,11 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 300,
         marginTop: -50, // Start behind the safe area
+    },
+    mainImageWeb: {
+        width: '100%',
+        height: 300,
+        marginTop: -80, // Start behind the header on web - increased for better overlap
     },
     headerOverlay: {
         position: 'absolute',
@@ -2026,4 +2850,5 @@ const styles = StyleSheet.create({
     photoModalDotActive: {
         backgroundColor: 'white',
     },
+
 }); 

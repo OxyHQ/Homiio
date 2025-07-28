@@ -4,7 +4,7 @@ export { PropertyCard } from './PropertyCard';
 export { PropertyList } from './PropertyList';
 export { SearchBar } from './SearchBar';
 export { SaveSearchModal } from './SaveSearchModal';
-export { default as WebSplashScreen } from './WebSplashScreen';
+export { default as AppSplashScreen } from './AppSplashScreen';
 export { default as FavoriteButton } from './FavoriteButton';
 export { SaveButton } from './SaveButton';
 export { default as LoadingSpinner } from './LoadingSpinner';

@@ -27,7 +27,7 @@ import itIT from "@/locales/it.json";
 import { BottomBar } from "@/components/BottomBar";
 import { MenuProvider } from 'react-native-popup-menu';
 import { BottomSheetModalProvider, BottomSheetModal } from "@gorhom/bottom-sheet";
-import WebSplashScreen from "@/components/WebSplashScreen";
+import AppSplashScreen from "@/components/AppSplashScreen";
 import LoadingTopSpinner from "@/components/LoadingTopSpinner";
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { ProfileProvider } from '@/context/ProfileContext';
@@ -224,7 +224,7 @@ export default function RootLayout() {
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <GestureHandlerRootView style={{ flex: 1 }}>
         {!appIsReady ? (
-          <WebSplashScreen
+          <AppSplashScreen
             startFade={splashState.startFade}
             onFadeComplete={handleSplashFadeComplete}
           />

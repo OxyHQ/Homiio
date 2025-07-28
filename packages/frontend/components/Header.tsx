@@ -62,9 +62,10 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
                 }
             };
 
-            window.addEventListener('scroll', handleScroll);
+            // Add scroll listener to document for better web compatibility
+            document.addEventListener('scroll', handleScroll, { passive: true });
             return () => {
-                window.removeEventListener('scroll', handleScroll);
+                document.removeEventListener('scroll', handleScroll);
             };
         }
     }, [scrollY, scrollThreshold]);
@@ -165,14 +166,17 @@ const styles = StyleSheet.create({
         paddingBottom: 10,
     },
     topRow: {
-        position: 'relative',
         ...Platform.select({
             web: {
                 position: 'sticky',
+                top: 0,
+                zIndex: 1000,
+            },
+            default: {
+                position: 'relative',
+                zIndex: 100,
             },
         }),
-        top: 0,
-        zIndex: 100,
     } as ViewStyle,
     backgroundOverlay: {
         position: 'absolute',
@@ -180,6 +184,11 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
+        ...Platform.select({
+            web: {
+                backdropFilter: 'blur(10px)',
+            },
+        }),
     },
     contentContainer: {
         flex: 1,
@@ -197,6 +206,11 @@ const styles = StyleSheet.create({
         }),
         position: 'relative',
         elevation: 5,
+        ...Platform.select({
+            web: {
+                minHeight: 60,
+            },
+        }),
     },
     topRowText: {
         fontSize: 20,

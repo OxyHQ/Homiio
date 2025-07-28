@@ -5,12 +5,12 @@ import LoadingSpinner from './LoadingSpinner';
 import { colors } from '@/styles/colors';
 import { LinearGradient } from 'expo-linear-gradient';
 
-interface WebSplashScreenProps {
+interface AppSplashScreenProps {
     onFadeComplete?: () => void;
     startFade?: boolean;
 }
 
-const WebSplashScreen: React.FC<WebSplashScreenProps> = ({ onFadeComplete, startFade = false }) => {
+const AppSplashScreen: React.FC<AppSplashScreenProps> = ({ onFadeComplete, startFade = false }) => {
     const fadeAnim = useRef(new Animated.Value(1)).current; // Use useRef to prevent recreation
     const animationRef = useRef<Animated.CompositeAnimation | null>(null);
 
@@ -77,4 +77,4 @@ const WebSplashScreen: React.FC<WebSplashScreenProps> = ({ onFadeComplete, start
     );
 };
 
-export default React.memo(WebSplashScreen);
+export default React.memo(AppSplashScreen); 
