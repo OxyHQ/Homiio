@@ -80,7 +80,7 @@
     "error.chat.load_failed": "Failed to load messages",
     "error.data.fetch_failed": "Error fetching data: {{message}}",
     "error.users.fetch_failed": "Error fetching users: {{message}}",
-    "notification.welcome.title": "Welcome to Mention! 👋",
+    "notification.welcome.title": "Welcome to Homiio! 👋",
     "notification.welcome.body": "Thanks for trying out our app. Start exploring now!",
     "success.signup": "Registration successful",
     "action.retry": "Retry",

@@ -32,7 +32,7 @@ return {
         jsEngine: "jsc",
         ios: {
             supportsTablet: true,
-            bundleIdentifier: "earth.mention.android"
+            bundleIdentifier: "com.homiio.android"
         },
         android: {
             adaptiveIcon: {
@@ -44,7 +44,7 @@ return {
                 "android.permission.CAMERA",
                 "android.permission.RECORD_AUDIO"
             ],
-            package: "earth.mention.android",
+            package: "com.homiio.android",
             intentFilters: [
                     {
                         action: 'VIEW',
@@ -173,13 +173,13 @@ return {
         ],
         extra: {
             eas: {
-                projectId: "0ca1d394-efea-4bf7-91b6-ed94a021bcf3"
+                projectId: "a261857b-a404-45ce-983c-501242578074"
             },
             router: {
                 origin: false
             }
         },
-        owner: "nateisern"
+        owner: "oxyhq"
     }
 };
 };

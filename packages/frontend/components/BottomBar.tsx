@@ -6,6 +6,7 @@ import Avatar from './Avatar';
 import { useOxy } from '@oxyhq/services';
 import { useHasRentalProperties } from '@/hooks/useLeaseQueries';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SindiIconActive } from '@/assets/icons/sindi-icon';
 
 export const BottomBar = () => {
     const router = useRouter();
@@ -77,7 +78,11 @@ export const BottomBar = () => {
                 )}
             </Pressable>
             <Pressable onPress={() => handlePress('/sindi')} style={[styles.tab, activeRoute === '/sindi' && styles.active]}>
-                <SindiIcon size={28} color={activeRoute === '/sindi' ? "#4E67EB" : "#000"} />
+                {activeRoute === '/sindi' ? (
+                    <SindiIconActive size={28} color="#4E67EB" />
+                ) : (
+                    <SindiIcon size={28} color="#000" />
+                )}
             </Pressable>
             {/* Only show contracts tab if user has rental properties */}
             {hasRentalProperties && (
