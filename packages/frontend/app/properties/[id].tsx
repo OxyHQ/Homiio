@@ -542,6 +542,265 @@ export default function PropertyDetailPage() {
                             </>
                         )}
 
+                        {/* Detailed Property Information */}
+                        <View style={styles.detailedInfoContainer}>
+                            <ThemedText style={styles.sectionTitle}>{t("Property Details")}</ThemedText>
+                            <View style={styles.detailedInfoCard}>
+                                <View style={styles.detailedInfoRow}>
+                                    <View style={styles.detailedInfoItem}>
+                                        <ThemedText style={styles.detailedInfoLabel}>{t("Property Type")}</ThemedText>
+                                        <ThemedText style={styles.detailedInfoValue}>
+                                            {apiProperty?.type ? apiProperty.type.charAt(0).toUpperCase() + apiProperty.type.slice(1) : t("Not specified")}
+                                        </ThemedText>
+                                    </View>
+                                    {apiProperty?.floor !== undefined && (
+                                        <View style={styles.detailedInfoItem}>
+                                            <ThemedText style={styles.detailedInfoLabel}>{t("Floor")}</ThemedText>
+                                            <ThemedText style={styles.detailedInfoValue}>{apiProperty.floor}</ThemedText>
+                                        </View>
+                                    )}
+                                </View>
+                                <View style={styles.detailedInfoRow}>
+                                    {apiProperty?.yearBuilt && (
+                                        <View style={styles.detailedInfoItem}>
+                                            <ThemedText style={styles.detailedInfoLabel}>{t("Year Built")}</ThemedText>
+                                            <ThemedText style={styles.detailedInfoValue}>{apiProperty.yearBuilt}</ThemedText>
+                                        </View>
+                                    )}
+                                    {apiProperty?.parkingSpaces !== undefined && (
+                                        <View style={styles.detailedInfoItem}>
+                                            <ThemedText style={styles.detailedInfoLabel}>{t("Parking Spaces")}</ThemedText>
+                                            <ThemedText style={styles.detailedInfoValue}>{apiProperty.parkingSpaces}</ThemedText>
+                                        </View>
+                                    )}
+                                </View>
+                            </View>
+                        </View>
+
+                        {/* Property Features */}
+                        {(apiProperty?.isFurnished !== undefined || apiProperty?.hasBalcony !== undefined || apiProperty?.hasGarden !== undefined || apiProperty?.hasElevator !== undefined) && (
+                            <View style={styles.featuresContainer}>
+                                <ThemedText style={styles.sectionTitle}>{t("Property Features")}</ThemedText>
+                                <View style={styles.featuresCard}>
+                                    <View style={styles.featuresGrid}>
+                                        {apiProperty?.isFurnished !== undefined && (
+                                            <View style={styles.featureItem}>
+                                                <IconComponent
+                                                    name={apiProperty.isFurnished ? "checkmark-circle" : "close-circle"}
+                                                    size={20}
+                                                    color={apiProperty.isFurnished ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                />
+                                                <ThemedText style={styles.featureText}>{t("Furnished")}</ThemedText>
+                                            </View>
+                                        )}
+                                        {apiProperty?.hasBalcony !== undefined && (
+                                            <View style={styles.featureItem}>
+                                                <IconComponent
+                                                    name={apiProperty.hasBalcony ? "checkmark-circle" : "close-circle"}
+                                                    size={20}
+                                                    color={apiProperty.hasBalcony ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                />
+                                                <ThemedText style={styles.featureText}>{t("Balcony")}</ThemedText>
+                                            </View>
+                                        )}
+                                        {apiProperty?.hasGarden !== undefined && (
+                                            <View style={styles.featureItem}>
+                                                <IconComponent
+                                                    name={apiProperty.hasGarden ? "checkmark-circle" : "close-circle"}
+                                                    size={20}
+                                                    color={apiProperty.hasGarden ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                />
+                                                <ThemedText style={styles.featureText}>{t("Garden")}</ThemedText>
+                                            </View>
+                                        )}
+                                        {apiProperty?.hasElevator !== undefined && (
+                                            <View style={styles.featureItem}>
+                                                <IconComponent
+                                                    name={apiProperty.hasElevator ? "checkmark-circle" : "close-circle"}
+                                                    size={20}
+                                                    color={apiProperty.hasElevator ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                />
+                                                <ThemedText style={styles.featureText}>{t("Elevator")}</ThemedText>
+                                            </View>
+                                        )}
+                                    </View>
+                                </View>
+                            </View>
+                        )}
+
+                        {/* Pricing Details */}
+                        <View style={styles.pricingDetailsContainer}>
+                            <ThemedText style={styles.sectionTitle}>{t("Pricing Details")}</ThemedText>
+                            <View style={styles.pricingDetailsCard}>
+                                <View style={styles.pricingDetailRow}>
+                                    <ThemedText style={styles.pricingDetailLabel}>{t("Monthly Rent")}</ThemedText>
+                                    <CurrencyFormatter
+                                        amount={apiProperty?.rent?.amount || 0}
+                                        originalCurrency={apiProperty?.rent?.currency || 'USD'}
+                                        showConversion={true}
+                                    />
+                                </View>
+                                {apiProperty?.rent?.deposit && apiProperty.rent.deposit > 0 && (
+                                    <View style={styles.pricingDetailRow}>
+                                        <ThemedText style={styles.pricingDetailLabel}>{t("Security Deposit")}</ThemedText>
+                                        <CurrencyFormatter
+                                            amount={apiProperty.rent.deposit}
+                                            originalCurrency={apiProperty.rent.currency || 'USD'}
+                                            showConversion={true}
+                                        />
+                                    </View>
+                                )}
+                                {apiProperty?.rent?.utilities && (
+                                    <View style={styles.pricingDetailRow}>
+                                        <ThemedText style={styles.pricingDetailLabel}>{t("Utilities")}</ThemedText>
+                                        <ThemedText style={styles.pricingDetailValue}>
+                                            {apiProperty.rent.utilities === 'included' ? t("Included") :
+                                                apiProperty.rent.utilities === 'partial' ? t("Partially included") :
+                                                    t("Not included")}
+                                        </ThemedText>
+                                    </View>
+                                )}
+
+                            </View>
+                        </View>
+
+                        {/* Rules & Policies */}
+                        {(apiProperty?.rules?.petsAllowed !== undefined || apiProperty?.rules?.smokingAllowed !== undefined ||
+                            apiProperty?.rules?.partiesAllowed !== undefined || apiProperty?.rules?.guestsAllowed !== undefined) && (
+                                <View style={styles.rulesContainer}>
+                                    <ThemedText style={styles.sectionTitle}>{t("House Rules")}</ThemedText>
+                                    <View style={styles.rulesCard}>
+                                        <View style={styles.rulesGrid}>
+                                            {apiProperty?.rules?.petsAllowed !== undefined && (
+                                                <View style={styles.ruleItem}>
+                                                    <IconComponent
+                                                        name={apiProperty.rules.petsAllowed ? "checkmark-circle" : "close-circle"}
+                                                        size={20}
+                                                        color={apiProperty.rules.petsAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                    />
+                                                    <ThemedText style={styles.ruleText}>{t("Pets Allowed")}</ThemedText>
+                                                </View>
+                                            )}
+                                            {apiProperty?.rules?.smokingAllowed !== undefined && (
+                                                <View style={styles.ruleItem}>
+                                                    <IconComponent
+                                                        name={apiProperty.rules.smokingAllowed ? "checkmark-circle" : "close-circle"}
+                                                        size={20}
+                                                        color={apiProperty.rules.smokingAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                    />
+                                                    <ThemedText style={styles.ruleText}>{t("Smoking Allowed")}</ThemedText>
+                                                </View>
+                                            )}
+                                            {apiProperty?.rules?.partiesAllowed !== undefined && (
+                                                <View style={styles.ruleItem}>
+                                                    <IconComponent
+                                                        name={apiProperty.rules.partiesAllowed ? "checkmark-circle" : "close-circle"}
+                                                        size={20}
+                                                        color={apiProperty.rules.partiesAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                    />
+                                                    <ThemedText style={styles.ruleText}>{t("Parties Allowed")}</ThemedText>
+                                                </View>
+                                            )}
+                                            {apiProperty?.rules?.guestsAllowed !== undefined && (
+                                                <View style={styles.ruleItem}>
+                                                    <IconComponent
+                                                        name={apiProperty.rules.guestsAllowed ? "checkmark-circle" : "close-circle"}
+                                                        size={20}
+                                                        color={apiProperty.rules.guestsAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                    />
+                                                    <ThemedText style={styles.ruleText}>{t("Guests Allowed")}</ThemedText>
+                                                </View>
+                                            )}
+                                        </View>
+                                        {apiProperty?.rules?.guestsAllowed && apiProperty?.rules?.maxGuests && (
+                                            <View style={styles.maxGuestsContainer}>
+                                                <ThemedText style={styles.maxGuestsLabel}>{t("Maximum Guests")}: {apiProperty.rules.maxGuests}</ThemedText>
+                                            </View>
+                                        )}
+                                    </View>
+                                </View>
+                            )}
+
+                        {/* Location Details */}
+                        <View style={styles.locationDetailsContainer}>
+                            <ThemedText style={styles.sectionTitle}>{t("Location Details")}</ThemedText>
+                            <View style={styles.locationDetailsCard}>
+                                {apiProperty?.address?.street && (
+                                    <View style={styles.locationDetailRow}>
+                                        <ThemedText style={styles.locationDetailLabel}>{t("Address")}</ThemedText>
+                                        <ThemedText style={styles.locationDetailValue}>
+                                            {apiProperty.address.street}
+                                        </ThemedText>
+                                    </View>
+                                )}
+                                {apiProperty?.address?.city && (
+                                    <View style={styles.locationDetailRow}>
+                                        <ThemedText style={styles.locationDetailLabel}>{t("City")}</ThemedText>
+                                        <ThemedText style={styles.locationDetailValue}>{apiProperty.address.city}</ThemedText>
+                                    </View>
+                                )}
+                                {apiProperty?.address?.state && (
+                                    <View style={styles.locationDetailRow}>
+                                        <ThemedText style={styles.locationDetailLabel}>{t("State/Province")}</ThemedText>
+                                        <ThemedText style={styles.locationDetailValue}>{apiProperty.address.state}</ThemedText>
+                                    </View>
+                                )}
+                                {apiProperty?.address?.zipCode && (
+                                    <View style={styles.locationDetailRow}>
+                                        <ThemedText style={styles.locationDetailLabel}>{t("ZIP/Postal Code")}</ThemedText>
+                                        <ThemedText style={styles.locationDetailValue}>{apiProperty.address.zipCode}</ThemedText>
+                                    </View>
+                                )}
+                                {apiProperty?.address?.country && (
+                                    <View style={styles.locationDetailRow}>
+                                        <ThemedText style={styles.locationDetailLabel}>{t("Country")}</ThemedText>
+                                        <ThemedText style={styles.locationDetailValue}>{apiProperty.address.country}</ThemedText>
+                                    </View>
+                                )}
+                            </View>
+                        </View>
+
+                        {/* Proximity Features */}
+                        {(apiProperty?.proximityToTransport !== undefined || apiProperty?.proximityToSchools !== undefined || apiProperty?.proximityToShopping !== undefined) && (
+                            <View style={styles.proximityContainer}>
+                                <ThemedText style={styles.sectionTitle}>{t("Nearby Amenities")}</ThemedText>
+                                <View style={styles.proximityCard}>
+                                    <View style={styles.proximityGrid}>
+                                        {apiProperty?.proximityToTransport !== undefined && (
+                                            <View style={styles.proximityItem}>
+                                                <IconComponent
+                                                    name={apiProperty.proximityToTransport ? "checkmark-circle" : "close-circle"}
+                                                    size={20}
+                                                    color={apiProperty.proximityToTransport ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                />
+                                                <ThemedText style={styles.proximityText}>{t("Public Transport")}</ThemedText>
+                                            </View>
+                                        )}
+                                        {apiProperty?.proximityToSchools !== undefined && (
+                                            <View style={styles.proximityItem}>
+                                                <IconComponent
+                                                    name={apiProperty.proximityToSchools ? "checkmark-circle" : "close-circle"}
+                                                    size={20}
+                                                    color={apiProperty.proximityToSchools ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                />
+                                                <ThemedText style={styles.proximityText}>{t("Schools")}</ThemedText>
+                                            </View>
+                                        )}
+                                        {apiProperty?.proximityToShopping !== undefined && (
+                                            <View style={styles.proximityItem}>
+                                                <IconComponent
+                                                    name={apiProperty.proximityToShopping ? "checkmark-circle" : "close-circle"}
+                                                    size={20}
+                                                    color={apiProperty.proximityToShopping ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                                                />
+                                                <ThemedText style={styles.proximityText}>{t("Shopping")}</ThemedText>
+                                            </View>
+                                        )}
+                                    </View>
+                                </View>
+                            </View>
+                        )}
+
                         {/* Availability */}
                         <View style={styles.availabilityContainer}>
                             <View style={styles.availabilityItem}>
@@ -1078,5 +1337,193 @@ const styles = StyleSheet.create({
         color: colors.COLOR_BLACK_LIGHT_3,
         textAlign: 'center',
         fontStyle: 'italic',
+    },
+    detailedInfoContainer: {
+        marginBottom: 20,
+    },
+    detailedInfoCard: {
+        backgroundColor: '#f8f9fa',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#e9ecef',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+        elevation: 1,
+    },
+    detailedInfoRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 10,
+    },
+    detailedInfoItem: {
+        flex: 1,
+    },
+    detailedInfoLabel: {
+        fontSize: 14,
+        color: colors.COLOR_BLACK_LIGHT_3,
+        marginBottom: 5,
+    },
+    detailedInfoValue: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: colors.COLOR_BLACK,
+    },
+    featuresContainer: {
+        marginBottom: 20,
+    },
+    featuresCard: {
+        backgroundColor: '#f8f9fa',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#e9ecef',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+        elevation: 1,
+    },
+    featuresGrid: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        flexWrap: 'wrap',
+    },
+    featureItem: {
+        alignItems: 'center',
+        marginVertical: 10,
+    },
+    featureText: {
+        fontSize: 14,
+        color: colors.COLOR_BLACK_LIGHT_3,
+        marginTop: 5,
+    },
+    pricingDetailsContainer: {
+        marginBottom: 20,
+    },
+    pricingDetailsCard: {
+        backgroundColor: '#f8f9fa',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#e9ecef',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+        elevation: 1,
+    },
+    pricingDetailRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    pricingDetailLabel: {
+        fontSize: 14,
+        color: colors.COLOR_BLACK_LIGHT_3,
+    },
+    pricingDetailValue: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: colors.COLOR_BLACK,
+    },
+    rulesContainer: {
+        marginBottom: 20,
+    },
+    rulesCard: {
+        backgroundColor: '#f8f9fa',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#e9ecef',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+        elevation: 1,
+    },
+    rulesGrid: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        flexWrap: 'wrap',
+    },
+    ruleItem: {
+        alignItems: 'center',
+        marginVertical: 10,
+    },
+    ruleText: {
+        fontSize: 14,
+        color: colors.COLOR_BLACK_LIGHT_3,
+        marginTop: 5,
+    },
+    maxGuestsContainer: {
+        marginTop: 10,
+        alignItems: 'center',
+    },
+    maxGuestsLabel: {
+        fontSize: 14,
+        color: colors.COLOR_BLACK_LIGHT_3,
+    },
+    locationDetailsContainer: {
+        marginBottom: 20,
+    },
+    locationDetailsCard: {
+        backgroundColor: '#f8f9fa',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#e9ecef',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+        elevation: 1,
+    },
+    locationDetailRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    locationDetailLabel: {
+        fontSize: 14,
+        color: colors.COLOR_BLACK_LIGHT_3,
+    },
+    locationDetailValue: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: colors.COLOR_BLACK,
+    },
+    proximityContainer: {
+        marginBottom: 20,
+    },
+    proximityCard: {
+        backgroundColor: '#f8f9fa',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#e9ecef',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+        elevation: 1,
+    },
+    proximityGrid: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        flexWrap: 'wrap',
+    },
+    proximityItem: {
+        alignItems: 'center',
+        marginVertical: 10,
+    },
+    proximityText: {
+        fontSize: 14,
+        color: colors.COLOR_BLACK_LIGHT_3,
+        marginTop: 5,
     },
 }); 

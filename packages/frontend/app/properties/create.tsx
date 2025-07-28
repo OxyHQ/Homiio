@@ -348,7 +348,7 @@ export default function CreatePropertyScreen() {
       if (fieldsToShow.includes('monthlyRent') && !formData.pricing.monthlyRent) errors.monthlyRent = 'Monthly rent is required';
     } else if (stepName === 'Amenities') {
       // Validation for amenities and rules combined
-      if (fieldsToShow.includes('maxGuests') && formData.rules.maxGuests !== undefined && formData.rules.maxGuests < 1) {
+      if (fieldsToShow.includes('maxGuests') && formData.rules.guestsAllowed && (formData.rules.maxGuests === undefined || formData.rules.maxGuests < 1)) {
         errors.maxGuests = 'Maximum guests must be at least 1';
       }
     }

@@ -137,7 +137,7 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()(
           smokingAllowed: false,
           partiesAllowed: false,
           guestsAllowed: false,
-          maxGuests: 0,
+          maxGuests: undefined,
         },
         media: {
           images: [],
@@ -225,7 +225,7 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()(
             smokingAllowed: false,
             partiesAllowed: false,
             guestsAllowed: false,
-            maxGuests: 0,
+            maxGuests: undefined,
           },
           media: {
             images: [],
