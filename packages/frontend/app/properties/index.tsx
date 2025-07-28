@@ -141,17 +141,21 @@ export default function PropertiesScreen() {
             >
                 <Header options={{ title: t('Properties'), titlePosition: 'left' }} />
             </View>
-            <View style={[styles.topBar, { paddingTop: headerHeight }]}> {/* Move topBar below header */}
-                <View style={styles.searchBarContainer}>
-                    <SearchBar hideFilterIcon={true} />
+            {!loading && allProperties.length > 0 && (
+                <View style={[styles.topBar, { paddingTop: headerHeight }]}> {/* Move topBar below header */}
+                    <View style={styles.searchBarContainer}>
+                        <SearchBar hideFilterIcon={true} />
+                    </View>
+                    {renderFilterButton()}
+                    {renderRecentlyViewedButton()}
+                    {renderViewModeToggle()}
                 </View>
-                {renderFilterButton()}
-                {renderRecentlyViewedButton()}
-                {renderViewModeToggle()}
-            </View>
-            <View style={styles.resultCountBar}>
-                <Text style={styles.resultCountText}>{t('Results')}: {total}</Text>
-            </View>
+            )}
+            {!loading && allProperties.length > 0 && (
+                <View style={styles.resultCountBar}>
+                    <Text style={styles.resultCountText}>{t('Results')}: {allProperties.length}</Text>
+                </View>
+            )}
             {loading && !allProperties.length ? (
                 <LoadingTopSpinner showLoading={true} />
             ) : error ? (

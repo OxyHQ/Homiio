@@ -25,10 +25,8 @@ const WebMap: React.FC<PropertyMapProps> = ({
   const mapRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Use Redux location hooks
-  const { search, results: locationSearchResults, loading: searchLoading } = useLocationSearch();
-  const { reverseGeocode, result: reverseResult, loading: reverseLoading } = useReverseGeocode();
+  const [map, setMap] = useState<any>(null);
+  const [marker, setMarker] = useState<any>(null);
 
   useEffect(() => {
     if (!mapRef.current || typeof window === 'undefined') return;
@@ -42,17 +40,20 @@ const WebMap: React.FC<PropertyMapProps> = ({
           return;
         }
 
-        const map = L.map(mapRef.current!).setView([latitude, longitude], 13);
-        let marker: any = null;
+        const leafletMap = L.map(mapRef.current!).setView([latitude, longitude], 13);
+        let mapMarker: any = null;
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
+        }).addTo(leafletMap);
 
         // Add initial marker if coordinates are provided
         if (latitude && longitude) {
-          marker = L.marker([latitude, longitude]).addTo(map);
+          mapMarker = L.marker([latitude, longitude]).addTo(leafletMap);
         }
+
+        setMap(leafletMap);
+        setMarker(mapMarker);
 
         // Add search functionality if interactive
         if (interactive) {
@@ -114,8 +115,8 @@ const WebMap: React.FC<PropertyMapProps> = ({
 
           searchContainer.appendChild(searchInput);
           searchContainer.appendChild(searchResults);
-          map.getContainer().appendChild(searchContainer);
-          map.getContainer().appendChild(locationInfo);
+          leafletMap.getContainer().appendChild(searchContainer);
+          leafletMap.getContainer().appendChild(locationInfo);
 
           // Search input handler
           let searchTimeout: ReturnType<typeof setTimeout>;
@@ -123,64 +124,152 @@ const WebMap: React.FC<PropertyMapProps> = ({
             const query = (e.target as HTMLInputElement).value;
 
             clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
+            searchTimeout = setTimeout(async () => {
               if (query.length >= 3) {
-                search(query);
+                try {
+                  const response = await fetch(
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=10&addressdetails=1&extratags=1&namedetails=1&countrycodes=es,us,ca,mx,gb,fr,de,it,pt,nl,be,ch,at&exclude_place_ids=`
+                  );
+                  const data = await response.json();
+
+                  // Filter out businesses and focus on residential addresses
+                  const residentialResults = data.filter((result: any) => {
+                    // Include residential addresses, houses, apartments
+                    const type = result.type || '';
+                    const classType = result.class || '';
+                    const address = result.address || {};
+
+                    // Accept residential types
+                    const isResidential = type === 'house' ||
+                      type === 'residential' ||
+                      type === 'apartments' ||
+                      type === 'house_number' ||
+                      classType === 'place' ||
+                      classType === 'boundary';
+
+                    // Exclude business types
+                    const isBusiness = type === 'shop' ||
+                      type === 'amenity' ||
+                      type === 'office' ||
+                      type === 'commercial' ||
+                      type === 'restaurant' ||
+                      type === 'cafe' ||
+                      type === 'bar' ||
+                      type === 'hotel' ||
+                      type === 'bank' ||
+                      type === 'pharmacy' ||
+                      type === 'supermarket' ||
+                      type === 'fuel' ||
+                      type === 'industrial';
+
+                    // Check if it has a house number (more likely to be residential)
+                    const hasHouseNumber = address.house_number ||
+                      address.housenumber ||
+                      result.display_name.match(/\d+/);
+
+                    return isResidential && !isBusiness && hasHouseNumber;
+                  }).slice(0, 5); // Limit to 5 results after filtering
+
+                  searchResults.innerHTML = '';
+                  if (residentialResults.length > 0) {
+                    residentialResults.forEach((result: any) => {
+                      const div = document.createElement('div');
+                      div.style.cssText = `
+                        padding: 12px;
+                        border-bottom: 1px solid #eee;
+                        cursor: pointer;
+                      `;
+                      div.textContent = result.display_name;
+                      div.onclick = () => {
+                        selectLocation(result.lat, result.lon, result.display_name, result);
+                        searchResults.style.display = 'none';
+                        searchInput.value = result.display_name;
+                      };
+                      searchResults.appendChild(div);
+                    });
+                    searchResults.style.display = 'block';
+                  } else {
+                    searchResults.style.display = 'none';
+                  }
+                } catch (error) {
+                  console.error('Search error:', error);
+                }
+              } else {
+                searchResults.style.display = 'none';
               }
             }, 400);
           });
 
-          // Display search results from Redux state
-          if (locationSearchResults && locationSearchResults.length > 0) {
-            searchResults.innerHTML = '';
-            locationSearchResults.forEach((result: any) => {
-              const div = document.createElement('div');
-              div.style.cssText = `
-                padding: 12px;
-                border-bottom: 1px solid #eee;
-                cursor: pointer;
-              `;
-              div.textContent = result.display_name;
-              div.onclick = () => {
-                selectLocation(result.lat, result.lon, result.display_name);
-                searchResults.style.display = 'none';
-                searchInput.value = result.display_name;
-              };
-              searchResults.appendChild(div);
-            });
-            searchResults.style.display = 'block';
-          }
-
           // Map click handler
-          map.on('click', function (e: any) {
+          leafletMap.on('click', async function (e: any) {
             const lat = e.latlng.lat;
             const lng = e.latlng.lng;
 
-            // Use Redux reverse geocoding
-            reverseGeocode(lat, lng);
+            try {
+              const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
+              );
+              const data = await response.json();
+              const address = data.display_name || 'Unknown location';
+
+              // Pass detailed address information
+              const detailedAddress = {
+                display_name: data.display_name,
+                address: data.address || {},
+                lat: lat,
+                lon: lng
+              };
+
+              selectLocation(lat, lng, address, detailedAddress);
+            } catch (error) {
+              console.error('Reverse geocoding error:', error);
+              // Create a fallback address with coordinates
+              const fallbackAddress = `Location at ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+              selectLocation(lat, lng, fallbackAddress);
+            }
           });
 
-          function selectLocation(lat: number, lng: number, address: string) {
+          function selectLocation(lat: number, lng: number, address: string, detailedData?: any) {
+            console.log('PropertyMap selectLocation called:', { lat, lng, address, detailedData });
+
+            // Normalize coordinates
+            const normalizedLat = Math.max(-90, Math.min(90, lat));
+            const normalizedLng = ((lng + 180) % 360) - 180;
+
             // Update marker
-            if (marker) {
-              map.removeLayer(marker);
+            if (mapMarker) {
+              leafletMap.removeLayer(mapMarker);
             }
-            marker = L.marker([lat, lng]).addTo(map);
-            map.setView([lat, lng], 16);
+            mapMarker = L.marker([normalizedLat, normalizedLng]).addTo(leafletMap);
+            leafletMap.setView([normalizedLat, normalizedLng], 16);
 
             // Update location info
             locationInfo.textContent = address;
 
-            // Call the callback
+            // Call the callback with detailed data if available
             if (onLocationSelect) {
-              onLocationSelect(lat, lng, address);
+              if (detailedData) {
+                // Create a more detailed address string with structured data
+                const detailedAddress = {
+                  display_name: detailedData.display_name,
+                  street: detailedData.address?.road || '',
+                  city: detailedData.address?.city || detailedData.address?.town || detailedData.address?.village || '',
+                  state: detailedData.address?.state || detailedData.address?.province || '',
+                  country: detailedData.address?.country || '',
+                  postcode: detailedData.address?.postcode || '',
+                  house_number: detailedData.address?.house_number || '',
+                  lat: normalizedLat,
+                  lon: normalizedLng
+                };
+                console.log('Calling onLocationSelect with detailed data:', detailedAddress);
+                onLocationSelect(normalizedLat, normalizedLng, JSON.stringify(detailedAddress));
+              } else {
+                console.log('Calling onLocationSelect with simple address:', address);
+                onLocationSelect(normalizedLat, normalizedLng, address);
+              }
+            } else {
+              console.warn('onLocationSelect callback not provided');
             }
-          }
-
-          // Handle reverse geocoding result
-          if (reverseResult) {
-            const address = reverseResult.address || 'Unknown location';
-            selectLocation(reverseResult.latitude, reverseResult.longitude, address);
           }
 
           // Close search results when clicking outside
@@ -234,7 +323,22 @@ const WebMap: React.FC<PropertyMapProps> = ({
         setError('Failed to load map library');
         setLoading(false);
       });
-  }, [latitude, longitude, address, interactive, onLocationSelect, search, reverseGeocode, reverseResult, locationSearchResults]);
+  }, [latitude, longitude, address, interactive, onLocationSelect]);
+
+  // Update map when props change
+  useEffect(() => {
+    if (map && latitude && longitude) {
+      map.setView([latitude, longitude], 16);
+      if (marker) {
+        map.removeLayer(marker);
+      }
+      const L = (window as any).L;
+      if (L) {
+        const newMarker = L.marker([latitude, longitude]).addTo(map);
+        setMarker(newMarker);
+      }
+    }
+  }, [latitude, longitude, map]);
 
   if (error) {
     return (
@@ -411,18 +515,56 @@ const MobileMap: React.FC<PropertyMapProps> = (props) => {
               
               async function searchAddress(query) {
                 try {
-                  const response = await fetch(\`https://nominatim.openstreetmap.org/search?format=json&q=\${encodeURIComponent(query)}&limit=5\`);
+                  const response = await fetch(\`https://nominatim.openstreetmap.org/search?format=json&q=\${encodeURIComponent(query)}&limit=10&addressdetails=1&extratags=1&namedetails=1&countrycodes=es,us,ca,mx,gb,fr,de,it,pt,nl,be,ch,at&exclude_place_ids=\`);
                   const data = await response.json();
+                  
+                  // Filter out businesses and focus on residential addresses
+                  const residentialResults = data.filter(result => {
+                    // Include residential addresses, houses, apartments
+                    const type = result.type || '';
+                    const classType = result.class || '';
+                    const address = result.address || {};
+                    
+                    // Accept residential types
+                    const isResidential = type === 'house' || 
+                                        type === 'residential' || 
+                                        type === 'apartments' || 
+                                        type === 'house_number' ||
+                                        classType === 'place' ||
+                                        classType === 'boundary';
+                    
+                    // Exclude business types
+                    const isBusiness = type === 'shop' || 
+                                     type === 'amenity' || 
+                                     type === 'office' || 
+                                     type === 'commercial' ||
+                                     type === 'restaurant' ||
+                                     type === 'cafe' ||
+                                     type === 'bar' ||
+                                     type === 'hotel' ||
+                                     type === 'bank' ||
+                                     type === 'pharmacy' ||
+                                     type === 'supermarket' ||
+                                     type === 'fuel' ||
+                                     type === 'industrial';
+                    
+                    // Check if it has a house number (more likely to be residential)
+                    const hasHouseNumber = address.house_number || 
+                                         address.housenumber || 
+                                         result.display_name.match(/\\d+/);
+                    
+                    return isResidential && !isBusiness && hasHouseNumber;
+                  }).slice(0, 5); // Limit to 5 results after filtering
                   
                   searchResults.innerHTML = '';
                   
-                  if (data.length > 0) {
-                    data.forEach(result => {
+                  if (residentialResults.length > 0) {
+                    residentialResults.forEach(result => {
                       const div = document.createElement('div');
                       div.className = 'search-result';
                       div.textContent = result.display_name;
                       div.onclick = () => {
-                        selectLocation(result.lat, result.lon, result.display_name);
+                        selectLocation(result.lat, result.lon, result.display_name, result);
                         searchResults.style.display = 'none';
                         searchInput.value = result.display_name;
                       };
@@ -443,11 +585,11 @@ const MobileMap: React.FC<PropertyMapProps> = (props) => {
                 const lng = e.latlng.lng;
                 
                 // Reverse geocode to get address
-                fetch(\`https://nominatim.openstreetmap.org/reverse?format=json&lat=\${lat}&lon=\${lng}\`)
+                fetch(\`https://nominatim.openstreetmap.org/reverse?format=json&lat=\${lat}&lon=\${lng}&addressdetails=1\`)
                   .then(response => response.json())
                   .then(data => {
                     const address = data.display_name || 'Unknown location';
-                    selectLocation(lat, lng, address);
+                    selectLocation(lat, lng, address, data);
                   })
                   .catch(error => {
                     console.error('Reverse geocoding error:', error);
@@ -455,25 +597,43 @@ const MobileMap: React.FC<PropertyMapProps> = (props) => {
                   });
               });
               
-              function selectLocation(lat, lng, address) {
+              function selectLocation(lat, lng, address, detailedData) {
+                console.log('Mobile PropertyMap selectLocation called:', { lat, lng, address, detailedData });
+                
+                // Normalize coordinates
+                const normalizedLat = Math.max(-90, Math.min(90, lat));
+                const normalizedLng = ((lng + 180) % 360) - 180;
+                
                 // Update marker
                 if (marker) {
                   map.removeLayer(marker);
                 }
-                marker = L.marker([lat, lng]).addTo(map);
-                map.setView([lat, lng], 16);
+                marker = L.marker([normalizedLat, normalizedLng]).addTo(map);
+                map.setView([normalizedLat, normalizedLng], 16);
                 
                 // Update location info
                 locationInfo.textContent = address;
                 
-                // Send message to React Native
+                // Send message to React Native with detailed data
                 if (window.ReactNativeWebView) {
-                  window.ReactNativeWebView.postMessage(JSON.stringify({
+                  const messageData = {
                     type: 'locationSelected',
-                    latitude: lat,
-                    longitude: lng,
-                    address: address
-                  }));
+                    latitude: normalizedLat,
+                    longitude: normalizedLng,
+                    address: detailedData ? JSON.stringify({
+                      display_name: detailedData.display_name,
+                      street: detailedData.address?.road || '',
+                      city: detailedData.address?.city || detailedData.address?.town || detailedData.address?.village || '',
+                      state: detailedData.address?.state || detailedData.address?.province || '',
+                      country: detailedData.address?.country || '',
+                      postcode: detailedData.address?.postcode || '',
+                      house_number: detailedData.address?.house_number || '',
+                      lat: normalizedLat,
+                      lon: normalizedLng
+                    }) : address
+                  };
+                  console.log('Sending message to React Native:', messageData);
+                  window.ReactNativeWebView.postMessage(JSON.stringify(messageData));
                 }
               }
               

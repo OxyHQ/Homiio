@@ -57,19 +57,23 @@ class ProfileService {
    */
   async getOrCreatePrimaryProfile(oxyServices?: OxyServices, activeSessionId?: string): Promise<Profile | null> {
     try {
+      console.log('ProfileService: Fetching primary profile from /api/profiles/me');
       const response = await api.get(`${this.baseUrl}/me`, {
         oxyServices,
         activeSessionId,
       });
       const profile = response.data.data; // Can be null if not created
+      console.log('ProfileService: Successfully retrieved primary profile:', profile ? 'Profile exists' : 'No profile');
       return profile;
     } catch (error: any) {
       if (error instanceof ApiError && error.status === 404) {
+        console.log('ProfileService: 404 error, creating basic personal profile');
         // Create a basic personal profile if none exists
         const createResponse = await api.post(`${this.baseUrl}`, { isPersonalProfile: true }, {
           oxyServices,
           activeSessionId,
         });
+        console.log('ProfileService: Successfully created personal profile');
         return createResponse.data.data;
       }
       console.error('Error fetching primary profile:', error);

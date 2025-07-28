@@ -125,6 +125,8 @@ class ProfileController {
         );
       }
 
+      console.log(`ProfileController: Getting or creating active profile for user ${oxyUserId}`);
+
       // Check cache first
       let profile = this.getCachedProfile(oxyUserId, 'active');
       
@@ -133,15 +135,19 @@ class ProfileController {
         profile = await Profile.findActiveByOxyUserId(oxyUserId);
         
         if (!profile) {
+          console.log(`ProfileController: No active profile found for user ${oxyUserId}, checking for personal profile`);
+          
           // Check if there's a personal profile (even if not active)
           const personalProfile = await Profile.findOne({ oxyUserId, profileType: ProfileType.PERSONAL });
           
           if (personalProfile) {
+            console.log(`ProfileController: Found existing personal profile for user ${oxyUserId}, making it active`);
             // Make personal profile active but don't change active status
             personalProfile.isActive = true;
             await personalProfile.save();
             profile = personalProfile;
           } else {
+            console.log(`ProfileController: No personal profile found for user ${oxyUserId}, creating default personal profile`);
             // Create a default personal profile
             const defaultPersonalProfile = new Profile({
               oxyUserId,
@@ -176,8 +182,10 @@ class ProfileController {
             defaultPersonalProfile.calculateTrustScore();
             await defaultPersonalProfile.save();
             profile = defaultPersonalProfile;
+            console.log(`ProfileController: Successfully created default personal profile for user ${oxyUserId}`);
           }
         } else {
+          console.log(`ProfileController: Found existing active profile for user ${oxyUserId}`);
           // Always return full profile data unless explicitly requesting minimal
           const minimal = req.query.minimal === 'true';
           if (!minimal) {
@@ -187,6 +195,8 @@ class ProfileController {
         
         // Cache the result
         this.setCachedProfile(oxyUserId, profile, 'active');
+      } else {
+        console.log(`ProfileController: Retrieved cached profile for user ${oxyUserId}`);
       }
 
       res.json(

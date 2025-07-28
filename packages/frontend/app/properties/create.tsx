@@ -15,6 +15,7 @@ import { useCreateProperty } from '@/hooks/usePropertyQueries';
 import { BottomSheetContext } from '@/app/_layout';
 import { SearchablePickerBottomSheet } from '@/components/SearchablePickerBottomSheet';
 import { PropertyService } from '@/services/propertyService';
+import * as Location from 'expo-location';
 
 // Define the property types
 const PROPERTY_TYPES = [
@@ -33,7 +34,6 @@ const STEP_FLOWS: Record<string, string[]> = {
     'Location',
     'Pricing',
     'Amenities',
-    'Rules',
     'Media',
     'Preview',
   ],
@@ -42,7 +42,6 @@ const STEP_FLOWS: Record<string, string[]> = {
     'Location',
     'Pricing',
     'Amenities',
-    'Rules',
     'Media',
     'Preview',
   ],
@@ -88,8 +87,7 @@ const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
     'Basic Info': ['propertyType', 'bedrooms', 'bathrooms', 'squareFootage', 'floor', 'yearBuilt', 'description'],
     'Location': ['address', 'city', 'state', 'zipCode', 'country', 'latitude', 'longitude', 'availableFrom', 'leaseTerm'],
     'Pricing': ['monthlyRent', 'currency', 'securityDeposit', 'applicationFee', 'lateFee'],
-    'Amenities': ['amenities'],
-    'Rules': ['petsAllowed', 'smokingAllowed', 'partiesAllowed', 'guestsAllowed', 'maxGuests'],
+    'Amenities': ['amenities', 'petsAllowed', 'smokingAllowed', 'partiesAllowed', 'guestsAllowed', 'maxGuests'],
     'Media': ['images'],
     'Preview': [],
   },
@@ -98,8 +96,7 @@ const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
     'Basic Info': ['propertyType', 'bedrooms', 'bathrooms', 'squareFootage', 'floor', 'yearBuilt', 'description'],
     'Location': ['address', 'city', 'state', 'zipCode', 'country', 'latitude', 'longitude', 'availableFrom', 'leaseTerm'],
     'Pricing': ['monthlyRent', 'currency', 'securityDeposit', 'applicationFee', 'lateFee'],
-    'Amenities': ['amenities'],
-    'Rules': ['petsAllowed', 'smokingAllowed', 'partiesAllowed', 'guestsAllowed', 'maxGuests'],
+    'Amenities': ['amenities', 'petsAllowed', 'smokingAllowed', 'partiesAllowed', 'guestsAllowed', 'maxGuests'],
     'Media': ['images'],
     'Preview': [],
   },
@@ -165,6 +162,45 @@ export default function CreatePropertyScreen() {
   // Track previous propertyType to reset step if changed
   const prevPropertyTypeRef = React.useRef<string | undefined>(formData.basicInfo.propertyType);
 
+  // Get user's current location on component mount
+  React.useEffect(() => {
+    const getUserLocation = async () => {
+      try {
+        // Request location permissions
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('Location permission denied');
+          return;
+        }
+
+        // Get current position
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+
+        console.log('User location obtained:', {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude
+        });
+
+        // Update form with user's location
+        setFormData('location', {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+
+      } catch (error) {
+        console.error('Error getting user location:', error);
+      }
+    };
+
+    // Only get location if we're on the location step and don't have coordinates set
+    if (currentStep === 1 && (!formData.location.latitude || !formData.location.longitude ||
+      formData.location.latitude === 40.7128 && formData.location.longitude === -74.0060)) {
+      getUserLocation();
+    }
+  }, [currentStep, formData.location.latitude, formData.location.longitude, setFormData]);
+
   React.useEffect(() => {
     const type = formData.basicInfo.propertyType || 'apartment';
     setSteps(STEP_FLOWS[type] || STEP_FLOWS['other']);
@@ -207,7 +243,7 @@ export default function CreatePropertyScreen() {
         bedrooms: formData.basicInfo.bedrooms ? parseInt(formData.basicInfo.bedrooms.toString()) : undefined,
         bathrooms: formData.basicInfo.bathrooms ? parseFloat(formData.basicInfo.bathrooms.toString()) : undefined,
         squareFootage: formData.basicInfo.squareFootage ? parseInt(formData.basicInfo.squareFootage.toString()) : undefined,
-        floor: formData.basicInfo.floor ? parseInt(formData.basicInfo.floor.toString()) : undefined,
+        floor: formData.location.floor ? parseInt(formData.location.floor.toString()) : undefined,
         yearBuilt: formData.basicInfo.yearBuilt ? parseInt(formData.basicInfo.yearBuilt.toString()) : undefined,
         rent: {
           amount: formData.pricing.monthlyRent ? parseFloat(formData.pricing.monthlyRent.toString()) : 0,
@@ -263,6 +299,44 @@ export default function CreatePropertyScreen() {
       if (fieldsToShow.includes('bedrooms') && (formData.basicInfo.bedrooms === undefined || formData.basicInfo.bedrooms === null || Number.isNaN(formData.basicInfo.bedrooms))) errors.bedrooms = 'Number of bedrooms is required';
       if (fieldsToShow.includes('bathrooms') && (formData.basicInfo.bathrooms === undefined || formData.basicInfo.bathrooms === null || Number.isNaN(formData.basicInfo.bathrooms))) errors.bathrooms = 'Number of bathrooms is required';
       if (fieldsToShow.includes('squareFootage') && !formData.basicInfo.squareFootage) errors.squareFootage = 'Square footage is required';
+
+      // Additional validation for different property types
+      if (formData.basicInfo.propertyType === 'apartment') {
+        if (fieldsToShow.includes('bedrooms') && (formData.basicInfo.bedrooms === undefined || formData.basicInfo.bedrooms === null || formData.basicInfo.bedrooms < 1)) {
+          errors.bedrooms = 'Apartments must have at least 1 bedroom';
+        }
+        if (fieldsToShow.includes('bathrooms') && (formData.basicInfo.bathrooms === undefined || formData.basicInfo.bathrooms === null || formData.basicInfo.bathrooms < 1)) {
+          errors.bathrooms = 'Apartments must have at least 1 bathroom';
+        }
+      } else if (formData.basicInfo.propertyType === 'house') {
+        if (fieldsToShow.includes('bedrooms') && (formData.basicInfo.bedrooms === undefined || formData.basicInfo.bedrooms === null || formData.basicInfo.bedrooms < 0)) {
+          errors.bedrooms = 'Houses can have 0 or more bedrooms';
+        }
+        if (fieldsToShow.includes('bathrooms') && (formData.basicInfo.bathrooms === undefined || formData.basicInfo.bathrooms === null || formData.basicInfo.bathrooms < 1)) {
+          errors.bathrooms = 'Houses must have at least 1 bathroom';
+        }
+      } else if (formData.basicInfo.propertyType === 'studio') {
+        if (fieldsToShow.includes('bedrooms') && (formData.basicInfo.bedrooms === undefined || formData.basicInfo.bedrooms === null || formData.basicInfo.bedrooms < 0)) {
+          errors.bedrooms = 'Studios can have 0 or more bedrooms';
+        }
+        if (fieldsToShow.includes('bathrooms') && (formData.basicInfo.bathrooms === undefined || formData.basicInfo.bathrooms === null || formData.basicInfo.bathrooms < 1)) {
+          errors.bathrooms = 'Studios must have at least 1 bathroom';
+        }
+      } else if (formData.basicInfo.propertyType === 'room') {
+        if (fieldsToShow.includes('bedrooms') && (formData.basicInfo.bedrooms === undefined || formData.basicInfo.bedrooms === null || formData.basicInfo.bedrooms < 1)) {
+          errors.bedrooms = 'Rooms must have at least 1 bedroom';
+        }
+        if (fieldsToShow.includes('bathrooms') && (formData.basicInfo.bathrooms === undefined || formData.basicInfo.bathrooms === null || formData.basicInfo.bathrooms < 0)) {
+          errors.bathrooms = 'Rooms can have 0 or more bathrooms (shared or private)';
+        }
+      } else if (formData.basicInfo.propertyType === 'duplex' || formData.basicInfo.propertyType === 'penthouse') {
+        if (fieldsToShow.includes('bedrooms') && (formData.basicInfo.bedrooms === undefined || formData.basicInfo.bedrooms === null || formData.basicInfo.bedrooms < 1)) {
+          errors.bedrooms = `${formData.basicInfo.propertyType.charAt(0).toUpperCase() + formData.basicInfo.propertyType.slice(1)}s must have at least 1 bedroom`;
+        }
+        if (fieldsToShow.includes('bathrooms') && (formData.basicInfo.bathrooms === undefined || formData.basicInfo.bathrooms === null || formData.basicInfo.bathrooms < 1)) {
+          errors.bathrooms = `${formData.basicInfo.propertyType.charAt(0).toUpperCase() + formData.basicInfo.propertyType.slice(1)}s must have at least 1 bathroom`;
+        }
+      }
     } else if (stepName === 'Location') {
       if (fieldsToShow.includes('address') && !formData.location.address) errors.address = 'Address is required';
       if (fieldsToShow.includes('city') && !formData.location.city) errors.city = 'City is required';
@@ -272,6 +346,11 @@ export default function CreatePropertyScreen() {
       if (fieldsToShow.includes('longitude') && !formData.location.longitude) errors.coordinates = 'Please select a location on the map';
     } else if (stepName === 'Pricing') {
       if (fieldsToShow.includes('monthlyRent') && !formData.pricing.monthlyRent) errors.monthlyRent = 'Monthly rent is required';
+    } else if (stepName === 'Amenities') {
+      // Validation for amenities and rules combined
+      if (fieldsToShow.includes('maxGuests') && formData.rules.maxGuests !== undefined && formData.rules.maxGuests < 1) {
+        errors.maxGuests = 'Maximum guests must be at least 1';
+      }
     }
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
@@ -284,22 +363,133 @@ export default function CreatePropertyScreen() {
     }
   };
 
-  // Handle location selection from map
-  const handleLocationSelect = (lat: number, lng: number, address: string) => {
-    // Parse address components
-    const addressParts = address.split(',').map(part => part.trim());
-    const zipCodeMatch = address.match(/\b\d{5}(?:-\d{4})?\b/);
-    const zipCode = zipCodeMatch ? zipCodeMatch[0] : '';
+  // Handle showAddressNumber toggle
+  const handleShowAddressNumberToggle = (show: boolean) => {
+    const currentLocation = formData.location;
 
-    // Update location data
+    // Update the showAddressNumber setting only
     setFormData('location', {
-      address: addressParts[0] || '',
-      city: addressParts[1] || '',
-      state: addressParts[2] || '',
-      zipCode,
-      latitude: lat,
-      longitude: lng,
+      ...currentLocation,
+      showAddressNumber: show,
     });
+  };
+
+  // Handle showFloor toggle
+  const handleShowFloorToggle = (show: boolean) => {
+    const currentLocation = formData.location;
+
+    // Update the showFloor setting
+    setFormData('location', {
+      ...currentLocation,
+      showFloor: show,
+    });
+  };
+
+  // Handle location selection from map
+  const handleLocationSelect = async (lat: number, lng: number, address: string) => {
+    console.log('Location selected:', { lat, lng, address });
+
+    // Normalize coordinates to valid ranges
+    const normalizedLat = Math.max(-90, Math.min(90, lat));
+    const normalizedLng = ((lng + 180) % 360) - 180; // Normalize longitude to -180 to 180
+
+    console.log('Normalized coordinates:', { normalizedLat, normalizedLng });
+
+    // Check if address is a JSON string with detailed data from Nominatim API
+    if (address.startsWith('{') && address.endsWith('}')) {
+      try {
+        const detailedData = JSON.parse(address);
+        console.log('Parsed detailed data from API:', detailedData);
+
+        // Get the current privacy settings
+        const showAddressNumber = formData.location.showAddressNumber ?? true;
+        const showFloor = formData.location.showFloor ?? true;
+
+        // Always keep address as street name only, handle number and floor separately
+        const streetName = detailedData.street || '';
+        const addressNumber = detailedData.house_number || '';
+        const floor = detailedData.floor || undefined;
+
+        // Use the structured address data directly from the API
+        setFormData('location', {
+          address: streetName,
+          addressLine2: formData.location.addressLine2 || '',
+          addressNumber: addressNumber,
+          floor: floor,
+          city: detailedData.city || '',
+          state: detailedData.state || '',
+          zipCode: detailedData.postcode || '',
+          country: detailedData.country || 'Spain',
+          latitude: normalizedLat,
+          longitude: normalizedLng,
+          showAddressNumber: showAddressNumber,
+          showFloor: showFloor,
+        });
+        console.log('Updated form with API data (showAddressNumber:', showAddressNumber, ')');
+        return;
+      } catch (error) {
+        console.error('Failed to parse detailed address data:', error);
+        // Fall back to reverse geocoding
+      }
+    }
+
+    // If we don't have detailed data, perform reverse geocoding to get it
+    try {
+      console.log('Performing reverse geocoding to get detailed address data...');
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${normalizedLat}&lon=${normalizedLng}&addressdetails=1`
+      );
+      const data = await response.json();
+
+      console.log('Reverse geocoding result:', data);
+
+      if (data.address) {
+        // Get the current privacy settings
+        const showAddressNumber = formData.location.showAddressNumber ?? true;
+        const showFloor = formData.location.showFloor ?? true;
+
+        // Always keep address as street name only, handle number and floor separately
+        const streetName = data.address.road || '';
+        const addressNumber = data.address.house_number || '';
+        const floor = data.address.floor || undefined;
+
+        // Use the structured address data from reverse geocoding
+        setFormData('location', {
+          address: streetName,
+          addressLine2: formData.location.addressLine2 || '',
+          addressNumber: addressNumber,
+          floor: floor,
+          city: data.address.city || data.address.town || data.address.village || '',
+          state: data.address.state || data.address.province || '',
+          zipCode: data.address.postcode || '',
+          country: data.address.country || 'Spain',
+          latitude: normalizedLat,
+          longitude: normalizedLng,
+          showAddressNumber: showAddressNumber,
+          showFloor: showFloor,
+        });
+        console.log('Updated form with reverse geocoded data (showAddressNumber:', showAddressNumber, ')');
+        return;
+      }
+    } catch (error) {
+      console.error('Reverse geocoding failed:', error);
+    }
+
+    // Last resort: use the simple address string
+    console.log('Using simple address string as fallback:', address);
+    setFormData('location', {
+      address: address,
+      addressLine2: formData.location.addressLine2 || '',
+      addressNumber: formData.location.addressNumber || '',
+      city: formData.location.city || '',
+      state: formData.location.state || '',
+      zipCode: formData.location.zipCode || '',
+      country: formData.location.country || 'Spain',
+      latitude: normalizedLat,
+      longitude: normalizedLng,
+      showAddressNumber: formData.location.showAddressNumber ?? true,
+    });
+    console.log('Updated form with fallback data');
   };
 
   // Handle amenity selection
@@ -315,8 +505,13 @@ export default function CreatePropertyScreen() {
   const bottomSheet = React.useContext(BottomSheetContext);
 
   // Predefined options
-  const COUNTRY_OPTIONS = ['US', 'Canada', 'Mexico', 'Other'];
-  const STATE_OPTIONS = ['CA', 'NY', 'TX', 'FL', 'IL', 'Other'];
+  const COUNTRY_OPTIONS = ['Spain', 'United States', 'Canada', 'Mexico', 'United Kingdom', 'France', 'Germany', 'Italy', 'Portugal', 'Netherlands', 'Belgium', 'Switzerland', 'Austria', 'Other'];
+  const STATE_OPTIONS = [
+    // Spanish provinces
+    'Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Zaragoza', 'Málaga', 'Murcia', 'Palma', 'Las Palmas', 'Bilbao', 'Alicante', 'Córdoba', 'Valladolid', 'Vigo', 'Gijón', 'L\'Hospitalet de Llobregat', 'A Coruña', 'Vitoria-Gasteiz', 'Granada', 'Elche', 'Tarrasa', 'Badalona', 'Oviedo', 'Cartagena', 'Jerez de la Frontera', 'Sabadell', 'Móstoles', 'Alcalá de Henares', 'Pamplona', 'Fuenlabrada', 'Almería', 'Leganés', 'San Sebastián', 'Santander', 'Castellón de la Plana', 'Burgos', 'Albacete', 'Alcorcón', 'Getafe', 'Salamanca', 'Logroño', 'Huelva', 'Marbella', 'Lleida', 'Tarragona', 'León', 'Cádiz', 'Jaén', 'Girona', 'Lugo', 'Cáceres', 'Toledo', 'Ceuta', 'Melilla',
+    // US states
+    'CA', 'NY', 'TX', 'FL', 'IL', 'Other'
+  ];
 
   // Render step content based on current step name
   const renderStepContent = () => {
@@ -402,18 +597,7 @@ export default function CreatePropertyScreen() {
                   {validationErrors.squareFootage && <ThemedText style={styles.errorText}>{validationErrors.squareFootage}</ThemedText>}
                 </View>
               )}
-              {fieldsToShow.includes('floor') && (
-                <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
-                  <ThemedText style={styles.label}>Floor (optional)</ThemedText>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.basicInfo.floor?.toString() || ''}
-                    onChangeText={(text) => updateFormField('basicInfo', 'floor', parseInt(text) || undefined)}
-                    keyboardType="numeric"
-                    placeholder="0"
-                  />
-                </View>
-              )}
+
             </View>
             {fieldsToShow.includes('yearBuilt') && (
               <View style={styles.formGroup}>
@@ -451,6 +635,12 @@ export default function CreatePropertyScreen() {
           <View style={styles.formSection}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>Location</ThemedText>
 
+            <View style={styles.formGroup}>
+              <ThemedText style={[styles.errorText, { fontSize: 14, color: colors.COLOR_BLACK_LIGHT_4, marginBottom: 16, lineHeight: 20 }]}>
+                📍 Please fill in the complete address details including exact number and floor. You can toggle privacy settings to control whether this detailed information is shown publicly.
+              </ThemedText>
+            </View>
+
             <View style={styles.mapContainer}>
               <PropertyMap
                 latitude={formData.location.latitude}
@@ -464,30 +654,114 @@ export default function CreatePropertyScreen() {
             </View>
 
             <View style={styles.formGroup}>
+              <ThemedText style={styles.label}>Country or Region</ThemedText>
+              <TouchableOpacity
+                style={[styles.input, { justifyContent: 'center' }]}
+                onPress={() => bottomSheet.open(
+                  <SearchablePickerBottomSheet
+                    options={COUNTRY_OPTIONS}
+                    selected={formData.location.country || ''}
+                    onSelect={(value) => updateFormField('location', 'country', value)}
+                    title="Country or Region"
+                    onClose={() => { }}
+                  />
+                )}
+              >
+                <ThemedText style={{ color: formData.location.country ? colors.primaryDark : colors.COLOR_BLACK_LIGHT_4 }}>
+                  {formData.location.country || 'Select country or region'}
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.formGroup}>
               <ThemedText style={styles.label}>Address</ThemedText>
               <TextInput
                 style={[styles.input, validationErrors.address && styles.inputError]}
                 value={formData.location.address}
                 onChangeText={(text) => updateFormField('location', 'address', text)}
-                placeholder="Street address"
+                placeholder="Street name"
               />
               {validationErrors.address && <ThemedText style={styles.errorText}>{validationErrors.address}</ThemedText>}
             </View>
 
+            <View style={styles.formGroup}>
+              <ThemedText style={styles.label}>Address line 2 (optional)</ThemedText>
+              <TextInput
+                style={styles.input}
+                value={formData.location.addressLine2 || ''}
+                onChangeText={(text) => updateFormField('location', 'addressLine2', text)}
+                placeholder="Apartment, suite, etc. (optional)"
+              />
+            </View>
+
             <View style={styles.formRow}>
               <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
-                <ThemedText style={styles.label}>City</ThemedText>
+                <ThemedText style={styles.label}>Address Number</ThemedText>
+                <View style={styles.addressNumberContainer}>
+                  <TextInput
+                    style={[styles.input, { flex: 1, marginRight: 8 }]}
+                    value={formData.location.addressNumber || ''}
+                    onChangeText={(text) => updateFormField('location', 'addressNumber', text)}
+                    placeholder="Number"
+                    keyboardType="numeric"
+                  />
+                  <TouchableOpacity
+                    style={[styles.toggleButton, formData.location.showAddressNumber && styles.toggleButtonActive]}
+                    onPress={() => handleShowAddressNumberToggle(!formData.location.showAddressNumber)}
+                  >
+                    <ThemedText style={[styles.toggleButtonText, formData.location.showAddressNumber && styles.toggleButtonTextActive]}>
+                      {formData.location.showAddressNumber ? 'Hide' : 'Show'}
+                    </ThemedText>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
+                <ThemedText style={styles.label}>Floor</ThemedText>
+                <View style={styles.addressNumberContainer}>
+                  <TextInput
+                    style={[styles.input, { flex: 1, marginRight: 8 }]}
+                    value={formData.location.floor?.toString() || ''}
+                    onChangeText={(text) => updateFormField('location', 'floor', parseInt(text) || undefined)}
+                    placeholder="Floor"
+                    keyboardType="numeric"
+                  />
+                  <TouchableOpacity
+                    style={[styles.toggleButton, formData.location.showFloor && styles.toggleButtonActive]}
+                    onPress={() => handleShowFloorToggle(!formData.location.showFloor)}
+                  >
+                    <ThemedText style={[styles.toggleButtonText, formData.location.showFloor && styles.toggleButtonTextActive]}>
+                      {formData.location.showFloor ? 'Hide' : 'Show'}
+                    </ThemedText>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            {/* Privacy message - show when either number or floor is hidden */}
+            {(formData.location.addressNumber && !formData.location.showAddressNumber) ||
+              (formData.location.floor && !formData.location.showFloor) ? (
+              <View style={styles.formGroup}>
+                <ThemedText style={[styles.errorText, { fontSize: 12, color: colors.COLOR_BLACK_LIGHT_4, marginTop: 4 }]}>
+                  ℹ️ Approximate address shown for privacy
+                </ThemedText>
+              </View>
+            ) : null}
+
+            <View style={styles.formRow}>
+              <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
+                <ThemedText style={styles.label}>City/District</ThemedText>
                 <TextInput
                   style={[styles.input, validationErrors.city && styles.inputError]}
                   value={formData.location.city}
                   onChangeText={(text) => updateFormField('location', 'city', text)}
-                  placeholder="City"
+                  placeholder="City or district"
                 />
                 {validationErrors.city && <ThemedText style={styles.errorText}>{validationErrors.city}</ThemedText>}
               </View>
 
               <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
-                <ThemedText style={styles.label}>State</ThemedText>
+                <ThemedText style={styles.label}>State/Province/Region</ThemedText>
                 <TouchableOpacity
                   style={[styles.input, { justifyContent: 'center' }]}
                   onPress={() => bottomSheet.open(
@@ -495,50 +769,29 @@ export default function CreatePropertyScreen() {
                       options={STATE_OPTIONS}
                       selected={formData.location.state || ''}
                       onSelect={(value) => updateFormField('location', 'state', value)}
-                      title="State"
+                      title="State/Province/Region"
                       onClose={() => { }}
                     />
                   )}
                 >
                   <ThemedText style={{ color: formData.location.state ? colors.primaryDark : colors.COLOR_BLACK_LIGHT_4 }}>
-                    {formData.location.state || 'Select state'}
+                    {formData.location.state || 'Select state/province/region'}
                   </ThemedText>
                 </TouchableOpacity>
                 {validationErrors.state && <ThemedText style={styles.errorText}>{validationErrors.state}</ThemedText>}
               </View>
             </View>
 
-            <View style={styles.formRow}>
-              <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
-                <ThemedText style={styles.label}>ZIP Code</ThemedText>
-                <TextInput
-                  style={[styles.input, validationErrors.zipCode && styles.inputError]}
-                  value={formData.location.zipCode}
-                  onChangeText={(text) => updateFormField('location', 'zipCode', text)}
-                  placeholder="ZIP Code"
-                />
-                {validationErrors.zipCode && <ThemedText style={styles.errorText}>{validationErrors.zipCode}</ThemedText>}
-              </View>
-
-              <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
-                <ThemedText style={styles.label}>Country</ThemedText>
-                <TouchableOpacity
-                  style={[styles.input, { justifyContent: 'center' }]}
-                  onPress={() => bottomSheet.open(
-                    <SearchablePickerBottomSheet
-                      options={COUNTRY_OPTIONS}
-                      selected={formData.location.country || ''}
-                      onSelect={(value) => updateFormField('location', 'country', value)}
-                      title="Country"
-                      onClose={() => { }}
-                    />
-                  )}
-                >
-                  <ThemedText style={{ color: formData.location.country ? colors.primaryDark : colors.COLOR_BLACK_LIGHT_4 }}>
-                    {formData.location.country || 'Select country'}
-                  </ThemedText>
-                </TouchableOpacity>
-              </View>
+            <View style={styles.formGroup}>
+              <ThemedText style={styles.label}>ZIP/Postal Code</ThemedText>
+              <TextInput
+                style={[styles.input, validationErrors.zipCode && styles.inputError]}
+                value={formData.location.zipCode}
+                onChangeText={(text) => updateFormField('location', 'zipCode', text)}
+                placeholder="ZIP or postal code"
+                keyboardType="numeric"
+              />
+              {validationErrors.zipCode && <ThemedText style={styles.errorText}>{validationErrors.zipCode}</ThemedText>}
             </View>
 
             <View style={styles.formRow}>
@@ -548,33 +801,18 @@ export default function CreatePropertyScreen() {
                   style={styles.input}
                   value={formData.location.availableFrom}
                   onChangeText={(text) => updateFormField('location', 'availableFrom', text)}
-                  placeholder="MM/DD/YYYY"
+                  placeholder="Available from date"
                 />
               </View>
 
               <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
                 <ThemedText style={styles.label}>Lease Term</ThemedText>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {['3 months', '6 months', '12 months', 'Month-to-month', 'Flexible'].map((term) => (
-                    <TouchableOpacity
-                      key={term}
-                      style={[
-                        styles.propertyTypeButton,
-                        formData.location.leaseTerm === term && styles.propertyTypeButtonSelected
-                      ]}
-                      onPress={() => updateFormField('location', 'leaseTerm', term)}
-                    >
-                      <ThemedText
-                        style={[
-                          styles.propertyTypeText,
-                          formData.location.leaseTerm === term && styles.propertyTypeTextSelected
-                        ]}
-                      >
-                        {term}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                <TextInput
+                  style={styles.input}
+                  value={formData.location.leaseTerm}
+                  onChangeText={(text) => updateFormField('location', 'leaseTerm', text)}
+                  placeholder="Lease term"
+                />
               </View>
             </View>
           </View>
@@ -662,7 +900,7 @@ export default function CreatePropertyScreen() {
       case 'Amenities':
         return (
           <View style={styles.formSection}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>Amenities</ThemedText>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>Amenities & Rules</ThemedText>
 
             <AmenitiesSelector
               selectedAmenities={formData.amenities.selectedAmenities || []}
@@ -670,6 +908,93 @@ export default function CreatePropertyScreen() {
               propertyType={formData.basicInfo.propertyType}
               style={styles.amenitiesSelector}
             />
+
+            {/* Rules Section */}
+            <View style={styles.formSection}>
+              <ThemedText type="subtitle" style={[styles.sectionTitle, { marginTop: 24, marginBottom: 16 }]}>House Rules</ThemedText>
+
+              <View style={styles.toggleContainer}>
+                <ThemedText style={styles.label}>Pets Allowed</ThemedText>
+                <TouchableOpacity
+                  style={[styles.toggleButton, formData.rules?.petsAllowed ? styles.toggleButtonActive : {}]}
+                  onPress={() => updateFormField('rules', 'petsAllowed', !formData.rules?.petsAllowed)}
+                >
+                  <IconComponent
+                    name={formData.rules?.petsAllowed ? 'checkmark-circle' : 'close-circle'}
+                    size={24}
+                    color={formData.rules?.petsAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                  />
+                  <ThemedText style={styles.toggleText}>
+                    {formData.rules?.petsAllowed ? 'Yes' : 'No'}
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.toggleContainer}>
+                <ThemedText style={styles.label}>Smoking Allowed</ThemedText>
+                <TouchableOpacity
+                  style={[styles.toggleButton, formData.rules?.smokingAllowed ? styles.toggleButtonActive : {}]}
+                  onPress={() => updateFormField('rules', 'smokingAllowed', !formData.rules?.smokingAllowed)}
+                >
+                  <IconComponent
+                    name={formData.rules?.smokingAllowed ? 'checkmark-circle' : 'close-circle'}
+                    size={24}
+                    color={formData.rules?.smokingAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                  />
+                  <ThemedText style={styles.toggleText}>
+                    {formData.rules?.smokingAllowed ? 'Yes' : 'No'}
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.toggleContainer}>
+                <ThemedText style={styles.label}>Parties Allowed</ThemedText>
+                <TouchableOpacity
+                  style={[styles.toggleButton, formData.rules?.partiesAllowed ? styles.toggleButtonActive : {}]}
+                  onPress={() => updateFormField('rules', 'partiesAllowed', !formData.rules?.partiesAllowed)}
+                >
+                  <IconComponent
+                    name={formData.rules?.partiesAllowed ? 'checkmark-circle' : 'close-circle'}
+                    size={24}
+                    color={formData.rules?.partiesAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                  />
+                  <ThemedText style={styles.toggleText}>
+                    {formData.rules?.partiesAllowed ? 'Yes' : 'No'}
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.toggleContainer}>
+                <ThemedText style={styles.label}>Guests Allowed</ThemedText>
+                <TouchableOpacity
+                  style={[styles.toggleButton, formData.rules?.guestsAllowed ? styles.toggleButtonActive : {}]}
+                  onPress={() => updateFormField('rules', 'guestsAllowed', !formData.rules?.guestsAllowed)}
+                >
+                  <IconComponent
+                    name={formData.rules?.guestsAllowed ? 'checkmark-circle' : 'close-circle'}
+                    size={24}
+                    color={formData.rules?.guestsAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                  />
+                  <ThemedText style={styles.toggleText}>
+                    {formData.rules?.guestsAllowed ? 'Yes' : 'No'}
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
+
+              {formData.rules?.guestsAllowed && (
+                <View style={styles.formGroup}>
+                  <ThemedText style={styles.label}>Maximum Number of Guests</ThemedText>
+                  <TextInput
+                    style={[styles.input, validationErrors.maxGuests && styles.inputError]}
+                    value={formData.rules.maxGuests?.toString() || ''}
+                    onChangeText={(text) => updateFormField('rules', 'maxGuests', parseInt(text) || undefined)}
+                    placeholder="e.g., 2"
+                    keyboardType="numeric"
+                  />
+                  {validationErrors.maxGuests && <ThemedText style={styles.errorText}>{validationErrors.maxGuests}</ThemedText>}
+                </View>
+              )}
+            </View>
           </View>
         );
 
@@ -753,91 +1078,7 @@ export default function CreatePropertyScreen() {
           </View>
         );
 
-      case 'Rules':
-        return (
-          <View style={styles.formSection}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>Rules</ThemedText>
 
-            <View style={styles.toggleContainer}>
-              <ThemedText style={styles.label}>Pets Allowed</ThemedText>
-              <TouchableOpacity
-                style={[styles.toggleButton, formData.rules.petsAllowed ? styles.toggleButtonActive : {}]}
-                onPress={() => updateFormField('rules', 'petsAllowed', !formData.rules.petsAllowed)}
-              >
-                <IconComponent
-                  name={formData.rules.petsAllowed ? 'checkmark-circle' : 'close-circle'}
-                  size={24}
-                  color={formData.rules.petsAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
-                />
-                <ThemedText style={styles.toggleText}>
-                  {formData.rules.petsAllowed ? 'Yes' : 'No'}
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.toggleContainer}>
-              <ThemedText style={styles.label}>Smoking Allowed</ThemedText>
-              <TouchableOpacity
-                style={[styles.toggleButton, formData.rules.smokingAllowed ? styles.toggleButtonActive : {}]}
-                onPress={() => updateFormField('rules', 'smokingAllowed', !formData.rules.smokingAllowed)}
-              >
-                <IconComponent
-                  name={formData.rules.smokingAllowed ? 'checkmark-circle' : 'close-circle'}
-                  size={24}
-                  color={formData.rules.smokingAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
-                />
-                <ThemedText style={styles.toggleText}>
-                  {formData.rules.smokingAllowed ? 'Yes' : 'No'}
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.toggleContainer}>
-              <ThemedText style={styles.label}>Parties Allowed</ThemedText>
-              <TouchableOpacity
-                style={[styles.toggleButton, formData.rules.partiesAllowed ? styles.toggleButtonActive : {}]}
-                onPress={() => updateFormField('rules', 'partiesAllowed', !formData.rules.partiesAllowed)}
-              >
-                <IconComponent
-                  name={formData.rules.partiesAllowed ? 'checkmark-circle' : 'close-circle'}
-                  size={24}
-                  color={formData.rules.partiesAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
-                />
-                <ThemedText style={styles.toggleText}>
-                  {formData.rules.partiesAllowed ? 'Yes' : 'No'}
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.toggleContainer}>
-              <ThemedText style={styles.label}>Guests Allowed</ThemedText>
-              <TouchableOpacity
-                style={[styles.toggleButton, formData.rules.guestsAllowed ? styles.toggleButtonActive : {}]}
-                onPress={() => updateFormField('rules', 'guestsAllowed', !formData.rules.guestsAllowed)}
-              >
-                <IconComponent
-                  name={formData.rules.guestsAllowed ? 'checkmark-circle' : 'close-circle'}
-                  size={24}
-                  color={formData.rules.guestsAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
-                />
-                <ThemedText style={styles.toggleText}>
-                  {formData.rules.guestsAllowed ? 'Yes' : 'No'}
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.formGroup}>
-              <ThemedText style={styles.label}>Maximum Guests</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={formData.rules.maxGuests?.toString() || ''}
-                onChangeText={(text) => updateFormField('rules', 'maxGuests', parseInt(text) || 0)}
-                keyboardType="numeric"
-                placeholder="0"
-              />
-            </View>
-          </View>
-        );
 
       case 'Media':
         return (
@@ -846,7 +1087,7 @@ export default function CreatePropertyScreen() {
 
             <View style={styles.mediaUploadContainer}>
               <TouchableOpacity style={styles.uploadButton}>
-                <IconComponent name="cloud-upload-outline" size={32} color={colors.primaryColor} />
+                <IconComponent name="cloud-upload-outline" size={32} color={colors.primaryLight} />
                 <ThemedText style={styles.uploadText}>Upload Images</ThemedText>
               </TouchableOpacity>
 
@@ -870,7 +1111,6 @@ export default function CreatePropertyScreen() {
         return (
           <View style={styles.formSection}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>Preview</ThemedText>
-
             <PropertyPreviewWidget />
 
             <View style={styles.submitContainer}>
@@ -898,8 +1138,32 @@ export default function CreatePropertyScreen() {
         );
 
       default:
-        return null;
+        return (
+          <View style={styles.formSection}>
+            <ThemedText>Unknown step: {stepName}</ThemedText>
+          </View>
+        );
     }
+  };
+
+  // Debug section for development
+  const renderDebugInfo = () => {
+    if (!__DEV__) return null;
+
+    return (
+      <View style={styles.debugContainer}>
+        <ThemedText type="subtitle" style={styles.debugTitle}>Debug Info</ThemedText>
+        <ThemedText style={styles.debugText}>
+          Current Step: {currentStep} ({steps[currentStep]})
+        </ThemedText>
+        <ThemedText style={styles.debugText}>
+          Location Data: {JSON.stringify(formData.location, null, 2)}
+        </ThemedText>
+        <ThemedText style={styles.debugText}>
+          Validation Errors: {JSON.stringify(validationErrors, null, 2)}
+        </ThemedText>
+      </View>
+    );
   };
 
   return (
@@ -948,7 +1212,10 @@ export default function CreatePropertyScreen() {
         </View>
 
         {/* Form content */}
-        {renderStepContent()}
+        <View style={styles.formContainer}>
+          {renderStepContent()}
+          {renderDebugInfo()}
+        </View>
 
         {/* Navigation buttons */}
         <View style={styles.navigationContainer}>
@@ -1138,37 +1405,56 @@ const styles = StyleSheet.create({
     borderColor: colors.COLOR_BLACK_LIGHT_6,
   },
   toggleButtonActive: {
-    backgroundColor: colors.primaryLight_2,
+    backgroundColor: colors.primaryLight,
     borderColor: colors.primaryColor,
   },
   toggleText: {
     marginLeft: 8,
     fontSize: 14,
   },
-  mediaUploadContainer: {
-    alignItems: 'center',
-    marginBottom: 16,
+  toggleButtonText: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK_LIGHT_3,
   },
-  uploadButton: {
+  toggleButtonTextActive: {
+    color: colors.primaryColor,
+    fontWeight: 'bold',
+  },
+  addressNumberContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: colors.COLOR_BLACK_LIGHT_9,
     borderWidth: 1,
     borderColor: colors.COLOR_BLACK_LIGHT_6,
     borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  mediaUploadContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.COLOR_BLACK_LIGHT_6,
     borderStyle: 'dashed',
+    borderRadius: 12,
     padding: 24,
-    width: '100%',
-    marginBottom: 16,
+    marginVertical: 16,
+  },
+  uploadButton: {
+    backgroundColor: colors.primaryColor,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 12,
   },
   uploadText: {
-    marginTop: 8,
-    color: colors.primaryColor,
-    fontWeight: 'bold',
+    color: colors.primaryLight,
+    fontSize: 16,
+    fontWeight: '600',
   },
   helperText: {
     fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_4,
+    color: colors.COLOR_BLACK_LIGHT_3,
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -1227,5 +1513,30 @@ const styles = StyleSheet.create({
     marginRight: 8,
     color: 'white',
     fontWeight: 'bold',
+  },
+  debugContainer: {
+    backgroundColor: colors.COLOR_BLACK_LIGHT_9,
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 24,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  debugTitle: {
+    marginBottom: 12,
+    color: colors.primaryDark,
+  },
+  debugText: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK_LIGHT_3,
+    marginBottom: 8,
+  },
+  formContainer: {
+    // This style is used to contain the form content and debug info
+    // It's not directly applied to the form content or debug info,
+    // but it helps in organizing the layout.
   },
 });

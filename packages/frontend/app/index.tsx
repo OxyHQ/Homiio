@@ -575,18 +575,20 @@ export default function HomePage() {
         </View>
 
         {/* Featured Properties */}
-        <HomeCarouselSection
-          title={t("home.featured.title")}
-          items={featuredProperties}
-          loading={propertiesLoading}
-          renderItem={(property) => (
-            <PropertyCard
-              property={property}
-              variant="featured"
-              onPress={() => router.push(`/properties/${property._id || property.id}`)}
-            />
-          )}
-        />
+        {featuredProperties.length > 0 && (
+          <HomeCarouselSection
+            title={t("home.featured.title")}
+            items={featuredProperties}
+            loading={propertiesLoading}
+            renderItem={(property) => (
+              <PropertyCard
+                property={property}
+                variant="featured"
+                onPress={() => router.push(`/properties/${property._id || property.id}`)}
+              />
+            )}
+          />
+        )}
 
         {/* Recently Viewed Properties */}
         {recentlyViewedProperties && recentlyViewedProperties.length > 0 && (
@@ -640,47 +642,49 @@ export default function HomePage() {
         ))}
 
         {/* Top Cities (Carousel) */}
-        <HomeCarouselSection
-          title={t('home.cities.title')}
-          items={topCities}
-          loading={citiesLoading}
-          minItemsToShow={1}
-          renderItem={(city, index) => (
-            <TouchableOpacity
-              key={city.id}
-              style={styles.cityCard}
-              onPress={() => router.push(`/properties/city/${city.id}`)}
-              activeOpacity={0.85}
-            >
-              <LinearGradient
-                colors={[colors.primaryColor, colors.secondaryLight]}
-                style={styles.cityImagePlaceholder}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+        {topCities.length > 0 && (
+          <HomeCarouselSection
+            title={t('home.cities.title')}
+            items={topCities}
+            loading={citiesLoading}
+            minItemsToShow={1}
+            renderItem={(city, index) => (
+              <TouchableOpacity
+                key={city.id}
+                style={styles.cityCard}
+                onPress={() => router.push(`/properties/city/${city.id}`)}
+                activeOpacity={0.85}
               >
-                {/* Subtle overlay for better text readability */}
-                <View style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: 'rgba(0, 0, 0, 0.15)',
-                  borderRadius: 25,
-                }} />
-                {/* City Info at bottom */}
-                <View style={{ width: '100%' }}>
-                  <ThemedText style={styles.cityName}>{city.name}</ThemedText>
-                  {(city.state || city.country) && (
-                    <ThemedText style={styles.cityLocation}>
-                      {[city.state, city.country].filter(Boolean).join(', ')}
-                    </ThemedText>
-                  )}
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          )}
-        />
+                <LinearGradient
+                  colors={[colors.primaryColor, colors.secondaryLight]}
+                  style={styles.cityImagePlaceholder}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  {/* Subtle overlay for better text readability */}
+                  <View style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.15)',
+                    borderRadius: 25,
+                  }} />
+                  {/* City Info at bottom */}
+                  <View style={{ width: '100%' }}>
+                    <ThemedText style={styles.cityName}>{city.name}</ThemedText>
+                    {(city.state || city.country) && (
+                      <ThemedText style={styles.cityLocation}>
+                        {[city.state, city.country].filter(Boolean).join(', ')}
+                      </ThemedText>
+                    )}
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
+          />
+        )}
 
         {/* Stats Section */}
         <View style={styles.statsSection}>

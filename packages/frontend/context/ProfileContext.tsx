@@ -29,16 +29,21 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         const loadProfiles = async () => {
             try {
-                await useProfileStore.getState().fetchPrimaryProfile(oxyServices, activeSessionId);
-                await useProfileStore.getState().fetchUserProfiles(oxyServices, activeSessionId);
+                console.log('ProfileContext: Loading profiles for authenticated user');
+                await useProfileStore.getState().fetchPrimaryProfile(oxyServices, activeSessionId || undefined);
+                await useProfileStore.getState().fetchUserProfiles(oxyServices, activeSessionId || undefined);
+                console.log('ProfileContext: Profiles loaded successfully');
             } catch (err: any) {
+                console.error('ProfileContext: Error loading profiles:', err);
                 setError(err.message || 'Failed to load profiles');
             }
         };
 
         if (oxyServices && activeSessionId) {
+            console.log('ProfileContext: User authenticated, loading profiles...');
             loadProfiles();
         } else {
+            console.log('ProfileContext: User not authenticated, clearing profiles');
             setPrimaryProfile(null);
             setAllProfiles([]);
         }
@@ -48,8 +53,8 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
     const refetch = () => {
         if (oxyServices && activeSessionId) {
-            useProfileStore.getState().fetchPrimaryProfile(oxyServices, activeSessionId);
-            useProfileStore.getState().fetchUserProfiles(oxyServices, activeSessionId);
+            useProfileStore.getState().fetchPrimaryProfile(oxyServices, activeSessionId || undefined);
+            useProfileStore.getState().fetchUserProfiles(oxyServices, activeSessionId || undefined);
         }
     };
 

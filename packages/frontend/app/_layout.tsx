@@ -177,6 +177,8 @@ export default function RootLayout() {
   // --- Auth Handlers ---
   const handleAuthenticated = useCallback((user: any) => {
     console.log('User authenticated:', user);
+    // The ProfileProvider will automatically handle profile creation
+    // when oxyServices and activeSessionId become available
   }, []);
 
   // --- App Initialization ---
@@ -221,36 +223,45 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <OxyProvider
-          oxyServices={oxyServices}
-          initialScreen="SignIn"
-          autoPresent={false}
-          onClose={() => console.log('Sheet closed')}
-          onAuthenticated={handleAuthenticated}
-          onAuthStateChange={user => console.log('Auth state changed:', user?.username || 'logged out')}
-          storageKeyPrefix="oxy_example"
-          theme="light"
-        >
-          <BottomSheetProvider>
-            <I18nextProvider i18n={i18n}>
-              <MenuProvider>
-                <ErrorBoundary>
-                  <View style={styles.container}>
-                    <SideBar />
-                    <View style={styles.mainContentWrapper}>
-                      <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0 }} />
-                      <Slot />
-                    </View>
-                    <RightBar />
-                  </View>
-                  <StatusBar style="auto" />
-                  <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
-                  {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
-                </ErrorBoundary>
-              </MenuProvider>
-            </I18nextProvider>
-          </BottomSheetProvider>
-        </OxyProvider>
+        {!appIsReady ? (
+          <WebSplashScreen
+            startFade={splashState.startFade}
+            onFadeComplete={handleSplashFadeComplete}
+          />
+        ) : (
+          <OxyProvider
+            oxyServices={oxyServices}
+            initialScreen="SignIn"
+            autoPresent={false}
+            onClose={() => console.log('Sheet closed')}
+            onAuthenticated={handleAuthenticated}
+            onAuthStateChange={user => console.log('Auth state changed:', user?.username || 'logged out')}
+            storageKeyPrefix="oxy_example"
+            theme="light"
+          >
+            <ProfileProvider>
+              <BottomSheetProvider>
+                <I18nextProvider i18n={i18n}>
+                  <MenuProvider>
+                    <ErrorBoundary>
+                      <View style={styles.container}>
+                        <SideBar />
+                        <View style={styles.mainContentWrapper}>
+                          <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0 }} />
+                          <Slot />
+                        </View>
+                        <RightBar />
+                      </View>
+                      <StatusBar style="auto" />
+                      <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
+                      {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
+                    </ErrorBoundary>
+                  </MenuProvider>
+                </I18nextProvider>
+              </BottomSheetProvider>
+            </ProfileProvider>
+          </OxyProvider>
+        )}
       </GestureHandlerRootView>
     </SafeAreaProvider >
   );

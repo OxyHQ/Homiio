@@ -12,12 +12,9 @@ import { requestLogger, errorLogger } from './middlewares/logging';
 import { notFound, errorHandler } from './middlewares/errorHandler';
 import database from './database/connection';
 import publicRoutes from './routes/public';
-
 import { OxyServices } from '@oxyhq/services/core';
 
-const oxy = new OxyServices({
-  baseURL: process.env.OXY_API_URL || 'https://api.oxy.so'
-});
+const oxy = new OxyServices({ baseURL: 'https://localhost:3001' });
 
 // Initialize database connection
 async function initializeDatabase() {
@@ -128,21 +125,6 @@ if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
   app.use(ensureDatabaseConnection);
 }
 
-// Use OxyHQServices middleware for authentication
-const authenticateToken = oxy.createAuthenticateTokenMiddleware({
-  loadFullUser: true,
-  onError: (error) => {
-  console.error('Auth error:', error);
-  let status = 403;
-  let message = 'Unknown error';
-  if (error && typeof error === 'object') {
-    if ('status' in error && typeof error.status === 'number') status = error.status;
-    if ('message' in error && typeof error.message === 'string') message = error.message;
-  }
-  return { statusCode: status, message };
-}
-});
-
 app.use((req, res, next) => {
   console.log('Authorization header:', req.headers.authorization);
   next();
@@ -184,7 +166,7 @@ app.get('/health', async (req, res) => {
 app.use('/api', publicRoutes());
 
 // Mount authenticated API routes
-app.use('/api', authenticateToken, routes());
+app.use('/api', oxy.auth(), routes());
 
 // Temporary test route without authentication to verify route mounting
 app.get('/api/test-routes', (req, res) => {

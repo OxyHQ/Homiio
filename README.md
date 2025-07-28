@@ -124,6 +124,29 @@ For detailed deployment instructions, see [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOY
 
 ### Shared Types (`packages/shared-types`)
 - Common TypeScript interfaces and types
+
+## 🔐 Authentication & Profile Management
+
+### Automatic Profile Creation
+When a user signs in or signs up with Oxy, the system automatically creates a personal profile for them if one doesn't already exist. This happens transparently in the background:
+
+1. **Frontend**: The `ProfileProvider` component automatically loads profiles when a user authenticates
+2. **Backend**: The `getOrCreateActiveProfile` endpoint automatically creates a default personal profile if none exists
+3. **Default Profile**: Includes basic settings, trust score initialization, and privacy preferences
+
+### Profile Types
+- **Personal**: Default profile type for individual users
+- **Agency**: For property management agencies
+- **Business**: For business entities
+- **Cooperative**: For housing cooperatives
+
+### Trust Score System
+Each personal profile includes an automatic trust score calculation based on:
+- Profile completion
+- Verification status
+- Rental history
+- References
+- Common TypeScript interfaces and types
 - Shared between frontend and backend
 - Ensures type consistency across the application
 - **Status**: ✅ **IMPLEMENTED** - 50+ shared types covering Property, Profile, City, Lease, and Address domains
