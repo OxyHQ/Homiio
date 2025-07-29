@@ -1,7 +1,8 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors } from '@/styles/colors';
 import { withTranslation } from 'react-i18next';
+import { ThemedText } from './ThemedText';
 
 interface Props {
     children: ReactNode;
@@ -40,15 +41,15 @@ class ErrorBoundaryBase extends Component<Props, State> {
 
             return (
                 <View style={styles.container}>
-                    <Text style={styles.title}>{this.props.t("error.boundary.title")}</Text>
-                    <Text style={styles.message}>
+                    <ThemedText style={styles.title}>{this.props.t("error.boundary.title")}</ThemedText>
+                    <ThemedText style={styles.message}>
                         {this.props.t("error.boundary.message")}
-                    </Text>
+                    </ThemedText>
                     <TouchableOpacity
                         style={styles.retryButton}
                         onPress={this.handleRetry}
                     >
-                        <Text style={styles.retryText}>{this.props.t("error.boundary.retry")}</Text>
+                        <ThemedText style={styles.retryText}>{this.props.t("error.boundary.retry")}</ThemedText>
                     </TouchableOpacity>
                 </View>
             );

@@ -812,5 +812,12 @@
             "oldest": "Oldest First",
             "alphabetical": "Alphabetical"
         }
+    },
+    "property": {
+        "loading": "Loading property details...",
+        "error": "Error",
+        "notFound": "Property not found",
+        "bed": "Bed",
+        "bath": "Bath"
     }
 }

@@ -1,5 +1,5 @@
 import { generatePropertyTitle } from './propertyTitleGenerator';
-import { Property } from '@homiio/shared-types';
+import { Property, PropertyImage } from '@homiio/shared-types';
 import propertyPlaceholder from '@/assets/images/property_placeholder.jpg';
 
 /**
@@ -28,22 +28,44 @@ export function getPropertyDisplayTitle(property: Property): string {
 /**
  * Get the image source for a property, falling back to placeholder if no image is available
  * This function can be used directly in Image source prop
- * @param property - Property object or images array
+ * @param property - Property object or images array (string[] or PropertyImage[])
  * @returns The property image source (string URL or imported image)
  */
-export function getPropertyImageSource(property: Property | string[] | undefined): any {
+export function getPropertyImageSource(property: Property | string[] | PropertyImage[] | undefined): any {
   if (!property) {
     return propertyPlaceholder;
   }
   
   // If property is an array of images
   if (Array.isArray(property)) {
-    return property[0] ? { uri: property[0] } : propertyPlaceholder;
+    if (property.length === 0) {
+      return propertyPlaceholder;
+    }
+    
+    const firstImage = property[0];
+    // Handle PropertyImage objects
+    if (typeof firstImage === 'object' && firstImage !== null && 'url' in firstImage) {
+      return { uri: (firstImage as PropertyImage).url };
+    }
+    // Handle string URLs
+    if (typeof firstImage === 'string') {
+      return { uri: firstImage };
+    }
+    
+    return propertyPlaceholder;
   }
   
   // If property is a Property object
   if (property.images && property.images.length > 0) {
-    return { uri: property.images[0] };
+    const firstImage = property.images[0];
+    // Handle PropertyImage objects
+    if (typeof firstImage === 'object' && firstImage !== null && 'url' in firstImage) {
+      return { uri: (firstImage as PropertyImage).url };
+    }
+    // Handle string URLs
+    if (typeof firstImage === 'string') {
+      return { uri: firstImage };
+    }
   }
   
   return propertyPlaceholder;

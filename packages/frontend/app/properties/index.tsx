@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, RefreshControl, Text, TouchableOpacity, Platform, Animated, Dimensions } from 'react-native';
+import { View, StyleSheet, RefreshControl, TouchableOpacity, Platform, Animated, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSavedProperties } from '@/hooks/useSavedProperties';
 import { useOxy } from '@oxyhq/services';
 import { useFavorites } from '@/hooks/useFavorites';
+import { ThemedText } from '@/components/ThemedText';
 
 const screenWidth = Dimensions.get('window').width;
 const isMobile = screenWidth < 600;
@@ -118,7 +119,7 @@ export default function PropertiesScreen() {
     const renderErrorState = () => (
         <View style={styles.errorState}>
             <IconComponent name="alert-circle" size={48} color={colors.COLOR_BLACK_LIGHT_4} />
-            <Text style={styles.errorTitle}>{error}</Text>
+            <ThemedText style={styles.errorTitle}>{error}</ThemedText>
             <Button onPress={() => loadProperties()}>
                 Try Again
             </Button>
@@ -128,8 +129,8 @@ export default function PropertiesScreen() {
     const renderEmptyState = () => (
         <View style={styles.emptyState}>
             <IconComponent name="home-outline" size={48} color={colors.COLOR_BLACK_LIGHT_4} />
-            <Text style={styles.emptyTitle}>No properties found</Text>
-            <Text style={styles.emptyDescription}>Try adjusting your search criteria</Text>
+            <ThemedText style={styles.emptyTitle}>No properties found</ThemedText>
+            <ThemedText style={styles.emptyDescription}>Try adjusting your search criteria</ThemedText>
         </View>
     );
 
@@ -153,7 +154,7 @@ export default function PropertiesScreen() {
             )}
             {!loading && allProperties.length > 0 && (
                 <View style={styles.resultCountBar}>
-                    <Text style={styles.resultCountText}>{t('Results')}: {allProperties.length}</Text>
+                    <ThemedText style={styles.resultCountText}>{t('Results')}: {allProperties.length}</ThemedText>
                 </View>
             )}
             {loading && !allProperties.length ? (

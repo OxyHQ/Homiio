@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, ViewStyle, Dimensions } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Image, StyleSheet, TouchableOpacity, ViewStyle, Dimensions } from 'react-native';
 import { colors } from '@/styles/colors';
 import { IconButton } from './IconButton';
 import { Property, PropertyType, PriceUnit } from '@homiio/shared-types';
@@ -63,22 +62,8 @@ type PropertyCardProps = {
 
 const { width: screenWidth } = Dimensions.get('window');
 const CARD_MAX_WIDTH = 350;
-const CARD_WIDTH = Math.min(screenWidth * 0.95, CARD_MAX_WIDTH);
 
-const getPropertyTypeIcon = (type: PropertyType) => {
-    switch (type) {
-        case PropertyType.APARTMENT:
-            return 'business-outline';
-        case PropertyType.HOUSE:
-            return 'home-outline';
-        case PropertyType.COLIVING:
-            return 'people-outline';
-        case PropertyType.OTHER:
-            return 'leaf-outline';
-        default:
-            return 'home-outline';
-    }
-};
+
 
 const getVariantStyles = (variant: PropertyCardVariant) => {
     switch (variant) {
@@ -191,7 +176,6 @@ export function PropertyCard({
 
     // Get variant-specific styles
     const variantStyles = getVariantStyles(variant);
-    const finalImageHeight = imageHeight || variantStyles.imageHeight;
     const finalTitleLines = useMemo(() => {
         if (titleLines !== undefined) return titleLines;
 
@@ -215,7 +199,6 @@ export function PropertyCard({
         }
     }, [variant]);
     const shouldShowFeatures = showFeatures && variantStyles.showFeatures;
-    const shouldShowTypeIcon = showTypeIcon && variantStyles.showTypeIcon;
     const shouldShowRating = showRating && variantStyles.showRating;
 
     const handleFavoritePress = () => {
@@ -258,9 +241,9 @@ export function PropertyCard({
                 {/* Rating - moved to top-left */}
                 {shouldShowRating && propertyData.rating && (
                     <View style={styles.ratingBadge}>
-                        <Text style={styles.ratingBadgeText}>
+                        <ThemedText style={styles.ratingBadgeText}>
                             {propertyData.rating.toFixed(1)}
-                        </Text>
+                        </ThemedText>
                         <IconButton
                             style={{ width: 10, height: 10 }}
                             name="star"
