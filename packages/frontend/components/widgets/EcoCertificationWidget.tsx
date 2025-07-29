@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
+import { ThemedText } from '@/components';
 
 export function EcoCertificationWidget() {
     const { t } = useTranslation();
@@ -18,7 +19,7 @@ export function EcoCertificationWidget() {
                     Properties with this badge meet our sustainability standards
                 </Text>
                 <TouchableOpacity style={styles.learnMoreButton}>
-                    <Text style={styles.learnMoreText}>Learn More</Text>
+                    <ThemedText style={styles.learnMoreText}>Learn More</ThemedText>
                 </TouchableOpacity>
             </View>
         </BaseWidget>
@@ -43,6 +44,7 @@ const styles = StyleSheet.create({
     },
     learnMoreText: {
         color: 'green',
-        fontWeight: '600',
+        fontWeight: 'bold',
+        fontFamily: 'Phudu',
     },
 }); 

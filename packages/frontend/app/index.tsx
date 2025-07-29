@@ -1,12 +1,10 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, TextInput, TouchableOpacity, RefreshControl, FlatList, Platform, type NativeSyntheticEvent, type NativeScrollEvent } from 'react-native';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { phuduFontWeights } from '@/styles/fonts';
 import { Ionicons } from '@expo/vector-icons';
-import { Search } from '@/assets/icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSEO } from '@/hooks/useDocumentTitle';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,8 +12,7 @@ import * as Location from 'expo-location';
 
 // Import real data hooks
 import { useProperties } from '@/hooks';
-import { useOxy } from '@oxyhq/services';
-import { useDebouncedAddressSearch } from '@/hooks/useAddressSearch';
+// import { useOxy } from '@oxyhq/services'; // Removed unused import
 import { cityService } from '@/services/cityService';
 import { tipsService, TipArticle } from '@/services/tipsService';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
@@ -33,10 +30,7 @@ export default function HomePage() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestionsFocused, setSuggestionsFocused] = useState(false);
   const [cities, setCities] = useState<any[]>([]);
   const [citiesLoading, setCitiesLoading] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
@@ -57,7 +51,7 @@ export default function HomePage() {
         if (status !== 'granted') return;
         let location = await Location.getCurrentPositionAsync({});
         setUserLocation({ latitude: location.coords.latitude, longitude: location.coords.longitude });
-      } catch (e) {
+      } catch {
         // Permission denied or error
       }
     })();
@@ -109,19 +103,20 @@ export default function HomePage() {
     });
   }, [nearbyCities]);
 
-  // Use the reusable address search hook
-  const {
-    suggestions: addressSuggestions,
-    loading: isLoadingAddresses,
-    debouncedSearch: fetchAddressSuggestions
-  } = useDebouncedAddressSearch({
-    minQueryLength: 3,
-    debounceDelay: 500,
-    maxResults: 5,
-    includeAddressDetails: true
-  });
+  // Use the reusable address search hook - removed for simplified search
+  // const {
+  //   suggestions: addressSuggestions,
+  //   loading: isLoadingAddresses,
+  //   debouncedSearch: fetchAddressSuggestions
+  // } = useDebouncedAddressSearch({
+  //   minQueryLength: 3,
+  //   debounceDelay: 500,
+  //   maxResults: 5,
+  //   includeAddressDetails: true
+  // });
 
-  const { oxyServices, activeSessionId } = useOxy();
+  // Remove unused oxyServices and activeSessionId
+  // const { oxyServices, activeSessionId } = useOxy();
 
   // Set enhanced SEO for home page
   useSEO({
@@ -231,115 +226,16 @@ export default function HomePage() {
       }));
   }, [cities]);
 
-  // Generate suggestions data
-  const suggestionsData = useMemo(() => {
-    const suggestions = [];
+  // Generate suggestions data - removed for simplified search
+  // const suggestionsData = useMemo(() => {
+  //   // Removed suggestions logic
+  //   return [];
+  // }, []);
 
-    // Address suggestions (when user is typing)
-    if (searchQuery.trim() && addressSuggestions.length > 0) {
-      suggestions.push({
-        type: 'addresses',
-        title: t('search.addressSuggestions') || 'Address Suggestions',
-        items: addressSuggestions.map(suggestion => ({
-          text: suggestion.text,
-          icon: suggestion.icon,
-          action: () => {
-            setSearchQuery(suggestion.text);
-            router.push(`/search/address/${encodeURIComponent(suggestion.text)}`);
-          }
-        }))
-      });
-    }
-
-    // Property types
-    suggestions.push({
-      type: 'propertyTypes',
-      title: t('search.propertyTypes'),
-      items: propertyTypes.slice(0, 4).map(type => ({
-        text: type.name,
-        icon: type.icon,
-        action: () => router.push(`/properties/type/${type.id}`)
-      }))
-    });
-
-    // Top cities (location-based)
-    if (topCities.length > 0) {
-      suggestions.push({
-        type: 'cities',
-        title: t('search.popularCities'),
-        items: topCities.map(city => ({
-          text: city.name,
-          icon: 'location-outline',
-          action: () => router.push(`/properties/city/${city.id}`)
-        }))
-      });
-    }
-
-    // Common neighborhoods/areas (if available)
-    const commonAreas = [
-      { text: t('search.areas.downtown'), icon: 'business-outline' },
-      { text: t('search.areas.universityDistrict'), icon: 'school-outline' },
-      { text: t('search.areas.businessDistrict'), icon: 'briefcase-outline' },
-      { text: t('search.areas.residentialArea'), icon: 'home-outline' }
-    ];
-
-    suggestions.push({
-      type: 'areas',
-      title: t('search.popularAreas') || 'Popular Areas',
-      items: commonAreas
-    });
-
-    // Quick filters
-    suggestions.push({
-      type: 'quickFilters',
-      title: t('search.quickFilters'),
-      items: [
-        { text: t('search.Furnished'), icon: 'bed-outline', filter: 'furnished' },
-        { text: t('search.Pets Allowed'), icon: 'paw-outline', filter: 'pets' },
-        { text: t('search.Eco-friendly'), icon: 'leaf-outline', filter: 'eco' },
-        { text: t('search.Co-living'), icon: 'people-outline', filter: 'coliving' }
-      ]
-    });
-
-    return suggestions;
-  }, [searchQuery, addressSuggestions, propertyTypes, topCities, t, router]);
-
-  const handleSearch = useCallback(() => {
-    if (searchQuery.trim()) {
-      setShowSuggestions(false);
-      // Search by address/location
-      router.push(`/search/address/${encodeURIComponent(searchQuery)}`);
-    }
-  }, [searchQuery, router]);
-
-  const handleSuggestionPress = useCallback((suggestion: any) => {
-    if (suggestion.action) {
-      suggestion.action();
-    } else if (suggestion.filter) {
-      // For filters, search by the filter term
-      router.push(`/search/filter/${encodeURIComponent(suggestion.text)}`);
-    } else {
-      // For location-based suggestions, search by address
-      setSearchQuery(suggestion.text);
-      router.push(`/search/address/${encodeURIComponent(suggestion.text)}`);
-    }
-    setShowSuggestions(false);
+  const handleSearchPress = useCallback(() => {
+    // Navigate to search screen
+    router.push('/search');
   }, [router]);
-
-  const handleSearchFocus = useCallback(() => {
-    setShowSuggestions(true);
-    setSuggestionsFocused(true);
-  }, []);
-
-  const handleSearchBlur = useCallback(() => {
-    // Delay hiding suggestions to allow for touch events
-    setTimeout(() => {
-      setSuggestionsFocused(false);
-      if (!suggestionsFocused) {
-        setShowSuggestions(false);
-      }
-    }, 200);
-  }, [suggestionsFocused]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -422,7 +318,7 @@ export default function HomePage() {
     <View style={{ flex: 1 }}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{ paddingTop: insets.top }}
+        contentContainerStyle={{ paddingBottom: 20 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -431,8 +327,9 @@ export default function HomePage() {
         {/* Hero Section */}
         <LinearGradient
           // Background Linear Gradient
-          colors={[colors.primaryColor, colors.secondaryLight]}
-          style={styles.heroSection}
+          colors={[colors.primaryColor, colors.secondaryLight, colors.primaryLight]}
+          locations={[0, 0.8, 1]}
+          style={[styles.heroSection, { paddingTop: insets.top + 50 }]}
         >
           <View style={styles.heroContent}>
             <ThemedText style={styles.heroTitle}>{t("home.hero.title")}</ThemedText>
@@ -441,68 +338,18 @@ export default function HomePage() {
             </ThemedText>
 
             <View style={styles.searchContainer}>
-              <View style={styles.searchBar}>
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder={t("home.hero.searchPlaceholder") || "Search by address, city, or neighborhood..."}
-                  value={searchQuery}
-                  onChangeText={(text) => {
-                    setSearchQuery(text);
-                    fetchAddressSuggestions(text);
-                  }}
-                  onSubmitEditing={handleSearch}
-                  onFocus={handleSearchFocus}
-                  onBlur={handleSearchBlur}
-                />
-                <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+              <TouchableOpacity style={styles.searchBar} onPress={handleSearchPress} activeOpacity={0.8}>
+                <View style={styles.searchInput}>
+                  <ThemedText style={styles.searchPlaceholderText}>
+                    {t("home.hero.searchPlaceholder") || "Search by address, city, or neighborhood..."}
+                  </ThemedText>
+                </View>
+                <View style={styles.searchButton}>
                   <IconComponent name="search" size={20} color={colors.COLOR_BLACK} />
-                </TouchableOpacity>
-              </View>
+                </View>
+              </TouchableOpacity>
             </View>
 
-            {/* Search Suggestions Dropdown */}
-            {showSuggestions && (
-              <View style={styles.suggestionsContainer}>
-                {isLoadingAddresses && searchQuery.trim() && (
-                  <View style={styles.suggestionSection}>
-                    <View style={styles.suggestionItems}>
-                      <View style={styles.suggestionItem}>
-                        <LoadingSpinner size={16} />
-                        <ThemedText style={styles.suggestionText}>{t('search.searchingAddresses')}</ThemedText>
-                      </View>
-                    </View>
-                  </View>
-                )}
-                <FlatList
-                  data={suggestionsData}
-                  keyExtractor={(item, index) => `${item.type}-${index}`}
-                  renderItem={({ item: section }) => (
-                    <View style={styles.suggestionSection}>
-                      <ThemedText style={styles.suggestionSectionTitle}>{section.title}</ThemedText>
-                      <View style={styles.suggestionItems}>
-                        {section.items.map((suggestion, index) => (
-                          <TouchableOpacity
-                            key={`${section.type}-${index}`}
-                            style={styles.suggestionItem}
-                            onPress={() => handleSuggestionPress(suggestion)}
-                            activeOpacity={0.7}
-                          >
-                            <IconComponent
-                              name={suggestion.icon}
-                              size={16}
-                              color={colors.COLOR_BLACK_LIGHT_4}
-                            />
-                            <ThemedText style={styles.suggestionText}>{suggestion.text}</ThemedText>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    </View>
-                  )}
-                  style={styles.suggestionsList}
-                  showsVerticalScrollIndicator={false}
-                />
-              </View>
-            )}
           </View>
         </LinearGradient>
 
@@ -575,7 +422,7 @@ export default function HomePage() {
         </View>
 
         {/* Featured Properties */}
-        {featuredProperties.length > 0 && (
+        {featuredProperties.length > 0 ? (
           <HomeCarouselSection
             title={t("home.featured.title")}
             items={featuredProperties}
@@ -588,10 +435,10 @@ export default function HomePage() {
               />
             )}
           />
-        )}
+        ) : null}
 
         {/* Recently Viewed Properties */}
-        {recentlyViewedProperties && recentlyViewedProperties.length > 0 && (
+        {recentlyViewedProperties && recentlyViewedProperties.length > 0 ? (
           <HomeCarouselSection
             title={t('home.recentlyViewed.title') || 'Recently Viewed'}
             items={recentlyViewedProperties}
@@ -604,10 +451,10 @@ export default function HomePage() {
               />
             )}
           />
-        )}
+        ) : null}
 
         {/* Saved Properties */}
-        {savedProperties && savedProperties.length > 0 && (
+        {savedProperties && savedProperties.length > 0 ? (
           <HomeCarouselSection
             title={t('home.saved.title') || 'Saved Properties'}
             items={savedProperties}
@@ -620,15 +467,18 @@ export default function HomePage() {
               />
             )}
           />
-        )}
+        ) : null}
 
         {/* Nearby Cities Sections */}
-        {nearbyCities.map((city, idx) => (
-          nearbyProperties[city._id || city.id] && nearbyProperties[city._id || city.id].length > 0 && (
+        {nearbyCities.map((city, idx) => {
+          const cityProperties = nearbyProperties[city._id || city.id];
+          if (!cityProperties || cityProperties.length === 0) return null;
+          
+          return (
             <HomeCarouselSection
               key={city._id || city.id}
               title={t('home.nearby.title', { city: city.name }) || `Properties in ${city.name}`}
-              items={nearbyProperties[city._id || city.id]}
+              items={cityProperties}
               loading={nearbyLoading}
               renderItem={(property) => (
                 <PropertyCard
@@ -638,11 +488,11 @@ export default function HomePage() {
                 />
               )}
             />
-          )
-        ))}
+          );
+        })}
 
         {/* Top Cities (Carousel) */}
-        {topCities.length > 0 && (
+        {topCities.length > 0 ? (
           <HomeCarouselSection
             title={t('home.cities.title')}
             items={topCities}
@@ -684,7 +534,7 @@ export default function HomePage() {
               </TouchableOpacity>
             )}
           />
-        )}
+        ) : null}
 
         {/* Stats Section */}
         <View style={styles.statsSection}>
@@ -922,24 +772,15 @@ const styles = StyleSheet.create({
   },
   heroSection: {
     ...Platform.select({
-      web: { height: 300 },
+      web: { minHeight: 300 },
       default: {},
     }),
     backgroundColor: colors.primaryColor,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: Platform.select({
-      web: 0,
-      ios: 20,
-      android: 20,
-    }),
-    borderRadius: 35,
-    marginHorizontal: 16,
+    paddingVertical: 20,
     marginBottom: 8,
-    marginTop: 16,
-    borderColor: colors.COLOR_BLACK,
-    borderWidth: 1,
     position: 'relative',
     zIndex: 1000,
   },
@@ -980,17 +821,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'white',
     borderRadius: 30,
+    padding: 8,
     paddingLeft: 20,
-    paddingTop: 8,
-    paddingBottom: 8,
-    paddingRight: 8,
     height: 52,
     marginRight: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   searchInput: {
     flex: 1,
     marginLeft: 10,
     fontSize: 16,
+    justifyContent: 'center',
+  },
+  searchPlaceholderText: {
+    fontSize: 16,
+    color: '#999',
   },
   searchButton: {
     backgroundColor: colors.secondaryColor,

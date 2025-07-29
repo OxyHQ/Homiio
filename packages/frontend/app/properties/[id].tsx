@@ -61,6 +61,13 @@ export default function PropertyDetailPage() {
     const router = useRouter();
     const { id } = useLocalSearchParams();
     const { oxyServices, activeSessionId } = useOxy();
+    
+    // Safe translation helper to prevent undefined/empty string issues
+    const safeT = (key: string, fallback?: string) => {
+        const translated = t(key);
+        return translated || fallback || key;
+    };
+    
     const { property: apiProperty, loading: isLoading, error, loadProperty } = useProperty(id as string);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const hasViewedRef = useRef(false);
@@ -357,14 +364,14 @@ export default function PropertyDetailPage() {
                 <Header
                     options={{
                         showBackButton: true,
-                        title: t("Loading..."),
+                        title: t("Loading...") || "Loading...",
                         titlePosition: 'center',
                     }}
                 />
                 <SafeAreaView style={styles.contentArea} edges={['top']}>
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color={colors.primaryColor} />
-                        <ThemedText style={styles.loadingText}>{t("property.loading")}</ThemedText>
+                        <ThemedText style={styles.loadingText}>{t("property.loading") || "Loading property..."}</ThemedText>
                     </View>
                 </SafeAreaView>
             </View>
@@ -377,18 +384,18 @@ export default function PropertyDetailPage() {
                 <Header
                     options={{
                         showBackButton: true,
-                        title: t("property.error"),
+                        title: t("property.error") || "Error",
                         titlePosition: 'center',
                     }}
                 />
                 <SafeAreaView style={styles.contentArea} edges={['top']}>
                     <View style={styles.errorContainer}>
-                        <ThemedText style={styles.errorText}>{t("property.notFound")}</ThemedText>
+                        <ThemedText style={styles.errorText}>{t("property.notFound") || "Property not found"}</ThemedText>
                         <Button
                             onPress={() => router.back()}
                             style={styles.goBackButton}
                         >
-                            {t("goBack")}
+                            {t("goBack") || "Go Back"}
                         </Button>
                     </View>
                 </SafeAreaView>
@@ -450,10 +457,10 @@ export default function PropertyDetailPage() {
                     </View>
                     <View style={styles.headerStats}>
                         <View style={styles.headerStat}>
-                            <ThemedText style={styles.headerStatText}>{property.bedrooms} {t(Platform.OS === 'web' ? "property.bed" : "Bed")}</ThemedText>
+                            <ThemedText style={styles.headerStatText}>{property.bedrooms} {t(Platform.OS === 'web' ? "property.bed" : "Bed") || (Platform.OS === 'web' ? "Bed" : "Bed")}</ThemedText>
                         </View>
                         <View style={styles.headerStat}>
-                            <ThemedText style={styles.headerStatText}>{property.bathrooms} {t(Platform.OS === 'web' ? "property.bath" : "Bath")}</ThemedText>
+                            <ThemedText style={styles.headerStatText}>{property.bathrooms} {t(Platform.OS === 'web' ? "property.bath" : "Bath") || (Platform.OS === 'web' ? "Bath" : "Bath")}</ThemedText>
                         </View>
                         <View style={styles.headerStat}>
                             <ThemedText style={styles.headerStatText}>{property.size}m²</ThemedText>
@@ -483,45 +490,31 @@ export default function PropertyDetailPage() {
                                     />
                                 </View>
                                 <View style={styles.mapPreviewContainer}>
-                                    {(() => {
-                                        const hasCoordinates = apiProperty?.location?.coordinates && apiProperty.location.coordinates.length === 2;
-                                        const showAddressNumber = apiProperty?.address?.showAddressNumber ?? true;
-                                        const lat = apiProperty?.location?.coordinates?.[1] || 40.7128;
-                                        const lng = apiProperty?.location?.coordinates?.[0] || -74.0060;
-                                        console.log('mapPreviewContainer coordinates:', { lat, lng, hasCoordinates, showAddressNumber, showMarker: showAddressNumber });
-
-                                        if (hasCoordinates && showAddressNumber) {
-                                            return (
-                                                <PropertyMap
-                                                    latitude={lat}
-                                                    longitude={lng}
-                                                    address={property.location}
-                                                    height={96}
-                                                    interactive={false}
-                                                    showMarker={true}
-                                                />
-                                            );
-                                        } else if (hasCoordinates && !showAddressNumber) {
-                                            return (
-                                                <PropertyMap
-                                                    latitude={lat}
-                                                    longitude={lng}
-                                                    address={property.location}
-                                                    height={96}
-                                                    interactive={false}
-                                                    showMarker={false}
-                                                />
-                                            );
-                                        } else {
-                                            return (
-                                                <View style={[styles.mapPreviewContainer, { justifyContent: 'center', alignItems: 'center' }]}>
-                                                    <ThemedText style={styles.locationPrivacyText}>
-                                                        {t("Location hidden")}
-                                                    </ThemedText>
-                                                </View>
-                                            );
-                                        }
-                                    })()}
+                                    {apiProperty?.location?.coordinates && apiProperty.location.coordinates.length === 2 && (apiProperty?.address?.showAddressNumber ?? true) ? (
+                                        <PropertyMap
+                                            latitude={apiProperty.location.coordinates[1]}
+                                            longitude={apiProperty.location.coordinates[0]}
+                                            address={property.location}
+                                            height={96}
+                                            interactive={false}
+                                            showMarker={true}
+                                        />
+                                    ) : apiProperty?.location?.coordinates && apiProperty.location.coordinates.length === 2 ? (
+                                        <PropertyMap
+                                            latitude={apiProperty.location.coordinates[1]}
+                                            longitude={apiProperty.location.coordinates[0]}
+                                            address={property.location}
+                                            height={96}
+                                            interactive={false}
+                                            showMarker={false}
+                                        />
+                                    ) : (
+                                        <View style={[styles.mapPreviewContainer, { justifyContent: 'center', alignItems: 'center' }]}>
+                                            <ThemedText style={styles.locationPrivacyText}>
+                                                {t("Location hidden") || "Location hidden"}
+                                            </ThemedText>
+                                        </View>
+                                    )}
                                     <View style={styles.mapOverlay}>
                                         <ThemedText style={styles.mapOverlayText}>Location</ThemedText>
                                     </View>
@@ -643,12 +636,12 @@ export default function PropertyDetailPage() {
                     <View style={styles.infoContainer}>
                         <View style={styles.priceContainer}>
                             <ThemedText style={styles.priceLabel}>
-                                {property.priceUnit === 'day' ? t("Daily Rent") :
-                                    property.priceUnit === 'night' ? t("Nightly Rent") :
-                                        property.priceUnit === 'week' ? t("Weekly Rent") :
-                                            property.priceUnit === 'month' ? t("Monthly Rent") :
-                                                property.priceUnit === 'year' ? t("Yearly Rent") :
-                                                    t("Rent")}
+                                {property.priceUnit === 'day' ? (t("Daily Rent") || "Daily Rent") :
+                                    property.priceUnit === 'night' ? (t("Nightly Rent") || "Nightly Rent") :
+                                        property.priceUnit === 'week' ? (t("Weekly Rent") || "Weekly Rent") :
+                                            property.priceUnit === 'month' ? (t("Monthly Rent") || "Monthly Rent") :
+                                                property.priceUnit === 'year' ? (t("Yearly Rent") || "Yearly Rent") :
+                                                    (t("Rent") || "Rent")}
                             </ThemedText>
                             <CurrencyFormatter
                                 amount={parseFloat(property.price) || 0}
@@ -662,14 +655,14 @@ export default function PropertyDetailPage() {
                             <>
                                 <View style={styles.ecoRatingContainer}>
                                     <View style={styles.ratingHeader}>
-                                        <ThemedText style={styles.ratingTitle}>{t("Energy Efficiency")}</ThemedText>
+                                        <ThemedText style={styles.ratingTitle}>{t("Energy Efficiency") || "Energy Efficiency"}</ThemedText>
                                     </View>
                                     <View style={styles.energyRatingContainer}>
                                         <View style={[styles.energyRatingBadge, { backgroundColor: '#2e7d32' }]}>
                                             <ThemedText style={styles.energyRatingText}>{property.energyRating}</ThemedText>
                                         </View>
                                         <ThemedText style={styles.energyRatingDesc}>
-                                            {t("This property meets high standards for energy efficiency")}
+                                            {t("This property meets high standards for energy efficiency") || "This property meets high standards for energy efficiency"}
                                         </ThemedText>
                                     </View>
                                 </View>
@@ -680,7 +673,7 @@ export default function PropertyDetailPage() {
                         {property.description && property.description.trim() !== '' && (
                             <>
                                 <View style={styles.descriptionContainer}>
-                                    <ThemedText style={styles.sectionTitle}>{t("About this property")}</ThemedText>
+                                    <ThemedText style={styles.sectionTitle}>{t("About this property") || "About this property"}</ThemedText>
                                     <View style={styles.descriptionCard}>
                                         <ThemedText style={styles.descriptionText}>{property.description}</ThemedText>
                                     </View>
@@ -690,18 +683,18 @@ export default function PropertyDetailPage() {
 
                         {/* Detailed Property Information */}
                         <View style={styles.detailedInfoContainer}>
-                            <ThemedText style={styles.sectionTitle}>{t("Property Details")}</ThemedText>
+                            <ThemedText style={styles.sectionTitle}>{t("Property Details") || "Property Details"}</ThemedText>
                             <View style={styles.detailedInfoCard}>
                                 <View style={styles.detailedInfoRow}>
                                     <View style={styles.detailedInfoItem}>
-                                        <ThemedText style={styles.detailedInfoLabel}>{t("Property Type")}</ThemedText>
+                                        <ThemedText style={styles.detailedInfoLabel}>{t("Property Type") || "Property Type"}</ThemedText>
                                         <ThemedText style={styles.detailedInfoValue}>
-                                            {apiProperty?.type ? apiProperty.type.charAt(0).toUpperCase() + apiProperty.type.slice(1) : t("Not specified")}
+                                            {apiProperty?.type ? apiProperty.type.charAt(0).toUpperCase() + apiProperty.type.slice(1) : t("Not specified") || "Not specified"}
                                         </ThemedText>
                                     </View>
                                     {apiProperty?.floor !== undefined && (
                                         <View style={styles.detailedInfoItem}>
-                                            <ThemedText style={styles.detailedInfoLabel}>{t("Floor")}</ThemedText>
+                                            <ThemedText style={styles.detailedInfoLabel}>{t("Floor") || "Floor"}</ThemedText>
                                             <ThemedText style={styles.detailedInfoValue}>{apiProperty.floor}</ThemedText>
                                         </View>
                                     )}
@@ -709,13 +702,13 @@ export default function PropertyDetailPage() {
                                 <View style={styles.detailedInfoRow}>
                                     {apiProperty?.yearBuilt && (
                                         <View style={styles.detailedInfoItem}>
-                                            <ThemedText style={styles.detailedInfoLabel}>{t("Year Built")}</ThemedText>
+                                            <ThemedText style={styles.detailedInfoLabel}>{t("Year Built") || "Year Built"}</ThemedText>
                                             <ThemedText style={styles.detailedInfoValue}>{apiProperty.yearBuilt}</ThemedText>
                                         </View>
                                     )}
                                     {apiProperty?.parkingSpaces !== undefined && (
                                         <View style={styles.detailedInfoItem}>
-                                            <ThemedText style={styles.detailedInfoLabel}>{t("Parking Spaces")}</ThemedText>
+                                            <ThemedText style={styles.detailedInfoLabel}>{t("Parking Spaces") || "Parking Spaces"}</ThemedText>
                                             <ThemedText style={styles.detailedInfoValue}>{apiProperty.parkingSpaces}</ThemedText>
                                         </View>
                                     )}

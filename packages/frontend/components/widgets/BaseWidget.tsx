@@ -7,9 +7,10 @@ type BaseWidgetProps = {
     title?: string;
     icon?: ReactNode;
     children: ReactNode;
+    noPadding?: boolean;
 };
 
-export function BaseWidget({ title, icon, children }: BaseWidgetProps) {
+export function BaseWidget({ title, icon, children, noPadding = false }: BaseWidgetProps) {
     return (
         <View style={styles.widgetContainer}>
             {title && (
@@ -18,7 +19,7 @@ export function BaseWidget({ title, icon, children }: BaseWidgetProps) {
                     {icon && <View>{icon}</View>}
                 </View>
             )}
-            <View>{children}</View>
+            <View style={[styles.widgetContent, noPadding && styles.noPadding]}>{children}</View>
         </View>
     );
 }
@@ -28,7 +29,6 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primaryLight,
         borderRadius: 15,
         overflow: 'hidden',
-        padding: 15,
     },
     widgetHeader: {
         flexDirection: 'row',
@@ -37,10 +37,18 @@ const styles = StyleSheet.create({
         paddingBottom: 12,
         borderBottomWidth: 0.5,
         borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
+        margin: 15,
         marginBottom: 12,
     },
     widgetTitle: {
         fontSize: 18,
         fontWeight: 'bold',
+    },
+    widgetContent: {
+        padding: 15,
+        paddingTop: 0,
+    },
+    noPadding: {
+        padding: 0,
     },
 }); 
