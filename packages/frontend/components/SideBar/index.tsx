@@ -15,7 +15,8 @@ import { Search, SearchActive } from '@/assets/icons/search-icon';
 import { Compose } from '@/assets/icons/compose-icon';
 import { Ionicons } from '@expo/vector-icons';
 import { OxySignInButton, useOxy } from '@oxyhq/services';
-import { SindiIcon } from '@/assets/icons';
+import { SindiIcon, SindiIconActive } from '@/assets/icons';
+import { ProfileIcon, ProfileIconActive } from '@/assets/icons/profile-icon';
 import { webAlert } from '@/utils/api';
 import { phuduFontWeights } from '@/styles/fonts';
 
@@ -62,6 +63,12 @@ export function SideBar() {
             route: '/',
         },
         {
+            title: t("sidebar.navigation.search"),
+            icon: <Search color={colors.COLOR_BLACK} />,
+            iconActive: <SearchActive />,
+            route: '/search',
+        },
+        {
             title: t("sidebar.navigation.saved"),
             icon: <Bookmark color={colors.COLOR_BLACK} />,
             iconActive: <BookmarkActive />,
@@ -70,14 +77,14 @@ export function SideBar() {
         {
             title: t("sidebar.navigation.sindi"),
             icon: <SindiIcon size={24} color={colors.COLOR_BLACK} />,
-            iconActive: <SindiIcon size={24} color={colors.primaryColor} />,
+            iconActive: <SindiIconActive size={24} color={colors.primaryColor} />,
             route: '/sindi',
         },
 
         {
             title: t("sidebar.navigation.profile"),
-            icon: <View><IconComponent name="person-outline" size={24} color={colors.COLOR_BLACK} /></View>,
-            iconActive: <View><IconComponent name="person" size={24} color={colors.primaryColor} /></View>,
+            icon: <ProfileIcon size={24} color={colors.COLOR_BLACK} />,
+            iconActive: <ProfileIconActive size={24} color={colors.primaryColor} />,
             route: '/profile',
         },
 

@@ -9,7 +9,7 @@ export { Home, HomeActive } from './home-icon';
 export { Search, SearchActive } from './search-icon';
 
 // Sindi icon
-export { SindiIcon } from './sindi-icon';
+export { SindiIcon, SindiIconActive } from './sindi-icon';
 
 // Types
 export type { IconProps } from './types'; 

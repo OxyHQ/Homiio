@@ -758,6 +758,7 @@
     "sidebar": {
         "navigation": {
             "home": "Home",
+            "search": "Search",
             "saved": "Saved",
             "sindi": "Sindi",
             "contracts": "Contracts",

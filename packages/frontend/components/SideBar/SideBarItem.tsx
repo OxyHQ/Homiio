@@ -1,10 +1,8 @@
 import React from 'react'
 import { View, Text, Platform, Pressable } from 'react-native'
 import { useMediaQuery } from 'react-responsive'
-import { useRouter , Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors'
-
-import { Ionicons } from "@expo/vector-icons";
 
 export function SideBarItem({
     isActive,
@@ -22,9 +20,8 @@ export function SideBarItem({
     return (
         <Pressable
             onPress={() => router.push(href)}
-            style={({ pressed, hovered }) => [
+            style={({ pressed }) => [
                 pressed ? { backgroundColor: `${colors.primaryColor}33`, } : {},
-                hovered ? { backgroundColor: `${colors.primaryColor}22`, } : {},
                 {
                     flexDirection: 'row',
                     alignItems: 'center',

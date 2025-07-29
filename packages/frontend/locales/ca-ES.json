@@ -758,6 +758,7 @@
     "sidebar": {
         "navigation": {
             "home": "Inici",
+            "search": "Cercar",
             "saved": "Desats",
             "sindi": "Sindi",
             "contracts": "Contractes",
