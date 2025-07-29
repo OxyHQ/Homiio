@@ -6,6 +6,7 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     Platform,
+    Alert,
 } from 'react-native';
 import { useOxy } from '@oxyhq/services';
 import { useTranslation } from 'react-i18next';
@@ -32,6 +33,8 @@ const getProfileDisplayName = (profile: Profile): string => {
             return profile.agencyProfile?.legalCompanyName || 'Agency Profile';
         case 'business':
             return profile.businessProfile?.legalCompanyName || 'Business Profile';
+        case 'cooperative':
+            return profile.cooperativeProfile?.legalName || 'Cooperative Profile';
         default:
             return 'Profile';
     }
@@ -44,6 +47,8 @@ const getProfileDescription = (profile: Profile): string | undefined => {
             return profile.agencyProfile?.description;
         case 'business':
             return profile.businessProfile?.description;
+        case 'cooperative':
+            return profile.cooperativeProfile?.description;
         default:
             return undefined;
     }
@@ -83,7 +88,8 @@ export default function ProfileScreen() {
         error,
         loadProfiles,
         updateProfile,
-        deleteProfile
+        deleteProfile,
+        activateProfile
     } = useProfile();
 
     const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
@@ -147,10 +153,10 @@ export default function ProfileScreen() {
                         setIsSwitching(true);
 
                         try {
-                            // TODO: Implement activateProfile functionality
-                            console.log('Activate profile functionality not implemented yet');
-
-                            // Update local state immediately
+                            // Call the actual activateProfile method
+                            await activateProfile(finalProfileId);
+                            
+                            // Update local state 
                             setActiveProfileId(finalProfileId);
                             toast.success(`Switched to ${profileName}`);
 
@@ -265,6 +271,7 @@ export default function ProfileScreen() {
     const personalProfiles = profiles?.filter(p => p.profileType === 'personal') || [];
     const businessProfiles = profiles?.filter(p => p.profileType === 'business') || [];
     const agencyProfiles = profiles?.filter(p => p.profileType === 'agency') || [];
+    const cooperativeProfiles = profiles?.filter(p => p.profileType === 'cooperative') || [];
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
@@ -305,7 +312,8 @@ export default function ProfileScreen() {
                         <View style={[styles.settingItem, styles.firstSettingItem, styles.lastSettingItem]}>
                             <View style={styles.settingInfo}>
                                 <IconComponent
-                                    name={activeProfile.profileType === 'personal' ? 'person' : 'business'}
+                                    name={activeProfile.profileType === 'personal' ? 'person' : 
+                                         activeProfile.profileType === 'cooperative' ? 'people' : 'business'}
                                     size={20}
                                     color="#666"
                                     style={styles.settingIcon}
@@ -314,7 +322,8 @@ export default function ProfileScreen() {
                                     <ThemedText style={styles.settingLabel}>{getProfileDisplayName(activeProfile)}</ThemedText>
                                     <ThemedText style={styles.settingDescription}>
                                         {activeProfile.profileType === 'personal' ? 'Personal Profile' :
-                                            activeProfile.profileType === 'agency' ? 'Agency Profile' : 'Business Profile'}
+                                            activeProfile.profileType === 'agency' ? 'Agency Profile' : 
+                                            activeProfile.profileType === 'business' ? 'Business Profile' : 'Cooperative Profile'}
                                         {getProfileDescription(activeProfile) && ` • ${getProfileDescription(activeProfile)}`}
                                     </ThemedText>
                                 </View>
@@ -473,6 +482,57 @@ export default function ProfileScreen() {
                                             <ThemedText style={styles.settingLabel}>{getProfileDisplayName(profile)}</ThemedText>
                                             <ThemedText style={styles.settingDescription}>
                                                 Agency Profile
+                                                {getProfileDescription(profile) && ` • ${getProfileDescription(profile)}`}
+                                                {!profile.isActive && ' • Inactive'}
+                                            </ThemedText>
+                                        </View>
+                                    </View>
+                                    <View style={styles.itemActions}>
+                                        {profile.isActive && (
+                                            <View style={styles.activeBadge}>
+                                                <ThemedText style={styles.activeBadgeText}>Active</ThemedText>
+                                            </View>
+                                        )}
+                                        {isSwitching && (profile.id || profile._id) === activeProfileId && (
+                                            <ActivityIndicator size="small" color={colors.primaryColor} />
+                                        )}
+                                        <IconComponent name="chevron-forward" size={16} color="#ccc" />
+                                    </View>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
+                )}
+
+                {/* Cooperative Profiles Section */}
+                {cooperativeProfiles.length > 0 && (
+                    <View style={styles.section}>
+                        <ThemedText style={styles.sectionTitle}>Cooperative Profiles</ThemedText>
+                        {cooperativeProfiles.map((profile, index) => {
+                            return (
+                                <TouchableOpacity
+                                    key={profile.id || profile._id}
+                                    style={[
+                                        styles.settingItem,
+                                        index === 0 && styles.firstSettingItem,
+                                        index === cooperativeProfiles.length - 1 && styles.lastSettingItem,
+                                    ]}
+                                    onPress={() => {
+                                        const profileId = profile.id || profile._id;
+                                        if (profileId) {
+                                            handleProfileSwitch(profileId);
+                                        } else {
+                                            toast.error('Invalid profile data');
+                                        }
+                                    }}
+                                    disabled={isSwitching}
+                                >
+                                    <View style={styles.settingInfo}>
+                                        <IconComponent name="people" size={20} color="#666" style={styles.settingIcon} />
+                                        <View style={styles.settingTextContainer}>
+                                            <ThemedText style={styles.settingLabel}>{getProfileDisplayName(profile)}</ThemedText>
+                                            <ThemedText style={styles.settingDescription}>
+                                                Cooperative Profile
                                                 {getProfileDescription(profile) && ` • ${getProfileDescription(profile)}`}
                                                 {!profile.isActive && ' • Inactive'}
                                             </ThemedText>

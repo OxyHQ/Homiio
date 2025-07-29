@@ -291,6 +291,30 @@ class ProfileService {
   }
 
   /**
+   * Activate profile
+   */
+  async activateProfile(profileId: string, oxyServices?: OxyServices, activeSessionId?: string): Promise<Profile> {
+    try {
+      console.log('ProfileService.activateProfile called with:', { profileId });
+      console.log('Making API call to:', `${this.baseUrl}/${profileId}/activate`);
+      
+      const response = await api.post(`${this.baseUrl}/${profileId}/activate`, undefined, {
+        oxyServices,
+        activeSessionId,
+      });
+      console.log('ProfileService.activateProfile API response:', response);
+      
+      const activatedProfile = response.data.data;
+      console.log('ProfileService.activateProfile activated profile:', activatedProfile);
+
+      return activatedProfile;
+    } catch (error) {
+      console.error('ProfileService.activateProfile error:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get profile by ID
    */
   async getProfileById(profileId: string, oxyServices?: OxyServices, activeSessionId?: string): Promise<Profile> {

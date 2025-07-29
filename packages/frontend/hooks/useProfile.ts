@@ -112,6 +112,36 @@ export const useProfile = () => {
     }
   }, [oxyServices, activeSessionId, setLoading, setError, setAllProfiles, setPrimaryProfile, primaryProfile, allProfiles]);
 
+  const activateProfile = useCallback(async (profileId: string) => {
+    if (!oxyServices || !activeSessionId) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const profileService = await import('@/services/profileService');
+      const activatedProfile = await profileService.default.activateProfile(profileId, oxyServices, activeSessionId);
+      
+      // Update all profiles - deactivate others and activate the selected one
+      const updatedProfiles = allProfiles.map((p: Profile) => ({
+        ...p,
+        isActive: (p.id === profileId || p._id === profileId)
+      }));
+      
+      setAllProfiles(updatedProfiles);
+      setPrimaryProfile(activatedProfile);
+      
+      toast.success('Profile activated successfully');
+      return activatedProfile;
+    } catch (error: any) {
+      setError(error.message || 'Failed to activate profile');
+      toast.error('Failed to activate profile');
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [oxyServices, activeSessionId, setLoading, setError, setAllProfiles, setPrimaryProfile, allProfiles]);
+
   return {
     primaryProfile,
     allProfiles,
@@ -121,5 +151,6 @@ export const useProfile = () => {
     createProfile,
     updateProfile,
     deleteProfile,
+    activateProfile,
   };
 }; 

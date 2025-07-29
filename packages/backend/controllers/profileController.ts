@@ -221,8 +221,8 @@ class ProfileController {
         );
       }
 
-      // Get profiles with basic fields only, but ensure toJSON transform works
-      const profiles = await Profile.findByOxyUserId(oxyUserId, '_id oxyUserId profileType isActive createdAt updatedAt');
+      // Get all profiles including profile-specific data for display
+      const profiles = await Profile.findByOxyUserId(oxyUserId);
       
       res.json(
         successResponse(profiles, "Profiles retrieved successfully")

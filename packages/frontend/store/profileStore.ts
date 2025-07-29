@@ -186,7 +186,9 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   activateProfile: async (profileId, oxyServices, activeSessionId) => {
     try {
       set({ isLoading: true, error: null });
-      const activatedProfile = await profileService.updateProfile(profileId, { isActive: true }, oxyServices, activeSessionId);
+      
+      // Use the new activateProfile method in the service
+      const activatedProfile = await profileService.activateProfile(profileId, oxyServices, activeSessionId);
       
       // Update state
       const { allProfiles } = get();
