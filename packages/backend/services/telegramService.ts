@@ -18,6 +18,15 @@ i18n.configure({
   updateFiles: false
 });
 
+// City-Country to Topic ID mapping
+const CITY_TOPIC_MAPPING = {
+  'New York, US': 4,
+  'New York, United States': 4, // Handle both US and United States
+  'Barcelona, Spain': 2,
+  // Add more mappings as needed
+  // Format: 'City, Country': topicId
+};
+
 class TelegramService {
   private bot: TelegramBot | null;
   private isInitialized: boolean;
@@ -68,6 +77,31 @@ class TelegramService {
     // For now, all notifications go to the default Spanish group
     // In the future, this can be expanded to route based on city/region
     return config.telegram.defaultGroup;
+  }
+
+  /**
+   * Get topic ID for city and country combination
+   * @param {string} city - The city name
+   * @param {string} country - The country name
+   * @returns {number|null} - Topic ID if found, null otherwise
+   */
+  getTopicIdForLocation(city, country) {
+    if (!city || !country) {
+      return null;
+    }
+
+    const locationKey = `${city}, ${country}`;
+    return CITY_TOPIC_MAPPING[locationKey] || null;
+  }
+
+  /**
+   * Check if a location is supported for Telegram notifications
+   * @param {string} city - The city name
+   * @param {string} country - The country name
+   * @returns {boolean} - True if location is supported
+   */
+  isLocationSupported(city, country) {
+    return this.getTopicIdForLocation(city, country) !== null;
   }
 
   /**
@@ -228,7 +262,7 @@ ${t.__('telegram.hashtags.newProperty')} #${this.escapeMarkdown(address.city.rep
   }
 
   /**
-   * Send property notification to appropriate Telegram group
+   * Send property notification to appropriate Telegram group with topic support
    * @param {Object} property - The property object
    * @returns {Promise<boolean>} - Success status
    */
@@ -239,12 +273,29 @@ ${t.__('telegram.hashtags.newProperty')} #${this.escapeMarkdown(address.city.rep
         return false;
       }
 
+      // Check if location is supported for notifications
+      const city = property.address?.city;
+      const country = property.address?.country;
+      
+      if (!this.isLocationSupported(city, country)) {
+        logger.info('Location not supported for Telegram notifications. Skipping notification.', {
+          city,
+          country,
+          propertyId: property._id
+        });
+        return false;
+      }
+
+      // Get topic ID for this location
+      const topicId = this.getTopicIdForLocation(city, country);
+      
       // Get the group configuration
-      const groupConfig = this.getGroupForCity(property.address?.city);
+      const groupConfig = this.getGroupForCity(city);
       
       if (!groupConfig || !groupConfig.id) {
         logger.warn('No Telegram group configured. Skipping notification.', {
-          city: property.address?.city,
+          city,
+          country,
           propertyId: property._id
         });
         return false;
@@ -271,17 +322,27 @@ ${t.__('telegram.hashtags.newProperty')} #${this.escapeMarkdown(address.city.rep
       // Get the best image for the property
       const imageUrl = this.getPropertyImage(property);
       
+      // Prepare message options with topic support
+      const messageOptions: any = {
+        caption: message,
+        parse_mode: 'Markdown',
+        reply_markup: keyboard
+      };
+
+      // Add topic ID if available
+      if (topicId) {
+        messageOptions.message_thread_id = topicId;
+      }
+      
       try {
         // Send photo with caption instead of text message
-        await this.bot.sendPhoto(groupConfig.id, imageUrl, {
-          caption: message,
-          parse_mode: 'Markdown',
-          reply_markup: keyboard
-        });
+        await this.bot.sendPhoto(groupConfig.id, imageUrl, messageOptions);
 
-        logger.info('Property notification sent to Telegram group with image', {
+        logger.info('Property notification sent to Telegram group with image and topic', {
           propertyId: property._id,
-          city: property.address?.city,
+          city,
+          country,
+          topicId,
           groupId: groupConfig.id,
           language: groupConfig.language,
           imageUrl: imageUrl
@@ -294,15 +355,24 @@ ${t.__('telegram.hashtags.newProperty')} #${this.escapeMarkdown(address.city.rep
           error: imageError.message
         });
 
-        await this.bot.sendMessage(groupConfig.id, message, {
+        const textMessageOptions: any = {
           parse_mode: 'Markdown',
           disable_web_page_preview: true,
           reply_markup: keyboard
-        });
+        };
 
-        logger.info('Property notification sent to Telegram group as text message (fallback)', {
+        // Add topic ID for text message as well
+        if (topicId) {
+          textMessageOptions.message_thread_id = topicId;
+        }
+
+        await this.bot.sendMessage(groupConfig.id, message, textMessageOptions);
+
+        logger.info('Property notification sent to Telegram group as text message (fallback) with topic', {
           propertyId: property._id,
-          city: property.address?.city,
+          city,
+          country,
+          topicId,
           groupId: groupConfig.id,
           language: groupConfig.language
         });
@@ -313,7 +383,8 @@ ${t.__('telegram.hashtags.newProperty')} #${this.escapeMarkdown(address.city.rep
       logger.error('Failed to send Telegram notification:', {
         error: error.message,
         propertyId: property._id,
-        city: property.address?.city
+        city: property.address?.city,
+        country: property.address?.country
       });
       return false;
     }
@@ -324,9 +395,10 @@ ${t.__('telegram.hashtags.newProperty')} #${this.escapeMarkdown(address.city.rep
    * @param {string} groupId - The group ID to test
    * @param {string} message - Optional custom message
    * @param {boolean} includeButton - Whether to include a test button
+   * @param {number} topicId - Optional topic ID for forum threads
    * @returns {Promise<boolean>} - Success status
    */
-  async sendTestMessage(groupId, message = null, includeButton = true) {
+  async sendTestMessage(groupId, message = null, includeButton = true, topicId = null) {
     try {
       if (!this.isInitialized) {
         throw new Error('Telegram bot not initialized');
@@ -344,6 +416,11 @@ ${t.__('telegram.hashtags.newProperty')} #${this.escapeMarkdown(address.city.rep
         parse_mode: 'Markdown'
       };
 
+      // Add topic ID if provided
+      if (topicId) {
+        options.message_thread_id = topicId;
+      }
+
       // Add test button if requested
       if (includeButton) {
         options.reply_markup = {
@@ -359,12 +436,13 @@ ${t.__('telegram.hashtags.newProperty')} #${this.escapeMarkdown(address.city.rep
       }
 
       await this.bot.sendMessage(groupId, finalMessage, options);
-      logger.info('Test message sent successfully', { groupId, language, includeButton });
+      logger.info('Test message sent successfully', { groupId, language, includeButton, topicId });
       return true;
     } catch (error) {
       logger.error('Failed to send test message:', {
         error: error.message,
-        groupId
+        groupId,
+        topicId
       });
       return false;
     }
@@ -398,11 +476,26 @@ ${t.__('telegram.hashtags.newProperty')} #${this.escapeMarkdown(address.city.rep
       total: properties.length,
       successful: 0,
       failed: 0,
+      skipped: 0,
       errors: []
     };
 
     for (const property of properties) {
       try {
+        // Check if location is supported before attempting to send
+        const city = property.address?.city;
+        const country = property.address?.country;
+        
+        if (!this.isLocationSupported(city, country)) {
+          results.skipped++;
+          logger.info('Skipping property - location not supported for Telegram notifications', {
+            propertyId: property._id,
+            city,
+            country
+          });
+          continue;
+        }
+
         const success = await this.sendPropertyNotification(property);
         if (success) {
           results.successful++;
@@ -434,7 +527,9 @@ ${t.__('telegram.hashtags.newProperty')} #${this.escapeMarkdown(address.city.rep
       defaultGroup: config.telegram.defaultGroup,
       groups: {},
       totalGroups: 0,
-      configuredGroups: 0
+      configuredGroups: 0,
+      supportedLocations: Object.keys(CITY_TOPIC_MAPPING),
+      topicMappings: CITY_TOPIC_MAPPING
     };
 
     // Process configured groups
@@ -534,6 +629,88 @@ ${t.__('telegram.hashtags.newProperty')} #${this.escapeMarkdown(address.city.rep
         expected: testCase.expectedResult,
         actual: actualResult,
         passed
+      };
+    });
+
+    const allPassed = results.every(result => result.passed);
+
+    return {
+      success: allPassed,
+      totalTests: results.length,
+      passedTests: results.filter(r => r.passed).length,
+      failedTests: results.filter(r => !r.passed).length,
+      results
+    };
+  }
+
+  /**
+   * Test location support functionality
+   * @returns {Object} - Test results
+   */
+  testLocationSupport() {
+    const testCases = [
+      {
+        name: 'New York, US - should be supported',
+        city: 'New York',
+        country: 'US',
+        expectedSupported: true,
+        expectedTopicId: 4
+      },
+      {
+        name: 'Barcelona, Spain - should be supported',
+        city: 'Barcelona',
+        country: 'Spain',
+        expectedSupported: true,
+        expectedTopicId: 2
+      },
+      {
+        name: 'Madrid, Spain - should not be supported',
+        city: 'Madrid',
+        country: 'Spain',
+        expectedSupported: false,
+        expectedTopicId: null
+      },
+      {
+        name: 'London, UK - should not be supported',
+        city: 'London',
+        country: 'UK',
+        expectedSupported: false,
+        expectedTopicId: null
+      },
+      {
+        name: 'Empty city - should not be supported',
+        city: '',
+        country: 'US',
+        expectedSupported: false,
+        expectedTopicId: null
+      },
+      {
+        name: 'Empty country - should not be supported',
+        city: 'New York',
+        country: '',
+        expectedSupported: false,
+        expectedTopicId: null
+      }
+    ];
+
+    const results = testCases.map(testCase => {
+      const actualSupported = this.isLocationSupported(testCase.city, testCase.country);
+      const actualTopicId = this.getTopicIdForLocation(testCase.city, testCase.country);
+      
+      const supportedPassed = actualSupported === testCase.expectedSupported;
+      const topicIdPassed = actualTopicId === testCase.expectedTopicId;
+      
+      return {
+        name: testCase.name,
+        city: testCase.city,
+        country: testCase.country,
+        expectedSupported: testCase.expectedSupported,
+        actualSupported: actualSupported,
+        supportedPassed,
+        expectedTopicId: testCase.expectedTopicId,
+        actualTopicId: actualTopicId,
+        topicIdPassed,
+        passed: supportedPassed && topicIdPassed
       };
     });
 

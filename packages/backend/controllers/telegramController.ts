@@ -51,22 +51,22 @@ class TelegramController {
    */
   async sendTestMessage(req, res, next) {
     try {
-      const { groupId, message } = req.body;
+      const { groupId, message, topicId } = req.body;
 
       if (!groupId) {
         return next(new AppError('Group ID is required', 400, 'MISSING_GROUP_ID'));
       }
 
-      const success = await telegramService.sendTestMessage(groupId, message);
+      const success = await telegramService.sendTestMessage(groupId, message, true, topicId);
 
       if (success) {
         res.json(successResponse(
-          { groupId, sent: true },
+          { groupId, topicId, sent: true },
           'Test message sent successfully'
         ));
       } else {
         res.status(500).json(successResponse(
-          { groupId, sent: false },
+          { groupId, topicId, sent: false },
           'Failed to send test message'
         ));
       }
@@ -174,6 +174,45 @@ class TelegramController {
         configured: !!groupConfig?.id,
         allMappings: groupsSummary
       }, 'Group mapping retrieved successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Test location support functionality
+   */
+  async testLocationSupport(req, res, next) {
+    try {
+      const testResults = telegramService.testLocationSupport();
+      
+      res.json(successResponse(testResults, 'Location support test completed'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Check if a specific location is supported
+   */
+  async checkLocationSupport(req, res, next) {
+    try {
+      const { city, country } = req.query;
+      
+      if (!city || !country) {
+        return next(new AppError('Both city and country are required', 400, 'MISSING_PARAMETERS'));
+      }
+
+      const isSupported = telegramService.isLocationSupported(city, country);
+      const topicId = telegramService.getTopicIdForLocation(city, country);
+
+      res.json(successResponse({
+        city,
+        country,
+        isSupported,
+        topicId,
+        locationKey: `${city}, ${country}`
+      }, 'Location support check completed'));
     } catch (error) {
       next(error);
     }

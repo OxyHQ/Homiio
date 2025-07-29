@@ -174,14 +174,14 @@ export default function ProfileEditScreen() {
         currency: 'USD',
     });
 
-    const [references, setReferences] = useState<Array<{
+    const [references, setReferences] = useState<{
         name: string;
         relationship: 'landlord' | 'employer' | 'personal' | 'other';
         phone?: string;
         email?: string;
-    }>>([]);
+    }[]>([]);
 
-    const [rentalHistory, setRentalHistory] = useState<Array<{
+    const [rentalHistory, setRentalHistory] = useState<{
         address: string;
         startDate: string;
         endDate?: string;
@@ -192,7 +192,7 @@ export default function ProfileEditScreen() {
             phone: string;
             email: string;
         };
-    }>>([]);
+    }[]>([]);
 
     // Update form state when profile data loads
     useEffect(() => {

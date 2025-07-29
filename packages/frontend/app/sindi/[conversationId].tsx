@@ -5,7 +5,6 @@ import { View, TextInput, ScrollView, Text, TouchableOpacity, StyleSheet, Platfo
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOxy } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
-const IconComponent = Ionicons as any;
 import { colors } from '@/styles/colors';
 
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -20,6 +19,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useConversationStore, type ConversationMessage, type Conversation } from '@/store/conversationStore';
 import { EmptyState } from '@/components/ui/EmptyState';
+const IconComponent = Ionicons as any;
 
 export default function ConversationDetail() {
     const { oxyServices, activeSessionId } = useOxy();

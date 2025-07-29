@@ -1,16 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState , ReactNode } from 'react';
 import {
     StyleSheet,
     View,
     ViewStyle,
     Platform,
     Animated,
-} from 'react-native'
-import { Pressable } from 'react-native'
+ Pressable } from 'react-native'
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from '@/styles/colors'
 import { useRouter } from 'expo-router'
-import { ReactNode } from 'react'
 import { phuduFontWeights } from '@/styles/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from './ThemedText';

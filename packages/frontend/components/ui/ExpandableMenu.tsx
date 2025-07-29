@@ -1,8 +1,7 @@
 import { useRef, useEffect } from "react"
-import { View, TouchableOpacity, Text, TouchableWithoutFeedback, Animated, Platform } from "react-native"
+import { View, TouchableOpacity, Text, TouchableWithoutFeedback, Animated, Platform , Image } from "react-native"
 import { BlurView } from "expo-blur"
 import { Ionicons } from "@expo/vector-icons"
-import { Image } from "react-native"
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6"
 import { ScrollView } from "react-native-gesture-handler"
 

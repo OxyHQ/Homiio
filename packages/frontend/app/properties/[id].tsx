@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
-import { PropertyType } from '@homiio/shared-types';
+import { PropertyType, RecentlyViewedType } from '@homiio/shared-types';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 import { getAmenityById, getCategoryById } from '@/constants/amenities';
@@ -222,40 +222,40 @@ export default function PropertyDetailPage() {
 
     // Track property view when property is loaded and user is authenticated
     useEffect(() => {
-        if (apiProperty && !hasViewedRef.current && oxyServices && activeSessionId) {
+        if (apiProperty && !hasViewedRef.current) {
             hasViewedRef.current = true;
 
-            console.log('PropertyDetailPage: Tracking property view for authenticated user', {
-                propertyId: apiProperty._id || apiProperty.id,
-                hasOxyServices: !!oxyServices,
-                hasActiveSession: !!activeSessionId
-            });
-
-            // Add property to Zustand state immediately for instant UI feedback
             const propertyId = apiProperty._id || apiProperty.id;
-            if (propertyId && !recentlyViewed.find(item => item.data._id === propertyId || item.data.id === propertyId)) {
-                addItem(propertyId, 'property', apiProperty);
-            }
 
-            // Call the backend to track the view in database
-            if (propertyId) {
-                userApi.trackPropertyView(propertyId, oxyServices, activeSessionId)
-                    .then(() => {
-                        console.log('PropertyDetailPage: Successfully tracked property view in backend');
-                        // TODO: Refresh recently viewed from backend to get the updated list
-                    })
-                    .catch((error) => {
-                        console.error('PropertyDetailPage: Failed to track property view in backend:', error);
-                    });
-            }
-        } else if (apiProperty && !hasViewedRef.current) {
-            console.log('PropertyDetailPage: User not authenticated, skipping backend view tracking');
-            hasViewedRef.current = true;
+            if (oxyServices && activeSessionId) {
+                console.log('PropertyDetailPage: Tracking property view for authenticated user', {
+                    propertyId,
+                    hasOxyServices: !!oxyServices,
+                    hasActiveSession: !!activeSessionId
+                });
 
-            // For unauthenticated users, only add to local Zustand state
-            const propertyId = apiProperty._id || apiProperty.id;
-            if (propertyId && !recentlyViewed.find(item => item.data._id === propertyId || item.data.id === propertyId)) {
-                addItem(propertyId, 'property', apiProperty);
+                // Add property to Zustand state immediately for instant UI feedback
+                if (propertyId) {
+                    addItem(propertyId, RecentlyViewedType.PROPERTY, apiProperty);
+                }
+
+                // Call the backend to track the view in database
+                if (propertyId) {
+                    userApi.trackPropertyView(propertyId, oxyServices, activeSessionId)
+                        .then(() => {
+                            console.log('PropertyDetailPage: Successfully tracked property view in backend');
+                        })
+                        .catch((error) => {
+                            console.error('PropertyDetailPage: Failed to track property view in backend:', error);
+                        });
+                }
+            } else {
+                console.log('PropertyDetailPage: User not authenticated, adding to local state only');
+
+                // For unauthenticated users, only add to local Zustand state
+                if (propertyId) {
+                    addItem(propertyId, RecentlyViewedType.PROPERTY, apiProperty);
+                }
             }
         }
     }, [apiProperty, oxyServices, activeSessionId, recentlyViewed, addItem]);

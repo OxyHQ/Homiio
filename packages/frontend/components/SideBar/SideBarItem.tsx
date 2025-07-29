@@ -1,11 +1,10 @@
 import React from 'react'
 import { View, Text, Platform, Pressable } from 'react-native'
 import { useMediaQuery } from 'react-responsive'
-import { useRouter } from 'expo-router';
+import { useRouter , Link } from 'expo-router';
 import { colors } from '@/styles/colors'
 
 import { Ionicons } from "@expo/vector-icons";
-import { Link } from "expo-router";
 
 export function SideBarItem({
     isActive,

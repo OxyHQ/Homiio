@@ -4,6 +4,7 @@ import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useOxy } from '@oxyhq/services';
 import { colors } from '@/styles/colors';
 import { userApi } from '@/utils/api';
+import { PropertyType, PaymentFrequency, UtilitiesIncluded, PropertyStatus } from '@homiio/shared-types';
 
 export function RecentlyViewedTest() {
     const { properties, isLoading, error, refetch, addProperty, clear } = useRecentlyViewed();
@@ -26,7 +27,7 @@ export function RecentlyViewedTest() {
     const testProperty = {
         _id: 'test-property-' + Date.now(),
         id: 'test-property-' + Date.now(),
-        type: 'apartment' as const,
+        type: PropertyType.APARTMENT,
         address: {
             street: 'Test Street 123',
             city: 'Test City',
@@ -37,11 +38,11 @@ export function RecentlyViewedTest() {
         rent: {
             amount: 1000,
             currency: 'USD',
-            paymentFrequency: 'monthly' as const,
+            paymentFrequency: PaymentFrequency.MONTHLY,
             deposit: 500,
-            utilities: 'excluded' as const
+            utilities: UtilitiesIncluded.EXCLUDED
         },
-        status: 'available' as const,
+        status: PropertyStatus.AVAILABLE,
         ownerId: 'test-owner',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -50,6 +51,16 @@ export function RecentlyViewedTest() {
     const addTestProperty = () => {
         console.log('Adding test property to recently viewed');
         addProperty(testProperty);
+    };
+
+    const addMultipleTestProperties = () => {
+        console.log('Adding multiple test properties to demonstrate multiple entries');
+        // Add the same property multiple times to show multiple entries
+        for (let i = 0; i < 3; i++) {
+            setTimeout(() => {
+                addProperty(testProperty);
+            }, i * 100); // Small delay to ensure they're added in sequence
+        }
     };
 
     const testDirectAPI = async () => {
@@ -98,6 +109,9 @@ export function RecentlyViewedTest() {
                 <Text style={styles.sectionTitle}>Actions</Text>
                 <TouchableOpacity style={styles.button} onPress={addTestProperty}>
                     <Text style={styles.buttonText}>Add Test Property</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.button} onPress={addMultipleTestProperties}>
+                    <Text style={styles.buttonText}>Add Multiple Test Properties</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.button} onPress={forceRefetch}>
                     <Text style={styles.buttonText}>Force Refetch</Text>

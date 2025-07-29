@@ -4,8 +4,7 @@ import { fetch as expoFetch } from 'expo/fetch';
 import { View, TextInput, ScrollView, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOxy } from '@oxyhq/services';
-import { Ionicons } from '@expo/vector-icons'; // keep for IconComponent type assertion
-const IconComponent = Ionicons as any;
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 
 import { useRouter } from 'expo-router';
@@ -19,7 +18,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as DocumentPicker from 'expo-document-picker';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useConversationStore, type ConversationMessage, type Conversation } from '@/store/conversationStore';
-import { EmptyState } from '@/components/ui/EmptyState';
+import { EmptyState } from '@/components/ui/EmptyState'; // keep for IconComponent type assertion
+const IconComponent = Ionicons as any;
 
 export default function Sindi() {
   const { oxyServices, activeSessionId } = useOxy();

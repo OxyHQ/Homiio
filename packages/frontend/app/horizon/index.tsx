@@ -11,11 +11,11 @@ export default function HorizonPage() {
   const { t } = useTranslation();
   const router = useRouter();
 
-  const benefitItems: Array<{
+  const benefitItems: {
     icon: "home-outline" | "medkit-outline" | "airplane-outline" | "people-outline";
     title: string;
     description: string;
-  }> = [
+  }[] = [
       {
         icon: 'home-outline',
         title: t('Fair Housing'),

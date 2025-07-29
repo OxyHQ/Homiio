@@ -53,11 +53,11 @@ const getProfileDescription = (profile: Profile): string | undefined => {
 const webAlert = (
     title: string,
     message: string,
-    buttons: Array<{
+    buttons: {
         text: string;
         style?: 'default' | 'cancel' | 'destructive';
         onPress?: () => void;
-    }>
+    }[]
 ) => {
     if (Platform.OS === 'web') {
         const result = window.confirm(`${title}\n\n${message}`);

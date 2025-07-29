@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect } from 'react';
 import { useOxy } from '@oxyhq/services';
 import { useProfileStore } from '@/store/profileStore';
+import { useRecentlyViewedStore } from '@/store/recentlyViewedStore';
 import type { Profile } from '@/services/profileService';
 
 interface ProfileContextType {
@@ -39,13 +40,28 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
             }
         };
 
+        const loadRecentlyViewed = async () => {
+            try {
+                console.log('ProfileContext: Loading recently viewed for authenticated user');
+                if (activeSessionId) {
+                    await useRecentlyViewedStore.getState().loadFromDatabase(oxyServices, activeSessionId);
+                    console.log('ProfileContext: Recently viewed loaded successfully');
+                }
+            } catch (err: any) {
+                console.error('ProfileContext: Error loading recently viewed:', err);
+                // Don't set profile error for recently viewed errors
+            }
+        };
+
         if (oxyServices && activeSessionId) {
-            console.log('ProfileContext: User authenticated, loading profiles...');
+            console.log('ProfileContext: User authenticated, loading profiles and recently viewed...');
             loadProfiles();
+            loadRecentlyViewed();
         } else {
-            console.log('ProfileContext: User not authenticated, clearing profiles');
+            console.log('ProfileContext: User not authenticated, clearing profiles and recently viewed');
             setPrimaryProfile(null);
             setAllProfiles([]);
+            useRecentlyViewedStore.getState().clearAll();
         }
     }, [oxyServices, activeSessionId, setPrimaryProfile, setAllProfiles, setError]);
 

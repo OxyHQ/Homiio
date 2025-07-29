@@ -3,7 +3,6 @@ import { View, StyleSheet, ScrollView, TextInput, TouchableOpacity, Platform, Ke
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-const IconComponent = Ionicons as any;
 import { colors } from '@/styles/colors';
 import { Header } from '@/components/Header';
 import { ThemedText } from '@/components/ThemedText';
@@ -16,6 +15,7 @@ import { BottomSheetContext } from '@/app/_layout';
 import { SearchablePickerBottomSheet } from '@/components/SearchablePickerBottomSheet';
 import { PropertyService } from '@/services/propertyService';
 import * as Location from 'expo-location';
+const IconComponent = Ionicons as any;
 
 // Define the property types
 const PROPERTY_TYPES = [

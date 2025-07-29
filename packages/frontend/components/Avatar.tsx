@@ -1,6 +1,5 @@
 import React from "react";
-import { Image, ImageSourcePropType, Pressable } from 'react-native';
-import { StyleSheet, ImageStyle } from "react-native";
+import { Image, ImageSourcePropType, Pressable , StyleSheet, ImageStyle } from 'react-native';
 import { colors } from "@/styles/colors";
 import defaultAvatar from "@/assets/images/default-avatar.jpg";
 
