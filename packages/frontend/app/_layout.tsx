@@ -33,6 +33,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import { ProfileProvider } from '@/context/ProfileContext';
 import { OxyProvider, OxyServices } from '@oxyhq/services';
 import { generateWebsiteStructuredData, injectStructuredData } from '@/utils/structuredData';
+import { PostHogProvider } from 'posthog-react-native';
 import "../styles/global.css";
 
 // BottomSheet context for global sheet control
@@ -229,40 +230,49 @@ export default function RootLayout() {
             onFadeComplete={handleSplashFadeComplete}
           />
         ) : (
-          <OxyProvider
-            oxyServices={oxyServices}
-            initialScreen="SignIn"
-            autoPresent={false}
-            onClose={() => console.log('Sheet closed')}
-            onAuthenticated={handleAuthenticated}
-            onAuthStateChange={user => console.log('Auth state changed:', user?.username || 'logged out')}
-            storageKeyPrefix="oxy_example"
-            theme="light"
+          <PostHogProvider
+            apiKey="phc_wRxFcPEaeeRHAKoMi4gzleLdNE9Ny4JEwYe8Z5h3soO"
+            options={{
+              host: 'https://us.i.posthog.com',
+              enableSessionReplay: true,
+            }}
+            autocapture
           >
-            <ProfileProvider>
-              <BottomSheetProvider>
-                <I18nextProvider i18n={i18n}>
-                  <MenuProvider>
-                    <ErrorBoundary>
-                      <View style={styles.container}>
-                        <SideBar />
-                        <View style={styles.mainContentWrapper}>
-                          <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0 }} />
-                          <Slot />
+            <OxyProvider
+              oxyServices={oxyServices}
+              initialScreen="SignIn"
+              autoPresent={false}
+              onClose={() => console.log('Sheet closed')}
+              onAuthenticated={handleAuthenticated}
+              onAuthStateChange={user => console.log('Auth state changed:', user?.username || 'logged out')}
+              storageKeyPrefix="oxy_example"
+              theme="light"
+            >
+              <ProfileProvider>
+                <BottomSheetProvider>
+                  <I18nextProvider i18n={i18n}>
+                    <MenuProvider>
+                      <ErrorBoundary>
+                        <View style={styles.container}>
+                          <SideBar />
+                          <View style={styles.mainContentWrapper}>
+                            <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0 }} />
+                            <Slot />
+                          </View>
+                          <RightBar />
                         </View>
-                        <RightBar />
-                      </View>
-                      <StatusBar style="auto" />
-                      <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
-                      {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
-                    </ErrorBoundary>
-                  </MenuProvider>
-                </I18nextProvider>
-              </BottomSheetProvider>
-            </ProfileProvider>
-          </OxyProvider>
+                        <StatusBar style="auto" />
+                        <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
+                        {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
+                      </ErrorBoundary>
+                    </MenuProvider>
+                  </I18nextProvider>
+                </BottomSheetProvider>
+              </ProfileProvider>
+            </OxyProvider>
+          </PostHogProvider>
         )}
       </GestureHandlerRootView>
-    </SafeAreaProvider >
+    </SafeAreaProvider>
   );
 }

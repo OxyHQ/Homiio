@@ -171,8 +171,11 @@ class PropertyService {
     }
   }
 
-  async updateProperty(id: string, data: Partial<CreatePropertyData>): Promise<Property> {
-    const response = await api.put(`${this.baseUrl}/${id}`, data);
+  async updateProperty(id: string, data: Partial<CreatePropertyData>, oxyServices?: any, activeSessionId?: string): Promise<Property> {
+    const response = await api.put(`${this.baseUrl}/${id}`, data, {
+      oxyServices,
+      activeSessionId,
+    });
     return response.data.data || response.data.property;
   }
 

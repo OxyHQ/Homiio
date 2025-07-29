@@ -15,7 +15,7 @@ This directory contains all property-related screens in the Homiio app.
   - Add button in header to create new property
 - **Navigation**: 
   - Property detail: `/properties/[id]`
-  - Edit property: `/properties/[id]/edit` (TODO)
+  - Edit property: `/properties/create?id=[id]` (Unified with create screen)
   - Create property: `/properties/create`
 - **API**: Uses `useUserProperties` hook to fetch data from `/api/users/me/properties`
 

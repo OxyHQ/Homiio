@@ -11,6 +11,7 @@ interface PropertyMapProps {
   onLocationSelect?: (lat: number, lng: number, address: string) => void;
   height?: number;
   interactive?: boolean;
+  showMarker?: boolean;
 }
 
 // Web-specific map component using Leaflet
@@ -21,6 +22,7 @@ const WebMap: React.FC<PropertyMapProps> = ({
   onLocationSelect,
   height = 300,
   interactive = true,
+  showMarker = true,
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
@@ -47,8 +49,8 @@ const WebMap: React.FC<PropertyMapProps> = ({
           attribution: '© OpenStreetMap contributors'
         }).addTo(leafletMap);
 
-        // Add initial marker if coordinates are provided
-        if (latitude && longitude) {
+        // Add initial marker if coordinates are provided and showMarker is true
+        if (latitude && longitude && showMarker) {
           mapMarker = L.marker([latitude, longitude]).addTo(leafletMap);
         }
 
@@ -487,8 +489,8 @@ const MobileMap: React.FC<PropertyMapProps> = (props) => {
             // Add OpenStreetMap tiles without any attribution text
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
             
-            // Add marker if coordinates are provided
-            ${props.latitude && props.longitude ? `
+            // Add marker if coordinates are provided and showMarker is true
+            ${props.latitude && props.longitude && props.showMarker !== false ? `
               marker = L.marker([${props.latitude}, ${props.longitude}]).addTo(map);
               ${props.address ? `document.getElementById('locationInfo').textContent = '${props.address}';` : ''}
             ` : ''}

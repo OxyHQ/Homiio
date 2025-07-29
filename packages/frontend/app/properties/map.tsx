@@ -69,7 +69,7 @@ export default function PropertiesMapScreen() {
 
     // Transform properties for map display
     const mapProperties: MapProperty[] = properties
-        .filter(property => property.address?.coordinates?.lat && property.address?.coordinates?.lng)
+        .filter(property => property.location?.coordinates && property.location.coordinates.length === 2)
         .map(property => ({
             ...property,
             title: generatePropertyTitle(property),
@@ -80,12 +80,12 @@ export default function PropertiesMapScreen() {
     useEffect(() => {
         if (properties.length > 0 && !mapCenter) {
             const validProperties = properties.filter(p =>
-                p.address?.coordinates?.lat && p.address?.coordinates?.lng
+                p.location?.coordinates && p.location.coordinates.length === 2
             );
 
             if (validProperties.length > 0) {
-                const avgLat = validProperties.reduce((sum, p) => sum + (p.address.coordinates!.lat), 0) / validProperties.length;
-                const avgLng = validProperties.reduce((sum, p) => sum + (p.address.coordinates!.lng), 0) / validProperties.length;
+                const avgLat = validProperties.reduce((sum, p) => sum + (p.location.coordinates![1]), 0) / validProperties.length;
+                const avgLng = validProperties.reduce((sum, p) => sum + (p.location.coordinates![0]), 0) / validProperties.length;
                 setMapCenter({ lat: avgLat, lng: avgLng });
             }
         }
@@ -134,10 +134,10 @@ export default function PropertiesMapScreen() {
     // Property selection handlers
     const handlePropertySelect = (property: Property) => {
         setSelectedProperty(property);
-        if (property.address?.coordinates?.lat && property.address?.coordinates?.lng) {
+        if (property.location?.coordinates && property.location.coordinates.length === 2) {
             setMapCenter({
-                lat: property.address.coordinates.lat,
-                lng: property.address.coordinates.lng,
+                lat: property.location.coordinates[1],
+                lng: property.location.coordinates[0],
             });
         }
     };

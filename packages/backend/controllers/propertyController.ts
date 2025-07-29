@@ -386,27 +386,79 @@ class PropertyController {
     try {
       const { propertyId } = req.params;
       const updateData = req.body;
+      const oxyUserId = req.user?.id || req.user?._id || req.userId;
 
-      // In a real implementation, check ownership and update in database
-      // const property = await PropertyModel.findById(propertyId);
-      // if (property.ownerId !== req.userId) {
-      //   throw new AppError('Access denied', 403, 'FORBIDDEN');
-      // }
+      if (!oxyUserId) {
+        return next(
+          new AppError(
+            "Authentication required",
+            401,
+            "AUTHENTICATION_REQUIRED",
+          ),
+        );
+      }
 
-      const updatedProperty = new Property({
-        id: propertyId,
-        ...updateData,
-        updatedAt: new Date(),
-      });
+      // Get the active profile for the current user
+      const Profile = require('../models').Profile;
+      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      
+      if (!activeProfile) {
+        return next(
+          new AppError(
+            "No active profile found",
+            404,
+            "PROFILE_NOT_FOUND",
+          ),
+        );
+      }
 
-      const validation = updatedProperty.validate();
-      if (!validation.isValid) {
-        throw new AppError("Validation failed", 400, "VALIDATION_ERROR");
+      // Find the property and check ownership
+      const property = await Property.findById(propertyId);
+      
+      if (!property) {
+        return next(
+          new AppError(
+            "Property not found",
+            404,
+            "PROPERTY_NOT_FOUND",
+          ),
+        );
+      }
+
+      // Check if the property belongs to the current user's profile
+      if (property.profileId.toString() !== activeProfile._id.toString()) {
+        return next(
+          new AppError(
+            "Access denied - you can only edit your own properties",
+            403,
+            "FORBIDDEN",
+          ),
+        );
+      }
+
+      // Update the property
+      const updatedProperty = await Property.findByIdAndUpdate(
+        propertyId,
+        {
+          ...updateData,
+          updatedAt: new Date(),
+        },
+        { new: true, runValidators: true }
+      );
+
+      if (!updatedProperty) {
+        return next(
+          new AppError(
+            "Failed to update property",
+            500,
+            "UPDATE_FAILED",
+          ),
+        );
       }
 
       res.json(
         successResponse(
-          updatedProperty.toJSON(),
+          updatedProperty,
           "Property updated successfully",
         ),
       );

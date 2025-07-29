@@ -31,6 +31,7 @@ export default function () {
   router.delete("/me/saved-searches/:searchId", asyncHandler(profileController.deleteSavedSearch));
   router.put("/me/saved-searches/:searchId", asyncHandler(profileController.updateSavedSearch));
   router.put("/me/saved-searches/:searchId/notifications", asyncHandler(profileController.toggleSearchNotifications));
+  router.get("/me/properties", asyncHandler(profileController.getProfileProperties));
   router.get("/me/:profileType", asyncHandler(profileController.getProfileByType));
   router.get("/:profileId", asyncHandler(profileController.getProfileById));
   router.put("/:profileId", asyncHandler(profileController.updateProfile));

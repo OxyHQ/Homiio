@@ -11,6 +11,7 @@ export interface Address {
   zipCode: string;
   country: string;
   coordinates?: Coordinates;
+  showAddressNumber?: boolean;
 }
 
 export interface AddressDetail extends Address {

@@ -5,7 +5,7 @@ import { Property } from '@homiio/shared-types';
 
 interface MapProperty extends Property {
   title: string;
-  location: string;
+  // location is inherited from Property (GeoJSONPoint)
 }
 
 interface PropertiesMapProps {
@@ -37,12 +37,12 @@ const WebPropertiesMap: React.FC<PropertiesMapProps> = ({
   // Calculate center if not provided
   const mapCenter = center || (() => {
     const validProperties = properties.filter(p =>
-      p.address?.coordinates?.lat && p.address?.coordinates?.lng
+      p.location?.coordinates && p.location.coordinates.length === 2
     );
 
     if (validProperties.length > 0) {
-      const avgLat = validProperties.reduce((sum, p) => sum + (p.address.coordinates?.lat || 0), 0) / validProperties.length;
-      const avgLng = validProperties.reduce((sum, p) => sum + (p.address.coordinates?.lng || 0), 0) / validProperties.length;
+      const avgLat = validProperties.reduce((sum, p) => sum + (p.location?.coordinates?.[1] || 0), 0) / validProperties.length;
+      const avgLng = validProperties.reduce((sum, p) => sum + (p.location?.coordinates?.[0] || 0), 0) / validProperties.length;
       return { lat: avgLat, lng: avgLng };
     }
 
@@ -147,9 +147,9 @@ const WebPropertiesMap: React.FC<PropertiesMapProps> = ({
       const L = (window as any).L;
 
       properties.forEach((property) => {
-        if (property.address?.coordinates?.lat && property.address?.coordinates?.lng) {
-          const lat = property.address.coordinates.lat;
-          const lng = property.address.coordinates.lng;
+        if (property.location?.coordinates && property.location.coordinates.length === 2) {
+          const lat = property.location.coordinates[1];
+          const lng = property.location.coordinates[0];
 
           // Create custom marker icon
           const markerIcon = L.divIcon({

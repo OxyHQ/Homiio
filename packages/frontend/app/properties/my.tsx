@@ -54,7 +54,7 @@ export default function MyPropertiesScreen() {
     };
 
     const handleEditProperty = (propertyId: string) => {
-        router.push(`/properties/${propertyId}/edit`);
+        router.push(`/properties/create?id=${propertyId}`);
     };
 
     const handleDeleteProperty = (propertyId: string, propertyTitle: string) => {

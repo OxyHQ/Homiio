@@ -226,6 +226,7 @@ export const useCreateProperty = () => {
 export const useUpdateProperty = () => {
   const { loading, error } = usePropertySelectors();
   const { setLoading, setError } = usePropertyStore();
+  const { oxyServices, activeSessionId } = useOxy();
 
   const update = useCallback(async (id: string, data: Partial<CreatePropertyData>) => {
     try {
@@ -233,7 +234,7 @@ export const useUpdateProperty = () => {
       setError(null);
       
       // Use propertyService instead of propertyApi
-      const response = await propertyService.updateProperty(id, data);
+      const response = await propertyService.updateProperty(id, data, oxyServices, activeSessionId || '');
       
       toast.success('Property updated successfully');
       return response;
@@ -245,7 +246,7 @@ export const useUpdateProperty = () => {
     } finally {
       setLoading('update', false);
     }
-  }, [setLoading, setError]);
+  }, [oxyServices, activeSessionId, setLoading, setError]);
 
   return {
     update,

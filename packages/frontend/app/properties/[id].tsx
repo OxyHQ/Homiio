@@ -142,7 +142,18 @@ export default function PropertyDetailPage() {
             isLoading,
             error: error,
             oxyServices: !!oxyServices,
-            activeSessionId: !!activeSessionId
+            activeSessionId: !!activeSessionId,
+            locationData: apiProperty ? {
+                hasLocation: !!apiProperty.location,
+                locationType: typeof apiProperty.location,
+                coordinates: apiProperty.location?.coordinates,
+                coordinatesType: typeof apiProperty.location?.coordinates,
+                coordinatesLength: apiProperty.location?.coordinates?.length,
+                addressCoordinates: apiProperty.address?.coordinates,
+                addressCoordinatesType: typeof apiProperty.address?.coordinates,
+                showAddressNumber: apiProperty.address?.showAddressNumber,
+                showAddressNumberType: typeof apiProperty.address?.showAddressNumber
+            } : null
         });
     }, [id, apiProperty, isLoading, error, oxyServices, activeSessionId]);
 
@@ -481,8 +492,8 @@ export default function PropertyDetailPage() {
                                         </View>
                                         <View style={styles.mapPreviewContainer}>
                                             <PropertyMap
-                                                latitude={apiProperty?.address?.coordinates?.lat || 40.7128}
-                                                longitude={apiProperty?.address?.coordinates?.lng || -74.0060}
+                                                latitude={apiProperty?.location?.coordinates?.[1] || 40.7128}
+                                                longitude={apiProperty?.location?.coordinates?.[0] || -74.0060}
                                                 address={property.location}
                                                 height={96}
                                                 interactive={false}
@@ -1045,15 +1056,16 @@ export default function PropertyDetailPage() {
                                 <AmenitiesDisplay amenities={property.amenities} title="" />
 
                                 {/* Map - Only show if location coordinates are available */}
-                                {apiProperty?.address?.coordinates?.lat && apiProperty?.address?.coordinates?.lng && (
+                                {apiProperty?.location?.coordinates && apiProperty.location.coordinates.length === 2 && (
                                     <>
                                         <ThemedText style={styles.sectionTitle}>{t("Location")}</ThemedText>
                                         <PropertyMap
-                                            latitude={apiProperty.address.coordinates.lat}
-                                            longitude={apiProperty.address.coordinates.lng}
+                                            latitude={apiProperty.location.coordinates[1]}
+                                            longitude={apiProperty.location.coordinates[0]}
                                             address={property.location}
                                             height={200}
                                             interactive={false}
+                                            showMarker={apiProperty?.address?.showAddressNumber ?? true}
                                         />
                                     </>
                                 )}
@@ -1311,13 +1323,45 @@ export default function PropertyDetailPage() {
                                             />
                                         </View>
                                         <View style={styles.mapPreviewContainer}>
-                                            <PropertyMap
-                                                latitude={apiProperty?.address?.coordinates?.lat || 40.7128}
-                                                longitude={apiProperty?.address?.coordinates?.lng || -74.0060}
-                                                address={property.location}
-                                                height={96}
-                                                interactive={false}
-                                            />
+                                            {(() => {
+                                                const hasCoordinates = apiProperty?.location?.coordinates && apiProperty.location.coordinates.length === 2;
+                                                const showAddressNumber = apiProperty?.address?.showAddressNumber ?? true;
+                                                const lat = apiProperty?.location?.coordinates?.[1] || 40.7128;
+                                                const lng = apiProperty?.location?.coordinates?.[0] || -74.0060;
+                                                console.log('mapPreviewContainer coordinates:', { lat, lng, hasCoordinates, showAddressNumber, showMarker: showAddressNumber });
+
+                                                if (hasCoordinates && showAddressNumber) {
+                                                    return (
+                                                        <PropertyMap
+                                                            latitude={lat}
+                                                            longitude={lng}
+                                                            address={property.location}
+                                                            height={96}
+                                                            interactive={false}
+                                                            showMarker={true}
+                                                        />
+                                                    );
+                                                } else if (hasCoordinates && !showAddressNumber) {
+                                                    return (
+                                                        <PropertyMap
+                                                            latitude={lat}
+                                                            longitude={lng}
+                                                            address={property.location}
+                                                            height={96}
+                                                            interactive={false}
+                                                            showMarker={false}
+                                                        />
+                                                    );
+                                                } else {
+                                                    return (
+                                                        <View style={[styles.mapPreviewContainer, { justifyContent: 'center', alignItems: 'center' }]}>
+                                                            <ThemedText style={styles.locationPrivacyText}>
+                                                                {t("Location hidden")}
+                                                            </ThemedText>
+                                                        </View>
+                                                    );
+                                                }
+                                            })()}
                                             <View style={styles.mapOverlay}>
                                                 <ThemedText style={styles.mapOverlayText}>Location</ThemedText>
                                             </View>
@@ -1876,15 +1920,16 @@ export default function PropertyDetailPage() {
                                 <AmenitiesDisplay amenities={property.amenities} title="" />
 
                                 {/* Map - Only show if location coordinates are available */}
-                                {apiProperty?.address?.coordinates?.lat && apiProperty?.address?.coordinates?.lng && (
+                                {apiProperty?.location?.coordinates && apiProperty.location.coordinates.length === 2 && (
                                     <>
                                         <ThemedText style={styles.sectionTitle}>{t("Location")}</ThemedText>
                                         <PropertyMap
-                                            latitude={apiProperty.address.coordinates.lat}
-                                            longitude={apiProperty.address.coordinates.lng}
+                                            latitude={apiProperty.location.coordinates[1]}
+                                            longitude={apiProperty.location.coordinates[0]}
                                             address={property.location}
                                             height={200}
                                             interactive={false}
+                                            showMarker={apiProperty?.address?.showAddressNumber ?? true}
                                         />
                                     </>
                                 )}
@@ -2933,6 +2978,26 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.3)',
         marginLeft: 12,
+    },
+    locationPrivacyContainer: {
+        backgroundColor: colors.COLOR_BLACK_LIGHT_1,
+        borderRadius: 12,
+        padding: 20,
+        alignItems: 'center',
+        marginVertical: 10,
+    },
+    locationPrivacyText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: colors.COLOR_BLACK,
+        marginBottom: 8,
+        textAlign: 'center',
+    },
+    locationPrivacySubtext: {
+        fontSize: 14,
+        color: colors.COLOR_BLACK_LIGHT_3,
+        textAlign: 'center',
+        lineHeight: 20,
     },
 
 }); 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TextInput, TouchableOpacity, Platform, KeyboardAvoidingView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
@@ -10,7 +10,7 @@ import { AmenitiesSelector } from '@/components/AmenitiesSelector';
 import { PropertyMap } from '@/components/PropertyMap';
 import { PropertyPreviewWidget } from '@/components/widgets/PropertyPreviewWidget';
 import { useCreatePropertyFormStore, useCreatePropertyFormSelectors } from '@/store/createPropertyFormStore';
-import { useCreateProperty } from '@/hooks/usePropertyQueries';
+import { useCreateProperty, useUpdateProperty, useProperty } from '@/hooks/usePropertyQueries';
 import { BottomSheetContext } from '@/app/_layout';
 import { SearchablePickerBottomSheet } from '@/components/SearchablePickerBottomSheet';
 import { PropertyService } from '@/services/propertyService';
@@ -141,7 +141,12 @@ const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
 export default function CreatePropertyScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { id } = useLocalSearchParams();
+  const isEditMode = !!id;
+
   const { create, loading, error } = useCreateProperty();
+  const { update, loading: updateLoading, error: updateError } = useUpdateProperty();
+  const { property, loading: propertyLoading, error: propertyError, loadProperty } = useProperty(id as string);
 
   // Get form state and actions from Zustand store
   const {
@@ -151,7 +156,8 @@ export default function CreatePropertyScreen() {
     prevStep,
     setLoading,
     setError,
-    setCurrentStep
+    setCurrentStep,
+    resetForm
   } = useCreatePropertyFormStore();
 
   const { formData, currentStep, isDirty, isLoading } = useCreatePropertyFormSelectors();
@@ -161,6 +167,73 @@ export default function CreatePropertyScreen() {
 
   // Track previous propertyType to reset step if changed
   const prevPropertyTypeRef = React.useRef<string | undefined>(formData.basicInfo.propertyType);
+
+  // Load property data if in edit mode
+  React.useEffect(() => {
+    if (isEditMode && id) {
+      loadProperty();
+    }
+  }, [isEditMode, id, loadProperty]);
+
+  // Populate form data when property is loaded in edit mode
+  React.useEffect(() => {
+    if (isEditMode && property) {
+      setFormData('basicInfo', {
+        propertyType: property.type || 'apartment',
+        bedrooms: property.bedrooms || 1,
+        bathrooms: property.bathrooms || 1,
+        squareFootage: property.squareFootage || 0,
+        floor: property.floor,
+        yearBuilt: property.yearBuilt,
+        description: property.description || '',
+      });
+
+      setFormData('location', {
+        address: property.address?.street || '',
+        addressLine2: '',
+        addressNumber: '',
+        showAddressNumber: false,
+        floor: property.floor,
+        showFloor: !!property.floor,
+        city: property.address?.city || '',
+        state: property.address?.state || '',
+        zipCode: property.address?.zipCode || '',
+        country: property.address?.country || 'Spain',
+        latitude: property.location?.coordinates?.[1] || 40.7128,
+        longitude: property.location?.coordinates?.[0] || -74.0060,
+        availableFrom: '',
+        leaseTerm: '',
+      });
+
+      setFormData('pricing', {
+        monthlyRent: property.rent?.amount || 0,
+        currency: property.rent?.currency || 'USD',
+        securityDeposit: 0,
+        applicationFee: 0,
+        lateFee: 0,
+      });
+
+      setFormData('amenities', {
+        selectedAmenities: property.amenities || [],
+        petsAllowed: property.petFriendly || false,
+        smokingAllowed: false,
+        partiesAllowed: false,
+        guestsAllowed: false,
+        maxGuests: undefined,
+      });
+
+      setFormData('media', {
+        images: property.images || [],
+      });
+
+      setFormData('colivingFeatures', {
+        sharedSpaces: false,
+        communityEvents: false,
+        sharedSpacesList: [],
+        otherFeatures: '',
+      });
+    }
+  }, [isEditMode, property, setFormData]);
 
   // Get user's current location on component mount
   React.useEffect(() => {
@@ -231,6 +304,7 @@ export default function CreatePropertyScreen() {
           state: formData.location.state,
           zipCode: formData.location.zipCode,
           country: formData.location.country || 'US',
+          showAddressNumber: formData.location.showAddressNumber ?? true,
         },
         type: formData.basicInfo.propertyType as
           | 'apartment'
@@ -268,19 +342,31 @@ export default function CreatePropertyScreen() {
       if (formData.basicInfo.propertyType === 'coliving') {
         propertyData.colivingFeatures = formData.colivingFeatures;
       }
-      const result = await create(propertyData);
-      if (result && typeof result === 'object') {
-        console.log('Property creation result:', JSON.stringify(result));
-        if (result._id) {
-          router.push(`/properties/${result._id}`);
+      if (isEditMode && id) {
+        // Update existing property
+        const result = await update(id as string, propertyData);
+        if (result && typeof result === 'object') {
+          console.log('Property update result:', JSON.stringify(result));
+          router.push(`/properties/${id}`);
         } else {
-          setError('Created property but received unexpected response format');
+          setError('Updated property but received unexpected response format');
         }
       } else {
-        setError(`Unexpected response format: ${JSON.stringify(result)}`);
+        // Create new property
+        const result = await create(propertyData);
+        if (result && typeof result === 'object') {
+          console.log('Property creation result:', JSON.stringify(result));
+          if (result._id) {
+            router.push(`/properties/${result._id}`);
+          } else {
+            setError('Created property but received unexpected response format');
+          }
+        } else {
+          setError(`Unexpected response format: ${JSON.stringify(result)}`);
+        }
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to create property');
+      setError(err.message || (isEditMode ? 'Failed to update property' : 'Failed to create property'));
     } finally {
       setLoading(false);
     }
@@ -1121,12 +1207,16 @@ export default function CreatePropertyScreen() {
               <TouchableOpacity
                 style={styles.submitButton}
                 onPress={handleSubmit}
-                disabled={isLoading}
+                disabled={isLoading || (isEditMode && propertyLoading)}
               >
                 {isLoading ? (
-                  <ThemedText style={styles.submitButtonText}>Creating...</ThemedText>
+                  <ThemedText style={styles.submitButtonText}>
+                    {isEditMode ? 'Updating...' : 'Creating...'}
+                  </ThemedText>
                 ) : (
-                  <ThemedText style={styles.submitButtonText}>Create Property</ThemedText>
+                  <ThemedText style={styles.submitButtonText}>
+                    {isEditMode ? 'Update Property' : 'Create Property'}
+                  </ThemedText>
                 )}
               </TouchableOpacity>
 
@@ -1166,13 +1256,42 @@ export default function CreatePropertyScreen() {
     );
   };
 
+  // Show loading state when in edit mode and property is loading
+  if (isEditMode && propertyLoading) {
+    return (
+      <View style={styles.container}>
+        <Header options={{ title: 'Edit Property', showBackButton: true }} />
+        <View style={styles.loadingContainer}>
+          <ThemedText>Loading property...</ThemedText>
+        </View>
+      </View>
+    );
+  }
+
+  // Show error state if property failed to load in edit mode
+  if (isEditMode && propertyError) {
+    return (
+      <View style={styles.container}>
+        <Header options={{ title: 'Edit Property', showBackButton: true }} />
+        <View style={styles.errorContainer}>
+          <ThemedText style={styles.errorText}>
+            {propertyError || 'Property not found'}
+          </ThemedText>
+          <TouchableOpacity style={styles.errorButton} onPress={() => router.back()}>
+            <ThemedText style={styles.errorButtonText}>Go Back</ThemedText>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
     >
-      <Header options={{ title: 'Create Property', showBackButton: true }} />
+      <Header options={{ title: isEditMode ? 'Edit Property' : 'Create Property', showBackButton: true }} />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Step indicators */}
@@ -1538,5 +1657,29 @@ const styles = StyleSheet.create({
     // This style is used to contain the form content and debug info
     // It's not directly applied to the form content or debug info,
     // but it helps in organizing the layout.
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+
+  errorButton: {
+    backgroundColor: colors.primaryColor,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  errorButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
