@@ -42,7 +42,13 @@ export default function ProfileEditScreen() {
     // Get profile type to determine which UI to show
     const profileType = activeProfile?.profileType || 'personal';
     console.log('ProfileEditScreen: Determined profileType:', profileType, 'from activeProfile.profileType:', activeProfile?.profileType);
-    console.log('ProfileEditScreen: Full activeProfile:', JSON.stringify(activeProfile, null, 2));
+    console.log('ProfileEditScreen: activeProfile id:', activeProfile?.id || activeProfile?._id);
+    console.log('ProfileEditScreen: activeProfile structure:');
+    console.log('  - profileType:', activeProfile?.profileType);
+    console.log('  - personalProfile exists:', !!activeProfile?.personalProfile);
+    console.log('  - agencyProfile exists:', !!activeProfile?.agencyProfile);
+    console.log('  - businessProfile exists:', !!activeProfile?.businessProfile);
+    console.log('  - cooperativeProfile exists:', !!activeProfile?.cooperativeProfile);
 
     // Load saved tab state on mount
     useEffect(() => {
@@ -2144,7 +2150,7 @@ export default function ProfileEditScreen() {
     }
 
     return (
-        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <SafeAreaView style={{ flex: 1 }} edges={['top']} key={`edit-${activeProfile?.id}-${profileType}`}>
             <Header
                 options={{
                     title: `Edit ${profileType === 'agency' ? 'Agency' : 

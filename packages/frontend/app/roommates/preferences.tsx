@@ -42,9 +42,10 @@ export default function RoommatePreferencesPage() {
     });
 
     const { primaryProfile } = useProfile();
+    const isPersonalProfile = primaryProfile?.profileType === 'personal';
 
     useEffect(() => {
-        if (primaryProfile) {
+        if (primaryProfile && isPersonalProfile) {
             const roommateSettings = primaryProfile.personalProfile?.settings?.roommate;
             if (roommateSettings) {
                 setRoommateEnabled(roommateSettings.enabled || false);
@@ -56,7 +57,7 @@ export default function RoommatePreferencesPage() {
                 }
             }
         }
-    }, [primaryProfile]);
+    }, [primaryProfile, isPersonalProfile]);
 
     const { oxyServices, activeSessionId } = useOxy();
 
