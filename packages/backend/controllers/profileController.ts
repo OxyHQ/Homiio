@@ -145,6 +145,10 @@ class ProfileController {
             // Make personal profile active but don't change active status
             personalProfile.isActive = true;
             await personalProfile.save();
+            
+            // Clear cache after making profile active
+            this.clearCachedProfile(oxyUserId, 'active');
+            
             profile = personalProfile;
           } else {
             console.log(`ProfileController: No personal profile found for user ${oxyUserId}, creating default personal profile`);
@@ -181,6 +185,10 @@ class ProfileController {
             // Calculate initial trust score
             defaultPersonalProfile.calculateTrustScore();
             await defaultPersonalProfile.save();
+            
+            // Clear cache after creating new profile
+            this.clearCachedProfile(oxyUserId, 'active');
+            
             profile = defaultPersonalProfile;
             console.log(`ProfileController: Successfully created default personal profile for user ${oxyUserId}`);
           }
@@ -522,6 +530,10 @@ class ProfileController {
 
       await Profile.findByIdAndDelete(profileId);
 
+      // Clear cache after deleting profile
+      this.clearCachedProfile(oxyUserId, 'active');
+      this.clearCachedProfile(oxyUserId, profileId);
+
       res.json(
         successResponse({ profileId }, "Profile deleted successfully")
       );
@@ -690,6 +702,8 @@ class ProfileController {
       if (updateData.isActive === true) {
         // Use the new activateProfile method for better consistency
         await Profile.activateProfile(oxyUserId, profile._id);
+        // Clear the cached active profile since we just changed which profile is active
+        this.clearCachedProfile(oxyUserId, 'active');
         // Update the profile object to reflect the changes
         profile.isActive = true;
       } else {
