@@ -46,12 +46,18 @@ export default function RoommatesPage() {
 
     const { oxyServices, activeSessionId } = useOxy();
 
-    const { primaryProfile } = useProfile();
-    const isPersonalProfile = primaryProfile?.profileType === 'personal';
-    const hasRoommateMatching = isPersonalProfile && (primaryProfile?.personalProfile?.settings?.roommate?.enabled || false);
+    const { 
+        primaryProfile,
+        isPersonalProfile,
+        hasPersonalProfile
+    } = useProfile();
+    
+    const hasRoommateMatching = isPersonalProfile && 
+        hasPersonalProfile && 
+        (primaryProfile?.personalProfile?.settings?.roommate?.enabled || false);
 
     useEffect(() => {
-        if (!hasRoommateMatching || !isPersonalProfile) return;
+        if (!isPersonalProfile || !hasPersonalProfile) return;
 
         switch (activeTab) {
             case 'discover':
@@ -64,7 +70,7 @@ export default function RoommatesPage() {
                 fetchRelationships();
                 break;
         }
-    }, [activeTab, hasRoommateMatching, isPersonalProfile, fetchProfiles, fetchRequests, fetchRelationships]);
+    }, [activeTab, isPersonalProfile, hasPersonalProfile, fetchProfiles, fetchRequests, fetchRelationships]);
 
     const onRefresh = async () => {
         setRefreshing(true);
@@ -96,7 +102,8 @@ export default function RoommatesPage() {
                 await fetchProfiles();
             }
             Alert.alert('Success', `Roommate matching ${newState ? 'enabled' : 'disabled'}`);
-        } catch (error) {
+        } catch (error: any) {
+            console.error('Error toggling roommate matching:', error);
             Alert.alert('Error', 'Failed to toggle roommate matching');
         }
     };
@@ -107,7 +114,7 @@ export default function RoommatesPage() {
 
 
     const renderDiscoverTab = () => {
-        if (!isPersonalProfile) {
+        if (!isPersonalProfile || !hasPersonalProfile) {
             return (
                 <EmptyState
                     icon="person-outline"
@@ -170,7 +177,7 @@ export default function RoommatesPage() {
     };
 
     const renderRequestsTab = () => {
-        if (!isPersonalProfile) {
+        if (!isPersonalProfile || !hasPersonalProfile) {
             return (
                 <EmptyState
                     icon="person-outline"
@@ -228,6 +235,19 @@ export default function RoommatesPage() {
     };
 
     const renderRelationshipsTab = () => {
+        if (!isPersonalProfile || !hasPersonalProfile) {
+            return (
+                <EmptyState
+                    icon="person-outline"
+                    title="Personal Profile Required"
+                    description="Roommate matching is only available for personal profiles. Please switch to your personal profile to use this feature."
+                    actionText="Switch to Personal Profile"
+                    actionIcon="person-circle"
+                    onAction={() => router.push('/profile')}
+                />
+            );
+        }
+
         if (isLoading) {
             return <LoadingSpinner />;
         }
@@ -394,12 +414,5 @@ const styles = StyleSheet.create({
     },
     profilesList: {
         flex: 1,
-    },
-    comingSoonText: {
-        fontSize: 16,
-        color: colors.primaryDark_1,
-        textAlign: 'center',
-        marginTop: 40,
-        paddingHorizontal: 20,
     },
 }); 

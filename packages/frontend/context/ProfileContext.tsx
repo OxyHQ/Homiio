@@ -11,6 +11,15 @@ interface ProfileContextType {
     error: Error | null;
     hasPrimaryProfile: boolean;
     refetch: () => void;
+    // Profile type specific helpers
+    personalProfile: Profile | null;
+    agencyProfiles: Profile[];
+    businessProfiles: Profile[];
+    ownedAgencyProfiles: Profile[];
+    // Profile checks
+    isPersonalProfile: boolean;
+    hasPersonalProfile: boolean;
+    canAccessRoommates: boolean;
 }
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
@@ -65,7 +74,39 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         }
     }, [oxyServices, activeSessionId, setPrimaryProfile, setAllProfiles, setError]);
 
+    // Memoized profile helpers
+    const personalProfile = React.useMemo(() => 
+        allProfiles.find(profile => profile.profileType === 'personal') || null,
+        [allProfiles]
+    );
+
+    const agencyProfiles = React.useMemo(() => 
+        allProfiles.filter(profile => profile.profileType === 'agency'),
+        [allProfiles]
+    );
+
+    const businessProfiles = React.useMemo(() => 
+        allProfiles.filter(profile => profile.profileType === 'business'),
+        [allProfiles]
+    );
+
+    const ownedAgencyProfiles = React.useMemo(() => {
+        if (!oxyServices || !activeSessionId) return [];
+        
+        return allProfiles.filter(profile =>
+            profile.profileType === 'agency' &&
+            profile.agencyProfile?.members.some(member =>
+                member.oxyUserId === activeSessionId &&
+                ['owner', 'admin'].includes(member.role)
+            )
+        );
+    }, [allProfiles, oxyServices, activeSessionId]);
+
+    // Profile state checks
     const hasPrimaryProfile = !!primaryProfile;
+    const hasPersonalProfile = !!personalProfile;
+    const isPersonalProfile = primaryProfile?.profileType === 'personal';
+    const canAccessRoommates = isPersonalProfile && hasPersonalProfile;
 
     const refetch = () => {
         if (oxyServices && activeSessionId) {
@@ -81,6 +122,13 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         error: error as Error | null,
         hasPrimaryProfile,
         refetch,
+        personalProfile,
+        agencyProfiles,
+        businessProfiles,
+        ownedAgencyProfiles,
+        isPersonalProfile,
+        hasPersonalProfile,
+        canAccessRoommates,
     };
 
     return (
@@ -98,38 +146,23 @@ export function useProfile() {
     return context;
 }
 
-// Hook to get personal profile specifically
+// Legacy hooks for backward compatibility
 export function usePersonalProfile() {
-    const { allProfiles } = useProfile();
-    return allProfiles.find(profile => profile.profileType === 'personal') || null;
+    const { personalProfile } = useProfile();
+    return personalProfile;
 }
 
-// Hook to get agency profiles specifically
 export function useAgencyProfiles() {
-    const { allProfiles } = useProfile();
-    return allProfiles.filter(profile => profile.profileType === 'agency');
+    const { agencyProfiles } = useProfile();
+    return agencyProfiles;
 }
 
-// Hook to get business profiles specifically
 export function useBusinessProfiles() {
-    const { allProfiles } = useProfile();
-    return allProfiles.filter(profile => profile.profileType === 'business');
+    const { businessProfiles } = useProfile();
+    return businessProfiles;
 }
 
-// Hook to get owned agency profiles
 export function useOwnedAgencyProfiles() {
-    const { allProfiles } = useProfile();
-    const { oxyServices, activeSessionId } = useOxy();
-
-    if (!oxyServices || !activeSessionId) {
-        return [];
-    }
-
-    return allProfiles.filter(profile =>
-        profile.profileType === 'agency' &&
-        profile.agencyProfile?.members.some(member =>
-            member.oxyUserId === activeSessionId &&
-            ['owner', 'admin'].includes(member.role)
-        )
-    );
+    const { ownedAgencyProfiles } = useProfile();
+    return ownedAgencyProfiles;
 } 

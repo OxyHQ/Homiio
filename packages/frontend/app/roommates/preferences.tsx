@@ -6,8 +6,7 @@ import {
     ScrollView,
     TouchableOpacity,
     Switch,
-    Alert,
-    Platform
+    Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -17,15 +16,14 @@ import { useProfile } from '@/context/ProfileContext';
 import { useOxy } from '@oxyhq/services';
 import { roommateService } from '@/services/roommateService';
 import { useProfileStore } from '@/store/profileStore';
-import LoadingSpinner from '@/components/LoadingSpinner';
 import Button from '@/components/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 // Type assertion for Ionicons compatibility
 const IconComponent = Ionicons as any;
 
 export default function RoommatePreferencesPage() {
     const router = useRouter();
-    const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [roommateEnabled, setRoommateEnabled] = useState(false);
     const [preferences, setPreferences] = useState({
@@ -41,8 +39,11 @@ export default function RoommatePreferencesPage() {
         interests: [] as string[]
     });
 
-    const { primaryProfile } = useProfile();
-    const isPersonalProfile = primaryProfile?.profileType === 'personal';
+    const { 
+        primaryProfile,
+        isPersonalProfile,
+        hasPersonalProfile
+    } = useProfile();
 
     useEffect(() => {
         if (primaryProfile && isPersonalProfile) {
@@ -62,13 +63,16 @@ export default function RoommatePreferencesPage() {
     const { oxyServices, activeSessionId } = useOxy();
 
     const handleToggleRoommateMatching = async (enabled: boolean) => {
+        if (!oxyServices || !activeSessionId) return;
+        
         setIsSaving(true);
         try {
             await roommateService.toggleRoommateMatching(enabled, oxyServices, activeSessionId);
             setRoommateEnabled(enabled);
             await useProfileStore.getState().fetchPrimaryProfile(oxyServices, activeSessionId);
             Alert.alert('Success', `Roommate matching ${enabled ? 'enabled' : 'disabled'}`);
-        } catch (error) {
+        } catch (error: any) {
+            console.error('Error toggling roommate matching:', error);
             Alert.alert('Error', 'Failed to update roommate matching settings');
         } finally {
             setIsSaving(false);
@@ -76,12 +80,19 @@ export default function RoommatePreferencesPage() {
     };
 
     const handleSavePreferences = async () => {
+        if (!oxyServices || !activeSessionId) return;
+        
         setIsSaving(true);
         try {
-            await roommateService.updateRoommatePreferences(preferences, oxyServices, activeSessionId);
+            const preferencesWithEnabled = {
+                ...preferences,
+                enabled: roommateEnabled
+            };
+            await roommateService.updateRoommatePreferences(preferencesWithEnabled, oxyServices, activeSessionId);
             await useProfileStore.getState().fetchPrimaryProfile(oxyServices, activeSessionId);
             Alert.alert('Success', 'Preferences saved successfully');
-        } catch (error) {
+        } catch (error: any) {
+            console.error('Error saving preferences:', error);
             Alert.alert('Error', 'Failed to save preferences');
         } finally {
             setIsSaving(false);
@@ -104,10 +115,30 @@ export default function RoommatePreferencesPage() {
         </TouchableOpacity>
     );
 
-    if (isLoading) {
+    // Check if user is on a personal profile
+    if (!isPersonalProfile || !hasPersonalProfile) {
         return (
             <SafeAreaView style={styles.container}>
-                <LoadingSpinner />
+                <View style={styles.header}>
+                    <TouchableOpacity
+                        style={styles.backButton}
+                        onPress={() => router.back()}
+                    >
+                        <IconComponent name="arrow-back" size={24} color={colors.primaryDark} />
+                    </TouchableOpacity>
+                    <Text style={styles.title}>Roommate Preferences</Text>
+                    <View style={styles.placeholder} />
+                </View>
+                <View style={styles.emptyStateContainer}>
+                    <EmptyState
+                        icon="person-outline"
+                        title="Personal Profile Required"
+                        description="Roommate preferences are only available for personal profiles. Please switch to your personal profile to manage your roommate settings."
+                        actionText="Switch to Personal Profile"
+                        actionIcon="person-circle"
+                        onAction={() => router.push('/profile')}
+                    />
+                </View>
             </SafeAreaView>
         );
     }
@@ -188,12 +219,12 @@ export default function RoommatePreferencesPage() {
                         {/* Save Button */}
                         <View style={styles.saveSection}>
                             <Button
-                                title="Save Preferences"
                                 onPress={handleSavePreferences}
-                                variant="primary"
-                                loading={isSaving}
+                                disabled={isSaving}
                                 style={styles.saveButton}
-                            />
+                            >
+                                {isSaving ? 'Saving...' : 'Save Preferences'}
+                            </Button>
                         </View>
                     </>
                 )}
@@ -230,6 +261,11 @@ const styles = StyleSheet.create({
     content: {
         flex: 1,
         paddingHorizontal: 16,
+    },
+    emptyStateContainer: {
+        flex: 1,
+        paddingHorizontal: 16,
+        paddingTop: 32,
     },
     section: {
         marginTop: 24,
