@@ -50,5 +50,6 @@ const styles = StyleSheet.create({
     },
     noPadding: {
         padding: 0,
+        paddingBottom: 10,
     },
 }); 
