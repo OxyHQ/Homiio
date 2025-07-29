@@ -445,6 +445,8 @@ class ProfileController {
       if (updateData.isActive === true) {
         // Use the new activateProfile method for better consistency
         await Profile.activateProfile(oxyUserId, profile._id);
+        // Clear the cached active profile since we just changed which profile is active
+        this.clearCachedProfile(oxyUserId, 'active');
         // Update the profile object to reflect the changes
         profile.isActive = true;
       } else {
@@ -949,6 +951,9 @@ class ProfileController {
       }
 
       await Profile.activateProfile(oxyUserId, profile._id);
+
+      // Clear the cached active profile since we just changed which profile is active
+      this.clearCachedProfile(oxyUserId, 'active');
 
       res.json(
         successResponse(profile, "Profile activated successfully")
