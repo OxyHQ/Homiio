@@ -42,18 +42,21 @@ export default function ProfileEditScreen() {
     // Get profile type to determine which UI to show
     const profileType = activeProfile?.profileType || 'personal';
     console.log('ProfileEditScreen: Determined profileType:', profileType, 'from activeProfile.profileType:', activeProfile?.profileType);
+    console.log('ProfileEditScreen: Full activeProfile:', JSON.stringify(activeProfile, null, 2));
 
     // Load saved tab state on mount
     useEffect(() => {
         const loadSavedTabState = async () => {
             try {
                 const savedTab = await getData<string>('profile-edit-active-section');
-                if (savedTab && ['personal', 'preferences', 'verification', 'business', 'settings'].includes(savedTab)) {
+                if (savedTab && ['personal', 'preferences', 'verification', 'business', 'cooperative', 'settings'].includes(savedTab)) {
                     setActiveSection(savedTab);
                 } else {
                     // Set default active section based on profile type
                     if (profileType === 'agency') {
                         setActiveSection('business');
+                    } else if (profileType === 'cooperative') {
+                        setActiveSection('cooperative');
                     } else {
                         setActiveSection('personal');
                     }
@@ -63,6 +66,8 @@ export default function ProfileEditScreen() {
                 // Fallback to default behavior
                 if (profileType === 'agency') {
                     setActiveSection('business');
+                } else if (profileType === 'cooperative') {
+                    setActiveSection('cooperative');
                 } else {
                     setActiveSection('personal');
                 }
@@ -137,6 +142,12 @@ export default function ProfileEditScreen() {
             insurance: false,
             backgroundCheck: false,
         },
+    });
+
+    // Form state for cooperative profile
+    const [cooperativeInfo, setCooperativeInfo] = useState({
+        legalName: '',
+        description: '',
     });
 
     const [preferences, setPreferences] = useState({
@@ -398,6 +409,16 @@ export default function ProfileEditScreen() {
             });
             setHasUnsavedChanges(false);
             setIsFormInitialized(true);
+        } else if (profileType === 'cooperative') {
+            // Initialize cooperative profile form whether or not cooperativeProfile exists
+            const profile = activeProfile?.cooperativeProfile;
+            console.log('ProfileEditScreen: Updating cooperative form state with profile data:', profile);
+            setCooperativeInfo({
+                legalName: profile?.legalName || '',
+                description: profile?.description || '',
+            });
+            setHasUnsavedChanges(false);
+            setIsFormInitialized(true);
         } else {
             // Unknown profile type or no profile - initialize with defaults
             console.log('ProfileEditScreen: Unknown profile type or no profile data, initializing with defaults');
@@ -507,6 +528,13 @@ export default function ProfileEditScreen() {
                         verification: businessInfo.verification,
                     },
                 };
+            } else if (profileType === 'cooperative') {
+                updateData = {
+                    cooperativeProfile: {
+                        legalName: cooperativeInfo.legalName,
+                        description: cooperativeInfo.description,
+                    },
+                };
             }
 
             await updateProfile(profileId, updateData, oxyServices, activeSessionId);
@@ -519,7 +547,7 @@ export default function ProfileEditScreen() {
         } finally {
             setIsSaving(false);
         }
-    }, [activeProfile, profileType, personalInfo, preferences, references, rentalHistory, settings, agencyInfo, businessInfo, updateProfile]);
+    }, [activeProfile, profileType, personalInfo, preferences, references, rentalHistory, settings, agencyInfo, businessInfo, cooperativeInfo, updateProfile, oxyServices, activeSessionId]);
 
     // Memoized form update functions to prevent unnecessary re-renders
     const updatePersonalInfo = useCallback((updates: Partial<typeof personalInfo>) => {
@@ -613,6 +641,11 @@ export default function ProfileEditScreen() {
         setHasUnsavedChanges(true);
     }, []);
 
+    const updateCooperativeInfo = useCallback((updates: Partial<typeof cooperativeInfo>) => {
+        setCooperativeInfo(prev => ({ ...prev, ...updates }));
+        setHasUnsavedChanges(true);
+    }, []);
+
     const toggleSpecialty = useCallback((specialty: string) => {
         if (profileType === 'agency') {
             setAgencyInfo(prev => ({
@@ -678,6 +711,8 @@ export default function ProfileEditScreen() {
             return renderAgencySection();
         } else if (profileType === 'business') {
             return renderBusinessSection();
+        } else if (profileType === 'cooperative') {
+            return renderCooperativeSection();
         } else {
             return renderPersonalSection();
         }
@@ -1264,6 +1299,115 @@ export default function ProfileEditScreen() {
                         <Text style={styles.sectionTitle}>Business Settings</Text>
                         <Text style={styles.sectionSubtitle}>
                             Configure your business profile settings
+                        </Text>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Profile Visibility</Text>
+                            <View style={styles.pickerContainer}>
+                                {['public', 'private', 'contacts_only'].map((visibility) => (
+                                    <TouchableOpacity
+                                        key={visibility}
+                                        style={[
+                                            styles.pickerOption,
+                                            settings.privacy.profileVisibility === visibility && styles.pickerOptionSelected
+                                        ]}
+                                        onPress={() => updateSettings({
+                                            privacy: { ...settings.privacy, profileVisibility: visibility as any }
+                                        })}
+                                    >
+                                        <Text style={[
+                                            styles.pickerOptionText,
+                                            settings.privacy.profileVisibility === visibility && styles.pickerOptionTextSelected
+                                        ]}>
+                                            {visibility.replace('_', ' ').toUpperCase()}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Notifications</Text>
+                            <View style={styles.checkboxGroup}>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.checkbox,
+                                        settings.notifications.email && styles.checkboxSelected
+                                    ]}
+                                    onPress={() => updateSettings({
+                                        notifications: { ...settings.notifications, email: !settings.notifications.email }
+                                    })}
+                                >
+                                    <Text style={[
+                                        styles.checkboxText,
+                                        settings.notifications.email && styles.checkboxTextSelected
+                                    ]}>
+                                        Email Notifications
+                                    </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.checkbox,
+                                        settings.notifications.push && styles.checkboxSelected
+                                    ]}
+                                    onPress={() => updateSettings({
+                                        notifications: { ...settings.notifications, push: !settings.notifications.push }
+                                    })}
+                                >
+                                    <Text style={[
+                                        styles.checkboxText,
+                                        settings.notifications.push && styles.checkboxTextSelected
+                                    ]}>
+                                        Push Notifications
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                );
+
+            default:
+                return null;
+        }
+    };
+
+    const renderCooperativeSection = () => {
+        switch (activeSection) {
+            case 'cooperative':
+                return (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Cooperative Information</Text>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Legal Name *</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={cooperativeInfo.legalName}
+                                onChangeText={(text) => updateCooperativeInfo({ legalName: text })}
+                                placeholder="Enter cooperative legal name"
+                            />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Description</Text>
+                            <TextInput
+                                style={[styles.input, styles.textArea]}
+                                value={cooperativeInfo.description}
+                                onChangeText={(text) => updateCooperativeInfo({ description: text })}
+                                placeholder="Describe your cooperative..."
+                                multiline
+                                numberOfLines={4}
+                            />
+                        </View>
+                    </View>
+                );
+
+            case 'settings':
+                return (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Cooperative Settings</Text>
+                        <Text style={styles.sectionSubtitle}>
+                            Configure your cooperative profile settings
                         </Text>
 
                         <View style={styles.inputGroup}>
@@ -2003,7 +2147,9 @@ export default function ProfileEditScreen() {
         <SafeAreaView style={{ flex: 1 }} edges={['top']}>
             <Header
                 options={{
-                    title: `Edit ${profileType === 'agency' ? 'Agency' : profileType === 'business' ? 'Business' : 'Personal'} Profile${hasUnsavedChanges ? ' *' : ''}`,
+                    title: `Edit ${profileType === 'agency' ? 'Agency' : 
+                             profileType === 'business' ? 'Business' : 
+                             profileType === 'cooperative' ? 'Cooperative' : 'Personal'} Profile${hasUnsavedChanges ? ' *' : ''}`,
                     showBackButton: true,
                     rightComponents: [
                         <TouchableOpacity
@@ -2055,6 +2201,28 @@ export default function ProfileEditScreen() {
                     [
                         { key: 'business', label: 'Business' },
                         { key: 'verification', label: 'Verification' },
+                        { key: 'settings', label: 'Settings' },
+                    ].map((tab) => (
+                        <TouchableOpacity
+                            key={tab.key}
+                            style={[
+                                styles.tab,
+                                activeSection === tab.key && styles.tabActive
+                            ]}
+                            onPress={() => setActiveSection(tab.key)}
+                        >
+                            <Text style={[
+                                styles.tabText,
+                                activeSection === tab.key && styles.tabTextActive
+                            ]}>
+                                {tab.label}
+                            </Text>
+                        </TouchableOpacity>
+                    ))
+                ) : profileType === 'cooperative' ? (
+                    // Cooperative profile tabs
+                    [
+                        { key: 'cooperative', label: 'Cooperative' },
                         { key: 'settings', label: 'Settings' },
                     ].map((tab) => (
                         <TouchableOpacity

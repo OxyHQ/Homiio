@@ -343,7 +343,7 @@ export default function ProfileScreen() {
                             <View style={styles.settingTextContainer}>
                                 <ThemedText style={styles.settingLabel}>Profile Management</ThemedText>
                                 <ThemedText style={styles.settingDescription}>
-                                    Personal profiles are unique and linked to your Oxy account. You can have multiple business or agency profiles. Inactive profiles are shown and can be reactivated.
+                                    Personal profiles are unique and linked to your Oxy account. You can have multiple business, agency, or cooperative profiles. Inactive profiles are shown and can be reactivated.
                                 </ThemedText>
                             </View>
                         </View>
@@ -581,7 +581,7 @@ export default function ProfileScreen() {
                             <IconComponent name="add-circle" size={20} color="#666" style={styles.settingIcon} />
                             <View>
                                 <ThemedText style={styles.settingLabel}>Create New Profile</ThemedText>
-                                <ThemedText style={styles.settingDescription}>Add a new business or agency profile</ThemedText>
+                                <ThemedText style={styles.settingDescription}>Add a new business, agency, or cooperative profile</ThemedText>
                             </View>
                         </View>
                         <IconComponent name="chevron-forward" size={16} color="#ccc" />
