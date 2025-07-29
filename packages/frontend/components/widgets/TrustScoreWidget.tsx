@@ -1,18 +1,16 @@
 import React, { useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import LoadingSpinner from '../LoadingSpinner';
-import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
-import { BaseWidget } from './BaseWidget';
 import { useOxy } from '@oxyhq/services';
 import { TrustScoreCompact } from '../TrustScoreCompact';
 import { useTrustScore } from '@/hooks/useTrustScore';
 import { useActiveProfile } from '@/hooks/useProfileQueries';
+import { ThemedText } from '../ThemedText';
 
 export function TrustScoreWidget() {
     const { isAuthenticated } = useOxy();
-    const { t } = useTranslation();
     const router = useRouter();
     const { data: activeProfile } = useActiveProfile();
 
@@ -44,18 +42,23 @@ export function TrustScoreWidget() {
         }
     }, [router, profileType]);
 
-    if (!isAuthenticated) {
-        return null; // Don't show the widget if the user is not authenticated
-    }
+    // Helper function to get color based on score percentage
+    const getScoreColor = (score: number) => {
+        if (score >= 90) return '#4CAF50';
+        if (score >= 70) return '#8BC34A';
+        if (score >= 50) return '#FFC107';
+        if (score >= 30) return '#FF9800';
+        return '#F44336';
+    };
 
     const renderContent = () => {
         if (isLoading) {
             return (
                 <View style={styles.loadingContainer}>
                     <LoadingSpinner size={16} showText={false} />
-                    <Text style={styles.loadingText}>
+                    <ThemedText style={styles.loadingText}>
                         Loading {profileType === 'agency' ? 'verification status' : 'trust score'}...
-                    </Text>
+                    </ThemedText>
                 </View>
             );
         }
@@ -63,11 +66,14 @@ export function TrustScoreWidget() {
         if (error) {
             return (
                 <View style={styles.errorContainer}>
-                    <Text style={styles.errorText}>
+                    <ThemedText style={styles.errorText}>
                         Unable to load {profileType === 'agency' ? 'verification status' : 'trust score'}
-                    </Text>
-                    <TouchableOpacity style={styles.retryButton} onPress={handlePress}>
-                        <Text style={styles.retryButtonText}>View Details</Text>
+                    </ThemedText>
+                    <TouchableOpacity 
+                        style={[styles.retryButton]} 
+                        onPress={handlePress}
+                    >
+                        <ThemedText style={styles.retryButtonText}>View Details</ThemedText>
                     </TouchableOpacity>
                 </View>
             );
@@ -79,7 +85,10 @@ export function TrustScoreWidget() {
                     <Text style={styles.noProfileText}>
                         No {profileType === 'agency' ? 'verification' : 'trust score'} data
                     </Text>
-                    <TouchableOpacity style={styles.setupButton} onPress={handlePress}>
+                    <TouchableOpacity 
+                        style={[styles.setupButton, { backgroundColor: colors.primaryColor }]} 
+                        onPress={handlePress}
+                    >
                         <Text style={styles.setupButtonText}>View Details</Text>
                     </TouchableOpacity>
                 </View>
@@ -87,44 +96,32 @@ export function TrustScoreWidget() {
         }
 
         if (trustScoreData.type === 'agency') {
+            const scoreColor = getScoreColor(trustScoreData.score);
             return (
                 <View style={styles.trustScoreContent}>
                     <View style={styles.verificationCircle}>
-                        <Text style={[styles.verificationPercentage, { color: trustScoreData.color }]}>
-                            {Math.round(trustScoreData.percentage)}%
-                        </Text>
-                        <Text style={styles.verificationLabel}>Verified</Text>
+                        <ThemedText style={[styles.verificationPercentage, { color: scoreColor }]}>
+                            {Math.round(trustScoreData.score)}%
+                        </ThemedText>
+                        <ThemedText style={styles.verificationLabel}>Verified</ThemedText>
                     </View>
 
-                    <Text style={[styles.trustScoreText, { color: trustScoreData.color }]}>
+                    <ThemedText style={[styles.trustScoreText]}>
                         {trustScoreData.level}
-                    </Text>
+                    </ThemedText>
 
-                    <View style={styles.verificationList}>
-                        <Text style={styles.verificationListTitle}>Verification Status:</Text>
-                        {Object.entries(trustScoreData.verifications).map(([key, value]) => (
-                            <View key={key} style={styles.verificationItem}>
-                                <Text style={styles.verificationItemText}>
-                                    {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                </Text>
-                                <Text style={[
-                                    styles.verificationItemStatus,
-                                    { color: value ? colors.online : colors.busy }
-                                ]}>
-                                    {value ? '✓' : '○'}
-                                </Text>
-                            </View>
-                        ))}
-                    </View>
-
-                    <TouchableOpacity style={styles.improveButton} onPress={handlePress}>
-                        <Text style={styles.improveButtonText}>Complete Verification</Text>
+                    <TouchableOpacity 
+                        style={[styles.improveButton, { backgroundColor: scoreColor }]} 
+                        onPress={handlePress}
+                    >
+                        <ThemedText style={styles.improveButtonText}>Complete Verification</ThemedText>
                     </TouchableOpacity>
                 </View>
             );
         }
 
         // Personal profile rendering
+        const scoreColor = getScoreColor(trustScoreData.score);
         return (
             <View style={styles.trustScoreContent}>
                 <TrustScoreCompact
@@ -133,23 +130,23 @@ export function TrustScoreWidget() {
                     showLabel={false}
                 />
 
-                <Text style={[styles.trustScoreText, { color: trustScoreData.color }]}>
+                <ThemedText style={[styles.trustScoreText]}>
                     Your trust score is {trustScoreData.level}
-                </Text>
+                </ThemedText>
 
                 <View style={styles.factorsPreview}>
                     {trustScoreData.factors.map((factor, index) => (
                         <View key={index} style={styles.factorPreview}>
-                            <Text style={styles.factorLabel}>
+                            <ThemedText style={styles.factorLabel}>
                                 {factor.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                            </Text>
+                            </ThemedText>
                             <View style={styles.factorProgress}>
                                 <View
                                     style={[
                                         styles.factorProgressFill,
                                         {
                                             width: `${factor.value}%`,
-                                            backgroundColor: trustScoreData.color
+                                            backgroundColor: scoreColor
                                         }
                                     ]}
                                 />
@@ -158,30 +155,39 @@ export function TrustScoreWidget() {
                     ))}
                 </View>
 
-                <TouchableOpacity style={styles.improveButton} onPress={handlePress}>
-                    <Text style={styles.improveButtonText}>Improve Score</Text>
+                <TouchableOpacity 
+                    style={[styles.improveButton, { backgroundColor: scoreColor }]} 
+                    onPress={handlePress}
+                >
+                    <ThemedText style={styles.improveButtonText}>Improve Score</ThemedText>
                 </TouchableOpacity>
             </View>
         );
     };
 
+    if (!isAuthenticated) {
+        return null; // Don't show the widget if the user is not authenticated
+    }
+
     return (
-        <BaseWidget
-            title={profileType === 'agency' ? t("Business Verification") : t("Trust Score")}
-            icon={
-                <View style={[styles.iconContainer, { backgroundColor: colors.primaryColor }]}>
-                    <Text style={styles.iconText}>
-                        {profileType === 'agency' ? '🏢' : '🛡️'}
-                    </Text>
-                </View>
-            }
-        >
-            {renderContent()}
-        </BaseWidget>
+        <View style={styles.widgetContainer}>
+            {/* Widget Content */}
+            <View style={styles.widgetContent}>
+                {renderContent()}
+            </View>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
+    widgetContainer: {
+        backgroundColor: colors.primaryLight,
+        borderRadius: 15,
+        overflow: 'hidden',
+    },
+    widgetContent: {
+        padding: 20,
+    },
     trustScoreContent: {
         alignItems: 'center',
         padding: 10,
@@ -191,7 +197,7 @@ const styles = StyleSheet.create({
         padding: 20,
     },
     loadingText: {
-        fontSize: 14,
+        fontSize: 16,
         color: colors.COLOR_BLACK_LIGHT_5,
         marginTop: 8,
     },
@@ -200,20 +206,20 @@ const styles = StyleSheet.create({
         padding: 20,
     },
     errorText: {
-        fontSize: 14,
+        fontSize: 16,
         color: colors.busy,
         marginBottom: 12,
         textAlign: 'center',
     },
     retryButton: {
         backgroundColor: colors.primaryColor,
-        paddingVertical: 6,
-        paddingHorizontal: 12,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
         borderRadius: 25,
     },
     retryButtonText: {
         color: colors.primaryLight,
-        fontSize: 12,
+        fontSize: 14,
         fontWeight: '600',
         fontFamily: 'Phudu',
     },
@@ -222,25 +228,25 @@ const styles = StyleSheet.create({
         padding: 20,
     },
     noProfileText: {
-        fontSize: 14,
+        fontSize: 16,
         color: colors.COLOR_BLACK_LIGHT_5,
         marginBottom: 12,
         textAlign: 'center',
     },
     setupButton: {
         backgroundColor: colors.primaryColor,
-        paddingVertical: 6,
-        paddingHorizontal: 12,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
         borderRadius: 25,
     },
     setupButtonText: {
         color: colors.primaryLight,
-        fontSize: 12,
+        fontSize: 14,
         fontWeight: '600',
         fontFamily: 'Phudu',
     },
     trustScoreText: {
-        fontSize: 14,
+        fontSize: 18,
         fontWeight: '600',
         marginTop: 8,
         marginBottom: 12,
@@ -269,16 +275,16 @@ const styles = StyleSheet.create({
     },
     improveButton: {
         backgroundColor: colors.primaryLight_1,
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 15,
-        borderWidth: 1,
-        borderColor: colors.primaryColor,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 25,
+        borderWidth: 0,
     },
     improveButtonText: {
-        color: colors.primaryColor,
-        fontSize: 12,
-        fontWeight: '600',
+        color: colors.primaryLight,
+        fontSize: 14,
+        fontWeight: 'bold',
+        fontFamily: 'Phudu',
     },
     iconContainer: {
         width: 24,
@@ -300,7 +306,8 @@ const styles = StyleSheet.create({
     },
     verificationPercentage: {
         fontSize: 24,
-        fontWeight: '600',
+        fontWeight: 'bold',
+        fontFamily: 'Phudu',
     },
     verificationLabel: {
         fontSize: 12,
