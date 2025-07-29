@@ -247,8 +247,8 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 24,
         color: colors.COLOR_BLACK,
-        fontFamily: phuduFontWeights.semiBold,
-        letterSpacing: -0.3,
+        fontFamily: phuduFontWeights.bold,
+        fontWeight: 'bold',
     },
     viewAllText: {
         color: colors.primaryColor,

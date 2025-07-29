@@ -1,4 +1,4 @@
-import React, { useContext } from 'react'
+import React from 'react'
 import { Dimensions, Platform, Text, View, ViewStyle, TouchableOpacity, StyleSheet } from 'react-native'
 import { usePathname, useRouter } from 'expo-router';
 import { useMediaQuery } from 'react-responsive'
@@ -19,6 +19,7 @@ import { SindiIcon, SindiIconActive } from '@/assets/icons';
 import { ProfileIcon, ProfileIconActive } from '@/assets/icons/profile-icon';
 import { webAlert } from '@/utils/api';
 import { phuduFontWeights } from '@/styles/fonts';
+import { useProfile } from '@/context/ProfileContext';
 
 const IconComponent = Ionicons as any;
 
@@ -27,8 +28,13 @@ const WindowHeight = Dimensions.get('window').height;
 export function SideBar() {
     const { t } = useTranslation();
     const router = useRouter();
+    const { primaryProfile, isLoading } = useProfile();
 
     const { isAuthenticated, user, showBottomSheet, logout } = useOxy();
+
+    // Only show roommates for personal profiles and when profile data is loaded
+    // If still loading profiles, don't show roommates to avoid flickering
+    const isPersonalProfile = !isLoading && primaryProfile?.profileType === 'personal';
 
     const handleSignOut = () => {
         webAlert(
@@ -88,12 +94,13 @@ export function SideBar() {
             route: '/profile',
         },
 
-        {
+        // Only show roommates for personal profiles
+        ...(isPersonalProfile ? [{
             title: t("sidebar.navigation.roommates"),
             icon: <Hashtag color={colors.COLOR_BLACK} />,
             iconActive: <HashtagActive />,
             route: '/roommates',
-        },
+        }] : []),
         {
             title: t("sidebar.navigation.settings"),
             icon: <Gear color={colors.COLOR_BLACK} />,
@@ -105,7 +112,6 @@ export function SideBar() {
     const pathname = usePathname()
     const isSideBarVisible = useMediaQuery({ minWidth: 500 })
     const isFullSideBar = useMediaQuery({ minWidth: 1266 })
-    const isRightBarVisible = useMediaQuery({ minWidth: 990 })
 
     if (!isSideBarVisible) return null
 

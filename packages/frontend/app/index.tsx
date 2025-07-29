@@ -791,10 +791,11 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 28,
-    fontFamily: phuduFontWeights.bold,
     color: 'white',
     textAlign: 'center',
     marginBottom: 10,
+    fontFamily: phuduFontWeights.bold,
+    fontWeight: 'bold',
   },
   heroSubtitle: {
     fontSize: 16,
@@ -867,8 +868,8 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 24,
     color: colors.COLOR_BLACK,
-    fontFamily: phuduFontWeights.semiBold,
-    letterSpacing: -0.3,
+    fontFamily: phuduFontWeights.bold,
+    fontWeight: 'bold',
   },
   viewAllText: {
     color: colors.primaryColor,
@@ -899,9 +900,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   featureTitle: {
-    fontWeight: 'bold',
     marginBottom: 4,
     textAlign: 'center',
+    fontFamily: phuduFontWeights.bold,
+    fontWeight: 'bold',
   },
   featureDescription: {
     textAlign: 'center',
