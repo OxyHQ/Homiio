@@ -1,20 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { colors } from '@/styles/colors';
 import { useTrustScore } from '@/hooks/useTrustScore';
 import { useActiveProfile } from '@/hooks/useProfileQueries';
 import { TrustScore } from './TrustScore';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 export function TrustScoreManager() {
     const { data: activeProfile } = useActiveProfile();
     const currentProfileId = activeProfile?.id || activeProfile?._id;
+    const router = useRouter();
 
     const {
         trustScoreData,
         loading: isLoading,
         error,
-        updateTrustScoreData,
-        recalculateTrustScoreData,
         setCurrentProfileId,
         fetchTrustScoreData
     } = useTrustScore(currentProfileId);
@@ -26,8 +27,6 @@ export function TrustScoreManager() {
             fetchTrustScoreData(currentProfileId);
         }
     }, [currentProfileId, setCurrentProfileId, fetchTrustScoreData]);
-
-    const [selectedFactor, setSelectedFactor] = useState<string | null>(null);
 
     if (isLoading) {
         return (
@@ -77,32 +76,52 @@ export function TrustScoreManager() {
         return descriptions[factorType] || 'Improve this factor to increase your trust score';
     };
 
-    const handleUpdateFactor = async (factorType: string, currentValue: number) => {
-        const newValue = Math.min(currentValue + 10, 100);
+    const getFactorActionText = (factorType: string) => {
+        const actions: Record<string, string> = {
+            verification: 'Add personal information and income details',
+            reviews: 'Add references from previous landlords',
+            payment_history: 'Add rental history with payment records',
+            communication: 'Complete your profile bio and contact info',
+            rental_history: 'Add your previous rental addresses'
+        };
+        return actions[factorType] || 'Complete your profile to improve this factor';
+    };
 
-        try {
-            updateTrustScoreData(factorType, newValue);
-            Alert.alert(
-                'Success',
-                `${getFactorLabel(factorType)} updated to ${newValue}/100`
-            );
-        } catch (error) {
-            Alert.alert('Error', 'Failed to update trust score. Please try again.');
+    const handleEditProfile = (section?: string) => {
+        if (section) {
+            // Navigate to specific section if provided
+            router.push(`/profile/edit?section=${section}`);
+        } else {
+            router.push('/profile/edit');
         }
+    };
+
+    const getProfileSection = (factorType: string) => {
+        const sections: Record<string, string> = {
+            verification: 'personal',
+            reviews: 'references', 
+            payment_history: 'rental-history',
+            communication: 'personal',
+            rental_history: 'rental-history'
+        };
+        return sections[factorType] || 'personal';
     };
 
     const showFactorDetails = (factorType: string) => {
         const factor = factors.find(f => f.type === factorType);
         if (!factor) return;
 
+        const section = getProfileSection(factorType);
+        const actionText = getFactorActionText(factorType);
+
         Alert.alert(
             getFactorLabel(factorType),
-            `${getFactorDescription(factorType)}\n\nCurrent Score: ${factor.value}/100`,
+            `${getFactorDescription(factorType)}\n\nCurrent Score: ${factor.value}/100\n\nTo improve: ${actionText}`,
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
-                    text: 'Improve',
-                    onPress: () => handleUpdateFactor(factorType, factor.value)
+                    text: 'Edit Profile',
+                    onPress: () => handleEditProfile(section)
                 }
             ]
         );
@@ -170,27 +189,57 @@ export function TrustScoreManager() {
             </View>
 
             <View style={styles.tipsSection}>
-                <Text style={styles.sectionTitle}>Tips to Improve Trust Score</Text>
-                <View style={styles.tipCard}>
-                    <Text style={styles.tipTitle}>Complete Verification</Text>
-                    <Text style={styles.tipText}>
-                        Verify your identity and income to show you&apos;re a reliable tenant.
+                <Text style={styles.sectionTitle}>Quick Actions to Improve Score</Text>
+                
+                <TouchableOpacity 
+                    style={styles.actionCard}
+                    onPress={() => handleEditProfile('personal')}
+                >
+                    <View style={styles.actionCardHeader}>
+                        <Ionicons name="person-outline" size={24} color={colors.primaryColor} />
+                        <Text style={styles.actionCardTitle}>Complete Personal Info</Text>
+                        <Ionicons name="chevron-forward" size={20} color={colors.COLOR_BLACK_LIGHT_5} />
+                    </View>
+                    <Text style={styles.actionCardText}>
+                        Add your occupation, income, and employment details to build trust.
                     </Text>
-                </View>
+                </TouchableOpacity>
 
-                <View style={styles.tipCard}>
-                    <Text style={styles.tipTitle}>Build Positive Reviews</Text>
-                    <Text style={styles.tipText}>
-                        Ask previous landlords and roommates for positive reviews.
+                <TouchableOpacity 
+                    style={styles.actionCard}
+                    onPress={() => handleEditProfile('references')}
+                >
+                    <View style={styles.actionCardHeader}>
+                        <Ionicons name="people-outline" size={24} color={colors.primaryColor} />
+                        <Text style={styles.actionCardTitle}>Add References</Text>
+                        <Ionicons name="chevron-forward" size={20} color={colors.COLOR_BLACK_LIGHT_5} />
+                    </View>
+                    <Text style={styles.actionCardText}>
+                        Include references from previous landlords and employers.
                     </Text>
-                </View>
+                </TouchableOpacity>
 
-                <View style={styles.tipCard}>
-                    <Text style={styles.tipTitle}>Maintain Good Communication</Text>
-                    <Text style={styles.tipText}>
-                        Respond promptly to messages and be transparent about your situation.
+                <TouchableOpacity 
+                    style={styles.actionCard}
+                    onPress={() => handleEditProfile('rental-history')}
+                >
+                    <View style={styles.actionCardHeader}>
+                        <Ionicons name="home-outline" size={24} color={colors.primaryColor} />
+                        <Text style={styles.actionCardTitle}>Add Rental History</Text>
+                        <Ionicons name="chevron-forward" size={20} color={colors.COLOR_BLACK_LIGHT_5} />
+                    </View>
+                    <Text style={styles.actionCardText}>
+                        Document your rental history to show your reliability as a tenant.
                     </Text>
-                </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                    style={styles.primaryActionButton}
+                    onPress={() => handleEditProfile()}
+                >
+                    <Ionicons name="create-outline" size={20} color={colors.primaryLight} />
+                    <Text style={styles.primaryActionButtonText}>Complete Profile</Text>
+                </TouchableOpacity>
             </View>
         </ScrollView>
     );
@@ -293,6 +342,53 @@ const styles = StyleSheet.create({
     },
     tipsSection: {
         padding: 20,
+    },
+    actionCard: {
+        backgroundColor: colors.primaryLight,
+        padding: 16,
+        borderRadius: 12,
+        marginBottom: 12,
+        shadowColor: colors.shadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+        borderLeftWidth: 4,
+        borderLeftColor: colors.primaryColor,
+    },
+    actionCardHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+        gap: 12,
+    },
+    actionCardTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: colors.COLOR_BLACK,
+        flex: 1,
+    },
+    actionCardText: {
+        fontSize: 14,
+        color: colors.COLOR_BLACK_LIGHT_4,
+        lineHeight: 20,
+        marginLeft: 36,
+    },
+    primaryActionButton: {
+        backgroundColor: colors.primaryColor,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+        borderRadius: 12,
+        marginTop: 8,
+        gap: 8,
+    },
+    primaryActionButtonText: {
+        color: colors.primaryLight,
+        fontSize: 16,
+        fontWeight: 'bold',
+        fontFamily: 'Phudu',
     },
     tipCard: {
         backgroundColor: colors.primaryLight_1,
