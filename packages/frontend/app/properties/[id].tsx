@@ -29,6 +29,8 @@ import { ActionButton } from '@/components/ui/ActionButton';
 import Button from '@/components/Button';
 import type { Profile } from '@/services/profileService';
 import profileService from '@/services/profileService';
+import { SindiIcon } from '@/assets/icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 type PropertyDetail = {
     id: string;
@@ -1140,14 +1142,32 @@ export default function PropertyDetailPage() {
                                     )}
                                 </View>
 
-                                {/* Trust and Safety */}
-                                <View style={styles.trustContainer}>
-                                    <View style={styles.trustTextContainer}>
-                                        <ThemedText style={styles.trustTitle}>{t("Homiio Verified")}</ThemedText>
-                                        <ThemedText style={styles.trustDescription}>
-                                            {t("This property has been personally verified by our team for authenticity and condition")}
-                                        </ThemedText>
-                                    </View>
+                                {/* Sindi Analysis */}
+                                <View style={styles.sindiContainer}>
+                                    <LinearGradient
+                                        colors={[colors.primaryColor, colors.secondaryLight]}
+                                        style={styles.sindiGradient}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 1 }}
+                                    >
+                                        <View style={styles.sindiHeader}>
+                                            <View style={styles.sindiIconContainer}>
+                                                <View style={styles.sindiIconBackground}>
+                                                    <SindiIcon size={32} color="white" />
+                                                </View>
+                                                <View style={styles.sindiIconGlow} />
+                                            </View>
+                                            <View style={styles.sindiTextContainer}>
+                                                <ThemedText style={styles.sindiTitle}>Sindi personally analyzed this property</ThemedText>
+                                                <ThemedText style={styles.sindiDescription}>
+                                                    I&apos;ve verified this property for authenticity and condition. Ask me anything about it!
+                                                </ThemedText>
+                                            </View>
+                                            <TouchableOpacity style={styles.askSindiButton} onPress={() => { }}>
+                                                <IconComponent name="chatbubble-outline" size={14} color="white" />
+                                            </TouchableOpacity>
+                                        </View>
+                                    </LinearGradient>
                                 </View>
 
                                 {/* Action Buttons */}
@@ -2849,6 +2869,70 @@ const styles = StyleSheet.create({
     },
     photoModalDotActive: {
         backgroundColor: 'white',
+    },
+    sindiContainer: {
+        marginBottom: 20,
+        borderRadius: 16,
+        overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    sindiGradient: {
+        padding: 20,
+    },
+    sindiHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    sindiIconContainer: {
+        marginRight: 16,
+    },
+    sindiIconBackground: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'relative',
+    },
+    sindiIconGlow: {
+        position: 'absolute',
+        top: -3,
+        left: -3,
+        right: -3,
+        bottom: -3,
+        borderRadius: 23,
+        backgroundColor: 'rgba(255, 255, 255, 0.3)',
+        zIndex: -1,
+    },
+    sindiTextContainer: {
+        flex: 1,
+    },
+    sindiTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: 'white',
+        marginBottom: 4,
+    },
+    sindiDescription: {
+        fontSize: 14,
+        color: 'rgba(255, 255, 255, 0.9)',
+        lineHeight: 20,
+    },
+    askSindiButton: {
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.3)',
+        marginLeft: 12,
     },
 
 }); 

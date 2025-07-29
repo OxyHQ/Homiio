@@ -275,7 +275,6 @@ const markdownStyles = StyleSheet.create({
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.COLOR_BACKGROUND,
     },
     loadingContainer: {
         flex: 1,

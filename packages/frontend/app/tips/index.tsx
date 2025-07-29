@@ -138,7 +138,6 @@ export default function TipsScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.COLOR_BACKGROUND,
     },
 
     // Tips Grid Styles
