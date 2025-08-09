@@ -449,8 +449,8 @@ export const userApi = {
   },
 
   // Save a property (authenticated)
-  async saveProperty(propertyId: string, notes: string | undefined, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.post<ApiResponse>(API_CONFIG.endpoints.profiles.saveProperty, { propertyId, notes }, {
+  async saveProperty(propertyId: string, notes: string | undefined, oxyServices: OxyServices, activeSessionId: string, folderId?: string | null): Promise<ApiResponse> {
+    const response = await api.post<ApiResponse>(API_CONFIG.endpoints.profiles.saveProperty, { propertyId, notes, folderId }, {
       oxyServices,
       activeSessionId,
     });
@@ -474,6 +474,44 @@ export const userApi = {
     });
     return response.data;
   },
+
+  // Get saved property folders (authenticated)
+  async getSavedPropertyFolders(oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
+    const response = await api.get<ApiResponse>('/api/profiles/me/saved-property-folders', {
+      oxyServices,
+      activeSessionId,
+    });
+    return response.data;
+  },
+
+  // Create saved property folder (authenticated)
+  async createSavedPropertyFolder(folderData: { name: string; description?: string; color?: string; icon?: string }, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
+    const response = await api.post<ApiResponse>('/api/profiles/me/saved-property-folders', folderData, {
+      oxyServices,
+      activeSessionId,
+    });
+    return response.data;
+  },
+
+  // Update saved property folder (authenticated)
+  async updateSavedPropertyFolder(folderId: string, folderData: { name?: string; description?: string; color?: string; icon?: string }, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
+    const response = await api.put<ApiResponse>(`/api/profiles/me/saved-property-folders/${folderId}`, folderData, {
+      oxyServices,
+      activeSessionId,
+    });
+    return response.data;
+  },
+
+  // Delete saved property folder (authenticated)
+  async deleteSavedPropertyFolder(folderId: string, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
+    const response = await api.delete<ApiResponse>(`/api/profiles/me/saved-property-folders/${folderId}`, {
+      oxyServices,
+      activeSessionId,
+    });
+    return response.data;
+  },
+
+
 
   // Get user properties (authenticated)
   async getUserProperties(page: number = 1, limit: number = 10, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {

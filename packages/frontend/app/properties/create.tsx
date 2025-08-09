@@ -11,7 +11,7 @@ import { PropertyMap } from '@/components/PropertyMap';
 import { PropertyPreviewWidget } from '@/components/widgets/PropertyPreviewWidget';
 import { useCreatePropertyFormStore, useCreatePropertyFormSelectors } from '@/store/createPropertyFormStore';
 import { useCreateProperty, useUpdateProperty, useProperty } from '@/hooks/usePropertyQueries';
-import { BottomSheetContext } from '@/app/_layout';
+import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SearchablePickerBottomSheet } from '@/components/SearchablePickerBottomSheet';
 import { PropertyService } from '@/services/propertyService';
 import * as Location from 'expo-location';
@@ -743,7 +743,7 @@ export default function CreatePropertyScreen() {
               <ThemedText style={styles.label}>Country or Region</ThemedText>
               <TouchableOpacity
                 style={[styles.input, { justifyContent: 'center' }]}
-                onPress={() => bottomSheet.open(
+                onPress={() => bottomSheet.openBottomSheet(
                   <SearchablePickerBottomSheet
                     options={COUNTRY_OPTIONS}
                     selected={formData.location.country || ''}
@@ -850,7 +850,7 @@ export default function CreatePropertyScreen() {
                 <ThemedText style={styles.label}>State/Province/Region</ThemedText>
                 <TouchableOpacity
                   style={[styles.input, { justifyContent: 'center' }]}
-                  onPress={() => bottomSheet.open(
+                  onPress={() => bottomSheet.openBottomSheet(
                     <SearchablePickerBottomSheet
                       options={STATE_OPTIONS}
                       selected={formData.location.state || ''}

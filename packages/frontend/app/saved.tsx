@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useContext } from 'react';
 import { View, FlatList, StyleSheet, Dimensions, Alert, TouchableOpacity, TextInput, ScrollView, Text, Modal, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +20,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Property } from '@/services/propertyService';
 import savedPropertyService, { SavedProperty } from '@/services/savedPropertyService';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
+import { BottomSheetContext } from '@/context/BottomSheetContext';
+import { EditNotesBottomSheet } from '@/components/EditNotesBottomSheet';
 
 // Extended interface for saved properties
 interface SavedPropertyWithUI extends SavedProperty {
@@ -32,7 +35,7 @@ const { width: screenWidth } = Dimensions.get('window');
 // Types
 export type SortOption = 'recent' | 'price-low' | 'price-high' | 'title' | 'notes';
 export type ViewMode = 'list' | 'grid';
-export type FilterCategory = 'all' | 'recent' | 'noted' | 'quick-saves';
+export type FilterCategory = 'all' | 'recent' | 'noted' | 'quick-saves' | 'folders';
 
 // Constants
 const SORT_OPTIONS = [
@@ -48,11 +51,13 @@ const CATEGORIES = [
     { id: 'recent', name: 'Recent', icon: 'time-outline' },
     { id: 'noted', name: 'With Notes', icon: 'document-text-outline' },
     { id: 'quick-saves', name: 'Quick Saves', icon: 'bookmark-outline' },
+    { id: 'folders', name: 'Folders', icon: 'folder-outline' },
 ];
 
 export default function SavedPropertiesScreen() {
     const { t } = useTranslation();
     const { oxyServices, activeSessionId } = useOxy();
+    const bottomSheetContext = useContext(BottomSheetContext);
 
     // Use the new Zustand-based favorites system
     const {
@@ -80,10 +85,11 @@ export default function SavedPropertiesScreen() {
     const [bulkActionMode, setBulkActionMode] = useState(false);
     const [showSortOptions, setShowSortOptions] = useState(false);
 
-    // Notes modal state
-    const [notesModalVisible, setNotesModalVisible] = useState(false);
-    const [selectedProperty, setSelectedProperty] = useState<SavedPropertyWithUI | null>(null);
-    const [notesText, setNotesText] = useState('');
+
+
+    // Folder functionality
+    const { folders, loadFolders } = useSavedPropertiesContext();
+    const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
 
     // Debounced search
     const debouncedSearchQuery = useDebounce(searchQuery, 300);
@@ -109,8 +115,9 @@ export default function SavedPropertiesScreen() {
     useEffect(() => {
         if (oxyServices && activeSessionId) {
             loadSavedProperties();
+            loadFolders();
         }
-    }, [oxyServices, activeSessionId, loadSavedProperties]);
+    }, [oxyServices, activeSessionId, loadSavedProperties, loadFolders]);
 
     // Memoized filtered properties
     const filteredProperties = useMemo(() => {
@@ -146,6 +153,8 @@ export default function SavedPropertiesScreen() {
                         return property.notes && property.notes.trim().length > 0;
                     case 'quick-saves':
                         return !property.notes || property.notes.trim().length === 0;
+                    case 'folders':
+                        return property.folderId != null;
                     default:
                         return true;
                 }
@@ -186,6 +195,7 @@ export default function SavedPropertiesScreen() {
             }).length,
             noted: savedProperties.filter(p => p.notes && p.notes.trim().length > 0).length,
             'quick-saves': savedProperties.filter(p => !p.notes || p.notes.trim().length === 0).length,
+            folders: savedProperties.filter(p => p.folderId != null).length,
         };
     }, [savedProperties]);
 
@@ -222,39 +232,44 @@ export default function SavedPropertiesScreen() {
     }, [oxyServices, activeSessionId, toggleFavorite, loadSavedProperties]);
 
     const handleEditNotes = useCallback((property: SavedPropertyWithUI) => {
-        setSelectedProperty(property);
-        setNotesText(property.notes || '');
-        setNotesModalVisible(true);
-    }, []);
+        if (!bottomSheetContext) return;
 
-    const handleSaveNotes = useCallback(async () => {
-        if (!selectedProperty || !oxyServices || !activeSessionId) return;
+        const propertyId = property._id || property.id || '';
+        const propertyTitle = getPropertyTitle(property);
 
-        const propertyId = selectedProperty._id || selectedProperty.id || '';
-        if (!propertyId) {
-            Alert.alert('Error', 'Unable to update notes - missing property ID.');
-            return;
-        }
+        bottomSheetContext.openBottomSheet(
+            <EditNotesBottomSheet
+                propertyId={propertyId}
+                propertyTitle={propertyTitle}
+                property={property}
+                currentNotes={property.notes || ''}
+                onClose={() => {
+                    bottomSheetContext?.closeBottomSheet();
+                }}
+                onSave={async (notes: string) => {
+                    if (!oxyServices || !activeSessionId) return;
 
-        try {
-            await savedPropertyService.updateNotes(propertyId, notesText, oxyServices, activeSessionId);
+                    try {
+                        await savedPropertyService.updateNotes(propertyId, notes, oxyServices, activeSessionId);
 
-            // Update the local state
-            setSavedProperties(prev =>
-                prev.map(p =>
-                    (p._id || p.id) === propertyId
-                        ? { ...p, notes: notesText }
-                        : p
-                )
-            );
+                        // Update the local state
+                        setSavedProperties(prev =>
+                            prev.map(p =>
+                                (p._id || p.id) === propertyId
+                                    ? { ...p, notes }
+                                    : p
+                            )
+                        );
+                    } catch (error) {
+                        console.error('Failed to update notes:', error);
+                        throw error; // Re-throw to let the bottom sheet handle the error
+                    }
+                }}
+            />
+        );
+    }, [bottomSheetContext, oxyServices, activeSessionId]);
 
-            setNotesModalVisible(false);
-            setSelectedProperty(null);
-            setNotesText('');
-        } catch (error) {
-            Alert.alert('Error', 'Failed to update notes. Please try again.');
-        }
-    }, [selectedProperty, notesText, oxyServices, activeSessionId]);
+
 
     const handlePropertyPress = useCallback((property: SavedPropertyWithUI) => {
         if (bulkActionMode) {
@@ -277,6 +292,9 @@ export default function SavedPropertiesScreen() {
             }
         }
     }, [bulkActionMode]);
+
+    // Note: Long press functionality is now handled globally via FolderContext
+    // No need for local handler here
 
     const handleBulkUnsave = useCallback(async () => {
         if (selectedProperties.size === 0 || !oxyServices || !activeSessionId) return;
@@ -326,6 +344,7 @@ export default function SavedPropertiesScreen() {
                     property={item}
                     variant={viewMode === 'grid' ? 'compact' : 'saved'}
                     onPress={() => !isProcessing && handlePropertyPress(item)}
+                    // Long press is now handled globally via FolderContext
                     style={StyleSheet.flatten([
                         styles.propertyCard,
                         isSelected && styles.selectedCard,
@@ -380,6 +399,32 @@ export default function SavedPropertiesScreen() {
                                     </Text>
                                 </TouchableOpacity>
                             </View>
+
+                            {/* Folder indicator */}
+                            {item.folderId && (
+                                <View style={styles.folderSection}>
+                                    <View style={styles.folderHeader}>
+                                        <Text style={styles.folderLabel}>Folder</Text>
+                                    </View>
+                                    <View style={styles.folderContainer}>
+                                        <IconComponent
+                                            name="folder-outline"
+                                            size={16}
+                                            color={colors.primaryColor}
+                                        />
+                                        <Text style={styles.folderText} numberOfLines={1}>
+                                            {(() => {
+                                                const folder = folders.find(f => f._id === item.folderId);
+                                                if (folder) {
+                                                    return `${folder.name} (${folder.propertyCount} ${folder.propertyCount === 1 ? 'property' : 'properties'})`;
+                                                }
+                                                return 'Unknown Folder';
+                                            })()}
+                                        </Text>
+                                    </View>
+                                </View>
+                            )}
+
                             {isProcessing && (
                                 <View style={styles.processingOverlay}>
                                     <Text style={styles.processingText}>Processing...</Text>
@@ -387,13 +432,26 @@ export default function SavedPropertiesScreen() {
                             )}
                         </View>
                     ) : (
-                        viewMode === 'grid' && item.notes ? (
-                            <View style={styles.gridNotesIndicator}>
-                                <IconComponent
-                                    name="document-text"
-                                    size={12}
-                                    color={colors.primaryColor}
-                                />
+                        viewMode === 'grid' && (item.notes || item.folderId) ? (
+                            <View style={styles.gridIndicators}>
+                                {item.notes && (
+                                    <View style={styles.gridNotesIndicator}>
+                                        <IconComponent
+                                            name="document-text"
+                                            size={12}
+                                            color={colors.primaryColor}
+                                        />
+                                    </View>
+                                )}
+                                {item.folderId && (
+                                    <View style={styles.gridFolderIndicator}>
+                                        <IconComponent
+                                            name="folder-outline"
+                                            size={12}
+                                            color={colors.primaryColor}
+                                        />
+                                    </View>
+                                )}
                             </View>
                         ) : null
                     )}
@@ -475,6 +533,24 @@ export default function SavedPropertiesScreen() {
                     </TouchableOpacity>
                 ))}
             </ScrollView>
+
+            {/* Folder Statistics */}
+            {selectedCategory === 'folders' && folders.length > 0 && (
+                <View style={styles.folderStats}>
+                    <Text style={styles.folderStatsTitle}>Folder Breakdown:</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.folderStatsScroll}>
+                        {folders.map(folder => (
+                            <View key={folder._id} style={styles.folderStatItem}>
+                                <View style={[styles.folderStatIcon, { backgroundColor: folder.color }]}>
+                                    <Text style={styles.folderStatEmoji}>{folder.icon}</Text>
+                                </View>
+                                <Text style={styles.folderStatName}>{folder.name}</Text>
+                                <Text style={styles.folderStatCount}>{folder.propertyCount}</Text>
+                            </View>
+                        ))}
+                    </ScrollView>
+                </View>
+            )}
 
             {/* Controls Bar */}
             <View style={styles.controlsBar}>
@@ -707,56 +783,7 @@ export default function SavedPropertiesScreen() {
                 />
             )}
 
-            {/* Modern Notes Modal */}
-            <Modal
-                visible={notesModalVisible}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={() => setNotesModalVisible(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Edit Notes</Text>
-                            <TouchableOpacity
-                                style={styles.modalCloseButton}
-                                onPress={() => setNotesModalVisible(false)}
-                            >
-                                <IconComponent name="close" size={24} color={colors.COLOR_BLACK_LIGHT_3} />
-                            </TouchableOpacity>
-                        </View>
 
-                        <Text style={styles.modalSubtitle}>
-                            Add personal notes for &quot;{selectedProperty ? getPropertyTitle(selectedProperty) : 'this property'}&quot;
-                        </Text>
-
-                        <TextInput
-                            style={styles.notesInput}
-                            value={notesText}
-                            onChangeText={setNotesText}
-                            placeholder="Add your thoughts, concerns, or reminders about this property..."
-                            placeholderTextColor={colors.COLOR_BLACK_LIGHT_3}
-                            multiline
-                            textAlignVertical="top"
-                        />
-
-                        <View style={styles.modalActions}>
-                            <TouchableOpacity
-                                style={styles.cancelButton}
-                                onPress={() => setNotesModalVisible(false)}
-                            >
-                                <Text style={styles.cancelButtonText}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.saveNotesButton}
-                                onPress={handleSaveNotes}
-                            >
-                                <Text style={styles.saveNotesButtonText}>Save Notes</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
         </View>
     );
 }
@@ -1107,86 +1134,101 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
 
-
-
-    // Modal
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'flex-end',
+    // Folder Section
+    folderSection: {
+        marginTop: 12,
+        gap: 8,
     },
-    modalContent: {
-        backgroundColor: 'white',
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        padding: 24,
-        maxHeight: '90%',
-    },
-    modalHeader: {
+    folderHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+    },
+    folderLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: colors.COLOR_BLACK,
+    },
+    folderContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        backgroundColor: colors.primaryLight,
+        borderRadius: 8,
+    },
+    folderText: {
+        fontSize: 14,
+        color: colors.primaryColor,
+        fontWeight: '500',
+        flex: 1,
+    },
+
+    // Grid Indicators
+    gridIndicators: {
+        position: 'absolute',
+        bottom: 8,
+        right: 8,
+        flexDirection: 'row',
+        gap: 4,
+    },
+    gridFolderIndicator: {
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        borderRadius: 12,
+        padding: 6,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+
+
+
+
+
+    // Folder Statistics
+    folderStats: {
+        marginTop: 16,
         marginBottom: 8,
     },
-    modalTitle: {
-        fontSize: 22,
-        fontWeight: '700',
-        color: colors.COLOR_BLACK,
-    },
-    modalCloseButton: {
-        padding: 4,
-    },
-    modalSubtitle: {
-        fontSize: 16,
-        color: colors.COLOR_BLACK_LIGHT_3,
-        marginBottom: 24,
-        lineHeight: 22,
-    },
-    notesInput: {
-        backgroundColor: '#f8f9fa',
-        borderRadius: 16,
-        padding: 16,
-        fontSize: 16,
-        color: colors.COLOR_BLACK,
-        minHeight: 120,
-        textAlignVertical: 'top',
-        marginBottom: 24,
-        borderWidth: 1,
-        borderColor: '#f1f3f4',
-    },
-    modalActions: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-    cancelButton: {
-        flex: 1,
-        backgroundColor: '#f8f9fa',
-        borderRadius: 16,
-        paddingVertical: 16,
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#f1f3f4',
-    },
-    cancelButtonText: {
+    folderStatsTitle: {
+        fontSize: 14,
+        fontWeight: '600',
         color: colors.COLOR_BLACK_LIGHT_2,
-        fontSize: 16,
-        fontWeight: '600',
+        marginBottom: 8,
     },
-    saveNotesButton: {
-        flex: 1,
-        backgroundColor: colors.primaryColor,
-        borderRadius: 16,
-        paddingVertical: 16,
+    folderStatsScroll: {
+        marginBottom: 8,
+    },
+    folderStatItem: {
         alignItems: 'center',
-        shadowColor: colors.primaryColor,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 3,
+        marginRight: 16,
+        minWidth: 60,
     },
-    saveNotesButtonText: {
-        color: 'white',
+    folderStatIcon: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 4,
+    },
+    folderStatEmoji: {
         fontSize: 16,
+        color: 'white',
+    },
+    folderStatName: {
+        fontSize: 12,
+        fontWeight: '500',
+        color: colors.COLOR_BLACK_LIGHT_2,
+        textAlign: 'center',
+        marginBottom: 2,
+    },
+    folderStatCount: {
+        fontSize: 14,
         fontWeight: '600',
+        color: colors.COLOR_BLACK,
     },
 }); 

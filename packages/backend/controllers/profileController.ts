@@ -42,6 +42,10 @@ class ProfileController {
     this.saveProperty = this.saveProperty.bind(this);
     this.unsaveProperty = this.unsaveProperty.bind(this);
     this.updateSavedPropertyNotes = this.updateSavedPropertyNotes.bind(this);
+    this.getSavedPropertyFolders = this.getSavedPropertyFolders.bind(this);
+    this.createSavedPropertyFolder = this.createSavedPropertyFolder.bind(this);
+    this.updateSavedPropertyFolder = this.updateSavedPropertyFolder.bind(this);
+    this.deleteSavedPropertyFolder = this.deleteSavedPropertyFolder.bind(this);
     this.trackPropertyView = this.trackPropertyView.bind(this);
     this.clearRecentProperties = this.clearRecentProperties.bind(this);
     this.debugRecentProperties = this.debugRecentProperties.bind(this);
@@ -1269,35 +1273,49 @@ class ProfileController {
         });
       }
 
-      // Import SavedProperty
-      const { SavedProperty } = require('../models');
+      // Import SavedPropertyFolder
+      const { SavedPropertyFolder } = require('../models');
       
-      console.log('[getSavedProperties] Querying SavedProperty with profileId:', activeProfile._id);
+      console.log('[getSavedProperties] Querying SavedPropertyFolder with profileId:', activeProfile._id);
       
-      // Get saved properties
-      const savedProperties = await SavedProperty.find({ profileId: activeProfile._id })
-        .sort({ savedAt: -1 })
-        .populate('propertyId')
+      // Get all folders with their properties
+      const folders = await SavedPropertyFolder.find({ profileId: activeProfile._id })
+        .populate('properties.propertyId')
         .lean();
 
-      console.log('[getSavedProperties] SavedProperty query result:', {
-        count: savedProperties.length,
-        firstItem: savedProperties[0] ? {
-          id: savedProperties[0]._id,
-          propertyId: savedProperties[0].propertyId,
-          hasPropertyId: !!savedProperties[0].propertyId,
-          savedAt: savedProperties[0].savedAt
+      console.log('[getSavedProperties] SavedPropertyFolder query result:', {
+        folderCount: folders.length,
+        totalProperties: folders.reduce((sum: number, folder: any) => sum + (folder.properties?.length || 0), 0),
+        firstFolder: folders[0] ? {
+          id: folders[0]._id,
+          name: folders[0].name,
+          propertyCount: folders[0].properties.length
         } : null
       });
 
-      const properties = savedProperties.map(saved => ({
-        ...saved.propertyId,
-        savedAt: saved.savedAt,
-        notes: saved.notes
-      })).filter(item => item._id); // Filter out any null properties
+      // Flatten all properties from all folders
+      const allProperties = [];
+      folders.forEach(folder => {
+        folder.properties.forEach(property => {
+          if (property.propertyId) {
+            allProperties.push({
+              ...property.propertyId,
+              savedAt: property.savedAt,
+              notes: property.notes,
+              folderId: folder._id,
+              folderName: folder.name
+            });
+          }
+        });
+      });
+
+      // Sort by savedAt (most recent first)
+      const properties = allProperties
+        .sort((a: any, b: any) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime())
+        .filter((item: any) => item._id); // Filter out any null properties
 
       console.log('[getSavedProperties] Mapped and filtered properties:', {
-        originalCount: savedProperties.length,
+        originalCount: allProperties.length,
         finalCount: properties.length,
         firstProperty: properties[0] ? {
           id: properties[0]._id,
@@ -1329,9 +1347,9 @@ class ProfileController {
   async saveProperty(req, res, next) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
-      const { propertyId, notes } = req.body;
+      const { propertyId, notes, folderId } = req.body;
       
-      console.log('saveProperty called:', { oxyUserId, propertyId, notes });
+      console.log('saveProperty called:', { oxyUserId, propertyId, notes, folderId });
       
       if (!oxyUserId) {
         return res.status(401).json(
@@ -1386,39 +1404,67 @@ class ProfileController {
         activeProfile = defaultPersonalProfile;
       }
 
-      // Import SavedProperty
-      const { SavedProperty } = require('../models');
+      // Import SavedPropertyFolder model
+      const { SavedPropertyFolder } = require('../models');
       
-      // Check if property is already saved
-      const existingSave = await SavedProperty.findOne({ 
-        profileId: activeProfile._id, 
-        propertyId 
+      // Find or create default folder if no folderId provided
+      let targetFolder;
+      if (folderId) {
+        // Verify the folder exists
+        targetFolder = await SavedPropertyFolder.findOne({
+          _id: folderId,
+          profileId: activeProfile._id
+        });
+
+        if (!targetFolder) {
+          return res.status(404).json(
+            errorResponse("Folder not found", "FOLDER_NOT_FOUND")
+          );
+        }
+      } else {
+        // Find or create default folder
+        targetFolder = await SavedPropertyFolder.findOne({
+          profileId: activeProfile._id,
+          isDefault: true
+        });
+
+        if (!targetFolder) {
+          // Create default folder
+          targetFolder = new SavedPropertyFolder({
+            profileId: activeProfile._id,
+            name: "Favorites",
+            description: "Default folder for saved properties",
+            icon: "heart",
+            isDefault: true,
+            properties: []
+          });
+          await targetFolder.save();
+        }
+      }
+      
+      // Check if property is already saved in any folder
+      const existingFolder = await SavedPropertyFolder.findOne({
+        profileId: activeProfile._id,
+        'properties.propertyId': propertyId
       });
 
-      if (existingSave) {
-        // Update existing save with new notes if provided
-        if (notes !== undefined) {
-          existingSave.notes = notes;
-          await existingSave.save();
-        }
+      if (existingFolder) {
+        // Property exists in another folder, move it to target folder
+        await existingFolder.removeProperty(propertyId);
+        
+        // Add to target folder
+        await targetFolder.addProperty(propertyId, notes);
         
         return res.json(
-          successResponse(existingSave, "Property already saved")
+          successResponse({ folderId: targetFolder._id }, "Property moved successfully")
         );
       }
 
-      // Create new saved property
-      const savedProperty = new SavedProperty({
-        profileId: activeProfile._id,
-        propertyId,
-        notes: notes || '',
-        savedAt: new Date()
-      });
-
-      await savedProperty.save();
+      // Property doesn't exist anywhere, add to target folder
+      await targetFolder.addProperty(propertyId, notes);
 
       res.json(
-        successResponse(savedProperty, "Property saved successfully")
+        successResponse({ folderId: targetFolder._id }, "Property saved successfully")
       );
     } catch (error) {
       console.error("Error saving property:", error);
@@ -1456,20 +1502,23 @@ class ProfileController {
         );
       }
 
-      // Import SavedProperty
-      const { SavedProperty } = require('../models');
+      // Import SavedPropertyFolder
+      const { SavedPropertyFolder } = require('../models');
       
-      // Remove saved property
-      const result = await SavedProperty.deleteOne({ 
-        profileId: activeProfile._id, 
-        propertyId 
+      // Find the folder containing this property
+      const folder = await SavedPropertyFolder.findOne({
+        profileId: activeProfile._id,
+        'properties.propertyId': propertyId
       });
 
-      if (result.deletedCount === 0) {
+      if (!folder) {
         return res.status(404).json(
           errorResponse("Saved property not found", "SAVED_PROPERTY_NOT_FOUND")
         );
       }
+
+      // Remove the property from the folder
+      await folder.removeProperty(propertyId);
 
       res.json(
         successResponse(null, "Property unsaved successfully")
@@ -1511,30 +1560,308 @@ class ProfileController {
         );
       }
 
-      // Import SavedProperty
-      const { SavedProperty } = require('../models');
+      // Import SavedPropertyFolder
+      const { SavedPropertyFolder } = require('../models');
       
-      // Update saved property notes
-      const savedProperty = await SavedProperty.findOneAndUpdate(
-        { profileId: activeProfile._id, propertyId },
-        { notes: notes || '' },
-        { new: true }
-      );
+      // Find the folder containing this property
+      const folder = await SavedPropertyFolder.findOne({
+        profileId: activeProfile._id,
+        'properties.propertyId': propertyId
+      });
 
-      if (!savedProperty) {
+      if (!folder) {
         return res.status(404).json(
           errorResponse("Saved property not found", "SAVED_PROPERTY_NOT_FOUND")
         );
       }
 
+      // Update the property notes
+      const updated = await folder.updatePropertyNotes(propertyId, notes || '');
+
+      if (!updated) {
+        return res.status(404).json(
+          errorResponse("Property not found in folder", "PROPERTY_NOT_FOUND")
+        );
+      }
+
       res.json(
-        successResponse(savedProperty, "Property notes updated successfully")
+        successResponse(folder, "Property notes updated successfully")
       );
     } catch (error) {
       console.error("Error updating saved property notes:", error);
       next(error);
     }
   }
+
+  /**
+   * Get saved property folders for the current user's profile
+   */
+  async getSavedPropertyFolders(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      
+      if (!oxyUserId) {
+        return res.status(401).json(
+          errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
+        );
+      }
+
+      // Get the active profile for the current user
+      let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      
+      if (!activeProfile) {
+        return res.status(404).json(
+          errorResponse("Profile not found", "PROFILE_NOT_FOUND")
+        );
+      }
+
+      // Import SavedPropertyFolder
+      const { SavedPropertyFolder } = require('../models');
+      
+      // Get all folders for this profile with property count
+      const folders = await SavedPropertyFolder.find({ profileId: activeProfile._id })
+        .sort({ isDefault: -1, createdAt: 1 })
+        .lean();
+
+      // Calculate property count for each folder
+      const foldersWithCount = folders.map(folder => ({
+        ...folder,
+        propertyCount: folder.properties ? folder.properties.length : 0
+      }));
+
+      res.json(
+        successResponse({ folders: foldersWithCount }, "Saved property folders retrieved successfully")
+      );
+    } catch (error) {
+      console.error("Error getting saved property folders:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Create a new saved property folder
+   */
+  async createSavedPropertyFolder(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      const { name, description, color, icon } = req.body;
+      
+      if (!oxyUserId) {
+        return res.status(401).json(
+          errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
+        );
+      }
+
+      if (!name || !name.trim()) {
+        return res.status(400).json(
+          errorResponse("Folder name is required", "FOLDER_NAME_REQUIRED")
+        );
+      }
+
+      // Get the active profile for the current user
+      let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      
+      if (!activeProfile) {
+        return res.status(404).json(
+          errorResponse("Profile not found", "PROFILE_NOT_FOUND")
+        );
+      }
+
+      // Import SavedPropertyFolder
+      const { SavedPropertyFolder } = require('../models');
+      
+      // Check if folder with same name already exists
+      const existingFolder = await SavedPropertyFolder.findOne({
+        profileId: activeProfile._id,
+        name: { $regex: new RegExp(`^${name.trim()}$`, 'i') }
+      });
+
+      if (existingFolder) {
+        return res.status(409).json(
+          errorResponse("Folder with this name already exists", "FOLDER_NAME_EXISTS")
+        );
+      }
+
+      // Create new folder
+      const folder = new SavedPropertyFolder({
+        profileId: activeProfile._id,
+        name: name.trim(),
+        description: description?.trim() || '',
+        color: color || '#3B82F6',
+        icon: icon || 'folder-outline',
+        isDefault: false
+      });
+
+      await folder.save();
+
+      res.status(201).json(
+        successResponse(folder, "Folder created successfully")
+      );
+    } catch (error) {
+      console.error("Error creating saved property folder:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Update a saved property folder
+   */
+  async updateSavedPropertyFolder(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      const { folderId } = req.params;
+      const { name, description, color, icon } = req.body;
+      
+      if (!oxyUserId) {
+        return res.status(401).json(
+          errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
+        );
+      }
+
+      if (!folderId) {
+        return res.status(400).json(
+          errorResponse("Folder ID is required", "FOLDER_ID_REQUIRED")
+        );
+      }
+
+      // Get the active profile for the current user
+      let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      
+      if (!activeProfile) {
+        return res.status(404).json(
+          errorResponse("Profile not found", "PROFILE_NOT_FOUND")
+        );
+      }
+
+      // Import SavedPropertyFolder
+      const { SavedPropertyFolder } = require('../models');
+      
+      // Find the folder
+      const folder = await SavedPropertyFolder.findOne({
+        _id: folderId,
+        profileId: activeProfile._id
+      });
+
+      if (!folder) {
+        return res.status(404).json(
+          errorResponse("Folder not found", "FOLDER_NOT_FOUND")
+        );
+      }
+
+      // Don't allow updating default folder
+      if (folder.isDefault) {
+        return res.status(400).json(
+          errorResponse("Cannot update default folder", "CANNOT_UPDATE_DEFAULT_FOLDER")
+        );
+      }
+
+      // Check if new name conflicts with existing folder
+      if (name && name.trim() !== folder.name) {
+        const existingFolder = await SavedPropertyFolder.findOne({
+          profileId: activeProfile._id,
+          name: { $regex: new RegExp(`^${name.trim()}$`, 'i') },
+          _id: { $ne: folderId }
+        });
+
+        if (existingFolder) {
+          return res.status(409).json(
+            errorResponse("Folder with this name already exists", "FOLDER_NAME_EXISTS")
+          );
+        }
+      }
+
+      // Update folder
+      const updateData: any = {};
+      if (name) updateData.name = name.trim();
+      if (description !== undefined) updateData.description = description?.trim() || '';
+      if (color) updateData.color = color;
+      if (icon) updateData.icon = icon;
+
+      const updatedFolder = await SavedPropertyFolder.findByIdAndUpdate(
+        folderId,
+        updateData,
+        { new: true }
+      );
+
+      res.json(
+        successResponse(updatedFolder, "Folder updated successfully")
+      );
+    } catch (error) {
+      console.error("Error updating saved property folder:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Delete a saved property folder
+   */
+  async deleteSavedPropertyFolder(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      const { folderId } = req.params;
+      
+      if (!oxyUserId) {
+        return res.status(401).json(
+          errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
+        );
+      }
+
+      if (!folderId) {
+        return res.status(400).json(
+          errorResponse("Folder ID is required", "FOLDER_ID_REQUIRED")
+        );
+      }
+
+      // Get the active profile for the current user
+      let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      
+      if (!activeProfile) {
+        return res.status(404).json(
+          errorResponse("Profile not found", "PROFILE_NOT_FOUND")
+        );
+      }
+
+      // Import models
+      const { SavedPropertyFolder, SavedProperty } = require('../models');
+      
+      // Find the folder
+      const folder = await SavedPropertyFolder.findOne({
+        _id: folderId,
+        profileId: activeProfile._id
+      });
+
+      if (!folder) {
+        return res.status(404).json(
+          errorResponse("Folder not found", "FOLDER_NOT_FOUND")
+        );
+      }
+
+      // Don't allow deleting default folder
+      if (folder.isDefault) {
+        return res.status(400).json(
+          errorResponse("Cannot delete default folder", "CANNOT_DELETE_DEFAULT_FOLDER")
+        );
+      }
+
+      // Move all properties in this folder to no folder (null)
+      await SavedProperty.updateMany(
+        { profileId: activeProfile._id, folderId: folderId },
+        { folderId: null }
+      );
+
+      // Delete the folder
+      await SavedPropertyFolder.findByIdAndDelete(folderId);
+
+      res.json(
+        successResponse(null, "Folder deleted successfully")
+      );
+    } catch (error) {
+      console.error("Error deleting saved property folder:", error);
+      next(error);
+    }
+  }
+
+
 
   /**
    * Track property view for the current user's profile

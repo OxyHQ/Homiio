@@ -37,8 +37,8 @@ class ErrorBoundaryBase extends Component<Props, State> {
 
     static getDerivedStateFromError(error: Error): State {
         const errorId = `ERR_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        return { 
-            hasError: true, 
+        return {
+            hasError: true,
             error,
             errorInfo: null,
             retryCount: 0,
@@ -49,13 +49,13 @@ class ErrorBoundaryBase extends Component<Props, State> {
 
     componentDidCatch(error: Error, errorInfo: ErrorInfo) {
         console.error('Error caught by boundary:', error, errorInfo);
-        
+
         // Update state with error info
         this.setState({ errorInfo });
-        
+
         // Call custom error handler if provided
         this.props.onError?.(error, errorInfo);
-        
+
         // Log error details for debugging
         this.logErrorDetails(error, errorInfo);
     }
@@ -81,14 +81,14 @@ class ErrorBoundaryBase extends Component<Props, State> {
                 osVersion: Device.osVersion,
             },
         };
-        
+
         console.group('🚨 Error Boundary Details');
         console.error('Error ID:', errorDetails.errorId);
         console.error('Error:', error);
         console.error('Error Info:', errorInfo);
         console.error('Device Info:', errorDetails.deviceInfo);
         console.groupEnd();
-        
+
         // In production, you might want to send this to an error reporting service
         // Example: Sentry.captureException(error, { extra: errorDetails });
     };
@@ -96,7 +96,7 @@ class ErrorBoundaryBase extends Component<Props, State> {
     private handleRetry = () => {
         const { maxRetries = 3 } = this.props;
         const newRetryCount = this.state.retryCount + 1;
-        
+
         if (newRetryCount > maxRetries) {
             Alert.alert(
                 this.props.t("error.boundary.maxRetriesTitle"),
@@ -114,10 +114,10 @@ class ErrorBoundaryBase extends Component<Props, State> {
             );
             return;
         }
-        
-        this.setState({ 
-            hasError: false, 
-            error: null, 
+
+        this.setState({
+            hasError: false,
+            error: null,
             errorInfo: null,
             retryCount: newRetryCount,
             showDetails: false,
@@ -125,9 +125,9 @@ class ErrorBoundaryBase extends Component<Props, State> {
     };
 
     private handleForceRetry = () => {
-        this.setState({ 
-            hasError: false, 
-            error: null, 
+        this.setState({
+            hasError: false,
+            error: null,
             errorInfo: null,
             retryCount: 0,
             showDetails: false,
@@ -141,7 +141,7 @@ class ErrorBoundaryBase extends Component<Props, State> {
 
     private handleReportIssue = async () => {
         const errorReport = this.generateErrorReport();
-        
+
         try {
             await Clipboard.setString(errorReport);
             Alert.alert(
@@ -158,7 +158,7 @@ class ErrorBoundaryBase extends Component<Props, State> {
 
     private generateErrorReport = (): string => {
         const { error, errorInfo, errorId } = this.state;
-        
+
         return `
 🚨 Error Report
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -200,13 +200,13 @@ Please share this report with the development team.
             return (
                 <ScrollView contentContainerStyle={styles.container}>
                     <View style={styles.iconContainer}>
-                        <Ionicons name="warning" size={64} color={colors.errorColor || '#ff4444'} />
+                        <Ionicons name="warning" size={64} color="#ff4444" />
                     </View>
-                    
+
                     <ThemedText style={styles.title}>
                         {this.props.t("error.boundary.title")}
                     </ThemedText>
-                    
+
                     <ThemedText style={styles.message}>
                         {this.props.t("error.boundary.message")}
                     </ThemedText>
@@ -227,7 +227,7 @@ Please share this report with the development team.
                         >
                             <Ionicons name="refresh" size={20} color="white" style={styles.buttonIcon} />
                             <ThemedText style={styles.retryText}>
-                                {this.props.t("error.boundary.retry")} 
+                                {this.props.t("error.boundary.retry")}
                                 {retryCount > 0 && ` (${retryCount}/${maxRetries})`}
                             </ThemedText>
                         </TouchableOpacity>
@@ -249,15 +249,15 @@ Please share this report with the development team.
                             onPress={this.handleToggleDetails}
                         >
                             <ThemedText style={styles.detailsToggleText}>
-                                {showDetails 
+                                {showDetails
                                     ? this.props.t("error.boundary.hideDetails")
                                     : this.props.t("error.boundary.showDetails")
                                 }
                             </ThemedText>
-                            <Ionicons 
-                                name={showDetails ? "chevron-up" : "chevron-down"} 
-                                size={16} 
-                                color={colors.COLOR_BLACK_LIGHT_3} 
+                            <Ionicons
+                                name={showDetails ? "chevron-up" : "chevron-down"}
+                                size={16}
+                                color={colors.COLOR_BLACK_LIGHT_3}
                             />
                         </TouchableOpacity>
                     )}
@@ -267,7 +267,7 @@ Please share this report with the development team.
                             <ThemedText style={styles.errorDetailsTitle}>
                                 {this.props.t("error.boundary.technicalDetails")}
                             </ThemedText>
-                            
+
                             <View style={styles.errorSection}>
                                 <ThemedText style={styles.errorSectionTitle}>Error Message:</ThemedText>
                                 <ThemedText style={styles.errorText}>{error?.message || 'Unknown error'}</ThemedText>

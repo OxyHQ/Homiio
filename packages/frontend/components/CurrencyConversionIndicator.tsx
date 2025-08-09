@@ -25,7 +25,7 @@ export const CurrencyConversionIndicator: React.FC<CurrencyConversionIndicatorPr
     const { currentCurrency, convertAmount, getExchangeRateInfo } = useCurrency();
 
     // Don't show if currencies are the same
-    if (originalCurrency === currentCurrency.code) {
+    if (originalCurrency === currentCurrency) {
         return null;
     }
 

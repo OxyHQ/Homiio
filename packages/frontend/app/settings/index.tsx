@@ -121,6 +121,23 @@ export default function SettingsScreen() {
                         </View>
                         <IconComponent name="chevron-forward" size={16} color="#ccc" />
                     </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.settingItem, styles.firstSettingItem, styles.lastSettingItem]}
+                        onPress={() => showBottomSheet?.('FileManagement')}
+                    >
+                        <View style={styles.userIcon}>
+                            <IconComponent name="person" size={24} color="#fff" />
+                        </View>
+                        <View style={styles.settingInfo}>
+                            <View>
+                                <Text style={styles.settingLabel}>
+                                    {user ? (typeof user.name === 'string' ? user.name : user.name?.full || user.name?.first || user.username) : 'User'}
+                                </Text>
+                                <Text style={styles.settingDescription}>{user?.username || 'Username'}</Text>
+                            </View>
+                        </View>
+                        <IconComponent name="chevron-forward" size={16} color="#ccc" />
+                    </TouchableOpacity>
                 </View>
 
                 {/* About Homiio */}

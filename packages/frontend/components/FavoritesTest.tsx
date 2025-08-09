@@ -11,10 +11,7 @@ export const FavoritesTest: React.FC = () => {
         favoriteIds,
         isLoading,
         isSaving,
-        error,
-        lastSynced,
-        getFavoriteCount,
-        clearAllFavorites
+        error
     } = useFavorites();
 
     // Sample property IDs for testing
@@ -35,10 +32,7 @@ export const FavoritesTest: React.FC = () => {
                     <ThemedText style={styles.sectionTitle}>Status</ThemedText>
                     <ThemedText>Loading: {isLoading ? 'Yes' : 'No'}</ThemedText>
                     <ThemedText>Saving: {isSaving ? 'Yes' : 'No'}</ThemedText>
-                    <ThemedText>Total Favorites: {getFavoriteCount()}</ThemedText>
-                    {lastSynced && (
-                        <ThemedText>Last Synced: {new Date(lastSynced).toLocaleTimeString()}</ThemedText>
-                    )}
+                    <ThemedText>Total Favorites: {favoriteIds.length}</ThemedText>
                     {error && (
                         <ThemedText style={styles.errorText}>Error: {error}</ThemedText>
                     )}
@@ -89,7 +83,6 @@ export const FavoritesTest: React.FC = () => {
                             propertyId="test-clear"
                             size={24}
                             variant="bookmark"
-                            onPress={clearAllFavorites}
                             style={styles.actionButton}
                         />
                         <ThemedText style={styles.actionLabel}>Clear All</ThemedText>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useContext } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Platform, Modal, Image, Share, Animated } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -23,6 +23,9 @@ import { getPropertyImageSource } from '@/utils/propertyUtils';
 import { useProfileStore } from '@/store/profileStore';
 import { useRecentlyViewedStore } from '@/store/recentlyViewedStore';
 import { useFavorites } from '@/hooks/useFavorites';
+import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
+import { BottomSheetContext } from '@/context/BottomSheetContext';
+import { SaveToFolderBottomSheet } from '@/components/SaveToFolderBottomSheet';
 import { userApi } from '@/utils/api';
 import { SaveButton } from '@/components/SaveButton';
 import { ActionButton } from '@/components/ui/ActionButton';
@@ -61,13 +64,13 @@ export default function PropertyDetailPage() {
     const router = useRouter();
     const { id } = useLocalSearchParams();
     const { oxyServices, activeSessionId } = useOxy();
-    
+
     // Safe translation helper to prevent undefined/empty string issues
     const safeT = (key: string, fallback?: string) => {
         const translated = t(key);
         return translated || fallback || key;
     };
-    
+
     const { property: apiProperty, loading: isLoading, error, loadProperty } = useProperty(id as string);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const hasViewedRef = useRef(false);
@@ -79,6 +82,10 @@ export default function PropertyDetailPage() {
 
     // Favorites (now Zustand-based)
     const { isFavorite, toggleFavorite, isPropertySaving } = useFavorites();
+
+    // Bottom sheet context for long press functionality
+    const bottomSheetContext = useContext(BottomSheetContext);
+    const { savePropertyToFolder, unsaveProperty, isPropertySaved, isInitialized } = useSavedPropertiesContext();
 
     // TODO: Implement landlord profile fetching with Zustand
     // For now, we'll use placeholder values
@@ -358,6 +365,8 @@ export default function PropertyDetailPage() {
         }
     };
 
+
+
     if (isLoading) {
         return (
             <View style={{ flex: 1 }}>
@@ -403,7 +412,7 @@ export default function PropertyDetailPage() {
         );
     }
 
-    const isPropertyFavorite = isFavorite(property.id);
+    const isPropertySavedState = property.id && isInitialized ? isPropertySaved(property.id) : false;
 
     return (
         <View style={styles.safeArea}>
@@ -422,12 +431,11 @@ export default function PropertyDetailPage() {
                             </TouchableOpacity>,
                             <SaveButton
                                 key="save"
-                                isSaved={isPropertyFavorite}
-                                onPress={() => toggleFavorite(property.id || '', apiProperty || {})}
+                                isSaved={isPropertySavedState}
                                 variant="heart"
                                 color="#222"
                                 activeColor="#EF4444"
-                                isLoading={isPropertySaving(property.id || '')}
+                                property={apiProperty || undefined}
                             />,
                         ],
                     }}

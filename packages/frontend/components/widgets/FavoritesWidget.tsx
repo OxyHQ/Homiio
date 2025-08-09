@@ -11,8 +11,8 @@ interface FavoritesWidgetProps {
 }
 
 export const FavoritesWidget: React.FC<FavoritesWidgetProps> = ({ style }) => {
-    const { favoriteIds, getFavoriteCount } = useFavorites();
-    const favoriteCount = getFavoriteCount();
+    const { favoriteIds } = useFavorites();
+    const favoriteCount = favoriteIds.length;
 
     const handlePress = () => {
         router.push('/saved');

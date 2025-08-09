@@ -1,5 +1,5 @@
 // --- 1. Organized Imports ---
-import React, { useEffect, useState, useCallback, useMemo, createContext, useRef } from "react";
+import React, { useEffect, useState, useCallback, useMemo, createContext } from "react";
 import { Keyboard, Platform, View, StyleSheet } from "react-native";
 import { SafeAreaProvider, initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -26,47 +26,23 @@ import caES from "@/locales/ca-ES.json";
 import itIT from "@/locales/it.json";
 import { BottomBar } from "@/components/BottomBar";
 import { MenuProvider } from 'react-native-popup-menu';
-import { BottomSheetModalProvider, BottomSheetModal } from "@gorhom/bottom-sheet";
+
 import AppSplashScreen from "@/components/AppSplashScreen";
 import LoadingTopSpinner from "@/components/LoadingTopSpinner";
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { ProfileProvider } from '@/context/ProfileContext';
+import { SavedPropertiesProvider } from '@/context/SavedPropertiesContext';
+import { BottomSheetProvider } from '@/context/BottomSheetContext';
 import { OxyProvider, OxyServices } from '@oxyhq/services';
 import { generateWebsiteStructuredData, injectStructuredData } from '@/utils/structuredData';
 import { PostHogProvider } from 'posthog-react-native';
 import "../styles/global.css";
 
-// BottomSheet context for global sheet control
-export const BottomSheetContext = createContext<{ open: (content: React.ReactNode) => void }>({ open: () => { } });
-
-function BottomSheetProvider({ children }: { children: React.ReactNode }) {
-  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-  const [sheetContent, setSheetContent] = React.useState<React.ReactNode>(null);
-
-  const open = useCallback((content: React.ReactNode) => {
-    setSheetContent(content);
-    setTimeout(() => {
-      bottomSheetModalRef.current?.present();
-    }, 0);
-  }, []);
-
-  const handleDismiss = () => setSheetContent(null);
-
-  return (
-    <BottomSheetContext.Provider value={{ open }}>
-      <BottomSheetModalProvider>
-        {children}
-        <BottomSheetModal
-          ref={bottomSheetModalRef}
-          snapPoints={["60%", "90%"]}
-          onDismiss={handleDismiss}
-        >
-          {sheetContent}
-        </BottomSheetModal>
-      </BottomSheetModalProvider>
-    </BottomSheetContext.Provider>
-  );
-}
+// Oxy context for bottom sheet content
+export const OxyContext = createContext<{ oxyServices: OxyServices | null; activeSessionId: string | null }>({
+  oxyServices: null,
+  activeSessionId: null
+});
 
 // --- 2. i18n Initialization ---
 i18n.use(initReactI18next).init({
@@ -79,7 +55,7 @@ i18n.use(initReactI18next).init({
   lng: "en-US",
   fallbackLng: "en-US",
   interpolation: { escapeValue: false },
-}).catch(error => {
+}).catch((error: unknown) => {
   console.error("Failed to initialize i18n:", error);
 });
 
@@ -249,25 +225,27 @@ export default function RootLayout() {
               theme="light"
             >
               <ProfileProvider>
-                <BottomSheetProvider>
+                <SavedPropertiesProvider>
                   <I18nextProvider i18n={i18n}>
-                    <MenuProvider>
-                      <ErrorBoundary>
-                        <View style={styles.container}>
-                          <SideBar />
-                          <View style={styles.mainContentWrapper}>
-                            <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0 }} />
-                            <Slot />
+                    <BottomSheetProvider>
+                      <MenuProvider>
+                        <ErrorBoundary>
+                          <View style={styles.container}>
+                            <SideBar />
+                            <View style={styles.mainContentWrapper}>
+                              <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0 }} />
+                              <Slot />
+                            </View>
+                            <RightBar />
                           </View>
-                          <RightBar />
-                        </View>
-                        <StatusBar style="auto" />
-                        <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
-                        {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
-                      </ErrorBoundary>
-                    </MenuProvider>
+                          <StatusBar style="auto" />
+                          <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
+                          {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
+                        </ErrorBoundary>
+                      </MenuProvider>
+                    </BottomSheetProvider>
                   </I18nextProvider>
-                </BottomSheetProvider>
+                </SavedPropertiesProvider>
               </ProfileProvider>
             </OxyProvider>
           </PostHogProvider>

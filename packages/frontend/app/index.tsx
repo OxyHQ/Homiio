@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
@@ -195,6 +195,9 @@ export default function HomePage() {
     { id: 'public_housing', name: t('search.propertyType.publicHousing'), icon: 'library-outline', count: 0 },
   ], [t]);
 
+  // Option A: Pure flex-wrap grid (no explicit width calculations / breakpoints)
+  // Each chip gets a flexible basis and minWidth; layout naturally flows into 1..N columns.
+
   // Calculate property type counts
   const propertyTypeCounts = useMemo(() => {
     if (!properties) return propertyTypes;
@@ -225,12 +228,6 @@ export default function HomePage() {
         country: city.country
       }));
   }, [cities]);
-
-  // Generate suggestions data - removed for simplified search
-  // const suggestionsData = useMemo(() => {
-  //   // Removed suggestions logic
-  //   return [];
-  // }, []);
 
   const handleSearchPress = useCallback(() => {
     // Navigate to search screen
@@ -359,27 +356,30 @@ export default function HomePage() {
             <ThemedText style={styles.sectionTitle}>{t("home.categories.title")}</ThemedText>
           </View>
           <View style={styles.propertyChipsContainer}>
-            {propertyTypeCounts.map((type) => (
-              <TouchableOpacity
-                key={type.id}
-                style={styles.propertyChip}
-                onPress={() => router.push(`/properties/type/${type.id}`)}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={[colors.primaryColor, colors.secondaryLight]}
-                  style={styles.propertyChipGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
+            {propertyTypeCounts.map((type, idx) => {
+              // Determine if last item in a row to avoid right margin if using margins (we're using gap via wrap so optional)
+              return (
+                <TouchableOpacity
+                  key={type.id}
+                  style={styles.propertyChip}
+                  onPress={() => router.push(`/properties/type/${type.id}`)}
+                  activeOpacity={0.8}
                 >
-                  <IconComponent name={type.icon as keyof typeof IconComponent.glyphMap} size={20} color="white" />
-                  <ThemedText style={styles.propertyChipName}>{type.name}</ThemedText>
-                  <View style={styles.propertyChipCountBadge}>
-                    <ThemedText style={styles.propertyChipCountText}>{type.count}</ThemedText>
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            ))}
+                  <LinearGradient
+                    colors={[colors.primaryColor, colors.secondaryLight]}
+                    style={styles.propertyChipGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <IconComponent name={type.icon as keyof typeof IconComponent.glyphMap} size={20} color="white" />
+                    <ThemedText style={styles.propertyChipName}>{type.name}</ThemedText>
+                    <View style={styles.propertyChipCountBadge}>
+                      <ThemedText style={styles.propertyChipCountText}>{type.count}</ThemedText>
+                    </View>
+                  </LinearGradient>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -473,7 +473,7 @@ export default function HomePage() {
         {nearbyCities.map((city, idx) => {
           const cityProperties = nearbyProperties[city._id || city.id];
           if (!cityProperties || cityProperties.length === 0) return null;
-          
+
           return (
             <HomeCarouselSection
               key={city._id || city.id}
@@ -1074,14 +1074,13 @@ const styles = StyleSheet.create({
   propertyChipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    // Reduced gap for tighter layout
+    gap: 4,
     paddingHorizontal: 16,
+    // Allow natural distribution; space-evenly can look nicer for single row cases
+    justifyContent: 'flex-start',
   },
   propertyChip: {
-    width: Platform.select({
-      web: '31%', // 3 columns on web/larger screens
-      default: '48%', // 2 columns on mobile
-    }),
     borderRadius: 25,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -1089,13 +1088,26 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
+    // Reduced vertical spacing
+    marginBottom: 4,
+    // Flex-based responsive sizing
+    flexGrow: 1,
+    // Target about 3 columns when space allows; will wrap naturally
+    flexBasis: '30%',
+    // Prevent chips from becoming too narrow on small widths
+    minWidth: 140,
+    // Cap width so very wide screens show more columns instead of huge chips
+    maxWidth: 260,
   },
   propertyChipGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 8,
+    // Slightly reduced internal padding for compact chips
+    paddingHorizontal: 6,
+    paddingVertical: 6,
     justifyContent: 'space-between',
+    // Make gradient fill the chip container width
+    flex: 1,
   },
   propertyChipName: {
     fontFamily: phuduFontWeights.medium,

@@ -4,6 +4,7 @@ import type { Property } from '@homiio/shared-types';
 export interface SavedProperty extends Property {
   notes?: string;
   savedAt?: string;
+  folderId?: string;
 }
 
 export interface SavedPropertiesResponse {
@@ -30,10 +31,11 @@ class SavedPropertyService {
     propertyId: string, 
     notes: string | undefined, 
     oxyServices: OxyServices, 
-    activeSessionId: string
+    activeSessionId: string,
+    folderId?: string | null
   ): Promise<void> {
     const { userApi } = await import('@/utils/api');
-    await userApi.saveProperty(propertyId, notes, oxyServices, activeSessionId);
+    await userApi.saveProperty(propertyId, notes, oxyServices, activeSessionId, folderId);
   }
 
   async unsaveProperty(

@@ -26,6 +26,12 @@ export default function () {
   router.post("/me/save-property", asyncHandler(profileController.saveProperty));
   router.delete("/me/saved-properties/:propertyId", asyncHandler(profileController.unsaveProperty));
   router.patch("/me/saved-properties/:propertyId/notes", asyncHandler(profileController.updateSavedPropertyNotes));
+  
+  // Saved property folders
+  router.get("/me/saved-property-folders", asyncHandler(profileController.getSavedPropertyFolders));
+  router.post("/me/saved-property-folders", asyncHandler(profileController.createSavedPropertyFolder));
+  router.put("/me/saved-property-folders/:folderId", asyncHandler(profileController.updateSavedPropertyFolder));
+  router.delete("/me/saved-property-folders/:folderId", asyncHandler(profileController.deleteSavedPropertyFolder));
   router.get("/me/saved-searches", asyncHandler(profileController.getSavedSearches));
   router.post("/me/saved-searches", asyncHandler(profileController.saveSearch));
   router.delete("/me/saved-searches/:searchId", asyncHandler(profileController.deleteSavedSearch));

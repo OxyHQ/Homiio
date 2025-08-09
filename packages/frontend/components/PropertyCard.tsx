@@ -1,10 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Image, StyleSheet, TouchableOpacity, ViewStyle, Dimensions } from 'react-native';
 import { colors } from '@/styles/colors';
 import { IconButton } from './IconButton';
 import { Property, PropertyType, PriceUnit } from '@homiio/shared-types';
 import { getPropertyTitle, getPropertyImageSource } from '@/utils/propertyUtils';
 import { useFavorites } from '@/hooks/useFavorites';
+import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
+
 import { SaveButton } from './SaveButton';
 import { CurrencyFormatter } from './CurrencyFormatter';
 import { ThemedText } from '@/components/ThemedText';
@@ -12,6 +14,7 @@ import { ThemedText } from '@/components/ThemedText';
 
 
 export type PropertyCardVariant = 'default' | 'compact' | 'featured' | 'saved';
+export type PropertyCardOrientation = 'vertical' | 'horizontal';
 
 type PropertyCardProps = {
     // Core data - can pass either individual props or a Property object
@@ -33,6 +36,7 @@ type PropertyCardProps = {
 
     // Display options
     variant?: PropertyCardVariant;
+    orientation?: PropertyCardOrientation;
     showFavoriteButton?: boolean;
     showVerifiedBadge?: boolean;
     showTypeIcon?: boolean;
@@ -111,6 +115,7 @@ export function PropertyCard({
 
     // Display options
     variant = 'default',
+    orientation = 'vertical',
     showFavoriteButton = true,
     showVerifiedBadge = true,
     showTypeIcon = true,
@@ -137,7 +142,8 @@ export function PropertyCard({
     badgeContent,
     overlayContent,
 }: PropertyCardProps) {
-    const { isFavorite, toggleFavorite, isPropertySaving } = useFavorites();
+    // Use saved properties context to check if property is saved
+    const { isPropertySaved, isInitialized } = useSavedPropertiesContext();
 
     // Use property object if provided, otherwise use individual props
     const propertyData = property ? {
@@ -172,7 +178,7 @@ export function PropertyCard({
 
     const isEco = Boolean(property && typeof property === 'object' && 'ecoCertified' in property && property.ecoCertified);
     const isFeatured = variant === 'featured' || Boolean(property && typeof property === 'object' && 'isFeatured' in property && property.isFeatured);
-    const isPropertyFavorite = isFavorite(propertyData.id || '');
+    const isPropertySavedState = propertyData.id && isInitialized ? isPropertySaved(propertyData.id) : false;
 
     // Get variant-specific styles
     const variantStyles = getVariantStyles(variant);
@@ -201,25 +207,17 @@ export function PropertyCard({
     const shouldShowFeatures = showFeatures && variantStyles.showFeatures;
     const shouldShowRating = showRating && variantStyles.showRating;
 
-    const handleFavoritePress = () => {
-        if (propertyData.id) {
-            // Convert PropertyCard type to Property interface type
-            const propertyForToggle: Partial<Property> = {
-                ...propertyData,
-                type: (propertyData.type === 'eco' ? 'apartment' :
-                    propertyData.type === 'coliving' ? 'coliving' :
-                        propertyData.type === 'house' ? 'house' : 'apartment') as any,
-                // Remove the location string since Property interface expects GeoJSONPoint
-                location: undefined
-            };
-            toggleFavorite(propertyData.id || '', propertyForToggle);
-        }
-    };
+
+
+
+
+
 
     return (
         <TouchableOpacity
             style={[
                 styles.container,
+                orientation === 'horizontal' ? styles.horizontalContainer : null,
                 style as ViewStyle,
                 isFeatured ? styles.featuredCard : null,
             ]}
@@ -229,6 +227,7 @@ export function PropertyCard({
         >
             <View style={[
                 styles.imageContainer,
+                orientation === 'horizontal' ? styles.horizontalImageContainer : null,
                 isFeatured ? styles.featuredImageContainer : null,
             ]}>
                 <Image
@@ -257,14 +256,13 @@ export function PropertyCard({
                 {/* Save Button - moved to top-right */}
                 {showFavoriteButton && (
                     <SaveButton
-                        isSaved={isPropertyFavorite}
-                        onPress={handleFavoritePress}
+                        isSaved={isPropertySavedState}
                         size={24}
                         variant="heart"
                         color="#222"
                         activeColor="#EF4444"
-                        isLoading={isPropertySaving(propertyData.id || '')}
                         style={styles.saveButton}
+                        property={property}
                     />
                 )}
 
@@ -305,6 +303,7 @@ export function PropertyCard({
 
             <View style={[
                 styles.content,
+                orientation === 'horizontal' ? styles.horizontalContent : null,
                 variant === 'compact' ? styles.compactContent : null,
                 isFeatured ? styles.featuredContent : null,
             ]}>
@@ -313,7 +312,8 @@ export function PropertyCard({
                     styles.title,
                     variant === 'compact' ? styles.compactTitle : null,
                     isFeatured ? styles.featuredTitle : null,
-                ]} numberOfLines={finalTitleLines}>
+                    orientation === 'horizontal' ? styles.horizontalTitle : null,
+                ]} numberOfLines={orientation === 'horizontal' ? undefined : finalTitleLines}>
                     {propertyData.title}
                 </ThemedText>
 
@@ -323,6 +323,7 @@ export function PropertyCard({
                         styles.location,
                         variant === 'compact' ? styles.compactLocation : null,
                         isFeatured ? styles.featuredLocation : null,
+                        orientation === 'horizontal' ? styles.horizontalLocation : null,
                     ]} numberOfLines={finalLocationLines}>
                         {propertyData.location}
                     </ThemedText>
@@ -387,6 +388,11 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 'auto',
     },
+    horizontalContainer: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 12,
+    },
     featuredCard: {
         // No border or shadow here
     },
@@ -397,6 +403,12 @@ const styles = StyleSheet.create({
         backgroundColor: '#f8f8f8',
         borderRadius: 25,
         overflow: 'hidden',
+    },
+    horizontalImageContainer: {
+        width: 120,
+        height: 120,
+        aspectRatio: 1,
+        flexShrink: 0,
     },
     featuredImageContainer: {
     },
@@ -440,6 +452,12 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         marginTop: 10, // Add gap between image and content
     },
+    horizontalContent: {
+        flex: 1,
+        marginTop: 0,
+        justifyContent: 'space-between',
+        minHeight: 120,
+    },
     compactContent: {
         // padding: 8, // Remove padding for flush alignment
     },
@@ -461,11 +479,23 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: '700',
     },
+    horizontalTitle: {
+        fontSize: 20,
+        fontWeight: '600',
+        lineHeight: 32,
+        marginBottom: 4,
+    },
     location: {
         fontSize: 12,
         color: '#717171',
         marginBottom: 4,
         lineHeight: 16,
+    },
+    horizontalLocation: {
+        fontSize: 14,
+        color: '#717171',
+        marginBottom: 6,
+        lineHeight: 18,
     },
     compactLocation: {
         fontSize: 11,

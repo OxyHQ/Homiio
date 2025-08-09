@@ -176,7 +176,7 @@ export function ProfileManager() {
                 {selectedProfileType === 'personal' && !personalProfile && (
                     <TouchableOpacity
                         style={styles.button}
-                        onPress={() => handleCreateProfile('personal')}
+                        onPress={() => handleCreateProfile(ProfileType.PERSONAL)}
                     >
                         <Text style={styles.buttonText}>
                             Create Personal Profile
@@ -187,7 +187,7 @@ export function ProfileManager() {
                 {selectedProfileType === 'agency' && (
                     <TouchableOpacity
                         style={styles.button}
-                        onPress={() => handleCreateProfile('agency')}
+                        onPress={() => handleCreateProfile(ProfileType.AGENCY)}
                     >
                         <Text style={styles.buttonText}>
                             Create Agency Profile

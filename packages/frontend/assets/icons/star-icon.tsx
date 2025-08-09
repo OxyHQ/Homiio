@@ -1,4 +1,10 @@
-export const StarIcon = () => {
+interface StarIconProps {
+  size?: number;
+  color?: string;
+  style?: any;
+}
+
+export const StarIcon = ({ size = 24, color = '#000', style = {} }: StarIconProps) => {
   return (
     <svg className="svgIcon" viewBox="0 0 24 24" aria-hidden="true" style={{ ...style, width: size, height: size, fill: color }}>
       <g>

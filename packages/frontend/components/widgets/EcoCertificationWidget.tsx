@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
-import { ThemedText } from '@/components';
+import { ThemedText } from '../ThemedText';
 
 export function EcoCertificationWidget() {
     const { t } = useTranslation();
