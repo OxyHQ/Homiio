@@ -220,16 +220,35 @@ export default function Sindi() {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
+            <View style={styles.heroDecorLayer} pointerEvents="none" />
+            <View style={styles.heroDecorBlur} pointerEvents="none" />
             <View style={styles.heroContent}>
-              <View style={styles.heroIconCircle}>
-                <SindiIcon size={52} color={colors.secondaryColor} />
+              <View style={styles.heroIconWrapper}>
+                <View style={styles.heroIconGlow} />
+                <View style={styles.heroIconCircle}>
+                  <SindiIcon size={54} color={colors.secondaryColor} />
+                </View>
               </View>
               <Text style={styles.heroTitle}>{t('sindi.welcome.title')}</Text>
               <Text style={styles.heroSubtitle}>{t('sindi.welcome.subtitle')}</Text>
               <View style={styles.heroBadgesRow}>
-                <View style={styles.heroBadge}><IconComponent name="shield-checkmark" size={14} color={colors.primaryColor} /><Text style={styles.heroBadgeText}>Rights</Text></View>
-                <View style={styles.heroBadge}><IconComponent name="home" size={14} color={colors.primaryColor} /><Text style={styles.heroBadgeText}>Housing</Text></View>
-                <View style={styles.heroBadge}><IconComponent name="document-text" size={14} color={colors.primaryColor} /><Text style={styles.heroBadgeText}>Legal</Text></View>
+                <View style={styles.heroBadge}><IconComponent name="shield-checkmark" size={13} color={colors.primaryColor} /><Text style={styles.heroBadgeText}>Rights</Text></View>
+                <View style={styles.heroBadge}><IconComponent name="home" size={13} color={colors.primaryColor} /><Text style={styles.heroBadgeText}>Housing</Text></View>
+                <View style={styles.heroBadge}><IconComponent name="document-text" size={13} color={colors.primaryColor} /><Text style={styles.heroBadgeText}>Legal</Text></View>
+              </View>
+              <View style={styles.heroCTARow}>
+                <TouchableOpacity style={styles.heroPrimaryBtn} activeOpacity={0.85} onPress={createNewConversation}>
+                  <Ionicons name="add" size={16} color="white" />
+                  <Text style={styles.heroPrimaryBtnText}>New Chat</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.heroSecondaryBtn} activeOpacity={0.85} onPress={() => router.push('/search')}>
+                  <Ionicons name="search" size={16} color={colors.primaryColor} />
+                  <Text style={styles.heroSecondaryBtnText}>Search Homes</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.heroPromptBar}>
+                <Ionicons name="sparkles" size={14} color={colors.primaryColor} />
+                <Text style={styles.heroPromptPlaceholder} numberOfLines={1}>Ask about rent limits, deposits, or your rights...</Text>
               </View>
             </View>
           </LinearGradient>
@@ -493,6 +512,92 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: colors.primaryColor,
+  },
+  heroDecorLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    opacity: 0.15,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  heroDecorBlur: {
+    position: 'absolute',
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    top: -40,
+    right: -60,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    opacity: 0.35,
+  },
+  heroIconWrapper: {
+    marginBottom: 16,
+  },
+  heroIconGlow: {
+    position: 'absolute',
+    top: -15,
+    left: -15,
+    right: -15,
+    bottom: -15,
+    borderRadius: 80,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  heroCTARow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 20,
+    marginBottom: 14,
+  },
+  heroPrimaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primaryColor,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  heroPrimaryBtnText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  heroSecondaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 26,
+  },
+  heroSecondaryBtnText: {
+    color: colors.primaryColor,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  heroPromptBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    borderRadius: 22,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    alignSelf: 'stretch',
+    marginTop: 4,
+    gap: 8,
+  },
+  heroPromptPlaceholder: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.COLOR_BLACK_LIGHT_4,
   },
   container: {
     flex: 1,
