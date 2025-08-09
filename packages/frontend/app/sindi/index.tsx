@@ -1,23 +1,20 @@
-import { generateAPIUrl } from '@/utils/generateAPIUrl';
-import { useChat } from '@ai-sdk/react';
 import { fetch as expoFetch } from 'expo/fetch';
-import { View, TextInput, ScrollView, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, ScrollView, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOxy } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 
 import { useRouter } from 'expo-router';
-import { PropertyCard } from '@/components/PropertyCard';
+// Landing screen does not render PropertyCard directly
 import { SindiIcon } from '@/assets/icons';
 import { ThemedView } from '@/components/ThemedView';
-import { ThemedText } from '@/components/ThemedText';
 import { Header } from '@/components/Header';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as DocumentPicker from 'expo-document-picker';
-import React, { useState, useEffect, useCallback } from 'react';
-import { useConversationStore, type ConversationMessage, type Conversation } from '@/store/conversationStore';
+// Removed file attachment functionality for minimal hero page
+import React, { useEffect, useCallback } from 'react';
+import { useConversationStore } from '@/store/conversationStore';
 import { EmptyState } from '@/components/ui/EmptyState'; // keep for IconComponent type assertion
 const IconComponent = Ionicons as any;
 
@@ -25,7 +22,7 @@ export default function Sindi() {
   const { oxyServices, activeSessionId } = useOxy();
   const router = useRouter();
   const { t } = useTranslation();
-  const [attachedFile, setAttachedFile] = React.useState<any>(null);
+  // No local file state needed on landing hero
 
   // Zustand store
   const {
@@ -65,67 +62,37 @@ export default function Sindi() {
     return expoFetch(url, fetchOptions as any);
   }, [oxyServices, activeSessionId]);
 
-  // Always call useChat, but only enable it if authenticated
+  // Alias with Response-compatible typing to satisfy functions expecting the standard fetch signature
+  const conversationFetch = authenticatedFetch as unknown as (url: string, options?: RequestInit) => Promise<Response>;
+
+  // Auth status
   const isAuthenticated = !!oxyServices && !!activeSessionId;
-  const { messages, error, handleInputChange, input, handleSubmit, isLoading } = useChat({
-    fetch: authenticatedFetch as unknown as typeof globalThis.fetch,
-    api: generateAPIUrl('/api/ai/stream'),
-    onError: (error: any) => console.error(error, 'ERROR'),
-    enabled: isAuthenticated, // Only enable chat if authenticated
-  } as any); // Cast to any to allow 'enabled' prop if not in type
 
   // Create new conversation
   const createNewConversation = useCallback(async () => {
     if (!isAuthenticated) return;
 
     try {
-      const newConversation = await createConversation('New Conversation', undefined, authenticatedFetch);
+      const newConversation = await createConversation('New Conversation', undefined, conversationFetch);
       router.push(`/sindi/${newConversation.id}`);
       // Refresh conversations list
-      loadConversations(authenticatedFetch);
+      loadConversations(conversationFetch);
     } catch (error) {
       console.error('Failed to create conversation:', error);
       // Fallback to client-side ID generation
       const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       router.push(`/sindi/${conversationId}`);
     }
-  }, [isAuthenticated, authenticatedFetch, router, createConversation, loadConversations]);
+  }, [isAuthenticated, conversationFetch, router, createConversation, loadConversations]);
 
   // Load conversations on mount
   useEffect(() => {
     if (isAuthenticated) {
-      loadConversations(authenticatedFetch);
+      loadConversations(conversationFetch);
     }
-  }, [isAuthenticated, loadConversations, authenticatedFetch]);
+  }, [isAuthenticated, loadConversations, conversationFetch]);
 
-  const handleAttachFile = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: '*/*',
-        copyToCacheDirectory: true,
-        multiple: false,
-      });
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setAttachedFile(result.assets[0]);
-      }
-    } catch (e) {
-      console.error('File pick error:', e);
-    }
-  };
-
-  const handleRemoveFile = () => setAttachedFile(null);
-
-  // Wrap the original handleSubmit to include file info (for now, just log)
-  const handleSubmitWithFile = () => {
-    if (attachedFile) {
-      console.log('Sending file:', attachedFile);
-      // TODO: Integrate file upload to backend here
-      setAttachedFile(null);
-    }
-    handleSubmit();
-  };
-
-  // Early return for unauthenticated users (after all hooks)
+  // Early return for unauthenticated users (after hooks)
   if (!isAuthenticated) {
     return (
       <ThemedView style={styles.container} lightColor="transparent" darkColor="transparent">
@@ -143,6 +110,7 @@ export default function Sindi() {
     );
   }
 
+  // Quick actions & examples (original arrays restored)
   const quickActions = [
     { title: t('sindi.actions.rentGouging.title'), icon: 'trending-up', prompt: t('sindi.actions.rentGouging.prompt') },
     { title: t('sindi.actions.evictionDefense.title'), icon: 'warning', prompt: t('sindi.actions.evictionDefense.prompt') },
@@ -164,29 +132,6 @@ export default function Sindi() {
     { title: t('sindi.housing.examples.luxury.title'), icon: 'diamond', prompt: t('sindi.housing.examples.luxury.prompt') },
     { title: t('sindi.housing.examples.shared.title'), icon: 'people', prompt: t('sindi.housing.examples.shared.prompt') },
   ];
-
-  const handleQuickAction = (prompt: string) => {
-    handleInputChange({
-      target: { value: prompt }
-    } as any);
-  };
-
-  if (error) return (
-    <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[colors.primaryColor, colors.secondaryLight]}
-        style={styles.errorContainer}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.errorContent}>
-          <IconComponent name="alert-circle" size={48} color="white" />
-          <Text style={styles.errorText}>{t('sindi.errors.connection')}</Text>
-          <Text style={styles.errorSubtext}>{t('sindi.errors.connectionMessage')}</Text>
-        </View>
-      </LinearGradient>
-    </SafeAreaView>
-  );
 
   // Web-specific styles for sticky positioning
   const webStyles = Platform.OS === 'web' ? {
@@ -215,34 +160,24 @@ export default function Sindi() {
         contentContainerStyle={[styles.messagesContent, webStyles.messagesContent]}
       >
         <View style={styles.welcomeContainer}>
+          {/* Hero styled like main screen */}
           <LinearGradient
-            colors={[colors.primaryColor, colors.secondaryLight]}
-            style={styles.welcomeHeader}
+            colors={[colors.primaryColor, colors.secondaryLight, colors.primaryLight]}
+            locations={[0, 0.85, 1]}
+            style={styles.heroSection}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
-            <View style={styles.welcomeIconContainer}>
-              <View style={styles.welcomeIconBackground}>
-                <SindiIcon size={56} color="white" />
+            <View style={styles.heroContent}>
+              <View style={styles.heroIconCircle}>
+                <SindiIcon size={52} color={colors.secondaryColor} />
               </View>
-              <View style={styles.welcomeIconGlow} />
-            </View>
-            <Text style={styles.welcomeTitle}>{t('sindi.welcome.title')}</Text>
-            <Text style={styles.welcomeSubtitle}>
-              {t('sindi.welcome.subtitle')}
-            </Text>
-            <View style={styles.welcomeFeatures}>
-              <View style={styles.welcomeFeature}>
-                <IconComponent name="shield-checkmark" size={16} color="rgba(255, 255, 255, 0.9)" />
-                <Text style={styles.welcomeFeatureText}>Tenant Rights Expert</Text>
-              </View>
-              <View style={styles.welcomeFeature}>
-                <IconComponent name="home" size={16} color="rgba(255, 255, 255, 0.9)" />
-                <Text style={styles.welcomeFeatureText}>Housing Search</Text>
-              </View>
-              <View style={styles.welcomeFeature}>
-                <IconComponent name="document-text" size={16} color="rgba(255, 255, 255, 0.9)" />
-                <Text style={styles.welcomeFeatureText}>Legal Guidance</Text>
+              <Text style={styles.heroTitle}>{t('sindi.welcome.title')}</Text>
+              <Text style={styles.heroSubtitle}>{t('sindi.welcome.subtitle')}</Text>
+              <View style={styles.heroBadgesRow}>
+                <View style={styles.heroBadge}><IconComponent name="shield-checkmark" size={14} color={colors.primaryColor} /><Text style={styles.heroBadgeText}>Rights</Text></View>
+                <View style={styles.heroBadge}><IconComponent name="home" size={14} color={colors.primaryColor} /><Text style={styles.heroBadgeText}>Housing</Text></View>
+                <View style={styles.heroBadge}><IconComponent name="document-text" size={14} color={colors.primaryColor} /><Text style={styles.heroBadgeText}>Legal</Text></View>
               </View>
             </View>
           </LinearGradient>
@@ -351,10 +286,10 @@ export default function Sindi() {
                     if (!isAuthenticated) return;
 
                     try {
-                      const newConversation = await createConversation(action.title, action.prompt, authenticatedFetch);
+                      const newConversation = await createConversation(action.title, action.prompt, conversationFetch);
                       router.push(`/sindi/${newConversation.id}?message=${encodeURIComponent(action.prompt)}`);
                       // Refresh conversations list
-                      loadConversations(authenticatedFetch);
+                      loadConversations(conversationFetch);
                     } catch (error) {
                       console.error('Failed to create conversation:', error);
                       // Fallback
@@ -391,10 +326,10 @@ export default function Sindi() {
                     if (!isAuthenticated) return;
 
                     try {
-                      const newConversation = await createConversation(example.title, example.prompt, authenticatedFetch);
+                      const newConversation = await createConversation(example.title, example.prompt, conversationFetch);
                       router.push(`/sindi/${newConversation.id}?message=${encodeURIComponent(example.prompt)}`);
                       // Refresh conversations list
-                      loadConversations(authenticatedFetch);
+                      loadConversations(conversationFetch);
                     } catch (error) {
                       console.error('Failed to create conversation:', error);
                       // Fallback
@@ -446,7 +381,72 @@ export default function Sindi() {
   );
 }
 
+// Minimal UI tuning constants
+const MINIMAL_BORDER = '#d0d5dd';
+
 const styles = StyleSheet.create({
+  // New hero styles aligned with main screen
+  heroSection: {
+    backgroundColor: colors.primaryColor,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 40,
+    marginBottom: 16,
+    // Make full-bleed inside a padded ScrollView by offsetting horizontal padding
+    marginHorizontal: -12,
+    alignSelf: 'stretch',
+    borderRadius: 0,
+    overflow: 'hidden',
+  },
+  heroContent: {
+    width: '100%',
+    alignItems: 'center',
+    maxWidth: 720,
+  },
+  heroIconCircle: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  heroTitle: {
+    fontSize: 30,
+    fontWeight: 'bold',
+    fontFamily: 'Phudu',
+    color: 'white',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  heroSubtitle: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.92)',
+    textAlign: 'center',
+    maxWidth: 520,
+    lineHeight: 22,
+    marginBottom: 18,
+  },
+  heroBadgesRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  heroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 18,
+  },
+  heroBadgeText: {
+    marginLeft: 4,
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primaryColor,
+  },
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
@@ -456,25 +456,25 @@ const styles = StyleSheet.create({
     marginBottom: 120, // Account for sticky input
   },
   messagesContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
   },
   welcomeContainer: {
-    paddingVertical: 20,
+    paddingVertical: 16,
   },
   welcomeHeader: {
     alignItems: 'center',
-    marginBottom: 30,
-    padding: 32,
-    borderRadius: 28,
+    marginBottom: 24,
+    padding: 20,
+    borderRadius: 36,
     borderWidth: 1,
-    borderColor: colors.COLOR_BLACK,
+    borderColor: MINIMAL_BORDER,
     marginHorizontal: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
   },
   welcomeIconContainer: {
     position: 'relative',
@@ -501,20 +501,20 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
   welcomeTitle: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: 'bold',
     color: 'white',
-    marginBottom: 12,
+    marginBottom: 10,
     fontFamily: 'Phudu',
     textAlign: 'center',
   },
   welcomeSubtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
     lineHeight: 24,
-    paddingHorizontal: 20,
-    marginBottom: 24,
+    paddingHorizontal: 16,
+    marginBottom: 20,
   },
   welcomeFeatures: {
     flexDirection: 'row',
@@ -527,17 +527,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   welcomeFeatureText: {
-    fontSize: 12,
+    fontSize: 11,
     color: 'rgba(255, 255, 255, 0.8)',
     marginTop: 6,
     textAlign: 'center',
     fontWeight: '500',
   },
   quickActionsContainer: {
-    marginBottom: 30,
+    marginBottom: 24,
   },
   quickActionsTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
     color: colors.COLOR_BLACK,
     marginBottom: 16,
@@ -553,35 +553,35 @@ const styles = StyleSheet.create({
   quickActionButton: {
     flex: 1,
     minWidth: '45%',
-    borderRadius: 20,
+    borderRadius: 28,
     borderWidth: 1,
-    borderColor: colors.COLOR_BLACK,
+    borderColor: MINIMAL_BORDER,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   quickActionGradient: {
-    padding: 18,
+    padding: 14,
     alignItems: 'center',
-    minHeight: 80,
+    minHeight: 70,
     justifyContent: 'center',
   },
   quickActionText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: 'white',
-    marginTop: 10,
+    marginTop: 8,
     textAlign: 'center',
     lineHeight: 18,
   },
   propertySearchContainer: {
-    marginBottom: 30,
+    marginBottom: 24,
   },
   propertySearchTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
     color: colors.COLOR_BLACK,
     marginBottom: 16,
@@ -593,8 +593,8 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_3,
     textAlign: 'center',
     lineHeight: 24,
-    paddingHorizontal: 20,
-    marginBottom: 16,
+    paddingHorizontal: 16,
+    marginBottom: 14,
   },
   propertySearchGrid: {
     flexDirection: 'row',
@@ -605,27 +605,27 @@ const styles = StyleSheet.create({
   propertySearchButton: {
     flex: 1,
     minWidth: '45%',
-    borderRadius: 18,
+    borderRadius: 26,
     borderWidth: 1,
-    borderColor: colors.COLOR_BLACK,
+    borderColor: MINIMAL_BORDER,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
     elevation: 1,
   },
   propertySearchGradient: {
-    padding: 16,
+    padding: 14,
     alignItems: 'center',
-    minHeight: 70,
+    minHeight: 64,
     justifyContent: 'center',
   },
   propertySearchText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: 'white',
-    marginTop: 8,
+    marginTop: 6,
     textAlign: 'center',
     lineHeight: 16,
   },
@@ -637,15 +637,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   featuresContainer: {
-    padding: 20,
-    borderRadius: 25,
+    padding: 16,
+    borderRadius: 32,
     borderWidth: 1,
-    borderColor: colors.COLOR_BLACK,
+    borderColor: MINIMAL_BORDER,
     marginHorizontal: 16,
     marginBottom: 20,
   },
   featuresTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
     color: 'white',
     marginBottom: 16,
@@ -670,9 +670,9 @@ const styles = StyleSheet.create({
   },
   messageBubble: {
     maxWidth: '80%',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 26,
     overflow: 'hidden',
   },
   userBubble: {
@@ -707,38 +707,38 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     backgroundColor: 'white',
     borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
+    borderTopColor: MINIMAL_BORDER,
   },
   inputGradient: {
-    margin: 16,
-    marginBottom: 8,
-    borderRadius: 25,
+    margin: 12,
+    marginBottom: 4,
+    borderRadius: 30,
     borderWidth: 1,
-    borderColor: colors.COLOR_BLACK,
+    borderColor: MINIMAL_BORDER,
   },
   inputContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    borderRadius: 28,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   textInput: {
     flex: 1,
     fontSize: 16,
     maxHeight: 100,
-    paddingVertical: 8,
+    paddingVertical: 6,
     color: 'white',
   },
   sendButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -751,7 +751,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: 6,
     fontStyle: 'italic',
   },
   errorContainer: {
@@ -760,9 +760,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 40,
     margin: 16,
-    borderRadius: 25,
+    borderRadius: 30,
     borderWidth: 1,
-    borderColor: colors.COLOR_BLACK,
+    borderColor: MINIMAL_BORDER,
   },
   errorContent: {
     alignItems: 'center',
@@ -846,14 +846,14 @@ const styles = StyleSheet.create({
   },
   propertyCardChat: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 18,
+    padding: 14,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-    marginBottom: 8,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+    marginBottom: 6,
   },
   propertyCardHeader: {
     flexDirection: 'row',
@@ -917,16 +917,16 @@ const styles = StyleSheet.create({
   newConversationButton: {
     marginHorizontal: 16,
     marginBottom: 20,
-    borderRadius: 25,
+    borderRadius: 34,
     borderWidth: 1,
-    borderColor: colors.COLOR_BLACK,
+    borderColor: MINIMAL_BORDER,
     overflow: 'hidden',
   },
   newConversationGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
+    padding: 14,
   },
   newConversationIconContainer: {
     marginRight: 12,
@@ -935,13 +935,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   newConversationText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: 'white',
     marginBottom: 2,
   },
   newConversationSubtext: {
-    fontSize: 13,
+    fontSize: 12,
     color: 'rgba(255, 255, 255, 0.8)',
     fontWeight: '400',
   },
@@ -949,10 +949,10 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   conversationHistoryContainer: {
-    marginBottom: 30,
+    marginBottom: 24,
   },
   conversationHistoryTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
     color: colors.COLOR_BLACK,
     marginBottom: 16,
@@ -973,18 +973,18 @@ const styles = StyleSheet.create({
   },
   conversationItem: {
     marginBottom: 12,
-    borderRadius: 16,
+    borderRadius: 28,
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: MINIMAL_BORDER,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
     overflow: 'hidden',
   },
   conversationCard: {
-    padding: 16,
+    padding: 14,
   },
   conversationHeader: {
     flexDirection: 'row',
@@ -999,9 +999,9 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   conversationIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: 'rgba(76, 175, 80, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1019,7 +1019,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   conversationPreview: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.COLOR_BLACK_LIGHT_2,
     lineHeight: 20,
     marginBottom: 12,
