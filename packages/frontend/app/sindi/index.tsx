@@ -225,52 +225,36 @@ export default function Sindi() {
               />
             ) : (
               <View style={styles.conversationsList}>
-                {conversations.map((conversation) => (
-                  <TouchableOpacity
-                    key={conversation.id}
-                    style={styles.conversationItem}
-                    onPress={() => router.push(`/sindi/${conversation.id}`)}
-                    activeOpacity={0.7}
-                  >
-                    <LinearGradient
-                      colors={['#ffffff', '#f8f9fa']}
-                      style={styles.conversationCard}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
+                {conversations.map((conversation) => {
+                  const last = conversation.messages[conversation.messages.length - 1];
+                  return (
+                    <TouchableOpacity
+                      key={conversation.id}
+                      style={styles.conversationItem}
+                      onPress={() => router.push(`/sindi/${conversation.id}`)}
+                      activeOpacity={0.7}
                     >
-                      <View style={styles.conversationHeader}>
-                        <View style={styles.conversationTitleContainer}>
-                          <View style={styles.conversationIcon}>
-                            <IconComponent name="chatbubble-ellipses" size={16} color={colors.primaryColor} />
+                      <View style={styles.conversationCard}>
+                        <View style={styles.conversationIcon}>
+                          <IconComponent name="chatbubble-ellipses" size={20} color={'white'} />
+                        </View>
+                        <View style={{ flex: 1, position: 'relative', paddingRight: 4 }}>
+                          <Text style={styles.conversationTitle} numberOfLines={1}>{conversation.title}</Text>
+                          <Text style={styles.conversationPreview} numberOfLines={1}>
+                            {last ? last.content : 'No messages yet'}
+                          </Text>
+                          <Text style={styles.conversationDate}>{new Date(conversation.updatedAt).toLocaleDateString()}</Text>
+                          <View style={styles.conversationMeta}>
+                            <View style={styles.conversationStats}>
+                              <IconComponent name="chatbubbles" size={12} color={colors.primaryColor} />
+                              <Text style={styles.conversationStatsText}>{conversation.messages.length}</Text>
+                            </View>
                           </View>
-                          <Text style={styles.conversationTitle} numberOfLines={1}>
-                            {conversation.title}
-                          </Text>
-                        </View>
-                        <Text style={styles.conversationDate}>
-                          {new Date(conversation.updatedAt).toLocaleDateString()}
-                        </Text>
-                      </View>
-                      <Text style={styles.conversationPreview} numberOfLines={2}>
-                        {conversation.messages.length > 0
-                          ? conversation.messages[conversation.messages.length - 1].content
-                          : 'No messages yet'
-                        }
-                      </Text>
-                      <View style={styles.conversationMeta}>
-                        <View style={styles.conversationStats}>
-                          <IconComponent name="chatbubbles" size={14} color={colors.primaryColor} />
-                          <Text style={styles.conversationStatsText}>
-                            {conversation.messages.length} messages
-                          </Text>
-                        </View>
-                        <View style={styles.conversationArrow}>
-                          <IconComponent name="chevron-forward" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
                         </View>
                       </View>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                ))}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
           </View>
@@ -969,78 +953,70 @@ const styles = StyleSheet.create({
   },
 
   conversationsList: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
   },
   conversationItem: {
-    marginBottom: 12,
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: MINIMAL_BORDER,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
+    marginBottom: 4,
+    borderRadius: 18,
+    backgroundColor: 'white',
     overflow: 'hidden',
   },
   conversationCard: {
-    padding: 14,
-  },
-  conversationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  conversationTitleContainer: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-    marginRight: 8,
+    gap: 10,
   },
+  conversationHeader: {},
+  conversationTitleContainer: { flex: 1 },
   conversationIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primaryColor,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
   },
   conversationTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: colors.COLOR_BLACK,
-    flex: 1,
+    marginBottom: 2,
   },
   conversationDate: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_3,
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    fontSize: 10,
+    color: colors.COLOR_BLACK_LIGHT_4,
     fontWeight: '500',
   },
   conversationPreview: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_2,
-    lineHeight: 20,
-    marginBottom: 12,
+    fontSize: 12,
+    color: colors.COLOR_BLACK_LIGHT_4,
+    lineHeight: 16,
+    paddingRight: 50,
   },
   conversationMeta: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
   },
   conversationStats: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
   },
   conversationStatsText: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    marginLeft: 4,
+    fontSize: 10,
+    color: colors.COLOR_BLACK_LIGHT_5,
     fontWeight: '500',
   },
   conversationArrow: {
-    padding: 4,
+    display: 'none',
   },
   conversationMessageCount: {
     fontSize: 12,
