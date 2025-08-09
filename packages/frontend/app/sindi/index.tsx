@@ -1,5 +1,5 @@
 import { fetch as expoFetch } from 'expo/fetch';
-import { View, ScrollView, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, ScrollView, Text, TouchableOpacity, StyleSheet, Platform, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOxy } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,7 +13,7 @@ import { Header } from '@/components/Header';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 // Removed file attachment functionality for minimal hero page
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState, useMemo } from 'react';
 import { useConversationStore } from '@/store/conversationStore';
 import { EmptyState } from '@/components/ui/EmptyState'; // keep for IconComponent type assertion
 const IconComponent = Ionicons as any;
@@ -92,24 +92,6 @@ export default function Sindi() {
     }
   }, [isAuthenticated, loadConversations, conversationFetch]);
 
-  // Early return for unauthenticated users (after hooks)
-  if (!isAuthenticated) {
-    return (
-      <ThemedView style={styles.container} lightColor="transparent" darkColor="transparent">
-        <Header options={{ title: t('sindi.title'), showBackButton: true }} />
-        <EmptyState
-          icon="lock-closed"
-          title={t('sindi.auth.required')}
-          description={t('sindi.auth.message')}
-          actionText="Sign In"
-          actionIcon="log-in"
-          onAction={() => router.push('/profile')}
-          iconColor={colors.primaryColor}
-        />
-      </ThemedView>
-    );
-  }
-
   // Quick actions & examples (original arrays restored)
   const quickActions = [
     { title: t('sindi.actions.rentGouging.title'), icon: 'trending-up', prompt: t('sindi.actions.rentGouging.prompt') },
@@ -133,6 +115,59 @@ export default function Sindi() {
     { title: t('sindi.housing.examples.shared.title'), icon: 'people', prompt: t('sindi.housing.examples.shared.prompt') },
   ];
 
+  // UI state
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filter conversations by search
+  const filteredConversations = useMemo(() => {
+    if (!searchQuery.trim()) return conversations;
+    const q = searchQuery.toLowerCase();
+    return conversations.filter(c =>
+      c.title.toLowerCase().includes(q) ||
+      (c.messages[c.messages.length - 1]?.content || '').toLowerCase().includes(q)
+    );
+  }, [conversations, searchQuery]);
+
+  // Group conversations by date label (Today / Yesterday / Month Day)
+  const groupedConversations = useMemo(() => {
+    const groups: Record<string, typeof filteredConversations> = {};
+    const today = new Date();
+    const isSameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    filteredConversations.forEach(conv => {
+      const d = new Date(conv.updatedAt);
+      let label: string;
+      if (isSameDay(d, today)) label = 'Today';
+      else if (isSameDay(d, yesterday)) label = 'Yesterday';
+      else label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      (groups[label] = groups[label] || []).push(conv);
+    });
+    // Preserve chronological descending order of labels
+    const orderedLabels = Object.keys(groups).sort((a, b) => {
+      // Custom ordering for Today / Yesterday; others by date desc
+      const special = (l: string) => (l === 'Today' ? 2 : l === 'Yesterday' ? 1 : 0);
+      const sa = special(a), sb = special(b);
+      if (sa !== sb) return sb - sa; // Today first
+      // Parse other labels
+      if (sa === 0 && sb === 0) {
+        const da = new Date(a + ' ' + new Date().getFullYear());
+        const db = new Date(b + ' ' + new Date().getFullYear());
+        return db.getTime() - da.getTime();
+      }
+      return 0;
+    });
+    return orderedLabels.map(label => ({ label, items: groups[label] }));
+  }, [filteredConversations]);
+
+  const formatTimestamp = (d: Date) => {
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) {
+      return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    }
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  };
+
   // Web-specific styles for sticky positioning
   const webStyles = Platform.OS === 'web' ? {
     container: { height: '100vh', display: 'flex', flexDirection: 'column' } as any,
@@ -141,6 +176,23 @@ export default function Sindi() {
     stickyInput: { position: 'sticky', bottom: 0 } as any,
     messagesContent: { paddingBottom: 100 }
   } : {};
+
+  if (!isAuthenticated) {
+    return (
+      <ThemedView style={styles.container} lightColor="transparent" darkColor="transparent">
+        <Header options={{ title: t('sindi.title'), showBackButton: true }} />
+        <EmptyState
+          icon="lock-closed"
+          title={t('sindi.auth.required')}
+          description={t('sindi.auth.message')}
+          actionText="Sign In"
+          actionIcon="log-in"
+          onAction={() => router.push('/profile')}
+          iconColor={colors.primaryColor}
+        />
+      </ThemedView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, webStyles.container]}>
@@ -209,91 +261,108 @@ export default function Sindi() {
 
           {/* Conversation History */}
           <View style={styles.conversationHistoryContainer}>
-            <Text style={styles.conversationHistoryTitle}>Recent Conversations</Text>
+            <Text style={styles.conversationHistoryTitle}>Chats</Text>
+            <View style={styles.searchBarWrapper}>
+              <Ionicons name="search" size={16} color={colors.COLOR_BLACK_LIGHT_5} />
+              <TextInput
+                style={styles.searchInputChats}
+                placeholder="Search conversations"
+                placeholderTextColor={colors.COLOR_BLACK_LIGHT_5}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearSearchBtn}>
+                  <Ionicons name="close" size={14} color={colors.COLOR_BLACK_LIGHT_5} />
+                </TouchableOpacity>
+              )}
+            </View>
             {loading ? (
-              <View style={styles.loadingContainer}>
-                <Text style={styles.loadingText}>Loading conversations...</Text>
+              <View style={{ paddingHorizontal: 16 }}>
+                {[...Array(4)].map((_, i) => (
+                  <View key={i} style={styles.skeletonRow} />
+                ))}
               </View>
-            ) : conversations.length === 0 ? (
+            ) : filteredConversations.length === 0 ? (
               <EmptyState
                 icon="chatbubbles-outline"
-                title="No conversations yet"
-                description="Start a new conversation to get help with your tenant rights questions"
-                actionText="Start First Chat"
-                actionIcon="add-circle"
-                onAction={createNewConversation}
+                title={searchQuery ? 'No matches' : 'No conversations yet'}
+                description={searchQuery ? 'Try another search term' : 'Start a new conversation to get help'}
+                actionText={searchQuery ? undefined : 'Start First Chat'}
+                actionIcon={searchQuery ? undefined : 'add-circle'}
+                onAction={searchQuery ? undefined : createNewConversation}
               />
             ) : (
               <View style={styles.conversationsList}>
-                {conversations.map((conversation) => {
-                  const last = conversation.messages[conversation.messages.length - 1];
-                  return (
-                    <TouchableOpacity
-                      key={conversation.id}
-                      style={styles.conversationItem}
-                      onPress={() => router.push(`/sindi/${conversation.id}`)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.conversationCard}>
-                        <View style={styles.conversationIcon}>
-                          <IconComponent name="chatbubble-ellipses" size={20} color={'white'} />
-                        </View>
-                        <View style={{ flex: 1, position: 'relative', paddingRight: 4 }}>
-                          <Text style={styles.conversationTitle} numberOfLines={1}>{conversation.title}</Text>
-                          <Text style={styles.conversationPreview} numberOfLines={1}>
-                            {last ? last.content : 'No messages yet'}
-                          </Text>
-                          <Text style={styles.conversationDate}>{new Date(conversation.updatedAt).toLocaleDateString()}</Text>
-                          <View style={styles.conversationMeta}>
-                            <View style={styles.conversationStats}>
-                              <IconComponent name="chatbubbles" size={12} color={colors.primaryColor} />
-                              <Text style={styles.conversationStatsText}>{conversation.messages.length}</Text>
+                {groupedConversations.map(group => (
+                  <View key={group.label}>
+                    <Text style={styles.groupHeader}>{group.label}</Text>
+                    {group.items.map((conversation, idx) => {
+                      const last = conversation.messages[conversation.messages.length - 1];
+                      return (
+                        <TouchableOpacity
+                          key={conversation.id}
+                          style={[styles.conversationItem, idx === group.items.length - 1 && styles.conversationItemLast]}
+                          onPress={() => router.push(`/sindi/${conversation.id}`)}
+                          activeOpacity={0.6}
+                        >
+                          <View style={styles.conversationCard}>
+                            <View style={styles.conversationIcon}>
+                              <IconComponent name="chatbubble-ellipses" size={18} color={'white'} />
+                            </View>
+                            <View style={{ flex: 1, position: 'relative', paddingRight: 4 }}>
+                              <Text style={styles.conversationTitle} numberOfLines={1}>{conversation.title}</Text>
+                              <Text style={styles.conversationPreview} numberOfLines={1}>
+                                {last ? last.content : 'No messages yet'}
+                              </Text>
+                              <Text style={styles.conversationDate}>{formatTimestamp(new Date(conversation.updatedAt))}</Text>
+                              <View style={styles.conversationMeta}>
+                                <View style={styles.conversationStats}>
+                                  <IconComponent name="chatbubbles" size={11} color={colors.primaryColor} />
+                                  <Text style={styles.conversationStatsText}>{conversation.messages.length}</Text>
+                                </View>
+                              </View>
                             </View>
                           </View>
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ))}
               </View>
             )}
           </View>
 
           <View style={styles.quickActionsContainer}>
             <Text style={styles.quickActionsTitle}>{t('sindi.actions.title')}</Text>
-            <View style={styles.quickActionsGrid}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.quickActionsScroller}
+            >
               {quickActions.map((action, index) => (
                 <TouchableOpacity
                   key={index}
-                  style={styles.quickActionButton}
+                  style={styles.quickActionChip}
                   onPress={async () => {
                     if (!isAuthenticated) return;
-
                     try {
                       const newConversation = await createConversation(action.title, action.prompt, conversationFetch);
                       router.push(`/sindi/${newConversation.id}?message=${encodeURIComponent(action.prompt)}`);
-                      // Refresh conversations list
                       loadConversations(conversationFetch);
                     } catch (error) {
                       console.error('Failed to create conversation:', error);
-                      // Fallback
                       const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                       router.push(`/sindi/${conversationId}?message=${encodeURIComponent(action.prompt)}`);
                     }
                   }}
+                  activeOpacity={0.7}
                 >
-                  <LinearGradient
-                    colors={[colors.primaryColor, colors.secondaryLight]}
-                    style={styles.quickActionGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <IconComponent name={action.icon as any} size={20} color="white" />
-                    <Text style={styles.quickActionText}>{action.title}</Text>
-                  </LinearGradient>
+                  <IconComponent name={action.icon as any} size={14} color={colors.primaryColor} />
+                  <Text style={styles.quickActionChipText}>{action.title}</Text>
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
           </View>
 
           <View style={styles.propertySearchContainer}>
@@ -301,39 +370,33 @@ export default function Sindi() {
             <Text style={styles.propertySearchSubtitle}>
               {t('sindi.housing.subtitle')}
             </Text>
-            <View style={styles.propertySearchGrid}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.propertySearchScroller}
+            >
               {propertySearchExamples.map((example, index) => (
                 <TouchableOpacity
                   key={index}
-                  style={styles.propertySearchButton}
+                  style={styles.propertySearchChip}
                   onPress={async () => {
                     if (!isAuthenticated) return;
-
                     try {
                       const newConversation = await createConversation(example.title, example.prompt, conversationFetch);
                       router.push(`/sindi/${newConversation.id}?message=${encodeURIComponent(example.prompt)}`);
-                      // Refresh conversations list
                       loadConversations(conversationFetch);
                     } catch (error) {
                       console.error('Failed to create conversation:', error);
-                      // Fallback
                       const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                       router.push(`/sindi/${conversationId}?message=${encodeURIComponent(example.prompt)}`);
                     }
                   }}
                 >
-                  <LinearGradient
-                    colors={[colors.primaryColor, colors.secondaryLight]}
-                    style={styles.propertySearchGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <IconComponent name={example.icon as any} size={18} color="white" />
-                    <Text style={styles.propertySearchText}>{example.title}</Text>
-                  </LinearGradient>
+                  <IconComponent name={example.icon as any} size={14} color={colors.primaryColor} />
+                  <Text style={styles.propertySearchChipText}>{example.title}</Text>
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
             <Text style={styles.propertySearchNote}>
               {t('sindi.housing.naturalLanguage')}
             </Text>
@@ -934,6 +997,90 @@ const styles = StyleSheet.create({
   },
   conversationHistoryContainer: {
     marginBottom: 24,
+  },
+  searchBarWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: MINIMAL_BORDER,
+    marginHorizontal: 12,
+    marginBottom: 12,
+    borderRadius: 24,
+    paddingHorizontal: 12,
+    height: 40,
+  },
+  searchInputChats: {
+    flex: 1,
+    fontSize: 14,
+    marginLeft: 6,
+    color: colors.COLOR_BLACK_LIGHT_2,
+  },
+  clearSearchBtn: {
+    padding: 4,
+    borderRadius: 12,
+  },
+  skeletonRow: {
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
+    marginBottom: 6,
+    overflow: 'hidden',
+  },
+  groupHeader: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.COLOR_BLACK_LIGHT_5,
+    marginTop: 12,
+    marginBottom: 4,
+    paddingHorizontal: 16,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  conversationItemLast: {
+    marginBottom: 12,
+  },
+  quickActionsScroller: {
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  quickActionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: MINIMAL_BORDER,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 30,
+    marginRight: 8,
+    gap: 6,
+  },
+  quickActionChipText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.primaryColor,
+  },
+  propertySearchScroller: {
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  propertySearchChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: MINIMAL_BORDER,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 28,
+    marginRight: 8,
+    gap: 6,
+  },
+  propertySearchChipText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.primaryColor,
   },
   conversationHistoryTitle: {
     fontSize: 20,
