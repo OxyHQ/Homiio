@@ -18,7 +18,7 @@
   "dependencies": {
     "@ai-sdk/openai": "^1.3.22",
     "@homiio/shared-types": "file:../shared-types",
-    "@oxyhq/services": "^5.9.6",
+    "@oxyhq/services": "^5.11.8",
     "ai": "^4.3.16",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.3",

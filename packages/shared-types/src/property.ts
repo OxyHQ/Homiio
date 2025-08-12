@@ -141,6 +141,9 @@ export interface Property {
   rules?: PropertyRules;
   documents?: PropertyDocument[];
   coverImageIndex?: number;
+  // Flags
+  isVerified?: boolean;
+  isEcoFriendly?: boolean;
   availableFrom?: string;
   leaseTerm?: string;
   maxGuests?: number;

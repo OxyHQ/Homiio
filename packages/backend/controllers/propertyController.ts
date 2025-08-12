@@ -236,6 +236,8 @@ class PropertyController {
         bathrooms,
         amenities,
         available,
+  verified,
+  eco,
         sortBy = "createdAt",
         sortOrder = "desc",
       } = req.query;
@@ -253,6 +255,14 @@ class PropertyController {
       if (amenities) {
         const amenityList = amenities.split(",");
         filters.amenities = { $in: amenityList };
+      }
+
+      // Optional verified/eco filters
+      if (verified === 'true') {
+        filters.isVerified = true;
+      }
+      if (eco === 'true') {
+        filters.isEcoFriendly = true;
       }
 
       // Build rent filter
@@ -616,6 +626,8 @@ class PropertyController {
         bathrooms,
         amenities,
         available,
+  verified,
+  eco,
         // Location parameters
         lat,
         lng,
@@ -663,6 +675,14 @@ class PropertyController {
       if (amenities) {
         const amenityList = amenities.split(',').map(a => a.trim());
         searchQuery.amenities = { $in: amenityList };
+      }
+
+      // Filter by verified/eco-friendly
+      if (verified === 'true') {
+        searchQuery.isVerified = true;
+      }
+      if (eco === 'true') {
+        searchQuery.isEcoFriendly = true;
       }
 
       // Filter by availability
@@ -759,6 +779,8 @@ class PropertyController {
         bathrooms,
         amenities,
         available,
+  verified,
+  eco,
         page = 1, 
         limit = 10 
       } = req.query;
@@ -797,7 +819,7 @@ class PropertyController {
           }
         },
         'availability.isAvailable': available !== undefined ? available === 'true' : true,
-        status: 'active'
+  status: 'active'
       };
 
       // Add additional filters
@@ -813,6 +835,8 @@ class PropertyController {
         const amenityList = amenities.split(',').map(a => a.trim());
         searchQuery.amenities = { $in: amenityList };
       }
+  if (verified === 'true') searchQuery.isVerified = true;
+  if (eco === 'true') searchQuery.isEcoFriendly = true;
 
       // Execute search
       const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -858,6 +882,8 @@ class PropertyController {
         bathrooms,
         amenities,
         available,
+  verified,
+  eco,
         page = 1, 
         limit = 10 
       } = req.query;
@@ -892,7 +918,7 @@ class PropertyController {
           }
         },
         'availability.isAvailable': available !== undefined ? available === 'true' : true,
-        status: 'active'
+  status: 'active'
       };
 
       // Add additional filters
@@ -908,6 +934,8 @@ class PropertyController {
         const amenityList = amenities.split(',').map(a => a.trim());
         searchQuery.amenities = { $in: amenityList };
       }
+  if (verified === 'true') searchQuery.isVerified = true;
+  if (eco === 'true') searchQuery.isEcoFriendly = true;
 
       // Execute search
       const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -944,14 +972,127 @@ class PropertyController {
     try {
       const { propertyId } = req.params;
 
-      // In a real implementation, calculate statistics from database
+      // Validate propertyId
+      const mongoose = require('mongoose');
+      if (!mongoose.Types.ObjectId.isValid(propertyId)) {
+        return next(new AppError('Invalid property ID', 400, 'INVALID_ID'));
+      }
+
+      // Ensure property exists
+      const exists = await Property.exists({ _id: propertyId });
+      if (!exists) {
+        return next(new AppError('Property not found', 404, 'NOT_FOUND'));
+      }
+
+      // Calculate statistics from database
+      // savesCount: number of unique profiles that have saved this property in any folder
+      const { SavedPropertyFolder } = require('../models');
+
+      let savesCount = 0;
+      try {
+        const result = await SavedPropertyFolder.aggregate([
+          { $match: { 'properties.propertyId': new mongoose.Types.ObjectId(propertyId) } },
+          { $group: { _id: '$profileId' } },
+          { $count: 'count' }
+        ]);
+        savesCount = result?.[0]?.count || 0;
+      } catch (aggError) {
+        // Don't fail the whole stats endpoint if aggregation fails; just log and continue
+        console.error('[getPropertyStats] Failed to aggregate savesCount', {
+          propertyId,
+          error: aggError?.message,
+        });
+        savesCount = 0;
+      }
+
+      // Compute real-time stats
+      const { Room, Lease } = require('../models');
+      const now = new Date();
+
+      // Prepare objectId once
+      const objId = new mongoose.Types.ObjectId(propertyId);
+
+      // Run core queries in parallel for performance
+      const [
+        totalRoomsResult,
+        occupiedRoomsResult,
+        availableRoomsResult,
+        leaseAgg,
+        roomRentAgg,
+        propertyDoc
+      ] = await Promise.all([
+        // Total rooms linked to this property
+        Room.countDocuments({ propertyId: objId }).catch(() => 0),
+        // Rooms considered occupied if they have any occupants or explicit occupied status
+        Room.countDocuments({
+          propertyId: objId,
+          $or: [
+            { 'occupancy.currentOccupants': { $gt: 0 } },
+            { status: 'occupied' }
+          ]
+        }).catch(() => 0),
+        // Available rooms by status and availability flag
+        Room.countDocuments({
+          propertyId: objId,
+          status: 'available',
+          'availability.isAvailable': true
+        }).catch(() => 0),
+        // Active leases for this property (time-bounded)
+        Lease.aggregate([
+          {
+            $match: {
+              propertyId: objId,
+              status: 'active',
+              'leaseTerms.startDate': { $lte: now },
+              'leaseTerms.endDate': { $gte: now }
+            }
+          },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: '$rentDetails.monthlyRent' },
+              avg: { $avg: '$rentDetails.monthlyRent' },
+              count: { $sum: 1 }
+            }
+          }
+        ]).catch(() => []),
+        // Average room rent (if defined)
+        Room.aggregate([
+          { $match: { propertyId: objId, 'rent.amount': { $gt: 0 } } },
+          { $group: { _id: null, avg: { $avg: '$rent.amount' }, count: { $sum: 1 } } }
+        ]).catch(() => []),
+        // Fetch property as fallback for rent
+        Property.findById(propertyId).select('rent').lean().catch(() => null)
+      ]);
+
+      const totalRooms = typeof totalRoomsResult === 'number' ? totalRoomsResult : 0;
+      const occupiedRooms = typeof occupiedRoomsResult === 'number' ? occupiedRoomsResult : 0;
+      const availableRooms = typeof availableRoomsResult === 'number' ? availableRoomsResult : Math.max(totalRooms - occupiedRooms, 0);
+
+      // Monthly revenue and average from leases
+      const leaseTotals = Array.isArray(leaseAgg) && leaseAgg[0] ? leaseAgg[0] : { total: 0, avg: null, count: 0 };
+      const monthlyRevenue = leaseTotals.total || 0;
+
+      // Determine average rent with sensible fallbacks
+      let averageRent = 0;
+      if (leaseTotals.count > 0 && leaseTotals.avg != null) {
+        averageRent = leaseTotals.avg;
+      } else if (Array.isArray(roomRentAgg) && roomRentAgg[0]?.avg != null) {
+        averageRent = roomRentAgg[0].avg;
+      } else if (propertyDoc?.rent?.amount != null) {
+        averageRent = propertyDoc.rent.amount;
+      }
+
+      const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
+
       const stats = {
-        totalRooms: 4,
-        occupiedRooms: 2,
-        availableRooms: 2,
-        monthlyRevenue: 4500,
-        averageRent: 1125,
-        occupancyRate: 50,
+        totalRooms,
+        occupiedRooms,
+        availableRooms,
+        monthlyRevenue,
+        averageRent,
+        occupancyRate,
+        savesCount,
       };
 
       res.json(

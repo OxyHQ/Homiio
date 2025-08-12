@@ -88,14 +88,14 @@ const SindiHeroComponent: React.FC<SindiHeroProps> = ({
     if (!suggestionsEnabled) return;
     const nextIndex = (index + 1) % rotatingSuggestions.length;
     fade.value = 0;
-  chipChange.value = 0;
-  // Pre-kick chip animation
-  chipChange.value = withTiming(1, { duration: transitionDuration, easing: Easing.out(Easing.cubic) });
+    chipChange.value = 0;
+    // Pre-kick chip animation
+    chipChange.value = withTiming(1, { duration: transitionDuration, easing: Easing.out(Easing.cubic) });
     fade.value = withTiming(1, { duration: transitionDuration, easing: Easing.out(Easing.cubic) }, (finished) => {
       if (finished) {
         runOnJS(setIndex)(nextIndex);
         fade.value = 0; // reset for next cycle
-    chipChange.value = 0; // reset for next cycle ready
+        chipChange.value = 0; // reset for next cycle ready
       }
     });
   }, [suggestionsEnabled, index, rotatingSuggestions, fade, transitionDuration, chipChange]);
@@ -188,7 +188,7 @@ const SindiHeroComponent: React.FC<SindiHeroProps> = ({
     const wave = Math.sin(chipGlow.value * Math.PI);
     return {
       opacity: 0.25 + 0.25 * wave,
-      transform: [ { scale: 0.96 + 0.02 * wave } ],
+      transform: [{ scale: 0.96 + 0.02 * wave }],
     };
   });
 
@@ -248,20 +248,20 @@ const SindiHeroComponent: React.FC<SindiHeroProps> = ({
             <Animated.View pointerEvents="none" style={[styles.chipAura, chipAuraStyle]} />
             <Animated.View pointerEvents="none" style={[styles.heroPromptBarGlow, chipInnerGlowStyle]} />
             <LinearGradient
-              colors={[ 'rgba(255,255,255,0.95)', 'rgba(255,255,255,0.80)' ]}
+              colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.80)']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.heroPromptGradient}
             >
-            <View style={styles.heroPromptBarContent}>
-            <Ionicons name="sparkles" size={14} color={colors.primaryColor} />
-            {suggestionsEnabled ? (
-              <RotatingSuggestions current={currentSuggestion} next={nextSuggestion} anim={fade} />
-            ) : (
-              <Text numberOfLines={1} style={styles.heroPromptPlaceholder}>{currentSuggestion}</Text>
-            )}
-            <Animated.View pointerEvents="none" style={[styles.chipSheen, chipSheenStyle]} />
-            </View>
+              <View style={styles.heroPromptBarContent}>
+                <Ionicons name="sparkles" size={14} color={colors.primaryColor} />
+                {suggestionsEnabled ? (
+                  <RotatingSuggestions current={currentSuggestion} next={nextSuggestion} anim={fade} />
+                ) : (
+                  <Text numberOfLines={1} style={styles.heroPromptPlaceholder}>{currentSuggestion}</Text>
+                )}
+                <Animated.View pointerEvents="none" style={[styles.chipSheen, chipSheenStyle]} />
+              </View>
             </LinearGradient>
           </Animated.View>
         </TouchableOpacity>
@@ -367,11 +367,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.15)',
   },
   suggestionViewport: {
-  flex: 1,
-  height: 16,
-  justifyContent: 'center',
-  overflow: 'hidden',
-  position: 'relative',
+    flex: 1,
+    height: 16,
+    justifyContent: 'center',
+    overflow: 'hidden',
+    position: 'relative',
   },
   absoluteFill: {
     position: 'absolute',
@@ -459,8 +459,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     gap: 8,
-  // Ensure text doesn't stretch chip taller
-  minHeight: 36,
+    // Ensure text doesn't stretch chip taller
+    minHeight: 36,
   },
   chipSheen: {
     position: 'absolute',
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     color: colors.COLOR_BLACK_LIGHT_4,
-  paddingRight: 4,
+    paddingRight: 4,
   },
 });
 

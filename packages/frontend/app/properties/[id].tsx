@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, useContext } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Platform, Modal, Image, Share, Animated } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -9,7 +9,7 @@ import { PropertyMap } from '@/components/PropertyMap';
 import { ThemedText } from '@/components/ThemedText';
 import { AmenitiesDisplay } from '@/components/AmenitiesDisplay';
 import { CurrencyFormatter } from '@/components/CurrencyFormatter';
-import { useProperty } from '@/hooks';
+import { useProperty, usePropertyStats } from '@/hooks';
 import { useOxy } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
 import { toast } from 'sonner';
@@ -20,12 +20,8 @@ import { PropertyType, RecentlyViewedType, PropertyImage } from '@homiio/shared-
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 
-import { useProfileStore } from '@/store/profileStore';
 import { useRecentlyViewedStore } from '@/store/recentlyViewedStore';
-import { useFavorites } from '@/hooks/useFavorites';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
-import { BottomSheetContext } from '@/context/BottomSheetContext';
-import { SaveToFolderBottomSheet } from '@/components/SaveToFolderBottomSheet';
 import { userApi } from '@/utils/api';
 import { SaveButton } from '@/components/SaveButton';
 import { ActionButton } from '@/components/ui/ActionButton';
@@ -65,13 +61,10 @@ export default function PropertyDetailPage() {
     const { id } = useLocalSearchParams();
     const { oxyServices, activeSessionId } = useOxy();
 
-    // Safe translation helper to prevent undefined/empty string issues
-    const safeT = (key: string, fallback?: string) => {
-        const translated = t(key);
-        return translated || fallback || key;
-    };
+    // Safe translation helper was unused; keep i18n hook only
 
     const { property: apiProperty, loading: isLoading, error, loadProperty } = useProperty(id as string);
+    const { stats, loadStats } = usePropertyStats((id as string) || '');
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const hasViewedRef = useRef(false);
     const scrollY = new Animated.Value(0);
@@ -80,12 +73,7 @@ export default function PropertyDetailPage() {
     // Zustand stores
     const { items: recentlyViewed, addItem } = useRecentlyViewedStore();
 
-    // Favorites (now Zustand-based)
-    const { isFavorite, toggleFavorite, isPropertySaving } = useFavorites();
-
-    // Bottom sheet context for long press functionality
-    const bottomSheetContext = useContext(BottomSheetContext);
-    const { savePropertyToFolder, unsaveProperty, isPropertySaved, isInitialized } = useSavedPropertiesContext();
+    const { isPropertySaved, isInitialized } = useSavedPropertiesContext();
 
     // TODO: Implement landlord profile fetching with Zustand
     // For now, we'll use placeholder values
@@ -288,6 +276,26 @@ export default function PropertyDetailPage() {
         }
     }, [id, loadProperty]);
 
+    // Load stats when id is available
+    React.useEffect(() => {
+        if (id) {
+            loadStats();
+        }
+    }, [id, loadStats]);
+
+    // Determine current saved state early (use apiProperty/id to avoid depending on derived object)
+    const currentPropertyId = (apiProperty?._id || apiProperty?.id || (typeof id === 'string' ? id : undefined)) as string | undefined;
+    const isPropertySavedState = currentPropertyId && isInitialized ? isPropertySaved(currentPropertyId) : false;
+
+    // Refresh stats shortly after save/unsave to keep count in sync
+    React.useEffect(() => {
+        if (!id) return;
+        const t = setTimeout(() => {
+            loadStats();
+        }, 400);
+        return () => clearTimeout(t);
+    }, [id, isPropertySavedState, loadStats]);
+
     const handleContact = () => {
         // In a real app, this would open a chat with the landlord
         router.push(`/chat/${property?.id}`);
@@ -327,6 +335,8 @@ export default function PropertyDetailPage() {
         router.push(`/browser?url=${encodeURIComponent(websiteUrl)}`);
     };
 
+    // (saved state and refresh effect declared above)
+
     const handleShare = async () => {
         if (!property) return;
 
@@ -346,7 +356,7 @@ export default function PropertyDetailPage() {
                     url: propertyUrl,
                     title: 'Share Property',
                 });
-            } catch (shareError) {
+            } catch {
                 // fallback to clipboard
                 await Clipboard.setStringAsync(fullDetails);
                 toast.success('Property details copied to clipboard!');
@@ -359,7 +369,7 @@ export default function PropertyDetailPage() {
                 const fallbackMessage = `🏠 ${property.title}\n\n📍 ${property.location}\n💰 ${property.price}\n🛏️ ${property.bedrooms} Bedrooms\n🚿 ${property.bathrooms} Bathrooms\n📏 ${property.size}m²\n\n${propertyUrl}`;
                 await Clipboard.setStringAsync(fallbackMessage);
                 toast.success('Property details copied to clipboard!');
-            } catch (clipboardError) {
+            } catch {
                 toast.error('Failed to share property');
             }
         }
@@ -412,7 +422,8 @@ export default function PropertyDetailPage() {
         );
     }
 
-    const isPropertySavedState = property.id && isInitialized ? isPropertySaved(property.id) : false;
+    // Saves count from stats
+    const savesCount = stats?.savesCount ?? 0;
 
     return (
         <View style={styles.safeArea}>
@@ -429,14 +440,16 @@ export default function PropertyDetailPage() {
                             <TouchableOpacity key="share" style={styles.headerButton} onPress={handleShare}>
                                 <IconComponent name="share-outline" size={24} color="#222" />
                             </TouchableOpacity>,
-                            <SaveButton
-                                key="save"
-                                isSaved={isPropertySavedState}
-                                variant="heart"
-                                color="#222"
-                                activeColor="#EF4444"
-                                property={apiProperty || undefined}
-                            />,
+                            <View key="save-with-count" style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <SaveButton
+                                    isSaved={isPropertySavedState}
+                                    variant="heart"
+                                    color="#222"
+                                    activeColor="#EF4444"
+                                    property={apiProperty || undefined}
+                                />
+                                <ThemedText style={{ color: '#222', fontSize: 14 }}>{savesCount}</ThemedText>
+                            </View>,
                         ],
                     }}
                     scrollY={scrollY}

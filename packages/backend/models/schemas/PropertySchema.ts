@@ -480,6 +480,15 @@ const propertySchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  // Verification and sustainability flags
+  isVerified: {
+    type: Boolean,
+    default: false
+  },
+  isEcoFriendly: {
+    type: Boolean,
+    default: false
+  },
   rating: {
     average: {
       type: Number,

@@ -1,4 +1,4 @@
-import api from '@/utils/api';
+import { api } from '@/utils/api';
 import { 
   Property, 
   CreatePropertyData, 
@@ -10,7 +10,6 @@ import {
   PaymentFrequency, 
   UtilitiesIncluded, 
   PriceUnit,
-  GeoJSONPoint
 } from '@homiio/shared-types';
 
 // Re-export the types for backward compatibility
@@ -187,7 +186,7 @@ class PropertyService {
     properties: Property[];
     total: number;
   }> {
-    const params = { ...filters, search: query };
+  const params = { ...filters, query };
     const response = await api.get(`${this.baseUrl}/search`, { params });
     return {
       properties: response.data.data || [],
@@ -201,7 +200,8 @@ class PropertyService {
     availableRooms: number;
     monthlyRevenue: number;
     averageRent: number;
-    occupancyRate: number;
+  occupancyRate: number;
+  savesCount?: number;
   }> {
     const response = await api.get(`${this.baseUrl}/${id}/stats`);
     return response.data.data || response.data.stats;

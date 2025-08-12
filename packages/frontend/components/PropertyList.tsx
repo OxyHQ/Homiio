@@ -9,6 +9,7 @@ const AIRBNB_CARD_WIDTH = 180;
 type PropertyListProps = {
     properties: Property[];
     onPropertyPress?: (property: Property) => void;
+    onItemHover?: (property: Property | null) => void;
     numColumns?: number;
     horizontal?: boolean;
     style?: ViewStyle;
@@ -20,6 +21,7 @@ type PropertyListProps = {
 export function PropertyList({
     properties,
     onPropertyPress,
+    onItemHover,
     numColumns = 1,
     horizontal = false,
     style,
@@ -38,13 +40,26 @@ export function PropertyList({
             ...(horizontal ? styles.horizontalCard : {}),
         };
 
+        const Wrapper: React.ComponentType<any> = ({ children, ...props }) => (
+            <View
+                {...props}
+                // @ts-ignore - web-only events
+                onMouseEnter={onItemHover ? () => onItemHover(item) : undefined}
+                // @ts-ignore - web-only events
+                onMouseLeave={onItemHover ? () => onItemHover(null) : undefined}
+            >
+                {children}
+            </View>
+        );
+
         return (
-            <PropertyCard
-                property={item}
-                variant={variant}
-                onPress={() => onPropertyPress?.(item)}
-                style={cardStyle}
-            />
+            <Wrapper style={cardStyle}>
+                <PropertyCard
+                    property={item}
+                    variant={variant}
+                    onPress={() => onPropertyPress?.(item)}
+                />
+            </Wrapper>
         );
     };
 

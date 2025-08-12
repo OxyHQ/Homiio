@@ -13,6 +13,7 @@ export { RightBar } from './RightBar';
 export { TrustScore } from './TrustScore';
 export { TrustScoreCompact } from './TrustScoreCompact';
 export { PropertiesMap } from './PropertiesMap';
+export { MapboxMap } from './MapboxMap';
 export { MapNavigationButton } from './MapNavigationButton';
 export { default as Button } from './Button';
 export { NotificationItem } from './NotificationItem';
