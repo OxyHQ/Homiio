@@ -122,13 +122,24 @@ export default function PublicProfileScreen() {
                     {/* Filters and view controls */}
                     <View style={styles.controlsRow}>
                         <View style={styles.typeChipsRow}>
-                            {(['all', PropertyType.APARTMENT, PropertyType.HOUSE, PropertyType.STUDIO, PropertyType.ROOM] as const).map((t) => (
-                                <TouchableOpacity key={t} onPress={() => { setActiveType(t as any); }} style={[styles.chip, activeType === t && styles.chipActive]}>
-                                    <Text style={[styles.chipText, activeType === t && styles.chipTextActive]}>
-                                        {t === 'all' ? t : t.toString().toLowerCase()}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
+                            {(['all', PropertyType.APARTMENT, PropertyType.HOUSE, PropertyType.STUDIO, PropertyType.ROOM] as const).map((tab) => {
+                                const label = tab === 'all'
+                                    ? t('common.all', 'All')
+                                    : tab === PropertyType.APARTMENT
+                                        ? t('properties.titles.types.apartment', 'Apartment')
+                                        : tab === PropertyType.HOUSE
+                                            ? t('properties.titles.types.house', 'House')
+                                            : tab === PropertyType.STUDIO
+                                                ? t('properties.titles.types.studio', 'Studio')
+                                                : t('properties.titles.types.room', 'Room');
+                                return (
+                                    <TouchableOpacity key={String(tab)} onPress={() => { setActiveType(tab as any); }} style={[styles.chip, activeType === tab && styles.chipActive]}>
+                                        <Text style={[styles.chipText, activeType === tab && styles.chipTextActive]}>
+                                            {label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
                         </View>
                         <View style={styles.rightControls}>
                             <View style={styles.segmented}>

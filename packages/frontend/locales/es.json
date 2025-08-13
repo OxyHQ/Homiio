@@ -282,6 +282,10 @@
   },
   "profile": {
     "title": "Perfil",
+    "tabs": {
+      "listings": "Publicaciones",
+      "about": "Acerca de"
+    },
     "editProfile": "Editar Perfil",
     "myProperties": "Mis Propiedades",
     "savedProperties": "Propiedades Guardadas",
@@ -324,6 +328,19 @@
       "updateFailed": "Error al actualizar perfil",
       "deleteFailed": "Error al eliminar perfil"
     }
+  },
+  "trust": {
+    "loadingVerification": "Cargando estado de verificación...",
+    "loadingScore": "Cargando puntuación de confianza...",
+    "errorVerification": "No se puede cargar el estado de verificación",
+    "errorScore": "No se puede cargar la puntuación de confianza",
+    "viewDetails": "Ver detalles",
+    "noVerification": "Sin datos de verificación",
+    "noScore": "Sin datos de puntuación de confianza",
+    "verified": "Verificado",
+    "completeVerification": "Completar verificación",
+    "yourScoreIs": "Tu puntuación de confianza es",
+    "improveScore": "Mejorar puntuación"
   },
   "notifications": {
     "title": "Notificaciones",

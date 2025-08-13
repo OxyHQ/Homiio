@@ -284,6 +284,10 @@
     },
     "profile": {
         "title": "Profile",
+        "tabs": {
+            "listings": "Listings",
+            "about": "About"
+        },
         "editProfile": "Edit Profile",
         "myProperties": "My Properties",
         "savedProperties": "Saved Properties",
@@ -326,6 +330,19 @@
             "updateFailed": "Failed to update profile",
             "deleteFailed": "Failed to delete profile"
         }
+    },
+    "trust": {
+        "loadingVerification": "Loading verification status...",
+        "loadingScore": "Loading trust score...",
+        "errorVerification": "Unable to load verification status",
+        "errorScore": "Unable to load trust score",
+        "viewDetails": "View Details",
+        "noVerification": "No verification data",
+        "noScore": "No trust score data",
+        "verified": "Verified",
+        "completeVerification": "Complete Verification",
+        "yourScoreIs": "Your trust score is",
+        "improveScore": "Improve Score"
     },
     "notifications": {
         "title": "Notifications",

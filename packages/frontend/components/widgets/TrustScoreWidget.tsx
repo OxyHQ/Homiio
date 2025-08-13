@@ -1,5 +1,6 @@
 import React, { useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import LoadingSpinner from '../LoadingSpinner';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
@@ -10,6 +11,7 @@ import { useActiveProfile } from '@/hooks/useProfileQueries';
 import { ThemedText } from '../ThemedText';
 
 export function TrustScoreWidget() {
+    const { t } = useTranslation();
     const { isAuthenticated } = useOxy();
     const router = useRouter();
     const { data: activeProfile } = useActiveProfile();
@@ -57,7 +59,7 @@ export function TrustScoreWidget() {
                 <View style={styles.loadingContainer}>
                     <LoadingSpinner size={16} showText={false} />
                     <ThemedText style={styles.loadingText}>
-                        Loading {profileType === 'agency' ? 'verification status' : 'trust score'}...
+                        {profileType === 'agency' ? t('trust.loadingVerification', 'Loading verification status...') : t('trust.loadingScore', 'Loading trust score...')}
                     </ThemedText>
                 </View>
             );
@@ -67,13 +69,13 @@ export function TrustScoreWidget() {
             return (
                 <View style={styles.errorContainer}>
                     <ThemedText style={styles.errorText}>
-                        Unable to load {profileType === 'agency' ? 'verification status' : 'trust score'}
+                        {profileType === 'agency' ? t('trust.errorVerification', 'Unable to load verification status') : t('trust.errorScore', 'Unable to load trust score')}
                     </ThemedText>
-                    <TouchableOpacity 
-                        style={[styles.retryButton]} 
+                    <TouchableOpacity
+                        style={[styles.retryButton]}
                         onPress={handlePress}
                     >
-                        <ThemedText style={styles.retryButtonText}>View Details</ThemedText>
+                        <ThemedText style={styles.retryButtonText}>{t('trust.viewDetails', 'View Details')}</ThemedText>
                     </TouchableOpacity>
                 </View>
             );
@@ -83,13 +85,13 @@ export function TrustScoreWidget() {
             return (
                 <View style={styles.noProfileContainer}>
                     <Text style={styles.noProfileText}>
-                        No {profileType === 'agency' ? 'verification' : 'trust score'} data
+                        {profileType === 'agency' ? t('trust.noVerification', 'No verification data') : t('trust.noScore', 'No trust score data')}
                     </Text>
-                    <TouchableOpacity 
-                        style={[styles.setupButton, { backgroundColor: colors.primaryColor }]} 
+                    <TouchableOpacity
+                        style={[styles.setupButton, { backgroundColor: colors.primaryColor }]}
                         onPress={handlePress}
                     >
-                        <Text style={styles.setupButtonText}>View Details</Text>
+                        <Text style={styles.setupButtonText}>{t('trust.viewDetails', 'View Details')}</Text>
                     </TouchableOpacity>
                 </View>
             );
@@ -103,18 +105,18 @@ export function TrustScoreWidget() {
                         <ThemedText style={[styles.verificationPercentage, { color: scoreColor }]}>
                             {Math.round(trustScoreData.score)}%
                         </ThemedText>
-                        <ThemedText style={styles.verificationLabel}>Verified</ThemedText>
+                        <ThemedText style={styles.verificationLabel}>{t('trust.verified', 'Verified')}</ThemedText>
                     </View>
 
                     <ThemedText style={[styles.trustScoreText]}>
                         {trustScoreData.level}
                     </ThemedText>
 
-                    <TouchableOpacity 
-                        style={[styles.improveButton, { backgroundColor: scoreColor }]} 
+                    <TouchableOpacity
+                        style={[styles.improveButton, { backgroundColor: scoreColor }]}
                         onPress={handlePress}
                     >
-                        <ThemedText style={styles.improveButtonText}>Complete Verification</ThemedText>
+                        <ThemedText style={styles.improveButtonText}>{t('trust.completeVerification', 'Complete Verification')}</ThemedText>
                     </TouchableOpacity>
                 </View>
             );
@@ -131,7 +133,7 @@ export function TrustScoreWidget() {
                 />
 
                 <ThemedText style={[styles.trustScoreText]}>
-                    Your trust score is {trustScoreData.level}
+                    {t('trust.yourScoreIs', 'Your trust score is')} {trustScoreData.level}
                 </ThemedText>
 
                 <View style={styles.factorsPreview}>
@@ -155,11 +157,11 @@ export function TrustScoreWidget() {
                     ))}
                 </View>
 
-                <TouchableOpacity 
-                    style={[styles.improveButton, { backgroundColor: scoreColor }]} 
+                <TouchableOpacity
+                    style={[styles.improveButton, { backgroundColor: scoreColor }]}
                     onPress={handlePress}
                 >
-                    <ThemedText style={styles.improveButtonText}>Improve Score</ThemedText>
+                    <ThemedText style={styles.improveButtonText}>{t('trust.improveScore', 'Improve Score')}</ThemedText>
                 </TouchableOpacity>
             </View>
         );

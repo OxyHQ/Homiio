@@ -307,6 +307,10 @@
     },
     "profile": {
         "title": "Perfil",
+        "tabs": {
+            "listings": "Llistats",
+            "about": "Sobre"
+        },
         "editProfile": "Editar Perfil",
         "myProperties": "Les Meves Propietats",
         "savedProperties": "Propietats Guardades",
@@ -349,6 +353,19 @@
             "updateFailed": "Error actualitzant perfil",
             "deleteFailed": "Error eliminant perfil"
         }
+    },
+    "trust": {
+        "loadingVerification": "Carregant estat de verificació...",
+        "loadingScore": "Carregant puntuació de confiança...",
+        "errorVerification": "No es pot carregar l'estat de verificació",
+        "errorScore": "No es pot carregar la puntuació de confiança",
+        "viewDetails": "Veure detalls",
+        "noVerification": "Sense dades de verificació",
+        "noScore": "Sense dades de puntuació de confiança",
+        "verified": "Verificat",
+        "completeVerification": "Completar verificació",
+        "yourScoreIs": "La teva puntuació de confiança és",
+        "improveScore": "Millorar puntuació"
     },
     "notifications": {
         "title": "Notificacions",
