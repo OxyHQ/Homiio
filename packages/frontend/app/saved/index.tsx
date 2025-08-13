@@ -18,7 +18,6 @@ import { Header } from '@/components/Header';
 import { PropertyCard } from '@/components/PropertyCard';
 import { ListItem } from '@/components/ListItem';
 import { colors } from '@/styles/colors';
-import { useSEO } from '@/hooks/useDocumentTitle';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useOxy } from '@oxyhq/services';
@@ -66,8 +65,6 @@ const CATEGORIES = [
 ];
 
 // Grid layout constants (style-based, no runtime calculations)
-const GRID_GAP = 0; // desired gap between cards
-const H_PADDING = 0; // desired outer padding
 const LIST_GAP = 16; // desired gap between list rows
 
 export default function SavedPropertiesScreen() {
@@ -94,10 +91,10 @@ export default function SavedPropertiesScreen() {
   const { tab } = useLocalSearchParams<{ tab?: string }>();
   const parseTab = (value?: string): FilterCategory =>
     value === 'recent' ||
-    value === 'noted' ||
-    value === 'quick-saves' ||
-    value === 'folders' ||
-    value === 'profiles'
+      value === 'noted' ||
+      value === 'quick-saves' ||
+      value === 'folders' ||
+      value === 'profiles'
       ? value
       : 'all';
   const [selectedCategory, setSelectedCategory] = useState<FilterCategory>(
@@ -250,14 +247,6 @@ export default function SavedPropertiesScreen() {
       (f) => f.name.toLowerCase().includes(q) || (f.description || '').toLowerCase().includes(q),
     );
   }, [folders, searchQuery]);
-
-  // SEO
-  useSEO({
-    title: t('saved.title'),
-    description: t('saved.emptyDescription'),
-    keywords: 'saved properties, property favorites, housing bookmarks, property notes',
-    type: 'website',
-  });
 
   // Handlers
   const handleRefresh = useCallback(async () => {
@@ -487,7 +476,7 @@ export default function SavedPropertiesScreen() {
                 setSelectedCategory(next);
                 try {
                   router.setParams?.({ tab: next });
-                } catch {}
+                } catch { }
               }}
             >
               <Text style={StyleSheet.flatten([styles.tabText, isActive && styles.tabTextActive])}>

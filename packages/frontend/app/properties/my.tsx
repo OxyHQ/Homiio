@@ -18,7 +18,6 @@ import LoadingTopSpinner from '@/components/LoadingTopSpinner';
 import { useUserProperties } from '@/hooks/usePropertyQueries';
 import { useOxy } from '@oxyhq/services';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 import { EmptyState } from '@/components/ui/EmptyState';
 
@@ -32,9 +31,6 @@ export default function MyPropertiesScreen() {
   const { data, isLoading, error, refetch } = useUserProperties();
   const [refreshing, setRefreshing] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(0);
-
-  // Set document title for web
-  useDocumentTitle('My Properties');
 
   const handleRefresh = async () => {
     setRefreshing(true);

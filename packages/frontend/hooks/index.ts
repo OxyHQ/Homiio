@@ -15,8 +15,6 @@ export { useFavorites } from './useFavorites';
 
 // Utility hooks
 export { useDebounce } from './useDebounce';
-export { useDocumentTitle } from './useDocumentTitle';
-export { useSEO } from './useDocumentTitle';
 
 // Address Search hooks
 export {

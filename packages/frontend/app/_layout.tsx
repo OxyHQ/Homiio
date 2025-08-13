@@ -1,10 +1,8 @@
-// --- 1. Organized Imports ---
-import React, { useEffect, useState, useCallback, useMemo, createContext } from 'react';
-import { Keyboard, Platform, View, StyleSheet } from 'react-native';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { Platform, View, StyleSheet } from 'react-native';
 import {
   SafeAreaProvider,
   initialWindowMetrics,
-  useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
@@ -15,7 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SideBar } from '@/components/SideBar';
 import { RightBar } from '@/components/RightBar';
 import { colors } from '@/styles/colors';
-import { useSEO } from '@/hooks/useDocumentTitle';
+import { useKeyboardVisibility } from '@/hooks/useKeyboardVisibility';
 import { Toaster } from '@/lib/sonner';
 import {
   setupNotifications,
@@ -23,7 +21,7 @@ import {
   scheduleDemoNotification,
 } from '@/utils/notifications';
 import i18n from 'i18next';
-import { initReactI18next, I18nextProvider, useTranslation } from 'react-i18next';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
 import enUS from '@/locales/en.json';
 import esES from '@/locales/es.json';
 import caES from '@/locales/ca-ES.json';
@@ -32,26 +30,15 @@ import { BottomBar } from '@/components/BottomBar';
 import { MenuProvider } from 'react-native-popup-menu';
 
 import AppSplashScreen from '@/components/AppSplashScreen';
-import LoadingTopSpinner from '@/components/LoadingTopSpinner';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { ProfileProvider } from '@/context/ProfileContext';
 import { SavedPropertiesProvider } from '@/context/SavedPropertiesContext';
 import { BottomSheetProvider } from '@/context/BottomSheetContext';
 import { OxyProvider, OxyServices } from '@oxyhq/services';
-import { generateWebsiteStructuredData, injectStructuredData } from '@/utils/structuredData';
 import { PostHogProvider } from 'posthog-react-native';
 import '../styles/global.css';
+import { OXY_BASE_URL } from '@/config';
 
-// Oxy context for bottom sheet content
-export const OxyContext = createContext<{
-  oxyServices: OxyServices | null;
-  activeSessionId: string | null;
-}>({
-  oxyServices: null,
-  activeSessionId: null,
-});
-
-// --- 2. i18n Initialization ---
 i18n
   .use(initReactI18next)
   .init({
@@ -69,8 +56,7 @@ i18n
     console.error('Failed to initialize i18n:', error);
   });
 
-// --- 3. Styles (outside component) ---
-const getStyles = (isScreenNotMobile: boolean, insets: any) =>
+const getStyles = (isScreenNotMobile: boolean) =>
   StyleSheet.create({
     container: {
       maxWidth: 1600,
@@ -87,23 +73,18 @@ const getStyles = (isScreenNotMobile: boolean, insets: any) =>
       flex: isScreenNotMobile ? 2.2 : 1,
       backgroundColor: colors.primaryLight,
     },
-    contentContainer: {
-      flex: 1,
-      alignItems: 'center',
-    },
   });
 
-// --- 4. RootLayout Component ---
 export default function RootLayout() {
   const [appIsReady, setAppIsReady] = useState(false);
   const [splashState, setSplashState] = useState({
     initializationComplete: false,
     startFade: false,
   });
-  const { i18n } = useTranslation();
   const isScreenNotMobile = useMediaQuery({ minWidth: 500 });
-  const insets = useSafeAreaInsets();
-  const styles = useMemo(() => getStyles(isScreenNotMobile, insets), [isScreenNotMobile, insets]);
+  const styles = useMemo(() => getStyles(isScreenNotMobile), [isScreenNotMobile]);
+  const posthogApiKey = process.env.EXPO_PUBLIC_POSTHOG_KEY || 'phc_wRxFcPEaeeRHAKoMi4gzleLdNE9Ny4JEwYe8Z5h3soO';
+  const posthogHost = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
 
   // --- Font Loading ---
   const [loaded] = useFonts({
@@ -131,52 +112,19 @@ export default function RootLayout() {
   });
 
   // --- Keyboard State ---
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
-  useEffect(() => {
-    const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
-    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, []);
+  const keyboardVisible = useKeyboardVisibility();
 
-  // --- SEO and Structured Data (Web only) ---
-  useSEO({
-    title: 'Ethical Housing Platform',
-    description:
-      'Find your ethical home with transparent rentals, fair agreements, and verified properties. Join Homiio for a better housing experience.',
-    keywords:
-      'housing, rental, property, ethical housing, transparent rentals, verified properties, fair agreements',
-    type: 'website',
-  });
-  useEffect(() => {
-    if (Platform.OS === 'web') {
-      const websiteData = generateWebsiteStructuredData();
-      injectStructuredData(websiteData);
-    }
-  }, []);
+  const oxyServices = useMemo(() => new OxyServices({ baseURL: OXY_BASE_URL }), []);
 
-  // --- OxyServices Memoization ---
-  const oxyServices = useMemo(
-    () =>
-      new OxyServices({
-        baseURL:
-          process.env.NODE_ENV === 'production'
-            ? 'https://api.oxy.so'
-            : 'http://192.168.86.44:3001',
-      }),
-    [],
-  );
-
-  // --- App Initialization ---
   const initializeApp = useCallback(async () => {
     try {
       if (loaded) {
-        await setupNotifications();
-        const hasPermission = await requestNotificationPermissions();
-        if (hasPermission) {
-          await scheduleDemoNotification();
+        if (Platform.OS !== 'web') {
+          await setupNotifications();
+          const hasPermission = await requestNotificationPermissions();
+          if (hasPermission && __DEV__) {
+            await scheduleDemoNotification();
+          }
         }
         setSplashState((prev) => ({ ...prev, initializationComplete: true }));
         await SplashScreen.hideAsync();
@@ -191,19 +139,16 @@ export default function RootLayout() {
     setAppIsReady(true);
   }, []);
 
-  // --- Effects: App Initialization, Body Styling ---
   useEffect(() => {
     initializeApp();
   }, [initializeApp]);
 
-  // --- Effects: Splash Fade Trigger ---
   useEffect(() => {
     if (loaded && splashState.initializationComplete && !splashState.startFade) {
       setSplashState((prev) => ({ ...prev, startFade: true }));
     }
   }, [loaded, splashState.initializationComplete, splashState.startFade]);
 
-  // --- Main Render ---
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <GestureHandlerRootView>
@@ -214,9 +159,9 @@ export default function RootLayout() {
           />
         ) : (
           <PostHogProvider
-            apiKey="phc_wRxFcPEaeeRHAKoMi4gzleLdNE9Ny4JEwYe8Z5h3soO"
+            apiKey={posthogApiKey}
             options={{
-              host: 'https://us.i.posthog.com',
+              host: posthogHost,
               enableSessionReplay: true,
             }}
             autocapture
@@ -225,10 +170,6 @@ export default function RootLayout() {
               oxyServices={oxyServices}
               initialScreen="SignIn"
               autoPresent={false}
-              onClose={() => console.log('Sheet closed')}
-              onAuthStateChange={(user) =>
-                console.log('Auth state changed:', user?.username || 'logged out')
-              }
               storageKeyPrefix="oxy_example"
               theme="light"
             >
@@ -241,11 +182,6 @@ export default function RootLayout() {
                           <View style={styles.container}>
                             <SideBar />
                             <View style={styles.mainContentWrapper}>
-                              <LoadingTopSpinner
-                                showLoading={false}
-                                size={20}
-                                style={{ paddingBottom: 0 }}
-                              />
                               <Slot />
                             </View>
                             <RightBar />

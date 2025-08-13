@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { Ionicons } from '@expo/vector-icons';
-import { useSEO } from '@/hooks/useDocumentTitle';
 import { LinearGradient } from 'expo-linear-gradient';
 import { tipsService, TipArticle } from '@/services/tipsService';
 import { Header } from '@/components/Header';
@@ -17,16 +16,6 @@ export default function TipsScreen() {
   const [tipsData, setTipsData] = useState<TipArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [headerHeight, setHeaderHeight] = useState(0);
-
-  // Set SEO for tips page
-  useSEO({
-    title: 'Rental Tips & Guides - Homiio',
-    description:
-      'Expert advice and guides for renters. Learn how to find the perfect rental, avoid scams, understand contracts, and more.',
-    keywords:
-      'rental tips, renting guide, rental advice, tenant tips, rental scams, rental contracts',
-    type: 'website',
-  });
 
   // Load tips from API
   useEffect(() => {
@@ -75,97 +64,97 @@ export default function TipsScreen() {
         <View style={styles.tipsGrid}>
           {loading
             ? // Loading skeleton
-              Array.from({ length: 4 }).map((_, index) => (
-                <View key={index} style={styles.tipCard}>
-                  <View style={styles.tipImageContainer}>
-                    <View
-                      style={[styles.tipImage, { backgroundColor: colors.COLOR_BLACK_LIGHT_4 }]}
-                    >
-                      <IconComponent name="hourglass-outline" size={32} color="white" />
-                    </View>
-                  </View>
-                  <View style={styles.tipContent}>
-                    <View
-                      style={[
-                        styles.tipTitle,
-                        {
-                          backgroundColor: colors.COLOR_BLACK_LIGHT_4,
-                          height: 20,
-                          borderRadius: 4,
-                        },
-                      ]}
-                    />
-                    <View
-                      style={[
-                        styles.tipDescription,
-                        {
-                          backgroundColor: colors.COLOR_BLACK_LIGHT_4,
-                          height: 16,
-                          borderRadius: 4,
-                          marginBottom: 8,
-                        },
-                      ]}
-                    />
-                    <View
-                      style={[
-                        styles.tipDescription,
-                        {
-                          backgroundColor: colors.COLOR_BLACK_LIGHT_4,
-                          height: 16,
-                          borderRadius: 4,
-                          width: '60%',
-                        },
-                      ]}
-                    />
+            Array.from({ length: 4 }).map((_, index) => (
+              <View key={index} style={styles.tipCard}>
+                <View style={styles.tipImageContainer}>
+                  <View
+                    style={[styles.tipImage, { backgroundColor: colors.COLOR_BLACK_LIGHT_4 }]}
+                  >
+                    <IconComponent name="hourglass-outline" size={32} color="white" />
                   </View>
                 </View>
-              ))
+                <View style={styles.tipContent}>
+                  <View
+                    style={[
+                      styles.tipTitle,
+                      {
+                        backgroundColor: colors.COLOR_BLACK_LIGHT_4,
+                        height: 20,
+                        borderRadius: 4,
+                      },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.tipDescription,
+                      {
+                        backgroundColor: colors.COLOR_BLACK_LIGHT_4,
+                        height: 16,
+                        borderRadius: 4,
+                        marginBottom: 8,
+                      },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.tipDescription,
+                      {
+                        backgroundColor: colors.COLOR_BLACK_LIGHT_4,
+                        height: 16,
+                        borderRadius: 4,
+                        width: '60%',
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
+            ))
             : tipsData.map((tip) => (
-                <TouchableOpacity
-                  key={tip.id}
-                  style={styles.tipCard}
-                  onPress={() => handleTipPress(tip)}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.tipImageContainer}>
-                    <LinearGradient
-                      colors={tip.gradientColors as [string, string]}
-                      style={styles.tipImage}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <IconComponent name={tip.icon} size={32} color="white" />
-                    </LinearGradient>
-                    <View style={styles.tipCategoryBadge}>
-                      <Text style={styles.tipCategoryText}>{tip.category}</Text>
+              <TouchableOpacity
+                key={tip.id}
+                style={styles.tipCard}
+                onPress={() => handleTipPress(tip)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.tipImageContainer}>
+                  <LinearGradient
+                    colors={tip.gradientColors as [string, string]}
+                    style={styles.tipImage}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <IconComponent name={tip.icon} size={32} color="white" />
+                  </LinearGradient>
+                  <View style={styles.tipCategoryBadge}>
+                    <Text style={styles.tipCategoryText}>{tip.category}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.tipContent}>
+                  <Text style={styles.tipTitle}>{tip.title}</Text>
+                  <Text style={styles.tipDescription}>{tip.description}</Text>
+
+                  <View style={styles.tipMeta}>
+                    <View style={styles.tipMetaItem}>
+                      <IconComponent
+                        name="time-outline"
+                        size={14}
+                        color={colors.COLOR_BLACK_LIGHT_4}
+                      />
+                      <Text style={styles.tipMetaText}>{tip.readTime}</Text>
+                    </View>
+                    <View style={styles.tipMetaItem}>
+                      <IconComponent
+                        name="calendar-outline"
+                        size={14}
+                        color={colors.COLOR_BLACK_LIGHT_4}
+                      />
+                      <Text style={styles.tipMetaText}>{tip.publishDate}</Text>
                     </View>
                   </View>
-
-                  <View style={styles.tipContent}>
-                    <Text style={styles.tipTitle}>{tip.title}</Text>
-                    <Text style={styles.tipDescription}>{tip.description}</Text>
-
-                    <View style={styles.tipMeta}>
-                      <View style={styles.tipMetaItem}>
-                        <IconComponent
-                          name="time-outline"
-                          size={14}
-                          color={colors.COLOR_BLACK_LIGHT_4}
-                        />
-                        <Text style={styles.tipMetaText}>{tip.readTime}</Text>
-                      </View>
-                      <View style={styles.tipMetaItem}>
-                        <IconComponent
-                          name="calendar-outline"
-                          size={14}
-                          color={colors.COLOR_BLACK_LIGHT_4}
-                        />
-                        <Text style={styles.tipMetaText}>{tip.publishDate}</Text>
-                      </View>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
+                </View>
+              </TouchableOpacity>
+            ))}
         </View>
       </ScrollView>
     </View>

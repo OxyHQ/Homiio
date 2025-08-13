@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { Ionicons } from '@expo/vector-icons';
-import { useSEO } from '@/hooks/useDocumentTitle';
 import { LinearGradient } from 'expo-linear-gradient';
 import { tipsService, TipArticle } from '@/services/tipsService';
 import { Header } from '@/components/Header';
@@ -17,14 +16,6 @@ export default function TipArticleScreen() {
   const [tip, setTip] = useState<TipArticle | null>(null);
   const [loading, setLoading] = useState(true);
   const [headerHeight, setHeaderHeight] = useState(0);
-
-  // Set SEO for individual tip article
-  useSEO({
-    title: tip ? `${tip.title} - Homiio` : 'Tip Article - Homiio',
-    description: tip ? tip.description : 'Expert rental advice and guides.',
-    keywords: 'rental tips, renting guide, rental advice, tenant tips',
-    type: 'article',
-  });
 
   // Load tip article from API
   useEffect(() => {

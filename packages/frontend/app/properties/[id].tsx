@@ -28,7 +28,6 @@ import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { PropertyType, RecentlyViewedType, PropertyImage } from '@homiio/shared-types';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 
 import { useRecentlyViewedStore } from '@/store/recentlyViewedStore';
@@ -167,16 +166,16 @@ export default function PropertyDetailPage() {
       activeSessionId: !!activeSessionId,
       locationData: apiProperty
         ? {
-            hasLocation: !!apiProperty.location,
-            locationType: typeof apiProperty.location,
-            coordinates: apiProperty.location?.coordinates,
-            coordinatesType: typeof apiProperty.location?.coordinates,
-            coordinatesLength: apiProperty.location?.coordinates?.length,
-            addressCoordinates: apiProperty.address?.coordinates,
-            addressCoordinatesType: typeof apiProperty.address?.coordinates,
-            showAddressNumber: apiProperty.address?.showAddressNumber,
-            showAddressNumberType: typeof apiProperty.address?.showAddressNumber,
-          }
+          hasLocation: !!apiProperty.location,
+          locationType: typeof apiProperty.location,
+          coordinates: apiProperty.location?.coordinates,
+          coordinatesType: typeof apiProperty.location?.coordinates,
+          coordinatesLength: apiProperty.location?.coordinates?.length,
+          addressCoordinates: apiProperty.address?.coordinates,
+          addressCoordinatesType: typeof apiProperty.address?.coordinates,
+          showAddressNumber: apiProperty.address?.showAddressNumber,
+          showAddressNumberType: typeof apiProperty.address?.showAddressNumber,
+        }
         : null,
     });
   }, [id, apiProperty, isLoading, error, oxyServices, activeSessionId]);
@@ -255,10 +254,6 @@ export default function PropertyDetailPage() {
       return null;
     }
   }, [apiProperty]);
-
-  // Set document title for web
-  useDocumentTitle(property?.title || 'Property Details');
-
   // Track property view when property is loaded and user is authenticated
   useEffect(() => {
     if (apiProperty && !hasViewedRef.current) {
@@ -570,8 +565,8 @@ export default function PropertyDetailPage() {
                 </View>
                 <View style={styles.mapPreviewContainer}>
                   {apiProperty?.location?.coordinates &&
-                  apiProperty.location.coordinates.length === 2 &&
-                  (apiProperty?.address?.showAddressNumber ?? true) ? (
+                    apiProperty.location.coordinates.length === 2 &&
+                    (apiProperty?.address?.showAddressNumber ?? true) ? (
                     <PropertyMap
                       latitude={apiProperty.location.coordinates[1]}
                       longitude={apiProperty.location.coordinates[0]}
@@ -849,68 +844,68 @@ export default function PropertyDetailPage() {
               apiProperty?.hasBalcony !== undefined ||
               apiProperty?.hasGarden !== undefined ||
               apiProperty?.hasElevator !== undefined) && (
-              <View style={styles.featuresContainer}>
-                <ThemedText style={styles.sectionTitle}>{t('Property Features')}</ThemedText>
-                <View style={styles.featuresCard}>
-                  <View style={styles.featuresGrid}>
-                    {apiProperty?.isFurnished !== undefined && (
-                      <View style={styles.featureItem}>
-                        <IconComponent
-                          name={apiProperty.isFurnished ? 'checkmark-circle' : 'close-circle'}
-                          size={20}
-                          color={
-                            apiProperty.isFurnished
-                              ? colors.primaryColor
-                              : colors.COLOR_BLACK_LIGHT_4
-                          }
-                        />
-                        <ThemedText style={styles.featureText}>{t('Furnished')}</ThemedText>
-                      </View>
-                    )}
-                    {apiProperty?.hasBalcony !== undefined && (
-                      <View style={styles.featureItem}>
-                        <IconComponent
-                          name={apiProperty.hasBalcony ? 'checkmark-circle' : 'close-circle'}
-                          size={20}
-                          color={
-                            apiProperty.hasBalcony
-                              ? colors.primaryColor
-                              : colors.COLOR_BLACK_LIGHT_4
-                          }
-                        />
-                        <ThemedText style={styles.featureText}>{t('Balcony')}</ThemedText>
-                      </View>
-                    )}
-                    {apiProperty?.hasGarden !== undefined && (
-                      <View style={styles.featureItem}>
-                        <IconComponent
-                          name={apiProperty.hasGarden ? 'checkmark-circle' : 'close-circle'}
-                          size={20}
-                          color={
-                            apiProperty.hasGarden ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4
-                          }
-                        />
-                        <ThemedText style={styles.featureText}>{t('Garden')}</ThemedText>
-                      </View>
-                    )}
-                    {apiProperty?.hasElevator !== undefined && (
-                      <View style={styles.featureItem}>
-                        <IconComponent
-                          name={apiProperty.hasElevator ? 'checkmark-circle' : 'close-circle'}
-                          size={20}
-                          color={
-                            apiProperty.hasElevator
-                              ? colors.primaryColor
-                              : colors.COLOR_BLACK_LIGHT_4
-                          }
-                        />
-                        <ThemedText style={styles.featureText}>{t('Elevator')}</ThemedText>
-                      </View>
-                    )}
+                <View style={styles.featuresContainer}>
+                  <ThemedText style={styles.sectionTitle}>{t('Property Features')}</ThemedText>
+                  <View style={styles.featuresCard}>
+                    <View style={styles.featuresGrid}>
+                      {apiProperty?.isFurnished !== undefined && (
+                        <View style={styles.featureItem}>
+                          <IconComponent
+                            name={apiProperty.isFurnished ? 'checkmark-circle' : 'close-circle'}
+                            size={20}
+                            color={
+                              apiProperty.isFurnished
+                                ? colors.primaryColor
+                                : colors.COLOR_BLACK_LIGHT_4
+                            }
+                          />
+                          <ThemedText style={styles.featureText}>{t('Furnished')}</ThemedText>
+                        </View>
+                      )}
+                      {apiProperty?.hasBalcony !== undefined && (
+                        <View style={styles.featureItem}>
+                          <IconComponent
+                            name={apiProperty.hasBalcony ? 'checkmark-circle' : 'close-circle'}
+                            size={20}
+                            color={
+                              apiProperty.hasBalcony
+                                ? colors.primaryColor
+                                : colors.COLOR_BLACK_LIGHT_4
+                            }
+                          />
+                          <ThemedText style={styles.featureText}>{t('Balcony')}</ThemedText>
+                        </View>
+                      )}
+                      {apiProperty?.hasGarden !== undefined && (
+                        <View style={styles.featureItem}>
+                          <IconComponent
+                            name={apiProperty.hasGarden ? 'checkmark-circle' : 'close-circle'}
+                            size={20}
+                            color={
+                              apiProperty.hasGarden ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4
+                            }
+                          />
+                          <ThemedText style={styles.featureText}>{t('Garden')}</ThemedText>
+                        </View>
+                      )}
+                      {apiProperty?.hasElevator !== undefined && (
+                        <View style={styles.featureItem}>
+                          <IconComponent
+                            name={apiProperty.hasElevator ? 'checkmark-circle' : 'close-circle'}
+                            size={20}
+                            color={
+                              apiProperty.hasElevator
+                                ? colors.primaryColor
+                                : colors.COLOR_BLACK_LIGHT_4
+                            }
+                          />
+                          <ThemedText style={styles.featureText}>{t('Elevator')}</ThemedText>
+                        </View>
+                      )}
+                    </View>
                   </View>
                 </View>
-              </View>
-            )}
+              )}
 
             {/* Pricing Details */}
             <View style={styles.pricingDetailsContainer}>
@@ -956,83 +951,83 @@ export default function PropertyDetailPage() {
               apiProperty?.rules?.smokingAllowed !== undefined ||
               apiProperty?.rules?.partiesAllowed !== undefined ||
               apiProperty?.rules?.guestsAllowed !== undefined) && (
-              <View style={styles.rulesContainer}>
-                <ThemedText style={styles.sectionTitle}>{t('House Rules')}</ThemedText>
-                <View style={styles.rulesCard}>
-                  <View style={styles.rulesGrid}>
-                    {apiProperty?.rules?.petsAllowed !== undefined && (
-                      <View style={styles.ruleItem}>
-                        <IconComponent
-                          name={apiProperty.rules.petsAllowed ? 'checkmark-circle' : 'close-circle'}
-                          size={20}
-                          color={
-                            apiProperty.rules.petsAllowed
-                              ? colors.primaryColor
-                              : colors.COLOR_BLACK_LIGHT_4
-                          }
-                        />
-                        <ThemedText style={styles.ruleText}>{t('Pets Allowed')}</ThemedText>
-                      </View>
-                    )}
-                    {apiProperty?.rules?.smokingAllowed !== undefined && (
-                      <View style={styles.ruleItem}>
-                        <IconComponent
-                          name={
-                            apiProperty.rules.smokingAllowed ? 'checkmark-circle' : 'close-circle'
-                          }
-                          size={20}
-                          color={
-                            apiProperty.rules.smokingAllowed
-                              ? colors.primaryColor
-                              : colors.COLOR_BLACK_LIGHT_4
-                          }
-                        />
-                        <ThemedText style={styles.ruleText}>{t('Smoking Allowed')}</ThemedText>
-                      </View>
-                    )}
-                    {apiProperty?.rules?.partiesAllowed !== undefined && (
-                      <View style={styles.ruleItem}>
-                        <IconComponent
-                          name={
-                            apiProperty.rules.partiesAllowed ? 'checkmark-circle' : 'close-circle'
-                          }
-                          size={20}
-                          color={
-                            apiProperty.rules.partiesAllowed
-                              ? colors.primaryColor
-                              : colors.COLOR_BLACK_LIGHT_4
-                          }
-                        />
-                        <ThemedText style={styles.ruleText}>{t('Parties Allowed')}</ThemedText>
-                      </View>
-                    )}
-                    {apiProperty?.rules?.guestsAllowed !== undefined && (
-                      <View style={styles.ruleItem}>
-                        <IconComponent
-                          name={
-                            apiProperty.rules.guestsAllowed ? 'checkmark-circle' : 'close-circle'
-                          }
-                          size={20}
-                          color={
-                            apiProperty.rules.guestsAllowed
-                              ? colors.primaryColor
-                              : colors.COLOR_BLACK_LIGHT_4
-                          }
-                        />
-                        <ThemedText style={styles.ruleText}>{t('Guests Allowed')}</ThemedText>
+                <View style={styles.rulesContainer}>
+                  <ThemedText style={styles.sectionTitle}>{t('House Rules')}</ThemedText>
+                  <View style={styles.rulesCard}>
+                    <View style={styles.rulesGrid}>
+                      {apiProperty?.rules?.petsAllowed !== undefined && (
+                        <View style={styles.ruleItem}>
+                          <IconComponent
+                            name={apiProperty.rules.petsAllowed ? 'checkmark-circle' : 'close-circle'}
+                            size={20}
+                            color={
+                              apiProperty.rules.petsAllowed
+                                ? colors.primaryColor
+                                : colors.COLOR_BLACK_LIGHT_4
+                            }
+                          />
+                          <ThemedText style={styles.ruleText}>{t('Pets Allowed')}</ThemedText>
+                        </View>
+                      )}
+                      {apiProperty?.rules?.smokingAllowed !== undefined && (
+                        <View style={styles.ruleItem}>
+                          <IconComponent
+                            name={
+                              apiProperty.rules.smokingAllowed ? 'checkmark-circle' : 'close-circle'
+                            }
+                            size={20}
+                            color={
+                              apiProperty.rules.smokingAllowed
+                                ? colors.primaryColor
+                                : colors.COLOR_BLACK_LIGHT_4
+                            }
+                          />
+                          <ThemedText style={styles.ruleText}>{t('Smoking Allowed')}</ThemedText>
+                        </View>
+                      )}
+                      {apiProperty?.rules?.partiesAllowed !== undefined && (
+                        <View style={styles.ruleItem}>
+                          <IconComponent
+                            name={
+                              apiProperty.rules.partiesAllowed ? 'checkmark-circle' : 'close-circle'
+                            }
+                            size={20}
+                            color={
+                              apiProperty.rules.partiesAllowed
+                                ? colors.primaryColor
+                                : colors.COLOR_BLACK_LIGHT_4
+                            }
+                          />
+                          <ThemedText style={styles.ruleText}>{t('Parties Allowed')}</ThemedText>
+                        </View>
+                      )}
+                      {apiProperty?.rules?.guestsAllowed !== undefined && (
+                        <View style={styles.ruleItem}>
+                          <IconComponent
+                            name={
+                              apiProperty.rules.guestsAllowed ? 'checkmark-circle' : 'close-circle'
+                            }
+                            size={20}
+                            color={
+                              apiProperty.rules.guestsAllowed
+                                ? colors.primaryColor
+                                : colors.COLOR_BLACK_LIGHT_4
+                            }
+                          />
+                          <ThemedText style={styles.ruleText}>{t('Guests Allowed')}</ThemedText>
+                        </View>
+                      )}
+                    </View>
+                    {apiProperty?.rules?.guestsAllowed && apiProperty?.rules?.maxGuests && (
+                      <View style={styles.maxGuestsContainer}>
+                        <ThemedText style={styles.maxGuestsLabel}>
+                          {t('Maximum Guests')}: {apiProperty.rules.maxGuests}
+                        </ThemedText>
                       </View>
                     )}
                   </View>
-                  {apiProperty?.rules?.guestsAllowed && apiProperty?.rules?.maxGuests && (
-                    <View style={styles.maxGuestsContainer}>
-                      <ThemedText style={styles.maxGuestsLabel}>
-                        {t('Maximum Guests')}: {apiProperty.rules.maxGuests}
-                      </ThemedText>
-                    </View>
-                  )}
                 </View>
-              </View>
-            )}
+              )}
 
             {/* Location Details */}
             <View style={styles.locationDetailsContainer}>
@@ -1089,64 +1084,64 @@ export default function PropertyDetailPage() {
             {(apiProperty?.proximityToTransport !== undefined ||
               apiProperty?.proximityToSchools !== undefined ||
               apiProperty?.proximityToShopping !== undefined) && (
-              <View style={styles.proximityContainer}>
-                <ThemedText style={styles.sectionTitle}>{t('Nearby Amenities')}</ThemedText>
-                <View style={styles.proximityCard}>
-                  <View style={styles.proximityGrid}>
-                    {apiProperty?.proximityToTransport !== undefined && (
-                      <View style={styles.proximityItem}>
-                        <IconComponent
-                          name={
-                            apiProperty.proximityToTransport ? 'checkmark-circle' : 'close-circle'
-                          }
-                          size={20}
-                          color={
-                            apiProperty.proximityToTransport
-                              ? colors.primaryColor
-                              : colors.COLOR_BLACK_LIGHT_4
-                          }
-                        />
-                        <ThemedText style={styles.proximityText}>
-                          {t('Public Transport')}
-                        </ThemedText>
-                      </View>
-                    )}
-                    {apiProperty?.proximityToSchools !== undefined && (
-                      <View style={styles.proximityItem}>
-                        <IconComponent
-                          name={
-                            apiProperty.proximityToSchools ? 'checkmark-circle' : 'close-circle'
-                          }
-                          size={20}
-                          color={
-                            apiProperty.proximityToSchools
-                              ? colors.primaryColor
-                              : colors.COLOR_BLACK_LIGHT_4
-                          }
-                        />
-                        <ThemedText style={styles.proximityText}>{t('Schools')}</ThemedText>
-                      </View>
-                    )}
-                    {apiProperty?.proximityToShopping !== undefined && (
-                      <View style={styles.proximityItem}>
-                        <IconComponent
-                          name={
-                            apiProperty.proximityToShopping ? 'checkmark-circle' : 'close-circle'
-                          }
-                          size={20}
-                          color={
-                            apiProperty.proximityToShopping
-                              ? colors.primaryColor
-                              : colors.COLOR_BLACK_LIGHT_4
-                          }
-                        />
-                        <ThemedText style={styles.proximityText}>{t('Shopping')}</ThemedText>
-                      </View>
-                    )}
+                <View style={styles.proximityContainer}>
+                  <ThemedText style={styles.sectionTitle}>{t('Nearby Amenities')}</ThemedText>
+                  <View style={styles.proximityCard}>
+                    <View style={styles.proximityGrid}>
+                      {apiProperty?.proximityToTransport !== undefined && (
+                        <View style={styles.proximityItem}>
+                          <IconComponent
+                            name={
+                              apiProperty.proximityToTransport ? 'checkmark-circle' : 'close-circle'
+                            }
+                            size={20}
+                            color={
+                              apiProperty.proximityToTransport
+                                ? colors.primaryColor
+                                : colors.COLOR_BLACK_LIGHT_4
+                            }
+                          />
+                          <ThemedText style={styles.proximityText}>
+                            {t('Public Transport')}
+                          </ThemedText>
+                        </View>
+                      )}
+                      {apiProperty?.proximityToSchools !== undefined && (
+                        <View style={styles.proximityItem}>
+                          <IconComponent
+                            name={
+                              apiProperty.proximityToSchools ? 'checkmark-circle' : 'close-circle'
+                            }
+                            size={20}
+                            color={
+                              apiProperty.proximityToSchools
+                                ? colors.primaryColor
+                                : colors.COLOR_BLACK_LIGHT_4
+                            }
+                          />
+                          <ThemedText style={styles.proximityText}>{t('Schools')}</ThemedText>
+                        </View>
+                      )}
+                      {apiProperty?.proximityToShopping !== undefined && (
+                        <View style={styles.proximityItem}>
+                          <IconComponent
+                            name={
+                              apiProperty.proximityToShopping ? 'checkmark-circle' : 'close-circle'
+                            }
+                            size={20}
+                            color={
+                              apiProperty.proximityToShopping
+                                ? colors.primaryColor
+                                : colors.COLOR_BLACK_LIGHT_4
+                            }
+                          />
+                          <ThemedText style={styles.proximityText}>{t('Shopping')}</ThemedText>
+                        </View>
+                      )}
+                    </View>
                   </View>
                 </View>
-              </View>
-            )}
+              )}
 
             {/* Property Statistics */}
             <View style={styles.statisticsContainer}>
@@ -1434,7 +1429,7 @@ export default function PropertyDetailPage() {
                       anything about it!
                     </ThemedText>
                   </View>
-                  <TouchableOpacity style={styles.askSindiButton} onPress={() => {}}>
+                  <TouchableOpacity style={styles.askSindiButton} onPress={() => { }}>
                     <IconComponent name="chatbubble-outline" size={14} color="white" />
                   </TouchableOpacity>
                 </View>
@@ -1448,7 +1443,7 @@ export default function PropertyDetailPage() {
                   <ActionButton
                     icon="chatbubble-outline"
                     text={t('Contact Housing Authority')}
-                    onPress={() => {}}
+                    onPress={() => { }}
                     variant="secondary"
                     size="large"
                     disabled={true}

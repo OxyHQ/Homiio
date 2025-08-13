@@ -13,7 +13,6 @@ import { colors } from '@/styles/colors';
 import { phuduFontWeights } from '@/styles/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSEO } from '@/hooks/useDocumentTitle';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 
@@ -121,31 +120,6 @@ export default function HomePage() {
       setNearbyLoading(false);
     });
   }, [nearbyCities]);
-
-  // Use the reusable address search hook - removed for simplified search
-  // const {
-  //   suggestions: addressSuggestions,
-  //   loading: isLoadingAddresses,
-  //   debouncedSearch: fetchAddressSuggestions
-  // } = useDebouncedAddressSearch({
-  //   minQueryLength: 3,
-  //   debounceDelay: 500,
-  //   maxResults: 5,
-  //   includeAddressDetails: true
-  // });
-
-  // Remove unused oxyServices and activeSessionId
-  // const { oxyServices, activeSessionId } = useOxy();
-
-  // Set enhanced SEO for home page
-  useSEO({
-    title: 'Find Your Ethical Home',
-    description:
-      'Discover transparent rentals with fair agreements and verified properties. Join thousands of users finding their perfect ethical home on Homiio.',
-    keywords:
-      'ethical housing, transparent rentals, verified properties, fair agreements, housing platform, rental search',
-    type: 'website',
-  });
 
   // Fetch real data
   const { properties, loading: propertiesLoading, loadProperties } = useProperties();
