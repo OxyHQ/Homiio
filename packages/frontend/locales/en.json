@@ -148,8 +148,10 @@
             "viewEcoProperties": "View Eco Properties"
         },
         "featured": {
-            "title": "Featured Properties"
+            "title": "Featured Properties",
+            "empty": "No featured properties available at the moment"
         },
+        "viewAll": "View All",
         "recentlyViewed": {
             "title": "Recently Viewed",
             "noProperties": "No recently viewed properties",

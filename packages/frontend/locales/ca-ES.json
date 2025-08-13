@@ -146,8 +146,10 @@
             "viewEcoProperties": "Veure Propietats Ecològiques"
         },
         "featured": {
-            "title": "Propietats Destacades"
+            "title": "Propietats Destacades",
+            "empty": "No hi ha propietats destacades disponibles en aquest moment"
         },
+        "viewAll": "Veure Tot",
         "recentlyViewed": {
             "title": "Vistes Recentment",
             "noProperties": "No hi ha propietats vistes recentment",

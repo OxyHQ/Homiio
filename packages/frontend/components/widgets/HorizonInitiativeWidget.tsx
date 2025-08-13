@@ -11,11 +11,11 @@ export function HorizonInitiativeWidget() {
 
     return (
         <BaseWidget
-            title={t("Horizon Initiative")}
+            title={t('horizon.title', 'Horizon Initiative')}
             icon={<Ionicons name="star" size={22} color="#FFD700" />}
         >
             <ThemedText style={styles.membershipText}>
-                Horizon is a global initiative offering fair housing, healthcare, and travel support. Integrated with Homiio, it ensures affordable living within a connected, sustainable network.
+                {t('horizon.description', 'Horizon is a global initiative offering fair housing, healthcare, and travel support. Integrated with Homiio, it ensures affordable living within a connected, sustainable network.')}
             </ThemedText>
             <TouchableOpacity
                 style={styles.joinButton}
@@ -24,7 +24,7 @@ export function HorizonInitiativeWidget() {
                     window.open(url, "_blank");
                 }}
             >
-                <ThemedText style={styles.joinButtonText}>Learn More</ThemedText>
+                <ThemedText style={styles.joinButtonText}>{t('home.horizon.learnMore', 'Learn More')}</ThemedText>
             </TouchableOpacity>
         </BaseWidget>
     );

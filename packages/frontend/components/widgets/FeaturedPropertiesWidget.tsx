@@ -32,7 +32,7 @@ export function FeaturedPropertiesWidget() {
     if (error) {
         console.error('FeaturedPropertiesWidget Error:', error);
         return (
-            <BaseWidget title={t("Featured Properties")}>
+            <BaseWidget title={t('home.featured.title', 'Featured Properties')}>
                 <View style={styles.errorContainer}>
                     <ThemedText style={styles.errorText}>
                         {typeof error === 'string' ? error : (error as Error)?.message || 'Failed to load properties'}
@@ -43,12 +43,12 @@ export function FeaturedPropertiesWidget() {
     }
 
     return (
-        <BaseWidget title={t("Featured Properties")}>
+        <BaseWidget title={t('home.featured.title', 'Featured Properties')}>
             <View>
                 {loading ? (
                     <View style={styles.loadingContainer}>
                         <LoadingSpinner size={16} showText={false} />
-                        <ThemedText style={styles.loadingText}>Loading properties...</ThemedText>
+                        <ThemedText style={styles.loadingText}>{t('state.loading', 'Loading...')}</ThemedText>
                     </View>
                 ) : (
                     <FeaturedProperties properties={featured} />
@@ -60,6 +60,7 @@ export function FeaturedPropertiesWidget() {
 
 function FeaturedProperties({ properties }: { properties: any[] }) {
     const router = useRouter();
+    const { t } = useTranslation();
 
     // Debug: Log the properties to see the actual structure
     console.log('FeaturedProperties received:', properties);
@@ -93,7 +94,7 @@ function FeaturedProperties({ properties }: { properties: any[] }) {
     if (propertyItems.length === 0) {
         return (
             <View style={styles.emptyContainer}>
-                <ThemedText style={styles.emptyText}>No featured properties available at the moment</ThemedText>
+                <ThemedText style={styles.emptyText}>{t('home.featured.empty', 'No featured properties available at the moment')}</ThemedText>
             </View>
         );
     }
@@ -131,7 +132,7 @@ function FeaturedProperties({ properties }: { properties: any[] }) {
                 style={styles.showMoreButton}
                 activeOpacity={0.7}>
                 <ThemedText style={styles.showMoreText}>
-                    View All Properties
+                    {t('home.viewAll', 'View All')}
                 </ThemedText>
             </TouchableOpacity>
         </>

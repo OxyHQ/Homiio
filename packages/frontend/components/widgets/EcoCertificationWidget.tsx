@@ -11,15 +11,15 @@ export function EcoCertificationWidget() {
 
     return (
         <BaseWidget
-            title={t("Eco Certified")}
+            title={t('home.eco.title', 'Eco-Certified Properties')}
             icon={<Ionicons name="leaf" size={22} color="green" />}
         >
             <View style={styles.ecoCertContent}>
                 <Text style={styles.ecoText}>
-                    Properties with this badge meet our sustainability standards
+                    {t('home.eco.description', 'Find sustainable properties that meet our energy efficiency and eco-friendly standards')}
                 </Text>
                 <TouchableOpacity style={styles.learnMoreButton}>
-                    <ThemedText style={styles.learnMoreText}>Learn More</ThemedText>
+                    <ThemedText style={styles.learnMoreText}>{t('home.horizon.learnMore', 'Learn More')}</ThemedText>
                 </TouchableOpacity>
             </View>
         </BaseWidget>

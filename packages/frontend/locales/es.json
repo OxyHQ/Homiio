@@ -146,8 +146,10 @@
       "viewEcoProperties": "Ver Propiedades Ecológicas"
     },
     "featured": {
-      "title": "Propiedades Destacadas"
+      "title": "Propiedades Destacadas",
+      "empty": "No hay propiedades destacadas disponibles en este momento"
     },
+    "viewAll": "Ver Todo",
     "recentlyViewed": {
       "title": "Vistas Recientemente",
       "noProperties": "No hay propiedades vistas recientemente",
