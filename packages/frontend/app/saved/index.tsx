@@ -20,6 +20,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { EditNotesBottomSheet } from '@/components/EditNotesBottomSheet';
+import { parseNotesString } from '@/utils/notes';
 
 // Extended interface for saved properties
 type SavedPropertyWithUI = SavedProperty;
@@ -340,7 +341,7 @@ export default function SavedPropertiesScreen() {
                     variant={viewMode === 'grid' ? 'compact' : 'saved'}
                     orientation={viewMode === 'grid' ? 'vertical' : 'horizontal'}
                     onPress={() => !isProcessing && handlePropertyPress(item)}
-                    noteText={item.notes || ''}
+                    noteText={(parseNotesString(item.notes as any)[0]?.text ?? '') + (parseNotesString(item.notes as any).length > 1 ? ` (+${parseNotesString(item.notes as any).length - 1} more)` : '')}
                     onPressNote={() => !isProcessing && handleEditNotes(item)}
                     isSelected={isSelected}
                     isProcessing={isProcessing}
@@ -615,6 +616,18 @@ export default function SavedPropertiesScreen() {
                         >
                             <IconComponent
                                 name="search"
+                                size={24}
+                                color={colors.COLOR_BLACK}
+                            />
+                        </TouchableOpacity>,
+                        <TouchableOpacity
+                            key="notes"
+                            style={styles.headerButton}
+                            onPress={() => router.push('/saved/notes')}
+                            accessibilityLabel="Open notes"
+                        >
+                            <IconComponent
+                                name="document-text-outline"
                                 size={24}
                                 color={colors.COLOR_BLACK}
                             />

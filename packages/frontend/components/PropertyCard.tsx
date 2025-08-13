@@ -80,7 +80,7 @@ const getVariantStyles = (variant: PropertyCardVariant) => {
         case 'compact':
             return {
                 imageHeight: 100,
-                showFeatures: false,
+                showFeatures: true,
                 showTypeIcon: false,
                 showRating: false,
             };
@@ -197,7 +197,7 @@ export function PropertyCard({
 
         switch (variant) {
             case 'compact':
-                return 1;
+                return 2;
             case 'featured':
                 return 2;
             default:
@@ -365,10 +365,16 @@ export function PropertyCard({
                                 </View>
                             </>
                         )}
+                        {variant === 'compact' && propertyData.type && (
+                            <>
+                                <ThemedText style={styles.featureSeparator}>•</ThemedText>
+                                <ThemedText style={styles.featureText}>{propertyData.type}</ThemedText>
+                            </>
+                        )}
                     </View>
                 )}
 
-                {/* Price - Airbnb style at bottom */}
+                {/* Price */}
                 {showPrice && propertyData.price && (
                     <View style={styles.priceContainer}>
                         <ThemedText style={[
