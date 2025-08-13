@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import LoadingSpinner from '../LoadingSpinner';
 import { Link, useRouter } from 'expo-router';
@@ -10,6 +10,7 @@ import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '../ThemedText';
+import * as Location from 'expo-location';
 
 const IconComponent = Ionicons as any;
 
@@ -21,6 +22,34 @@ export function FeaturedPropertiesWidget() {
     useEffect(() => { loadProperties({ limit: 4, status: 'available' }); }, [loadProperties]);
 
     const featured = properties || [];
+    // Single fetch path: attempt location; on denial or error, fallback to default
+    useEffect(() => {
+        (async () => {
+            try {
+                const { status } = await Location.requestForegroundPermissionsAsync();
+                if (status !== 'granted') {
+                    await loadProperties({ limit: 4, status: 'available' });
+                    return;
+                }
+                try {
+                    const location = await Location.getCurrentPositionAsync({});
+                    await loadProperties({
+                        limit: 4,
+                        status: 'available',
+                        lat: location.coords.latitude as any,
+                        lng: location.coords.longitude as any,
+                        radius: 45000 as any,
+                    });
+                } catch {
+                    await loadProperties({ limit: 4, status: 'available' });
+                }
+            } catch {
+                await loadProperties({ limit: 4, status: 'available' });
+            }
+        })();
+    }, [loadProperties]);
+
+    // No client-side ordering; backend provides preferred order and savesCount
 
     // Basic monitoring log
     console.log('FeaturedPropertiesWidget:', {
@@ -51,7 +80,9 @@ export function FeaturedPropertiesWidget() {
                         <ThemedText style={styles.loadingText}>{t('state.loading', 'Loading...')}</ThemedText>
                     </View>
                 ) : (
-                    <FeaturedProperties properties={featured} />
+                    <FeaturedProperties
+                        properties={featured}
+                    />
                 )}
             </View>
         </BaseWidget>
@@ -65,8 +96,18 @@ function FeaturedProperties({ properties }: { properties: any[] }) {
     // Debug: Log the properties to see the actual structure
     console.log('FeaturedProperties received:', properties);
 
+    // Order most saved to less saved, then limit to 4
+    const sorted = Array.isArray(properties)
+        ? [...properties].sort((a, b) => {
+            const aSaves = typeof a.savesCount === 'number' ? a.savesCount : 0;
+            const bSaves = typeof b.savesCount === 'number' ? b.savesCount : 0;
+            return bSaves - aSaves;
+        })
+        : [];
+    const limited = sorted.slice(0, 4);
+
     // Map API data to display format
-    const propertyItems = properties.map(property => {
+    const propertyItems = limited.map(property => {
         console.log('Mapping property:', property); // Debug each property
 
         // Generate title dynamically from property data
@@ -77,6 +118,8 @@ function FeaturedProperties({ properties }: { properties: any[] }) {
             bathrooms: property.bathrooms
         });
 
+        const savesCount = typeof property.savesCount === 'number' ? property.savesCount : 0;
+
         return {
             id: property._id || property.id, // Use _id from MongoDB or fallback to id
             title: generatedTitle,
@@ -86,7 +129,7 @@ function FeaturedProperties({ properties }: { properties: any[] }) {
             isEcoCertified: property.amenities?.includes('eco-friendly') ||
                 property.amenities?.includes('green') ||
                 property.amenities?.includes('solar') || false,
-            rating: 4.5 // Default rating since it's not in the API yet
+            savesCount,
         };
     });
 
@@ -119,8 +162,8 @@ function FeaturedProperties({ properties }: { properties: any[] }) {
                             <View style={styles.propertyFooter}>
                                 <ThemedText style={styles.propertyPrice}>{property.price}</ThemedText>
                                 <View style={styles.ratingContainer}>
-                                    <IconComponent name="star" size={14} color="#FFD700" />
-                                    <ThemedText style={styles.ratingText}>{property.rating}</ThemedText>
+                                    <IconComponent name="heart" size={14} color="#ef4444" />
+                                    <ThemedText style={styles.ratingText}>{property.savesCount || 0}</ThemedText>
                                 </View>
                             </View>
                         </View>

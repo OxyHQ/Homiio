@@ -241,6 +241,10 @@ class PropertyController {
         sortBy = "createdAt",
         sortOrder = "desc",
         profileId,
+        // Optional coordinates and radius for preference-based ordering
+        lat,
+        lng,
+        radius
       } = req.query;
 
       // Build filters
@@ -286,7 +290,7 @@ class PropertyController {
       const limitNumber = parseInt(limit);
       const skip = (pageNumber - 1) * limitNumber;
 
-      // Query database
+      // Query database (base list)
       const [properties, total] = await Promise.all([
         Property.find(filters)
           .sort(sortOptions)
@@ -297,11 +301,74 @@ class PropertyController {
         Property.countDocuments(filters),
       ]);
 
+      // Build savesCount map in a single aggregation for returned list
+      const mongoose = require('mongoose');
+      const { Saved } = require('../models');
+      const ids = properties.map(p => p._id).filter(Boolean).map((id: any) => new mongoose.Types.ObjectId(id));
+      let savesMap: Record<string, number> = {};
+      if (ids.length > 0) {
+        const savesAgg = await Saved.aggregate([
+          { $match: { targetType: 'property', targetId: { $in: ids } } },
+          { $group: { _id: '$targetId', count: { $sum: 1 } } }
+        ]).catch(() => []);
+        savesMap = Array.isArray(savesAgg) ? savesAgg.reduce((acc: Record<string, number>, doc: any) => {
+          acc[String(doc._id)] = doc.count || 0;
+          return acc;
+        }, {}) : {};
+      }
+
+      // If coordinates are provided, prefer items within radius and order by saves then distance
+      let ordered = properties;
+      const hasCoords = lat !== undefined && lng !== undefined && lat !== null && lng !== null;
+      const preferredRadiusMeters = radius ? parseFloat(radius) : 45000; // default 45km preference
+
+      if (hasCoords) {
+        const latitude = parseFloat(lat);
+        const longitude = parseFloat(lng);
+
+        try {
+          // Compute distance and decorate
+          const R = 6371000; // meters
+          const toRadians = (deg: number) => deg * Math.PI / 180;
+          const computeDistance = (prop: any): number => {
+            const coords = prop?.location?.coordinates;
+            if (!Array.isArray(coords) || coords.length !== 2) return Number.POSITIVE_INFINITY;
+            const [propLng, propLat] = coords;
+            const dLat = toRadians(latitude - propLat);
+            const dLng = toRadians(longitude - propLng);
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(toRadians(propLat)) * Math.cos(toRadians(latitude)) * Math.sin(dLng/2) * Math.sin(dLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+          };
+
+          const decorated = properties.map((p: any, index: number) => {
+            const distance = computeDistance(p);
+            const savesCount = savesMap[String(p._id)] || 0;
+            return { index, distance, savesCount, inside: Number.isFinite(distance) && distance <= preferredRadiusMeters, prop: p };
+          });
+
+          decorated.sort((a, b) => {
+            if (a.inside !== b.inside) return a.inside ? -1 : 1; // prefer inside radius
+            if (b.savesCount !== a.savesCount) return b.savesCount - a.savesCount; // higher saves first
+            if (a.distance !== b.distance) return a.distance - b.distance; // nearer first
+            return a.index - b.index; // stable fallback
+          });
+
+          ordered = decorated.map(d => ({ ...d.prop, savesCount: d.savesCount, distance: d.distance }));
+        } catch (e) {
+          // On any failure, keep original ordering but attach savesCount
+          ordered = properties.map((p: any) => ({ ...p, savesCount: savesMap[String(p._id)] || 0 }));
+        }
+      } else {
+        // No coordinates: attach savesCount without reordering
+        ordered = properties.map((p: any) => ({ ...p, savesCount: savesMap[String(p._id)] || 0 }));
+      }
+
       const totalPages = Math.ceil(total / limitNumber);
 
       res.json(
         paginationResponse(
-          properties,
+          ordered,
           pageNumber,
           limitNumber,
           total,

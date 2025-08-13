@@ -11,6 +11,9 @@ import { RecentlyViewedWidget } from './RecentlyViewedWidget';
 import { QuickFiltersWidget } from './QuickFiltersWidget';
 import { PropertyPreviewWidget } from './PropertyPreviewWidget';
 
+// Feature flag: controls whether the Neighborhood widget is rendered
+const NEIGHBORHOOD_WIDGET_ENABLED = (process.env.NEXT_PUBLIC_NEIGHBORHOOD_WIDGET_ENABLED || '').toLowerCase() === 'true';
+
 // Define screen IDs
 export type ScreenId =
     | 'home'
@@ -135,13 +138,21 @@ export function WidgetManager({
 
     const screenWidgets = getWidgetsForScreen(screenId);
 
-    if (screenWidgets.length === 0) {
+    // If disabled, remove NeighborhoodRatingWidget elements entirely
+    const filteredScreenWidgets = NEIGHBORHOOD_WIDGET_ENABLED
+        ? screenWidgets
+        : screenWidgets.filter(widget => {
+            if (!React.isValidElement(widget)) return true;
+            return widget.type !== NeighborhoodRatingWidget;
+        });
+
+    if (filteredScreenWidgets.length === 0) {
         return null;
     }
 
     return (
         <View style={styles.container}>
-            {screenWidgets.map((widget, index) => (
+            {filteredScreenWidgets.map((widget, index) => (
                 <View key={`widget-${index}`} style={styles.widgetWrapper}>
                     {widget}
                 </View>
