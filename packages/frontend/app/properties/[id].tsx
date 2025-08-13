@@ -437,6 +437,11 @@ export default function PropertyDetailPage() {
                         transparent: true,
                         scrollThreshold: 100,
                         rightComponents: [
+                            normalizedLandlordProfileId ? (
+                                <TouchableOpacity key="profile" style={styles.headerButton} onPress={() => router.push(`/profile/${normalizedLandlordProfileId}`)}>
+                                    <IconComponent name="person-circle-outline" size={24} color="#222" />
+                                </TouchableOpacity>
+                            ) : null,
                             <TouchableOpacity key="share" style={styles.headerButton} onPress={handleShare}>
                                 <IconComponent name="share-outline" size={24} color="#222" />
                             </TouchableOpacity>,

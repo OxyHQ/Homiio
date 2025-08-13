@@ -18,6 +18,8 @@ import savedPropertyService from '@/services/savedPropertyService';
 import type { SavedProperty } from '@homiio/shared-types';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
+// import { useSavedProfiles } from '@/context/SavedProfilesContext';
+import { api } from '@/utils/api';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { EditNotesBottomSheet } from '@/components/EditNotesBottomSheet';
 import { parseNotesString } from '@/utils/notes';
@@ -31,7 +33,7 @@ const { width: screenWidth } = Dimensions.get('window');
 // Types
 export type SortOption = 'recent' | 'price-low' | 'price-high' | 'title' | 'notes';
 export type ViewMode = 'list' | 'grid';
-export type FilterCategory = 'all' | 'recent' | 'noted' | 'quick-saves' | 'folders';
+export type FilterCategory = 'all' | 'recent' | 'noted' | 'quick-saves' | 'folders' | 'profiles';
 
 // Constants
 const SORT_OPTIONS = [
@@ -48,6 +50,7 @@ const CATEGORIES = [
     { id: 'noted', name: 'With Notes', icon: 'document-text-outline' },
     { id: 'quick-saves', name: 'Quick Saves', icon: 'bookmark-outline' },
     { id: 'folders', name: 'Folders', icon: 'folder-outline' },
+    { id: 'profiles', name: 'Profiles', icon: 'person-circle-outline' },
 ];
 
 // Grid layout constants (style-based, no runtime calculations)
@@ -68,6 +71,7 @@ export default function SavedPropertiesScreen() {
 
     // Local state for saved properties
     const [savedProperties, setSavedProperties] = useState<SavedPropertyWithUI[]>([]);
+    const [savedProfiles, setSavedProfiles] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -75,7 +79,7 @@ export default function SavedPropertiesScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const { tab } = useLocalSearchParams<{ tab?: string }>();
     const parseTab = (value?: string): FilterCategory => (
-        value === 'recent' || value === 'noted' || value === 'quick-saves' || value === 'folders' ? value : 'all'
+        value === 'recent' || value === 'noted' || value === 'quick-saves' || value === 'folders' || value === 'profiles' ? value : 'all'
     );
     const [selectedCategory, setSelectedCategory] = useState<FilterCategory>(parseTab(typeof tab === 'string' ? tab : undefined));
     useEffect(() => {
@@ -104,6 +108,9 @@ export default function SavedPropertiesScreen() {
             setError(null);
             const response = await savedPropertyService.getSavedProperties(oxyServices, activeSessionId);
             setSavedProperties(response.properties);
+            // Load saved profiles
+            const res = await api.get('/api/profiles/me/saved-profiles', { oxyServices, activeSessionId });
+            setSavedProfiles(res.data?.data || res.data || []);
         } catch (error: any) {
             console.error('Failed to load saved properties:', error);
             setError(error.message || 'Failed to load saved properties');
@@ -205,8 +212,9 @@ export default function SavedPropertiesScreen() {
             noted: savedProperties.filter(p => p.notes && p.notes.trim().length > 0).length,
             'quick-saves': savedProperties.filter(p => !p.notes || p.notes.trim().length === 0).length,
             folders: folders.length,
+            profiles: savedProfiles.length,
         };
-    }, [savedProperties, folders]);
+    }, [savedProperties, folders, savedProfiles]);
 
     // Folders filtered for Folders tab
     const filteredFolders = useMemo(() => {
@@ -447,7 +455,7 @@ export default function SavedPropertiesScreen() {
                 })}
             </View>
 
-            {/* Folders tab now shows a proper list below; removed breakdown */}
+            {/* Folders/Profiles tabs show custom lists below */}
 
             {/* Controls Bar */}
             <View style={styles.controlsBar}>
@@ -503,7 +511,7 @@ export default function SavedPropertiesScreen() {
                     </TouchableOpacity>
 
                     <Text style={styles.resultCount}>
-                        {filteredProperties.length} {filteredProperties.length === 1 ? 'property' : 'properties'}
+                        {selectedCategory === 'profiles' ? savedProfiles.length : filteredProperties.length} {selectedCategory === 'profiles' ? (savedProfiles.length === 1 ? 'profile' : 'profiles') : (filteredProperties.length === 1 ? 'property' : 'properties')}
                     </Text>
                 </View>
             </View>
@@ -686,6 +694,38 @@ export default function SavedPropertiesScreen() {
                             filteredFolders.length === 0 && styles.emptyListContent
                         ])}
                         ListEmptyComponent={renderEmptyState}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={isLoading}
+                                onRefresh={handleRefresh}
+                                colors={[colors.primaryColor]}
+                                tintColor={colors.primaryColor}
+                            />
+                        }
+                    />
+                ) : selectedCategory === 'profiles' ? (
+                    <FlatList
+                        data={savedProfiles}
+                        keyExtractor={(item) => String(item._id)}
+                        renderItem={({ item }) => (
+                            <ListItem
+                                title={(item.agencyProfile?.legalCompanyName || item.businessProfile?.legalCompanyName || item.cooperativeProfile?.legalName || item.personalProfile?.personalInfo?.bio || item.oxyUserId || 'Profile')}
+                                description={item.profileType}
+                                onPress={() => router.push(`/profile/${item._id}`)}
+                                rightElement={<Text style={styles.folderCount}>↗</Text>}
+                            />
+                        )}
+                        contentContainerStyle={StyleSheet.flatten([
+                            styles.listContent,
+                            savedProfiles.length === 0 && styles.emptyListContent
+                        ])}
+                        ListEmptyComponent={
+                            <EmptyState
+                                icon="person-circle-outline"
+                                title="No Saved Profiles"
+                                description="Follow profiles to see them here"
+                            />
+                        }
                         refreshControl={
                             <RefreshControl
                                 refreshing={isLoading}

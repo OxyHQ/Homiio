@@ -174,6 +174,10 @@ export default function () {
   router.get('/telegram/webhook', asyncHandler(telegramController.getWebhookInfo));
   router.post('/telegram/test', asyncHandler(telegramController.sendTestMessage));
 
+  // Public profile route (read-only)
+  const profileController = require('../controllers/profileController');
+  router.get('/public/profiles/:profileId', asyncHandler(profileController.getProfileById));
+
   // Public shared conversation endpoint (no authentication required)
   router.get('/ai/shared/:token', asyncHandler(async (req, res) => {
     try {

@@ -23,6 +23,7 @@ export default function () {
   router.get("/me/recent-properties/debug", asyncHandler(profileController.debugRecentProperties));
   router.delete("/me/recent-properties", asyncHandler(profileController.clearRecentProperties));
   router.get("/me/saved-properties", asyncHandler(profileController.getSavedProperties));
+  router.get("/me/saved-profiles", asyncHandler(profileController.getSavedProfiles));
   router.post("/me/save-property", asyncHandler(profileController.saveProperty));
   router.delete("/me/saved-properties/:propertyId", asyncHandler(profileController.unsaveProperty));
   router.patch("/me/saved-properties/:propertyId/notes", asyncHandler(profileController.updateSavedPropertyNotes));
@@ -37,6 +38,10 @@ export default function () {
   router.delete("/me/saved-searches/:searchId", asyncHandler(profileController.deleteSavedSearch));
   router.put("/me/saved-searches/:searchId", asyncHandler(profileController.updateSavedSearch));
   router.put("/me/saved-searches/:searchId/notifications", asyncHandler(profileController.toggleSearchNotifications));
+  // Save/unsave other profiles (follow)
+  router.post("/me/save-profile", asyncHandler(profileController.saveProfile));
+  router.delete("/me/saved-profiles/:profileId", asyncHandler(profileController.unsaveProfile));
+  router.get("/me/saved-profiles/:profileId", asyncHandler(profileController.isProfileSaved));
   router.get("/me/properties", asyncHandler(profileController.getProfileProperties));
   router.get("/me/:profileType", asyncHandler(profileController.getProfileByType));
   router.get("/:profileId", asyncHandler(profileController.getProfileById));

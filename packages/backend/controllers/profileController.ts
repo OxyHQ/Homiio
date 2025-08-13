@@ -54,6 +54,92 @@ class ProfileController {
     this.deleteSavedSearch = this.deleteSavedSearch.bind(this);
     this.updateSavedSearch = this.updateSavedSearch.bind(this);
     this.toggleSearchNotifications = this.toggleSearchNotifications.bind(this);
+    this.saveProfile = this.saveProfile.bind(this);
+    this.unsaveProfile = this.unsaveProfile.bind(this);
+    this.isProfileSaved = this.isProfileSaved.bind(this);
+  }
+
+  /**
+   * Save (follow) a profile for the current user's active profile
+   */
+  async saveProfile(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      const { profileId } = req.body;
+      if (!oxyUserId) {
+        return res.status(401).json(errorResponse("Authentication required", "AUTHENTICATION_REQUIRED"));
+      }
+      if (!profileId) {
+        return res.status(400).json(errorResponse("Profile ID is required", "PROFILE_ID_REQUIRED"));
+      }
+      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      if (!activeProfile) {
+        return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
+      }
+      const { SavedProfile } = require('../models');
+      // Upsert follow
+      await SavedProfile.updateOne(
+        { followerProfileId: activeProfile._id, followedProfileId: profileId },
+        { $set: { followerProfileId: activeProfile._id, followedProfileId: profileId, createdAt: new Date() } },
+        { upsert: true }
+      );
+      return res.json(successResponse({}, "Profile saved"));
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      next(error);
+    }
+  }
+
+  /**
+   * Unsave (unfollow) a profile
+   */
+  async unsaveProfile(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      const { profileId } = req.params;
+      if (!oxyUserId) {
+        return res.status(401).json(errorResponse("Authentication required", "AUTHENTICATION_REQUIRED"));
+      }
+      if (!profileId) {
+        return res.status(400).json(errorResponse("Profile ID is required", "PROFILE_ID_REQUIRED"));
+      }
+      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      if (!activeProfile) {
+        return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
+      }
+      const { SavedProfile } = require('../models');
+      await SavedProfile.deleteOne({ followerProfileId: activeProfile._id, followedProfileId: profileId });
+      return res.json(successResponse({}, "Profile unsaved"));
+    } catch (error) {
+      console.error('Error unsaving profile:', error);
+      next(error);
+    }
+  }
+
+  /**
+   * Check if a profile is saved (followed) by current user's active profile
+   */
+  async isProfileSaved(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      const { profileId } = req.params;
+      if (!oxyUserId) {
+        return res.status(401).json(errorResponse("Authentication required", "AUTHENTICATION_REQUIRED"));
+      }
+      if (!profileId) {
+        return res.status(400).json(errorResponse("Profile ID is required", "PROFILE_ID_REQUIRED"));
+      }
+      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      if (!activeProfile) {
+        return res.json(successResponse({ saved: false }, "No active profile"));
+      }
+      const { SavedProfile } = require('../models');
+      const exists = await SavedProfile.findOne({ followerProfileId: activeProfile._id, followedProfileId: profileId }).lean();
+      return res.json(successResponse({ saved: !!exists }, "Saved status"));
+    } catch (error) {
+      console.error('Error checking saved profile:', error);
+      next(error);
+    }
   }
 
   /**
@@ -1337,6 +1423,30 @@ class ProfileController {
       res.json(response);
     } catch (error) {
       console.error("Error getting saved properties:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Get saved (followed) profiles for the current user's profile
+   */
+  async getSavedProfiles(req, res, next) {
+    try {
+      const oxyUserId = req.user?.id || req.user?._id;
+      if (!oxyUserId) {
+        return res.status(401).json(errorResponse("Authentication required", "AUTHENTICATION_REQUIRED"));
+      }
+      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      if (!activeProfile) {
+        return res.json(successResponse([] , "No profile found for user"));
+      }
+      const { SavedProfile } = require('../models');
+      const follows = await SavedProfile.find({ followerProfileId: activeProfile._id }).lean();
+      const ids = follows.map(f => f.followedProfileId);
+      const profiles = await Profile.find({ _id: { $in: ids } }).lean();
+      return res.json(successResponse(profiles, "Saved profiles retrieved"));
+    } catch (error) {
+      console.error('Error getting saved profiles:', error);
       next(error);
     }
   }

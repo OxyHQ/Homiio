@@ -6,6 +6,7 @@ import LoadingSpinner from './LoadingSpinner';
 import { SaveToFolderBottomSheet } from './SaveToFolderBottomSheet';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { Property } from '@homiio/shared-types';
+import { useSavedProfiles } from '@/context/SavedProfilesContext';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 
@@ -25,6 +26,8 @@ interface SaveButtonProps {
     isLoading?: boolean;
     // Only need the property object
     property?: Property;
+    // For saving profiles instead of properties
+    profileId?: string;
 }
 
 export function SaveButton({
@@ -40,14 +43,16 @@ export function SaveButton({
     showLoading = true,
     isLoading = false,
     // Only need the property object
-    property
+    property,
+    profileId
 }: SaveButtonProps) {
     const [isPressed, setIsPressed] = useState(false);
     const [internalLoading, setInternalLoading] = useState(false);
     const pressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const isProcessingRef = useRef(false);
     const bottomSheetContext = useContext(BottomSheetContext);
-    const { savePropertyToFolder, unsaveProperty, isPropertySaved, isInitialized } = useSavedPropertiesContext();
+    const { savePropertyToFolder, unsaveProperty } = useSavedPropertiesContext();
+    const { saveProfile, unsaveProfile } = useSavedProfiles();
 
     // Extract propertyId and propertyTitle from property object
     const propertyId = property?._id || property?.id;
@@ -68,20 +73,24 @@ export function SaveButton({
     const isButtonDisabled = disabled || isLoading || internalLoading || isPressed;
 
     const handleInternalSave = async () => {
-        if (!propertyId || isProcessingRef.current) return;
+        if (isProcessingRef.current) return;
 
         try {
             isProcessingRef.current = true;
             setInternalLoading(true);
 
-            if (isSaved) {
-                // Property is saved, so unsave it
-                await unsaveProperty(propertyId);
-                console.log('Property unsaved');
-            } else {
-                // Property is not saved, so save it to default folder
-                await savePropertyToFolder(propertyId, null);
-                console.log('Property saved to default folder');
+            if (profileId) {
+                if (isSaved) {
+                    await unsaveProfile(profileId);
+                } else {
+                    await saveProfile(profileId);
+                }
+            } else if (propertyId) {
+                if (isSaved) {
+                    await unsaveProperty(propertyId);
+                } else {
+                    await savePropertyToFolder(propertyId, null);
+                }
             }
         } catch (error) {
             console.error('Failed to toggle save:', error);
@@ -107,7 +116,7 @@ export function SaveButton({
         }, 1000); // 1 second debounce
 
         // Use internal save logic if propertyId is provided, otherwise use external onPress
-        if (propertyId) {
+        if (profileId || propertyId) {
             handleInternalSave();
         } else if (onPress) {
             onPress();

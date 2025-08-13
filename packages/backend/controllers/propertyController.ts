@@ -240,10 +240,13 @@ class PropertyController {
   eco,
         sortBy = "createdAt",
         sortOrder = "desc",
+        profileId,
       } = req.query;
 
       // Build filters
       const filters: any = {};
+      // Optional filter by profileId (supports viewing listings for a specific profile)
+      if (profileId) filters.profileId = profileId;
       if (type) filters.type = type;
       if (city) filters["address.city"] = new RegExp(city, "i");
       if (bedrooms) filters.bedrooms = parseInt(bedrooms);
