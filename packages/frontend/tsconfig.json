@@ -3,15 +3,26 @@
   "compilerOptions": {
     "esModuleInterop": true,
     "strict": true,
+    "composite": true,
     "baseUrl": ".",
     "jsx": "react-jsx",
     "paths": {
-      "@/*": ["./*"],
-      "@homiio/shared-types": ["../shared-types/src"],
-      "@homiio/shared-types/*": ["../shared-types/src/*"]
+      "@/*": [
+        "./*"
+      ],
+      "@homiio/shared-types": [
+        "../shared-types/src"
+      ],
+      "@homiio/shared-types/*": [
+        "../shared-types/src/*"
+      ]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", "nativewind-env.d.ts"],
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "nativewind-env.d.ts"
+  ],
   "references": [
     {
       "path": "../shared-types"
