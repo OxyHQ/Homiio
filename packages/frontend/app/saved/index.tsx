@@ -338,6 +338,7 @@ export default function SavedPropertiesScreen() {
                 <PropertyCard
                     property={item}
                     variant={viewMode === 'grid' ? 'compact' : 'saved'}
+                    orientation={viewMode === 'grid' ? 'vertical' : 'horizontal'}
                     onPress={() => !isProcessing && handlePropertyPress(item)}
                     noteText={item.notes || ''}
                     onPressNote={() => !isProcessing && handleEditNotes(item)}

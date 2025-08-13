@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
         width: '100%',
         aspectRatio: 1,
         backgroundColor: '#f8f8f8',
-        borderRadius: 25,
+        borderRadius: 16,
         overflow: 'hidden',
     },
     horizontalImageContainer: {
@@ -489,16 +489,17 @@ const styles = StyleSheet.create({
         zIndex: 2,
     },
     content: {
-        // padding: 10, // Remove padding for flush alignment
         flex: 1,
         justifyContent: 'space-between',
-        marginTop: 10, // Add gap between image and content
+        marginTop: 8,
+        paddingHorizontal: 8,
     },
     horizontalContent: {
         flex: 1,
         marginTop: 0,
         justifyContent: 'space-between',
         minHeight: 120,
+        paddingLeft: 10,
     },
     compactContent: {
         // padding: 8, // Remove padding for flush alignment
@@ -507,31 +508,31 @@ const styles = StyleSheet.create({
         // padding: 12, // Remove padding for flush alignment
     },
     title: {
-        fontSize: 14,
+        fontSize: 15,
         fontWeight: '600',
         color: '#222222',
-        lineHeight: 18,
-        marginBottom: 3,
+        lineHeight: 20,
+        marginBottom: 4,
     },
     compactTitle: {
-        fontSize: 13,
-        fontWeight: '500',
+        fontSize: 14,
+        fontWeight: '600',
     },
     featuredTitle: {
         fontSize: 15,
         fontWeight: '700',
     },
     horizontalTitle: {
-        fontSize: 20,
+        fontSize: 16,
         fontWeight: '600',
-        lineHeight: 32,
+        lineHeight: 22,
         marginBottom: 4,
     },
     location: {
         fontSize: 12,
         color: '#717171',
-        marginBottom: 4,
-        lineHeight: 16,
+        marginBottom: 6,
+        lineHeight: 18,
     },
     horizontalLocation: {
         fontSize: 14,
@@ -540,8 +541,8 @@ const styles = StyleSheet.create({
         lineHeight: 18,
     },
     compactLocation: {
-        fontSize: 11,
-        marginBottom: 3,
+        fontSize: 12,
+        marginBottom: 6,
     },
     featuredLocation: {
         fontSize: 13,
@@ -567,7 +568,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         flexWrap: 'wrap',
-        marginBottom: 6,
+        marginBottom: 8,
+        gap: 4,
     },
     feature: {
         flexDirection: 'row',
@@ -586,12 +588,12 @@ const styles = StyleSheet.create({
         marginTop: 'auto',
     },
     price: {
-        fontSize: 14,
-        fontWeight: '600',
+        fontSize: 15,
+        fontWeight: '700',
         color: '#222222',
     },
     compactPrice: {
-        fontSize: 13,
+        fontSize: 14,
     },
     featuredPrice: {
         fontSize: 15,
