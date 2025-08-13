@@ -987,26 +987,9 @@ class PropertyController {
         return next(new AppError('Property not found', 404, 'NOT_FOUND'));
       }
 
-      // Calculate statistics from database
-      // savesCount: number of unique profiles that have saved this property in any folder
-      const { SavedPropertyFolder } = require('../models');
-
-      let savesCount = 0;
-      try {
-        const result = await SavedPropertyFolder.aggregate([
-          { $match: { 'properties.propertyId': new mongoose.Types.ObjectId(propertyId) } },
-          { $group: { _id: '$profileId' } },
-          { $count: 'count' }
-        ]);
-        savesCount = result?.[0]?.count || 0;
-      } catch (aggError) {
-        // Don't fail the whole stats endpoint if aggregation fails; just log and continue
-        console.error('[getPropertyStats] Failed to aggregate savesCount', {
-          propertyId,
-          error: aggError?.message,
-        });
-        savesCount = 0;
-      }
+      // Calculate statistics from database using unified Saved collection
+      const { Saved } = require('../models');
+      let savesCount = await Saved.countDocuments({ targetType: 'property', targetId: new mongoose.Types.ObjectId(propertyId) }).catch(() => 0);
 
       // Compute real-time stats
       const { Room, Lease } = require('../models');

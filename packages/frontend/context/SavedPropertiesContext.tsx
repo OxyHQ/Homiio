@@ -156,6 +156,9 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
             // Save property directly to the specified folder using the unified save API
             await savedPropertyService.saveProperty(propertyId, undefined, oxyServices, activeSessionId, folderId);
 
+            // Refresh saved properties so folder views update immediately
+            await loadSavedProperties();
+
             console.log('Property saved successfully');
 
             toast.success('Property saved successfully');
@@ -192,6 +195,9 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
 
             // Unsave property using the API
             await savedPropertyService.unsaveProperty(propertyId, oxyServices, activeSessionId);
+
+            // Refresh saved properties so folder views update immediately
+            await loadSavedProperties();
 
             console.log('Property unsaved successfully');
 

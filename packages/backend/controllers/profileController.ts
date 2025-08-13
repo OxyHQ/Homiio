@@ -76,11 +76,10 @@ class ProfileController {
       if (!activeProfile) {
         return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
       }
-      const { SavedProfile } = require('../models');
-      // Upsert follow
-      await SavedProfile.updateOne(
-        { followerProfileId: activeProfile._id, followedProfileId: profileId },
-        { $set: { followerProfileId: activeProfile._id, followedProfileId: profileId, createdAt: new Date() } },
+      const { Saved } = require('../models');
+      await Saved.updateOne(
+        { profileId: activeProfile._id, targetType: 'profile', targetId: profileId },
+        { $set: { profileId: activeProfile._id, targetType: 'profile', targetId: profileId, createdAt: new Date() } },
         { upsert: true }
       );
       return res.json(successResponse({}, "Profile saved"));
@@ -107,8 +106,8 @@ class ProfileController {
       if (!activeProfile) {
         return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
       }
-      const { SavedProfile } = require('../models');
-      await SavedProfile.deleteOne({ followerProfileId: activeProfile._id, followedProfileId: profileId });
+      const { Saved } = require('../models');
+      await Saved.deleteOne({ profileId: activeProfile._id, targetType: 'profile', targetId: profileId });
       return res.json(successResponse({}, "Profile unsaved"));
     } catch (error) {
       console.error('Error unsaving profile:', error);
@@ -133,8 +132,8 @@ class ProfileController {
       if (!activeProfile) {
         return res.json(successResponse({ saved: false }, "No active profile"));
       }
-      const { SavedProfile } = require('../models');
-      const exists = await SavedProfile.findOne({ followerProfileId: activeProfile._id, followedProfileId: profileId }).lean();
+      const { Saved } = require('../models');
+      const exists = await Saved.findOne({ profileId: activeProfile._id, targetType: 'profile', targetId: profileId }).lean();
       return res.json(successResponse({ saved: !!exists }, "Saved status"));
     } catch (error) {
       console.error('Error checking saved profile:', error);
@@ -1359,58 +1358,33 @@ class ProfileController {
         });
       }
 
-      // Import SavedPropertyFolder
-      const { SavedPropertyFolder } = require('../models');
-      
-      console.log('[getSavedProperties] Querying SavedPropertyFolder with profileId:', activeProfile._id);
-      
-      // Get all folders with their properties
-      const folders = await SavedPropertyFolder.find({ profileId: activeProfile._id })
-        .populate('properties.propertyId')
+      // Use unified Saved collection
+      const { Saved, Property } = require('../models');
+      const savedRows = await Saved.find({ profileId: activeProfile._id, targetType: 'property' })
+        .sort({ createdAt: -1 })
         .lean();
 
-      console.log('[getSavedProperties] SavedPropertyFolder query result:', {
-        folderCount: folders.length,
-        totalProperties: folders.reduce((sum: number, folder: any) => sum + (folder.properties?.length || 0), 0),
-        firstFolder: folders[0] ? {
-          id: folders[0]._id,
-          name: folders[0].name,
-          propertyCount: folders[0].properties.length
-        } : null
-      });
+      const propertyIds = savedRows.map((row: any) => row.targetId);
+      const properties = await Property.find({ _id: { $in: propertyIds } }).lean();
 
-      // Flatten all properties from all folders
-      const allProperties = [];
-      folders.forEach(folder => {
-        folder.properties.forEach(property => {
-          if (property.propertyId) {
-            allProperties.push({
-              ...property.propertyId,
-              savedAt: property.savedAt,
-              notes: property.notes,
-              folderId: folder._id,
-              folderName: folder.name
-            });
-          }
-        });
-      });
+      // Map propertyId to doc for quick lookup
+      const propById: Record<string, any> = {};
+      properties.forEach((p: any) => { propById[String(p._id)] = p; });
 
-      // Sort by savedAt (most recent first)
-      const properties = allProperties
-        .sort((a: any, b: any) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime())
-        .filter((item: any) => item._id); // Filter out any null properties
+      const merged = savedRows
+        .map((row: any) => {
+          const prop = propById[String(row.targetId)];
+          if (!prop) return null;
+          return {
+            ...prop,
+            savedAt: row.createdAt || row.updatedAt,
+            notes: row.notes || '',
+            folderId: row.folderId || null,
+          };
+        })
+        .filter(Boolean);
 
-      console.log('[getSavedProperties] Mapped and filtered properties:', {
-        originalCount: allProperties.length,
-        finalCount: properties.length,
-        firstProperty: properties[0] ? {
-          id: properties[0]._id,
-          title: properties[0].title || 'No title',
-          savedAt: properties[0].savedAt
-        } : null
-      });
-
-      const response = successResponse(properties, "Saved properties retrieved successfully");
+      const response = successResponse(merged, "Saved properties retrieved successfully");
       
       console.log('[getSavedProperties] Final response:', {
         success: response.success,
@@ -1440,9 +1414,9 @@ class ProfileController {
       if (!activeProfile) {
         return res.json(successResponse([] , "No profile found for user"));
       }
-      const { SavedProfile } = require('../models');
-      const follows = await SavedProfile.find({ followerProfileId: activeProfile._id }).lean();
-      const ids = follows.map(f => f.followedProfileId);
+      const { Saved } = require('../models');
+      const follows = await Saved.find({ profileId: activeProfile._id, targetType: 'profile' }).lean();
+      const ids = follows.map(f => f.targetId);
       const profiles = await Profile.find({ _id: { $in: ids } }).lean();
       return res.json(successResponse(profiles, "Saved profiles retrieved"));
     } catch (error) {
@@ -1514,8 +1488,8 @@ class ProfileController {
         activeProfile = defaultPersonalProfile;
       }
 
-      // Import SavedPropertyFolder model
-      const { SavedPropertyFolder } = require('../models');
+      // Import Saved collection and SavedPropertyFolder model
+      const { SavedPropertyFolder, Saved } = require('../models');
       
       // Find or create default folder if no folderId provided
       let targetFolder;
@@ -1552,29 +1526,18 @@ class ProfileController {
         }
       }
       
-      // Check if property is already saved in any folder
-      const existingFolder = await SavedPropertyFolder.findOne({
-        profileId: activeProfile._id,
-        'properties.propertyId': propertyId
-      });
+      // Check if property is already saved
+      const existingSaved = await Saved.findOne({ profileId: activeProfile._id, targetType: 'property', targetId: propertyId });
 
-      if (existingFolder) {
-        // Property exists in another folder, move it to target folder
-        await existingFolder.removeProperty(propertyId);
-        
-        // Add to target folder
-        await targetFolder.addProperty(propertyId, notes);
-        
-        return res.json(
-          successResponse({ folderId: targetFolder._id }, "Property moved successfully")
-        );
-      }
-
-      // Property doesn't exist anywhere, add to target folder
-      await targetFolder.addProperty(propertyId, notes);
+      // Upsert in unified Saved collection
+      await Saved.updateOne(
+        { profileId: activeProfile._id, targetType: 'property', targetId: propertyId },
+        { $set: { profileId: activeProfile._id, targetType: 'property', targetId: propertyId, notes: notes || null, folderId: targetFolder?._id, createdAt: new Date() } },
+        { upsert: true }
+      );
 
       res.json(
-        successResponse({ folderId: targetFolder._id }, "Property saved successfully")
+        successResponse({ folderId: targetFolder?._id }, "Property saved successfully")
       );
     } catch (error) {
       console.error("Error saving property:", error);
@@ -1612,23 +1575,11 @@ class ProfileController {
         );
       }
 
-      // Import SavedPropertyFolder
-      const { SavedPropertyFolder } = require('../models');
-      
-      // Find the folder containing this property
-      const folder = await SavedPropertyFolder.findOne({
-        profileId: activeProfile._id,
-        'properties.propertyId': propertyId
-      });
-
-      if (!folder) {
-        return res.status(404).json(
-          errorResponse("Saved property not found", "SAVED_PROPERTY_NOT_FOUND")
-        );
+      const { Saved } = require('../models');
+      const result = await Saved.deleteOne({ profileId: activeProfile._id, targetType: 'property', targetId: propertyId });
+      if (result.deletedCount === 0) {
+        return res.status(404).json(errorResponse("Saved property not found", "SAVED_PROPERTY_NOT_FOUND"));
       }
-
-      // Remove the property from the folder
-      await folder.removeProperty(propertyId);
 
       res.json(
         successResponse(null, "Property unsaved successfully")
@@ -1685,18 +1636,16 @@ class ProfileController {
         );
       }
 
-      // Update the property notes
-      const updated = await folder.updatePropertyNotes(propertyId, notes || '');
-
-      if (!updated) {
-        return res.status(404).json(
-          errorResponse("Property not found in folder", "PROPERTY_NOT_FOUND")
-        );
-      }
-
-      res.json(
-        successResponse(folder, "Property notes updated successfully")
+      const { Saved } = require('../models');
+      const updated = await Saved.findOneAndUpdate(
+        { profileId: activeProfile._id, targetType: 'property', targetId: propertyId },
+        { $set: { notes: notes || '' } },
+        { new: true }
       );
+      if (!updated) {
+        return res.status(404).json(errorResponse("Saved property not found", "SAVED_PROPERTY_NOT_FOUND"));
+      }
+      res.json(successResponse(updated, "Property notes updated successfully"));
     } catch (error) {
       console.error("Error updating saved property notes:", error);
       next(error);
@@ -1728,15 +1677,29 @@ class ProfileController {
       // Import SavedPropertyFolder
       const { SavedPropertyFolder } = require('../models');
       
-      // Get all folders for this profile with property count
+      // Get all folders for this profile
       const folders = await SavedPropertyFolder.find({ profileId: activeProfile._id })
         .sort({ isDefault: -1, createdAt: 1 })
         .lean();
 
-      // Calculate property count for each folder
-      const foldersWithCount = folders.map(folder => ({
+      // Calculate property count using unified Saved collection
+      const folderIds = folders.map((f: any) => f._id);
+      let countsByFolder: Record<string, number> = {};
+      if (folderIds.length > 0) {
+        const { Saved } = require('../models');
+        const counts = await Saved.aggregate([
+          { $match: { profileId: activeProfile._id, targetType: 'property', folderId: { $in: folderIds } } },
+          { $group: { _id: '$folderId', count: { $sum: 1 } } },
+        ]);
+        countsByFolder = counts.reduce((acc: any, row: any) => {
+          acc[String(row._id)] = row.count;
+          return acc;
+        }, {} as Record<string, number>);
+      }
+
+      const foldersWithCount = folders.map((folder: any) => ({
         ...folder,
-        propertyCount: folder.properties ? folder.properties.length : 0
+        propertyCount: countsByFolder[String(folder._id)] || 0,
       }));
 
       res.json(
