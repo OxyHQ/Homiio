@@ -106,6 +106,8 @@
             "searchPlaceholder": "Where do you want to live?",
             "searchButton": "Search"
         },
+        "noProfilesTitle": "No Saved Profiles",
+        "noProfilesDescription": "Follow profiles to see them here",
         "trust": {
             "title": "Housing You Can Trust",
             "verifiedListings": {
@@ -790,7 +792,30 @@
         }
     },
     "saved": {
+        "header": "Saved",
         "title": "Saved Properties",
+        "tabs": {
+            "all": "All",
+            "recent": "Recent",
+            "noted": "With Notes",
+            "quickSaves": "Quick Saves",
+            "folders": "Folders",
+            "profiles": "Profiles"
+        },
+        "view": {
+            "list": "List",
+            "grid": "Grid"
+        },
+        "searchPlaceholder": "Search your saved items...",
+        "profilesLabel": "profiles",
+        "adjustFilters": "Try adjusting your search or filter criteria",
+        "sort": {
+            "recent": "Recently Saved",
+            "price-low": "Price: Low to High",
+            "price-high": "Price: High to Low",
+            "title": "Property Name",
+            "notes": "Most Notes"
+        },
         "emptyTitle": "No Saved Properties",
         "emptyDescription": "You haven't saved any properties yet. Start exploring and save properties you love!",
         "startExploring": "Start Exploring",

@@ -160,7 +160,32 @@
             "filtered": "filtrades"
         },
         "saved": {
+            "header": "Desats",
             "title": "Propietats Desades",
+            "tabs": {
+                "all": "Tot",
+                "recent": "Recents",
+                "noted": "Amb notes",
+                "quickSaves": "Desats ràpids",
+                "folders": "Carpetes",
+                "profiles": "Perfils"
+            },
+            "view": {
+                "list": "Llista",
+                "grid": "Quadrícula"
+            },
+            "searchPlaceholder": "Cerca als teus desats...",
+            "profilesLabel": "perfils",
+            "adjustFilters": "Prova d'ajustar la teva cerca o filtres",
+            "sort": {
+                "recent": "Recentment desats",
+                "price-low": "Preu: menor a major",
+                "price-high": "Preu: major a menor",
+                "title": "Nom de la propietat",
+                "notes": "Més notes"
+            },
+            "noProfilesTitle": "No hi ha perfils desats",
+            "noProfilesDescription": "Segueix perfils per veure'ls aquí",
             "editFolder": "Editar carpeta",
             "defaultFolder": "Carpeta per defecte",
             "folderNamePlaceholder": "Nom de la carpeta",
@@ -787,6 +812,7 @@
         }
     },
     "saved": {
+        "header": "Desats",
         "title": "Propietats Desades",
         "emptyTitle": "Cap Propietat Desada",
         "emptyDescription": "Encara no heu desat cap propietat. Comenceu a explorar i deseu les propietats que us agradin!",

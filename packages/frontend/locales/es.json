@@ -790,7 +790,32 @@
     }
   },
   "saved": {
+    "header": "Guardados",
     "title": "Propiedades Guardadas",
+    "tabs": {
+      "all": "Todo",
+      "recent": "Recientes",
+      "noted": "Con notas",
+      "quickSaves": "Guardados rápidos",
+      "folders": "Carpetas",
+      "profiles": "Perfiles"
+    },
+    "view": {
+      "list": "Lista",
+      "grid": "Cuadrícula"
+    },
+    "searchPlaceholder": "Busca en tus guardados...",
+    "profilesLabel": "perfiles",
+    "adjustFilters": "Prueba ajustando tu búsqueda o filtros",
+    "sort": {
+      "recent": "Recientemente guardados",
+      "price-low": "Precio: menor a mayor",
+      "price-high": "Precio: mayor a menor",
+      "title": "Nombre de la propiedad",
+      "notes": "Más notas"
+    },
+    "noProfilesTitle": "No hay perfiles guardados",
+    "noProfilesDescription": "Sigue perfiles para verlos aquí",
     "emptyTitle": "No Hay Propiedades Guardadas",
     "emptyDescription": "Aún no has guardado ninguna propiedad. ¡Comienza a explorar y guarda las propiedades que te gusten!",
     "startExploring": "Comenzar a Explorar",

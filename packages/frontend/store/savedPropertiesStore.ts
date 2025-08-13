@@ -5,6 +5,7 @@ import { Property } from '@homiio/shared-types';
 interface SavedPropertiesState {
   // Data
   properties: Property[];
+  folders: any[];
   savingPropertyIds: string[];
   
   // Loading states
@@ -13,6 +14,11 @@ interface SavedPropertiesState {
   
   // Actions
   setProperties: (properties: Property[]) => void;
+  setFolders: (folders: any[]) => void;
+  addFolder: (folder: any) => void;
+  updateFolderLocal: (folderId: string, folder: any) => void;
+  removeFolderLocal: (folderId: string) => void;
+  adjustFolderCount: (folderId: string, delta: number) => void;
   addProperty: (property: Property) => void;
   removeProperty: (propertyId: string) => void;
   updatePropertyNotes: (propertyId: string, notes: string) => void;
@@ -27,12 +33,26 @@ export const useSavedPropertiesStore = create<SavedPropertiesState>()(
   (set, get) => ({
       // Initial state
       properties: [],
+      folders: [],
       savingPropertyIds: [],
       isLoading: false,
       error: null,
       
       // Actions
       setProperties: (properties) => set({ properties }),
+      setFolders: (folders) => set({ folders }),
+      addFolder: (folder) => set((state) => ({
+        folders: [...state.folders, folder]
+      })),
+      updateFolderLocal: (folderId, folder) => set((state) => ({
+        folders: state.folders.map((f: any) => f._id === folderId ? { ...f, ...folder } : f)
+      })),
+      removeFolderLocal: (folderId) => set((state) => ({
+        folders: state.folders.filter((f: any) => f._id !== folderId)
+      })),
+      adjustFolderCount: (folderId, delta) => set((state) => ({
+        folders: state.folders.map((f: any) => f._id === folderId ? { ...f, propertyCount: Math.max(0, (f.propertyCount || 0) + delta) } : f)
+      })),
       addProperty: (property) => set((state) => ({
         properties: [...state.properties, property]
       })),

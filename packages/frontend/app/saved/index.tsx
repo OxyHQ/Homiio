@@ -46,12 +46,12 @@ const SORT_OPTIONS = [
 ];
 
 const CATEGORIES = [
-    { id: 'all', name: 'All', icon: 'grid-outline' },
-    { id: 'recent', name: 'Recent', icon: 'time-outline' },
-    { id: 'noted', name: 'With Notes', icon: 'document-text-outline' },
-    { id: 'quick-saves', name: 'Quick Saves', icon: 'bookmark-outline' },
-    { id: 'folders', name: 'Folders', icon: 'folder-outline' },
-    { id: 'profiles', name: 'Profiles', icon: 'person-circle-outline' },
+    { id: 'all', name: 'saved.tabs.all', icon: 'grid-outline' },
+    { id: 'recent', name: 'saved.tabs.recent', icon: 'time-outline' },
+    { id: 'noted', name: 'saved.tabs.noted', icon: 'document-text-outline' },
+    { id: 'quick-saves', name: 'saved.tabs.quickSaves', icon: 'bookmark-outline' },
+    { id: 'folders', name: 'saved.tabs.folders', icon: 'folder-outline' },
+    { id: 'profiles', name: 'saved.tabs.profiles', icon: 'person-circle-outline' },
 ];
 
 // Grid layout constants (style-based, no runtime calculations)
@@ -67,9 +67,9 @@ export default function SavedPropertiesScreen() {
     const { toggleFavorite, clearError: clearFavoritesError } = useFavorites();
 
     // Local state for saved properties
-    const { savingPropertyIds } = useSavedPropertiesSelectors();
+    const { properties: storeProperties, savingPropertyIds } = useSavedPropertiesSelectors();
     const { setProperties: setSavedPropertiesZ } = useSavedPropertiesStore.getState();
-    const [savedProperties, setSavedProperties] = useState<SavedPropertyWithUI[]>([]);
+    const savedProperties: SavedPropertyWithUI[] = useMemo(() => storeProperties as any, [storeProperties]);
     const [savedProfiles, setSavedProfiles] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -106,7 +106,6 @@ export default function SavedPropertiesScreen() {
             setIsLoading(true);
             setError(null);
             const response = await savedPropertyService.getSavedProperties(oxyServices, activeSessionId);
-            setSavedProperties(response.properties);
             setSavedPropertiesZ(response.properties as any);
             // Load saved profiles
             const res = await api.get('/api/profiles/me/saved-profiles', { oxyServices, activeSessionId });
@@ -266,14 +265,14 @@ export default function SavedPropertiesScreen() {
                     try {
                         await savedPropertyService.updateNotes(propertyId, notes, oxyServices, activeSessionId);
 
-                        // Update the local state
-                        setSavedProperties(prev =>
-                            prev.map(p =>
-                                (p._id || p.id) === propertyId
-                                    ? { ...p, notes }
-                                    : p
-                            )
+                        // Update the Zustand state for notes
+                        // setProperties in store expects an array; compute and pass
+                        const updated = (useSavedPropertiesStore.getState().properties as any[] || []).map((p: any) =>
+                            ((p._id || p.id) === propertyId)
+                                ? { ...p, notes }
+                                : p
                         );
+                        setSavedPropertiesZ(updated as any);
                     } catch (error) {
                         console.error('Failed to update notes:', error);
                         throw error; // Re-throw to let the bottom sheet handle the error
@@ -281,7 +280,7 @@ export default function SavedPropertiesScreen() {
                 }}
             />
         );
-    }, [bottomSheetContext, oxyServices, activeSessionId]);
+    }, [bottomSheetContext, oxyServices, activeSessionId, setSavedPropertiesZ]);
 
 
 
@@ -414,7 +413,7 @@ export default function SavedPropertiesScreen() {
                     <IconComponent name="search" size={20} color={colors.COLOR_BLACK_LIGHT_3} />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Search your saved properties..."
+                        placeholder={t('saved.searchPlaceholder', 'Search your saved items...')}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
                         placeholderTextColor={colors.COLOR_BLACK_LIGHT_3}
@@ -448,7 +447,7 @@ export default function SavedPropertiesScreen() {
                                 styles.tabText,
                                 isActive && styles.tabTextActive,
                             ])}>
-                                {category.name} ({(categoryCounts as any)[category.id] || 0})
+                                {t(category.name as any)} ({(categoryCounts as any)[category.id] || 0})
                             </Text>
                         </TouchableOpacity>
                     );
@@ -472,20 +471,20 @@ export default function SavedPropertiesScreen() {
                     {/* View segmented control */}
                     <View style={styles.segmented}>
                         <TouchableOpacity
-                            accessibilityLabel="List view"
+                            accessibilityLabel={t('saved.view.list', 'List')}
                             style={StyleSheet.flatten([styles.segment, viewMode === 'list' && styles.segmentActive])}
                             onPress={() => setViewMode('list')}
                         >
                             <IconComponent name="list" size={14} color={viewMode === 'list' ? 'white' : colors.primaryColor} />
-                            <Text style={StyleSheet.flatten([styles.segmentText, viewMode === 'list' && styles.segmentTextActive])}>List</Text>
+                            <Text style={StyleSheet.flatten([styles.segmentText, viewMode === 'list' && styles.segmentTextActive])}>{t('saved.view.list', 'List')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            accessibilityLabel="Grid view"
+                            accessibilityLabel={t('saved.view.grid', 'Grid')}
                             style={StyleSheet.flatten([styles.segment, viewMode === 'grid' && styles.segmentActive])}
                             onPress={() => setViewMode('grid')}
                         >
                             <IconComponent name="grid" size={14} color={viewMode === 'grid' ? 'white' : colors.primaryColor} />
-                            <Text style={StyleSheet.flatten([styles.segmentText, viewMode === 'grid' && styles.segmentTextActive])}>Grid</Text>
+                            <Text style={StyleSheet.flatten([styles.segmentText, viewMode === 'grid' && styles.segmentTextActive])}>{t('saved.view.grid', 'Grid')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -511,7 +510,9 @@ export default function SavedPropertiesScreen() {
                     </TouchableOpacity>
 
                     <Text style={styles.resultCount}>
-                        {selectedCategory === 'profiles' ? savedProfiles.length : filteredProperties.length} {selectedCategory === 'profiles' ? (savedProfiles.length === 1 ? 'profile' : 'profiles') : (filteredProperties.length === 1 ? 'property' : 'properties')}
+                        {selectedCategory === 'profiles'
+                            ? `${savedProfiles.length} ${t('saved.profilesLabel', 'profiles')}`
+                            : `${filteredProperties.length} ${t('search.properties')}`}
                     </Text>
                 </View>
             </View>
@@ -540,7 +541,7 @@ export default function SavedPropertiesScreen() {
                                 styles.sortOptionText,
                                 sortBy === option.key && styles.sortOptionTextActive
                             ])}>
-                                {option.label}
+                                {t(`saved.sort.${option.key}`, option.label)}
                             </Text>
                             {sortBy === option.key && (
                                 <IconComponent
@@ -578,9 +579,9 @@ export default function SavedPropertiesScreen() {
             return (
                 <EmptyState
                     icon="search"
-                    title="No Properties Found"
-                    description="Try adjusting your search or filter criteria"
-                    actionText="Clear Filters"
+                    title={t('common.noResults')}
+                    description={t('saved.adjustFilters', 'Try adjusting your search or filter criteria')}
+                    actionText={t('common.clear')}
                     actionIcon="refresh"
                     onAction={() => {
                         setSearchQuery('');
@@ -606,11 +607,11 @@ export default function SavedPropertiesScreen() {
     if (!oxyServices || !activeSessionId) {
         return (
             <View style={styles.container}>
-                <Header options={{ title: 'Saved Properties', showBackButton: true }} />
+                <Header options={{ title: 'Saved', showBackButton: true }} />
                 <EmptyState
                     icon="lock-closed"
-                    title="Sign In Required"
-                    description="Please sign in to view and manage your saved properties"
+                    title={t('profile.signInRequired')}
+                    description={t('profile.signInMessage')}
                 />
             </View>
         );
@@ -620,7 +621,7 @@ export default function SavedPropertiesScreen() {
         <View style={styles.container}>
             <Header
                 options={{
-                    title: t('saved.title'),
+                    title: t('saved.header', 'Saved'),
                     titlePosition: 'left',
                     rightComponents: [
                         <TouchableOpacity
@@ -722,8 +723,8 @@ export default function SavedPropertiesScreen() {
                         ListEmptyComponent={
                             <EmptyState
                                 icon="person-circle-outline"
-                                title="No Saved Profiles"
-                                description="Follow profiles to see them here"
+                                title={t('saved.noProfilesTitle', 'No Saved Profiles')}
+                                description={t('saved.noProfilesDescription', 'Follow profiles to see them here')}
                             />
                         }
                         refreshControl={
