@@ -160,7 +160,14 @@
             "filtered": "filtered"
         },
         "saved": {
-            "title": "Saved Properties"
+            "title": "Saved Properties",
+            "editFolder": "Edit Folder",
+            "defaultFolder": "Default Folder",
+            "folderNamePlaceholder": "Folder name",
+            "noFolder": "Folder not found",
+            "noFolderDescription": "This folder may have been removed",
+            "noFolderItems": "No properties in this folder",
+            "noFolderItemsDescription": "Save properties to this folder to see them here"
         },
         "viewAll": "View All",
         "tips": {
@@ -553,6 +560,9 @@
         "retry": "Retry",
         "save": "Save",
         "saving": "Saving...",
+        "name": "Name",
+        "emoji": "Emoji",
+        "color": "Color",
         "delete": "Delete",
         "edit": "Edit",
         "close": "Close",
@@ -784,6 +794,13 @@
         "emptyTitle": "No Saved Properties",
         "emptyDescription": "You haven't saved any properties yet. Start exploring and save properties you love!",
         "startExploring": "Start Exploring",
+        "editFolder": "Edit Folder",
+        "defaultFolder": "Default Folder",
+        "folderNamePlaceholder": "Folder name",
+        "noFolder": "Folder not found",
+        "noFolderDescription": "This folder may have been removed",
+        "noFolderItems": "No properties in this folder",
+        "noFolderItemsDescription": "Save properties to this folder to see them here",
         "unsave": {
             "title": "Unsave Property",
             "message": "Are you sure you want to remove \"{{title}}\" from your saved properties?",

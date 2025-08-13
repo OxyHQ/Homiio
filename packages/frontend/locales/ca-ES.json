@@ -160,7 +160,14 @@
             "filtered": "filtrades"
         },
         "saved": {
-            "title": "Propietats Desades"
+            "title": "Propietats Desades",
+            "editFolder": "Editar carpeta",
+            "defaultFolder": "Carpeta per defecte",
+            "folderNamePlaceholder": "Nom de la carpeta",
+            "noFolder": "Carpeta no trobada",
+            "noFolderDescription": "És possible que aquesta carpeta hagi estat eliminada",
+            "noFolderItems": "No hi ha propietats en aquesta carpeta",
+            "noFolderItemsDescription": "Desa propietats en aquesta carpeta per veure-les aquí"
         },
         "viewAll": "Veure Tot",
         "tips": {

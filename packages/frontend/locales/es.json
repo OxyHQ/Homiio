@@ -160,7 +160,14 @@
       "filtered": "filtrados"
     },
     "saved": {
-      "title": "Propiedades Guardadas"
+      "title": "Propiedades Guardadas",
+      "editFolder": "Editar carpeta",
+      "defaultFolder": "Carpeta predeterminada",
+      "folderNamePlaceholder": "Nombre de la carpeta",
+      "noFolder": "Carpeta no encontrada",
+      "noFolderDescription": "Es posible que esta carpeta haya sido eliminada",
+      "noFolderItems": "No hay propiedades en esta carpeta",
+      "noFolderItemsDescription": "Guarda propiedades en esta carpeta para verlas aquí"
     },
     "viewAll": "Ver Todo",
     "tips": {
@@ -553,6 +560,9 @@
     "retry": "Reintentar",
     "save": "Guardar",
     "saving": "Guardando...",
+    "name": "Nombre",
+    "emoji": "Emoji",
+    "color": "Color",
     "delete": "Eliminar",
     "edit": "Editar",
     "close": "Cerrar",
@@ -784,6 +794,13 @@
     "emptyTitle": "No Hay Propiedades Guardadas",
     "emptyDescription": "Aún no has guardado ninguna propiedad. ¡Comienza a explorar y guarda las propiedades que te gusten!",
     "startExploring": "Comenzar a Explorar",
+    "editFolder": "Editar carpeta",
+    "defaultFolder": "Carpeta predeterminada",
+    "folderNamePlaceholder": "Nombre de la carpeta",
+    "noFolder": "Carpeta no encontrada",
+    "noFolderDescription": "Es posible que esta carpeta haya sido eliminada",
+    "noFolderItems": "No hay propiedades en esta carpeta",
+    "noFolderItemsDescription": "Guarda propiedades en esta carpeta para verlas aquí",
     "unsave": {
       "title": "Quitar de Guardados",
       "message": "¿Estás seguro de que quieres eliminar \"{{title}}\" de tus propiedades guardadas?",

@@ -46,7 +46,7 @@ export default function SavedFolderScreen() {
         return (
             <View style={styles.container}>
                 <Header options={{ title: t('saved.title'), showBackButton: true }} />
-                <EmptyState icon="folder-open-outline" title="Folder not found" description="This folder may have been removed" />
+                <EmptyState icon="folder-open-outline" title={t('saved.noFolder')} description={t('saved.noFolderDescription')} />
             </View>
         );
     }
@@ -57,20 +57,11 @@ export default function SavedFolderScreen() {
                 options={{
                     title: `${folder.icon || '📁'} ${folder.name}`,
                     titlePosition: 'left',
-                    rightComponents: [
+                    rightComponents: folder.isDefault ? [] : [
                         <TouchableOpacity
                             key="editFolder"
                             style={styles.headerButton}
-                            onPress={() => {
-                                bottomSheetContext?.openBottomSheet(
-                                    <SaveToFolderBottomSheet
-                                        propertyId={''}
-                                        propertyTitle={''}
-                                        onClose={() => bottomSheetContext?.closeBottomSheet()}
-                                        onSave={() => bottomSheetContext?.closeBottomSheet()}
-                                    />
-                                );
-                            }}
+                            onPress={() => router.push(`/saved/${folderId}/edit`)}
                         >
                             <Ionicons name="create-outline" size={20} color={colors.COLOR_BLACK} />
                         </TouchableOpacity>,
@@ -89,11 +80,7 @@ export default function SavedFolderScreen() {
                     propertiesInFolder.length === 0 && styles.emptyListContent,
                 ])}
                 ListEmptyComponent={() => (
-                    <EmptyState
-                        icon="folder-outline"
-                        title="No properties in this folder"
-                        description="Save properties to this folder to see them here"
-                    />
+                    <EmptyState icon="folder-outline" title={t('saved.noFolderItems')} description={t('saved.noFolderItemsDescription')} />
                 )}
                 refreshControl={<RefreshControl refreshing={false} onRefresh={() => { }} colors={[colors.primaryColor]} tintColor={colors.primaryColor} />}
             />

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import LoadingTopSpinner from '@/components/LoadingTopSpinner';
 import { Header } from '@/components/Header';
 import { PropertyCard } from '@/components/PropertyCard';
+import { ListItem } from '@/components/ListItem';
 import { colors } from '@/styles/colors';
 import { useSEO } from '@/hooks/useDocumentTitle';
 import { getPropertyTitle } from '@/utils/propertyUtils';
@@ -628,22 +629,12 @@ export default function SavedPropertiesScreen() {
                         data={filteredFolders}
                         keyExtractor={(item) => item._id}
                         renderItem={({ item }) => (
-                            <TouchableOpacity
-                                style={styles.folderRow}
+                            <ListItem
+                                title={item.name}
+                                description={item.description}
                                 onPress={() => router.push(`/saved/${item._id}`)}
-                            >
-                                <View style={[styles.folderBadge, { backgroundColor: item.color || colors.primaryLight }]}>
-                                    <Text style={styles.folderBadgeText}>{item.icon || '📁'}</Text>
-                                </View>
-                                <View style={styles.folderInfo}>
-                                    <Text style={styles.folderTitle} numberOfLines={1}>{item.name}</Text>
-                                    {item.description ? (
-                                        <Text style={styles.folderSubtitle} numberOfLines={1}>{item.description}</Text>
-                                    ) : null}
-                                </View>
-                                <Text style={styles.folderCount}>{item.propertyCount}</Text>
-                                <IconComponent name="chevron-forward" size={18} color={colors.COLOR_BLACK_LIGHT_4} />
-                            </TouchableOpacity>
+                                rightElement={<Text style={styles.folderCount}>{item.propertyCount}</Text>}
+                            />
                         )}
                         contentContainerStyle={StyleSheet.flatten([
                             styles.listContent,
