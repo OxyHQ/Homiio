@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect, useContext } from 'react';
-import { View, FlatList, StyleSheet, Dimensions, Alert, TouchableOpacity, TextInput, Text, RefreshControl } from 'react-native';
+import { View, FlatList, StyleSheet, Dimensions, Alert, TouchableOpacity, TextInput, Text, RefreshControl, Platform } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import LoadingTopSpinner from '@/components/LoadingTopSpinner';
@@ -55,8 +55,9 @@ const CATEGORIES = [
 ];
 
 // Grid layout constants (style-based, no runtime calculations)
-const GRID_GAP = 16; // desired gap between cards
-const H_PADDING = 16; // desired outer padding
+const GRID_GAP = 0; // desired gap between cards
+const H_PADDING = 0; // desired outer padding
+const LIST_GAP = 16; // desired gap between list rows
 
 export default function SavedPropertiesScreen() {
     const { t } = useTranslation();
@@ -388,25 +389,26 @@ export default function SavedPropertiesScreen() {
     );
 
     const getItemLayout = useCallback((data: any, index: number) => {
-        const itemHeight = viewMode === 'grid' ? 260 : 340;
+        const baseItemHeight = viewMode === 'grid' ? 260 : 340;
         if (viewMode === 'grid') {
             const rowIndex = Math.floor(index / 2);
             return {
-                length: itemHeight,
-                offset: itemHeight * rowIndex,
+                length: baseItemHeight,
+                offset: baseItemHeight * rowIndex,
                 index,
             };
         } else {
+            const itemHeightWithGap = baseItemHeight + LIST_GAP;
             return {
-                length: itemHeight,
-                offset: itemHeight * index,
+                length: itemHeightWithGap,
+                offset: itemHeightWithGap * index,
                 index,
             };
         }
     }, [viewMode]);
 
     const renderHeader = () => (
-        <View style={styles.headerContent}>
+        <>
             {/* Modern Search Bar */}
             <View style={styles.searchWrapper}>
                 <View style={styles.searchContainer}>
@@ -571,7 +573,7 @@ export default function SavedPropertiesScreen() {
                     </View>
                 </View>
             )}
-        </View>
+        </>
     );
 
     const renderEmptyState = () => {
@@ -741,7 +743,7 @@ export default function SavedPropertiesScreen() {
                         data={filteredProperties}
                         renderItem={renderPropertyItem}
                         keyExtractor={keyExtractor}
-                        getItemLayout={getItemLayout}
+                        getItemLayout={viewMode === 'grid' ? getItemLayout : undefined}
                         contentContainerStyle={StyleSheet.flatten([
                             styles.listContent,
                             filteredProperties.length === 0 && styles.emptyListContent
@@ -750,6 +752,7 @@ export default function SavedPropertiesScreen() {
                         numColumns={viewMode === 'grid' ? 2 : 1}
                         key={viewMode}
                         columnWrapperStyle={viewMode === 'grid' ? styles.gridRow : undefined}
+                        ItemSeparatorComponent={viewMode === 'grid' ? undefined : () => <View style={{ height: LIST_GAP }} />}
                         ListEmptyComponent={renderEmptyState}
                         refreshControl={
                             <RefreshControl
@@ -778,19 +781,13 @@ const styles = StyleSheet.create({
     },
     listContent: {
         padding: 16,
-        paddingBottom: 100,
     },
     emptyListContent: {
         flexGrow: 1,
         justifyContent: 'center',
     },
-    headerContent: {
-        marginBottom: 24,
-    },
-
-    // Modern Search
     searchWrapper: {
-        marginBottom: 20,
+        padding: 16,
     },
     searchContainer: {
         flexDirection: 'row',
@@ -824,7 +821,14 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#eaeaea',
         paddingHorizontal: 4,
-        // Removed web-only sticky style to satisfy native style typing
+        ...Platform.select({
+            web: {
+                position: 'sticky',
+                top: 50,
+                backgroundColor: 'white',
+                zIndex: 1000,
+            },
+        }),
     },
     tabItem: {
         paddingVertical: 10,
@@ -854,7 +858,6 @@ const styles = StyleSheet.create({
         borderRadius: 100,
         paddingHorizontal: 10,
         paddingVertical: 8,
-        marginBottom: 16,
         marginHorizontal: 12,
         borderWidth: 1,
         borderColor: '#eaeaea',
@@ -1049,15 +1052,14 @@ const styles = StyleSheet.create({
     },
 
     // Property Cards
-    propertyCardWrapper: {},
+    propertyCardWrapper: {
+    },
     gridItemContainer: {
         flex: 1,
-        paddingHorizontal: 8,
-        marginBottom: GRID_GAP,
     },
     gridRow: {
         justifyContent: 'space-between',
-        paddingHorizontal: H_PADDING,
+        gap: 16,
     },
     propertyCard: {
     },
@@ -1085,8 +1087,6 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primaryColor,
         borderColor: colors.primaryColor,
     },
-
-    // List Footer (Notes) removed; notes now render inline inside PropertyCard
     processingOverlay: {
         position: 'absolute',
         top: 0,
@@ -1103,7 +1103,6 @@ const styles = StyleSheet.create({
         color: colors.primaryColor,
         fontWeight: '500',
     },
-
     // Grid Notes Indicator
     gridNotesIndicator: {
         position: 'absolute',
@@ -1118,7 +1117,6 @@ const styles = StyleSheet.create({
         shadowRadius: 2,
         elevation: 2,
     },
-
     // Folder Section
     folderSection: {
         marginTop: 12,
