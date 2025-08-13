@@ -15,15 +15,16 @@ import { StatusBadge, type StatusType } from '@/components/ui/StatusBadge';
 <StatusBadge status="active" />
 
 // With custom styling
-<StatusBadge 
-  status="pending" 
-  size="large" 
-  showIcon={false} 
-  customText="Custom Status" 
+<StatusBadge
+  status="pending"
+  size="large"
+  showIcon={false}
+  customText="Custom Status"
 />
 ```
 
 **Props:**
+
 - `status`: StatusType - The status to display
 - `size`: 'small' | 'medium' | 'large' - Badge size
 - `showIcon`: boolean - Whether to show the status icon
@@ -34,6 +35,7 @@ import { StatusBadge, type StatusType } from '@/components/ui/StatusBadge';
 - `customText`: string - Override the default status text
 
 **Supported Status Types:**
+
 - Contract: `draft`, `pending`, `active`, `expired`, `terminated`
 - Payment: `processing`, `completed`, `failed`, `refunded`
 - General: `success`, `warning`, `error`, `info`
@@ -47,16 +49,16 @@ A versatile button component with multiple variants and states.
 import { ActionButton, type ActionButtonVariant } from '@/components/ui/ActionButton';
 
 // Primary button
-<ActionButton 
-  icon="add" 
-  text="Add Item" 
-  onPress={handleAdd} 
+<ActionButton
+  icon="add"
+  text="Add Item"
+  onPress={handleAdd}
 />
 
 // Secondary button with loading state
-<ActionButton 
-  icon="save" 
-  text="Save" 
+<ActionButton
+  icon="save"
+  text="Save"
   onPress={handleSave}
   variant="secondary"
   loading={isSaving}
@@ -65,6 +67,7 @@ import { ActionButton, type ActionButtonVariant } from '@/components/ui/ActionBu
 ```
 
 **Props:**
+
 - `icon`: string - Icon name (Ionicons)
 - `text`: string - Button text
 - `onPress`: () => void - Press handler
@@ -77,6 +80,7 @@ import { ActionButton, type ActionButtonVariant } from '@/components/ui/ActionBu
 - `textStyle`: any - Custom text styling
 
 **Variants:**
+
 - `primary`: Primary brand color
 - `secondary`: Secondary/gray color
 - `outline`: Outlined style
@@ -91,22 +95,23 @@ A selectable chip component for filters and selection.
 import { FilterChip } from '@/components/ui/FilterChip';
 
 // Basic filter chip
-<FilterChip 
-  label="All Properties" 
-  selected={filter === 'all'} 
-  onPress={() => setFilter('all')} 
+<FilterChip
+  label="All Properties"
+  selected={filter === 'all'}
+  onPress={() => setFilter('all')}
 />
 
 // Disabled chip
-<FilterChip 
-  label="Premium" 
-  selected={false} 
-  onPress={() => {}} 
-  disabled={true} 
+<FilterChip
+  label="Premium"
+  selected={false}
+  onPress={() => {}}
+  disabled={true}
 />
 ```
 
 **Props:**
+
 - `label`: string - Chip text
 - `selected`: boolean - Whether chip is selected
 - `onPress`: () => void - Press handler
@@ -123,24 +128,25 @@ A component for displaying empty states with optional actions.
 import { EmptyState } from '@/components/ui/EmptyState';
 
 // Basic empty state
-<EmptyState 
-  icon="folder-open" 
-  title="No Properties Found" 
-  description="You haven't added any properties yet." 
+<EmptyState
+  icon="folder-open"
+  title="No Properties Found"
+  description="You haven't added any properties yet."
 />
 
 // With action button
-<EmptyState 
-  icon="add-circle" 
-  title="No Saved Properties" 
-  description="Start saving properties to see them here." 
-  actionText="Browse Properties" 
-  actionIcon="search" 
-  onAction={() => router.push('/properties')} 
+<EmptyState
+  icon="add-circle"
+  title="No Saved Properties"
+  description="Start saving properties to see them here."
+  actionText="Browse Properties"
+  actionIcon="search"
+  onAction={() => router.push('/properties')}
 />
 ```
 
 **Props:**
+
 - `icon`: string - Icon name (Ionicons)
 - `title`: string - Main title text
 - `description`: string - Description text
@@ -162,24 +168,25 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 <ProgressBar progress={0.75} />
 
 // With labels and percentage
-<ProgressBar 
-  progress={0.6} 
-  current={6} 
-  total={10} 
-  showLabel={true} 
-  showPercentage={true} 
+<ProgressBar
+  progress={0.6}
+  current={6}
+  total={10}
+  showLabel={true}
+  showPercentage={true}
 />
 
 // Custom styling
-<ProgressBar 
-  progress={0.8} 
-  color="#4CAF50" 
-  backgroundColor="#E0E0E0" 
-  height={12} 
+<ProgressBar
+  progress={0.8}
+  color="#4CAF50"
+  backgroundColor="#E0E0E0"
+  height={12}
 />
 ```
 
 **Props:**
+
 - `progress`: number - Progress value (0 to 1)
 - `total`: number - Total count
 - `current`: number - Current count
@@ -220,20 +227,20 @@ import { FilterChip } from '@/components/ui/FilterChip';
 function PropertyFilters({ activeFilter, onFilterChange }) {
   return (
     <View style={styles.filterContainer}>
-      <FilterChip 
-        label="All" 
-        selected={activeFilter === 'all'} 
-        onPress={() => onFilterChange('all')} 
+      <FilterChip
+        label="All"
+        selected={activeFilter === 'all'}
+        onPress={() => onFilterChange('all')}
       />
-      <FilterChip 
-        label="Available" 
-        selected={activeFilter === 'available'} 
-        onPress={() => onFilterChange('available')} 
+      <FilterChip
+        label="Available"
+        selected={activeFilter === 'available'}
+        onPress={() => onFilterChange('available')}
       />
-      <FilterChip 
-        label="Rented" 
-        selected={activeFilter === 'rented'} 
-        onPress={() => onFilterChange('rented')} 
+      <FilterChip
+        label="Rented"
+        selected={activeFilter === 'rented'}
+        onPress={() => onFilterChange('rented')}
       />
     </View>
   );
@@ -250,15 +257,10 @@ function PropertyForm({ onSubmit, isSubmitting }) {
     <View style={styles.form}>
       {/* ... form fields */}
       <View style={styles.actions}>
-        <ActionButton 
-          icon="save" 
-          text="Save Draft" 
-          onPress={onSaveDraft}
-          variant="outline"
-        />
-        <ActionButton 
-          icon="checkmark" 
-          text="Publish" 
+        <ActionButton icon="save" text="Save Draft" onPress={onSaveDraft} variant="outline" />
+        <ActionButton
+          icon="checkmark"
+          text="Publish"
           onPress={onSubmit}
           loading={isSubmitting}
           disabled={!isValid}
@@ -287,4 +289,4 @@ When adding new UI components:
 3. Add proper documentation and examples
 4. Ensure accessibility compliance
 5. Test across different screen sizes
-6. Update this README with usage examples 
+6. Update this README with usage examples

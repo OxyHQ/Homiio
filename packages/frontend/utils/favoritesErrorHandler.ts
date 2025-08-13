@@ -18,7 +18,7 @@ export class FavoritesErrorHandler {
 
   static createError(error: any, context: string): FavoritesError {
     const timestamp = new Date();
-    
+
     // Network errors
     if (error?.code === 'NETWORK_ERROR' || error?.message?.includes('network')) {
       return {
@@ -46,7 +46,7 @@ export class FavoritesErrorHandler {
       return {
         code: this.ERROR_CODES.PERMISSION_ERROR,
         message: error.message || 'Permission denied',
-        userMessage: 'You don\'t have permission to perform this action',
+        userMessage: "You don't have permission to perform this action",
         retryable: false,
         timestamp,
       };
@@ -112,4 +112,4 @@ export class FavoritesErrorHandler {
       retryable: error.retryable,
     });
   }
-} 
+}

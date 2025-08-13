@@ -1,5 +1,13 @@
 import { fetch as expoFetch } from 'expo/fetch';
-import { View, ScrollView, Text, TouchableOpacity, StyleSheet, Platform, TextInput } from 'react-native';
+import {
+  View,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+  TextInput,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOxy } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,45 +33,46 @@ export default function Sindi() {
   // No local file state needed on landing hero
 
   // Zustand store
-  const {
-    conversations,
-    loading,
-    loadConversations,
-    createConversation,
-  } = useConversationStore();
+  const { conversations, loading, loadConversations, createConversation } = useConversationStore();
 
   // Create a custom fetch function that includes authentication
-  const authenticatedFetch = useCallback(async (url: string, options: RequestInit = {}) => {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...(options.headers as Record<string, string> || {}),
-    };
+  const authenticatedFetch = useCallback(
+    async (url: string, options: RequestInit = {}) => {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...((options.headers as Record<string, string>) || {}),
+      };
 
-    // Add authentication token if available
-    if (oxyServices && activeSessionId) {
-      try {
-        const tokenData = await oxyServices.getTokenBySession(activeSessionId);
-        if (tokenData) {
-          headers['Authorization'] = `Bearer ${tokenData.accessToken}`;
+      // Add authentication token if available
+      if (oxyServices && activeSessionId) {
+        try {
+          const tokenData = await oxyServices.getTokenBySession(activeSessionId);
+          if (tokenData) {
+            headers['Authorization'] = `Bearer ${tokenData.accessToken}`;
+          }
+        } catch (error) {
+          console.error('Failed to get authentication token:', error);
         }
-      } catch (error) {
-        console.error('Failed to get authentication token:', error);
       }
-    }
 
-    // Create fetch options without null body
-    const { body, ...otherOptions } = options;
-    const fetchOptions = {
-      ...otherOptions,
-      headers,
-      ...(body !== null && { body }),
-    };
+      // Create fetch options without null body
+      const { body, ...otherOptions } = options;
+      const fetchOptions = {
+        ...otherOptions,
+        headers,
+        ...(body !== null && { body }),
+      };
 
-    return expoFetch(url, fetchOptions as any);
-  }, [oxyServices, activeSessionId]);
+      return expoFetch(url, fetchOptions as any);
+    },
+    [oxyServices, activeSessionId],
+  );
 
   // Alias with Response-compatible typing to satisfy functions expecting the standard fetch signature
-  const conversationFetch = authenticatedFetch as unknown as (url: string, options?: RequestInit) => Promise<Response>;
+  const conversationFetch = authenticatedFetch as unknown as (
+    url: string,
+    options?: RequestInit,
+  ) => Promise<Response>;
 
   // Auth status
   const isAuthenticated = !!oxyServices && !!activeSessionId;
@@ -73,7 +82,11 @@ export default function Sindi() {
     if (!isAuthenticated) return;
 
     try {
-      const newConversation = await createConversation('New Conversation', undefined, conversationFetch);
+      const newConversation = await createConversation(
+        'New Conversation',
+        undefined,
+        conversationFetch,
+      );
       router.push(`/sindi/${newConversation.id}`);
       // Refresh conversations list
       loadConversations(conversationFetch);
@@ -94,25 +107,89 @@ export default function Sindi() {
 
   // Quick actions & examples (original arrays restored)
   const quickActions = [
-    { title: t('sindi.actions.rentGouging.title'), icon: 'trending-up', prompt: t('sindi.actions.rentGouging.prompt') },
-    { title: t('sindi.actions.evictionDefense.title'), icon: 'warning', prompt: t('sindi.actions.evictionDefense.prompt') },
-    { title: t('sindi.actions.securityDeposit.title'), icon: 'card', prompt: t('sindi.actions.securityDeposit.prompt') },
-    { title: t('sindi.actions.unsafeLiving.title'), icon: 'construct', prompt: t('sindi.actions.unsafeLiving.prompt') },
-    { title: t('sindi.actions.discrimination.title'), icon: 'shield-checkmark', prompt: t('sindi.actions.discrimination.prompt') },
-    { title: t('sindi.actions.retaliation.title'), icon: 'alert-circle', prompt: t('sindi.actions.retaliation.prompt') },
-    { title: t('sindi.actions.leaseReview.title'), icon: 'document-text', prompt: t('sindi.actions.leaseReview.prompt') },
-    { title: t('sindi.actions.tenantOrganizing.title'), icon: 'people', prompt: t('sindi.actions.tenantOrganizing.prompt') },
-    { title: t('sindi.actions.currentLaws.title'), icon: 'globe', prompt: t('sindi.actions.currentLaws.prompt') },
-    { title: t('sindi.actions.catalunya.title'), icon: 'location', prompt: t('sindi.actions.catalunya.prompt') },
+    {
+      title: t('sindi.actions.rentGouging.title'),
+      icon: 'trending-up',
+      prompt: t('sindi.actions.rentGouging.prompt'),
+    },
+    {
+      title: t('sindi.actions.evictionDefense.title'),
+      icon: 'warning',
+      prompt: t('sindi.actions.evictionDefense.prompt'),
+    },
+    {
+      title: t('sindi.actions.securityDeposit.title'),
+      icon: 'card',
+      prompt: t('sindi.actions.securityDeposit.prompt'),
+    },
+    {
+      title: t('sindi.actions.unsafeLiving.title'),
+      icon: 'construct',
+      prompt: t('sindi.actions.unsafeLiving.prompt'),
+    },
+    {
+      title: t('sindi.actions.discrimination.title'),
+      icon: 'shield-checkmark',
+      prompt: t('sindi.actions.discrimination.prompt'),
+    },
+    {
+      title: t('sindi.actions.retaliation.title'),
+      icon: 'alert-circle',
+      prompt: t('sindi.actions.retaliation.prompt'),
+    },
+    {
+      title: t('sindi.actions.leaseReview.title'),
+      icon: 'document-text',
+      prompt: t('sindi.actions.leaseReview.prompt'),
+    },
+    {
+      title: t('sindi.actions.tenantOrganizing.title'),
+      icon: 'people',
+      prompt: t('sindi.actions.tenantOrganizing.prompt'),
+    },
+    {
+      title: t('sindi.actions.currentLaws.title'),
+      icon: 'globe',
+      prompt: t('sindi.actions.currentLaws.prompt'),
+    },
+    {
+      title: t('sindi.actions.catalunya.title'),
+      icon: 'location',
+      prompt: t('sindi.actions.catalunya.prompt'),
+    },
   ];
 
   const propertySearchExamples = [
-    { title: t('sindi.housing.examples.cheap.title'), icon: 'cash', prompt: t('sindi.housing.examples.cheap.prompt') },
-    { title: t('sindi.housing.examples.petFriendly.title'), icon: 'paw', prompt: t('sindi.housing.examples.petFriendly.prompt') },
-    { title: t('sindi.housing.examples.furnished.title'), icon: 'bed', prompt: t('sindi.housing.examples.furnished.prompt') },
-    { title: t('sindi.housing.examples.family.title'), icon: 'home', prompt: t('sindi.housing.examples.family.prompt') },
-    { title: t('sindi.housing.examples.luxury.title'), icon: 'diamond', prompt: t('sindi.housing.examples.luxury.prompt') },
-    { title: t('sindi.housing.examples.shared.title'), icon: 'people', prompt: t('sindi.housing.examples.shared.prompt') },
+    {
+      title: t('sindi.housing.examples.cheap.title'),
+      icon: 'cash',
+      prompt: t('sindi.housing.examples.cheap.prompt'),
+    },
+    {
+      title: t('sindi.housing.examples.petFriendly.title'),
+      icon: 'paw',
+      prompt: t('sindi.housing.examples.petFriendly.prompt'),
+    },
+    {
+      title: t('sindi.housing.examples.furnished.title'),
+      icon: 'bed',
+      prompt: t('sindi.housing.examples.furnished.prompt'),
+    },
+    {
+      title: t('sindi.housing.examples.family.title'),
+      icon: 'home',
+      prompt: t('sindi.housing.examples.family.prompt'),
+    },
+    {
+      title: t('sindi.housing.examples.luxury.title'),
+      icon: 'diamond',
+      prompt: t('sindi.housing.examples.luxury.prompt'),
+    },
+    {
+      title: t('sindi.housing.examples.shared.title'),
+      icon: 'people',
+      prompt: t('sindi.housing.examples.shared.prompt'),
+    },
   ];
 
   // UI state
@@ -122,9 +199,10 @@ export default function Sindi() {
   const filteredConversations = useMemo(() => {
     if (!searchQuery.trim()) return conversations;
     const q = searchQuery.toLowerCase();
-    return conversations.filter(c =>
-      c.title.toLowerCase().includes(q) ||
-      (c.messages[c.messages.length - 1]?.content || '').toLowerCase().includes(q)
+    return conversations.filter(
+      (c) =>
+        c.title.toLowerCase().includes(q) ||
+        (c.messages[c.messages.length - 1]?.content || '').toLowerCase().includes(q),
     );
   }, [conversations, searchQuery]);
 
@@ -135,7 +213,7 @@ export default function Sindi() {
     const isSameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
-    filteredConversations.forEach(conv => {
+    filteredConversations.forEach((conv) => {
       const d = new Date(conv.updatedAt);
       let label: string;
       if (isSameDay(d, today)) label = 'Today';
@@ -147,7 +225,8 @@ export default function Sindi() {
     const orderedLabels = Object.keys(groups).sort((a, b) => {
       // Custom ordering for Today / Yesterday; others by date desc
       const special = (l: string) => (l === 'Today' ? 2 : l === 'Yesterday' ? 1 : 0);
-      const sa = special(a), sb = special(b);
+      const sa = special(a),
+        sb = special(b);
       if (sa !== sb) return sb - sa; // Today first
       // Parse other labels
       if (sa === 0 && sb === 0) {
@@ -157,7 +236,7 @@ export default function Sindi() {
       }
       return 0;
     });
-    return orderedLabels.map(label => ({ label, items: groups[label] }));
+    return orderedLabels.map((label) => ({ label, items: groups[label] }));
   }, [filteredConversations]);
 
   const formatTimestamp = (d: Date) => {
@@ -169,13 +248,16 @@ export default function Sindi() {
   };
 
   // Web-specific styles for sticky positioning
-  const webStyles = Platform.OS === 'web' ? {
-    container: { height: '100vh', display: 'flex', flexDirection: 'column' } as any,
-    stickyHeader: { position: 'sticky', top: 0 } as any,
-    messagesContainer: { marginTop: 0, marginBottom: 0, flex: 1, overflow: 'auto' } as any,
-    stickyInput: { position: 'sticky', bottom: 0 } as any,
-    messagesContent: { paddingBottom: 100 }
-  } : {};
+  const webStyles =
+    Platform.OS === 'web'
+      ? {
+          container: { height: '100vh', display: 'flex', flexDirection: 'column' } as any,
+          stickyHeader: { position: 'sticky', top: 0 } as any,
+          messagesContainer: { marginTop: 0, marginBottom: 0, flex: 1, overflow: 'auto' } as any,
+          stickyInput: { position: 'sticky', bottom: 0 } as any,
+          messagesContent: { paddingBottom: 100 },
+        }
+      : {};
 
   if (!isAuthenticated) {
     return (
@@ -201,7 +283,7 @@ export default function Sindi() {
         options={{
           title: t('sindi.title'),
           subtitle: t('sindi.subtitle'),
-          showBackButton: true
+          showBackButton: true,
         }}
       />
 
@@ -244,7 +326,9 @@ export default function Sindi() {
               </View>
               <View style={styles.newConversationTextContainer}>
                 <Text style={styles.newConversationText}>Start New Conversation</Text>
-                <Text style={styles.newConversationSubtext}>Get instant help with housing questions</Text>
+                <Text style={styles.newConversationSubtext}>
+                  Get instant help with housing questions
+                </Text>
               </View>
               <View style={styles.newConversationArrow}>
                 <IconComponent name="arrow-forward" size={20} color="rgba(255, 255, 255, 0.8)" />
@@ -280,14 +364,16 @@ export default function Sindi() {
               <EmptyState
                 icon="chatbubbles-outline"
                 title={searchQuery ? 'No matches' : 'No conversations yet'}
-                description={searchQuery ? 'Try another search term' : 'Start a new conversation to get help'}
+                description={
+                  searchQuery ? 'Try another search term' : 'Start a new conversation to get help'
+                }
                 actionText={searchQuery ? undefined : 'Start First Chat'}
                 actionIcon={searchQuery ? undefined : 'add-circle'}
                 onAction={searchQuery ? undefined : createNewConversation}
               />
             ) : (
               <View style={styles.conversationsList}>
-                {groupedConversations.map(group => (
+                {groupedConversations.map((group) => (
                   <View key={group.label}>
                     <Text style={styles.groupHeader}>{group.label}</Text>
                     {group.items.map((conversation, idx) => {
@@ -295,7 +381,10 @@ export default function Sindi() {
                       return (
                         <TouchableOpacity
                           key={conversation.id}
-                          style={[styles.conversationItem, idx === group.items.length - 1 && styles.conversationItemLast]}
+                          style={[
+                            styles.conversationItem,
+                            idx === group.items.length - 1 && styles.conversationItemLast,
+                          ]}
                           onPress={() => router.push(`/sindi/${conversation.id}`)}
                           activeOpacity={0.6}
                         >
@@ -304,15 +393,25 @@ export default function Sindi() {
                               <IconComponent name="chatbubble-ellipses" size={18} color={'white'} />
                             </View>
                             <View style={{ flex: 1, position: 'relative', paddingRight: 4 }}>
-                              <Text style={styles.conversationTitle} numberOfLines={1}>{conversation.title}</Text>
+                              <Text style={styles.conversationTitle} numberOfLines={1}>
+                                {conversation.title}
+                              </Text>
                               <Text style={styles.conversationPreview} numberOfLines={1}>
                                 {last ? last.content : 'No messages yet'}
                               </Text>
-                              <Text style={styles.conversationDate}>{formatTimestamp(new Date(conversation.updatedAt))}</Text>
+                              <Text style={styles.conversationDate}>
+                                {formatTimestamp(new Date(conversation.updatedAt))}
+                              </Text>
                               <View style={styles.conversationMeta}>
                                 <View style={styles.conversationStats}>
-                                  <IconComponent name="chatbubbles" size={11} color={colors.primaryColor} />
-                                  <Text style={styles.conversationStatsText}>{conversation.messages.length}</Text>
+                                  <IconComponent
+                                    name="chatbubbles"
+                                    size={11}
+                                    color={colors.primaryColor}
+                                  />
+                                  <Text style={styles.conversationStatsText}>
+                                    {conversation.messages.length}
+                                  </Text>
                                 </View>
                               </View>
                             </View>
@@ -340,13 +439,21 @@ export default function Sindi() {
                   onPress={async () => {
                     if (!isAuthenticated) return;
                     try {
-                      const newConversation = await createConversation(action.title, action.prompt, conversationFetch);
-                      router.push(`/sindi/${newConversation.id}?message=${encodeURIComponent(action.prompt)}`);
+                      const newConversation = await createConversation(
+                        action.title,
+                        action.prompt,
+                        conversationFetch,
+                      );
+                      router.push(
+                        `/sindi/${newConversation.id}?message=${encodeURIComponent(action.prompt)}`,
+                      );
                       loadConversations(conversationFetch);
                     } catch (error) {
                       console.error('Failed to create conversation:', error);
                       const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                      router.push(`/sindi/${conversationId}?message=${encodeURIComponent(action.prompt)}`);
+                      router.push(
+                        `/sindi/${conversationId}?message=${encodeURIComponent(action.prompt)}`,
+                      );
                     }
                   }}
                   activeOpacity={0.7}
@@ -360,9 +467,7 @@ export default function Sindi() {
 
           <View style={styles.propertySearchContainer}>
             <Text style={styles.propertySearchTitle}>{t('sindi.housing.title')}</Text>
-            <Text style={styles.propertySearchSubtitle}>
-              {t('sindi.housing.subtitle')}
-            </Text>
+            <Text style={styles.propertySearchSubtitle}>{t('sindi.housing.subtitle')}</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -375,13 +480,21 @@ export default function Sindi() {
                   onPress={async () => {
                     if (!isAuthenticated) return;
                     try {
-                      const newConversation = await createConversation(example.title, example.prompt, conversationFetch);
-                      router.push(`/sindi/${newConversation.id}?message=${encodeURIComponent(example.prompt)}`);
+                      const newConversation = await createConversation(
+                        example.title,
+                        example.prompt,
+                        conversationFetch,
+                      );
+                      router.push(
+                        `/sindi/${newConversation.id}?message=${encodeURIComponent(example.prompt)}`,
+                      );
                       loadConversations(conversationFetch);
                     } catch (error) {
                       console.error('Failed to create conversation:', error);
                       const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                      router.push(`/sindi/${conversationId}?message=${encodeURIComponent(example.prompt)}`);
+                      router.push(
+                        `/sindi/${conversationId}?message=${encodeURIComponent(example.prompt)}`,
+                      );
                     }
                   }}
                 >
@@ -390,9 +503,7 @@ export default function Sindi() {
                 </TouchableOpacity>
               ))}
             </ScrollView>
-            <Text style={styles.propertySearchNote}>
-              {t('sindi.housing.naturalLanguage')}
-            </Text>
+            <Text style={styles.propertySearchNote}>{t('sindi.housing.naturalLanguage')}</Text>
           </View>
 
           <LinearGradient

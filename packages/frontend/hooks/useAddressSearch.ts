@@ -34,10 +34,10 @@ export interface UseAddressSearchReturn {
 
 /**
  * Reusable hook for address search using OpenStreetMap Nominatim API
- * 
+ *
  * @param options - Configuration options for the address search
  * @returns Object with suggestions, loading state, error state, and search functions
- * 
+ *
  * @example
  * ```tsx
  * const { suggestions, loading, error, searchAddresses, clearSuggestions } = useAddressSearch({
@@ -45,10 +45,10 @@ export interface UseAddressSearchReturn {
  *   debounceDelay: 500,
  *   maxResults: 5
  * });
- * 
+ *
  * // Search for addresses
  * await searchAddresses('123 Main St');
- * 
+ *
  * // Clear suggestions
  * clearSuggestions();
  * ```
@@ -58,7 +58,7 @@ export const useAddressSearch = (options: AddressSearchOptions = {}): UseAddress
     minQueryLength = 3,
     debounceDelay = 500,
     maxResults = 5,
-    includeAddressDetails = true
+    includeAddressDetails = true,
   } = options;
 
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
@@ -68,59 +68,67 @@ export const useAddressSearch = (options: AddressSearchOptions = {}): UseAddress
   /**
    * Search for addresses using OpenStreetMap Nominatim API
    */
-  const searchAddresses = useCallback(async (query: string) => {
-    if (!query.trim() || query.length < minQueryLength) {
-      setSuggestions([]);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Build the API URL with parameters
-      const params = new URLSearchParams({
-        format: 'json',
-        q: query.trim(),
-        limit: maxResults.toString(),
-        ...(includeAddressDetails && { addressdetails: '1' })
-      });
-
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?${params.toString()}`
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: Failed to fetch address suggestions`);
+  const searchAddresses = useCallback(
+    async (query: string) => {
+      if (!query.trim() || query.length < minQueryLength) {
+        setSuggestions([]);
+        return;
       }
 
-      const data = await response.json();
+      setLoading(true);
+      setError(null);
 
-      // Transform the API response to our format
-      const transformedSuggestions: AddressSuggestion[] = data.map((result: any, index: number) => ({
-        id: result.place_id?.toString() || index.toString(),
-        text: result.display_name,
-        icon: 'location-outline',
-        lat: parseFloat(result.lat),
-        lon: parseFloat(result.lon),
-        address: includeAddressDetails ? {
-          street: result.address?.road || '',
-          city: result.address?.city || result.address?.town || result.address?.village || '',
-          state: result.address?.state || '',
-          country: result.address?.country || '',
-          postcode: result.address?.postcode || ''
-        } : undefined
-      }));
+      try {
+        // Build the API URL with parameters
+        const params = new URLSearchParams({
+          format: 'json',
+          q: query.trim(),
+          limit: maxResults.toString(),
+          ...(includeAddressDetails && { addressdetails: '1' }),
+        });
 
-      setSuggestions(transformedSuggestions);
-    } catch (err: any) {
-      console.error('Error fetching address suggestions:', err);
-      setError(err.message || 'Failed to fetch address suggestions');
-      setSuggestions([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [minQueryLength, maxResults, includeAddressDetails]);
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?${params.toString()}`,
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: Failed to fetch address suggestions`);
+        }
+
+        const data = await response.json();
+
+        // Transform the API response to our format
+        const transformedSuggestions: AddressSuggestion[] = data.map(
+          (result: any, index: number) => ({
+            id: result.place_id?.toString() || index.toString(),
+            text: result.display_name,
+            icon: 'location-outline',
+            lat: parseFloat(result.lat),
+            lon: parseFloat(result.lon),
+            address: includeAddressDetails
+              ? {
+                  street: result.address?.road || '',
+                  city:
+                    result.address?.city || result.address?.town || result.address?.village || '',
+                  state: result.address?.state || '',
+                  country: result.address?.country || '',
+                  postcode: result.address?.postcode || '',
+                }
+              : undefined,
+          }),
+        );
+
+        setSuggestions(transformedSuggestions);
+      } catch (err: any) {
+        console.error('Error fetching address suggestions:', err);
+        setError(err.message || 'Failed to fetch address suggestions');
+        setSuggestions([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [minQueryLength, maxResults, includeAddressDetails],
+  );
 
   /**
    * Clear all suggestions
@@ -149,10 +157,10 @@ export const useAddressSearch = (options: AddressSearchOptions = {}): UseAddress
 
 /**
  * Hook that combines address search with debounced input
- * 
+ *
  * @param options - Configuration options for the address search
  * @returns Object with suggestions, loading state, error state, and debounced search function
- * 
+ *
  * @example
  * ```tsx
  * const { suggestions, loading, error, debouncedSearch } = useDebouncedAddressSearch({
@@ -160,27 +168,20 @@ export const useAddressSearch = (options: AddressSearchOptions = {}): UseAddress
  *   debounceDelay: 500,
  *   maxResults: 5
  * });
- * 
+ *
  * // Use with input onChange
  * <TextInput onChangeText={debouncedSearch} />
  * ```
  */
-export const useDebouncedAddressSearch = (options: AddressSearchOptions = {}): UseAddressSearchReturn & {
+export const useDebouncedAddressSearch = (
+  options: AddressSearchOptions = {},
+): UseAddressSearchReturn & {
   debouncedSearch: (query: string) => void;
 } => {
-  const {
-    debounceDelay = 500,
-    ...searchOptions
-  } = options;
+  const { debounceDelay = 500, ...searchOptions } = options;
 
-  const {
-    suggestions,
-    loading,
-    error,
-    searchAddresses,
-    clearSuggestions,
-    setSuggestions
-  } = useAddressSearch(searchOptions);
+  const { suggestions, loading, error, searchAddresses, clearSuggestions, setSuggestions } =
+    useAddressSearch(searchOptions);
 
   const [debouncedQuery, setDebouncedQuery] = useState('');
 
@@ -217,13 +218,13 @@ export const useDebouncedAddressSearch = (options: AddressSearchOptions = {}): U
 
 /**
  * Hook for reverse geocoding (coordinates to address)
- * 
+ *
  * @returns Object with reverse geocoding function and result
- * 
+ *
  * @example
  * ```tsx
  * const { reverseGeocode, result, loading, error } = useReverseGeocode();
- * 
+ *
  * // Get address from coordinates
  * await reverseGeocode(40.7128, -74.0060);
  * ```
@@ -239,7 +240,7 @@ export const useReverseGeocode = () => {
 
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
       );
 
       if (!response.ok) {
@@ -269,4 +270,4 @@ export const useReverseGeocode = () => {
     reverseGeocode,
     clearResult,
   };
-}; 
+};

@@ -103,7 +103,9 @@ class NotificationService {
     return response.data.data;
   }
 
-  async updateNotificationSettings(settings: Partial<NotificationSettings>): Promise<NotificationSettings> {
+  async updateNotificationSettings(
+    settings: Partial<NotificationSettings>,
+  ): Promise<NotificationSettings> {
     const response = await api.put(`${this.baseUrl}/preferences/settings`, settings);
     return response.data.data;
   }

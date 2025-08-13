@@ -12,4 +12,4 @@ export { Search, SearchActive } from './search-icon';
 export { SindiIcon, SindiIconActive } from './sindi-icon';
 
 // Types
-export type { IconProps } from './types'; 
+export type { IconProps } from './types';

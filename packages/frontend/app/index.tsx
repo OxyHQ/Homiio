@@ -1,5 +1,12 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Platform } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  RefreshControl,
+  Platform,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
@@ -38,7 +45,9 @@ export default function HomePage() {
   const [tipsLoading, setTipsLoading] = useState(false);
 
   // Nearby cities state
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(
+    null,
+  );
   const [nearbyCities, setNearbyCities] = useState<any[]>([]);
   const [nearbyProperties, setNearbyProperties] = useState<{ [cityId: string]: any[] }>({});
   const [nearbyLoading, setNearbyLoading] = useState(false);
@@ -50,7 +59,10 @@ export default function HomePage() {
         let { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') return;
         let location = await Location.getCurrentPositionAsync({});
-        setUserLocation({ latitude: location.coords.latitude, longitude: location.coords.longitude });
+        setUserLocation({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
       } catch {
         // Permission denied or error
       }
@@ -66,17 +78,22 @@ export default function HomePage() {
       const R = 6371; // km
       const dLat = toRad(lat2 - lat1);
       const dLon = toRad(lon2 - lon1);
-      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     }
     const withDistance = cities
-      .filter(city => city.latitude && city.longitude)
-      .map(city => ({
+      .filter((city) => city.latitude && city.longitude)
+      .map((city) => ({
         ...city,
-        distance: getDistance(userLocation.latitude, userLocation.longitude, city.latitude, city.longitude)
+        distance: getDistance(
+          userLocation.latitude,
+          userLocation.longitude,
+          city.latitude,
+          city.longitude,
+        ),
       }));
     const sorted = withDistance.sort((a, b) => a.distance - b.distance);
     setNearbyCities(sorted.slice(0, 2));
@@ -94,10 +111,12 @@ export default function HomePage() {
         } catch {
           return { cityId: city._id || city.id, properties: [] };
         }
-      })
-    ).then(results => {
+      }),
+    ).then((results) => {
       const map: { [cityId: string]: any[] } = {};
-      results.forEach(r => { map[r.cityId] = r.properties; });
+      results.forEach((r) => {
+        map[r.cityId] = r.properties;
+      });
       setNearbyProperties(map);
       setNearbyLoading(false);
     });
@@ -121,9 +140,11 @@ export default function HomePage() {
   // Set enhanced SEO for home page
   useSEO({
     title: 'Find Your Ethical Home',
-    description: 'Discover transparent rentals with fair agreements and verified properties. Join thousands of users finding their perfect ethical home on Homiio.',
-    keywords: 'ethical housing, transparent rentals, verified properties, fair agreements, housing platform, rental search',
-    type: 'website'
+    description:
+      'Discover transparent rentals with fair agreements and verified properties. Join thousands of users finding their perfect ethical home on Homiio.',
+    keywords:
+      'ethical housing, transparent rentals, verified properties, fair agreements, housing platform, rental search',
+    type: 'website',
   });
 
   // Fetch real data
@@ -137,7 +158,7 @@ export default function HomePage() {
   React.useEffect(() => {
     loadProperties({
       limit: 8,
-      status: 'available'
+      status: 'available',
     });
   }, [loadProperties]);
 
@@ -186,14 +207,27 @@ export default function HomePage() {
   }, [properties]);
 
   // Memoize property types to prevent unnecessary re-renders
-  const propertyTypes = useMemo(() => [
-    { id: 'apartment', name: t('search.propertyType.apartments'), icon: 'business-outline', count: 0 },
-    { id: 'house', name: t('search.propertyType.houses'), icon: 'home-outline', count: 0 },
-    { id: 'room', name: t('search.propertyType.rooms'), icon: 'bed-outline', count: 0 },
-    { id: 'studio', name: t('search.propertyType.studios'), icon: 'home-outline', count: 0 },
-    { id: 'coliving', name: t('search.propertyType.coliving'), icon: 'people-outline', count: 0 },
-    { id: 'public_housing', name: t('search.propertyType.publicHousing'), icon: 'library-outline', count: 0 },
-  ], [t]);
+  const propertyTypes = useMemo(
+    () => [
+      {
+        id: 'apartment',
+        name: t('search.propertyType.apartments'),
+        icon: 'business-outline',
+        count: 0,
+      },
+      { id: 'house', name: t('search.propertyType.houses'), icon: 'home-outline', count: 0 },
+      { id: 'room', name: t('search.propertyType.rooms'), icon: 'bed-outline', count: 0 },
+      { id: 'studio', name: t('search.propertyType.studios'), icon: 'home-outline', count: 0 },
+      { id: 'coliving', name: t('search.propertyType.coliving'), icon: 'people-outline', count: 0 },
+      {
+        id: 'public_housing',
+        name: t('search.propertyType.publicHousing'),
+        icon: 'library-outline',
+        count: 0,
+      },
+    ],
+    [t],
+  );
 
   // Option A: Pure flex-wrap grid (no explicit width calculations / breakpoints)
   // Each chip gets a flexible basis and minWidth; layout naturally flows into 1..N columns.
@@ -202,14 +236,17 @@ export default function HomePage() {
   const propertyTypeCounts = useMemo(() => {
     if (!properties) return propertyTypes;
 
-    const counts = properties.reduce((acc: Record<string, number>, property: any) => {
-      acc[property.type] = (acc[property.type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const counts = properties.reduce(
+      (acc: Record<string, number>, property: any) => {
+        acc[property.type] = (acc[property.type] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
-    return propertyTypes.map(type => ({
+    return propertyTypes.map((type) => ({
       ...type,
-      count: counts[type.id] || 0
+      count: counts[type.id] || 0,
     }));
   }, [properties, propertyTypes]);
 
@@ -225,7 +262,7 @@ export default function HomePage() {
         name: city.name,
         count: city.propertiesCount || 0,
         state: city.state,
-        country: city.country
+        country: city.country,
       }));
   }, [cities]);
 
@@ -239,7 +276,7 @@ export default function HomePage() {
     try {
       await loadProperties({
         limit: 8,
-        status: 'available'
+        status: 'available',
       });
     } catch (error) {
       console.error('Error refreshing data:', error);
@@ -247,7 +284,6 @@ export default function HomePage() {
       setRefreshing(false);
     }
   }, [loadProperties]);
-
 
   // Tip card styles for carousel (StyleSheet)
   const tipCarouselCardStyles = StyleSheet.create({
@@ -316,9 +352,7 @@ export default function HomePage() {
       <ScrollView
         style={styles.container}
         contentContainerStyle={{ paddingBottom: 20 }}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
         {/* Hero Section */}
@@ -329,16 +363,19 @@ export default function HomePage() {
           style={[styles.heroSection, { paddingTop: insets.top + 50 }]}
         >
           <View style={styles.heroContent}>
-            <ThemedText style={styles.heroTitle}>{t("home.hero.title")}</ThemedText>
-            <ThemedText style={styles.heroSubtitle}>
-              {t("home.hero.subtitle")}
-            </ThemedText>
+            <ThemedText style={styles.heroTitle}>{t('home.hero.title')}</ThemedText>
+            <ThemedText style={styles.heroSubtitle}>{t('home.hero.subtitle')}</ThemedText>
 
             <View style={styles.searchContainer}>
-              <TouchableOpacity style={styles.searchBar} onPress={handleSearchPress} activeOpacity={0.8}>
+              <TouchableOpacity
+                style={styles.searchBar}
+                onPress={handleSearchPress}
+                activeOpacity={0.8}
+              >
                 <View style={styles.searchInput}>
                   <ThemedText style={styles.searchPlaceholderText}>
-                    {t("home.hero.searchPlaceholder") || "Search by address, city, or neighborhood..."}
+                    {t('home.hero.searchPlaceholder') ||
+                      'Search by address, city, or neighborhood...'}
                   </ThemedText>
                 </View>
                 <View style={styles.searchButton}>
@@ -346,14 +383,13 @@ export default function HomePage() {
                 </View>
               </TouchableOpacity>
             </View>
-
           </View>
         </LinearGradient>
 
         {/* Property Types */}
         <View style={styles.typesSection}>
           <View style={styles.sectionHeader}>
-            <ThemedText style={styles.sectionTitle}>{t("home.categories.title")}</ThemedText>
+            <ThemedText style={styles.sectionTitle}>{t('home.categories.title')}</ThemedText>
           </View>
           <View style={styles.propertyChipsContainer}>
             {propertyTypeCounts.map((type, idx) => {
@@ -371,7 +407,11 @@ export default function HomePage() {
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                   >
-                    <IconComponent name={type.icon as keyof typeof IconComponent.glyphMap} size={20} color="white" />
+                    <IconComponent
+                      name={type.icon as keyof typeof IconComponent.glyphMap}
+                      size={20}
+                      color="white"
+                    />
                     <ThemedText style={styles.propertyChipName}>{type.name}</ThemedText>
                     <View style={styles.propertyChipCountBadge}>
                       <ThemedText style={styles.propertyChipCountText}>{type.count}</ThemedText>
@@ -386,16 +426,18 @@ export default function HomePage() {
         {/* Trust Features */}
         <View style={styles.trustSection}>
           <View style={styles.sectionHeader}>
-            <ThemedText style={styles.sectionTitle}>{t("home.trust.title")}</ThemedText>
+            <ThemedText style={styles.sectionTitle}>{t('home.trust.title')}</ThemedText>
           </View>
           <View style={styles.trustFeatures}>
             <View style={styles.trustFeature}>
               <View style={styles.featureIconCircle}>
                 <IconComponent name="shield-checkmark" size={24} color={colors.primaryColor} />
               </View>
-              <ThemedText style={styles.featureTitle}>{t("home.trust.verifiedListings.title")}</ThemedText>
+              <ThemedText style={styles.featureTitle}>
+                {t('home.trust.verifiedListings.title')}
+              </ThemedText>
               <ThemedText style={styles.featureDescription}>
-                {t("home.trust.verifiedListings.description")}
+                {t('home.trust.verifiedListings.description')}
               </ThemedText>
             </View>
 
@@ -403,9 +445,11 @@ export default function HomePage() {
               <View style={styles.featureIconCircle}>
                 <IconComponent name="document-text" size={24} color={colors.primaryColor} />
               </View>
-              <ThemedText style={styles.featureTitle}>{t("home.trust.fairAgreements.title")}</ThemedText>
+              <ThemedText style={styles.featureTitle}>
+                {t('home.trust.fairAgreements.title')}
+              </ThemedText>
               <ThemedText style={styles.featureDescription}>
-                {t("home.trust.fairAgreements.description")}
+                {t('home.trust.fairAgreements.description')}
               </ThemedText>
             </View>
 
@@ -413,9 +457,11 @@ export default function HomePage() {
               <View style={styles.featureIconCircle}>
                 <IconComponent name="star" size={24} color={colors.primaryColor} />
               </View>
-              <ThemedText style={styles.featureTitle}>{t("home.trust.trustScore.title")}</ThemedText>
+              <ThemedText style={styles.featureTitle}>
+                {t('home.trust.trustScore.title')}
+              </ThemedText>
               <ThemedText style={styles.featureDescription}>
-                {t("home.trust.trustScore.description")}
+                {t('home.trust.trustScore.description')}
               </ThemedText>
             </View>
           </View>
@@ -424,7 +470,7 @@ export default function HomePage() {
         {/* Featured Properties */}
         {featuredProperties.length > 0 ? (
           <HomeCarouselSection
-            title={t("home.featured.title")}
+            title={t('home.featured.title')}
             items={featuredProperties}
             loading={propertiesLoading}
             renderItem={(property) => (
@@ -512,15 +558,17 @@ export default function HomePage() {
                   end={{ x: 1, y: 1 }}
                 >
                   {/* Subtle overlay for better text readability */}
-                  <View style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.15)',
-                    borderRadius: 25,
-                  }} />
+                  <View
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: 'rgba(0, 0, 0, 0.15)',
+                      borderRadius: 25,
+                    }}
+                  />
                   {/* City Info at bottom */}
                   <View style={{ width: '100%' }}>
                     <ThemedText style={styles.cityName}>{city.name}</ThemedText>
@@ -566,7 +614,9 @@ export default function HomePage() {
               >
                 <IconComponent name="people" size={20} color="white" />
                 <View style={styles.statChipContent}>
-                  <ThemedText style={styles.statChipNumber}>{properties?.filter(p => p.status === 'available').length || 0}</ThemedText>
+                  <ThemedText style={styles.statChipNumber}>
+                    {properties?.filter((p) => p.status === 'available').length || 0}
+                  </ThemedText>
                   <ThemedText style={styles.statChipLabel}>Available Now</ThemedText>
                 </View>
               </LinearGradient>
@@ -582,8 +632,10 @@ export default function HomePage() {
                 <IconComponent name="leaf" size={20} color="white" />
                 <View style={styles.statChipContent}>
                   <ThemedText style={styles.statChipNumber}>
-                    {properties?.filter(p =>
-                      p.amenities?.some(a => a.includes('eco') || a.includes('green') || a.includes('solar'))
+                    {properties?.filter((p) =>
+                      p.amenities?.some(
+                        (a) => a.includes('eco') || a.includes('green') || a.includes('solar'),
+                      ),
                     ).length || 0}
                   </ThemedText>
                   <ThemedText style={styles.statChipLabel}>Eco-Friendly</ThemedText>
@@ -634,18 +686,30 @@ export default function HomePage() {
                   </LinearGradient>
                 </View>
                 <View style={tipCarouselCardStyles.badge}>
-                  <ThemedText style={tipCarouselCardStyles.badgeText}>{t(`home.tips.categories.${tip.category}`)}</ThemedText>
+                  <ThemedText style={tipCarouselCardStyles.badgeText}>
+                    {t(`home.tips.categories.${tip.category}`)}
+                  </ThemedText>
                 </View>
-                <ThemedText style={tipCarouselCardStyles.title} numberOfLines={2}>{tip.title}</ThemedText>
-                <ThemedText style={tipCarouselCardStyles.description} numberOfLines={2}>{tip.description}</ThemedText>
+                <ThemedText style={tipCarouselCardStyles.title} numberOfLines={2}>
+                  {tip.title}
+                </ThemedText>
+                <ThemedText style={tipCarouselCardStyles.description} numberOfLines={2}>
+                  {tip.description}
+                </ThemedText>
                 <View style={tipCarouselCardStyles.metaRow}>
                   <View style={tipCarouselCardStyles.metaItem}>
                     <Ionicons name="time-outline" size={14} color={colors.COLOR_BLACK_LIGHT_4} />
                     <ThemedText style={tipCarouselCardStyles.metaText}>{tip.readTime}</ThemedText>
                   </View>
                   <View style={tipCarouselCardStyles.metaItem}>
-                    <Ionicons name="calendar-outline" size={14} color={colors.COLOR_BLACK_LIGHT_4} />
-                    <ThemedText style={tipCarouselCardStyles.metaText}>{tip.publishDate}</ThemedText>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={14}
+                      color={colors.COLOR_BLACK_LIGHT_4}
+                    />
+                    <ThemedText style={tipCarouselCardStyles.metaText}>
+                      {tip.publishDate}
+                    </ThemedText>
                   </View>
                 </View>
               </View>
@@ -656,7 +720,7 @@ export default function HomePage() {
         {/* FAQ Section */}
         <View style={styles.faqSection}>
           <View style={styles.sectionHeader}>
-            <ThemedText style={styles.sectionTitle}>{t("home.faq.title")}</ThemedText>
+            <ThemedText style={styles.sectionTitle}>{t('home.faq.title')}</ThemedText>
           </View>
           <View style={styles.faqContainer}>
             <View style={styles.faqItem}>
@@ -669,7 +733,9 @@ export default function HomePage() {
                 }}
                 activeOpacity={0.7}
               >
-                <ThemedText style={styles.faqQuestionText}>{t("home.faq.scheduleViewing.question")}</ThemedText>
+                <ThemedText style={styles.faqQuestionText}>
+                  {t('home.faq.scheduleViewing.question')}
+                </ThemedText>
                 <IconComponent
                   name={expandedFaq === 'faq1' ? 'chevron-up' : 'chevron-down'}
                   size={20}
@@ -679,7 +745,7 @@ export default function HomePage() {
               {expandedFaq === 'faq1' && (
                 <View style={styles.faqAnswer}>
                   <ThemedText style={styles.faqAnswerText}>
-                    {t("home.faq.scheduleViewing.answer")}
+                    {t('home.faq.scheduleViewing.answer')}
                   </ThemedText>
                 </View>
               )}
@@ -694,7 +760,9 @@ export default function HomePage() {
                 }}
                 activeOpacity={0.7}
               >
-                <ThemedText style={styles.faqQuestionText}>{t("home.faq.verifiedProperty.question")}</ThemedText>
+                <ThemedText style={styles.faqQuestionText}>
+                  {t('home.faq.verifiedProperty.question')}
+                </ThemedText>
                 <IconComponent
                   name={expandedFaq === 'faq2' ? 'chevron-up' : 'chevron-down'}
                   size={20}
@@ -704,7 +772,7 @@ export default function HomePage() {
               {expandedFaq === 'faq2' && (
                 <View style={styles.faqAnswer}>
                   <ThemedText style={styles.faqAnswerText}>
-                    {t("home.faq.verifiedProperty.answer")}
+                    {t('home.faq.verifiedProperty.answer')}
                   </ThemedText>
                 </View>
               )}
@@ -719,7 +787,9 @@ export default function HomePage() {
                 }}
                 activeOpacity={0.7}
               >
-                <ThemedText style={styles.faqQuestionText}>{t("home.faq.reportSuspicious.question")}</ThemedText>
+                <ThemedText style={styles.faqQuestionText}>
+                  {t('home.faq.reportSuspicious.question')}
+                </ThemedText>
                 <IconComponent
                   name={expandedFaq === 'faq3' ? 'chevron-up' : 'chevron-down'}
                   size={20}
@@ -729,7 +799,7 @@ export default function HomePage() {
               {expandedFaq === 'faq3' && (
                 <View style={styles.faqAnswer}>
                   <ThemedText style={styles.faqAnswerText}>
-                    {t("home.faq.reportSuspicious.answer")}
+                    {t('home.faq.reportSuspicious.answer')}
                   </ThemedText>
                 </View>
               )}
@@ -744,7 +814,9 @@ export default function HomePage() {
                 }}
                 activeOpacity={0.7}
               >
-                <ThemedText style={styles.faqQuestionText}>{t("home.faq.applicationRequirements.question")}</ThemedText>
+                <ThemedText style={styles.faqQuestionText}>
+                  {t('home.faq.applicationRequirements.question')}
+                </ThemedText>
                 <IconComponent
                   name={expandedFaq === 'faq4' ? 'chevron-up' : 'chevron-down'}
                   size={20}
@@ -754,7 +826,7 @@ export default function HomePage() {
               {expandedFaq === 'faq4' && (
                 <View style={styles.faqAnswer}>
                   <ThemedText style={styles.faqAnswerText}>
-                    {t("home.faq.applicationRequirements.answer")}
+                    {t('home.faq.applicationRequirements.answer')}
                   </ThemedText>
                 </View>
               )}

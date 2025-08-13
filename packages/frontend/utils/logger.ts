@@ -28,7 +28,7 @@ const createLogger = (): Logger => {
       if (process.env.NODE_ENV !== 'production') {
         console.debug(`${PREFIX} [DEBUG] ${message}`, ...args);
       }
-    }
+    },
   };
 };
 

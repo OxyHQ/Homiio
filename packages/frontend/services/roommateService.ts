@@ -1,20 +1,9 @@
 import { api } from '@/utils/api';
 import { OxyServices } from '@oxyhq/services';
-import { 
-  Profile, 
-  PersonalProfile,
-  RoommatePreferences,
-  LeaseDuration
-} from '@homiio/shared-types';
+import { Profile, PersonalProfile, RoommatePreferences, LeaseDuration } from '@homiio/shared-types';
 
 // Re-export the types for backward compatibility
-export type { 
-  Profile, 
-  PersonalProfile,
-  RoommatePreferences
-};
-
-
+export type { Profile, PersonalProfile, RoommatePreferences };
 
 export interface RoommateFilters {
   minMatchPercentage?: number;
@@ -34,7 +23,11 @@ class RoommateService {
   private baseUrl = '/api/roommates';
 
   // Get all available roommate profiles (personal profiles with roommate enabled)
-  async getRoommateProfiles(filters?: RoommateFilters, oxyServices?: OxyServices, activeSessionId?: string): Promise<{
+  async getRoommateProfiles(
+    filters?: RoommateFilters,
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<{
     profiles: Profile[];
     total: number;
     page: number;
@@ -61,7 +54,10 @@ class RoommateService {
   }
 
   // Get current user's roommate preferences
-  async getMyRoommatePreferences(oxyServices?: OxyServices, activeSessionId?: string): Promise<RoommatePreferences | null> {
+  async getMyRoommatePreferences(
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<RoommatePreferences | null> {
     try {
       const response = await api.get(`${this.baseUrl}/preferences`, {
         oxyServices,
@@ -75,7 +71,11 @@ class RoommateService {
   }
 
   // Update roommate preferences
-  async updateRoommatePreferences(preferences: RoommatePreferences, oxyServices?: OxyServices, activeSessionId?: string): Promise<RoommatePreferences> {
+  async updateRoommatePreferences(
+    preferences: RoommatePreferences,
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<RoommatePreferences> {
     try {
       const response = await api.put(`${this.baseUrl}/preferences`, preferences, {
         oxyServices,
@@ -89,12 +89,20 @@ class RoommateService {
   }
 
   // Enable/disable roommate matching for current profile
-  async toggleRoommateMatching(enabled: boolean, oxyServices?: OxyServices, activeSessionId?: string): Promise<void> {
+  async toggleRoommateMatching(
+    enabled: boolean,
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<void> {
     try {
-      await api.patch(`${this.baseUrl}/toggle`, { enabled }, {
-        oxyServices,
-        activeSessionId,
-      });
+      await api.patch(
+        `${this.baseUrl}/toggle`,
+        { enabled },
+        {
+          oxyServices,
+          activeSessionId,
+        },
+      );
     } catch (error) {
       console.error('Error toggling roommate matching:', error);
       throw error;
@@ -102,12 +110,21 @@ class RoommateService {
   }
 
   // Send roommate request
-  async sendRoommateRequest(profileId: string, message?: string, oxyServices?: OxyServices, activeSessionId?: string): Promise<void> {
+  async sendRoommateRequest(
+    profileId: string,
+    message?: string,
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<void> {
     try {
-      await api.post(`${this.baseUrl}/${profileId}/request`, { message }, {
-        oxyServices,
-        activeSessionId,
-      });
+      await api.post(
+        `${this.baseUrl}/${profileId}/request`,
+        { message },
+        {
+          oxyServices,
+          activeSessionId,
+        },
+      );
     } catch (error) {
       console.error('Error sending roommate request:', error);
       throw error;
@@ -115,7 +132,10 @@ class RoommateService {
   }
 
   // Get roommate requests (sent and received)
-  async getRoommateRequests(oxyServices?: OxyServices, activeSessionId?: string): Promise<{
+  async getRoommateRequests(
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<{
     sent: any[];
     received: any[];
   }> {
@@ -144,15 +164,22 @@ class RoommateService {
     }
   }
 
-
-
   // Decline roommate request
-  async declineRoommateRequest(requestId: string, responseMessage?: string, oxyServices?: OxyServices, activeSessionId?: string): Promise<void> {
+  async declineRoommateRequest(
+    requestId: string,
+    responseMessage?: string,
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<void> {
     try {
-      await api.post(`${this.baseUrl}/requests/${requestId}/decline`, { responseMessage }, {
-        oxyServices,
-        activeSessionId,
-      });
+      await api.post(
+        `${this.baseUrl}/requests/${requestId}/decline`,
+        { responseMessage },
+        {
+          oxyServices,
+          activeSessionId,
+        },
+      );
     } catch (error) {
       console.error('Error declining roommate request:', error);
       throw error;
@@ -160,12 +187,21 @@ class RoommateService {
   }
 
   // Accept roommate request
-  async acceptRoommateRequest(requestId: string, responseMessage?: string, oxyServices?: OxyServices, activeSessionId?: string): Promise<void> {
+  async acceptRoommateRequest(
+    requestId: string,
+    responseMessage?: string,
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<void> {
     try {
-      await api.post(`${this.baseUrl}/requests/${requestId}/accept`, { responseMessage }, {
-        oxyServices,
-        activeSessionId,
-      });
+      await api.post(
+        `${this.baseUrl}/requests/${requestId}/accept`,
+        { responseMessage },
+        {
+          oxyServices,
+          activeSessionId,
+        },
+      );
     } catch (error) {
       console.error('Error accepting roommate request:', error);
       throw error;
@@ -173,7 +209,10 @@ class RoommateService {
   }
 
   // Get roommate relationships
-  async getRoommateRelationships(oxyServices?: OxyServices, activeSessionId?: string): Promise<{
+  async getRoommateRelationships(
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<{
     data: any[];
   }> {
     try {
@@ -196,7 +235,11 @@ class RoommateService {
   }
 
   // End roommate relationship
-  async endRoommateRelationship(relationshipId: string, oxyServices?: OxyServices, activeSessionId?: string): Promise<void> {
+  async endRoommateRelationship(
+    relationshipId: string,
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<void> {
     try {
       await api.delete(`${this.baseUrl}/relationships/${relationshipId}`, {
         oxyServices,
@@ -232,7 +275,9 @@ class RoommateService {
 
     // Budget compatibility
     if (prefs1.budget && prefs2.budget) {
-      const overlap = Math.min(prefs1.budget.max, prefs2.budget.max) - Math.max(prefs1.budget.min, prefs2.budget.min);
+      const overlap =
+        Math.min(prefs1.budget.max, prefs2.budget.max) -
+        Math.max(prefs1.budget.min, prefs2.budget.min);
       if (overlap > 0) {
         matchScore += 20;
       }
@@ -282,7 +327,7 @@ class RoommateService {
 
     // Use enriched Oxy user data if available
     const userData = (profile as any).userData;
-    
+
     // Try to extract name from various possible sources
     let name = 'User';
     if (userData?.fullName) {
@@ -300,11 +345,12 @@ class RoommateService {
       age: this.calculateAge(personal?.personalInfo?.bio || ''),
       occupation: personal?.personalInfo?.occupation || 'Not specified',
       bio: userData?.bio || personal?.personalInfo?.bio || 'No bio available',
-      location: userData?.location || this.extractLocation(roommatePrefs) || 'Location not specified',
+      location:
+        userData?.location || this.extractLocation(roommatePrefs) || 'Location not specified',
       budget: {
         min: roommatePrefs?.budget?.min || 0,
         max: roommatePrefs?.budget?.max || 0,
-        currency: 'USD'
+        currency: 'USD',
       },
       moveInDate: roommatePrefs?.moveInDate || 'Flexible',
       duration: roommatePrefs?.leaseDuration || 'Flexible',
@@ -330,4 +376,4 @@ class RoommateService {
   }
 }
 
-export const roommateService = new RoommateService(); 
+export const roommateService = new RoommateService();

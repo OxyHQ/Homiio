@@ -16,7 +16,7 @@ interface PropertyState {
     totalPages: number;
     limit: number;
   };
-  
+
   // Loading states
   loading: {
     properties: boolean;
@@ -28,10 +28,10 @@ interface PropertyState {
     update: boolean;
     delete: boolean;
   };
-  
+
   // Error state
   error: string | null;
-  
+
   // Actions
   setProperties: (properties: Property[]) => void;
   setCurrentProperty: (property: Property | null) => void;
@@ -48,63 +48,65 @@ interface PropertyState {
   clearFilters: () => void;
 }
 
-export const usePropertyStore = create<PropertyState>()(
-  (set, get) => ({
-    // Initial state
-    properties: [],
-    currentProperty: null,
-    propertyStats: {},
-    propertyEnergyStats: {},
-    searchResults: [],
-    filters: null,
-    pagination: {
-      page: 1,
-      total: 0,
-      totalPages: 1,
-      limit: 10,
-    },
-    loading: {
-      properties: false,
-      currentProperty: false,
-      stats: false,
-      energy: false,
-      search: false,
-      create: false,
-      update: false,
-      delete: false,
-    },
-    error: null,
-    
-    // Actions
-    setProperties: (properties) => set({ properties }),
-    setCurrentProperty: (property) => set({ currentProperty: property }),
-    setPropertyStats: (propertyId, stats) => set((state) => ({
-      propertyStats: { ...state.propertyStats, [propertyId]: stats }
+export const usePropertyStore = create<PropertyState>()((set, get) => ({
+  // Initial state
+  properties: [],
+  currentProperty: null,
+  propertyStats: {},
+  propertyEnergyStats: {},
+  searchResults: [],
+  filters: null,
+  pagination: {
+    page: 1,
+    total: 0,
+    totalPages: 1,
+    limit: 10,
+  },
+  loading: {
+    properties: false,
+    currentProperty: false,
+    stats: false,
+    energy: false,
+    search: false,
+    create: false,
+    update: false,
+    delete: false,
+  },
+  error: null,
+
+  // Actions
+  setProperties: (properties) => set({ properties }),
+  setCurrentProperty: (property) => set({ currentProperty: property }),
+  setPropertyStats: (propertyId, stats) =>
+    set((state) => ({
+      propertyStats: { ...state.propertyStats, [propertyId]: stats },
     })),
-    setPropertyEnergyStats: (propertyId, period, stats) => set((state) => ({
+  setPropertyEnergyStats: (propertyId, period, stats) =>
+    set((state) => ({
       propertyEnergyStats: {
         ...state.propertyEnergyStats,
         [propertyId]: {
           ...state.propertyEnergyStats[propertyId],
-          [period]: stats
-        }
-      }
+          [period]: stats,
+        },
+      },
     })),
-    setSearchResults: (results) => set({ searchResults: results }),
-    setFilters: (filters) => set({ filters }),
-    setPagination: (pagination) => set((state) => ({
-      pagination: { ...state.pagination, ...pagination }
+  setSearchResults: (results) => set({ searchResults: results }),
+  setFilters: (filters) => set({ filters }),
+  setPagination: (pagination) =>
+    set((state) => ({
+      pagination: { ...state.pagination, ...pagination },
     })),
-    setLoading: (key, loading) => set((state) => ({
-      loading: { ...state.loading, [key]: loading }
+  setLoading: (key, loading) =>
+    set((state) => ({
+      loading: { ...state.loading, [key]: loading },
     })),
-    setError: (error) => set({ error }),
-    clearError: () => set({ error: null }),
-    clearCurrentProperty: () => set({ currentProperty: null }),
-    clearSearchResults: () => set({ searchResults: [] }),
-    clearFilters: () => set({ filters: null }),
-  })
-);
+  setError: (error) => set({ error }),
+  clearError: () => set({ error: null }),
+  clearCurrentProperty: () => set({ currentProperty: null }),
+  clearSearchResults: () => set({ searchResults: [] }),
+  clearFilters: () => set({ filters: null }),
+}));
 
 // Selector hooks for easier access
 export const usePropertySelectors = () => {
@@ -129,4 +131,4 @@ export const usePropertySelectors = () => {
     loading,
     error,
   };
-}; 
+};

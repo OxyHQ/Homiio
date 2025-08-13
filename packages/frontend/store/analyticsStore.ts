@@ -29,11 +29,11 @@ interface AnalyticsState {
       growthRate: number;
     };
   };
-  
+
   // Loading states
   isLoading: boolean;
   error: string | null;
-  
+
   // Actions
   setAnalytics: (analytics: AnalyticsState['analytics']) => void;
   setUserMetrics: (metrics: AnalyticsState['analytics']['userMetrics']) => void;
@@ -45,57 +45,59 @@ interface AnalyticsState {
   clearError: () => void;
 }
 
-export const useAnalyticsStore = create<AnalyticsState>()(
-  (set, get) => ({
-    // Initial state
-    analytics: {
-      userMetrics: {
-        totalUsers: 0,
-        activeUsers: 0,
-        newUsers: 0,
-        retentionRate: 0,
-      },
-      propertyMetrics: {
-        totalProperties: 0,
-        activeListings: 0,
-        averageRent: 0,
-        occupancyRate: 0,
-      },
-      searchMetrics: {
-        totalSearches: 0,
-        averageSearchTime: 0,
-        popularSearches: [],
-        conversionRate: 0,
-      },
-      revenueMetrics: {
-        totalRevenue: 0,
-        monthlyRevenue: 0,
-        averageTransactionValue: 0,
-        growthRate: 0,
-      },
+export const useAnalyticsStore = create<AnalyticsState>()((set, get) => ({
+  // Initial state
+  analytics: {
+    userMetrics: {
+      totalUsers: 0,
+      activeUsers: 0,
+      newUsers: 0,
+      retentionRate: 0,
     },
-    isLoading: false,
-    error: null,
-    
-    // Actions
-    setAnalytics: (analytics) => set({ analytics }),
-    setUserMetrics: (metrics) => set((state) => ({
-      analytics: { ...state.analytics, userMetrics: metrics }
+    propertyMetrics: {
+      totalProperties: 0,
+      activeListings: 0,
+      averageRent: 0,
+      occupancyRate: 0,
+    },
+    searchMetrics: {
+      totalSearches: 0,
+      averageSearchTime: 0,
+      popularSearches: [],
+      conversionRate: 0,
+    },
+    revenueMetrics: {
+      totalRevenue: 0,
+      monthlyRevenue: 0,
+      averageTransactionValue: 0,
+      growthRate: 0,
+    },
+  },
+  isLoading: false,
+  error: null,
+
+  // Actions
+  setAnalytics: (analytics) => set({ analytics }),
+  setUserMetrics: (metrics) =>
+    set((state) => ({
+      analytics: { ...state.analytics, userMetrics: metrics },
     })),
-    setPropertyMetrics: (metrics) => set((state) => ({
-      analytics: { ...state.analytics, propertyMetrics: metrics }
+  setPropertyMetrics: (metrics) =>
+    set((state) => ({
+      analytics: { ...state.analytics, propertyMetrics: metrics },
     })),
-    setSearchMetrics: (metrics) => set((state) => ({
-      analytics: { ...state.analytics, searchMetrics: metrics }
+  setSearchMetrics: (metrics) =>
+    set((state) => ({
+      analytics: { ...state.analytics, searchMetrics: metrics },
     })),
-    setRevenueMetrics: (metrics) => set((state) => ({
-      analytics: { ...state.analytics, revenueMetrics: metrics }
+  setRevenueMetrics: (metrics) =>
+    set((state) => ({
+      analytics: { ...state.analytics, revenueMetrics: metrics },
     })),
-    setLoading: (loading) => set({ isLoading: loading }),
-    setError: (error) => set({ error }),
-    clearError: () => set({ error: null }),
-  })
-);
+  setLoading: (loading) => set({ isLoading: loading }),
+  setError: (error) => set({ error }),
+  clearError: () => set({ error: null }),
+}));
 
 // Selector hooks for easier access
 export const useAnalyticsSelectors = () => {

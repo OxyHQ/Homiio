@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
 import { PropertyCard } from '@/components/PropertyCard';
 import { useEcoProperties } from '@/hooks/usePropertyList';
@@ -39,13 +45,19 @@ export default function EcoPropertiesPage() {
 
     switch (activeFilter) {
       case 'energy-a':
-        return properties.filter(p => p.energyStats?.current?.power && p.energyStats.current.power > 0);
+        return properties.filter(
+          (p) => p.energyStats?.current?.power && p.energyStats.current.power > 0,
+        );
       case 'solar':
-        return properties.filter(p => p.amenities?.some((f: string) => f.toLowerCase().includes('solar')));
+        return properties.filter((p) =>
+          p.amenities?.some((f: string) => f.toLowerCase().includes('solar')),
+        );
       case 'garden':
-        return properties.filter(p => p.amenities?.some((f: string) => f.toLowerCase().includes('garden')));
+        return properties.filter((p) =>
+          p.amenities?.some((f: string) => f.toLowerCase().includes('garden')),
+        );
       case 'coliving':
-        return properties.filter(p => p.type === 'room' || p.housingType === 'public');
+        return properties.filter((p) => p.type === 'room' || p.housingType === 'public');
       default:
         return properties;
     }
@@ -58,10 +70,7 @@ export default function EcoPropertiesPage() {
   const renderFilterOption = (option: { id: string; label: string; icon: string }) => (
     <TouchableOpacity
       key={option.id}
-      style={[
-        styles.filterOption,
-        activeFilter === option.id && styles.activeFilterOption
-      ]}
+      style={[styles.filterOption, activeFilter === option.id && styles.activeFilterOption]}
       onPress={() => handleFilterPress(option.id)}
     >
       <IconComponent
@@ -69,12 +78,7 @@ export default function EcoPropertiesPage() {
         size={18}
         color={activeFilter === option.id ? 'white' : colors.COLOR_BLACK}
       />
-      <Text
-        style={[
-          styles.filterText,
-          activeFilter === option.id && styles.activeFilterText
-        ]}
-      >
+      <Text style={[styles.filterText, activeFilter === option.id && styles.activeFilterText]}>
         {option.label}
       </Text>
     </TouchableOpacity>
@@ -92,12 +96,12 @@ export default function EcoPropertiesPage() {
     <View style={styles.safeArea}>
       <View
         style={styles.stickyHeaderWrapper}
-        onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+        onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
       >
         <Header
           options={{
             showBackButton: true,
-            title: t("Eco-Certified Properties"),
+            title: t('Eco-Certified Properties'),
             titlePosition: 'center',
           }}
         />
@@ -107,9 +111,11 @@ export default function EcoPropertiesPage() {
           {/* Hero Banner */}
           <View style={styles.ecoBanner}>
             <View style={styles.ecoBannerContent}>
-              <Text style={styles.ecoBannerTitle}>{t("Sustainable Living")}</Text>
+              <Text style={styles.ecoBannerTitle}>{t('Sustainable Living')}</Text>
               <Text style={styles.ecoBannerText}>
-                {t("All properties meet strict eco-friendly standards for energy efficiency, sustainable materials, and minimal environmental impact.")}
+                {t(
+                  'All properties meet strict eco-friendly standards for energy efficiency, sustainable materials, and minimal environmental impact.',
+                )}
               </Text>
             </View>
             <View style={styles.ecoBannerIcon}>
@@ -119,16 +125,14 @@ export default function EcoPropertiesPage() {
 
           {/* Filters */}
           <View style={styles.filtersContainer}>
-            <Text style={styles.filtersTitle}>{t("Filter by:")}</Text>
-            <View style={styles.filtersRow}>
-              {filterOptions.map(renderFilterOption)}
-            </View>
+            <Text style={styles.filtersTitle}>{t('Filter by:')}</Text>
+            <View style={styles.filtersRow}>{filterOptions.map(renderFilterOption)}</View>
           </View>
 
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="green" />
-              <Text style={styles.loadingText}>{t("Loading eco properties...")}</Text>
+              <Text style={styles.loadingText}>{t('Loading eco properties...')}</Text>
             </View>
           ) : (
             <FlatList
@@ -139,14 +143,12 @@ export default function EcoPropertiesPage() {
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
                   <IconComponent name="leaf" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
-                  <Text style={styles.emptyText}>
-                    {t("No eco properties match your filters")}
-                  </Text>
+                  <Text style={styles.emptyText}>{t('No eco properties match your filters')}</Text>
                   <TouchableOpacity
                     style={styles.resetButton}
                     onPress={() => setActiveFilter(null)}
                   >
-                    <Text style={styles.resetButtonText}>{t("Reset Filters")}</Text>
+                    <Text style={styles.resetButtonText}>{t('Reset Filters')}</Text>
                   </TouchableOpacity>
                 </View>
               }
@@ -159,21 +161,21 @@ export default function EcoPropertiesPage() {
               <View style={styles.infoIcon}>
                 <Text style={styles.energyLabel}>A+</Text>
               </View>
-              <Text style={styles.infoText}>{t("Top energy efficiency rating")}</Text>
+              <Text style={styles.infoText}>{t('Top energy efficiency rating')}</Text>
             </View>
 
             <View style={styles.infoItem}>
               <View style={styles.infoIcon}>
                 <IconComponent name="water-outline" size={22} color="green" />
               </View>
-              <Text style={styles.infoText}>{t("Water conservation features")}</Text>
+              <Text style={styles.infoText}>{t('Water conservation features')}</Text>
             </View>
 
             <View style={styles.infoItem}>
               <View style={styles.infoIcon}>
                 <IconComponent name="leaf-outline" size={22} color="green" />
               </View>
-              <Text style={styles.infoText}>{t("Sustainably sourced materials")}</Text>
+              <Text style={styles.infoText}>{t('Sustainably sourced materials')}</Text>
             </View>
           </View>
         </View>

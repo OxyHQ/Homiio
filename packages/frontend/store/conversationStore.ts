@@ -24,32 +24,34 @@ interface ConversationState {
   loading: boolean;
   error: string | null;
   creatingConversation: boolean;
-  
+
   // Actions
   setConversations: (conversations: Conversation[]) => void;
   setCurrentConversation: (conversation: Conversation | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  
+
   // API Actions
-  loadConversations: (authenticatedFetch: (url: string, options?: RequestInit) => Promise<Response>) => Promise<void>;
+  loadConversations: (
+    authenticatedFetch: (url: string, options?: RequestInit) => Promise<Response>,
+  ) => Promise<void>;
   loadConversation: (
     conversationId: string,
-    authenticatedFetch: (url: string, options?: RequestInit) => Promise<Response>
+    authenticatedFetch: (url: string, options?: RequestInit) => Promise<Response>,
   ) => Promise<Conversation | null>;
   saveConversation: (
     conversation: Conversation,
-    authenticatedFetch: (url: string, options?: RequestInit) => Promise<Response>
+    authenticatedFetch: (url: string, options?: RequestInit) => Promise<Response>,
   ) => Promise<Conversation | null>;
   createConversation: (
     title: string,
     initialMessage?: string,
-    authenticatedFetch?: (url: string, options?: RequestInit) => Promise<Response>
+    authenticatedFetch?: (url: string, options?: RequestInit) => Promise<Response>,
   ) => Promise<Conversation>;
   updateConversationMessages: (conversationId: string, messages: ConversationMessage[]) => void;
   generateShareToken: (
     conversationId: string,
-    authenticatedFetch: (url: string, options?: RequestInit) => Promise<Response>
+    authenticatedFetch: (url: string, options?: RequestInit) => Promise<Response>,
   ) => Promise<string | null>;
 }
 
@@ -81,7 +83,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             title: conv.title,
             messages: conv.messages || [],
             createdAt: new Date(conv.createdAt),
-            updatedAt: new Date(conv.updatedAt)
+            updatedAt: new Date(conv.updatedAt),
           }));
           set({ conversations: formattedConversations });
         }
@@ -101,7 +103,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
   loadConversation: async (conversationId, authenticatedFetch) => {
     try {
       console.log('Store: Loading conversation with ID:', conversationId);
-      
+
       if (!conversationId) {
         console.error('Store: conversationId is undefined or null');
         set({ error: 'Invalid conversation ID', loading: false });
@@ -126,16 +128,18 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
 
       // Try to load from API
       console.log('Store: Fetching conversation from API');
-      const response = await authenticatedFetch(generateAPIUrl(`/api/ai/conversations/${conversationId}`));
+      const response = await authenticatedFetch(
+        generateAPIUrl(`/api/ai/conversations/${conversationId}`),
+      );
 
       if (response.ok) {
         const data = await response.json();
         console.log('Store: API response data:', data);
-        
+
         if (data.success && data.conversation) {
           const apiConversation = data.conversation;
           console.log('Store: Processing API conversation:', apiConversation);
-          
+
           const formattedConversation: Conversation = {
             id: apiConversation._id || apiConversation.id,
             title: apiConversation.title || 'Untitled Conversation',
@@ -197,7 +201,10 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
         id: conversation.id,
         title: conversation.title,
         messageCount: conversation.messages.length,
-        messages: conversation.messages.map(m => ({ role: m.role, content: m.content.substring(0, 50) + '...' }))
+        messages: conversation.messages.map((m) => ({
+          role: m.role,
+          content: m.content.substring(0, 50) + '...',
+        })),
       });
 
       // Skip saving if this is a client-generated ID that hasn't been created yet
@@ -211,7 +218,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
         console.log('Store: Creating new conversation from client ID');
         const requestBody = {
           title: conversation.title,
-          messages: conversation.messages.map(msg => ({
+          messages: conversation.messages.map((msg) => ({
             role: msg.role,
             content: msg.content,
             timestamp: msg.timestamp,
@@ -236,17 +243,17 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
               id: data.conversation._id,
             };
             set({ currentConversation: newConversation });
-            
+
             // Update conversations list
             const { conversations } = get();
-            const updatedConversations = conversations.map(c =>
-              c.id === conversation.id ? newConversation : c
+            const updatedConversations = conversations.map((c) =>
+              c.id === conversation.id ? newConversation : c,
             );
-            if (!updatedConversations.find(c => c.id === newConversation.id)) {
+            if (!updatedConversations.find((c) => c.id === newConversation.id)) {
               updatedConversations.unshift(newConversation);
             }
             set({ conversations: updatedConversations });
-            
+
             return newConversation;
           }
         } else {
@@ -259,7 +266,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
       console.log('Store: Updating existing conversation with ID:', conversation.id);
       const requestBody = {
         title: conversation.title,
-        messages: conversation.messages.map(msg => ({
+        messages: conversation.messages.map((msg) => ({
           role: msg.role,
           content: msg.content,
           timestamp: msg.timestamp,
@@ -267,26 +274,29 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
       };
       console.log('Store: PUT request body:', requestBody);
 
-      const response = await authenticatedFetch(generateAPIUrl(`/api/ai/conversations/${conversation.id}`), {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await authenticatedFetch(
+        generateAPIUrl(`/api/ai/conversations/${conversation.id}`),
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
         },
-        body: JSON.stringify(requestBody),
-      });
+      );
 
       if (response.ok) {
         console.log('Store: PUT request successful');
         // Update conversations list
         const { conversations } = get();
-        const updatedConversations = conversations.map(c =>
-          c.id === conversation.id ? conversation : c
+        const updatedConversations = conversations.map((c) =>
+          c.id === conversation.id ? conversation : c,
         );
         set({ conversations: updatedConversations });
       } else {
         console.error('Store: PUT request failed:', response.status, response.statusText);
       }
-      
+
       return conversation;
     } catch (error) {
       console.error('Store: Exception in saveConversation:', error);
@@ -306,14 +316,14 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
           },
           body: JSON.stringify({
             title,
-            initialMessage
-          })
+            initialMessage,
+          }),
         });
 
         if (response.ok) {
           const data = await response.json();
           console.log('Store: Create conversation API response:', data);
-          
+
           if (data.success && data.conversation && data.conversation._id) {
             const newConversation: Conversation = {
               id: data.conversation._id,
@@ -322,13 +332,13 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
               createdAt: new Date(data.conversation.createdAt),
               updatedAt: new Date(data.conversation.updatedAt),
             };
-            
+
             console.log('Store: Created conversation with ID:', newConversation.id);
-            
+
             // Add to conversations list
             const { conversations } = get();
             set({ conversations: [newConversation, ...conversations] });
-            
+
             return newConversation;
           } else {
             console.error('Store: Invalid API response structure for create conversation:', data);
@@ -337,7 +347,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
           console.error('Store: Create conversation API failed with status:', response.status);
         }
       }
-      
+
       // Fallback to client-side ID generation
       console.log('Store: Falling back to client-side ID generation');
       const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -348,7 +358,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      
+
       console.log('Store: Generated client-side conversation with ID:', conversationId);
       return newConversation;
     } catch (error) {
@@ -362,7 +372,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      
+
       console.log('Store: Exception fallback conversation with ID:', conversationId);
       return newConversation;
     }
@@ -371,23 +381,26 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
   // Update conversation messages
   updateConversationMessages: (conversationId, messages) => {
     const { currentConversation, conversations } = get();
-    
+
     if (currentConversation && currentConversation.id === conversationId) {
       const updatedConversation: Conversation = {
         ...currentConversation,
         messages,
         updatedAt: new Date(),
         // Update title based on first user message if it's still the default
-        title: currentConversation.title === 'New Conversation' && messages.length > 0 && messages[0].role === 'user'
-          ? messages[0].content.substring(0, 50) + (messages[0].content.length > 50 ? '...' : '')
-          : currentConversation.title,
+        title:
+          currentConversation.title === 'New Conversation' &&
+          messages.length > 0 &&
+          messages[0].role === 'user'
+            ? messages[0].content.substring(0, 50) + (messages[0].content.length > 50 ? '...' : '')
+            : currentConversation.title,
       };
-      
+
       set({ currentConversation: updatedConversation });
-      
+
       // Update in conversations list
-      const updatedConversations = conversations.map(c => 
-        c.id === conversationId ? updatedConversation : c
+      const updatedConversations = conversations.map((c) =>
+        c.id === conversationId ? updatedConversation : c,
       );
       set({ conversations: updatedConversations });
     }
@@ -398,7 +411,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     try {
       const response = await authenticatedFetch(
         generateAPIUrl(`/api/ai/conversations/${conversationId}/share`),
-        { method: 'POST' }
+        { method: 'POST' },
       );
 
       if (response.ok) {

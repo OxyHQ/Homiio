@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TextInput, TouchableOpacity, Platform, KeyboardAvoidingView } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  Platform,
+  KeyboardAvoidingView,
+} from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +17,10 @@ import { ThemedText } from '@/components/ThemedText';
 import { AmenitiesSelector } from '@/components/AmenitiesSelector';
 import { PropertyMap } from '@/components/PropertyMap';
 import { PropertyPreviewWidget } from '@/components/widgets/PropertyPreviewWidget';
-import { useCreatePropertyFormStore, useCreatePropertyFormSelectors } from '@/store/createPropertyFormStore';
+import {
+  useCreatePropertyFormStore,
+  useCreatePropertyFormSelectors,
+} from '@/store/createPropertyFormStore';
 import { useCreateProperty, useUpdateProperty, useProperty } from '@/hooks/usePropertyQueries';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SearchablePickerBottomSheet } from '@/components/SearchablePickerBottomSheet';
@@ -29,38 +40,10 @@ const PROPERTY_TYPES = [
 
 // Step flows for each property type
 const STEP_FLOWS: Record<string, string[]> = {
-  apartment: [
-    'Basic Info',
-    'Location',
-    'Pricing',
-    'Amenities',
-    'Media',
-    'Preview',
-  ],
-  house: [
-    'Basic Info',
-    'Location',
-    'Pricing',
-    'Amenities',
-    'Media',
-    'Preview',
-  ],
-  room: [
-    'Basic Info',
-    'Location',
-    'Pricing',
-    'Amenities',
-    'Media',
-    'Preview',
-  ],
-  studio: [
-    'Basic Info',
-    'Location',
-    'Pricing',
-    'Amenities',
-    'Media',
-    'Preview',
-  ],
+  apartment: ['Basic Info', 'Location', 'Pricing', 'Amenities', 'Media', 'Preview'],
+  house: ['Basic Info', 'Location', 'Pricing', 'Amenities', 'Media', 'Preview'],
+  room: ['Basic Info', 'Location', 'Pricing', 'Amenities', 'Media', 'Preview'],
+  studio: ['Basic Info', 'Location', 'Pricing', 'Amenities', 'Media', 'Preview'],
   coliving: [
     'Basic Info',
     'Location',
@@ -70,13 +53,7 @@ const STEP_FLOWS: Record<string, string[]> = {
     'Media',
     'Preview',
   ],
-  other: [
-    'Basic Info',
-    'Location',
-    'Pricing',
-    'Media',
-    'Preview',
-  ],
+  other: ['Basic Info', 'Location', 'Pricing', 'Media', 'Preview'],
 };
 
 // Field configuration for each property type and step
@@ -84,57 +61,128 @@ const STEP_FLOWS: Record<string, string[]> = {
 const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
   apartment: {
     // Apartment: all main fields
-    'Basic Info': ['propertyType', 'bedrooms', 'bathrooms', 'squareFootage', 'floor', 'yearBuilt', 'description'],
-    'Location': ['address', 'city', 'state', 'zipCode', 'country', 'latitude', 'longitude', 'availableFrom', 'leaseTerm'],
-    'Pricing': ['monthlyRent', 'currency', 'securityDeposit', 'applicationFee', 'lateFee'],
-    'Amenities': ['amenities', 'petsAllowed', 'smokingAllowed', 'partiesAllowed', 'guestsAllowed', 'maxGuests'],
-    'Media': ['images'],
-    'Preview': [],
+    'Basic Info': [
+      'propertyType',
+      'bedrooms',
+      'bathrooms',
+      'squareFootage',
+      'floor',
+      'yearBuilt',
+      'description',
+    ],
+    Location: [
+      'address',
+      'city',
+      'state',
+      'zipCode',
+      'country',
+      'latitude',
+      'longitude',
+      'availableFrom',
+      'leaseTerm',
+    ],
+    Pricing: ['monthlyRent', 'currency', 'securityDeposit', 'applicationFee', 'lateFee'],
+    Amenities: [
+      'amenities',
+      'petsAllowed',
+      'smokingAllowed',
+      'partiesAllowed',
+      'guestsAllowed',
+      'maxGuests',
+    ],
+    Media: ['images'],
+    Preview: [],
   },
   house: {
     // House: same as apartment
-    'Basic Info': ['propertyType', 'bedrooms', 'bathrooms', 'squareFootage', 'floor', 'yearBuilt', 'description'],
-    'Location': ['address', 'city', 'state', 'zipCode', 'country', 'latitude', 'longitude', 'availableFrom', 'leaseTerm'],
-    'Pricing': ['monthlyRent', 'currency', 'securityDeposit', 'applicationFee', 'lateFee'],
-    'Amenities': ['amenities', 'petsAllowed', 'smokingAllowed', 'partiesAllowed', 'guestsAllowed', 'maxGuests'],
-    'Media': ['images'],
-    'Preview': [],
+    'Basic Info': [
+      'propertyType',
+      'bedrooms',
+      'bathrooms',
+      'squareFootage',
+      'floor',
+      'yearBuilt',
+      'description',
+    ],
+    Location: [
+      'address',
+      'city',
+      'state',
+      'zipCode',
+      'country',
+      'latitude',
+      'longitude',
+      'availableFrom',
+      'leaseTerm',
+    ],
+    Pricing: ['monthlyRent', 'currency', 'securityDeposit', 'applicationFee', 'lateFee'],
+    Amenities: [
+      'amenities',
+      'petsAllowed',
+      'smokingAllowed',
+      'partiesAllowed',
+      'guestsAllowed',
+      'maxGuests',
+    ],
+    Media: ['images'],
+    Preview: [],
   },
   studio: {
     // Studio: no bedrooms
-    'Basic Info': ['propertyType', 'bathrooms', 'squareFootage', 'floor', 'yearBuilt', 'description'],
-    'Location': ['address', 'city', 'state', 'zipCode', 'country', 'latitude', 'longitude'],
-    'Pricing': ['monthlyRent', 'currency', 'securityDeposit'],
-    'Amenities': ['amenities'],
-    'Media': ['images'],
-    'Preview': [],
+    'Basic Info': [
+      'propertyType',
+      'bathrooms',
+      'squareFootage',
+      'floor',
+      'yearBuilt',
+      'description',
+    ],
+    Location: ['address', 'city', 'state', 'zipCode', 'country', 'latitude', 'longitude'],
+    Pricing: ['monthlyRent', 'currency', 'securityDeposit'],
+    Amenities: ['amenities'],
+    Media: ['images'],
+    Preview: [],
   },
   room: {
     // Room: no bedrooms, but has bathrooms, squareFootage, floor, yearBuilt
-    'Basic Info': ['propertyType', 'bathrooms', 'squareFootage', 'floor', 'yearBuilt', 'description'],
-    'Location': ['address', 'city', 'state', 'zipCode', 'country', 'latitude', 'longitude'],
-    'Pricing': ['monthlyRent', 'currency', 'securityDeposit'],
-    'Amenities': ['amenities'],
-    'Media': ['images'],
-    'Preview': [],
+    'Basic Info': [
+      'propertyType',
+      'bathrooms',
+      'squareFootage',
+      'floor',
+      'yearBuilt',
+      'description',
+    ],
+    Location: ['address', 'city', 'state', 'zipCode', 'country', 'latitude', 'longitude'],
+    Pricing: ['monthlyRent', 'currency', 'securityDeposit'],
+    Amenities: ['amenities'],
+    Media: ['images'],
+    Preview: [],
   },
   coliving: {
     // Coliving: no bedrooms, optional bathrooms, coliving features
     'Basic Info': ['propertyType', 'bathrooms', 'squareFootage', 'yearBuilt', 'description'],
-    'Location': ['address', 'city', 'state', 'zipCode', 'country', 'latitude', 'longitude'],
-    'Pricing': ['monthlyRent', 'currency', 'securityDeposit'],
-    'Amenities': ['amenities'],
+    Location: ['address', 'city', 'state', 'zipCode', 'country', 'latitude', 'longitude'],
+    Pricing: ['monthlyRent', 'currency', 'securityDeposit'],
+    Amenities: ['amenities'],
     'Coliving Features': ['sharedSpaces', 'communityEvents'],
-    'Media': ['images'],
-    'Preview': [],
+    Media: ['images'],
+    Preview: [],
   },
   other: {
     // Other: minimal fields
-    'Basic Info': ['propertyType', 'bathrooms', 'squareFootage', 'floor', 'yearBuilt', 'description'],
-    'Location': ['address', 'city', 'state', 'zipCode', 'country', 'latitude', 'longitude'],
-    'Pricing': ['monthlyRent', 'currency', 'securityDeposit'],
-    'Media': ['images'],
-    'Preview': [],
+    'Basic Info': [
+      'propertyType',
+      'bathrooms',
+      'squareFootage',
+      'floor',
+      'yearBuilt',
+      'description',
+    ],
+    Location: ['address', 'city', 'state', 'zipCode', 'country', 'latitude', 'longitude'],
+    Pricing: ['monthlyRent', 'currency', 'securityDeposit'],
+    Media: ['images'],
+    Preview: [],
   },
 };
 
@@ -146,7 +194,12 @@ export default function CreatePropertyScreen() {
 
   const { create, loading, error } = useCreateProperty();
   const { update, loading: updateLoading, error: updateError } = useUpdateProperty();
-  const { property, loading: propertyLoading, error: propertyError, loadProperty } = useProperty(id as string);
+  const {
+    property,
+    loading: propertyLoading,
+    error: propertyError,
+    loadProperty,
+  } = useProperty(id as string);
 
   // Get form state and actions from Zustand store
   const {
@@ -157,7 +210,7 @@ export default function CreatePropertyScreen() {
     setLoading,
     setError,
     setCurrentStep,
-    resetForm
+    resetForm,
   } = useCreatePropertyFormStore();
 
   const { formData, currentStep, isDirty, isLoading } = useCreatePropertyFormSelectors();
@@ -200,7 +253,7 @@ export default function CreatePropertyScreen() {
         zipCode: property.address?.zipCode || '',
         country: property.address?.country || 'Spain',
         latitude: property.location?.coordinates?.[1] || 40.7128,
-        longitude: property.location?.coordinates?.[0] || -74.0060,
+        longitude: property.location?.coordinates?.[0] || -74.006,
         availableFrom: '',
         leaseTerm: '',
       });
@@ -253,7 +306,7 @@ export default function CreatePropertyScreen() {
 
         console.log('User location obtained:', {
           latitude: location.coords.latitude,
-          longitude: location.coords.longitude
+          longitude: location.coords.longitude,
         });
 
         // Update form with user's location
@@ -261,15 +314,18 @@ export default function CreatePropertyScreen() {
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
         });
-
       } catch (error) {
         console.error('Error getting user location:', error);
       }
     };
 
     // Only get location if we're on the location step and don't have coordinates set
-    if (currentStep === 1 && (!formData.location.latitude || !formData.location.longitude ||
-      formData.location.latitude === 40.7128 && formData.location.longitude === -74.0060)) {
+    if (
+      currentStep === 1 &&
+      (!formData.location.latitude ||
+        !formData.location.longitude ||
+        (formData.location.latitude === 40.7128 && formData.location.longitude === -74.006))
+    ) {
       getUserLocation();
     }
   }, [currentStep, formData.location.latitude, formData.location.longitude, setFormData]);
@@ -314,30 +370,43 @@ export default function CreatePropertyScreen() {
           | 'coliving'
           | 'other',
         description: formData.basicInfo.description,
-        bedrooms: formData.basicInfo.bedrooms ? parseInt(formData.basicInfo.bedrooms.toString()) : undefined,
-        bathrooms: formData.basicInfo.bathrooms ? parseFloat(formData.basicInfo.bathrooms.toString()) : undefined,
-        squareFootage: formData.basicInfo.squareFootage ? parseInt(formData.basicInfo.squareFootage.toString()) : undefined,
+        bedrooms: formData.basicInfo.bedrooms
+          ? parseInt(formData.basicInfo.bedrooms.toString())
+          : undefined,
+        bathrooms: formData.basicInfo.bathrooms
+          ? parseFloat(formData.basicInfo.bathrooms.toString())
+          : undefined,
+        squareFootage: formData.basicInfo.squareFootage
+          ? parseInt(formData.basicInfo.squareFootage.toString())
+          : undefined,
         floor: formData.location.floor ? parseInt(formData.location.floor.toString()) : undefined,
-        yearBuilt: formData.basicInfo.yearBuilt ? parseInt(formData.basicInfo.yearBuilt.toString()) : undefined,
+        yearBuilt: formData.basicInfo.yearBuilt
+          ? parseInt(formData.basicInfo.yearBuilt.toString())
+          : undefined,
         rent: {
-          amount: formData.pricing.monthlyRent ? parseFloat(formData.pricing.monthlyRent.toString()) : 0,
+          amount: formData.pricing.monthlyRent
+            ? parseFloat(formData.pricing.monthlyRent.toString())
+            : 0,
           currency: PropertyService.getCurrencyCode(formData.pricing.currency || 'USD'),
           paymentFrequency: 'monthly' as 'monthly',
-          deposit: formData.pricing.securityDeposit ? parseFloat(formData.pricing.securityDeposit.toString()) : 0,
+          deposit: formData.pricing.securityDeposit
+            ? parseFloat(formData.pricing.securityDeposit.toString())
+            : 0,
           utilities:
             typeof formData.pricing.utilities === 'string' &&
-              ['included', 'excluded', 'partial'].includes(formData.pricing.utilities)
+            ['included', 'excluded', 'partial'].includes(formData.pricing.utilities)
               ? (formData.pricing.utilities as 'included' | 'excluded' | 'partial')
               : 'excluded',
         },
         amenities: formData.amenities.selectedAmenities || [],
         images: formData.media.images || [],
-        location: (formData.location.latitude && formData.location.longitude)
-          ? {
-            type: 'Point',
-            coordinates: [formData.location.longitude, formData.location.latitude], // [longitude, latitude]
-          }
-          : undefined,
+        location:
+          formData.location.latitude && formData.location.longitude
+            ? {
+                type: 'Point',
+                coordinates: [formData.location.longitude, formData.location.latitude], // [longitude, latitude]
+              }
+            : undefined,
       };
       if (formData.basicInfo.propertyType === 'coliving') {
         propertyData.colivingFeatures = formData.colivingFeatures;
@@ -366,7 +435,9 @@ export default function CreatePropertyScreen() {
         }
       }
     } catch (err: any) {
-      setError(err.message || (isEditMode ? 'Failed to update property' : 'Failed to create property'));
+      setError(
+        err.message || (isEditMode ? 'Failed to update property' : 'Failed to create property'),
+      );
     } finally {
       setLoading(false);
     }
@@ -381,60 +452,138 @@ export default function CreatePropertyScreen() {
   const validateCurrentStep = () => {
     const errors: Record<string, string> = {};
     if (stepName === 'Basic Info') {
-      if (fieldsToShow.includes('propertyType') && !formData.basicInfo.propertyType) errors.propertyType = 'Property type is required';
-      if (fieldsToShow.includes('bedrooms') && (formData.basicInfo.bedrooms === undefined || formData.basicInfo.bedrooms === null || Number.isNaN(formData.basicInfo.bedrooms))) errors.bedrooms = 'Number of bedrooms is required';
-      if (fieldsToShow.includes('bathrooms') && (formData.basicInfo.bathrooms === undefined || formData.basicInfo.bathrooms === null || Number.isNaN(formData.basicInfo.bathrooms))) errors.bathrooms = 'Number of bathrooms is required';
-      if (fieldsToShow.includes('squareFootage') && !formData.basicInfo.squareFootage) errors.squareFootage = 'Square footage is required';
+      if (fieldsToShow.includes('propertyType') && !formData.basicInfo.propertyType)
+        errors.propertyType = 'Property type is required';
+      if (
+        fieldsToShow.includes('bedrooms') &&
+        (formData.basicInfo.bedrooms === undefined ||
+          formData.basicInfo.bedrooms === null ||
+          Number.isNaN(formData.basicInfo.bedrooms))
+      )
+        errors.bedrooms = 'Number of bedrooms is required';
+      if (
+        fieldsToShow.includes('bathrooms') &&
+        (formData.basicInfo.bathrooms === undefined ||
+          formData.basicInfo.bathrooms === null ||
+          Number.isNaN(formData.basicInfo.bathrooms))
+      )
+        errors.bathrooms = 'Number of bathrooms is required';
+      if (fieldsToShow.includes('squareFootage') && !formData.basicInfo.squareFootage)
+        errors.squareFootage = 'Square footage is required';
 
       // Additional validation for different property types
       if (formData.basicInfo.propertyType === 'apartment') {
-        if (fieldsToShow.includes('bedrooms') && (formData.basicInfo.bedrooms === undefined || formData.basicInfo.bedrooms === null || formData.basicInfo.bedrooms < 1)) {
+        if (
+          fieldsToShow.includes('bedrooms') &&
+          (formData.basicInfo.bedrooms === undefined ||
+            formData.basicInfo.bedrooms === null ||
+            formData.basicInfo.bedrooms < 1)
+        ) {
           errors.bedrooms = 'Apartments must have at least 1 bedroom';
         }
-        if (fieldsToShow.includes('bathrooms') && (formData.basicInfo.bathrooms === undefined || formData.basicInfo.bathrooms === null || formData.basicInfo.bathrooms < 1)) {
+        if (
+          fieldsToShow.includes('bathrooms') &&
+          (formData.basicInfo.bathrooms === undefined ||
+            formData.basicInfo.bathrooms === null ||
+            formData.basicInfo.bathrooms < 1)
+        ) {
           errors.bathrooms = 'Apartments must have at least 1 bathroom';
         }
       } else if (formData.basicInfo.propertyType === 'house') {
-        if (fieldsToShow.includes('bedrooms') && (formData.basicInfo.bedrooms === undefined || formData.basicInfo.bedrooms === null || formData.basicInfo.bedrooms < 0)) {
+        if (
+          fieldsToShow.includes('bedrooms') &&
+          (formData.basicInfo.bedrooms === undefined ||
+            formData.basicInfo.bedrooms === null ||
+            formData.basicInfo.bedrooms < 0)
+        ) {
           errors.bedrooms = 'Houses can have 0 or more bedrooms';
         }
-        if (fieldsToShow.includes('bathrooms') && (formData.basicInfo.bathrooms === undefined || formData.basicInfo.bathrooms === null || formData.basicInfo.bathrooms < 1)) {
+        if (
+          fieldsToShow.includes('bathrooms') &&
+          (formData.basicInfo.bathrooms === undefined ||
+            formData.basicInfo.bathrooms === null ||
+            formData.basicInfo.bathrooms < 1)
+        ) {
           errors.bathrooms = 'Houses must have at least 1 bathroom';
         }
       } else if (formData.basicInfo.propertyType === 'studio') {
-        if (fieldsToShow.includes('bedrooms') && (formData.basicInfo.bedrooms === undefined || formData.basicInfo.bedrooms === null || formData.basicInfo.bedrooms < 0)) {
+        if (
+          fieldsToShow.includes('bedrooms') &&
+          (formData.basicInfo.bedrooms === undefined ||
+            formData.basicInfo.bedrooms === null ||
+            formData.basicInfo.bedrooms < 0)
+        ) {
           errors.bedrooms = 'Studios can have 0 or more bedrooms';
         }
-        if (fieldsToShow.includes('bathrooms') && (formData.basicInfo.bathrooms === undefined || formData.basicInfo.bathrooms === null || formData.basicInfo.bathrooms < 1)) {
+        if (
+          fieldsToShow.includes('bathrooms') &&
+          (formData.basicInfo.bathrooms === undefined ||
+            formData.basicInfo.bathrooms === null ||
+            formData.basicInfo.bathrooms < 1)
+        ) {
           errors.bathrooms = 'Studios must have at least 1 bathroom';
         }
       } else if (formData.basicInfo.propertyType === 'room') {
-        if (fieldsToShow.includes('bedrooms') && (formData.basicInfo.bedrooms === undefined || formData.basicInfo.bedrooms === null || formData.basicInfo.bedrooms < 1)) {
+        if (
+          fieldsToShow.includes('bedrooms') &&
+          (formData.basicInfo.bedrooms === undefined ||
+            formData.basicInfo.bedrooms === null ||
+            formData.basicInfo.bedrooms < 1)
+        ) {
           errors.bedrooms = 'Rooms must have at least 1 bedroom';
         }
-        if (fieldsToShow.includes('bathrooms') && (formData.basicInfo.bathrooms === undefined || formData.basicInfo.bathrooms === null || formData.basicInfo.bathrooms < 0)) {
+        if (
+          fieldsToShow.includes('bathrooms') &&
+          (formData.basicInfo.bathrooms === undefined ||
+            formData.basicInfo.bathrooms === null ||
+            formData.basicInfo.bathrooms < 0)
+        ) {
           errors.bathrooms = 'Rooms can have 0 or more bathrooms (shared or private)';
         }
-      } else if (formData.basicInfo.propertyType === 'duplex' || formData.basicInfo.propertyType === 'penthouse') {
-        if (fieldsToShow.includes('bedrooms') && (formData.basicInfo.bedrooms === undefined || formData.basicInfo.bedrooms === null || formData.basicInfo.bedrooms < 1)) {
+      } else if (
+        formData.basicInfo.propertyType === 'duplex' ||
+        formData.basicInfo.propertyType === 'penthouse'
+      ) {
+        if (
+          fieldsToShow.includes('bedrooms') &&
+          (formData.basicInfo.bedrooms === undefined ||
+            formData.basicInfo.bedrooms === null ||
+            formData.basicInfo.bedrooms < 1)
+        ) {
           errors.bedrooms = `${formData.basicInfo.propertyType.charAt(0).toUpperCase() + formData.basicInfo.propertyType.slice(1)}s must have at least 1 bedroom`;
         }
-        if (fieldsToShow.includes('bathrooms') && (formData.basicInfo.bathrooms === undefined || formData.basicInfo.bathrooms === null || formData.basicInfo.bathrooms < 1)) {
+        if (
+          fieldsToShow.includes('bathrooms') &&
+          (formData.basicInfo.bathrooms === undefined ||
+            formData.basicInfo.bathrooms === null ||
+            formData.basicInfo.bathrooms < 1)
+        ) {
           errors.bathrooms = `${formData.basicInfo.propertyType.charAt(0).toUpperCase() + formData.basicInfo.propertyType.slice(1)}s must have at least 1 bathroom`;
         }
       }
     } else if (stepName === 'Location') {
-      if (fieldsToShow.includes('address') && !formData.location.address) errors.address = 'Address is required';
-      if (fieldsToShow.includes('city') && !formData.location.city) errors.city = 'City is required';
-      if (fieldsToShow.includes('state') && !formData.location.state) errors.state = 'State is required';
-      if (fieldsToShow.includes('zipCode') && !formData.location.zipCode) errors.zipCode = 'ZIP code is required';
-      if (fieldsToShow.includes('latitude') && !formData.location.latitude) errors.coordinates = 'Please select a location on the map';
-      if (fieldsToShow.includes('longitude') && !formData.location.longitude) errors.coordinates = 'Please select a location on the map';
+      if (fieldsToShow.includes('address') && !formData.location.address)
+        errors.address = 'Address is required';
+      if (fieldsToShow.includes('city') && !formData.location.city)
+        errors.city = 'City is required';
+      if (fieldsToShow.includes('state') && !formData.location.state)
+        errors.state = 'State is required';
+      if (fieldsToShow.includes('zipCode') && !formData.location.zipCode)
+        errors.zipCode = 'ZIP code is required';
+      if (fieldsToShow.includes('latitude') && !formData.location.latitude)
+        errors.coordinates = 'Please select a location on the map';
+      if (fieldsToShow.includes('longitude') && !formData.location.longitude)
+        errors.coordinates = 'Please select a location on the map';
     } else if (stepName === 'Pricing') {
-      if (fieldsToShow.includes('monthlyRent') && !formData.pricing.monthlyRent) errors.monthlyRent = 'Monthly rent is required';
+      if (fieldsToShow.includes('monthlyRent') && !formData.pricing.monthlyRent)
+        errors.monthlyRent = 'Monthly rent is required';
     } else if (stepName === 'Amenities') {
       // Validation for amenities and rules combined
-      if (fieldsToShow.includes('maxGuests') && formData.rules.guestsAllowed && (formData.rules.maxGuests === undefined || formData.rules.maxGuests < 1)) {
+      if (
+        fieldsToShow.includes('maxGuests') &&
+        formData.rules.guestsAllowed &&
+        (formData.rules.maxGuests === undefined || formData.rules.maxGuests < 1)
+      ) {
         errors.maxGuests = 'Maximum guests must be at least 1';
       }
     }
@@ -523,7 +672,7 @@ export default function CreatePropertyScreen() {
     try {
       console.log('Performing reverse geocoding to get detailed address data...');
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${normalizedLat}&lon=${normalizedLng}&addressdetails=1`
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${normalizedLat}&lon=${normalizedLng}&addressdetails=1`,
       );
       const data = await response.json();
 
@@ -554,7 +703,11 @@ export default function CreatePropertyScreen() {
           showAddressNumber: showAddressNumber,
           showFloor: showFloor,
         });
-        console.log('Updated form with reverse geocoded data (showAddressNumber:', showAddressNumber, ')');
+        console.log(
+          'Updated form with reverse geocoded data (showAddressNumber:',
+          showAddressNumber,
+          ')',
+        );
         return;
       }
     } catch (error) {
@@ -582,7 +735,7 @@ export default function CreatePropertyScreen() {
   const handleAmenityToggle = (amenityId: string) => {
     const currentAmenities = formData.amenities.selectedAmenities || [];
     const updatedAmenities = currentAmenities.includes(amenityId)
-      ? currentAmenities.filter(id => id !== amenityId)
+      ? currentAmenities.filter((id) => id !== amenityId)
       : [...currentAmenities, amenityId];
 
     setFormData('amenities', { selectedAmenities: updatedAmenities });
@@ -591,12 +744,85 @@ export default function CreatePropertyScreen() {
   const bottomSheet = React.useContext(BottomSheetContext);
 
   // Predefined options
-  const COUNTRY_OPTIONS = ['Spain', 'United States', 'Canada', 'Mexico', 'United Kingdom', 'France', 'Germany', 'Italy', 'Portugal', 'Netherlands', 'Belgium', 'Switzerland', 'Austria', 'Other'];
+  const COUNTRY_OPTIONS = [
+    'Spain',
+    'United States',
+    'Canada',
+    'Mexico',
+    'United Kingdom',
+    'France',
+    'Germany',
+    'Italy',
+    'Portugal',
+    'Netherlands',
+    'Belgium',
+    'Switzerland',
+    'Austria',
+    'Other',
+  ];
   const STATE_OPTIONS = [
     // Spanish provinces
-    'Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Zaragoza', 'Málaga', 'Murcia', 'Palma', 'Las Palmas', 'Bilbao', 'Alicante', 'Córdoba', 'Valladolid', 'Vigo', 'Gijón', 'L\'Hospitalet de Llobregat', 'A Coruña', 'Vitoria-Gasteiz', 'Granada', 'Elche', 'Tarrasa', 'Badalona', 'Oviedo', 'Cartagena', 'Jerez de la Frontera', 'Sabadell', 'Móstoles', 'Alcalá de Henares', 'Pamplona', 'Fuenlabrada', 'Almería', 'Leganés', 'San Sebastián', 'Santander', 'Castellón de la Plana', 'Burgos', 'Albacete', 'Alcorcón', 'Getafe', 'Salamanca', 'Logroño', 'Huelva', 'Marbella', 'Lleida', 'Tarragona', 'León', 'Cádiz', 'Jaén', 'Girona', 'Lugo', 'Cáceres', 'Toledo', 'Ceuta', 'Melilla',
+    'Madrid',
+    'Barcelona',
+    'Valencia',
+    'Sevilla',
+    'Zaragoza',
+    'Málaga',
+    'Murcia',
+    'Palma',
+    'Las Palmas',
+    'Bilbao',
+    'Alicante',
+    'Córdoba',
+    'Valladolid',
+    'Vigo',
+    'Gijón',
+    "L'Hospitalet de Llobregat",
+    'A Coruña',
+    'Vitoria-Gasteiz',
+    'Granada',
+    'Elche',
+    'Tarrasa',
+    'Badalona',
+    'Oviedo',
+    'Cartagena',
+    'Jerez de la Frontera',
+    'Sabadell',
+    'Móstoles',
+    'Alcalá de Henares',
+    'Pamplona',
+    'Fuenlabrada',
+    'Almería',
+    'Leganés',
+    'San Sebastián',
+    'Santander',
+    'Castellón de la Plana',
+    'Burgos',
+    'Albacete',
+    'Alcorcón',
+    'Getafe',
+    'Salamanca',
+    'Logroño',
+    'Huelva',
+    'Marbella',
+    'Lleida',
+    'Tarragona',
+    'León',
+    'Cádiz',
+    'Jaén',
+    'Girona',
+    'Lugo',
+    'Cáceres',
+    'Toledo',
+    'Ceuta',
+    'Melilla',
     // US states
-    'CA', 'NY', 'TX', 'FL', 'IL', 'Other'
+    'CA',
+    'NY',
+    'TX',
+    'FL',
+    'IL',
+    'Other',
   ];
 
   // Render step content based on current step name
@@ -606,7 +832,9 @@ export default function CreatePropertyScreen() {
       case 'Basic Info':
         return (
           <View style={styles.formSection}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>Basic Information</ThemedText>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              Basic Information
+            </ThemedText>
 
             {/* Property title is auto-generated */}
 
@@ -618,14 +846,16 @@ export default function CreatePropertyScreen() {
                     key={type.id}
                     style={[
                       styles.propertyTypeButton,
-                      formData.basicInfo.propertyType === type.id && styles.propertyTypeButtonSelected
+                      formData.basicInfo.propertyType === type.id &&
+                        styles.propertyTypeButtonSelected,
                     ]}
                     onPress={() => updateFormField('basicInfo', 'propertyType', type.id)}
                   >
                     <ThemedText
                       style={[
                         styles.propertyTypeText,
-                        formData.basicInfo.propertyType === type.id && styles.propertyTypeTextSelected
+                        formData.basicInfo.propertyType === type.id &&
+                          styles.propertyTypeTextSelected,
                       ]}
                     >
                       {type.label}
@@ -633,7 +863,9 @@ export default function CreatePropertyScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
-              {validationErrors.propertyType && <ThemedText style={styles.errorText}>{validationErrors.propertyType}</ThemedText>}
+              {validationErrors.propertyType && (
+                <ThemedText style={styles.errorText}>{validationErrors.propertyType}</ThemedText>
+              )}
             </View>
 
             {/* Conditionally render Bedrooms */}
@@ -644,11 +876,15 @@ export default function CreatePropertyScreen() {
                   <TextInput
                     style={[styles.input, validationErrors.bedrooms && styles.inputError]}
                     value={formData.basicInfo.bedrooms?.toString() || ''}
-                    onChangeText={(text) => updateFormField('basicInfo', 'bedrooms', parseInt(text) || 0)}
+                    onChangeText={(text) =>
+                      updateFormField('basicInfo', 'bedrooms', parseInt(text) || 0)
+                    }
                     keyboardType="numeric"
                     placeholder="0"
                   />
-                  {validationErrors.bedrooms && <ThemedText style={styles.errorText}>{validationErrors.bedrooms}</ThemedText>}
+                  {validationErrors.bedrooms && (
+                    <ThemedText style={styles.errorText}>{validationErrors.bedrooms}</ThemedText>
+                  )}
                 </View>
 
                 {/* Conditionally render Bathrooms */}
@@ -658,11 +894,15 @@ export default function CreatePropertyScreen() {
                     <TextInput
                       style={[styles.input, validationErrors.bathrooms && styles.inputError]}
                       value={formData.basicInfo.bathrooms?.toString() || ''}
-                      onChangeText={(text) => updateFormField('basicInfo', 'bathrooms', parseFloat(text) || 0)}
+                      onChangeText={(text) =>
+                        updateFormField('basicInfo', 'bathrooms', parseFloat(text) || 0)
+                      }
                       keyboardType="numeric"
                       placeholder="0"
                     />
-                    {validationErrors.bathrooms && <ThemedText style={styles.errorText}>{validationErrors.bathrooms}</ThemedText>}
+                    {validationErrors.bathrooms && (
+                      <ThemedText style={styles.errorText}>{validationErrors.bathrooms}</ThemedText>
+                    )}
                   </View>
                 )}
               </View>
@@ -676,14 +916,19 @@ export default function CreatePropertyScreen() {
                   <TextInput
                     style={[styles.input, validationErrors.squareFootage && styles.inputError]}
                     value={formData.basicInfo.squareFootage?.toString() || ''}
-                    onChangeText={(text) => updateFormField('basicInfo', 'squareFootage', parseInt(text) || 0)}
+                    onChangeText={(text) =>
+                      updateFormField('basicInfo', 'squareFootage', parseInt(text) || 0)
+                    }
                     keyboardType="numeric"
                     placeholder="0"
                   />
-                  {validationErrors.squareFootage && <ThemedText style={styles.errorText}>{validationErrors.squareFootage}</ThemedText>}
+                  {validationErrors.squareFootage && (
+                    <ThemedText style={styles.errorText}>
+                      {validationErrors.squareFootage}
+                    </ThemedText>
+                  )}
                 </View>
               )}
-
             </View>
             {fieldsToShow.includes('yearBuilt') && (
               <View style={styles.formGroup}>
@@ -691,7 +936,9 @@ export default function CreatePropertyScreen() {
                 <TextInput
                   style={styles.input}
                   value={formData.basicInfo.yearBuilt?.toString() || ''}
-                  onChangeText={(text) => updateFormField('basicInfo', 'yearBuilt', parseInt(text) || undefined)}
+                  onChangeText={(text) =>
+                    updateFormField('basicInfo', 'yearBuilt', parseInt(text) || undefined)
+                  }
                   keyboardType="numeric"
                   placeholder="2023"
                 />
@@ -719,11 +966,25 @@ export default function CreatePropertyScreen() {
       case 'Location':
         return (
           <View style={styles.formSection}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>Location</ThemedText>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              Location
+            </ThemedText>
 
             <View style={styles.formGroup}>
-              <ThemedText style={[styles.errorText, { fontSize: 14, color: colors.COLOR_BLACK_LIGHT_4, marginBottom: 16, lineHeight: 20 }]}>
-                📍 Please fill in the complete address details including exact number and floor. You can toggle privacy settings to control whether this detailed information is shown publicly.
+              <ThemedText
+                style={[
+                  styles.errorText,
+                  {
+                    fontSize: 14,
+                    color: colors.COLOR_BLACK_LIGHT_4,
+                    marginBottom: 16,
+                    lineHeight: 20,
+                  },
+                ]}
+              >
+                📍 Please fill in the complete address details including exact number and floor. You
+                can toggle privacy settings to control whether this detailed information is shown
+                publicly.
               </ThemedText>
             </View>
 
@@ -736,24 +997,34 @@ export default function CreatePropertyScreen() {
                 height={300}
                 interactive={true}
               />
-              {validationErrors.coordinates && <ThemedText style={styles.errorText}>{validationErrors.coordinates}</ThemedText>}
+              {validationErrors.coordinates && (
+                <ThemedText style={styles.errorText}>{validationErrors.coordinates}</ThemedText>
+              )}
             </View>
 
             <View style={styles.formGroup}>
               <ThemedText style={styles.label}>Country or Region</ThemedText>
               <TouchableOpacity
                 style={[styles.input, { justifyContent: 'center' }]}
-                onPress={() => bottomSheet.openBottomSheet(
-                  <SearchablePickerBottomSheet
-                    options={COUNTRY_OPTIONS}
-                    selected={formData.location.country || ''}
-                    onSelect={(value) => updateFormField('location', 'country', value)}
-                    title="Country or Region"
-                    onClose={() => { }}
-                  />
-                )}
+                onPress={() =>
+                  bottomSheet.openBottomSheet(
+                    <SearchablePickerBottomSheet
+                      options={COUNTRY_OPTIONS}
+                      selected={formData.location.country || ''}
+                      onSelect={(value) => updateFormField('location', 'country', value)}
+                      title="Country or Region"
+                      onClose={() => {}}
+                    />,
+                  )
+                }
               >
-                <ThemedText style={{ color: formData.location.country ? colors.primaryDark : colors.COLOR_BLACK_LIGHT_4 }}>
+                <ThemedText
+                  style={{
+                    color: formData.location.country
+                      ? colors.primaryDark
+                      : colors.COLOR_BLACK_LIGHT_4,
+                  }}
+                >
                   {formData.location.country || 'Select country or region'}
                 </ThemedText>
               </TouchableOpacity>
@@ -767,7 +1038,9 @@ export default function CreatePropertyScreen() {
                 onChangeText={(text) => updateFormField('location', 'address', text)}
                 placeholder="Street name"
               />
-              {validationErrors.address && <ThemedText style={styles.errorText}>{validationErrors.address}</ThemedText>}
+              {validationErrors.address && (
+                <ThemedText style={styles.errorText}>{validationErrors.address}</ThemedText>
+              )}
             </View>
 
             <View style={styles.formGroup}>
@@ -792,10 +1065,20 @@ export default function CreatePropertyScreen() {
                     keyboardType="numeric"
                   />
                   <TouchableOpacity
-                    style={[styles.toggleButton, formData.location.showAddressNumber && styles.toggleButtonActive]}
-                    onPress={() => handleShowAddressNumberToggle(!formData.location.showAddressNumber)}
+                    style={[
+                      styles.toggleButton,
+                      formData.location.showAddressNumber && styles.toggleButtonActive,
+                    ]}
+                    onPress={() =>
+                      handleShowAddressNumberToggle(!formData.location.showAddressNumber)
+                    }
                   >
-                    <ThemedText style={[styles.toggleButtonText, formData.location.showAddressNumber && styles.toggleButtonTextActive]}>
+                    <ThemedText
+                      style={[
+                        styles.toggleButtonText,
+                        formData.location.showAddressNumber && styles.toggleButtonTextActive,
+                      ]}
+                    >
                       {formData.location.showAddressNumber ? 'Hide' : 'Show'}
                     </ThemedText>
                   </TouchableOpacity>
@@ -808,15 +1091,25 @@ export default function CreatePropertyScreen() {
                   <TextInput
                     style={[styles.input, { flex: 1, marginRight: 8 }]}
                     value={formData.location.floor?.toString() || ''}
-                    onChangeText={(text) => updateFormField('location', 'floor', parseInt(text) || undefined)}
+                    onChangeText={(text) =>
+                      updateFormField('location', 'floor', parseInt(text) || undefined)
+                    }
                     placeholder="Floor"
                     keyboardType="numeric"
                   />
                   <TouchableOpacity
-                    style={[styles.toggleButton, formData.location.showFloor && styles.toggleButtonActive]}
+                    style={[
+                      styles.toggleButton,
+                      formData.location.showFloor && styles.toggleButtonActive,
+                    ]}
                     onPress={() => handleShowFloorToggle(!formData.location.showFloor)}
                   >
-                    <ThemedText style={[styles.toggleButtonText, formData.location.showFloor && styles.toggleButtonTextActive]}>
+                    <ThemedText
+                      style={[
+                        styles.toggleButtonText,
+                        formData.location.showFloor && styles.toggleButtonTextActive,
+                      ]}
+                    >
                       {formData.location.showFloor ? 'Hide' : 'Show'}
                     </ThemedText>
                   </TouchableOpacity>
@@ -826,9 +1119,14 @@ export default function CreatePropertyScreen() {
 
             {/* Privacy message - show when either number or floor is hidden */}
             {(formData.location.addressNumber && !formData.location.showAddressNumber) ||
-              (formData.location.floor && !formData.location.showFloor) ? (
+            (formData.location.floor && !formData.location.showFloor) ? (
               <View style={styles.formGroup}>
-                <ThemedText style={[styles.errorText, { fontSize: 12, color: colors.COLOR_BLACK_LIGHT_4, marginTop: 4 }]}>
+                <ThemedText
+                  style={[
+                    styles.errorText,
+                    { fontSize: 12, color: colors.COLOR_BLACK_LIGHT_4, marginTop: 4 },
+                  ]}
+                >
                   ℹ️ Approximate address shown for privacy
                 </ThemedText>
               </View>
@@ -843,28 +1141,40 @@ export default function CreatePropertyScreen() {
                   onChangeText={(text) => updateFormField('location', 'city', text)}
                   placeholder="City or district"
                 />
-                {validationErrors.city && <ThemedText style={styles.errorText}>{validationErrors.city}</ThemedText>}
+                {validationErrors.city && (
+                  <ThemedText style={styles.errorText}>{validationErrors.city}</ThemedText>
+                )}
               </View>
 
               <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
                 <ThemedText style={styles.label}>State/Province/Region</ThemedText>
                 <TouchableOpacity
                   style={[styles.input, { justifyContent: 'center' }]}
-                  onPress={() => bottomSheet.openBottomSheet(
-                    <SearchablePickerBottomSheet
-                      options={STATE_OPTIONS}
-                      selected={formData.location.state || ''}
-                      onSelect={(value) => updateFormField('location', 'state', value)}
-                      title="State/Province/Region"
-                      onClose={() => { }}
-                    />
-                  )}
+                  onPress={() =>
+                    bottomSheet.openBottomSheet(
+                      <SearchablePickerBottomSheet
+                        options={STATE_OPTIONS}
+                        selected={formData.location.state || ''}
+                        onSelect={(value) => updateFormField('location', 'state', value)}
+                        title="State/Province/Region"
+                        onClose={() => {}}
+                      />,
+                    )
+                  }
                 >
-                  <ThemedText style={{ color: formData.location.state ? colors.primaryDark : colors.COLOR_BLACK_LIGHT_4 }}>
+                  <ThemedText
+                    style={{
+                      color: formData.location.state
+                        ? colors.primaryDark
+                        : colors.COLOR_BLACK_LIGHT_4,
+                    }}
+                  >
                     {formData.location.state || 'Select state/province/region'}
                   </ThemedText>
                 </TouchableOpacity>
-                {validationErrors.state && <ThemedText style={styles.errorText}>{validationErrors.state}</ThemedText>}
+                {validationErrors.state && (
+                  <ThemedText style={styles.errorText}>{validationErrors.state}</ThemedText>
+                )}
               </View>
             </View>
 
@@ -877,7 +1187,9 @@ export default function CreatePropertyScreen() {
                 placeholder="ZIP or postal code"
                 keyboardType="numeric"
               />
-              {validationErrors.zipCode && <ThemedText style={styles.errorText}>{validationErrors.zipCode}</ThemedText>}
+              {validationErrors.zipCode && (
+                <ThemedText style={styles.errorText}>{validationErrors.zipCode}</ThemedText>
+              )}
             </View>
 
             <View style={styles.formRow}>
@@ -907,7 +1219,9 @@ export default function CreatePropertyScreen() {
       case 'Pricing':
         return (
           <View style={styles.formSection}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>Pricing</ThemedText>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              Pricing
+            </ThemedText>
 
             <View style={styles.formRow}>
               <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
@@ -915,29 +1229,35 @@ export default function CreatePropertyScreen() {
                 <TextInput
                   style={[styles.input, validationErrors.monthlyRent && styles.inputError]}
                   value={formData.pricing.monthlyRent?.toString() || ''}
-                  onChangeText={(text) => updateFormField('pricing', 'monthlyRent', parseFloat(text) || 0)}
+                  onChangeText={(text) =>
+                    updateFormField('pricing', 'monthlyRent', parseFloat(text) || 0)
+                  }
                   keyboardType="numeric"
                   placeholder="0"
                 />
-                {validationErrors.monthlyRent && <ThemedText style={styles.errorText}>{validationErrors.monthlyRent}</ThemedText>}
+                {validationErrors.monthlyRent && (
+                  <ThemedText style={styles.errorText}>{validationErrors.monthlyRent}</ThemedText>
+                )}
               </View>
 
               <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
                 <ThemedText style={styles.label}>Currency</ThemedText>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {(['USD', 'EUR', 'GBP', 'CAD', 'MXN', 'FAIR (FairCoin)', 'Other'] as string[]).map((currency: string) => (
+                  {(
+                    ['USD', 'EUR', 'GBP', 'CAD', 'MXN', 'FAIR (FairCoin)', 'Other'] as string[]
+                  ).map((currency: string) => (
                     <TouchableOpacity
                       key={currency}
                       style={[
                         styles.propertyTypeButton,
-                        formData.pricing.currency === currency && styles.propertyTypeButtonSelected
+                        formData.pricing.currency === currency && styles.propertyTypeButtonSelected,
                       ]}
                       onPress={() => updateFormField('pricing', 'currency', currency)}
                     >
                       <ThemedText
                         style={[
                           styles.propertyTypeText,
-                          formData.pricing.currency === currency && styles.propertyTypeTextSelected
+                          formData.pricing.currency === currency && styles.propertyTypeTextSelected,
                         ]}
                       >
                         {currency}
@@ -953,7 +1273,9 @@ export default function CreatePropertyScreen() {
               <TextInput
                 style={styles.input}
                 value={formData.pricing.securityDeposit?.toString() || ''}
-                onChangeText={(text) => updateFormField('pricing', 'securityDeposit', parseFloat(text) || 0)}
+                onChangeText={(text) =>
+                  updateFormField('pricing', 'securityDeposit', parseFloat(text) || 0)
+                }
                 keyboardType="numeric"
                 placeholder="0"
               />
@@ -964,7 +1286,9 @@ export default function CreatePropertyScreen() {
               <TextInput
                 style={styles.input}
                 value={formData.pricing.applicationFee?.toString() || ''}
-                onChangeText={(text) => updateFormField('pricing', 'applicationFee', parseFloat(text) || 0)}
+                onChangeText={(text) =>
+                  updateFormField('pricing', 'applicationFee', parseFloat(text) || 0)
+                }
                 keyboardType="numeric"
                 placeholder="0"
               />
@@ -975,7 +1299,9 @@ export default function CreatePropertyScreen() {
               <TextInput
                 style={styles.input}
                 value={formData.pricing.lateFee?.toString() || ''}
-                onChangeText={(text) => updateFormField('pricing', 'lateFee', parseFloat(text) || 0)}
+                onChangeText={(text) =>
+                  updateFormField('pricing', 'lateFee', parseFloat(text) || 0)
+                }
                 keyboardType="numeric"
                 placeholder="0"
               />
@@ -986,7 +1312,9 @@ export default function CreatePropertyScreen() {
       case 'Amenities':
         return (
           <View style={styles.formSection}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>Amenities & Rules</ThemedText>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              Amenities & Rules
+            </ThemedText>
 
             <AmenitiesSelector
               selectedAmenities={formData.amenities.selectedAmenities || []}
@@ -997,18 +1325,30 @@ export default function CreatePropertyScreen() {
 
             {/* Rules Section */}
             <View style={styles.formSection}>
-              <ThemedText type="subtitle" style={[styles.sectionTitle, { marginTop: 24, marginBottom: 16 }]}>House Rules</ThemedText>
+              <ThemedText
+                type="subtitle"
+                style={[styles.sectionTitle, { marginTop: 24, marginBottom: 16 }]}
+              >
+                House Rules
+              </ThemedText>
 
               <View style={styles.toggleContainer}>
                 <ThemedText style={styles.label}>Pets Allowed</ThemedText>
                 <TouchableOpacity
-                  style={[styles.toggleButton, formData.rules?.petsAllowed ? styles.toggleButtonActive : {}]}
-                  onPress={() => updateFormField('rules', 'petsAllowed', !formData.rules?.petsAllowed)}
+                  style={[
+                    styles.toggleButton,
+                    formData.rules?.petsAllowed ? styles.toggleButtonActive : {},
+                  ]}
+                  onPress={() =>
+                    updateFormField('rules', 'petsAllowed', !formData.rules?.petsAllowed)
+                  }
                 >
                   <IconComponent
                     name={formData.rules?.petsAllowed ? 'checkmark-circle' : 'close-circle'}
                     size={24}
-                    color={formData.rules?.petsAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                    color={
+                      formData.rules?.petsAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4
+                    }
                   />
                   <ThemedText style={styles.toggleText}>
                     {formData.rules?.petsAllowed ? 'Yes' : 'No'}
@@ -1019,13 +1359,22 @@ export default function CreatePropertyScreen() {
               <View style={styles.toggleContainer}>
                 <ThemedText style={styles.label}>Smoking Allowed</ThemedText>
                 <TouchableOpacity
-                  style={[styles.toggleButton, formData.rules?.smokingAllowed ? styles.toggleButtonActive : {}]}
-                  onPress={() => updateFormField('rules', 'smokingAllowed', !formData.rules?.smokingAllowed)}
+                  style={[
+                    styles.toggleButton,
+                    formData.rules?.smokingAllowed ? styles.toggleButtonActive : {},
+                  ]}
+                  onPress={() =>
+                    updateFormField('rules', 'smokingAllowed', !formData.rules?.smokingAllowed)
+                  }
                 >
                   <IconComponent
                     name={formData.rules?.smokingAllowed ? 'checkmark-circle' : 'close-circle'}
                     size={24}
-                    color={formData.rules?.smokingAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                    color={
+                      formData.rules?.smokingAllowed
+                        ? colors.primaryColor
+                        : colors.COLOR_BLACK_LIGHT_4
+                    }
                   />
                   <ThemedText style={styles.toggleText}>
                     {formData.rules?.smokingAllowed ? 'Yes' : 'No'}
@@ -1036,13 +1385,22 @@ export default function CreatePropertyScreen() {
               <View style={styles.toggleContainer}>
                 <ThemedText style={styles.label}>Parties Allowed</ThemedText>
                 <TouchableOpacity
-                  style={[styles.toggleButton, formData.rules?.partiesAllowed ? styles.toggleButtonActive : {}]}
-                  onPress={() => updateFormField('rules', 'partiesAllowed', !formData.rules?.partiesAllowed)}
+                  style={[
+                    styles.toggleButton,
+                    formData.rules?.partiesAllowed ? styles.toggleButtonActive : {},
+                  ]}
+                  onPress={() =>
+                    updateFormField('rules', 'partiesAllowed', !formData.rules?.partiesAllowed)
+                  }
                 >
                   <IconComponent
                     name={formData.rules?.partiesAllowed ? 'checkmark-circle' : 'close-circle'}
                     size={24}
-                    color={formData.rules?.partiesAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                    color={
+                      formData.rules?.partiesAllowed
+                        ? colors.primaryColor
+                        : colors.COLOR_BLACK_LIGHT_4
+                    }
                   />
                   <ThemedText style={styles.toggleText}>
                     {formData.rules?.partiesAllowed ? 'Yes' : 'No'}
@@ -1053,13 +1411,22 @@ export default function CreatePropertyScreen() {
               <View style={styles.toggleContainer}>
                 <ThemedText style={styles.label}>Guests Allowed</ThemedText>
                 <TouchableOpacity
-                  style={[styles.toggleButton, formData.rules?.guestsAllowed ? styles.toggleButtonActive : {}]}
-                  onPress={() => updateFormField('rules', 'guestsAllowed', !formData.rules?.guestsAllowed)}
+                  style={[
+                    styles.toggleButton,
+                    formData.rules?.guestsAllowed ? styles.toggleButtonActive : {},
+                  ]}
+                  onPress={() =>
+                    updateFormField('rules', 'guestsAllowed', !formData.rules?.guestsAllowed)
+                  }
                 >
                   <IconComponent
                     name={formData.rules?.guestsAllowed ? 'checkmark-circle' : 'close-circle'}
                     size={24}
-                    color={formData.rules?.guestsAllowed ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                    color={
+                      formData.rules?.guestsAllowed
+                        ? colors.primaryColor
+                        : colors.COLOR_BLACK_LIGHT_4
+                    }
                   />
                   <ThemedText style={styles.toggleText}>
                     {formData.rules?.guestsAllowed ? 'Yes' : 'No'}
@@ -1073,11 +1440,15 @@ export default function CreatePropertyScreen() {
                   <TextInput
                     style={[styles.input, validationErrors.maxGuests && styles.inputError]}
                     value={formData.rules.maxGuests?.toString() || ''}
-                    onChangeText={(text) => updateFormField('rules', 'maxGuests', parseInt(text) || undefined)}
+                    onChangeText={(text) =>
+                      updateFormField('rules', 'maxGuests', parseInt(text) || undefined)
+                    }
                     placeholder="e.g., 2"
                     keyboardType="numeric"
                   />
-                  {validationErrors.maxGuests && <ThemedText style={styles.errorText}>{validationErrors.maxGuests}</ThemedText>}
+                  {validationErrors.maxGuests && (
+                    <ThemedText style={styles.errorText}>{validationErrors.maxGuests}</ThemedText>
+                  )}
                 </View>
               )}
             </View>
@@ -1087,18 +1458,35 @@ export default function CreatePropertyScreen() {
       case 'Coliving Features':
         return (
           <View style={styles.formSection}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>Coliving Features</ThemedText>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              Coliving Features
+            </ThemedText>
 
             <View style={styles.toggleContainer}>
               <ThemedText style={styles.label}>Shared Spaces</ThemedText>
               <TouchableOpacity
-                style={[styles.toggleButton, formData.colivingFeatures?.sharedSpaces ? styles.toggleButtonActive : {}]}
-                onPress={() => updateFormField('colivingFeatures', 'sharedSpaces', !formData.colivingFeatures?.sharedSpaces)}
+                style={[
+                  styles.toggleButton,
+                  formData.colivingFeatures?.sharedSpaces ? styles.toggleButtonActive : {},
+                ]}
+                onPress={() =>
+                  updateFormField(
+                    'colivingFeatures',
+                    'sharedSpaces',
+                    !formData.colivingFeatures?.sharedSpaces,
+                  )
+                }
               >
                 <IconComponent
-                  name={formData.colivingFeatures?.sharedSpaces ? 'checkmark-circle' : 'close-circle'}
+                  name={
+                    formData.colivingFeatures?.sharedSpaces ? 'checkmark-circle' : 'close-circle'
+                  }
                   size={24}
-                  color={formData.colivingFeatures?.sharedSpaces ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                  color={
+                    formData.colivingFeatures?.sharedSpaces
+                      ? colors.primaryColor
+                      : colors.COLOR_BLACK_LIGHT_4
+                  }
                 />
                 <ThemedText style={styles.toggleText}>
                   {formData.colivingFeatures?.sharedSpaces ? 'Yes' : 'No'}
@@ -1111,14 +1499,23 @@ export default function CreatePropertyScreen() {
               <View style={styles.formGroup}>
                 <ThemedText style={styles.label}>Which shared spaces?</ThemedText>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {['Kitchen', 'Living Room', 'Coworking Area', 'Gym', 'Laundry', 'Garden', 'Terrace', 'Dining Room'].map((space) => {
+                  {[
+                    'Kitchen',
+                    'Living Room',
+                    'Coworking Area',
+                    'Gym',
+                    'Laundry',
+                    'Garden',
+                    'Terrace',
+                    'Dining Room',
+                  ].map((space) => {
                     const selected = formData.colivingFeatures?.sharedSpacesList?.includes(space);
                     return (
                       <TouchableOpacity
                         key={space}
                         style={[
                           styles.propertyTypeButton,
-                          selected && styles.propertyTypeButtonSelected
+                          selected && styles.propertyTypeButtonSelected,
                         ]}
                         onPress={() => {
                           const current = formData.colivingFeatures?.sharedSpacesList || [];
@@ -1128,18 +1525,27 @@ export default function CreatePropertyScreen() {
                           updateFormField('colivingFeatures', 'sharedSpacesList', updated);
                         }}
                       >
-                        <ThemedText style={[styles.propertyTypeText, selected && styles.propertyTypeTextSelected]}>
+                        <ThemedText
+                          style={[
+                            styles.propertyTypeText,
+                            selected && styles.propertyTypeTextSelected,
+                          ]}
+                        >
                           {space}
                         </ThemedText>
                       </TouchableOpacity>
                     );
                   })}
                 </View>
-                <ThemedText style={[styles.label, { marginTop: 16 }]}>Other shared spaces or features</ThemedText>
+                <ThemedText style={[styles.label, { marginTop: 16 }]}>
+                  Other shared spaces or features
+                </ThemedText>
                 <TextInput
                   style={styles.input}
                   value={formData.colivingFeatures?.otherFeatures || ''}
-                  onChangeText={(text) => updateFormField('colivingFeatures', 'otherFeatures', text)}
+                  onChangeText={(text) =>
+                    updateFormField('colivingFeatures', 'otherFeatures', text)
+                  }
                   placeholder="e.g., Rooftop, Cinema Room, Pool, etc."
                 />
               </View>
@@ -1148,13 +1554,28 @@ export default function CreatePropertyScreen() {
             <View style={styles.toggleContainer}>
               <ThemedText style={styles.label}>Community Events</ThemedText>
               <TouchableOpacity
-                style={[styles.toggleButton, formData.colivingFeatures?.communityEvents ? styles.toggleButtonActive : {}]}
-                onPress={() => updateFormField('colivingFeatures', 'communityEvents', !formData.colivingFeatures?.communityEvents)}
+                style={[
+                  styles.toggleButton,
+                  formData.colivingFeatures?.communityEvents ? styles.toggleButtonActive : {},
+                ]}
+                onPress={() =>
+                  updateFormField(
+                    'colivingFeatures',
+                    'communityEvents',
+                    !formData.colivingFeatures?.communityEvents,
+                  )
+                }
               >
                 <IconComponent
-                  name={formData.colivingFeatures?.communityEvents ? 'checkmark-circle' : 'close-circle'}
+                  name={
+                    formData.colivingFeatures?.communityEvents ? 'checkmark-circle' : 'close-circle'
+                  }
                   size={24}
-                  color={formData.colivingFeatures?.communityEvents ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                  color={
+                    formData.colivingFeatures?.communityEvents
+                      ? colors.primaryColor
+                      : colors.COLOR_BLACK_LIGHT_4
+                  }
                 />
                 <ThemedText style={styles.toggleText}>
                   {formData.colivingFeatures?.communityEvents ? 'Yes' : 'No'}
@@ -1164,12 +1585,12 @@ export default function CreatePropertyScreen() {
           </View>
         );
 
-
-
       case 'Media':
         return (
           <View style={styles.formSection}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>Media</ThemedText>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              Media
+            </ThemedText>
 
             <View style={styles.mediaUploadContainer}>
               <TouchableOpacity style={styles.uploadButton}>
@@ -1178,7 +1599,8 @@ export default function CreatePropertyScreen() {
               </TouchableOpacity>
 
               <ThemedText style={styles.helperText}>
-                Upload high-quality images of your property. Include photos of all rooms, exterior, and any special features.
+                Upload high-quality images of your property. Include photos of all rooms, exterior,
+                and any special features.
               </ThemedText>
             </View>
 
@@ -1196,12 +1618,15 @@ export default function CreatePropertyScreen() {
       case 'Preview':
         return (
           <View style={styles.formSection}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>Preview</ThemedText>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              Preview
+            </ThemedText>
             <PropertyPreviewWidget />
 
             <View style={styles.submitContainer}>
               <ThemedText style={styles.helperText}>
-                Review your property listing before submitting. Make sure all information is accurate and complete.
+                Review your property listing before submitting. Make sure all information is
+                accurate and complete.
               </ThemedText>
 
               <TouchableOpacity
@@ -1220,9 +1645,7 @@ export default function CreatePropertyScreen() {
                 )}
               </TouchableOpacity>
 
-              {error && (
-                <ThemedText style={styles.errorText}>{error}</ThemedText>
-              )}
+              {error && <ThemedText style={styles.errorText}>{error}</ThemedText>}
             </View>
           </View>
         );
@@ -1242,7 +1665,9 @@ export default function CreatePropertyScreen() {
 
     return (
       <View style={styles.debugContainer}>
-        <ThemedText type="subtitle" style={styles.debugTitle}>Debug Info</ThemedText>
+        <ThemedText type="subtitle" style={styles.debugTitle}>
+          Debug Info
+        </ThemedText>
         <ThemedText style={styles.debugText}>
           Current Step: {currentStep} ({steps[currentStep]})
         </ThemedText>
@@ -1274,9 +1699,7 @@ export default function CreatePropertyScreen() {
       <View style={styles.container}>
         <Header options={{ title: 'Edit Property', showBackButton: true }} />
         <View style={styles.errorContainer}>
-          <ThemedText style={styles.errorText}>
-            {propertyError || 'Property not found'}
-          </ThemedText>
+          <ThemedText style={styles.errorText}>{propertyError || 'Property not found'}</ThemedText>
           <TouchableOpacity style={styles.errorButton} onPress={() => router.back()}>
             <ThemedText style={styles.errorButtonText}>Go Back</ThemedText>
           </TouchableOpacity>
@@ -1291,7 +1714,9 @@ export default function CreatePropertyScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
     >
-      <Header options={{ title: isEditMode ? 'Edit Property' : 'Create Property', showBackButton: true }} />
+      <Header
+        options={{ title: isEditMode ? 'Edit Property' : 'Create Property', showBackButton: true }}
+      />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Step indicators */}
@@ -1302,27 +1727,21 @@ export default function CreatePropertyScreen() {
                 style={[
                   styles.stepIndicator,
                   index === currentStep && styles.stepIndicatorActive,
-                  index < currentStep && styles.stepIndicatorCompleted
+                  index < currentStep && styles.stepIndicatorCompleted,
                 ]}
               >
                 {index < currentStep ? (
                   <IconComponent name="checkmark" size={16} color="white" />
                 ) : (
                   <ThemedText
-                    style={[
-                      styles.stepNumber,
-                      index === currentStep && styles.stepNumberActive
-                    ]}
+                    style={[styles.stepNumber, index === currentStep && styles.stepNumberActive]}
                   >
                     {index + 1}
                   </ThemedText>
                 )}
               </View>
               <ThemedText
-                style={[
-                  styles.stepLabel,
-                  index === currentStep && styles.stepLabelActive
-                ]}
+                style={[styles.stepLabel, index === currentStep && styles.stepLabelActive]}
               >
                 {stepName}
               </ThemedText>
@@ -1339,10 +1758,7 @@ export default function CreatePropertyScreen() {
         {/* Navigation buttons */}
         <View style={styles.navigationContainer}>
           {currentStep > 0 && (
-            <TouchableOpacity
-              style={styles.navigationButton}
-              onPress={prevStep}
-            >
+            <TouchableOpacity style={styles.navigationButton} onPress={prevStep}>
               <IconComponent name="arrow-back" size={20} color={colors.primaryColor} />
               <ThemedText style={styles.navigationButtonText}>Previous</ThemedText>
             </TouchableOpacity>

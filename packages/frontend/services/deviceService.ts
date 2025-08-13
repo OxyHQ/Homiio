@@ -133,28 +133,31 @@ class DeviceService {
 
   async updateDevice(deviceId: string, data: Partial<CreateDeviceData>): Promise<Device> {
     const response = await api.put(`${this.baseUrl}/${deviceId}`, data);
-    
+
     // Clear related caches
     this.clearDeviceCache(deviceId);
     this.clearDevicesCache();
-    
+
     return response.data.data;
   }
 
   async deleteDevice(deviceId: string): Promise<void> {
     await api.delete(`${this.baseUrl}/${deviceId}`);
-    
+
     // Clear related caches
     this.clearDeviceCache(deviceId);
     this.clearDevicesCache();
   }
 
-  async getDeviceData(deviceId: string, options?: {
-    startDate?: string;
-    endDate?: string;
-    period?: 'hour' | 'day' | 'week' | 'month';
-    metric?: string;
-  }): Promise<any> {
+  async getDeviceData(
+    deviceId: string,
+    options?: {
+      startDate?: string;
+      endDate?: string;
+      period?: 'hour' | 'day' | 'week' | 'month';
+      metric?: string;
+    },
+  ): Promise<any> {
     const response = await api.get(`${this.baseUrl}/${deviceId}/data`, { params: options });
     return response.data.data;
   }
@@ -168,7 +171,10 @@ class DeviceService {
     return response.data.data;
   }
 
-  async updateDeviceConfig(deviceId: string, config: Partial<Device['configuration']>): Promise<void> {
+  async updateDeviceConfig(
+    deviceId: string,
+    config: Partial<Device['configuration']>,
+  ): Promise<void> {
     await api.put(`${this.baseUrl}/${deviceId}/config`, config);
   }
 
@@ -190,7 +196,6 @@ class DeviceService {
     const { clearCache } = require('@/utils/api');
     clearCache(this.baseUrl);
   }
-
 }
 
 export const deviceService = new DeviceService();

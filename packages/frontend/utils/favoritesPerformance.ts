@@ -25,7 +25,10 @@ export class FavoritesPerformance {
     this.config = { ...this.config, ...config };
   }
 
-  static startTimer(operation: string, propertyId: string): (success?: boolean, error?: string) => void {
+  static startTimer(
+    operation: string,
+    propertyId: string,
+  ): (success?: boolean, error?: string) => void {
     if (!this.config.enabled || Math.random() > this.config.sampleRate) {
       return () => {}; // No-op timer
     }
@@ -35,7 +38,7 @@ export class FavoritesPerformance {
 
     return (success: boolean = true, error?: string) => {
       const duration = performance.now() - startTime;
-      
+
       const metric: FavoritesMetrics = {
         operation,
         propertyId,
@@ -74,13 +77,11 @@ export class FavoritesPerformance {
   }
 
   static getMetricsByOperation(operation: string): FavoritesMetrics[] {
-    return this.metrics.filter(m => m.operation === operation);
+    return this.metrics.filter((m) => m.operation === operation);
   }
 
   static getAverageDuration(operation?: string): number {
-    const relevantMetrics = operation 
-      ? this.getMetricsByOperation(operation)
-      : this.metrics;
+    const relevantMetrics = operation ? this.getMetricsByOperation(operation) : this.metrics;
 
     if (relevantMetrics.length === 0) return 0;
 
@@ -89,13 +90,11 @@ export class FavoritesPerformance {
   }
 
   static getSuccessRate(operation?: string): number {
-    const relevantMetrics = operation 
-      ? this.getMetricsByOperation(operation)
-      : this.metrics;
+    const relevantMetrics = operation ? this.getMetricsByOperation(operation) : this.metrics;
 
     if (relevantMetrics.length === 0) return 1;
 
-    const successfulOperations = relevantMetrics.filter(m => m.success).length;
+    const successfulOperations = relevantMetrics.filter((m) => m.success).length;
     return successfulOperations / relevantMetrics.length;
   }
 
@@ -113,8 +112,8 @@ export class FavoritesPerformance {
     const totalOperations = this.metrics.length;
     const averageDuration = this.getAverageDuration();
     const successRate = this.getSuccessRate();
-    const slowOperations = this.metrics.filter(m => m.duration > this.config.logThreshold).length;
-    const failedOperations = this.metrics.filter(m => !m.success).length;
+    const slowOperations = this.metrics.filter((m) => m.duration > this.config.logThreshold).length;
+    const failedOperations = this.metrics.filter((m) => !m.success).length;
 
     return {
       totalOperations,
@@ -131,4 +130,4 @@ export class FavoritesPerformance {
     const summary = this.getMetricsSummary();
     console.log('[Favorites Performance] Summary:', summary);
   }
-} 
+}

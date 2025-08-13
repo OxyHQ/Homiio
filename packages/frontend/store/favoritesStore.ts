@@ -14,11 +14,11 @@ export interface Favorite {
 interface FavoritesState {
   // Data
   favorites: Favorite[];
-  
+
   // Loading states
   isLoading: boolean;
   error: string | null;
-  
+
   // Actions
   addFavorite: (id: string, type: FavoriteType, data: any) => void;
   removeFavorite: (id: string) => void;
@@ -35,51 +35,48 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
   favorites: [],
   isLoading: false,
   error: null,
-  
+
   // Actions
-  addFavorite: (id, type, data) => set((state) => {
-    if (!id) {
-      console.warn('favoritesStore: Cannot add favorite - missing ID');
-      return state;
-    }
+  addFavorite: (id, type, data) =>
+    set((state) => {
+      if (!id) {
+        console.warn('favoritesStore: Cannot add favorite - missing ID');
+        return state;
+      }
 
-    const existingIndex = state.favorites.findIndex(fav => fav.id === id);
-    if (existingIndex >= 0) {
-      return state; // Already exists
-    }
+      const existingIndex = state.favorites.findIndex((fav) => fav.id === id);
+      if (existingIndex >= 0) {
+        return state; // Already exists
+      }
 
-    return {
-      favorites: [
-        { id, type, data, addedAt: new Date().toISOString() },
-        ...state.favorites
-      ]
-    };
-  }),
+      return {
+        favorites: [{ id, type, data, addedAt: new Date().toISOString() }, ...state.favorites],
+      };
+    }),
 
-  removeFavorite: (id) => set((state) => {
-    if (!id) {
-      console.warn('favoritesStore: Cannot remove favorite - missing ID');
-      return state;
-    }
+  removeFavorite: (id) =>
+    set((state) => {
+      if (!id) {
+        console.warn('favoritesStore: Cannot remove favorite - missing ID');
+        return state;
+      }
 
-    return {
-      favorites: state.favorites.filter(fav => fav.id !== id)
-    };
-  }),
+      return {
+        favorites: state.favorites.filter((fav) => fav.id !== id),
+      };
+    }),
 
   clearFavorites: () => set({ favorites: [] }),
 
   getFavoritesByType: (type) => {
     const state = get();
-    return state.favorites
-      .filter(fav => fav.type === type)
-      .map(fav => fav.data);
+    return state.favorites.filter((fav) => fav.type === type).map((fav) => fav.data);
   },
 
   isFavorite: (id) => {
     if (!id) return false;
     const state = get();
-    return state.favorites.some(fav => fav.id === id);
+    return state.favorites.some((fav) => fav.id === id);
   },
 
   setLoading: (loading) => set({ isLoading: loading }),
@@ -104,4 +101,4 @@ export const useFavoritesSelectors = () => {
     getFavoritesByType,
     isFavorite,
   };
-}; 
+};

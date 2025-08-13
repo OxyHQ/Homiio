@@ -12,161 +12,158 @@ import { QuickFiltersWidget } from './QuickFiltersWidget';
 import { PropertyPreviewWidget } from './PropertyPreviewWidget';
 
 // Feature flag: controls whether the Neighborhood widget is rendered
-const NEIGHBORHOOD_WIDGET_ENABLED = (process.env.NEXT_PUBLIC_NEIGHBORHOOD_WIDGET_ENABLED || '').toLowerCase() === 'true';
+const NEIGHBORHOOD_WIDGET_ENABLED =
+  (process.env.NEXT_PUBLIC_NEIGHBORHOOD_WIDGET_ENABLED || '').toLowerCase() === 'true';
 
 // Define screen IDs
 export type ScreenId =
-    | 'home'
-    | 'properties'
-    | 'property-details'
-    | 'saved-properties'
-    | 'profile'
-    | 'contracts'
-    | 'payments'
-    | 'messages'
-    | 'search'
-    | 'search-results'
-    | 'create-property';
+  | 'home'
+  | 'properties'
+  | 'property-details'
+  | 'saved-properties'
+  | 'profile'
+  | 'contracts'
+  | 'payments'
+  | 'messages'
+  | 'search'
+  | 'search-results'
+  | 'create-property';
 
 interface WidgetManagerProps {
-    screenId: ScreenId;
-    propertyId?: string;
-    neighborhoodName?: string;
-    city?: string;
-    state?: string;
+  screenId: ScreenId;
+  propertyId?: string;
+  neighborhoodName?: string;
+  city?: string;
+  state?: string;
 }
 
 /**
  * Widget Manager Component
- * 
+ *
  * This component controls which widgets should appear on which screens.
  * It provides a centralized way to manage widget visibility based on screen context.
  */
 export function WidgetManager({
-    screenId,
-    propertyId,
-    neighborhoodName,
-    city,
-    state
+  screenId,
+  propertyId,
+  neighborhoodName,
+  city,
+  state,
 }: WidgetManagerProps) {
-    // Define which widgets should appear on which screens
-    const getWidgetsForScreen = (screen: ScreenId): ReactNode[] => {
-        switch (screen) {
-            case 'home':
-                return [
-                    <TrustScoreWidget key="trust-score" />,
-                    <RecentlyViewedWidget key="recently-viewed" />,
-                    <FeaturedPropertiesWidget key="featured-properties" />,
-                    <HorizonInitiativeWidget key="horizon" />,
-                    <EcoCertificationWidget key="eco-cert" />
-                ];
+  // Define which widgets should appear on which screens
+  const getWidgetsForScreen = (screen: ScreenId): ReactNode[] => {
+    switch (screen) {
+      case 'home':
+        return [
+          <TrustScoreWidget key="trust-score" />,
+          <RecentlyViewedWidget key="recently-viewed" />,
+          <FeaturedPropertiesWidget key="featured-properties" />,
+          <HorizonInitiativeWidget key="horizon" />,
+          <EcoCertificationWidget key="eco-cert" />,
+        ];
 
-            case 'properties':
-                return [
-                    <PropertyAlertWidget key="property-alert" />,
-                    <SavedSearchesWidget key="saved-searches" />,
-                    <NeighborhoodRatingWidget
-                        key="neighborhood"
-                        neighborhoodName={neighborhoodName}
-                        city={city}
-                        state={state}
-                    />,
-                    <EcoCertificationWidget key="eco-cert" />
-                ];
+      case 'properties':
+        return [
+          <PropertyAlertWidget key="property-alert" />,
+          <SavedSearchesWidget key="saved-searches" />,
+          <NeighborhoodRatingWidget
+            key="neighborhood"
+            neighborhoodName={neighborhoodName}
+            city={city}
+            state={state}
+          />,
+          <EcoCertificationWidget key="eco-cert" />,
+        ];
 
-            case 'property-details':
-                return [
-                    <NeighborhoodRatingWidget
-                        key="neighborhood"
-                        propertyId={propertyId}
-                        neighborhoodName={neighborhoodName}
-                        city={city}
-                        state={state}
-                    />,
-                    <RecentlyViewedWidget key="recently-viewed" />,
-                    <EcoCertificationWidget key="eco-cert" />
-                ];
+      case 'property-details':
+        return [
+          <NeighborhoodRatingWidget
+            key="neighborhood"
+            propertyId={propertyId}
+            neighborhoodName={neighborhoodName}
+            city={city}
+            state={state}
+          />,
+          <RecentlyViewedWidget key="recently-viewed" />,
+          <EcoCertificationWidget key="eco-cert" />,
+        ];
 
-            case 'saved-properties':
-                return [
-                    <PropertyAlertWidget key="property-alert" />,
-                    <NeighborhoodRatingWidget
-                        key="neighborhood"
-                        neighborhoodName={neighborhoodName}
-                        city={city}
-                        state={state}
-                    />
-                ];
+      case 'saved-properties':
+        return [
+          <PropertyAlertWidget key="property-alert" />,
+          <NeighborhoodRatingWidget
+            key="neighborhood"
+            neighborhoodName={neighborhoodName}
+            city={city}
+            state={state}
+          />,
+        ];
 
-            case 'profile':
-                return [
-                    <TrustScoreWidget key="trust-score" />
-                ];
+      case 'profile':
+        return [<TrustScoreWidget key="trust-score" />];
 
-            case 'contracts':
-                return [];
+      case 'contracts':
+        return [];
 
-            case 'payments':
-                return [];
+      case 'payments':
+        return [];
 
-            case 'messages':
-                return [];
+      case 'messages':
+        return [];
 
-            case 'search':
-                return [
-                    <QuickFiltersWidget key="quick-filters" />,
-                    <SavedSearchesWidget key="saved-searches" />,
-                    <PropertyAlertWidget key="property-alert" />
-                ];
+      case 'search':
+        return [
+          <QuickFiltersWidget key="quick-filters" />,
+          <SavedSearchesWidget key="saved-searches" />,
+          <PropertyAlertWidget key="property-alert" />,
+        ];
 
-            case 'search-results':
-                return [
-                    <QuickFiltersWidget key="quick-filters" />,
-                    <SavedSearchesWidget key="saved-searches" />,
-                    <PropertyAlertWidget key="property-alert" />
-                ];
+      case 'search-results':
+        return [
+          <QuickFiltersWidget key="quick-filters" />,
+          <SavedSearchesWidget key="saved-searches" />,
+          <PropertyAlertWidget key="property-alert" />,
+        ];
 
-            case 'create-property':
-                return [
-                    <PropertyPreviewWidget key="property-preview" />
-                ];
+      case 'create-property':
+        return [<PropertyPreviewWidget key="property-preview" />];
 
-            default:
-                return [];
-        }
-    };
-
-    const screenWidgets = getWidgetsForScreen(screenId);
-
-    // If disabled, remove NeighborhoodRatingWidget elements entirely
-    const filteredScreenWidgets = NEIGHBORHOOD_WIDGET_ENABLED
-        ? screenWidgets
-        : screenWidgets.filter(widget => {
-            if (!React.isValidElement(widget)) return true;
-            return widget.type !== NeighborhoodRatingWidget;
-        });
-
-    if (filteredScreenWidgets.length === 0) {
-        return null;
+      default:
+        return [];
     }
+  };
 
-    return (
-        <View style={styles.container}>
-            {filteredScreenWidgets.map((widget, index) => (
-                <View key={`widget-${index}`} style={styles.widgetWrapper}>
-                    {widget}
-                </View>
-            ))}
+  const screenWidgets = getWidgetsForScreen(screenId);
+
+  // If disabled, remove NeighborhoodRatingWidget elements entirely
+  const filteredScreenWidgets = NEIGHBORHOOD_WIDGET_ENABLED
+    ? screenWidgets
+    : screenWidgets.filter((widget) => {
+        if (!React.isValidElement(widget)) return true;
+        return widget.type !== NeighborhoodRatingWidget;
+      });
+
+  if (filteredScreenWidgets.length === 0) {
+    return null;
+  }
+
+  return (
+    <View style={styles.container}>
+      {filteredScreenWidgets.map((widget, index) => (
+        <View key={`widget-${index}`} style={styles.widgetWrapper}>
+          {widget}
         </View>
-    );
+      ))}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flexDirection: 'column',
-        gap: 15,
-    },
-    widgetWrapper: {
-        marginBottom: 0, // No margin since we're using gap
-    }
-}); 
+  container: {
+    flexDirection: 'column',
+    gap: 15,
+  },
+  widgetWrapper: {
+    marginBottom: 0, // No margin since we're using gap
+  },
+});

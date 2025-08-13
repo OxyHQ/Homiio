@@ -55,20 +55,17 @@ function safeTranslate(key: string, fallback: string): string {
  * @returns Generated title with privacy protection
  */
 export function generatePropertyTitle(propertyData: PropertyData): string {
-  const {
-    type = PropertyType.APARTMENT,
-    address = {},
-  } = propertyData;
+  const { type = PropertyType.APARTMENT, address = {} } = propertyData;
 
   // Get current language from i18next
   const currentLanguage = i18next.language || 'en';
 
   // Get translated property type with fallbacks
   const propertyType = safeTranslate(
-    `properties.titles.types.${type}`, 
-    safeTranslate('properties.titles.types.apartment', 'Apartment')
+    `properties.titles.types.${type}`,
+    safeTranslate('properties.titles.types.apartment', 'Apartment'),
   );
-  
+
   // Get "for rent in" text in current language with fallback
   const forRentText = safeTranslate('properties.titles.forRent', 'for rent in');
 
@@ -86,7 +83,9 @@ export function generatePropertyTitle(propertyData: PropertyData): string {
       location += `, ${address.state}`;
     }
   } else {
-    location = address.state || safeTranslate('properties.titles.locationNotSpecified', 'Location not specified');
+    location =
+      address.state ||
+      safeTranslate('properties.titles.locationNotSpecified', 'Location not specified');
   }
 
   // Generate the final title: "PropertyType for rent in Location"
@@ -110,40 +109,42 @@ export function generatePropertyTitle(propertyData: PropertyData): string {
  * @returns Generated title with optional details
  */
 export function generateDetailedPropertyTitle(
-  propertyData: PropertyData, 
-  includeDetails = false
+  propertyData: PropertyData,
+  includeDetails = false,
 ): string {
   const baseTitle = generatePropertyTitle(propertyData);
-  
+
   if (!includeDetails) {
     return baseTitle;
   }
 
   const { bedrooms = 0, bathrooms = 0 } = propertyData;
-  
+
   // Add bedroom/bathroom details for properties with multiple rooms
   if (bedrooms > 0 || bathrooms > 0) {
     const details = [];
     if (bedrooms > 0) {
       const bedroomText = safeTranslate('properties.details.bedrooms', 'Bedrooms');
-      const bedroomLabel = bedrooms === 1 ? 
-        bedroomText.slice(0, -1) : // Remove 's' for singular
-        bedroomText;
+      const bedroomLabel =
+        bedrooms === 1
+          ? bedroomText.slice(0, -1) // Remove 's' for singular
+          : bedroomText;
       details.push(`${bedrooms} ${bedroomLabel.toLowerCase()}`);
     }
     if (bathrooms > 0) {
       const bathroomText = safeTranslate('properties.details.bathrooms', 'Bathrooms');
-      const bathroomLabel = bathrooms === 1 ? 
-        bathroomText.slice(0, -1) : // Remove 's' for singular  
-        bathroomText;
+      const bathroomLabel =
+        bathrooms === 1
+          ? bathroomText.slice(0, -1) // Remove 's' for singular
+          : bathroomText;
       details.push(`${bathrooms} ${bathroomLabel.toLowerCase()}`);
     }
-    
+
     if (details.length > 0) {
       return `${baseTitle} - ${details.join(', ')}`;
     }
   }
-  
+
   return baseTitle;
 }
 
@@ -154,19 +155,19 @@ export function generateDetailedPropertyTitle(
  */
 export function previewPropertyTitle(propertyData: PropertyData): string | null {
   const { type, address } = propertyData;
-  
+
   // Need at least type and some address info
   if (!type || !address) {
     return null;
   }
-  
+
   const street = address.street || '';
   const city = address.city || '';
-  
+
   if (!street && !city) {
     return null;
   }
-  
+
   return generatePropertyTitle(propertyData);
 }
 
@@ -187,11 +188,11 @@ export function testPropertyTitleGeneration(language = 'en-US'): {
   }>;
 } {
   const originalLanguage = i18next.language;
-  
+
   try {
     // Set language for testing
     i18next.changeLanguage(language);
-    
+
     const testCases: Array<{
       name: string;
       input: PropertyData;
@@ -204,28 +205,28 @@ export function testPropertyTitleGeneration(language = 'en-US'): {
           address: {
             street: 'Calle de Vicente Blasco Ibáñez, 6',
             city: 'Barcelona',
-            state: 'Catalunya'
-          }
+            state: 'Catalunya',
+          },
         },
-        expected: 'Apartment for rent in Calle de Vicente Blasco Ibáñez, Barcelona, Catalunya'
+        expected: 'Apartment for rent in Calle de Vicente Blasco Ibáñez, Barcelona, Catalunya',
       },
       {
         name: 'House with city only',
         input: {
           type: PropertyType.HOUSE,
           address: {
-            city: 'Madrid'
-          }
+            city: 'Madrid',
+          },
         },
-        expected: 'House for rent in Madrid'
+        expected: 'House for rent in Madrid',
       },
       {
         name: 'Studio with no address',
         input: {
           type: PropertyType.STUDIO,
-          address: {}
+          address: {},
         },
-        expected: 'Studio for rent in Location not specified'
+        expected: 'Studio for rent in Location not specified',
       },
       {
         name: 'Detailed apartment with bedrooms and bathrooms',
@@ -233,35 +234,35 @@ export function testPropertyTitleGeneration(language = 'en-US'): {
           type: PropertyType.APARTMENT,
           address: {
             street: 'Gran Via, 123',
-            city: 'Valencia'
+            city: 'Valencia',
           },
           bedrooms: 2,
-          bathrooms: 1
+          bathrooms: 1,
         },
-        expected: 'Apartment for rent in Gran Via, Valencia - 2 bedroom, 1 bathroom'
-      }
+        expected: 'Apartment for rent in Gran Via, Valencia - 2 bedroom, 1 bathroom',
+      },
     ];
-    
-    const results = testCases.map(testCase => {
+
+    const results = testCases.map((testCase) => {
       const actual = generateDetailedPropertyTitle(testCase.input, true);
       return {
         name: testCase.name,
         input: testCase.input,
         expected: testCase.expected,
         actual,
-        passed: actual.includes('Apartment') || actual.includes('House') || actual.includes('Studio')
+        passed:
+          actual.includes('Apartment') || actual.includes('House') || actual.includes('Studio'),
       };
     });
-    
-    const success = results.every(result => result.passed);
-    
+
+    const success = results.every((result) => result.passed);
+
     return {
       success,
-      tests: results
+      tests: results,
     };
-    
   } finally {
     // Restore original language
     i18next.changeLanguage(originalLanguage);
   }
-} 
+}

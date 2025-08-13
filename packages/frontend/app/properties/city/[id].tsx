@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, ScrollView, Image } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  ActivityIndicator,
+  TouchableOpacity,
+  ScrollView,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
 import { PropertyCard } from '@/components/PropertyCard';
 import { Property } from '@/services/propertyService';
@@ -44,7 +51,7 @@ export default function CityPropertiesPage() {
         // Get properties for this city using the city service
         const propertiesResponse = await cityService.getPropertiesByCity(cityResponse.data._id, {
           limit: 50,
-          sort: 'createdAt'
+          sort: 'createdAt',
         });
 
         // Ensure we always set an array
@@ -88,20 +95,23 @@ export default function CityPropertiesPage() {
     if (activeFilter) {
       switch (activeFilter) {
         case 'verified':
-          result = result.filter(p => p.status === 'available');
+          result = result.filter((p) => p.status === 'available');
           break;
         case 'eco':
-          result = result.filter(p => p.amenities?.some(a =>
-            a.toLowerCase().includes('eco') ||
-            a.toLowerCase().includes('green') ||
-            a.toLowerCase().includes('solar')
-          ));
+          result = result.filter((p) =>
+            p.amenities?.some(
+              (a) =>
+                a.toLowerCase().includes('eco') ||
+                a.toLowerCase().includes('green') ||
+                a.toLowerCase().includes('solar'),
+            ),
+          );
           break;
         case '1bed':
-          result = result.filter(p => (p.bedrooms || 0) >= 1);
+          result = result.filter((p) => (p.bedrooms || 0) >= 1);
           break;
         case '2bed':
-          result = result.filter(p => (p.bedrooms || 0) >= 2);
+          result = result.filter((p) => (p.bedrooms || 0) >= 2);
           break;
       }
     }
@@ -140,10 +150,7 @@ export default function CityPropertiesPage() {
   const renderFilterOption = (option: { id: string; label: string; icon: string }) => (
     <TouchableOpacity
       key={option.id}
-      style={[
-        styles.filterChip,
-        activeFilter === option.id && styles.activeFilterChip
-      ]}
+      style={[styles.filterChip, activeFilter === option.id && styles.activeFilterChip]}
       onPress={() => toggleFilter(option.id)}
     >
       <Ionicons
@@ -151,10 +158,9 @@ export default function CityPropertiesPage() {
         size={16}
         color={activeFilter === option.id ? 'white' : colors.COLOR_BLACK}
       />
-      <Text style={[
-        styles.filterChipText,
-        activeFilter === option.id && styles.activeFilterChipText
-      ]}>
+      <Text
+        style={[styles.filterChipText, activeFilter === option.id && styles.activeFilterChipText]}
+      >
         {option.label}
       </Text>
     </TouchableOpacity>
@@ -173,12 +179,12 @@ export default function CityPropertiesPage() {
       <View style={styles.safeArea}>
         <View
           style={styles.stickyHeaderWrapper}
-          onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+          onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
         >
           <Header
             options={{
               showBackButton: true,
-              title: t("Loading..."),
+              title: t('Loading...'),
               titlePosition: 'center',
             }}
           />
@@ -186,7 +192,7 @@ export default function CityPropertiesPage() {
         <View style={{ paddingTop: headerHeight, flex: 1 }}>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primaryColor} />
-            <Text style={styles.loadingText}>{t("Loading properties...")}</Text>
+            <Text style={styles.loadingText}>{t('Loading properties...')}</Text>
           </View>
         </View>
       </View>
@@ -198,12 +204,12 @@ export default function CityPropertiesPage() {
       <View style={styles.safeArea}>
         <View
           style={styles.stickyHeaderWrapper}
-          onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+          onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
         >
           <Header
             options={{
               showBackButton: true,
-              title: t("Error"),
+              title: t('Error'),
               titlePosition: 'center',
             }}
           />
@@ -211,8 +217,8 @@ export default function CityPropertiesPage() {
         <View style={{ paddingTop: headerHeight, flex: 1 }}>
           <EmptyState
             icon="alert-circle"
-            title={error || t("City not found")}
-            actionText={t("Go Back")}
+            title={error || t('City not found')}
+            actionText={t('Go Back')}
             actionIcon="arrow-back"
             onAction={() => router.back()}
           />
@@ -225,7 +231,7 @@ export default function CityPropertiesPage() {
     <View style={styles.safeArea}>
       <View
         style={styles.stickyHeaderWrapper}
-        onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+        onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
       >
         <Header
           options={{
@@ -243,15 +249,9 @@ export default function CityPropertiesPage() {
             style={styles.heroContainer}
           >
             <View style={styles.heroContent}>
-              <Text style={styles.heroTitle}>
-                {city.name}
-              </Text>
-              <Text style={styles.heroSubtitle}>
-                {city.country}
-              </Text>
-              <Text style={styles.heroDescription}>
-                {city.description}
-              </Text>
+              <Text style={styles.heroTitle}>{city.name}</Text>
+              <Text style={styles.heroSubtitle}>{city.country}</Text>
+              <Text style={styles.heroDescription}>{city.description}</Text>
             </View>
           </LinearGradient>
         </View>
@@ -260,24 +260,24 @@ export default function CityPropertiesPage() {
         <View style={styles.statsSection}>
           <View style={styles.statCard}>
             <Text style={styles.statNumber}>{city.propertiesCount}</Text>
-            <Text style={styles.statLabel}>{t("Properties")}</Text>
+            <Text style={styles.statLabel}>{t('Properties')}</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statNumber}>
               {city.averageRent ? `⊜${city.averageRent.toLocaleString()}` : 'N/A'}
             </Text>
-            <Text style={styles.statLabel}>{t("Avg. Price")}</Text>
+            <Text style={styles.statLabel}>{t('Avg. Price')}</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statNumber}>{city.popularNeighborhoods?.length || 0}</Text>
-            <Text style={styles.statLabel}>{t("Neighborhoods")}</Text>
+            <Text style={styles.statLabel}>{t('Neighborhoods')}</Text>
           </View>
         </View>
 
         {/* Neighborhood Pills */}
         {city.popularNeighborhoods && city.popularNeighborhoods.length > 0 && (
           <View style={styles.neighborhoodSection}>
-            <Text style={styles.sectionTitle}>{t("Popular Neighborhoods")}</Text>
+            <Text style={styles.sectionTitle}>{t('Popular Neighborhoods')}</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -296,9 +296,9 @@ export default function CityPropertiesPage() {
         <View style={styles.propertiesSection}>
           <View style={styles.propertiesHeader}>
             <View>
-              <Text style={styles.sectionTitle}>{t("Available Properties")}</Text>
+              <Text style={styles.sectionTitle}>{t('Available Properties')}</Text>
               <Text style={styles.propertiesSubtitle}>
-                {getFilteredAndSortedProperties().length} {t("properties found")}
+                {getFilteredAndSortedProperties().length} {t('properties found')}
               </Text>
             </View>
 
@@ -310,13 +310,17 @@ export default function CityPropertiesPage() {
                 <Ionicons
                   name="arrow-up"
                   size={16}
-                  color={activeSort === 'price_asc' ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3}
+                  color={
+                    activeSort === 'price_asc' ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3
+                  }
                 />
-                <Text style={[
-                  styles.sortButtonText,
-                  activeSort === 'price_asc' && styles.activeSortButtonText
-                ]}>
-                  {t("Price")}
+                <Text
+                  style={[
+                    styles.sortButtonText,
+                    activeSort === 'price_asc' && styles.activeSortButtonText,
+                  ]}
+                >
+                  {t('Price')}
                 </Text>
               </TouchableOpacity>
 
@@ -329,11 +333,13 @@ export default function CityPropertiesPage() {
                   size={16}
                   color={activeSort === 'rating' ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3}
                 />
-                <Text style={[
-                  styles.sortButtonText,
-                  activeSort === 'rating' && styles.activeSortButtonText
-                ]}>
-                  {t("Rating")}
+                <Text
+                  style={[
+                    styles.sortButtonText,
+                    activeSort === 'rating' && styles.activeSortButtonText,
+                  ]}
+                >
+                  {t('Rating')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -358,9 +364,9 @@ export default function CityPropertiesPage() {
             ListEmptyComponent={
               <EmptyState
                 icon="home-outline"
-                title={t("No properties found")}
-                description={t("Try adjusting your filters or check back later")}
-                actionText={t("Clear Filters")}
+                title={t('No properties found')}
+                description={t('Try adjusting your filters or check back later')}
+                actionText={t('Clear Filters')}
                 actionIcon="refresh"
                 onAction={() => {
                   setActiveFilter(null);
@@ -589,5 +595,4 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: colors.primaryLight,
   },
-
 });

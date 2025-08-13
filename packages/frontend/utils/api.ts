@@ -41,7 +41,7 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public status?: number,
-    public response?: any
+    public response?: any,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -56,15 +56,15 @@ export const api = {
    * GET request
    */
   async get<T = any>(
-    endpoint: string, 
-    options?: { 
+    endpoint: string,
+    options?: {
       params?: Record<string, any>;
       oxyServices?: OxyServices;
       activeSessionId?: string;
-    }
+    },
   ): Promise<{ data: T }> {
     const url = new URL(`${API_CONFIG.baseURL}${endpoint}`);
-    
+
     // Add query parameters if provided
     if (options?.params) {
       Object.entries(options.params).forEach(([key, value]) => {
@@ -82,11 +82,11 @@ export const api = {
     if (options?.oxyServices && options?.activeSessionId) {
       try {
         const tokenData = await options.oxyServices.getTokenBySession(options.activeSessionId);
-        
+
         if (!tokenData) {
           throw new ApiError('No authentication token found', 401);
         }
-        
+
         headers['Authorization'] = `Bearer ${tokenData.accessToken}`;
       } catch (error) {
         console.error('Failed to get token:', error);
@@ -105,7 +105,7 @@ export const api = {
       throw new ApiError(
         data.message || data.error || `HTTP ${response.status}`,
         response.status,
-        data
+        data,
       );
     }
 
@@ -116,12 +116,12 @@ export const api = {
    * POST request
    */
   async post<T = any>(
-    endpoint: string, 
+    endpoint: string,
     body?: any,
     options?: {
       oxyServices?: OxyServices;
       activeSessionId?: string;
-    }
+    },
   ): Promise<{ data: T }> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -131,11 +131,11 @@ export const api = {
     if (options?.oxyServices && options?.activeSessionId) {
       try {
         const tokenData = await options.oxyServices.getTokenBySession(options.activeSessionId);
-        
+
         if (!tokenData) {
           throw new ApiError('No authentication token found', 401);
         }
-        
+
         headers['Authorization'] = `Bearer ${tokenData.accessToken}`;
       } catch (error) {
         console.error('Failed to get token:', error);
@@ -155,7 +155,7 @@ export const api = {
       throw new ApiError(
         data.message || data.error || `HTTP ${response.status}`,
         response.status,
-        data
+        data,
       );
     }
 
@@ -166,12 +166,12 @@ export const api = {
    * PUT request
    */
   async put<T = any>(
-    endpoint: string, 
+    endpoint: string,
     body?: any,
     options?: {
       oxyServices?: OxyServices;
       activeSessionId?: string;
-    }
+    },
   ): Promise<{ data: T }> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -181,11 +181,11 @@ export const api = {
     if (options?.oxyServices && options?.activeSessionId) {
       try {
         const tokenData = await options.oxyServices.getTokenBySession(options.activeSessionId);
-        
+
         if (!tokenData) {
           throw new ApiError('No authentication token found', 401);
         }
-        
+
         headers['Authorization'] = `Bearer ${tokenData.accessToken}`;
       } catch (error) {
         console.error('Failed to get token:', error);
@@ -205,7 +205,7 @@ export const api = {
       throw new ApiError(
         data.message || data.error || `HTTP ${response.status}`,
         response.status,
-        data
+        data,
       );
     }
 
@@ -220,7 +220,7 @@ export const api = {
     options?: {
       oxyServices?: OxyServices;
       activeSessionId?: string;
-    }
+    },
   ): Promise<{ data: T }> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -230,11 +230,11 @@ export const api = {
     if (options?.oxyServices && options?.activeSessionId) {
       try {
         const tokenData = await options.oxyServices.getTokenBySession(options.activeSessionId);
-        
+
         if (!tokenData) {
           throw new ApiError('No authentication token found', 401);
         }
-        
+
         headers['Authorization'] = `Bearer ${tokenData.accessToken}`;
       } catch (error) {
         console.error('Failed to get token:', error);
@@ -253,7 +253,7 @@ export const api = {
       throw new ApiError(
         data.message || data.error || `HTTP ${response.status}`,
         response.status,
-        data
+        data,
       );
     }
 
@@ -264,12 +264,12 @@ export const api = {
    * PATCH request
    */
   async patch<T = any>(
-    endpoint: string, 
+    endpoint: string,
     body?: any,
     options?: {
       oxyServices?: OxyServices;
       activeSessionId?: string;
-    }
+    },
   ): Promise<{ data: T }> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -279,11 +279,11 @@ export const api = {
     if (options?.oxyServices && options?.activeSessionId) {
       try {
         const tokenData = await options.oxyServices.getTokenBySession(options.activeSessionId);
-        
+
         if (!tokenData) {
           throw new ApiError('No authentication token found', 401);
         }
-        
+
         headers['Authorization'] = `Bearer ${tokenData.accessToken}`;
       } catch (error) {
         console.error('Failed to get token:', error);
@@ -303,7 +303,7 @@ export const api = {
       throw new ApiError(
         data.message || data.error || `HTTP ${response.status}`,
         response.status,
-        data
+        data,
       );
     }
 
@@ -317,7 +317,10 @@ export const api = {
  */
 export const profileApi = {
   // Get user profile (authenticated) - creates personal profile if it doesn't exist
-  async getUserProfile(oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse<UserProfile>> {
+  async getUserProfile(
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ): Promise<ApiResponse<UserProfile>> {
     try {
       const response = await api.get<ApiResponse<UserProfile>>(API_CONFIG.endpoints.profile, {
         oxyServices,
@@ -342,12 +345,12 @@ export const profileApi = {
           };
 
           const createResponse = await api.post<ApiResponse<UserProfile>>(
-            API_CONFIG.endpoints.profile, 
+            API_CONFIG.endpoints.profile,
             basicProfileData,
             {
               oxyServices,
               activeSessionId,
-            }
+            },
           );
           return createResponse.data;
         } catch (createError) {
@@ -361,24 +364,35 @@ export const profileApi = {
   },
 
   // Create personal profile (authenticated)
-  async createPersonalProfile(oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse<UserProfile>> {
+  async createPersonalProfile(
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ): Promise<ApiResponse<UserProfile>> {
     const response = await api.post<ApiResponse<UserProfile>>(
-      API_CONFIG.endpoints.profile, 
+      API_CONFIG.endpoints.profile,
       { isPersonalProfile: true },
       {
         oxyServices,
         activeSessionId,
-      }
+      },
     );
     return response.data;
   },
 
   // Update user profile (authenticated)
-  async updateUserProfile(profileData: Partial<UserProfile>, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse<UserProfile>> {
-    const response = await api.put<ApiResponse<UserProfile>>(API_CONFIG.endpoints.profile, profileData, {
-      oxyServices,
-      activeSessionId,
-    });
+  async updateUserProfile(
+    profileData: Partial<UserProfile>,
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ): Promise<ApiResponse<UserProfile>> {
+    const response = await api.put<ApiResponse<UserProfile>>(
+      API_CONFIG.endpoints.profile,
+      profileData,
+      {
+        oxyServices,
+        activeSessionId,
+      },
+    );
     return response.data;
   },
 };
@@ -398,7 +412,11 @@ export const dataApi = {
   },
 
   // Create user data (authenticated)
-  async createUserData(data: Record<string, any>, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
+  async createUserData(
+    data: Record<string, any>,
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ): Promise<ApiResponse> {
     const response = await api.post<ApiResponse>(API_CONFIG.endpoints.data, data, {
       oxyServices,
       activeSessionId,
@@ -413,7 +431,10 @@ export const dataApi = {
  */
 export const userApi = {
   // Get recently viewed properties (authenticated)
-  async getRecentProperties(oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
+  async getRecentProperties(
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ): Promise<ApiResponse> {
     const response = await api.get<ApiResponse>(API_CONFIG.endpoints.profiles.recentProperties, {
       oxyServices,
       activeSessionId,
@@ -422,16 +443,27 @@ export const userApi = {
   },
 
   // Track property view (authenticated)
-  async trackPropertyView(propertyId: string, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.post<ApiResponse>(`/api/properties/${propertyId}/track-view`, {}, {
-      oxyServices,
-      activeSessionId,
-    });
+  async trackPropertyView(
+    propertyId: string,
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ): Promise<ApiResponse> {
+    const response = await api.post<ApiResponse>(
+      `/api/properties/${propertyId}/track-view`,
+      {},
+      {
+        oxyServices,
+        activeSessionId,
+      },
+    );
     return response.data;
   },
 
   // Clear recently viewed properties (authenticated)
-  async clearRecentProperties(oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
+  async clearRecentProperties(
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ): Promise<ApiResponse> {
     const response = await api.delete<ApiResponse>(API_CONFIG.endpoints.profiles.recentProperties, {
       oxyServices,
       activeSessionId,
@@ -440,7 +472,10 @@ export const userApi = {
   },
 
   // Get saved properties (authenticated)
-  async getSavedProperties(oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
+  async getSavedProperties(
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ): Promise<ApiResponse> {
     const response = await api.get<ApiResponse>(API_CONFIG.endpoints.profiles.savedProperties, {
       oxyServices,
       activeSessionId,
@@ -449,34 +484,63 @@ export const userApi = {
   },
 
   // Save a property (authenticated)
-  async saveProperty(propertyId: string, notes: string | undefined, oxyServices: OxyServices, activeSessionId: string, folderId?: string | null): Promise<ApiResponse> {
-    const response = await api.post<ApiResponse>(API_CONFIG.endpoints.profiles.saveProperty, { propertyId, notes, folderId }, {
-      oxyServices,
-      activeSessionId,
-    });
+  async saveProperty(
+    propertyId: string,
+    notes: string | undefined,
+    oxyServices: OxyServices,
+    activeSessionId: string,
+    folderId?: string | null,
+  ): Promise<ApiResponse> {
+    const response = await api.post<ApiResponse>(
+      API_CONFIG.endpoints.profiles.saveProperty,
+      { propertyId, notes, folderId },
+      {
+        oxyServices,
+        activeSessionId,
+      },
+    );
     return response.data;
   },
 
   // Unsave a property (authenticated)
-  async unsaveProperty(propertyId: string, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.delete<ApiResponse>(`${API_CONFIG.endpoints.profiles.savedProperties}/${propertyId}`, {
-      oxyServices,
-      activeSessionId,
-    });
+  async unsaveProperty(
+    propertyId: string,
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ): Promise<ApiResponse> {
+    const response = await api.delete<ApiResponse>(
+      `${API_CONFIG.endpoints.profiles.savedProperties}/${propertyId}`,
+      {
+        oxyServices,
+        activeSessionId,
+      },
+    );
     return response.data;
   },
 
   // Update saved property notes (authenticated)
-  async updateSavedPropertyNotes(propertyId: string, notes: string, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.patch<ApiResponse>(`${API_CONFIG.endpoints.profiles.savedProperties}/${propertyId}/notes`, { notes }, {
-      oxyServices,
-      activeSessionId,
-    });
+  async updateSavedPropertyNotes(
+    propertyId: string,
+    notes: string,
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ): Promise<ApiResponse> {
+    const response = await api.patch<ApiResponse>(
+      `${API_CONFIG.endpoints.profiles.savedProperties}/${propertyId}/notes`,
+      { notes },
+      {
+        oxyServices,
+        activeSessionId,
+      },
+    );
     return response.data;
   },
 
   // Get saved property folders (authenticated)
-  async getSavedPropertyFolders(oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
+  async getSavedPropertyFolders(
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ): Promise<ApiResponse> {
     const response = await api.get<ApiResponse>('/api/profiles/me/saved-property-folders', {
       oxyServices,
       activeSessionId,
@@ -485,40 +549,70 @@ export const userApi = {
   },
 
   // Create saved property folder (authenticated)
-  async createSavedPropertyFolder(folderData: { name: string; description?: string; color?: string; icon?: string }, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.post<ApiResponse>('/api/profiles/me/saved-property-folders', folderData, {
-      oxyServices,
-      activeSessionId,
-    });
+  async createSavedPropertyFolder(
+    folderData: { name: string; description?: string; color?: string; icon?: string },
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ): Promise<ApiResponse> {
+    const response = await api.post<ApiResponse>(
+      '/api/profiles/me/saved-property-folders',
+      folderData,
+      {
+        oxyServices,
+        activeSessionId,
+      },
+    );
     return response.data;
   },
 
   // Update saved property folder (authenticated)
-  async updateSavedPropertyFolder(folderId: string, folderData: { name?: string; description?: string; color?: string; icon?: string }, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.put<ApiResponse>(`/api/profiles/me/saved-property-folders/${folderId}`, folderData, {
-      oxyServices,
-      activeSessionId,
-    });
+  async updateSavedPropertyFolder(
+    folderId: string,
+    folderData: { name?: string; description?: string; color?: string; icon?: string },
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ): Promise<ApiResponse> {
+    const response = await api.put<ApiResponse>(
+      `/api/profiles/me/saved-property-folders/${folderId}`,
+      folderData,
+      {
+        oxyServices,
+        activeSessionId,
+      },
+    );
     return response.data;
   },
 
   // Delete saved property folder (authenticated)
-  async deleteSavedPropertyFolder(folderId: string, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.delete<ApiResponse>(`/api/profiles/me/saved-property-folders/${folderId}`, {
-      oxyServices,
-      activeSessionId,
-    });
+  async deleteSavedPropertyFolder(
+    folderId: string,
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ): Promise<ApiResponse> {
+    const response = await api.delete<ApiResponse>(
+      `/api/profiles/me/saved-property-folders/${folderId}`,
+      {
+        oxyServices,
+        activeSessionId,
+      },
+    );
     return response.data;
   },
 
-
-
   // Get user properties (authenticated)
-  async getUserProperties(page: number = 1, limit: number = 10, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.get<ApiResponse>(`${API_CONFIG.endpoints.profiles.properties}?page=${page}&limit=${limit}`, {
-      oxyServices,
-      activeSessionId,
-    });
+  async getUserProperties(
+    page: number = 1,
+    limit: number = 10,
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ): Promise<ApiResponse> {
+    const response = await api.get<ApiResponse>(
+      `${API_CONFIG.endpoints.profiles.properties}?page=${page}&limit=${limit}`,
+      {
+        oxyServices,
+        activeSessionId,
+      },
+    );
     return response.data;
   },
 
@@ -532,57 +626,98 @@ export const userApi = {
   },
 
   // Save a search (authenticated)
-  async saveSearch(searchData: { name: string; query: string; filters?: any; notificationsEnabled?: boolean }, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.post<ApiResponse>(API_CONFIG.endpoints.profiles.savedSearches, searchData, {
-      oxyServices,
-      activeSessionId,
-    });
+  async saveSearch(
+    searchData: { name: string; query: string; filters?: any; notificationsEnabled?: boolean },
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ): Promise<ApiResponse> {
+    const response = await api.post<ApiResponse>(
+      API_CONFIG.endpoints.profiles.savedSearches,
+      searchData,
+      {
+        oxyServices,
+        activeSessionId,
+      },
+    );
     return response.data;
   },
 
   // Delete a saved search (authenticated)
-  async deleteSavedSearch(searchId: string, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.delete<ApiResponse>(`${API_CONFIG.endpoints.profiles.savedSearches}/${searchId}`, {
-      oxyServices,
-      activeSessionId,
-    });
+  async deleteSavedSearch(
+    searchId: string,
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ): Promise<ApiResponse> {
+    const response = await api.delete<ApiResponse>(
+      `${API_CONFIG.endpoints.profiles.savedSearches}/${searchId}`,
+      {
+        oxyServices,
+        activeSessionId,
+      },
+    );
     return response.data;
   },
 
   // Update a saved search (authenticated)
-  async updateSavedSearch(searchId: string, searchData: { name?: string; query?: string; filters?: any; notificationsEnabled?: boolean }, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.patch<ApiResponse>(`${API_CONFIG.endpoints.profiles.savedSearches}/${searchId}`, searchData, {
-      oxyServices,
-      activeSessionId,
-    });
+  async updateSavedSearch(
+    searchId: string,
+    searchData: { name?: string; query?: string; filters?: any; notificationsEnabled?: boolean },
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ): Promise<ApiResponse> {
+    const response = await api.patch<ApiResponse>(
+      `${API_CONFIG.endpoints.profiles.savedSearches}/${searchId}`,
+      searchData,
+      {
+        oxyServices,
+        activeSessionId,
+      },
+    );
     return response.data;
   },
 
   // Toggle notifications for a saved search (authenticated)
-  async toggleSearchNotifications(searchId: string, notificationsEnabled: boolean, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.patch<ApiResponse>(`${API_CONFIG.endpoints.profiles.savedSearches}/${searchId}/notifications`, { notificationsEnabled }, {
-      oxyServices,
-      activeSessionId,
-    });
+  async toggleSearchNotifications(
+    searchId: string,
+    notificationsEnabled: boolean,
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ): Promise<ApiResponse> {
+    const response = await api.patch<ApiResponse>(
+      `${API_CONFIG.endpoints.profiles.savedSearches}/${searchId}/notifications`,
+      { notificationsEnabled },
+      {
+        oxyServices,
+        activeSessionId,
+      },
+    );
     return response.data;
   },
 };
 
 // Web-compatible alert function
-export function webAlert(title: string, message: string, buttons?: Array<{ text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void }>) {
+export function webAlert(
+  title: string,
+  message: string,
+  buttons?: Array<{
+    text: string;
+    style?: 'default' | 'cancel' | 'destructive';
+    onPress?: () => void;
+  }>,
+) {
   if (Platform.OS === 'web') {
     if (buttons && buttons.length > 1) {
       // For confirmation dialogs, use browser confirm
       const result = window.confirm(`${title}\n\n${message}`);
       if (result) {
         // Find the non-cancel button and call its onPress
-        const confirmButton = buttons.find(btn => btn.style !== 'cancel');
+        const confirmButton = buttons.find((btn) => btn.style !== 'cancel');
         if (confirmButton?.onPress) {
           confirmButton.onPress();
         }
       } else {
         // Find the cancel button and call its onPress
-        const cancelButton = buttons.find(btn => btn.style === 'cancel');
+        const cancelButton = buttons.find((btn) => btn.style === 'cancel');
         if (cancelButton?.onPress) {
           cancelButton.onPress();
         }
@@ -615,7 +750,10 @@ export const healthApi = {
  */
 export const sindiApi = {
   // Get Sindi chat history (authenticated)
-  async getSindiChatHistory(oxyServices: OxyServices, activeSessionId: string): Promise<{ history: any[] }> {
+  async getSindiChatHistory(
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ): Promise<{ history: any[] }> {
     const response = await api.get<{ history: any[] }>('/api/ai/history', {
       oxyServices,
       activeSessionId,
@@ -624,7 +762,10 @@ export const sindiApi = {
   },
 
   // Clear Sindi chat history (authenticated)
-  async clearSindiChatHistory(oxyServices: OxyServices, activeSessionId: string): Promise<{ success: boolean }> {
+  async clearSindiChatHistory(
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ): Promise<{ success: boolean }> {
     const response = await api.delete<{ success: boolean }>('/api/ai/history', {
       oxyServices,
       activeSessionId,
@@ -633,14 +774,23 @@ export const sindiApi = {
   },
 
   // Save Sindi chat history (user/assistant message pair)
-  async saveSindiChatHistory(userMessage: string, assistantMessage: string, oxyServices: OxyServices, activeSessionId: string): Promise<{ success: boolean }> {
-    const response = await api.post<{ success: boolean }>('/api/ai/history', {
-      userMessage,
-      assistantMessage,
-    }, {
-      oxyServices,
-      activeSessionId,
-    });
+  async saveSindiChatHistory(
+    userMessage: string,
+    assistantMessage: string,
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ): Promise<{ success: boolean }> {
+    const response = await api.post<{ success: boolean }>(
+      '/api/ai/history',
+      {
+        userMessage,
+        assistantMessage,
+      },
+      {
+        oxyServices,
+        activeSessionId,
+      },
+    );
     return response.data;
   },
 };

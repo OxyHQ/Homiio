@@ -24,7 +24,7 @@ export class FavoritesRetry {
 
   static async execute<T>(
     operation: () => Promise<T>,
-    config: Partial<RetryConfig> = {}
+    config: Partial<RetryConfig> = {},
   ): Promise<RetryResult<T>> {
     const finalConfig = { ...this.DEFAULT_CONFIG, ...config };
     let lastError: FavoritesError;
@@ -40,7 +40,7 @@ export class FavoritesRetry {
         };
       } catch (error: any) {
         lastError = FavoritesErrorHandler.createError(error, `Attempt ${attempt}`);
-        
+
         // Log the error
         FavoritesErrorHandler.logError(lastError, `Retry attempt ${attempt}`);
 
@@ -64,12 +64,9 @@ export class FavoritesRetry {
 
         // Wait before next attempt
         await this.delay(delay);
-        
+
         // Calculate next delay with exponential backoff
-        delay = Math.min(
-          delay * finalConfig.backoffMultiplier,
-          finalConfig.maxDelay
-        );
+        delay = Math.min(delay * finalConfig.backoffMultiplier, finalConfig.maxDelay);
       }
     }
 
@@ -81,7 +78,7 @@ export class FavoritesRetry {
   }
 
   private static delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   static shouldRetry(error: FavoritesError): boolean {
@@ -92,4 +89,4 @@ export class FavoritesRetry {
     const baseDelay = FavoritesErrorHandler.getRetryDelay(error);
     return Math.min(baseDelay * Math.pow(2, attempt - 1), 10000);
   }
-} 
+}

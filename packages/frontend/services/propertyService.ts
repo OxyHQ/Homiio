@@ -1,33 +1,29 @@
 import { api } from '@/utils/api';
-import { 
-  Property, 
-  CreatePropertyData, 
-  PropertyFilters, 
-  PropertyType, 
-  PropertyStatus, 
-  HousingType, 
-  LayoutType, 
-  PaymentFrequency, 
-  UtilitiesIncluded, 
+import {
+  Property,
+  CreatePropertyData,
+  PropertyFilters,
+  PropertyType,
+  PropertyStatus,
+  HousingType,
+  LayoutType,
+  PaymentFrequency,
+  UtilitiesIncluded,
   PriceUnit,
 } from '@homiio/shared-types';
 
 // Re-export the types for backward compatibility
-export type { 
-  Property, 
-  CreatePropertyData, 
-  PropertyFilters 
-};
+export type { Property, CreatePropertyData, PropertyFilters };
 
 // Re-export enums for backward compatibility
-export { 
-  PropertyType, 
-  PropertyStatus, 
-  HousingType, 
-  LayoutType, 
-  PaymentFrequency, 
-  UtilitiesIncluded, 
-  PriceUnit 
+export {
+  PropertyType,
+  PropertyStatus,
+  HousingType,
+  LayoutType,
+  PaymentFrequency,
+  UtilitiesIncluded,
+  PriceUnit,
 };
 
 export interface EthicalPricingRequest {
@@ -71,22 +67,22 @@ class PropertyService {
   // Currency utility methods
   static getCurrencyDisplayName(currencyCode: string): string {
     const currencyMap: Record<string, string> = {
-      'USD': 'USD',
-      'EUR': 'EUR', 
-      'GBP': 'GBP',
-      'CAD': 'CAD',
-      'FAIR': 'FAIR (FairCoin)'
+      USD: 'USD',
+      EUR: 'EUR',
+      GBP: 'GBP',
+      CAD: 'CAD',
+      FAIR: 'FAIR (FairCoin)',
     };
     return currencyMap[currencyCode] || currencyCode;
   }
 
   static getCurrencyCode(displayName: string): string {
     const reverseMap: Record<string, string> = {
-      'USD': 'USD',
-      'EUR': 'EUR',
-      'GBP': 'GBP', 
-      'CAD': 'CAD',
-      'FAIR (FairCoin)': 'FAIR'
+      USD: 'USD',
+      EUR: 'EUR',
+      GBP: 'GBP',
+      CAD: 'CAD',
+      'FAIR (FairCoin)': 'FAIR',
     };
     return reverseMap[displayName] || displayName;
   }
@@ -103,25 +99,27 @@ class PropertyService {
   static setLocation(longitude: number, latitude: number): Property['location'] {
     return {
       type: 'Point',
-      coordinates: [longitude, latitude]
+      coordinates: [longitude, latitude],
     };
   }
 
   static getDistanceFromPoint(
     property: Property,
     targetLongitude: number,
-    targetLatitude: number
+    targetLatitude: number,
   ): number | null {
     const coords = this.getCoordinates(property);
     if (!coords) return null;
 
     const R = 6371000; // Earth's radius in meters
-    const dLat = (targetLatitude - coords.latitude) * Math.PI / 180;
-    const dLng = (targetLongitude - coords.longitude) * Math.PI / 180;
-    const a = 
+    const dLat = ((targetLatitude - coords.latitude) * Math.PI) / 180;
+    const dLng = ((targetLongitude - coords.longitude) * Math.PI) / 180;
+    const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(coords.latitude * Math.PI / 180) * Math.cos(targetLatitude * Math.PI / 180) *
-      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      Math.cos((coords.latitude * Math.PI) / 180) *
+        Math.cos((targetLatitude * Math.PI) / 180) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   }
@@ -151,12 +149,16 @@ class PropertyService {
     return property;
   }
 
-  async createProperty(data: CreatePropertyData, oxyServices: any, activeSessionId: string): Promise<Property> {
+  async createProperty(
+    data: CreatePropertyData,
+    oxyServices: any,
+    activeSessionId: string,
+  ): Promise<Property> {
     const response = await api.post(this.baseUrl, data, { oxyServices, activeSessionId });
-    
+
     // Log the response for debugging
     console.log('API response:', JSON.stringify(response.data));
-    
+
     // Handle different response formats
     if (response.data.data) {
       return response.data.data; // Standard format: { success, message, data }
@@ -170,7 +172,12 @@ class PropertyService {
     }
   }
 
-  async updateProperty(id: string, data: Partial<CreatePropertyData>, oxyServices?: any, activeSessionId?: string): Promise<Property> {
+  async updateProperty(
+    id: string,
+    data: Partial<CreatePropertyData>,
+    oxyServices?: any,
+    activeSessionId?: string,
+  ): Promise<Property> {
     const response = await api.put(`${this.baseUrl}/${id}`, data, {
       oxyServices,
       activeSessionId,
@@ -182,11 +189,14 @@ class PropertyService {
     await api.delete(`${this.baseUrl}/${id}`);
   }
 
-  async searchProperties(query: string, filters?: Omit<PropertyFilters, 'search'>): Promise<{
+  async searchProperties(
+    query: string,
+    filters?: Omit<PropertyFilters, 'search'>,
+  ): Promise<{
     properties: Property[];
     total: number;
   }> {
-  const params = { ...filters, query };
+    const params = { ...filters, query };
     const response = await api.get(`${this.baseUrl}/search`, { params });
     return {
       properties: response.data.data || [],
@@ -200,8 +210,8 @@ class PropertyService {
     availableRooms: number;
     monthlyRevenue: number;
     averageRent: number;
-  occupancyRate: number;
-  savesCount?: number;
+    occupancyRate: number;
+    savesCount?: number;
   }> {
     const response = await api.get(`${this.baseUrl}/${id}/stats`);
     return response.data.data || response.data.stats;
@@ -226,7 +236,7 @@ class PropertyService {
     longitude: number,
     latitude: number,
     maxDistance: number = 10000,
-    filters?: Omit<PropertyFilters, 'search'>
+    filters?: Omit<PropertyFilters, 'search'>,
   ): Promise<{
     properties: Property[];
     total: number;
@@ -236,8 +246,8 @@ class PropertyService {
         longitude,
         latitude,
         maxDistance,
-        ...filters
-      }
+        ...filters,
+      },
     });
     return {
       properties: response.data.data || [],
@@ -249,7 +259,7 @@ class PropertyService {
     longitude: number,
     latitude: number,
     radiusInMeters: number,
-    filters?: Omit<PropertyFilters, 'search'>
+    filters?: Omit<PropertyFilters, 'search'>,
   ): Promise<{
     properties: Property[];
     total: number;
@@ -259,8 +269,8 @@ class PropertyService {
         longitude,
         latitude,
         radius: radiusInMeters,
-        ...filters
-      }
+        ...filters,
+      },
     });
     return {
       properties: response.data.data || [],

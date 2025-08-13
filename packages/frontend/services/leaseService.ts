@@ -1,34 +1,22 @@
 import { api } from '@/utils/api';
 import { OxyServices } from '@oxyhq/services';
 import { API_URL } from '@/config';
-import { 
-  Lease, 
-  CreateLeaseData, 
+import {
+  Lease,
+  CreateLeaseData,
   UpdateLeaseData,
   LeaseStatus,
   PaymentMethod,
   PetPolicy,
   SmokingPolicy,
-  MaintenanceResponsibility
+  MaintenanceResponsibility,
 } from '@homiio/shared-types';
 
 // Re-export the types for backward compatibility
-export type { 
-  Lease, 
-  CreateLeaseData, 
-  UpdateLeaseData 
-};
+export type { Lease, CreateLeaseData, UpdateLeaseData };
 
 // Re-export enums for backward compatibility
-export { 
-  LeaseStatus,
-  PaymentMethod,
-  PetPolicy,
-  SmokingPolicy,
-  MaintenanceResponsibility
-};
-
-
+export { LeaseStatus, PaymentMethod, PetPolicy, SmokingPolicy, MaintenanceResponsibility };
 
 export interface LeaseFilters {
   status?: string;
@@ -73,13 +61,17 @@ export interface LeaseDocument {
 class LeaseService {
   private baseUrl = '/api/leases';
 
-  async getLeases(filters?: LeaseFilters, oxyServices?: OxyServices, activeSessionId?: string): Promise<{
+  async getLeases(
+    filters?: LeaseFilters,
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<{
     leases: Lease[];
     total: number;
     page: number;
     totalPages: number;
   }> {
-    const response = await api.get(this.baseUrl, { 
+    const response = await api.get(this.baseUrl, {
       params: filters,
       oxyServices,
       activeSessionId,
@@ -87,7 +79,11 @@ class LeaseService {
     return response.data;
   }
 
-  async getLease(leaseId: string, oxyServices?: OxyServices, activeSessionId?: string): Promise<Lease> {
+  async getLease(
+    leaseId: string,
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<Lease> {
     const response = await api.get(`${this.baseUrl}/${leaseId}`, {
       oxyServices,
       activeSessionId,
@@ -95,7 +91,11 @@ class LeaseService {
     return response.data.data;
   }
 
-  async createLease(data: CreateLeaseData, oxyServices?: OxyServices, activeSessionId?: string): Promise<Lease> {
+  async createLease(
+    data: CreateLeaseData,
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<Lease> {
     const response = await api.post(this.baseUrl, data, {
       oxyServices,
       activeSessionId,
@@ -103,7 +103,12 @@ class LeaseService {
     return response.data.data;
   }
 
-  async updateLease(leaseId: string, data: Partial<CreateLeaseData>, oxyServices?: OxyServices, activeSessionId?: string): Promise<Lease> {
+  async updateLease(
+    leaseId: string,
+    data: Partial<CreateLeaseData>,
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<Lease> {
     const response = await api.put(`${this.baseUrl}/${leaseId}`, data, {
       oxyServices,
       activeSessionId,
@@ -111,41 +116,71 @@ class LeaseService {
     return response.data.data;
   }
 
-  async deleteLease(leaseId: string, oxyServices?: OxyServices, activeSessionId?: string): Promise<void> {
+  async deleteLease(
+    leaseId: string,
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<void> {
     await api.delete(`${this.baseUrl}/${leaseId}`, {
       oxyServices,
       activeSessionId,
     });
   }
 
-  async signLease(leaseId: string, signature: string, acceptTerms: boolean, oxyServices?: OxyServices, activeSessionId?: string): Promise<Lease> {
-    const response = await api.post(`${this.baseUrl}/${leaseId}/sign`, {
-      signature,
-      acceptTerms
-    }, {
-      oxyServices,
-      activeSessionId,
-    });
+  async signLease(
+    leaseId: string,
+    signature: string,
+    acceptTerms: boolean,
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<Lease> {
+    const response = await api.post(
+      `${this.baseUrl}/${leaseId}/sign`,
+      {
+        signature,
+        acceptTerms,
+      },
+      {
+        oxyServices,
+        activeSessionId,
+      },
+    );
     return response.data.data;
   }
 
-  async terminateLease(leaseId: string, reason: string, terminationDate: string, notice?: string, oxyServices?: OxyServices, activeSessionId?: string): Promise<void> {
-    await api.post(`${this.baseUrl}/${leaseId}/terminate`, {
-      reason,
-      terminationDate,
-      notice
-    }, {
-      oxyServices,
-      activeSessionId,
-    });
+  async terminateLease(
+    leaseId: string,
+    reason: string,
+    terminationDate: string,
+    notice?: string,
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<void> {
+    await api.post(
+      `${this.baseUrl}/${leaseId}/terminate`,
+      {
+        reason,
+        terminationDate,
+        notice,
+      },
+      {
+        oxyServices,
+        activeSessionId,
+      },
+    );
   }
 
-  async renewLease(leaseId: string, data: {
-    newStartDate: string;
-    newEndDate: string;
-    rentIncrease?: number;
-    updatedTerms?: any;
-  }, oxyServices?: OxyServices, activeSessionId?: string): Promise<Lease> {
+  async renewLease(
+    leaseId: string,
+    data: {
+      newStartDate: string;
+      newEndDate: string;
+      rentIncrease?: number;
+      updatedTerms?: any;
+    },
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<Lease> {
     const response = await api.post(`${this.baseUrl}/${leaseId}/renew`, data, {
       oxyServices,
       activeSessionId,
@@ -153,11 +188,16 @@ class LeaseService {
     return response.data.data;
   }
 
-  async getLeasePayments(leaseId: string, filters?: {
-    status?: string;
-    page?: number;
-    limit?: number;
-  }, oxyServices?: OxyServices, activeSessionId?: string): Promise<{
+  async getLeasePayments(
+    leaseId: string,
+    filters?: {
+      status?: string;
+      page?: number;
+      limit?: number;
+    },
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<{
     payments: Payment[];
     total: number;
     page: number;
@@ -171,7 +211,12 @@ class LeaseService {
     return response.data;
   }
 
-  async createPayment(leaseId: string, data: CreatePaymentData, oxyServices?: OxyServices, activeSessionId?: string): Promise<Payment> {
+  async createPayment(
+    leaseId: string,
+    data: CreatePaymentData,
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<Payment> {
     const response = await api.post(`${this.baseUrl}/${leaseId}/payments`, data, {
       oxyServices,
       activeSessionId,
@@ -179,7 +224,11 @@ class LeaseService {
     return response.data.data;
   }
 
-  async getLeaseDocuments(leaseId: string, oxyServices?: OxyServices, activeSessionId?: string): Promise<LeaseDocument[]> {
+  async getLeaseDocuments(
+    leaseId: string,
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<LeaseDocument[]> {
     const response = await api.get(`${this.baseUrl}/${leaseId}/documents`, {
       oxyServices,
       activeSessionId,
@@ -187,7 +236,14 @@ class LeaseService {
     return response.data.data;
   }
 
-  async uploadLeaseDocument(leaseId: string, file: File, type: string, description?: string, oxyServices?: OxyServices, activeSessionId?: string): Promise<LeaseDocument> {
+  async uploadLeaseDocument(
+    leaseId: string,
+    file: File,
+    type: string,
+    description?: string,
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<LeaseDocument> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('type', type);
@@ -201,11 +257,11 @@ class LeaseService {
     if (oxyServices && activeSessionId) {
       try {
         const tokenData = await oxyServices.getTokenBySession(activeSessionId);
-        
+
         if (!tokenData) {
           throw new Error('No authentication token found');
         }
-        
+
         headers['Authorization'] = `Bearer ${tokenData.accessToken}`;
       } catch (error) {
         console.error('Failed to get token:', error);
@@ -237,7 +293,10 @@ class LeaseService {
     return response.data.data;
   }
 
-  async getPendingSignatureLeases(oxyServices?: OxyServices, activeSessionId?: string): Promise<Lease[]> {
+  async getPendingSignatureLeases(
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<Lease[]> {
     const response = await api.get(`${this.baseUrl}/pending-signature`, {
       oxyServices,
       activeSessionId,
@@ -245,7 +304,11 @@ class LeaseService {
     return response.data.data;
   }
 
-  async getUpcomingPayments(leaseId: string, oxyServices?: OxyServices, activeSessionId?: string): Promise<Payment[]> {
+  async getUpcomingPayments(
+    leaseId: string,
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<Payment[]> {
     const response = await api.get(`${this.baseUrl}/${leaseId}/upcoming-payments`, {
       oxyServices,
       activeSessionId,

@@ -12,7 +12,8 @@ interface SearchStatistics {
 
 export const useSearchStatistics = () => {
   const { oxyServices, activeSessionId } = useOxy();
-  const { statistics, isLoading, error, setStatistics, setLoading, setError } = useSearchStatisticsStore();
+  const { statistics, isLoading, error, setStatistics, setLoading, setError } =
+    useSearchStatisticsStore();
 
   useEffect(() => {
     const fetchStatistics = async () => {
@@ -49,7 +50,7 @@ export const useSearchStatistics = () => {
           recentSearches: [],
           popularSearches: [
             'Barcelona apartments',
-            'Berlin co-living', 
+            'Berlin co-living',
             'Amsterdam studios',
             'Stockholm eco-friendly',
             'London furnished',
@@ -71,4 +72,4 @@ export const useSearchStatistics = () => {
     loading: isLoading,
     error,
   };
-}; 
+};

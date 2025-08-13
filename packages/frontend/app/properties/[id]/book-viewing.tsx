@@ -8,7 +8,6 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
-  Platform
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -18,7 +17,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { useProperty } from '@/hooks';
-import { Property } from '@/services/propertyService';
 import { ActionButton } from '@/components/ui/ActionButton';
 
 type PropertyData = {
@@ -41,7 +39,12 @@ export default function BookViewingPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const normalizedId = Array.isArray(id) ? id[0] : id;
-  const { property: apiProperty, loading: apiLoading, error: apiError, loadProperty } = useProperty(normalizedId || '');
+  const {
+    property: apiProperty,
+    loading: apiLoading,
+    error: apiError,
+    loadProperty,
+  } = useProperty(normalizedId || '');
 
   useEffect(() => {
     loadProperty();
@@ -50,7 +53,9 @@ export default function BookViewingPage() {
   useEffect(() => {
     if (apiProperty) {
       // Map API property type to PropertyData type
-      const mapPropertyType = (type: string): 'apartment' | 'house' | 'room' | 'studio' | 'duplex' | 'penthouse' | undefined => {
+      const mapPropertyType = (
+        type: string,
+      ): 'apartment' | 'house' | 'room' | 'studio' | 'duplex' | 'penthouse' | undefined => {
         switch (type) {
           case 'apartment':
           case 'house':
@@ -68,7 +73,7 @@ export default function BookViewingPage() {
         type: mapPropertyType(apiProperty.type),
         address: apiProperty.address,
         bedrooms: apiProperty.bedrooms,
-        bathrooms: apiProperty.bathrooms
+        bathrooms: apiProperty.bathrooms,
       });
 
       const propertyData: PropertyData = {
@@ -85,8 +90,19 @@ export default function BookViewingPage() {
   }, [apiProperty]);
 
   const timeSlots = [
-    '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-    '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'
+    '09:00',
+    '09:30',
+    '10:00',
+    '10:30',
+    '11:00',
+    '11:30',
+    '14:00',
+    '14:30',
+    '15:00',
+    '15:30',
+    '16:00',
+    '16:30',
+    '17:00',
   ];
 
   const availableDates = Array.from({ length: 7 }, (_, i) => {
@@ -104,7 +120,7 @@ export default function BookViewingPage() {
     setSubmitting(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       Alert.alert(
         t('Success'),
@@ -112,9 +128,9 @@ export default function BookViewingPage() {
         [
           {
             text: t('OK'),
-            onPress: () => router.back()
-          }
-        ]
+            onPress: () => router.back(),
+          },
+        ],
       );
     } catch (error) {
       Alert.alert(t('Error'), t('Failed to submit viewing request. Please try again.'));
@@ -129,13 +145,13 @@ export default function BookViewingPage() {
         <Header
           options={{
             showBackButton: true,
-            title: t("Loading..."),
+            title: t('Loading...'),
             titlePosition: 'center',
           }}
         />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primaryColor} />
-          <Text style={styles.loadingText}>{t("Loading property details...")}</Text>
+          <Text style={styles.loadingText}>{t('Loading property details...')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -146,7 +162,7 @@ export default function BookViewingPage() {
       <Header
         options={{
           showBackButton: true,
-          title: t("Schedule Viewing"),
+          title: t('Schedule Viewing'),
           titlePosition: 'center',
         }}
       />
@@ -155,14 +171,13 @@ export default function BookViewingPage() {
         <View style={styles.propertyCard}>
           <Text style={styles.propertyTitle}>{property.title}</Text>
           <Text style={styles.propertyLocation}>
-            <Ionicons name="location-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} /> {property.location}
+            <Ionicons name="location-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} />{' '}
+            {property.location}
           </Text>
 
           <View style={styles.landlordInfo}>
             <View style={styles.landlordAvatar}>
-              <Text style={styles.landlordAvatarText}>
-                {property.landlordName.charAt(0)}
-              </Text>
+              <Text style={styles.landlordAvatarText}>{property.landlordName.charAt(0)}</Text>
             </View>
             <View style={styles.landlordDetails}>
               <Text style={styles.landlordName}>{property.landlordName}</Text>
@@ -175,7 +190,7 @@ export default function BookViewingPage() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t("Select Date")}</Text>
+          <Text style={styles.sectionTitle}>{t('Select Date')}</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -206,24 +221,19 @@ export default function BookViewingPage() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            {t("Available Time Slots")} - {selectedDate && new Date(selectedDate).toLocaleDateString()}
+            {t('Available Time Slots')} -{' '}
+            {selectedDate && new Date(selectedDate).toLocaleDateString()}
           </Text>
 
           <View style={styles.timeSlotsContainer}>
             {timeSlots.map((time, index) => (
               <TouchableOpacity
                 key={index}
-                style={[
-                  styles.timeSlot,
-                  selectedTime === time && styles.selectedSlot,
-                ]}
+                style={[styles.timeSlot, selectedTime === time && styles.selectedSlot]}
                 onPress={() => setSelectedTime(time)}
               >
                 <Text
-                  style={[
-                    styles.timeSlotText,
-                    selectedTime === time && styles.selectedSlotText,
-                  ]}
+                  style={[styles.timeSlotText, selectedTime === time && styles.selectedSlotText]}
                 >
                   {time}
                 </Text>
@@ -237,12 +247,12 @@ export default function BookViewingPage() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t("Additional Notes")}</Text>
+          <Text style={styles.sectionTitle}>{t('Additional Notes')}</Text>
           <TextInput
             style={styles.notesInput}
             multiline
             numberOfLines={4}
-            placeholder={t("Any questions for the landlord? (optional)")}
+            placeholder={t('Any questions for the landlord? (optional)')}
             placeholderTextColor={colors.COLOR_BLACK_LIGHT_3}
             value={message}
             onChangeText={setMessage}
@@ -252,13 +262,15 @@ export default function BookViewingPage() {
         <View style={styles.policyContainer}>
           <Ionicons name="information-circle" size={20} color={colors.COLOR_BLACK_LIGHT_3} />
           <Text style={styles.policyText}>
-            {t("Please be on time for your appointment. If you need to cancel, please do so at least 2 hours in advance.")}
+            {t(
+              'Please be on time for your appointment. If you need to cancel, please do so at least 2 hours in advance.',
+            )}
           </Text>
         </View>
 
         <ActionButton
           icon="calendar-outline"
-          text={t("Request Viewing")}
+          text={t('Request Viewing')}
           onPress={handleSubmit}
           variant="primary"
           size="large"
@@ -462,5 +474,4 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_3,
     lineHeight: 20,
   },
-
 });

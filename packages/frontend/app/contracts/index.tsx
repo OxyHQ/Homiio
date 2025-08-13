@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,15 +35,17 @@ export default function ContractsScreen() {
       <SafeAreaView style={styles.container} edges={['top']}>
         <Header
           options={{
-            title: t("Rental Contracts"),
+            title: t('Rental Contracts'),
             titlePosition: 'center',
           }}
         />
         <EmptyState
           icon="document-text-outline"
-          title={t("No rental contracts")}
-          description={t("You don't have any rental properties yet. Start by browsing available properties or listing your own.")}
-          actionText={t("Browse Properties")}
+          title={t('No rental contracts')}
+          description={t(
+            "You don't have any rental properties yet. Start by browsing available properties or listing your own.",
+          )}
+          actionText={t('Browse Properties')}
           actionIcon="home"
           onAction={() => router.push('/')}
         />
@@ -45,19 +54,24 @@ export default function ContractsScreen() {
   }
 
   // Convert lease data to contract format for the ContractCard component
-  const contracts = leasesData?.leases.map((lease: Lease) => ({
-    id: lease.id,
-    title: lease.property?.title || `Lease for ${lease.property?.address?.street || 'Property'}`,
-    propertyId: lease.propertyId,
-    propertyName: lease.property?.title || `${lease.property?.address?.street}, ${lease.property?.address?.city}`,
-    startDate: lease.startDate,
-    endDate: lease.endDate,
-    status: lease.status as ContractStatus,
-    landlordName: lease.landlord ? `${lease.landlord.firstName} ${lease.landlord.lastName}` : 'Unknown',
-    tenantName: lease.tenant ? `${lease.tenant.firstName} ${lease.tenant.lastName}` : 'Unknown',
-    monthlyRent: lease.rent.amount,
-    currency: lease.rent.currency,
-  })) || [];
+  const contracts =
+    leasesData?.leases.map((lease: Lease) => ({
+      id: lease.id,
+      title: lease.property?.title || `Lease for ${lease.property?.address?.street || 'Property'}`,
+      propertyId: lease.propertyId,
+      propertyName:
+        lease.property?.title ||
+        `${lease.property?.address?.street}, ${lease.property?.address?.city}`,
+      startDate: lease.startDate,
+      endDate: lease.endDate,
+      status: lease.status as ContractStatus,
+      landlordName: lease.landlord
+        ? `${lease.landlord.firstName} ${lease.landlord.lastName}`
+        : 'Unknown',
+      tenantName: lease.tenant ? `${lease.tenant.firstName} ${lease.tenant.lastName}` : 'Unknown',
+      monthlyRent: lease.rent.amount,
+      currency: lease.rent.currency,
+    })) || [];
 
   // Filter contracts based on the selected filter
   const filteredContracts = contracts.filter((contract) => {
@@ -85,18 +99,10 @@ export default function ContractsScreen() {
 
   const renderFilterButton = (label: string, value: FilterOptions) => (
     <TouchableOpacity
-      style={[
-        styles.filterButton,
-        filter === value && styles.filterButtonActive
-      ]}
+      style={[styles.filterButton, filter === value && styles.filterButtonActive]}
       onPress={() => setFilter(value)}
     >
-      <Text
-        style={[
-          styles.filterButtonText,
-          filter === value && styles.filterButtonTextActive
-        ]}
-      >
+      <Text style={[styles.filterButtonText, filter === value && styles.filterButtonTextActive]}>
         {label}
       </Text>
     </TouchableOpacity>
@@ -107,13 +113,13 @@ export default function ContractsScreen() {
       <SafeAreaView style={styles.container} edges={['top']}>
         <Header
           options={{
-            title: t("Rental Contracts"),
+            title: t('Rental Contracts'),
             titlePosition: 'center',
           }}
         />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primaryColor} />
-          <Text style={styles.loadingText}>{t("Loading contracts...")}</Text>
+          <Text style={styles.loadingText}>{t('Loading contracts...')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -123,7 +129,7 @@ export default function ContractsScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <Header
         options={{
-          title: t("Rental Contracts"),
+          title: t('Rental Contracts'),
           titlePosition: 'center',
           rightComponents: [
             <TouchableOpacity key="add" style={styles.headerButton} onPress={handleAddNewContract}>
@@ -141,18 +147,17 @@ export default function ContractsScreen() {
         {renderFilterButton(t('Drafts'), 'draft')}
       </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-      >
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {filteredContracts.length === 0 ? (
           <EmptyState
             icon="document-text-outline"
-            title={t("No contracts found")}
-            description={filter === 'all' ?
-              t("You don't have any rental contracts yet") :
-              t(`You don't have any ${filter} contracts`)}
-            actionText={t("Create New Contract")}
+            title={t('No contracts found')}
+            description={
+              filter === 'all'
+                ? t("You don't have any rental contracts yet")
+                : t(`You don't have any ${filter} contracts`)
+            }
+            actionText={t('Create New Contract')}
             actionIcon="add"
             onAction={handleAddNewContract}
           />
@@ -170,12 +175,9 @@ export default function ContractsScreen() {
       </ScrollView>
 
       <View style={styles.bottomButtonContainer}>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={handleAddNewContract}
-        >
+        <TouchableOpacity style={styles.addButton} onPress={handleAddNewContract}>
           <Ionicons name="add" size={24} color="white" />
-          <Text style={styles.addButtonText}>{t("New Contract")}</Text>
+          <Text style={styles.addButtonText}>{t('New Contract')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

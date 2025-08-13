@@ -5,23 +5,16 @@
  */
 
 import api from '@/utils/api';
-import { 
-  City, 
-  CityFilters, 
-  CityPropertiesResponse, 
+import {
+  City,
+  CityFilters,
+  CityPropertiesResponse,
   CitiesResponse,
-  Property
+  Property,
 } from '@homiio/shared-types';
 
 // Re-export the types for backward compatibility
-export type { 
-  City, 
-  CityFilters, 
-  CityPropertiesResponse, 
-  CitiesResponse 
-};
-
-
+export type { City, CityFilters, CityPropertiesResponse, CitiesResponse };
 
 class CityService {
   /**
@@ -29,7 +22,7 @@ class CityService {
    */
   async getCities(filters: CityFilters = {}): Promise<CitiesResponse> {
     const params = new URLSearchParams();
-    
+
     if (filters.search) params.append('search', filters.search);
     if (filters.state) params.append('state', filters.state);
     if (filters.country) params.append('country', filters.country);
@@ -59,13 +52,17 @@ class CityService {
   /**
    * Get city by name, state, and country
    */
-  async getCityByLocation(name: string, state: string, country: string = 'USA'): Promise<{ data: City }> {
+  async getCityByLocation(
+    name: string,
+    state: string,
+    country: string = 'USA',
+  ): Promise<{ data: City }> {
     const params = new URLSearchParams({
       name,
       state,
-      country
+      country,
     });
-    
+
     const response = await api.get(`/api/cities/lookup?${params.toString()}`);
     return response.data;
   }
@@ -84,10 +81,10 @@ class CityService {
       minBedrooms?: number;
       maxPrice?: number;
       minPrice?: number;
-    } = {}
+    } = {},
   ): Promise<CityPropertiesResponse> {
     const params = new URLSearchParams();
-    
+
     if (options.limit) params.append('limit', options.limit.toString());
     if (options.page) params.append('page', options.page.toString());
     if (options.sort) params.append('sort', options.sort);
@@ -107,9 +104,9 @@ class CityService {
   async searchCities(query: string, limit: number = 10): Promise<{ data: City[] }> {
     const params = new URLSearchParams({
       q: query,
-      limit: limit.toString()
+      limit: limit.toString(),
     });
-    
+
     const response = await api.get(`/api/cities/search?${params.toString()}`);
     return response.data;
   }
@@ -139,24 +136,24 @@ class CityService {
       return await this.getCityById(slug);
     } catch (error) {
       // If not found by ID, try to parse as city name
-      const cityName = slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-      
+      const cityName = slug.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+
       // Common city mappings for slugs
       const cityMappings: { [key: string]: { name: string; state: string; country: string } } = {
         'new-york': { name: 'New York', state: 'New York', country: 'USA' },
         'los-angeles': { name: 'Los Angeles', state: 'California', country: 'USA' },
-        'chicago': { name: 'Chicago', state: 'Illinois', country: 'USA' },
-        'miami': { name: 'Miami', state: 'Florida', country: 'USA' },
-        'austin': { name: 'Austin', state: 'Texas', country: 'USA' },
-        'seattle': { name: 'Seattle', state: 'Washington', country: 'USA' },
-        'denver': { name: 'Denver', state: 'Colorado', country: 'USA' },
-        'nashville': { name: 'Nashville', state: 'Tennessee', country: 'USA' },
-        'portland': { name: 'Portland', state: 'Oregon', country: 'USA' },
+        chicago: { name: 'Chicago', state: 'Illinois', country: 'USA' },
+        miami: { name: 'Miami', state: 'Florida', country: 'USA' },
+        austin: { name: 'Austin', state: 'Texas', country: 'USA' },
+        seattle: { name: 'Seattle', state: 'Washington', country: 'USA' },
+        denver: { name: 'Denver', state: 'Colorado', country: 'USA' },
+        nashville: { name: 'Nashville', state: 'Tennessee', country: 'USA' },
+        portland: { name: 'Portland', state: 'Oregon', country: 'USA' },
         'san-francisco': { name: 'San Francisco', state: 'California', country: 'USA' },
-        'barcelona': { name: 'Barcelona', state: 'Catalonia', country: 'Spain' },
-        'berlin': { name: 'Berlin', state: 'Berlin', country: 'Germany' },
-        'amsterdam': { name: 'Amsterdam', state: 'North Holland', country: 'Netherlands' },
-        'stockholm': { name: 'Stockholm', state: 'Stockholm', country: 'Sweden' }
+        barcelona: { name: 'Barcelona', state: 'Catalonia', country: 'Spain' },
+        berlin: { name: 'Berlin', state: 'Berlin', country: 'Germany' },
+        amsterdam: { name: 'Amsterdam', state: 'North Holland', country: 'Netherlands' },
+        stockholm: { name: 'Stockholm', state: 'Stockholm', country: 'Sweden' },
       };
 
       const mapping = cityMappings[slug.toLowerCase()];
@@ -175,4 +172,4 @@ class CityService {
   }
 }
 
-export const cityService = new CityService(); 
+export const cityService = new CityService();

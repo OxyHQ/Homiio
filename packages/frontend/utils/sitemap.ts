@@ -7,22 +7,24 @@ export interface SitemapUrl {
 
 export function generateSitemap(urls: SitemapUrl[]): string {
   const baseUrl = 'https://homiio.com';
-  
+
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls.map(url => {
-  const fullUrl = url.url.startsWith('http') ? url.url : `${baseUrl}${url.url}`;
-  const lastMod = url.lastModified ? url.lastModified.toISOString() : new Date().toISOString();
-  const changeFreq = url.changeFrequency || 'weekly';
-  const priority = url.priority || 0.5;
-  
-  return `  <url>
+${urls
+  .map((url) => {
+    const fullUrl = url.url.startsWith('http') ? url.url : `${baseUrl}${url.url}`;
+    const lastMod = url.lastModified ? url.lastModified.toISOString() : new Date().toISOString();
+    const changeFreq = url.changeFrequency || 'weekly';
+    const priority = url.priority || 0.5;
+
+    return `  <url>
     <loc>${fullUrl}</loc>
     <lastmod>${lastMod}</lastmod>
     <changefreq>${changeFreq}</changefreq>
     <priority>${priority}</priority>
   </url>`;
-}).join('\n')}
+  })
+  .join('\n')}
 </urlset>`;
 
   return sitemap;
@@ -76,4 +78,4 @@ export const defaultSitemapUrls: SitemapUrl[] = [
   { url: '/help', priority: 0.4, changeFrequency: 'monthly' },
   { url: '/privacy', priority: 0.3, changeFrequency: 'yearly' },
   { url: '/terms', priority: 0.3, changeFrequency: 'yearly' },
-]; 
+];

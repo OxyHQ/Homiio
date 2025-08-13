@@ -27,11 +27,11 @@ interface NeighborhoodState {
     distance: number;
     averageRent: number;
   }>;
-  
+
   // Loading states
   isLoading: boolean;
   error: string | null;
-  
+
   // Actions
   setCurrentNeighborhood: (neighborhood: NeighborhoodState['currentNeighborhood']) => void;
   setNearbyNeighborhoods: (neighborhoods: NeighborhoodState['nearbyNeighborhoods']) => void;
@@ -40,22 +40,20 @@ interface NeighborhoodState {
   clearError: () => void;
 }
 
-export const useNeighborhoodStore = create<NeighborhoodState>()(
-  (set, get) => ({
-    // Initial state
-    currentNeighborhood: null,
-    nearbyNeighborhoods: [],
-    isLoading: false,
-    error: null,
-    
-    // Actions
-    setCurrentNeighborhood: (neighborhood) => set({ currentNeighborhood: neighborhood }),
-    setNearbyNeighborhoods: (neighborhoods) => set({ nearbyNeighborhoods: neighborhoods }),
-    setLoading: (loading) => set({ isLoading: loading }),
-    setError: (error) => set({ error }),
-    clearError: () => set({ error: null }),
-  })
-);
+export const useNeighborhoodStore = create<NeighborhoodState>()((set, get) => ({
+  // Initial state
+  currentNeighborhood: null,
+  nearbyNeighborhoods: [],
+  isLoading: false,
+  error: null,
+
+  // Actions
+  setCurrentNeighborhood: (neighborhood) => set({ currentNeighborhood: neighborhood }),
+  setNearbyNeighborhoods: (neighborhoods) => set({ nearbyNeighborhoods: neighborhoods }),
+  setLoading: (loading) => set({ isLoading: loading }),
+  setError: (error) => set({ error }),
+  clearError: () => set({ error: null }),
+}));
 
 // Selector hooks for easier access
 export const useNeighborhoodSelectors = () => {
@@ -70,4 +68,4 @@ export const useNeighborhoodSelectors = () => {
     isLoading,
     error,
   };
-}; 
+};

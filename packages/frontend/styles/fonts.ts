@@ -8,4 +8,4 @@ export const phuduFontWeights = {
 
 export const getFontWeight = (weight: keyof typeof phuduFontWeights) => {
   return phuduFontWeights[weight];
-}; 
+};

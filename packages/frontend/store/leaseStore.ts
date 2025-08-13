@@ -11,11 +11,11 @@ interface LeaseState {
     startDate: string;
     endDate: string;
   } | null;
-  
+
   // Loading states
   isLoading: boolean;
   error: string | null;
-  
+
   // Actions
   setLeases: (leases: any[]) => void;
   setCurrentLease: (lease: any | null) => void;
@@ -26,25 +26,23 @@ interface LeaseState {
   clearError: () => void;
 }
 
-export const useLeaseStore = create<LeaseState>()(
-  (set, get) => ({
-    // Initial state
-    leases: [],
-    currentLease: null,
-    filters: null,
-    isLoading: false,
-    error: null,
-    
-    // Actions
-    setLeases: (leases) => set({ leases }),
-    setCurrentLease: (lease) => set({ currentLease: lease }),
-    setFilters: (filters) => set({ filters }),
-    clearFilters: () => set({ filters: null }),
-    setLoading: (loading) => set({ isLoading: loading }),
-    setError: (error) => set({ error }),
-    clearError: () => set({ error: null }),
-  })
-);
+export const useLeaseStore = create<LeaseState>()((set, get) => ({
+  // Initial state
+  leases: [],
+  currentLease: null,
+  filters: null,
+  isLoading: false,
+  error: null,
+
+  // Actions
+  setLeases: (leases) => set({ leases }),
+  setCurrentLease: (lease) => set({ currentLease: lease }),
+  setFilters: (filters) => set({ filters }),
+  clearFilters: () => set({ filters: null }),
+  setLoading: (loading) => set({ isLoading: loading }),
+  setError: (error) => set({ error }),
+  clearError: () => set({ error: null }),
+}));
 
 // Selector hooks for easier access
 export const useLeaseSelectors = () => {
@@ -61,4 +59,4 @@ export const useLeaseSelectors = () => {
     isLoading,
     error,
   };
-}; 
+};

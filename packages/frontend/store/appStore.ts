@@ -31,7 +31,7 @@ interface AppState extends BottomSheetState, ProfileState, SavedPropertiesState 
   // Bottom Sheet Actions
   openBottomSheet: (isOpen: boolean) => void;
   setBottomSheetContent: (content: React.ReactNode | null) => void;
-  
+
   // Profile Actions
   setPrimaryProfile: (profile: any | null) => void;
   setAllProfiles: (profiles: any[]) => void;
@@ -40,7 +40,7 @@ interface AppState extends BottomSheetState, ProfileState, SavedPropertiesState 
   setLandlordProfile: (profile: any | null) => void;
   setLandlordProfileLoading: (loading: boolean) => void;
   setLandlordProfileError: (error: string | null) => void;
-  
+
   // Saved Properties Actions
   setSavedProperties: (properties: any[]) => void;
   setSavedPropertiesLoading: (loading: boolean) => void;
@@ -49,48 +49,48 @@ interface AppState extends BottomSheetState, ProfileState, SavedPropertiesState 
   removeSavingPropertyId: (propertyId: string) => void;
 }
 
-export const useAppStore = create<AppState>()(
-  (set, get) => ({
-    // Initial state
-    // Bottom Sheet
-    isOpen: false,
-    content: null,
-    
-    // Profile
-    primaryProfile: null,
-    allProfiles: [],
-    isLoading: false,
-    error: null,
-    landlordProfile: null,
-    landlordProfileLoading: false,
-    landlordProfileError: null,
-    
-    // Saved Properties
-    properties: [],
-    savingPropertyIds: [],
-    
-    // Bottom Sheet Actions
-    openBottomSheet: (isOpen) => set({ isOpen }),
-    setBottomSheetContent: (content) => set({ content }),
-    
-    // Profile Actions
-    setPrimaryProfile: (profile) => set({ primaryProfile: profile }),
-    setAllProfiles: (profiles) => set({ allProfiles: profiles }),
-    setProfileLoading: (loading) => set({ isLoading: loading }),
-    setProfileError: (error) => set({ error }),
-    setLandlordProfile: (profile) => set({ landlordProfile: profile }),
-    setLandlordProfileLoading: (loading) => set({ landlordProfileLoading: loading }),
-    setLandlordProfileError: (error) => set({ landlordProfileError: error }),
-    
-    // Saved Properties Actions
-    setSavedProperties: (properties) => set({ properties }),
-    setSavedPropertiesLoading: (loading) => set({ isLoading: loading }),
-    setSavedPropertiesError: (error) => set({ error }),
-    addSavingPropertyId: (propertyId) => set((state) => ({
-      savingPropertyIds: [...state.savingPropertyIds, propertyId]
+export const useAppStore = create<AppState>()((set, get) => ({
+  // Initial state
+  // Bottom Sheet
+  isOpen: false,
+  content: null,
+
+  // Profile
+  primaryProfile: null,
+  allProfiles: [],
+  isLoading: false,
+  error: null,
+  landlordProfile: null,
+  landlordProfileLoading: false,
+  landlordProfileError: null,
+
+  // Saved Properties
+  properties: [],
+  savingPropertyIds: [],
+
+  // Bottom Sheet Actions
+  openBottomSheet: (isOpen) => set({ isOpen }),
+  setBottomSheetContent: (content) => set({ content }),
+
+  // Profile Actions
+  setPrimaryProfile: (profile) => set({ primaryProfile: profile }),
+  setAllProfiles: (profiles) => set({ allProfiles: profiles }),
+  setProfileLoading: (loading) => set({ isLoading: loading }),
+  setProfileError: (error) => set({ error }),
+  setLandlordProfile: (profile) => set({ landlordProfile: profile }),
+  setLandlordProfileLoading: (loading) => set({ landlordProfileLoading: loading }),
+  setLandlordProfileError: (error) => set({ landlordProfileError: error }),
+
+  // Saved Properties Actions
+  setSavedProperties: (properties) => set({ properties }),
+  setSavedPropertiesLoading: (loading) => set({ isLoading: loading }),
+  setSavedPropertiesError: (error) => set({ error }),
+  addSavingPropertyId: (propertyId) =>
+    set((state) => ({
+      savingPropertyIds: [...state.savingPropertyIds, propertyId],
     })),
-    removeSavingPropertyId: (propertyId) => set((state) => ({
-      savingPropertyIds: state.savingPropertyIds.filter(id => id !== propertyId)
+  removeSavingPropertyId: (propertyId) =>
+    set((state) => ({
+      savingPropertyIds: state.savingPropertyIds.filter((id) => id !== propertyId),
     })),
-  })
-); 
+}));

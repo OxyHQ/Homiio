@@ -23,13 +23,37 @@ interface ProfileState {
   setLandlordProfileError: (error: string | null) => void;
 
   // Async Actions
-  fetchPrimaryProfile: (oxyServices?: OxyServices, activeSessionId?: string) => Promise<Profile | null>;
+  fetchPrimaryProfile: (
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ) => Promise<Profile | null>;
   fetchUserProfiles: (oxyServices?: OxyServices, activeSessionId?: string) => Promise<Profile[]>;
-  fetchLandlordProfileById: (profileId: string, oxyServices?: OxyServices, activeSessionId?: string) => Promise<Profile | null>;
-  createProfile: (profileData: any, oxyServices?: OxyServices, activeSessionId?: string) => Promise<Profile>;
-  updateProfile: (profileId: string, updateData: UpdateProfileData, oxyServices?: OxyServices, activeSessionId?: string) => Promise<Profile>;
-  deleteProfile: (profileId: string, oxyServices?: OxyServices, activeSessionId?: string) => Promise<void>;
-  activateProfile: (profileId: string, oxyServices?: OxyServices, activeSessionId?: string) => Promise<Profile>;
+  fetchLandlordProfileById: (
+    profileId: string,
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ) => Promise<Profile | null>;
+  createProfile: (
+    profileData: any,
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ) => Promise<Profile>;
+  updateProfile: (
+    profileId: string,
+    updateData: UpdateProfileData,
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ) => Promise<Profile>;
+  deleteProfile: (
+    profileId: string,
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ) => Promise<void>;
+  activateProfile: (
+    profileId: string,
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ) => Promise<Profile>;
 }
 
 export const useProfileStore = create<ProfileState>((set, get) => ({
@@ -86,7 +110,11 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       return profile;
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to fetch landlord profile';
-      set({ landlordProfileError: errorMessage, landlordProfileLoading: false, landlordProfile: null });
+      set({
+        landlordProfileError: errorMessage,
+        landlordProfileLoading: false,
+        landlordProfile: null,
+      });
       throw error;
     }
   },
@@ -95,22 +123,24 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     try {
       // Check if trying to create a personal profile
       if (profileData.profileType === ProfileType.PERSONAL) {
-        throw new Error('Personal profiles cannot be created manually. They are created automatically when you first access the system.');
+        throw new Error(
+          'Personal profiles cannot be created manually. They are created automatically when you first access the system.',
+        );
       }
 
       set({ isLoading: true, error: null });
       const profile = await profileService.createProfile(profileData, oxyServices, activeSessionId);
-      
+
       // Update state
       const { allProfiles } = get();
       const newAllProfiles = [...allProfiles, profile];
-      set({ 
-        allProfiles: newAllProfiles, 
+      set({
+        allProfiles: newAllProfiles,
         isLoading: false,
         // If this is the first profile, set it as primary
-        primaryProfile: allProfiles.length === 0 ? profile : get().primaryProfile
+        primaryProfile: allProfiles.length === 0 ? profile : get().primaryProfile,
       });
-      
+
       return profile;
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to create profile';
@@ -122,28 +152,36 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   updateProfile: async (profileId, updateData, oxyServices, activeSessionId) => {
     try {
       set({ isLoading: true, error: null });
-      const updatedProfile = await profileService.updateProfile(profileId, updateData, oxyServices, activeSessionId);
-      
+      const updatedProfile = await profileService.updateProfile(
+        profileId,
+        updateData,
+        oxyServices,
+        activeSessionId,
+      );
+
       // Update state
       const { allProfiles, primaryProfile } = get();
-      
+
       // Update in allProfiles
-      const updatedAllProfiles = allProfiles.map(profile => 
-        (profile.id === updatedProfile.id || profile._id === updatedProfile._id) ? updatedProfile : profile
+      const updatedAllProfiles = allProfiles.map((profile) =>
+        profile.id === updatedProfile.id || profile._id === updatedProfile._id
+          ? updatedProfile
+          : profile,
       );
-      
+
       // Update primary profile if it's the same
-      const newPrimaryProfile = (primaryProfile && 
-        (primaryProfile.id === updatedProfile.id || primaryProfile._id === updatedProfile._id)) 
-        ? updatedProfile 
-        : primaryProfile;
-      
-      set({ 
-        allProfiles: updatedAllProfiles, 
+      const newPrimaryProfile =
+        primaryProfile &&
+        (primaryProfile.id === updatedProfile.id || primaryProfile._id === updatedProfile._id)
+          ? updatedProfile
+          : primaryProfile;
+
+      set({
+        allProfiles: updatedAllProfiles,
         primaryProfile: newPrimaryProfile,
-        isLoading: false 
+        isLoading: false,
       });
-      
+
       return updatedProfile;
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to update profile';
@@ -156,25 +194,25 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       await profileService.deleteProfile(profileId, oxyServices, activeSessionId);
-      
+
       // Update state
       const { allProfiles, primaryProfile } = get();
-      
+
       // Remove from allProfiles
-      const updatedAllProfiles = allProfiles.filter(profile => 
-        !(profile.id === profileId || profile._id === profileId)
+      const updatedAllProfiles = allProfiles.filter(
+        (profile) => !(profile.id === profileId || profile._id === profileId),
       );
-      
+
       // If primary profile was deleted, set the first remaining profile as primary
       let newPrimaryProfile = primaryProfile;
       if (primaryProfile && (primaryProfile.id === profileId || primaryProfile._id === profileId)) {
         newPrimaryProfile = updatedAllProfiles.length > 0 ? updatedAllProfiles[0] : null;
       }
-      
-      set({ 
-        allProfiles: updatedAllProfiles, 
+
+      set({
+        allProfiles: updatedAllProfiles,
         primaryProfile: newPrimaryProfile,
-        isLoading: false 
+        isLoading: false,
       });
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to delete profile';
@@ -186,25 +224,29 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   activateProfile: async (profileId, oxyServices, activeSessionId) => {
     try {
       set({ isLoading: true, error: null });
-      
+
       // Use the new activateProfile method in the service
-      const activatedProfile = await profileService.activateProfile(profileId, oxyServices, activeSessionId);
-      
+      const activatedProfile = await profileService.activateProfile(
+        profileId,
+        oxyServices,
+        activeSessionId,
+      );
+
       // Update state
       const { allProfiles } = get();
-      
+
       // Update all profiles to set isActive correctly
-      const updatedAllProfiles = allProfiles.map(profile => ({
+      const updatedAllProfiles = allProfiles.map((profile) => ({
         ...profile,
-        isActive: (profile.id === activatedProfile.id || profile._id === activatedProfile._id)
+        isActive: profile.id === activatedProfile.id || profile._id === activatedProfile._id,
       }));
-      
-      set({ 
-        allProfiles: updatedAllProfiles, 
+
+      set({
+        allProfiles: updatedAllProfiles,
         primaryProfile: activatedProfile,
-        isLoading: false 
+        isLoading: false,
       });
-      
+
       return activatedProfile;
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to activate profile';
@@ -212,4 +254,4 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       throw error;
     }
   },
-})); 
+}));

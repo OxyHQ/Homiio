@@ -5,6 +5,7 @@ This directory contains all property-related screens in the Homiio app.
 ## Screens
 
 ### `/properties/my` - My Properties Screen
+
 - **Purpose**: Displays properties owned by the current user
 - **Features**:
   - List of user's owned properties with PropertyCard components
@@ -13,13 +14,14 @@ This directory contains all property-related screens in the Homiio app.
   - Error state with retry functionality
   - Pull-to-refresh functionality
   - Add button in header to create new property
-- **Navigation**: 
+- **Navigation**:
   - Property detail: `/properties/[id]`
   - Edit property: `/properties/create?id=[id]` (Unified with create screen)
   - Create property: `/properties/create`
 - **API**: Uses `useUserProperties` hook to fetch data from `/api/users/me/properties`
 
 ### `/properties/[id]` - Property Detail Screen
+
 - **Purpose**: Displays detailed information about a specific property
 - **Features**:
   - Property images, details, and amenities
@@ -30,6 +32,7 @@ This directory contains all property-related screens in the Homiio app.
   - Property map integration
 
 ### `/properties/create` - Create Property Screen
+
 - **Purpose**: Form to create a new property listing
 - **Features**:
   - Multi-step form for property details
@@ -39,6 +42,7 @@ This directory contains all property-related screens in the Homiio app.
   - Preview before publishing
 
 ### `/properties/search` - Property Search Screen
+
 - **Purpose**: Search and filter properties
 - **Features**:
   - Search by location, property type, etc.
@@ -47,6 +51,7 @@ This directory contains all property-related screens in the Homiio app.
   - Saved searches functionality
 
 ### `/properties/map` - Property Map Screen
+
 - **Purpose**: View properties on a map
 - **Features**:
   - Interactive map with property markers
@@ -107,4 +112,4 @@ The screens use the following translation keys:
 - Property analytics and insights
 - Bulk property management
 - Property scheduling and availability management
-- Integration with property management tools 
+- Integration with property management tools

@@ -1,7 +1,7 @@
-import React from "react";
-import { Image, ImageSourcePropType, Pressable , StyleSheet, ImageStyle } from 'react-native';
-import { colors } from "@/styles/colors";
-import defaultAvatar from "@/assets/images/default-avatar.jpg";
+import React from 'react';
+import { Image, Pressable, StyleSheet, ImageStyle } from 'react-native';
+import { colors } from '@/styles/colors';
+import defaultAvatar from '@/assets/images/default-avatar.jpg';
 
 interface AvatarProps {
   id?: string; // Avatar ID or full URL

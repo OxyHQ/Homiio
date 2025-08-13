@@ -2,9 +2,9 @@ export const VerifiedIcon = () => {
   return (
     <svg
       style={{
-        fill: "var(--clr-primary)",
-        height: "var(--verified-icon-width)",
-        marginLeft: "2px",
+        fill: 'var(--clr-primary)',
+        height: 'var(--verified-icon-width)',
+        marginLeft: '2px',
       }}
       viewBox="0 0 24 24"
       aria-label="Verified account"

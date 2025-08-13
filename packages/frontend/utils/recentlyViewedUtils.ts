@@ -42,4 +42,4 @@ export function isInRecentlyViewed(propertyId: string): boolean {
 export function getRecentlyViewedProperties(): Property[] {
   const state = useRecentlyViewedStore.getState();
   return state.properties;
-} 
+}

@@ -12,7 +12,7 @@ export function getPropertyTitle(property: Property): string {
     type: property.type,
     address: property.address,
     bedrooms: property.bedrooms,
-    bathrooms: property.bathrooms
+    bathrooms: property.bathrooms,
   });
 }
 
@@ -31,17 +31,19 @@ export function getPropertyDisplayTitle(property: Property): string {
  * @param property - Property object or images array (string[] or PropertyImage[])
  * @returns The property image source (string URL or imported image)
  */
-export function getPropertyImageSource(property: Property | string[] | PropertyImage[] | undefined): any {
+export function getPropertyImageSource(
+  property: Property | string[] | PropertyImage[] | undefined,
+): any {
   if (!property) {
     return propertyPlaceholder;
   }
-  
+
   // If property is an array of images
   if (Array.isArray(property)) {
     if (property.length === 0) {
       return propertyPlaceholder;
     }
-    
+
     const firstImage = property[0];
     // Handle PropertyImage objects
     if (typeof firstImage === 'object' && firstImage !== null && 'url' in firstImage) {
@@ -51,10 +53,10 @@ export function getPropertyImageSource(property: Property | string[] | PropertyI
     if (typeof firstImage === 'string') {
       return { uri: firstImage };
     }
-    
+
     return propertyPlaceholder;
   }
-  
+
   // If property is a Property object
   if (property.images && property.images.length > 0) {
     const firstImage = property.images[0];
@@ -67,6 +69,6 @@ export function getPropertyImageSource(property: Property | string[] | PropertyI
       return { uri: firstImage };
     }
   }
-  
+
   return propertyPlaceholder;
-} 
+}

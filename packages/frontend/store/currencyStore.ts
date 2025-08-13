@@ -10,11 +10,11 @@ interface CurrencyState {
     name: string;
     symbol: string;
   }>;
-  
+
   // Loading states
   isLoading: boolean;
   error: string | null;
-  
+
   // Actions
   setCurrentCurrency: (currency: string) => void;
   setExchangeRates: (rates: Record<string, number>) => void;
@@ -36,7 +36,7 @@ export const useCurrencyStore = create<CurrencyState>((set, get) => ({
   ],
   isLoading: false,
   error: null,
-  
+
   // Actions
   setCurrentCurrency: (currency) => set({ currentCurrency: currency }),
   setExchangeRates: (rates) => set({ exchangeRates: rates }),
@@ -61,4 +61,4 @@ export const useCurrencySelectors = () => {
     isLoading,
     error,
   };
-}; 
+};

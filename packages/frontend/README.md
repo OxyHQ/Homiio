@@ -58,21 +58,25 @@ Homiio users can:
 ## Installation
 
 1. Clone the repository:
+
 ```bash
   git clone https://github.com/OxyHQ/Homiio.git
 ```
 
 2. Install dependencies:
+
 ```bash
   yarn install
 ```
 
 3. Start the development server:
+
 ```bash
   yarn start
 ```
 
 4. Run on specific platforms:
+
 ```bash
 # For iOS
 yarn ios
@@ -116,11 +120,14 @@ frontend/
 ### Common Issues
 
 1. Metro bundler issues
+
 ```bash
 yarn start --clear
 ```
 
 2. Dependencies issues
+
 ```bash
 rm -rf node_modules
 yarn install
+```

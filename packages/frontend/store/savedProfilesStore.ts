@@ -15,14 +15,16 @@ export const useSavedProfilesStore = create<SavedProfilesState>()((set) => ({
   savedProfileIds: [],
   isSaving: false,
   setSavedProfileIds: (ids) => set({ savedProfileIds: ids }),
-  addSavedProfileId: (id) => set((state) => ({
-    savedProfileIds: state.savedProfileIds.includes(id)
-      ? state.savedProfileIds
-      : [...state.savedProfileIds, id],
-  })),
-  removeSavedProfileId: (id) => set((state) => ({
-    savedProfileIds: state.savedProfileIds.filter((x) => x !== id),
-  })),
+  addSavedProfileId: (id) =>
+    set((state) => ({
+      savedProfileIds: state.savedProfileIds.includes(id)
+        ? state.savedProfileIds
+        : [...state.savedProfileIds, id],
+    })),
+  removeSavedProfileId: (id) =>
+    set((state) => ({
+      savedProfileIds: state.savedProfileIds.filter((x) => x !== id),
+    })),
   setIsSaving: (isSaving) => set({ isSaving }),
 }));
 
@@ -50,7 +52,11 @@ export function useSavedProfiles() {
     setIsSaving(true);
     try {
       addSavedProfileId(profileId);
-      await api.post('/api/profiles/me/save-profile', { profileId }, { oxyServices, activeSessionId });
+      await api.post(
+        '/api/profiles/me/save-profile',
+        { profileId },
+        { oxyServices, activeSessionId },
+      );
     } catch (e) {
       removeSavedProfileId(profileId);
       throw e;
@@ -64,7 +70,10 @@ export function useSavedProfiles() {
     setIsSaving(true);
     try {
       removeSavedProfileId(profileId);
-      await api.delete(`/api/profiles/me/saved-profiles/${profileId}`, { oxyServices, activeSessionId });
+      await api.delete(`/api/profiles/me/saved-profiles/${profileId}`, {
+        oxyServices,
+        activeSessionId,
+      });
     } catch (e) {
       addSavedProfileId(profileId);
       throw e;
@@ -75,4 +84,3 @@ export function useSavedProfiles() {
 
   return { isSaving, savedProfileIds, isProfileSaved, saveProfile, unsaveProfile, refresh };
 }
-

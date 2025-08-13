@@ -21,7 +21,9 @@ export const useProfileRedux = () => {
 
     try {
       // Use the profile store's async action
-      const profile = await useProfileStore.getState().fetchPrimaryProfile(oxyServices, activeSessionId);
+      const profile = await useProfileStore
+        .getState()
+        .fetchPrimaryProfile(oxyServices, activeSessionId);
       console.log('Successfully fetched user profile');
     } catch (error: any) {
       console.error('Error fetching profile:', error);
@@ -31,23 +33,28 @@ export const useProfileRedux = () => {
     }
   }, [oxyServices, activeSessionId, setPrimaryProfile, setAllProfiles, setLoading, setError]);
 
-  const updateProfile = useCallback(async (profileData: Partial<UserProfile>) => {
-    if (!oxyServices || !activeSessionId) {
-      throw new Error('OxyServices not available');
-    }
+  const updateProfile = useCallback(
+    async (profileData: Partial<UserProfile>) => {
+      if (!oxyServices || !activeSessionId) {
+        throw new Error('OxyServices not available');
+      }
 
-    try {
-      // Use the profile store's async action for primary profile
-      const updatedProfile = await useProfileStore.getState().updatePrimaryProfile(profileData as any, oxyServices, activeSessionId);
-      
-      toast.success('Profile updated successfully');
-      return updatedProfile;
-    } catch (error: any) {
-      console.error('Error updating profile:', error);
-      toast.error(error.message || 'Failed to update profile');
-      throw error;
-    }
-  }, [oxyServices, activeSessionId]);
+      try {
+        // Use the profile store's async action for primary profile
+        const updatedProfile = await useProfileStore
+          .getState()
+          .updatePrimaryProfile(profileData as any, oxyServices, activeSessionId);
+
+        toast.success('Profile updated successfully');
+        return updatedProfile;
+      } catch (error: any) {
+        console.error('Error updating profile:', error);
+        toast.error(error.message || 'Failed to update profile');
+        throw error;
+      }
+    },
+    [oxyServices, activeSessionId],
+  );
 
   const createProfile = useCallback(async () => {
     if (!oxyServices || !activeSessionId) {
@@ -56,8 +63,10 @@ export const useProfileRedux = () => {
 
     try {
       // Use the profile store's async action
-      const profile = await useProfileStore.getState().createProfile({ profileType: 'personal' }, oxyServices, activeSessionId);
-      
+      const profile = await useProfileStore
+        .getState()
+        .createProfile({ profileType: 'personal' }, oxyServices, activeSessionId);
+
       toast.success('Profile created successfully');
       return profile;
     } catch (error: any) {
@@ -89,10 +98,10 @@ export const useProfileRedux = () => {
 // Hook to get the active profile
 export const useActiveProfile = () => {
   const { primaryProfile, isLoading, error } = useProfileStore();
-  
+
   return {
     data: primaryProfile,
     isLoading,
     error,
   };
-}; 
+};

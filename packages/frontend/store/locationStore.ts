@@ -18,11 +18,11 @@ interface LocationState {
     timestamp: string;
     results: any[];
   }>;
-  
+
   // Loading states
   isLoading: boolean;
   error: string | null;
-  
+
   // Actions
   setCurrentLocation: (location: LocationState['currentLocation']) => void;
   setSearchResults: (results: any[]) => void;
@@ -41,16 +41,17 @@ export const useLocationStore = create<LocationState>((set, get) => ({
   searchHistory: [],
   isLoading: false,
   error: null,
-  
+
   // Actions
   setCurrentLocation: (location) => set({ currentLocation: location }),
   setSearchResults: (results) => set({ searchResults: results }),
-  addSearchHistory: (query, results) => set((state) => ({
-    searchHistory: [
-      { query, results, timestamp: new Date().toISOString() },
-      ...state.searchHistory
-    ].slice(0, 20) // Keep last 20 searches
-  })),
+  addSearchHistory: (query, results) =>
+    set((state) => ({
+      searchHistory: [
+        { query, results, timestamp: new Date().toISOString() },
+        ...state.searchHistory,
+      ].slice(0, 20), // Keep last 20 searches
+    })),
   clearSearchHistory: () => set({ searchHistory: [] }),
   clearSearchResults: () => set({ searchResults: [] }),
   setLoading: (loading) => set({ isLoading: loading }),
@@ -73,4 +74,4 @@ export const useLocationSelectors = () => {
     isLoading,
     error,
   };
-}; 
+};

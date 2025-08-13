@@ -21,11 +21,11 @@ interface PropertyListState {
   } | null;
   sortBy: string;
   sortOrder: 'asc' | 'desc';
-  
+
   // Loading states
   isLoading: boolean;
   error: string | null;
-  
+
   // Actions
   setProperties: (properties: Property[]) => void;
   setPagination: (pagination: Partial<PropertyListState['pagination']>) => void;
@@ -38,37 +38,35 @@ interface PropertyListState {
   clearError: () => void;
 }
 
-export const usePropertyListStore = create<PropertyListState>()(
-  (set, get) => ({
-      // Initial state
-      properties: [],
-      pagination: {
-        page: 1,
-        total: 0,
-        totalPages: 1,
-        limit: 20,
-      },
-      filters: null,
-      sortBy: 'createdAt',
-      sortOrder: 'desc',
-      isLoading: false,
-      error: null,
-      
-      // Actions
-      setProperties: (properties) => set({ properties }),
-      setPagination: (pagination) => set((state) => ({
-        pagination: { ...state.pagination, ...pagination }
-      })),
-      setFilters: (filters) => set({ filters }),
-      clearFilters: () => set({ filters: null }),
-      setSortBy: (sortBy) => set({ sortBy }),
-      setSortOrder: (order) => set({ sortOrder: order }),
-      setLoading: (loading) => set({ isLoading: loading }),
-      setError: (error) => set({ error }),
-      clearError: () => set({ error: null }),
-    }
-  )
-);
+export const usePropertyListStore = create<PropertyListState>()((set, get) => ({
+  // Initial state
+  properties: [],
+  pagination: {
+    page: 1,
+    total: 0,
+    totalPages: 1,
+    limit: 20,
+  },
+  filters: null,
+  sortBy: 'createdAt',
+  sortOrder: 'desc',
+  isLoading: false,
+  error: null,
+
+  // Actions
+  setProperties: (properties) => set({ properties }),
+  setPagination: (pagination) =>
+    set((state) => ({
+      pagination: { ...state.pagination, ...pagination },
+    })),
+  setFilters: (filters) => set({ filters }),
+  clearFilters: () => set({ filters: null }),
+  setSortBy: (sortBy) => set({ sortBy }),
+  setSortOrder: (order) => set({ sortOrder: order }),
+  setLoading: (loading) => set({ isLoading: loading }),
+  setError: (error) => set({ error }),
+  clearError: () => set({ error: null }),
+}));
 
 // Selector hooks for easier access
 export const usePropertyListSelectors = () => {
@@ -89,4 +87,4 @@ export const usePropertyListSelectors = () => {
     isLoading,
     error,
   };
-}; 
+};

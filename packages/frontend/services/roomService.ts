@@ -62,7 +62,10 @@ export interface RoomFilters {
 class RoomService {
   private baseUrl = '/api/properties';
 
-  async getRooms(propertyId: string, filters?: RoomFilters): Promise<{
+  async getRooms(
+    propertyId: string,
+    filters?: RoomFilters,
+  ): Promise<{
     rooms: Room[];
     total: number;
     page: number;
@@ -82,34 +85,42 @@ class RoomService {
   async createRoom(propertyId: string, data: CreateRoomData): Promise<Room> {
     const url = `${this.baseUrl}/${propertyId}/rooms`;
     const response = await api.post(url, data);
-    
+
     // Clear rooms cache for this property
     this.clearRoomsCache(propertyId);
-    
+
     return response.data.room;
   }
 
-  async updateRoom(propertyId: string, roomId: string, data: Partial<CreateRoomData>): Promise<Room> {
+  async updateRoom(
+    propertyId: string,
+    roomId: string,
+    data: Partial<CreateRoomData>,
+  ): Promise<Room> {
     const url = `${this.baseUrl}/${propertyId}/rooms/${roomId}`;
     const response = await api.put(url, data);
-    
+
     // Clear related caches
     this.clearRoomCache(propertyId, roomId);
     this.clearRoomsCache(propertyId);
-    
+
     return response.data.room;
   }
 
   async deleteRoom(propertyId: string, roomId: string): Promise<void> {
     const url = `${this.baseUrl}/${propertyId}/rooms/${roomId}`;
     await api.delete(url);
-    
+
     // Clear related caches
     this.clearRoomCache(propertyId, roomId);
     this.clearRoomsCache(propertyId);
   }
 
-  async searchRooms(propertyId: string, query: string, filters?: Omit<RoomFilters, 'search'>): Promise<{
+  async searchRooms(
+    propertyId: string,
+    query: string,
+    filters?: Omit<RoomFilters, 'search'>,
+  ): Promise<{
     rooms: Room[];
     total: number;
   }> {
@@ -119,7 +130,10 @@ class RoomService {
     return response.data;
   }
 
-  async getRoomStats(propertyId: string, roomId: string): Promise<{
+  async getRoomStats(
+    propertyId: string,
+    roomId: string,
+  ): Promise<{
     occupancyRate: number;
     averageStayDuration: number;
     monthlyRevenue: number;
@@ -131,7 +145,11 @@ class RoomService {
     return response.data.stats;
   }
 
-  async getRoomEnergyStats(propertyId: string, roomId: string, period: 'day' | 'week' | 'month' = 'day'): Promise<any> {
+  async getRoomEnergyStats(
+    propertyId: string,
+    roomId: string,
+    period: 'day' | 'week' | 'month' = 'day',
+  ): Promise<any> {
     const url = `${this.baseUrl}/${propertyId}/rooms/${roomId}/energy`;
     const response = await api.get(url, { params: { period } });
     return response.data;
@@ -140,22 +158,22 @@ class RoomService {
   async assignTenant(propertyId: string, roomId: string, tenantId: string): Promise<Room> {
     const url = `${this.baseUrl}/${propertyId}/rooms/${roomId}/assign`;
     const response = await api.post(url, { tenantId });
-    
+
     // Clear related caches
     this.clearRoomCache(propertyId, roomId);
     this.clearRoomsCache(propertyId);
-    
+
     return response.data.room;
   }
 
   async unassignTenant(propertyId: string, roomId: string): Promise<Room> {
     const url = `${this.baseUrl}/${propertyId}/rooms/${roomId}/unassign`;
     const response = await api.post(url);
-    
+
     // Clear related caches
     this.clearRoomCache(propertyId, roomId);
     this.clearRoomsCache(propertyId);
-    
+
     return response.data.room;
   }
 

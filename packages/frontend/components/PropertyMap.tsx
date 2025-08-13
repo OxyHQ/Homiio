@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { View, StyleSheet, Platform, ActivityIndicator, Text } from 'react-native';
+import { View, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import { colors } from '@/styles/colors';
-import { useLocationSearch, useReverseGeocode } from '@/hooks/useLocation';
 import { ThemedText } from './ThemedText';
 
 interface PropertyMapProps {
@@ -17,7 +16,7 @@ interface PropertyMapProps {
 // Web-specific map component using Leaflet
 const WebMap: React.FC<PropertyMapProps> = ({
   latitude = 40.7128,
-  longitude = -74.0060,
+  longitude = -74.006,
   address = '',
   onLocationSelect,
   height = 300,
@@ -46,7 +45,7 @@ const WebMap: React.FC<PropertyMapProps> = ({
         let mapMarker: any = null;
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors'
+          attribution: '© OpenStreetMap contributors',
         }).addTo(leafletMap);
 
         // Add initial marker if coordinates are provided and showMarker is true
@@ -130,47 +129,52 @@ const WebMap: React.FC<PropertyMapProps> = ({
               if (query.length >= 3) {
                 try {
                   const response = await fetch(
-                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=10&addressdetails=1&extratags=1&namedetails=1&countrycodes=es,us,ca,mx,gb,fr,de,it,pt,nl,be,ch,at&exclude_place_ids=`
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=10&addressdetails=1&extratags=1&namedetails=1&countrycodes=es,us,ca,mx,gb,fr,de,it,pt,nl,be,ch,at&exclude_place_ids=`,
                   );
                   const data = await response.json();
 
                   // Filter out businesses and focus on residential addresses
-                  const residentialResults = data.filter((result: any) => {
-                    // Include residential addresses, houses, apartments
-                    const type = result.type || '';
-                    const classType = result.class || '';
-                    const address = result.address || {};
+                  const residentialResults = data
+                    .filter((result: any) => {
+                      // Include residential addresses, houses, apartments
+                      const type = result.type || '';
+                      const classType = result.class || '';
+                      const address = result.address || {};
 
-                    // Accept residential types
-                    const isResidential = type === 'house' ||
-                      type === 'residential' ||
-                      type === 'apartments' ||
-                      type === 'house_number' ||
-                      classType === 'place' ||
-                      classType === 'boundary';
+                      // Accept residential types
+                      const isResidential =
+                        type === 'house' ||
+                        type === 'residential' ||
+                        type === 'apartments' ||
+                        type === 'house_number' ||
+                        classType === 'place' ||
+                        classType === 'boundary';
 
-                    // Exclude business types
-                    const isBusiness = type === 'shop' ||
-                      type === 'amenity' ||
-                      type === 'office' ||
-                      type === 'commercial' ||
-                      type === 'restaurant' ||
-                      type === 'cafe' ||
-                      type === 'bar' ||
-                      type === 'hotel' ||
-                      type === 'bank' ||
-                      type === 'pharmacy' ||
-                      type === 'supermarket' ||
-                      type === 'fuel' ||
-                      type === 'industrial';
+                      // Exclude business types
+                      const isBusiness =
+                        type === 'shop' ||
+                        type === 'amenity' ||
+                        type === 'office' ||
+                        type === 'commercial' ||
+                        type === 'restaurant' ||
+                        type === 'cafe' ||
+                        type === 'bar' ||
+                        type === 'hotel' ||
+                        type === 'bank' ||
+                        type === 'pharmacy' ||
+                        type === 'supermarket' ||
+                        type === 'fuel' ||
+                        type === 'industrial';
 
-                    // Check if it has a house number (more likely to be residential)
-                    const hasHouseNumber = address.house_number ||
-                      address.housenumber ||
-                      result.display_name.match(/\d+/);
+                      // Check if it has a house number (more likely to be residential)
+                      const hasHouseNumber =
+                        address.house_number ||
+                        address.housenumber ||
+                        result.display_name.match(/\d+/);
 
-                    return isResidential && !isBusiness && hasHouseNumber;
-                  }).slice(0, 5); // Limit to 5 results after filtering
+                      return isResidential && !isBusiness && hasHouseNumber;
+                    })
+                    .slice(0, 5); // Limit to 5 results after filtering
 
                   searchResults.innerHTML = '';
                   if (residentialResults.length > 0) {
@@ -209,7 +213,7 @@ const WebMap: React.FC<PropertyMapProps> = ({
 
             try {
               const response = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
               );
               const data = await response.json();
               const address = data.display_name || 'Unknown location';
@@ -219,7 +223,7 @@ const WebMap: React.FC<PropertyMapProps> = ({
                 display_name: data.display_name,
                 address: data.address || {},
                 lat: lat,
-                lon: lng
+                lon: lng,
               };
 
               selectLocation(lat, lng, address, detailedAddress);
@@ -255,13 +259,17 @@ const WebMap: React.FC<PropertyMapProps> = ({
                 const detailedAddress = {
                   display_name: detailedData.display_name,
                   street: detailedData.address?.road || '',
-                  city: detailedData.address?.city || detailedData.address?.town || detailedData.address?.village || '',
+                  city:
+                    detailedData.address?.city ||
+                    detailedData.address?.town ||
+                    detailedData.address?.village ||
+                    '',
                   state: detailedData.address?.state || detailedData.address?.province || '',
                   country: detailedData.address?.country || '',
                   postcode: detailedData.address?.postcode || '',
                   house_number: detailedData.address?.house_number || '',
                   lat: normalizedLat,
-                  lon: normalizedLng
+                  lon: normalizedLng,
                 };
                 console.log('Calling onLocationSelect with detailed data:', detailedAddress);
                 onLocationSelect(normalizedLat, normalizedLng, JSON.stringify(detailedAddress));
@@ -276,7 +284,10 @@ const WebMap: React.FC<PropertyMapProps> = ({
 
           // Close search results when clicking outside
           document.addEventListener('click', function (e) {
-            if (!searchInput.contains(e.target as Node) && !searchResults.contains(e.target as Node)) {
+            if (
+              !searchInput.contains(e.target as Node) &&
+              !searchResults.contains(e.target as Node)
+            ) {
               searchResults.style.display = 'none';
             }
           });
@@ -359,7 +370,7 @@ const WebMap: React.FC<PropertyMapProps> = ({
           width: '100%',
           height: '100%',
           borderRadius: 8,
-        }
+        },
       })}
       {loading && (
         <View style={styles.loadingOverlay}>
@@ -462,7 +473,9 @@ const MobileMap: React.FC<PropertyMapProps> = (props) => {
         </head>
         <body>
           <div id="map"></div>
-          ${props.interactive ? `
+          ${
+            props.interactive
+              ? `
             <div class="search-container">
               <input 
                 type="text" 
@@ -475,7 +488,9 @@ const MobileMap: React.FC<PropertyMapProps> = (props) => {
             <div class="location-info" id="locationInfo">
               ${props.address || 'Click on the map to select a location'}
             </div>
-          ` : ''}
+          `
+              : ''
+          }
           
           <script>
             let map, marker, searchTimeout;
@@ -490,12 +505,18 @@ const MobileMap: React.FC<PropertyMapProps> = (props) => {
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
             
             // Add marker if coordinates are provided and showMarker is true
-            ${props.latitude && props.longitude && props.showMarker !== false ? `
+            ${
+              props.latitude && props.longitude && props.showMarker !== false
+                ? `
               marker = L.marker([${props.latitude}, ${props.longitude}]).addTo(map);
               ${props.address ? `document.getElementById('locationInfo').textContent = '${props.address}';` : ''}
-            ` : ''}
+            `
+                : ''
+            }
             
-            ${props.interactive ? `
+            ${
+              props.interactive
+                ? `
               // Search functionality
               const searchInput = document.getElementById('searchInput');
               const searchResults = document.getElementById('searchResults');
@@ -645,7 +666,9 @@ const MobileMap: React.FC<PropertyMapProps> = (props) => {
                   searchResults.style.display = 'none';
                 }
               });
-            ` : ''}
+            `
+                : ''
+            }
             
             // Notify React Native that map is loaded
             if (window.ReactNativeWebView) {

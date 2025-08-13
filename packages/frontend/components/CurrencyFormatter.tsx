@@ -4,58 +4,58 @@ import { ThemedText } from './ThemedText';
 import { useCurrency } from '@/hooks/useCurrency';
 
 interface CurrencyFormatterProps extends TextProps {
-    amount: number;
-    originalCurrency?: string; // The currency the amount is originally in
-    showCode?: boolean;
-    showSymbol?: boolean;
-    showConversion?: boolean; // Show original amount in parentheses if different currency
-    style?: any;
+  amount: number;
+  originalCurrency?: string; // The currency the amount is originally in
+  showCode?: boolean;
+  showSymbol?: boolean;
+  showConversion?: boolean; // Show original amount in parentheses if different currency
+  style?: any;
 }
 
 export const CurrencyFormatter: React.FC<CurrencyFormatterProps> = ({
-    amount,
-    originalCurrency,
-    showCode = false,
-    showSymbol = true,
-    showConversion = true,
-    style,
-    ...textProps
+  amount,
+  originalCurrency,
+  showCode = false,
+  showSymbol = true,
+  showConversion = true,
+  style,
+  ...textProps
 }) => {
-    const { formatAmount, convertAndFormat, getCurrencyCode } = useCurrency();
-    const currentCurrencyCode = getCurrencyCode();
+  const { formatAmount, convertAndFormat, getCurrencyCode } = useCurrency();
+  const currentCurrencyCode = getCurrencyCode();
 
-    const formatValue = () => {
-        // If no original currency specified, assume it's in current currency
-        if (!originalCurrency || originalCurrency === currentCurrencyCode) {
-            if (showCode) {
-                return formatAmount(amount, true);
-            }
+  const formatValue = () => {
+    // If no original currency specified, assume it's in current currency
+    if (!originalCurrency || originalCurrency === currentCurrencyCode) {
+      if (showCode) {
+        return formatAmount(amount, true);
+      }
 
-            if (!showSymbol) {
-                return amount.toLocaleString('en-US', {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 2,
-                });
-            }
+      if (!showSymbol) {
+        return amount.toLocaleString('en-US', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2,
+        });
+      }
 
-            return formatAmount(amount);
-        }
+      return formatAmount(amount);
+    }
 
-        // Convert from original currency to current currency
-        const convertedAmount = convertAndFormat(amount, originalCurrency, showCode);
+    // Convert from original currency to current currency
+    const convertedAmount = convertAndFormat(amount, originalCurrency, showCode);
 
-        if (showConversion) {
-            // Show converted amount with original amount in parentheses
-            const originalFormatted = formatAmount(amount, showCode);
-            return `${convertedAmount} (${originalFormatted})`;
-        }
+    if (showConversion) {
+      // Show converted amount with original amount in parentheses
+      const originalFormatted = formatAmount(amount, showCode);
+      return `${convertedAmount} (${originalFormatted})`;
+    }
 
-        return convertedAmount;
-    };
+    return convertedAmount;
+  };
 
-    return (
-        <ThemedText style={style} {...textProps}>
-            {formatValue()}
-        </ThemedText>
-    );
-}; 
+  return (
+    <ThemedText style={style} {...textProps}>
+      {formatValue()}
+    </ThemedText>
+  );
+};

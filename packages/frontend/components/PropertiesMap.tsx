@@ -1,5 +1,12 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { View, StyleSheet, Platform, ActivityIndicator, Text, TouchableOpacity } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Platform,
+  ActivityIndicator,
+  Text,
+  TouchableOpacity,
+} from 'react-native';
 import { colors } from '@/styles/colors';
 import { Property } from '@homiio/shared-types';
 
@@ -35,19 +42,25 @@ const WebPropertiesMap: React.FC<PropertiesMapProps> = ({
   const [markers, setMarkers] = useState<any[]>([]);
 
   // Calculate center if not provided
-  const mapCenter = center || (() => {
-    const validProperties = properties.filter(p =>
-      p.location?.coordinates && p.location.coordinates.length === 2
-    );
+  const mapCenter =
+    center ||
+    (() => {
+      const validProperties = properties.filter(
+        (p) => p.location?.coordinates && p.location.coordinates.length === 2,
+      );
 
-    if (validProperties.length > 0) {
-      const avgLat = validProperties.reduce((sum, p) => sum + (p.location?.coordinates?.[1] || 0), 0) / validProperties.length;
-      const avgLng = validProperties.reduce((sum, p) => sum + (p.location?.coordinates?.[0] || 0), 0) / validProperties.length;
-      return { lat: avgLat, lng: avgLng };
-    }
+      if (validProperties.length > 0) {
+        const avgLat =
+          validProperties.reduce((sum, p) => sum + (p.location?.coordinates?.[1] || 0), 0) /
+          validProperties.length;
+        const avgLng =
+          validProperties.reduce((sum, p) => sum + (p.location?.coordinates?.[0] || 0), 0) /
+          validProperties.length;
+        return { lat: avgLat, lng: avgLng };
+      }
 
-    return { lat: 40.7128, lng: -74.0060 }; // Default to NYC
-  })();
+      return { lat: 40.7128, lng: -74.006 }; // Default to NYC
+    })();
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -125,7 +138,7 @@ const WebPropertiesMap: React.FC<PropertiesMapProps> = ({
       // Add OpenStreetMap tiles
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
-        attribution: '© OpenStreetMap contributors'
+        attribution: '© OpenStreetMap contributors',
       }).addTo(mapInstance);
 
       setMap(mapInstance);
@@ -227,14 +240,14 @@ const WebPropertiesMap: React.FC<PropertiesMapProps> = ({
 
       // Add global functions for popup buttons
       (window as any).selectProperty = (propertyId: string) => {
-        const property = properties.find(p => p._id === propertyId);
+        const property = properties.find((p) => p._id === propertyId);
         if (property && onPropertySelect) {
           onPropertySelect(property);
         }
       };
 
       (window as any).viewProperty = (propertyId: string) => {
-        const property = properties.find(p => p._id === propertyId);
+        const property = properties.find((p) => p._id === propertyId);
         if (property && onPropertyPress) {
           onPropertyPress(property);
         }
@@ -249,7 +262,7 @@ const WebPropertiesMap: React.FC<PropertiesMapProps> = ({
     if (map) {
       try {
         // Remove existing markers
-        markers.forEach(marker => {
+        markers.forEach((marker) => {
           map.removeLayer(marker);
         });
 
@@ -277,12 +290,15 @@ const WebPropertiesMap: React.FC<PropertiesMapProps> = ({
       <View style={[styles.container, { height }, styles.errorContainer]}>
         <Text style={styles.errorText}>Failed to load map</Text>
         <Text style={styles.errorSubtext}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => {
-          setError(null);
-          setLoading(true);
-          // Force reload
-          window.location.reload();
-        }}>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={() => {
+            setError(null);
+            setLoading(true);
+            // Force reload
+            window.location.reload();
+          }}
+        >
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -318,24 +334,30 @@ const MobilePropertiesMap: React.FC<PropertiesMapProps> = (props) => {
   const [error, setError] = useState<string | null>(null);
 
   // Calculate center if not provided
-  const mapCenter = props.center || (() => {
-    const validProperties = props.properties.filter(p =>
-      p.address?.coordinates?.lat && p.address?.coordinates?.lng
-    );
+  const mapCenter =
+    props.center ||
+    (() => {
+      const validProperties = props.properties.filter(
+        (p) => p.address?.coordinates?.lat && p.address?.coordinates?.lng,
+      );
 
-    if (validProperties.length > 0) {
-      const avgLat = validProperties.reduce((sum, p) => sum + (p.address.coordinates?.lat || 0), 0) / validProperties.length;
-      const avgLng = validProperties.reduce((sum, p) => sum + (p.address.coordinates?.lng || 0), 0) / validProperties.length;
-      return { lat: avgLat, lng: avgLng };
-    }
+      if (validProperties.length > 0) {
+        const avgLat =
+          validProperties.reduce((sum, p) => sum + (p.address.coordinates?.lat || 0), 0) /
+          validProperties.length;
+        const avgLng =
+          validProperties.reduce((sum, p) => sum + (p.address.coordinates?.lng || 0), 0) /
+          validProperties.length;
+        return { lat: avgLat, lng: avgLng };
+      }
 
-    return { lat: 40.7128, lng: -74.0060 }; // Default to NYC
-  })();
+      return { lat: 40.7128, lng: -74.006 }; // Default to NYC
+    })();
 
   useEffect(() => {
     const propertiesData = props.properties
-      .filter(p => p.address?.coordinates?.lat && p.address?.coordinates?.lng)
-      .map(p => ({
+      .filter((p) => p.address?.coordinates?.lat && p.address?.coordinates?.lng)
+      .map((p) => ({
         id: p._id,
         lat: p.address.coordinates!.lat,
         lng: p.address.coordinates!.lng,
@@ -511,12 +533,12 @@ const MobilePropertiesMap: React.FC<PropertiesMapProps> = (props) => {
         setLoading(false);
         setError(null);
       } else if (data.type === 'propertySelected' && props.onPropertySelect) {
-        const property = props.properties.find(p => p._id === data.propertyId);
+        const property = props.properties.find((p) => p._id === data.propertyId);
         if (property) {
           props.onPropertySelect(property);
         }
       } else if (data.type === 'propertyPressed' && props.onPropertyPress) {
-        const property = props.properties.find(p => p._id === data.propertyId);
+        const property = props.properties.find((p) => p._id === data.propertyId);
         if (property) {
           props.onPropertyPress(property);
         }
@@ -537,10 +559,13 @@ const MobilePropertiesMap: React.FC<PropertiesMapProps> = (props) => {
       <View style={[styles.container, { height: props.height }, styles.errorContainer]}>
         <Text style={styles.errorText}>Failed to load map</Text>
         <Text style={styles.errorSubtext}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => {
-          setError(null);
-          setLoading(true);
-        }}>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={() => {
+            setError(null);
+            setLoading(true);
+          }}
+        >
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -644,4 +669,4 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.primaryDark,
   },
-}); 
+});

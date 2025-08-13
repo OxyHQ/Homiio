@@ -1,10 +1,10 @@
 import { io, Socket } from 'socket.io-client';
 import { getData } from './storage';
-import { API_URL_SOCKET } from "@/config";
+import { API_URL_SOCKET } from '@/config';
 import { toast } from 'sonner';
 import { SOCKET_CONFIG, getReconnectDelay, debug, isAuthError } from './socketConfig';
 
-const SOCKET_URL = API_URL_SOCKET || "ws://localhost:3000";
+const SOCKET_URL = API_URL_SOCKET || 'ws://localhost:3000';
 let socket: Socket | null = null;
 let retryCount = 0;
 let tokenRefreshTimeout: NodeJS.Timeout | null = null;
@@ -14,7 +14,7 @@ const refreshSocketToken = async (socket: Socket) => {
   try {
     const newToken = await getData('accessToken');
     if (!newToken) throw new Error('No access token available');
-    
+
     if (socket) {
       socket.auth = { token: newToken };
       socket.disconnect().connect(); // Force reconnection with new token
@@ -29,10 +29,13 @@ const setupTokenRefresh = (socket: Socket) => {
   if (tokenRefreshTimeout) {
     clearTimeout(tokenRefreshTimeout);
   }
-  
-  tokenRefreshTimeout = setTimeout(() => {
-    refreshSocketToken(socket);
-  }, 45 * 60 * 1000);
+
+  tokenRefreshTimeout = setTimeout(
+    () => {
+      refreshSocketToken(socket);
+    },
+    45 * 60 * 1000,
+  );
 };
 
 // Changed function signature to accept Socket | null
@@ -57,10 +60,10 @@ export const getSocket = async (namespace?: string) => {
 
       const url = namespace ? `${SOCKET_URL}/${namespace}` : SOCKET_URL;
       transportFallbackAttempted = false;
-      
+
       socket = io(url, {
         ...SOCKET_CONFIG,
-        auth: { token: accessToken }
+        auth: { token: accessToken },
       });
 
       socket.on('connect', () => {
@@ -86,7 +89,9 @@ export const getSocket = async (namespace?: string) => {
         if (retryCount < (SOCKET_CONFIG.reconnectionAttempts || 5)) {
           retryCount++;
           const delay = getReconnectDelay(retryCount);
-          debug.log(`Retrying socket connection (${retryCount}/${SOCKET_CONFIG.reconnectionAttempts}) in ${delay}ms...`);
+          debug.log(
+            `Retrying socket connection (${retryCount}/${SOCKET_CONFIG.reconnectionAttempts}) in ${delay}ms...`,
+          );
           setTimeout(() => {
             if (socket) {
               socket.connect();
@@ -100,25 +105,25 @@ export const getSocket = async (namespace?: string) => {
       });
 
       // Handle transport-specific errors
-      socket.io.on("error", (error) => {
+      socket.io.on('error', (error) => {
         debug.error('Transport error:', error);
         if (!socket?.connected && !transportFallbackAttempted) {
           attemptTransportFallback(socket);
         }
       });
 
-      socket.io.on("reconnect_attempt", (attempt) => {
+      socket.io.on('reconnect_attempt', (attempt) => {
         debug.log('Reconnection attempt:', attempt);
       });
 
-      socket.io.on("reconnect_error", (error) => {
+      socket.io.on('reconnect_error', (error) => {
         debug.error('Reconnection error:', error);
         if (!socket?.connected && !transportFallbackAttempted) {
           attemptTransportFallback(socket);
         }
       });
 
-      socket.io.on("reconnect_failed", () => {
+      socket.io.on('reconnect_failed', () => {
         debug.error('Reconnection failed');
         toast.error('Connection lost. Please refresh the page.');
       });
@@ -138,7 +143,6 @@ export const getSocket = async (namespace?: string) => {
       });
 
       socket.connect();
-      
     } catch (error) {
       debug.error('Error initializing socket:', error);
       toast.error('Failed to initialize connection');
@@ -153,7 +157,7 @@ export const disconnectSocket = () => {
     clearTimeout(tokenRefreshTimeout);
     tokenRefreshTimeout = null;
   }
-  
+
   if (socket) {
     console.log('Manually disconnecting socket');
     socket.disconnect();

@@ -53,17 +53,14 @@ class NeighborhoodService {
     latitude: number,
     longitude: number,
     oxyServices?: OxyServices,
-    activeSessionId?: string
+    activeSessionId?: string,
   ): Promise<NeighborhoodData> {
     try {
-      const response = await api.get<NeighborhoodData>(
-        '/api/neighborhoods/by-location',
-        {
-          params: { latitude, longitude },
-          oxyServices,
-          activeSessionId,
-        }
-      );
+      const response = await api.get<NeighborhoodData>('/api/neighborhoods/by-location', {
+        params: { latitude, longitude },
+        oxyServices,
+        activeSessionId,
+      });
       return response.data;
     } catch (error) {
       console.error('Failed to fetch neighborhood by location:', error);
@@ -80,17 +77,14 @@ class NeighborhoodService {
     city?: string,
     state?: string,
     oxyServices?: OxyServices,
-    activeSessionId?: string
+    activeSessionId?: string,
   ): Promise<NeighborhoodData> {
     try {
-      const response = await api.get<NeighborhoodData>(
-        '/api/neighborhoods/by-name',
-        {
-          params: { name, city, state },
-          oxyServices,
-          activeSessionId,
-        }
-      );
+      const response = await api.get<NeighborhoodData>('/api/neighborhoods/by-name', {
+        params: { name, city, state },
+        oxyServices,
+        activeSessionId,
+      });
       return response.data;
     } catch (error) {
       console.error('Failed to fetch neighborhood by name:', error);
@@ -105,7 +99,7 @@ class NeighborhoodService {
   async getNeighborhoodByProperty(
     propertyId: string,
     oxyServices?: OxyServices,
-    activeSessionId?: string
+    activeSessionId?: string,
   ): Promise<NeighborhoodData> {
     try {
       const response = await api.get<NeighborhoodData>(
@@ -113,7 +107,7 @@ class NeighborhoodService {
         {
           oxyServices,
           activeSessionId,
-        }
+        },
       );
       return response.data;
     } catch (error) {
@@ -129,17 +123,14 @@ class NeighborhoodService {
   async searchNeighborhoods(
     filters: NeighborhoodFilters,
     oxyServices?: OxyServices,
-    activeSessionId?: string
+    activeSessionId?: string,
   ): Promise<NeighborhoodData[]> {
     try {
-      const response = await api.get<NeighborhoodData[]>(
-        '/api/neighborhoods/search',
-        {
-          params: filters,
-          oxyServices,
-          activeSessionId,
-        }
-      );
+      const response = await api.get<NeighborhoodData[]>('/api/neighborhoods/search', {
+        params: filters,
+        oxyServices,
+        activeSessionId,
+      });
       return response.data;
     } catch (error) {
       console.error('Failed to search neighborhoods:', error);
@@ -156,17 +147,14 @@ class NeighborhoodService {
     state?: string,
     limit: number = 10,
     oxyServices?: OxyServices,
-    activeSessionId?: string
+    activeSessionId?: string,
   ): Promise<NeighborhoodData[]> {
     try {
-      const response = await api.get<NeighborhoodData[]>(
-        '/api/neighborhoods/popular',
-        {
-          params: { city, state, limit },
-          oxyServices,
-          activeSessionId,
-        }
-      );
+      const response = await api.get<NeighborhoodData[]>('/api/neighborhoods/popular', {
+        params: { city, state, limit },
+        oxyServices,
+        activeSessionId,
+      });
       return response.data;
     } catch (error) {
       console.error('Failed to fetch popular neighborhoods:', error);
@@ -185,7 +173,7 @@ class NeighborhoodService {
   private getMockNeighborhoodData(
     name: string = 'El Born',
     city: string = 'Barcelona',
-    state: string = 'Catalonia'
+    state: string = 'Catalonia',
   ): NeighborhoodData {
     return {
       id: `neighborhood-${Date.now()}`,
@@ -212,14 +200,54 @@ class NeighborhoodService {
         shoppingCenters: 2,
       },
       ratings: [
-        { category: 'Safety', score: 4.5, icon: 'shield-checkmark-outline', description: 'Low crime rate, well-lit streets' },
-        { category: 'Dining', score: 4.8, icon: 'restaurant-outline', description: 'Excellent variety of restaurants' },
-        { category: 'Transit', score: 4.3, icon: 'subway-outline', description: 'Good public transportation access' },
-        { category: 'Nightlife', score: 4.0, icon: 'wine-outline', description: 'Lively bars and entertainment' },
-        { category: 'Shopping', score: 3.9, icon: 'bag-outline', description: 'Good mix of local and chain stores' },
-        { category: 'Parks', score: 4.1, icon: 'leaf-outline', description: 'Several green spaces nearby' },
-        { category: 'Schools', score: 4.2, icon: 'school-outline', description: 'Quality educational institutions' },
-        { category: 'Healthcare', score: 4.4, icon: 'medical-outline', description: 'Access to medical facilities' },
+        {
+          category: 'Safety',
+          score: 4.5,
+          icon: 'shield-checkmark-outline',
+          description: 'Low crime rate, well-lit streets',
+        },
+        {
+          category: 'Dining',
+          score: 4.8,
+          icon: 'restaurant-outline',
+          description: 'Excellent variety of restaurants',
+        },
+        {
+          category: 'Transit',
+          score: 4.3,
+          icon: 'subway-outline',
+          description: 'Good public transportation access',
+        },
+        {
+          category: 'Nightlife',
+          score: 4.0,
+          icon: 'wine-outline',
+          description: 'Lively bars and entertainment',
+        },
+        {
+          category: 'Shopping',
+          score: 3.9,
+          icon: 'bag-outline',
+          description: 'Good mix of local and chain stores',
+        },
+        {
+          category: 'Parks',
+          score: 4.1,
+          icon: 'leaf-outline',
+          description: 'Several green spaces nearby',
+        },
+        {
+          category: 'Schools',
+          score: 4.2,
+          icon: 'school-outline',
+          description: 'Quality educational institutions',
+        },
+        {
+          category: 'Healthcare',
+          score: 4.4,
+          icon: 'medical-outline',
+          description: 'Access to medical facilities',
+        },
       ],
       images: [
         'https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=400',
@@ -230,4 +258,4 @@ class NeighborhoodService {
   }
 }
 
-export default new NeighborhoodService(); 
+export default new NeighborhoodService();

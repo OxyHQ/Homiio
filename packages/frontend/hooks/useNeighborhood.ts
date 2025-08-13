@@ -4,7 +4,7 @@ import { useOxy } from '@oxyhq/services';
 import type { NeighborhoodFilters } from '@/services/neighborhoodService';
 
 export function useNeighborhood() {
-  const { 
+  const {
     currentNeighborhood,
     popularNeighborhoods,
     searchResults,
@@ -17,7 +17,7 @@ export function useNeighborhood() {
     setError,
     clearCurrentNeighborhood,
     clearSearchResults,
-    clearError
+    clearError,
   } = useNeighborhoodStore();
   const { oxyServices, activeSessionId } = useOxy();
 
@@ -34,11 +34,16 @@ export function useNeighborhood() {
       try {
         setLoading(true);
         setError(null);
-        
+
         // Import the API function
         const { neighborhoodApi } = await import('@/utils/api');
-        const response = await neighborhoodApi.getNeighborhoodByLocation(latitude, longitude, oxyServices, activeSessionId);
-        
+        const response = await neighborhoodApi.getNeighborhoodByLocation(
+          latitude,
+          longitude,
+          oxyServices,
+          activeSessionId,
+        );
+
         setCurrentNeighborhood(response.data);
       } catch (error: any) {
         console.error('useNeighborhood: Failed to fetch neighborhood by location:', error);
@@ -47,7 +52,7 @@ export function useNeighborhood() {
         setLoading(false);
       }
     },
-    [oxyServices, activeSessionId, isAuthenticated, setCurrentNeighborhood, setLoading, setError]
+    [oxyServices, activeSessionId, isAuthenticated, setCurrentNeighborhood, setLoading, setError],
   );
 
   // Fetch neighborhood by name
@@ -61,11 +66,17 @@ export function useNeighborhood() {
       try {
         setLoading(true);
         setError(null);
-        
+
         // Import the API function
         const { neighborhoodApi } = await import('@/utils/api');
-        const response = await neighborhoodApi.getNeighborhoodByName(name, city, state, oxyServices, activeSessionId);
-        
+        const response = await neighborhoodApi.getNeighborhoodByName(
+          name,
+          city,
+          state,
+          oxyServices,
+          activeSessionId,
+        );
+
         setCurrentNeighborhood(response.data);
       } catch (error: any) {
         console.error('useNeighborhood: Failed to fetch neighborhood by name:', error);
@@ -74,7 +85,7 @@ export function useNeighborhood() {
         setLoading(false);
       }
     },
-    [oxyServices, activeSessionId, isAuthenticated, setCurrentNeighborhood, setLoading, setError]
+    [oxyServices, activeSessionId, isAuthenticated, setCurrentNeighborhood, setLoading, setError],
   );
 
   // Fetch neighborhood by property
@@ -88,11 +99,15 @@ export function useNeighborhood() {
       try {
         setLoading(true);
         setError(null);
-        
+
         // Import the API function
         const { neighborhoodApi } = await import('@/utils/api');
-        const response = await neighborhoodApi.getNeighborhoodByProperty(propertyId, oxyServices, activeSessionId);
-        
+        const response = await neighborhoodApi.getNeighborhoodByProperty(
+          propertyId,
+          oxyServices,
+          activeSessionId,
+        );
+
         setCurrentNeighborhood(response.data);
       } catch (error: any) {
         console.error('useNeighborhood: Failed to fetch neighborhood by property:', error);
@@ -101,7 +116,7 @@ export function useNeighborhood() {
         setLoading(false);
       }
     },
-    [oxyServices, activeSessionId, isAuthenticated, setCurrentNeighborhood, setLoading, setError]
+    [oxyServices, activeSessionId, isAuthenticated, setCurrentNeighborhood, setLoading, setError],
   );
 
   // Search neighborhoods
@@ -115,11 +130,15 @@ export function useNeighborhood() {
       try {
         setLoading(true);
         setError(null);
-        
+
         // Import the API function
         const { neighborhoodApi } = await import('@/utils/api');
-        const response = await neighborhoodApi.searchNeighborhoods(filters, oxyServices, activeSessionId);
-        
+        const response = await neighborhoodApi.searchNeighborhoods(
+          filters,
+          oxyServices,
+          activeSessionId,
+        );
+
         setSearchResults(response.data || []);
       } catch (error: any) {
         console.error('useNeighborhood: Failed to search neighborhoods:', error);
@@ -128,7 +147,7 @@ export function useNeighborhood() {
         setLoading(false);
       }
     },
-    [oxyServices, activeSessionId, isAuthenticated, setSearchResults, setLoading, setError]
+    [oxyServices, activeSessionId, isAuthenticated, setSearchResults, setLoading, setError],
   );
 
   // Fetch popular neighborhoods
@@ -142,11 +161,17 @@ export function useNeighborhood() {
       try {
         setLoading(true);
         setError(null);
-        
+
         // Import the API function
         const { neighborhoodApi } = await import('@/utils/api');
-        const response = await neighborhoodApi.getPopularNeighborhoods(city, state, limit, oxyServices, activeSessionId);
-        
+        const response = await neighborhoodApi.getPopularNeighborhoods(
+          city,
+          state,
+          limit,
+          oxyServices,
+          activeSessionId,
+        );
+
         setPopularNeighborhoods(response.data || []);
       } catch (error: any) {
         console.error('useNeighborhood: Failed to fetch popular neighborhoods:', error);
@@ -155,7 +180,7 @@ export function useNeighborhood() {
         setLoading(false);
       }
     },
-    [oxyServices, activeSessionId, isAuthenticated, setPopularNeighborhoods, setLoading, setError]
+    [oxyServices, activeSessionId, isAuthenticated, setPopularNeighborhoods, setLoading, setError],
   );
 
   // Manual actions
@@ -163,7 +188,7 @@ export function useNeighborhood() {
     (neighborhood: any) => {
       setCurrentNeighborhood(neighborhood);
     },
-    [setCurrentNeighborhood]
+    [setCurrentNeighborhood],
   );
 
   const clearCurrent = useCallback(() => {
@@ -178,7 +203,7 @@ export function useNeighborhood() {
     (error: string | null) => {
       setError(error);
     },
-    [setError]
+    [setError],
   );
 
   const clearErrorState = useCallback(() => {
@@ -222,4 +247,4 @@ export function useNeighborhood() {
     clearError: clearErrorState,
     reset,
   };
-} 
+}

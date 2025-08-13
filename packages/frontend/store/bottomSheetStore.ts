@@ -25,18 +25,14 @@ export const useBottomSheetStore = create<BottomSheetState & BottomSheetActions>
   index: 1,
 
   // Actions
-  openBottomSheet: (content, snapPoints = ['25%', '50%', '90%'], onClose) => 
+  openBottomSheet: (content, snapPoints = ['25%', '50%', '90%'], onClose) =>
     set({ isVisible: true, content, snapPoints, index: 1, onClose }),
-  
-  closeBottomSheet: () => 
-    set({ isVisible: false, content: null, onClose: undefined }),
-  
-  setBottomSheetContent: (content) => 
-    set({ content }),
-  
-  setSnapPoints: (snapPoints) => 
-    set({ snapPoints }),
-  
-  setIndex: (index) => 
-    set({ index }),
-})); 
+
+  closeBottomSheet: () => set({ isVisible: false, content: null, onClose: undefined }),
+
+  setBottomSheetContent: (content) => set({ content }),
+
+  setSnapPoints: (snapPoints) => set({ snapPoints }),
+
+  setIndex: (index) => set({ index }),
+}));

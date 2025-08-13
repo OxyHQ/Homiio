@@ -9,4 +9,4 @@ export { ProgressBar } from './ProgressBar';
 export { default as ExpandableMenu } from './ExpandableMenu';
 export { Menu } from './Menu';
 export { IconSymbol } from './IconSymbol';
-export { default as TabBarBackground } from './TabBarBackground'; 
+export { default as TabBarBackground } from './TabBarBackground';

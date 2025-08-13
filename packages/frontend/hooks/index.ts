@@ -26,4 +26,4 @@ export {
   type AddressSuggestion,
   type AddressSearchOptions,
   type UseAddressSearchReturn,
-} from './useAddressSearch'; 
+} from './useAddressSearch';

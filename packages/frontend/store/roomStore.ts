@@ -11,11 +11,11 @@ interface RoomState {
     amenities: string[];
     availability: string;
   } | null;
-  
+
   // Loading states
   isLoading: boolean;
   error: string | null;
-  
+
   // Actions
   setRooms: (rooms: any[]) => void;
   setCurrentRoom: (room: any | null) => void;
@@ -26,25 +26,23 @@ interface RoomState {
   clearError: () => void;
 }
 
-export const useRoomStore = create<RoomState>()(
-  (set, get) => ({
-    // Initial state
-    rooms: [],
-    currentRoom: null,
-    filters: null,
-    isLoading: false,
-    error: null,
-    
-    // Actions
-    setRooms: (rooms) => set({ rooms }),
-    setCurrentRoom: (room) => set({ currentRoom: room }),
-    setFilters: (filters) => set({ filters }),
-    clearFilters: () => set({ filters: null }),
-    setLoading: (loading) => set({ isLoading: loading }),
-    setError: (error) => set({ error }),
-    clearError: () => set({ error: null }),
-  })
-);
+export const useRoomStore = create<RoomState>()((set, get) => ({
+  // Initial state
+  rooms: [],
+  currentRoom: null,
+  filters: null,
+  isLoading: false,
+  error: null,
+
+  // Actions
+  setRooms: (rooms) => set({ rooms }),
+  setCurrentRoom: (room) => set({ currentRoom: room }),
+  setFilters: (filters) => set({ filters }),
+  clearFilters: () => set({ filters: null }),
+  setLoading: (loading) => set({ isLoading: loading }),
+  setError: (error) => set({ error }),
+  clearError: () => set({ error: null }),
+}));
 
 // Selector hooks for easier access
 export const useRoomSelectors = () => {
@@ -61,4 +59,4 @@ export const useRoomSelectors = () => {
     isLoading,
     error,
   };
-}; 
+};

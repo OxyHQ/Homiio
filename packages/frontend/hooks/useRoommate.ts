@@ -33,13 +33,7 @@ export interface RoommateRelationship {
 }
 
 export const useRoommate = () => {
-  const {
-    roommates: profiles,
-    requests,
-    relationships,
-    isLoading,
-    error,
-  } = useRoommateSelectors();
+  const { roommates: profiles, requests, relationships, isLoading, error } = useRoommateSelectors();
   const {
     setRoommates,
     setRequests,
@@ -57,7 +51,11 @@ export const useRoommate = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await roommateService.getRoommateProfiles(undefined, oxyServices, activeSessionId);
+      const response = await roommateService.getRoommateProfiles(
+        undefined,
+        oxyServices,
+        activeSessionId,
+      );
       setRoommates(response.profiles || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch profiles');
@@ -99,76 +97,98 @@ export const useRoommate = () => {
   }, [oxyServices, activeSessionId, setLoading, setError, setRelationships]);
 
   // Send roommate request
-  const sendRequest = useCallback(async (profileId: string, message?: string) => {
-    if (!oxyServices || !activeSessionId) return false;
+  const sendRequest = useCallback(
+    async (profileId: string, message?: string) => {
+      if (!oxyServices || !activeSessionId) return false;
 
-    try {
-      setLoading(true);
-      setError(null);
-      await roommateService.sendRoommateRequest(profileId, message, oxyServices, activeSessionId);
-      await fetchRequests();
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send request');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchRequests, oxyServices, activeSessionId, setLoading, setError]);
+      try {
+        setLoading(true);
+        setError(null);
+        await roommateService.sendRoommateRequest(profileId, message, oxyServices, activeSessionId);
+        await fetchRequests();
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to send request');
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [fetchRequests, oxyServices, activeSessionId, setLoading, setError],
+  );
 
   // Accept roommate request
-  const acceptRequest = useCallback(async (requestId: string, responseMessage?: string) => {
-    if (!oxyServices || !activeSessionId) return false;
+  const acceptRequest = useCallback(
+    async (requestId: string, responseMessage?: string) => {
+      if (!oxyServices || !activeSessionId) return false;
 
-    try {
-      setLoading(true);
-      setError(null);
-      await roommateService.acceptRoommateRequest(requestId, responseMessage, oxyServices, activeSessionId);
-      await Promise.all([fetchRequests(), fetchRelationships()]);
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to accept request');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchRequests, fetchRelationships, oxyServices, activeSessionId, setLoading, setError]);
+      try {
+        setLoading(true);
+        setError(null);
+        await roommateService.acceptRoommateRequest(
+          requestId,
+          responseMessage,
+          oxyServices,
+          activeSessionId,
+        );
+        await Promise.all([fetchRequests(), fetchRelationships()]);
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to accept request');
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [fetchRequests, fetchRelationships, oxyServices, activeSessionId, setLoading, setError],
+  );
 
   // Decline roommate request
-  const declineRequest = useCallback(async (requestId: string, responseMessage?: string) => {
-    if (!oxyServices || !activeSessionId) return false;
+  const declineRequest = useCallback(
+    async (requestId: string, responseMessage?: string) => {
+      if (!oxyServices || !activeSessionId) return false;
 
-    try {
-      setLoading(true);
-      setError(null);
-      await roommateService.declineRoommateRequest(requestId, responseMessage, oxyServices, activeSessionId);
-      await fetchRequests();
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to decline request');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchRequests, oxyServices, activeSessionId, setLoading, setError]);
+      try {
+        setLoading(true);
+        setError(null);
+        await roommateService.declineRoommateRequest(
+          requestId,
+          responseMessage,
+          oxyServices,
+          activeSessionId,
+        );
+        await fetchRequests();
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to decline request');
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [fetchRequests, oxyServices, activeSessionId, setLoading, setError],
+  );
 
   // End roommate relationship
-  const endRelationship = useCallback(async (relationshipId: string) => {
-    if (!oxyServices || !activeSessionId) return false;
+  const endRelationship = useCallback(
+    async (relationshipId: string) => {
+      if (!oxyServices || !activeSessionId) return false;
 
-    try {
-      setLoading(true);
-      setError(null);
-      await roommateService.endRoommateRelationship(relationshipId, oxyServices, activeSessionId);
-      await fetchRelationships();
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to end relationship');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchRelationships, oxyServices, activeSessionId, setLoading, setError]);
+      try {
+        setLoading(true);
+        setError(null);
+        await roommateService.endRoommateRelationship(relationshipId, oxyServices, activeSessionId);
+        await fetchRelationships();
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to end relationship');
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [fetchRelationships, oxyServices, activeSessionId, setLoading, setError],
+  );
 
   // Clear error
   const clearError = useCallback(() => {
@@ -188,6 +208,6 @@ export const useRoommate = () => {
     acceptRequest,
     declineRequest,
     endRelationship,
-    clearError
+    clearError,
   };
-}; 
+};

@@ -9,11 +9,11 @@ interface SearchStatisticsState {
     popularSearches: any[];
     searchTrends: any[];
   };
-  
+
   // Loading states
   isLoading: boolean;
   error: string | null;
-  
+
   // Actions
   setStatistics: (statistics: SearchStatisticsState['statistics']) => void;
   updateTotalSearches: (count: number) => void;
@@ -25,40 +25,42 @@ interface SearchStatisticsState {
   clearError: () => void;
 }
 
-export const useSearchStatisticsStore = create<SearchStatisticsState>()(
-  (set, get) => ({
-    // Initial state
-    statistics: {
-      totalSearches: 0,
-      recentSearches: [],
-      popularSearches: [],
-      searchTrends: [],
-    },
-    isLoading: false,
-    error: null,
-    
-    // Actions
-    setStatistics: (statistics) => set({ statistics }),
-    updateTotalSearches: (count) => set((state) => ({
-      statistics: { ...state.statistics, totalSearches: count }
+export const useSearchStatisticsStore = create<SearchStatisticsState>()((set, get) => ({
+  // Initial state
+  statistics: {
+    totalSearches: 0,
+    recentSearches: [],
+    popularSearches: [],
+    searchTrends: [],
+  },
+  isLoading: false,
+  error: null,
+
+  // Actions
+  setStatistics: (statistics) => set({ statistics }),
+  updateTotalSearches: (count) =>
+    set((state) => ({
+      statistics: { ...state.statistics, totalSearches: count },
     })),
-    addRecentSearch: (search) => set((state) => ({
+  addRecentSearch: (search) =>
+    set((state) => ({
       statistics: {
         ...state.statistics,
-        recentSearches: [search, ...state.statistics.recentSearches.slice(0, 9)]
-      }
+        recentSearches: [search, ...state.statistics.recentSearches.slice(0, 9)],
+      },
     })),
-    setPopularSearches: (searches) => set((state) => ({
-      statistics: { ...state.statistics, popularSearches: searches }
+  setPopularSearches: (searches) =>
+    set((state) => ({
+      statistics: { ...state.statistics, popularSearches: searches },
     })),
-    setSearchTrends: (trends) => set((state) => ({
-      statistics: { ...state.statistics, searchTrends: trends }
+  setSearchTrends: (trends) =>
+    set((state) => ({
+      statistics: { ...state.statistics, searchTrends: trends },
     })),
-    setLoading: (loading) => set({ isLoading: loading }),
-    setError: (error) => set({ error }),
-    clearError: () => set({ error: null }),
-  })
-);
+  setLoading: (loading) => set({ isLoading: loading }),
+  setError: (error) => set({ error }),
+  clearError: () => set({ error: null }),
+}));
 
 // Selector hooks for easier access
 export const useSearchStatisticsSelectors = () => {
@@ -71,4 +73,4 @@ export const useSearchStatisticsSelectors = () => {
     isLoading,
     error,
   };
-}; 
+};

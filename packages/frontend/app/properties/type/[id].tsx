@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  ActivityIndicator,
+  TouchableOpacity,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
 import { PropertyCard } from '@/components/PropertyCard';
 import { useProperties } from '@/hooks';
@@ -37,42 +43,41 @@ export default function PropertyTypePage() {
 
   // Property type definitions
   const propertyTypes: { [key: string]: PropertyType } = {
-    'apartment': {
+    apartment: {
       id: 'apartment',
       name: t('Apartments'),
       description: t('Modern apartments with all amenities'),
       icon: 'business-outline',
       propertiesCount: apiProperties?.length || 0,
     },
-    'house': {
+    house: {
       id: 'house',
       name: t('Houses'),
       description: t('Spacious houses with gardens'),
       icon: 'home-outline',
       propertiesCount: apiProperties?.length || 0,
     },
-    'room': {
+    room: {
       id: 'room',
       name: t('Rooms'),
       description: t('Individual rooms in shared spaces'),
       icon: 'bed-outline',
       propertiesCount: apiProperties?.length || 0,
     },
-    'studio': {
+    studio: {
       id: 'studio',
       name: t('Studios'),
       description: t('Compact studio apartments'),
       icon: 'home-outline',
       propertiesCount: apiProperties?.length || 0,
     },
-    'coliving': {
+    coliving: {
       id: 'coliving',
       name: t('Co-Living'),
       description: t('Shared spaces for community living'),
       icon: 'people-outline',
       propertiesCount: apiProperties?.length || 0,
     },
-
   };
 
   const propertyType = propertyTypes[id as string];
@@ -108,41 +113,66 @@ export default function PropertyTypePage() {
 
     switch (activeFilter) {
       case 'balcony':
-        return properties.filter(p => p.amenities?.some(a => a.toLowerCase().includes('balcony')));
+        return properties.filter((p) =>
+          p.amenities?.some((a) => a.toLowerCase().includes('balcony')),
+        );
       case 'elevator':
-        return properties.filter(p => p.amenities?.some(a => a.toLowerCase().includes('elevator')));
+        return properties.filter((p) =>
+          p.amenities?.some((a) => a.toLowerCase().includes('elevator')),
+        );
       case 'furnished':
-        return properties.filter(p => p.amenities?.some(a =>
-          a.toLowerCase().includes('furnished') || a.toLowerCase().includes('bed')
-        ));
+        return properties.filter((p) =>
+          p.amenities?.some(
+            (a) => a.toLowerCase().includes('furnished') || a.toLowerCase().includes('bed'),
+          ),
+        );
       case 'garden':
-        return properties.filter(p => p.amenities?.some(a => a.toLowerCase().includes('garden')));
+        return properties.filter((p) =>
+          p.amenities?.some((a) => a.toLowerCase().includes('garden')),
+        );
       case 'parking':
-        return properties.filter(p => p.amenities?.some(a => a.toLowerCase().includes('parking')));
+        return properties.filter((p) =>
+          p.amenities?.some((a) => a.toLowerCase().includes('parking')),
+        );
       case 'fireplace':
-        return properties.filter(p => p.amenities?.some(a => a.toLowerCase().includes('fireplace')));
+        return properties.filter((p) =>
+          p.amenities?.some((a) => a.toLowerCase().includes('fireplace')),
+        );
       case 'workspace':
-        return properties.filter(p => p.amenities?.some(a =>
-          a.toLowerCase().includes('workspace') || a.toLowerCase().includes('working')
-        ));
+        return properties.filter((p) =>
+          p.amenities?.some(
+            (a) => a.toLowerCase().includes('workspace') || a.toLowerCase().includes('working'),
+          ),
+        );
       case 'events':
-        return properties.filter(p => p.amenities?.some(a =>
-          a.toLowerCase().includes('event') || a.toLowerCase().includes('activities')
-        ));
+        return properties.filter((p) =>
+          p.amenities?.some(
+            (a) => a.toLowerCase().includes('event') || a.toLowerCase().includes('activities'),
+          ),
+        );
       case 'gym':
-        return properties.filter(p => p.amenities?.some(a => a.toLowerCase().includes('gym')));
+        return properties.filter((p) => p.amenities?.some((a) => a.toLowerCase().includes('gym')));
       case 'cleaning':
-        return properties.filter(p => p.amenities?.some(a =>
-          a.toLowerCase().includes('cleaning') || a.toLowerCase().includes('laundry') || a.toLowerCase().includes('service')
-        ));
+        return properties.filter((p) =>
+          p.amenities?.some(
+            (a) =>
+              a.toLowerCase().includes('cleaning') ||
+              a.toLowerCase().includes('laundry') ||
+              a.toLowerCase().includes('service'),
+          ),
+        );
       case 'solar':
-        return properties.filter(p => p.amenities?.some(a => a.toLowerCase().includes('solar')));
+        return properties.filter((p) =>
+          p.amenities?.some((a) => a.toLowerCase().includes('solar')),
+        );
       case 'ecoRating':
-        return properties.filter(p => p.amenities?.some(a => a.toLowerCase().includes('eco')));
+        return properties.filter((p) => p.amenities?.some((a) => a.toLowerCase().includes('eco')));
       case 'water':
-        return properties.filter(p => p.amenities?.some(a => a.toLowerCase().includes('water')));
+        return properties.filter((p) =>
+          p.amenities?.some((a) => a.toLowerCase().includes('water')),
+        );
       case 'pets':
-        return properties.filter(p => p.amenities?.some(a => a.toLowerCase().includes('pet')));
+        return properties.filter((p) => p.amenities?.some((a) => a.toLowerCase().includes('pet')));
       default:
         return properties;
     }
@@ -155,10 +185,7 @@ export default function PropertyTypePage() {
   const renderFilterOption = (option: { id: string; label: string; icon: string }) => (
     <TouchableOpacity
       key={option.id}
-      style={[
-        styles.filterOption,
-        activeFilter === option.id && styles.activeFilterOption
-      ]}
+      style={[styles.filterOption, activeFilter === option.id && styles.activeFilterOption]}
       onPress={() => toggleFilter(option.id)}
     >
       <Ionicons
@@ -166,10 +193,7 @@ export default function PropertyTypePage() {
         size={18}
         color={activeFilter === option.id ? 'white' : colors.COLOR_BLACK}
       />
-      <Text style={[
-        styles.filterText,
-        activeFilter === option.id && styles.activeFilterText
-      ]}>
+      <Text style={[styles.filterText, activeFilter === option.id && styles.activeFilterText]}>
         {option.label}
       </Text>
     </TouchableOpacity>
@@ -188,12 +212,12 @@ export default function PropertyTypePage() {
       <View style={styles.safeArea}>
         <View
           style={styles.stickyHeaderWrapper}
-          onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+          onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
         >
           <Header
             options={{
               showBackButton: true,
-              title: t("Loading..."),
+              title: t('Loading...'),
               titlePosition: 'center',
             }}
           />
@@ -202,7 +226,7 @@ export default function PropertyTypePage() {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primaryColor} />
             <Text style={styles.loadingText}>
-              {!propertyType ? t("Property type not found") : t("Loading properties...")}
+              {!propertyType ? t('Property type not found') : t('Loading properties...')}
             </Text>
           </View>
         </View>
@@ -215,12 +239,12 @@ export default function PropertyTypePage() {
       <View style={styles.safeArea}>
         <View
           style={styles.stickyHeaderWrapper}
-          onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+          onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
         >
           <Header
             options={{
               showBackButton: true,
-              title: t("Error"),
+              title: t('Error'),
               titlePosition: 'center',
             }}
           />
@@ -228,14 +252,9 @@ export default function PropertyTypePage() {
         <View style={{ paddingTop: headerHeight, flex: 1 }}>
           <View style={styles.loadingContainer}>
             <Ionicons name="alert-circle-outline" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
-            <Text style={styles.loadingText}>
-              {t("Failed to load properties")}
-            </Text>
-            <TouchableOpacity
-              style={styles.resetButton}
-              onPress={() => window.location.reload()}
-            >
-              <Text style={styles.resetButtonText}>{t("Try Again")}</Text>
+            <Text style={styles.loadingText}>{t('Failed to load properties')}</Text>
+            <TouchableOpacity style={styles.resetButton} onPress={() => window.location.reload()}>
+              <Text style={styles.resetButtonText}>{t('Try Again')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -247,7 +266,7 @@ export default function PropertyTypePage() {
     <View style={styles.safeArea}>
       <View
         style={styles.stickyHeaderWrapper}
-        onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+        onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
       >
         <Header
           options={{
@@ -268,37 +287,32 @@ export default function PropertyTypePage() {
             <Text style={styles.typeTitle}>{propertyType.name}</Text>
             <Text style={styles.typeDescription}>{propertyType.description}</Text>
             <Text style={styles.typeCount}>
-              {propertyType.propertiesCount} {t("available properties")}
+              {propertyType.propertiesCount} {t('available properties')}
             </Text>
           </View>
         </View>
 
         {/* Filters */}
         <View style={styles.filtersContainer}>
-          <Text style={styles.filtersTitle}>{t("Filter by:")}</Text>
-          <View style={styles.filtersRow}>
-            {filterOptions.map(renderFilterOption)}
-          </View>
+          <Text style={styles.filtersTitle}>{t('Filter by:')}</Text>
+          <View style={styles.filtersRow}>{filterOptions.map(renderFilterOption)}</View>
         </View>
 
         {/* Properties List */}
         <FlatList
           data={getFilteredProperties()}
           renderItem={renderPropertyItem}
-          keyExtractor={(item, index) => ((item._id || item.id) ? String(item._id || item.id) : String(index))}
+          keyExtractor={(item, index) =>
+            item._id || item.id ? String(item._id || item.id) : String(index)
+          }
           contentContainerStyle={styles.propertiesList}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="home" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
-              <Text style={styles.emptyText}>
-                {t("No properties match your filters")}
-              </Text>
-              <TouchableOpacity
-                style={styles.resetButton}
-                onPress={() => setActiveFilter(null)}
-              >
-                <Text style={styles.resetButtonText}>{t("Reset Filters")}</Text>
+              <Text style={styles.emptyText}>{t('No properties match your filters')}</Text>
+              <TouchableOpacity style={styles.resetButton} onPress={() => setActiveFilter(null)}>
+                <Text style={styles.resetButtonText}>{t('Reset Filters')}</Text>
               </TouchableOpacity>
             </View>
           }

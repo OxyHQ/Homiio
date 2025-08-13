@@ -47,4 +47,4 @@ try {
 }
 
 console.log('✅ All caches cleared successfully!');
-console.log('🚀 You can now run: npm run start'); 
+console.log('🚀 You can now run: npm run start');

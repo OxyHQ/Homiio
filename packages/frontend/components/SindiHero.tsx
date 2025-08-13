@@ -1,5 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState, memo, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, AccessibilityRole, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  AccessibilityRole,
+  Platform,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { SindiIcon } from '@/assets/icons';
@@ -31,7 +38,11 @@ export interface SindiHeroProps {
 }
 
 // Animated rotating suggestion text (crossfade + upward slide) -------------
-const RotatingSuggestions: React.FC<{ current: string; next: string; anim: any }> = ({ current, next, anim }) => {
+const RotatingSuggestions: React.FC<{ current: string; next: string; anim: any }> = ({
+  current,
+  next,
+  anim,
+}) => {
   const currentStyle = useAnimatedStyle(() => ({
     opacity: 1 - anim.value,
     transform: [
@@ -46,8 +57,18 @@ const RotatingSuggestions: React.FC<{ current: string; next: string; anim: any }
   }));
   return (
     <View style={styles.suggestionViewport} accessibilityRole={'text' as AccessibilityRole}>
-      <Animated.Text numberOfLines={1} style={[styles.heroPromptPlaceholder, styles.absoluteFill, currentStyle]}>{current}</Animated.Text>
-      <Animated.Text numberOfLines={1} style={[styles.heroPromptPlaceholder, styles.absoluteFill, nextStyle]}>{next}</Animated.Text>
+      <Animated.Text
+        numberOfLines={1}
+        style={[styles.heroPromptPlaceholder, styles.absoluteFill, currentStyle]}
+      >
+        {current}
+      </Animated.Text>
+      <Animated.Text
+        numberOfLines={1}
+        style={[styles.heroPromptPlaceholder, styles.absoluteFill, nextStyle]}
+      >
+        {next}
+      </Animated.Text>
     </View>
   );
 };
@@ -76,13 +97,18 @@ const SindiHeroComponent: React.FC<SindiHeroProps> = ({
   const cycleRef = useRef<NodeJS.Timeout | null>(null);
   const chipChange = useSharedValue(0); // animates whole chip per suggestion change
 
-  const currentSuggestion = useMemo(() => (
-    suggestionsEnabled ? rotatingSuggestions[index] : placeholder
-  ), [suggestionsEnabled, rotatingSuggestions, index, placeholder]);
+  const currentSuggestion = useMemo(
+    () => (suggestionsEnabled ? rotatingSuggestions[index] : placeholder),
+    [suggestionsEnabled, rotatingSuggestions, index, placeholder],
+  );
 
-  const nextSuggestion = useMemo(() => (
-    suggestionsEnabled ? rotatingSuggestions[(index + 1) % rotatingSuggestions.length] : placeholder
-  ), [suggestionsEnabled, rotatingSuggestions, index, placeholder]);
+  const nextSuggestion = useMemo(
+    () =>
+      suggestionsEnabled
+        ? rotatingSuggestions[(index + 1) % rotatingSuggestions.length]
+        : placeholder,
+    [suggestionsEnabled, rotatingSuggestions, index, placeholder],
+  );
 
   const advance = useCallback(() => {
     if (!suggestionsEnabled) return;
@@ -90,20 +116,31 @@ const SindiHeroComponent: React.FC<SindiHeroProps> = ({
     fade.value = 0;
     chipChange.value = 0;
     // Pre-kick chip animation
-    chipChange.value = withTiming(1, { duration: transitionDuration, easing: Easing.out(Easing.cubic) });
-    fade.value = withTiming(1, { duration: transitionDuration, easing: Easing.out(Easing.cubic) }, (finished) => {
-      if (finished) {
-        runOnJS(setIndex)(nextIndex);
-        fade.value = 0; // reset for next cycle
-        chipChange.value = 0; // reset for next cycle ready
-      }
+    chipChange.value = withTiming(1, {
+      duration: transitionDuration,
+      easing: Easing.out(Easing.cubic),
     });
+    fade.value = withTiming(
+      1,
+      { duration: transitionDuration, easing: Easing.out(Easing.cubic) },
+      (finished) => {
+        if (finished) {
+          runOnJS(setIndex)(nextIndex);
+          fade.value = 0; // reset for next cycle
+          chipChange.value = 0; // reset for next cycle ready
+        }
+      },
+    );
   }, [suggestionsEnabled, index, rotatingSuggestions, fade, transitionDuration, chipChange]);
 
   useEffect(() => {
     if (!suggestionsEnabled) return;
-    cycleRef.current = setInterval(() => { advance(); }, rotateInterval);
-    return () => { if (cycleRef.current) clearInterval(cycleRef.current); };
+    cycleRef.current = setInterval(() => {
+      advance();
+    }, rotateInterval);
+    return () => {
+      if (cycleRef.current) clearInterval(cycleRef.current);
+    };
   }, [suggestionsEnabled, rotateInterval, advance]);
 
   // Removed measurement logic for simplicity
@@ -111,30 +148,38 @@ const SindiHeroComponent: React.FC<SindiHeroProps> = ({
   // Icon breathing / glow animation
   const glow = useSharedValue(0);
   useEffect(() => {
-    glow.value = withRepeat(withTiming(1, { duration: 3200, easing: Easing.inOut(Easing.quad) }), -1, true);
+    glow.value = withRepeat(
+      withTiming(1, { duration: 3200, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true,
+    );
   }, [glow]);
   const glowStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: 1 + 0.04 * Math.sin(glow.value * Math.PI) },
-    ],
+    transform: [{ scale: 1 + 0.04 * Math.sin(glow.value * Math.PI) }],
     opacity: 0.7 + 0.3 * Math.sin(glow.value * Math.PI),
   }));
 
   const iconPulse = useAnimatedStyle(() => ({
-    transform: [
-      { scale: 1 + 0.03 * Math.sin(glow.value * Math.PI) },
-    ],
+    transform: [{ scale: 1 + 0.03 * Math.sin(glow.value * Math.PI) }],
   }));
 
   // Prompt chip glow animation (decoupled so timing can differ later)
   const chipGlow = useSharedValue(0);
   useEffect(() => {
-    chipGlow.value = withRepeat(withTiming(1, { duration: 3800, easing: Easing.inOut(Easing.cubic) }), -1, true);
+    chipGlow.value = withRepeat(
+      withTiming(1, { duration: 3800, easing: Easing.inOut(Easing.cubic) }),
+      -1,
+      true,
+    );
   }, [chipGlow]);
   // Independent slow rotation for aura (rotate up effect)
   const glowSpin = useSharedValue(0);
   useEffect(() => {
-    glowSpin.value = withRepeat(withTiming(1, { duration: 8000, easing: Easing.linear }), -1, false);
+    glowSpin.value = withRepeat(
+      withTiming(1, { duration: 8000, easing: Easing.linear }),
+      -1,
+      false,
+    );
   }, [glowSpin]);
   const chipGlowStyle = useAnimatedStyle(() => {
     const wave = Math.sin(chipGlow.value * Math.PI);
@@ -142,11 +187,13 @@ const SindiHeroComponent: React.FC<SindiHeroProps> = ({
       shadowOpacity: 0.15 + 0.15 * wave,
       shadowRadius: 8 + 6 * wave,
       shadowColor: colors.primaryColor,
-      transform: [
-        { scale: 1 + 0.004 * wave },
-      ],
+      transform: [{ scale: 1 + 0.004 * wave }],
       // Web-specific boxShadow (ignored on native)
-      ...(Platform.OS === 'web' ? { boxShadow: `0 0 ${12 + 8 * wave}px rgba(0,0,0,0.08), 0 0 ${18 + 10 * wave}px rgba(37,99,235,${0.25 + 0.2 * wave})` } : {}),
+      ...(Platform.OS === 'web'
+        ? {
+            boxShadow: `0 0 ${12 + 8 * wave}px rgba(0,0,0,0.08), 0 0 ${18 + 10 * wave}px rgba(37,99,235,${0.25 + 0.2 * wave})`,
+          }
+        : {}),
     };
   });
   // Outer aura (soft expanding radial glow)
@@ -176,10 +223,7 @@ const SindiHeroComponent: React.FC<SindiHeroProps> = ({
     const v = chipChange.value; // 0 ->1
     const easing = v < 0.5 ? v * 2 : 1 - (v - 0.5) * 2;
     return {
-      transform: [
-        { translateY: -2 * easing },
-        { scale: 1 + 0.015 * easing },
-      ],
+      transform: [{ translateY: -2 * easing }, { scale: 1 + 0.015 * easing }],
       opacity: 0.97 + 0.03 * easing,
     };
   });
@@ -209,12 +253,25 @@ const SindiHeroComponent: React.FC<SindiHeroProps> = ({
             <SindiIcon size={54} color={colors.secondaryColor} />
           </View>
         </Animated.View>
-        <Text accessibilityRole={'header' as AccessibilityRole} style={styles.heroTitle}>{title}</Text>
-        <Text accessibilityRole={'text' as AccessibilityRole} style={styles.heroSubtitle}>{subtitle}</Text>
+        <Text accessibilityRole={'header' as AccessibilityRole} style={styles.heroTitle}>
+          {title}
+        </Text>
+        <Text accessibilityRole={'text' as AccessibilityRole} style={styles.heroSubtitle}>
+          {subtitle}
+        </Text>
         <View style={styles.heroBadgesRow}>
-          <View style={styles.heroBadge}><Ionicons name="shield-checkmark" size={13} color={colors.primaryColor} /><Text style={styles.heroBadgeText}>Rights</Text></View>
-          <View style={styles.heroBadge}><Ionicons name="home" size={13} color={colors.primaryColor} /><Text style={styles.heroBadgeText}>Housing</Text></View>
-          <View style={styles.heroBadge}><Ionicons name="document-text" size={13} color={colors.primaryColor} /><Text style={styles.heroBadgeText}>Legal</Text></View>
+          <View style={styles.heroBadge}>
+            <Ionicons name="shield-checkmark" size={13} color={colors.primaryColor} />
+            <Text style={styles.heroBadgeText}>Rights</Text>
+          </View>
+          <View style={styles.heroBadge}>
+            <Ionicons name="home" size={13} color={colors.primaryColor} />
+            <Text style={styles.heroBadgeText}>Housing</Text>
+          </View>
+          <View style={styles.heroBadge}>
+            <Ionicons name="document-text" size={13} color={colors.primaryColor} />
+            <Text style={styles.heroBadgeText}>Legal</Text>
+          </View>
         </View>
         <View style={styles.heroCTARow}>
           <TouchableOpacity
@@ -244,9 +301,14 @@ const SindiHeroComponent: React.FC<SindiHeroProps> = ({
           accessibilityRole={'button'}
           accessibilityLabel={`Use suggestion: ${currentSuggestion}`}
         >
-          <Animated.View style={[styles.heroPromptBarWrapper, chipGlowStyle, chipChangeStyle, chipWidthStyle]}>
+          <Animated.View
+            style={[styles.heroPromptBarWrapper, chipGlowStyle, chipChangeStyle, chipWidthStyle]}
+          >
             <Animated.View pointerEvents="none" style={[styles.chipAura, chipAuraStyle]} />
-            <Animated.View pointerEvents="none" style={[styles.heroPromptBarGlow, chipInnerGlowStyle]} />
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.heroPromptBarGlow, chipInnerGlowStyle]}
+            />
             <LinearGradient
               colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.80)']}
               start={{ x: 0, y: 0 }}
@@ -256,9 +318,15 @@ const SindiHeroComponent: React.FC<SindiHeroProps> = ({
               <View style={styles.heroPromptBarContent}>
                 <Ionicons name="sparkles" size={14} color={colors.primaryColor} />
                 {suggestionsEnabled ? (
-                  <RotatingSuggestions current={currentSuggestion} next={nextSuggestion} anim={fade} />
+                  <RotatingSuggestions
+                    current={currentSuggestion}
+                    next={nextSuggestion}
+                    anim={fade}
+                  />
                 ) : (
-                  <Text numberOfLines={1} style={styles.heroPromptPlaceholder}>{currentSuggestion}</Text>
+                  <Text numberOfLines={1} style={styles.heroPromptPlaceholder}>
+                    {currentSuggestion}
+                  </Text>
                 )}
                 <Animated.View pointerEvents="none" style={[styles.chipSheen, chipSheenStyle]} />
               </View>
@@ -440,7 +508,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     borderRadius: 24,
     backgroundColor: colors.primaryLight,
-    filter: Platform.OS === 'web' ? 'blur(14px)' as any : undefined,
+    filter: Platform.OS === 'web' ? ('blur(14px)' as any) : undefined,
   },
   heroPromptGradient: {
     borderRadius: 24,
@@ -449,7 +517,7 @@ const styles = StyleSheet.create({
   chipAura: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 28,
-    filter: Platform.OS === 'web' ? 'blur(20px)' as any : undefined,
+    filter: Platform.OS === 'web' ? ('blur(20px)' as any) : undefined,
   },
   heroPromptBarContent: {
     flexDirection: 'row',
@@ -471,7 +539,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.9)',
     opacity: 0.12,
     borderRadius: 24,
-    filter: Platform.OS === 'web' ? 'blur(12px)' as any : undefined,
+    filter: Platform.OS === 'web' ? ('blur(12px)' as any) : undefined,
   },
   heroPromptPlaceholder: {
     flex: 1,

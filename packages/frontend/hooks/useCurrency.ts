@@ -1,12 +1,12 @@
 import { useCurrencyStore } from '@/store/currencyStore';
-import { 
-    getCurrencyByCode, 
-    formatCurrency, 
-    formatCurrencyWithCode, 
-    convertCurrency,
-    formatAmountInCurrency,
-    getExchangeRateDisplay,
-    Currency 
+import {
+  getCurrencyByCode,
+  formatCurrency,
+  formatCurrencyWithCode,
+  convertCurrency,
+  formatAmountInCurrency,
+  getExchangeRateDisplay,
+  Currency,
 } from '@/utils/currency';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect } from 'react';
@@ -14,7 +14,8 @@ import { useEffect } from 'react';
 const CURRENCY_STORAGE_KEY = '@homiio_currency';
 
 export const useCurrency = () => {
-  const { currentCurrency, isLoading, error, setCurrentCurrency, setLoading, setError } = useCurrencyStore();
+  const { currentCurrency, isLoading, error, setCurrentCurrency, setLoading, setError } =
+    useCurrencyStore();
 
   // Load saved currency on app start
   useEffect(() => {
@@ -57,16 +58,18 @@ export const useCurrency = () => {
   };
 
   const convertAndFormat = (
-    amount: number, 
-    originalCurrency: string, 
-    showCode: boolean = false
+    amount: number,
+    originalCurrency: string,
+    showCode: boolean = false,
   ): string => {
     const convertedAmount = convertCurrency(amount, originalCurrency, currentCurrency);
     return formatAmount(convertedAmount, showCode);
   };
 
   const getCurrentCurrency = (): Currency => {
-    return getCurrencyByCode(currentCurrency) || { code: currentCurrency, symbol: '$', name: 'Unknown' };
+    return (
+      getCurrencyByCode(currentCurrency) || { code: currentCurrency, symbol: '$', name: 'Unknown' }
+    );
   };
 
   const getCurrencySymbol = (): string => {
@@ -99,4 +102,4 @@ export const useCurrency = () => {
     getExchangeRateInfo,
     convertAmount,
   };
-}; 
+};

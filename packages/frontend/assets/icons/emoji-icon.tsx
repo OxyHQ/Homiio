@@ -3,23 +3,17 @@ import Svg, { Path } from 'react-native-svg';
 import { ViewStyle } from 'react-native';
 import { colors } from '@/styles/colors';
 
-
 export const EmojiIcon = ({
   color = colors.primaryColor, // Replace with your primary color
   size = 26,
-  style
+  style,
 }: {
   color?: string;
   size?: number;
-  style?: ViewStyle
+  style?: ViewStyle;
 }) => {
   return (
-    <Svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      style={style}
-    >
+    <Svg width={size} height={size} viewBox="0 0 24 24" style={style}>
       <Path
         fill={color}
         fillRule="evenodd"
