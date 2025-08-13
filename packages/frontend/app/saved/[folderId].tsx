@@ -57,6 +57,7 @@ export default function SavedFolderScreen() {
                 options={{
                     title: `${folder.icon || '📁'} ${folder.name}`,
                     titlePosition: 'left',
+                    showBackButton: true,
                     rightComponents: folder.isDefault ? [] : [
                         <TouchableOpacity
                             key="editFolder"

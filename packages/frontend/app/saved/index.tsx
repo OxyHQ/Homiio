@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useContext } from 'react';
 import { View, FlatList, StyleSheet, Dimensions, Alert, TouchableOpacity, TextInput, Text, RefreshControl } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import LoadingTopSpinner from '@/components/LoadingTopSpinner';
 import { Header } from '@/components/Header';
@@ -72,7 +72,15 @@ export default function SavedPropertiesScreen() {
 
     // Local state
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState<FilterCategory>('all');
+    const { tab } = useLocalSearchParams<{ tab?: string }>();
+    const parseTab = (value?: string): FilterCategory => (
+        value === 'recent' || value === 'noted' || value === 'quick-saves' || value === 'folders' ? value : 'all'
+    );
+    const [selectedCategory, setSelectedCategory] = useState<FilterCategory>(parseTab(typeof tab === 'string' ? tab : undefined));
+    useEffect(() => {
+        const next = parseTab(typeof tab === 'string' ? tab : undefined);
+        if (next !== selectedCategory) setSelectedCategory(next);
+    }, [tab, selectedCategory]);
     const [sortBy, setSortBy] = useState<SortOption>('recent');
     const [viewMode, setViewMode] = useState<ViewMode>(screenWidth > 768 ? 'list' : 'grid');
     const [selectedProperties, setSelectedProperties] = useState<Set<string>>(new Set());
@@ -413,7 +421,11 @@ export default function SavedPropertiesScreen() {
                                 styles.tabItem,
                                 isActive && styles.tabItemActive,
                             ])}
-                            onPress={() => setSelectedCategory(category.id as FilterCategory)}
+                            onPress={() => {
+                                const next = category.id as FilterCategory;
+                                setSelectedCategory(next);
+                                try { router.setParams?.({ tab: next }); } catch { }
+                            }}
                         >
                             <Text style={StyleSheet.flatten([
                                 styles.tabText,
