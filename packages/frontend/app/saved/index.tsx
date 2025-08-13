@@ -11,7 +11,7 @@ import { useSEO } from '@/hooks/useDocumentTitle';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useOxy } from '@oxyhq/services';
-import { useDebounce } from '@/hooks/useDebounce';
+
 import { Ionicons } from '@expo/vector-icons';
 
 import savedPropertyService from '@/services/savedPropertyService';
@@ -93,8 +93,7 @@ export default function SavedPropertiesScreen() {
     // Folder functionality
     const { folders, loadFolders } = useSavedPropertiesContext();
 
-    // Debounced search
-    const debouncedSearchQuery = useDebounce(searchQuery, 300);
+    // Search query (filtering directly for now for reliability)
 
     // Load saved properties
     const loadSavedProperties = useCallback(async () => {
@@ -126,20 +125,28 @@ export default function SavedPropertiesScreen() {
         let filtered = [...savedProperties];
 
         // Apply search filter
-        if (debouncedSearchQuery.trim()) {
-            const query = debouncedSearchQuery.toLowerCase().trim();
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase().trim();
             filtered = filtered.filter(property => {
                 const title = (getPropertyTitle(property) || '').toLowerCase();
                 const city = property.address?.city?.toLowerCase() || '';
+                const state = property.address?.state?.toLowerCase() || '';
                 const street = property.address?.street?.toLowerCase() || '';
-                const notes = property.notes?.toLowerCase() || '';
                 const type = property.type?.toLowerCase() || '';
+                const priceStr = `${property.rent?.amount ?? ''} ${property.rent?.currency ?? ''}`.toLowerCase();
+                // Notes can be plain or JSON; parse for robust search
+                const notesArr = parseNotesString(property.notes as any);
+                const notesCombined = notesArr.map(n => n.text).join(' ').toLowerCase();
 
-                return title.includes(query) ||
+                return (
+                    title.includes(query) ||
                     city.includes(query) ||
+                    state.includes(query) ||
                     street.includes(query) ||
-                    notes.includes(query) ||
-                    type.includes(query);
+                    type.includes(query) ||
+                    priceStr.includes(query) ||
+                    notesCombined.includes(query)
+                );
             });
         }
 
@@ -184,7 +191,7 @@ export default function SavedPropertiesScreen() {
         });
 
         return filtered;
-    }, [savedProperties, debouncedSearchQuery, selectedCategory, sortBy]);
+    }, [savedProperties, searchQuery, selectedCategory, sortBy]);
 
     // Memoized category counts
     const categoryCounts = useMemo(() => {
@@ -445,45 +452,54 @@ export default function SavedPropertiesScreen() {
             {/* Controls Bar */}
             <View style={styles.controlsBar}>
                 <View style={styles.leftControls}>
+                    {/* Sort icon */}
                     <TouchableOpacity
                         accessibilityLabel="Sort"
-                        style={StyleSheet.flatten([styles.viewToggle, showSortOptions && styles.controlButtonActive])}
+                        style={StyleSheet.flatten([styles.iconPill, showSortOptions && styles.iconPillActive])}
                         onPress={() => setShowSortOptions(!showSortOptions)}
                     >
-                        <IconComponent
-                            name="filter"
-                            size={18}
-                            color={showSortOptions ? 'white' : colors.primaryColor}
-                        />
+                        <IconComponent name="filter" size={16} color={showSortOptions ? 'white' : colors.primaryColor} />
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                        accessibilityLabel="Toggle view"
-                        style={styles.viewToggle}
-                        onPress={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
-                    >
-                        <IconComponent
-                            name={viewMode === 'list' ? 'grid' : 'list'}
-                            size={20}
-                            color={colors.primaryColor}
-                        />
-                    </TouchableOpacity>
+                    {/* View segmented control */}
+                    <View style={styles.segmented}>
+                        <TouchableOpacity
+                            accessibilityLabel="List view"
+                            style={StyleSheet.flatten([styles.segment, viewMode === 'list' && styles.segmentActive])}
+                            onPress={() => setViewMode('list')}
+                        >
+                            <IconComponent name="list" size={14} color={viewMode === 'list' ? 'white' : colors.primaryColor} />
+                            <Text style={StyleSheet.flatten([styles.segmentText, viewMode === 'list' && styles.segmentTextActive])}>List</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            accessibilityLabel="Grid view"
+                            style={StyleSheet.flatten([styles.segment, viewMode === 'grid' && styles.segmentActive])}
+                            onPress={() => setViewMode('grid')}
+                        >
+                            <IconComponent name="grid" size={14} color={viewMode === 'grid' ? 'white' : colors.primaryColor} />
+                            <Text style={StyleSheet.flatten([styles.segmentText, viewMode === 'grid' && styles.segmentTextActive])}>Grid</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 <View style={styles.rightControls}>
+                    {/* Clear search if active */}
+                    {searchQuery.length > 0 && (
+                        <TouchableOpacity accessibilityLabel="Clear search" style={styles.iconPill} onPress={() => setSearchQuery('')}>
+                            <IconComponent name="close-circle" size={16} color={colors.primaryColor} />
+                        </TouchableOpacity>
+                    )}
+
+                    {/* Selection toggle */}
                     <TouchableOpacity
                         accessibilityLabel={bulkActionMode ? 'Cancel selection' : 'Select items'}
-                        style={StyleSheet.flatten([styles.viewToggle, bulkActionMode && styles.controlButtonActive])}
+                        style={StyleSheet.flatten([styles.iconPill, bulkActionMode && styles.iconPillActive])}
                         onPress={() => {
                             setBulkActionMode(!bulkActionMode);
                             setSelectedProperties(new Set());
                         }}
                     >
-                        <IconComponent
-                            name="checkmark-circle"
-                            size={18}
-                            color={bulkActionMode ? 'white' : colors.primaryColor}
-                        />
+                        <IconComponent name="checkmark-circle" size={16} color={bulkActionMode ? 'white' : colors.primaryColor} />
                     </TouchableOpacity>
 
                     <Text style={styles.resultCount}>
@@ -533,16 +549,17 @@ export default function SavedPropertiesScreen() {
             {/* Bulk Actions Bar */}
             {bulkActionMode && selectedProperties.size > 0 && (
                 <View style={styles.bulkActionsBar}>
-                    <Text style={styles.bulkActionsText}>
-                        {`${selectedProperties.size} ${selectedProperties.size === 1 ? 'property' : 'properties'} selected`}
-                    </Text>
-                    <TouchableOpacity
-                        style={styles.bulkActionButton}
-                        onPress={handleBulkUnsave}
-                    >
-                        <IconComponent name="trash" size={16} color="white" />
-                        <Text style={styles.bulkActionButtonText}>Remove</Text>
-                    </TouchableOpacity>
+                    <View style={styles.bulkLeft}>
+                        <Text style={styles.bulkActionsText}>{`${selectedProperties.size} selected`}</Text>
+                    </View>
+                    <View style={styles.bulkRight}>
+                        <TouchableOpacity style={styles.bulkIconBtn} onPress={handleBulkUnsave} accessibilityLabel="Remove">
+                            <IconComponent name="trash" size={18} color={colors.primaryColor} />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.bulkIconBtn} onPress={() => { setSelectedProperties(new Set()); setBulkActionMode(false); }} accessibilityLabel="Cancel">
+                            <IconComponent name="close" size={18} color={colors.primaryColor} />
+                        </TouchableOpacity>
+                    </View>
                 </View>
             )}
         </View>
@@ -636,6 +653,8 @@ export default function SavedPropertiesScreen() {
                 }}
             />
 
+            {renderHeader()}
+
             {isLoading && savedProperties.length === 0 && <LoadingTopSpinner showLoading={true} />}
 
             {error && !isLoading && (
@@ -656,7 +675,7 @@ export default function SavedPropertiesScreen() {
                         keyExtractor={(item) => item._id}
                         renderItem={({ item }) => (
                             <ListItem
-                                title={item.name}
+                                title={`${item.icon || '📁'} ${item.name}`}
                                 description={item.description}
                                 onPress={() => router.push(`/saved/${item._id}`)}
                                 rightElement={<Text style={styles.folderCount}>{item.propertyCount}</Text>}
@@ -666,7 +685,6 @@ export default function SavedPropertiesScreen() {
                             styles.listContent,
                             filteredFolders.length === 0 && styles.emptyListContent
                         ])}
-                        ListHeaderComponent={renderHeader}
                         ListEmptyComponent={renderEmptyState}
                         refreshControl={
                             <RefreshControl
@@ -691,7 +709,6 @@ export default function SavedPropertiesScreen() {
                         numColumns={viewMode === 'grid' ? 2 : 1}
                         key={viewMode}
                         columnWrapperStyle={viewMode === 'grid' ? styles.gridRow : undefined}
-                        ListHeaderComponent={renderHeader}
                         ListEmptyComponent={renderEmptyState}
                         refreshControl={
                             <RefreshControl
@@ -712,10 +729,9 @@ export default function SavedPropertiesScreen() {
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: '#fafbfc',
     },
     headerButton: {
-        padding: 8,
+        padding: 6,
         borderRadius: 8,
         backgroundColor: 'rgba(99, 102, 241, 0.1)',
     },
@@ -793,17 +809,31 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        backgroundColor: 'white',
+        borderRadius: 100,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
         marginBottom: 16,
+        marginHorizontal: 12,
+        borderWidth: 1,
+        borderColor: '#eaeaea',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 4,
     },
     leftControls: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        gap: 10,
+        flexShrink: 1,
     },
     rightControls: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 16,
+        gap: 10,
+        flexShrink: 1,
     },
     controlButton: {
         flexDirection: 'row',
@@ -823,6 +853,54 @@ const styles = StyleSheet.create({
     controlButtonActive: {
         backgroundColor: colors.primaryColor,
         borderColor: colors.primaryColor,
+    },
+    iconPill: {
+        backgroundColor: 'white',
+        borderRadius: 100,
+        padding: 6,
+        borderWidth: 1,
+        borderColor: '#eaeaea',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+        elevation: 2,
+    },
+    iconPillActive: {
+        backgroundColor: colors.primaryColor,
+        borderColor: colors.primaryColor,
+    },
+    segmented: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'white',
+        borderRadius: 100,
+        borderWidth: 1,
+        borderColor: '#eaeaea',
+        overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+        elevation: 2,
+    },
+    segment: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 5,
+    },
+    segmentActive: {
+        backgroundColor: colors.primaryColor,
+    },
+    segmentText: {
+        fontSize: 13,
+        color: colors.primaryColor,
+        fontWeight: '600',
+    },
+    segmentTextActive: {
+        color: 'white',
     },
     controlButtonText: {
         marginLeft: 6,
@@ -888,35 +966,45 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: colors.primaryColor,
-        borderRadius: 16,
-        paddingHorizontal: 20,
-        paddingVertical: 16,
+        backgroundColor: 'white',
+        borderRadius: 100,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
         marginBottom: 20,
-        shadowColor: colors.primaryColor,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
-        elevation: 6,
+        borderWidth: 1,
+        borderColor: '#eaeaea',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 4,
     },
-    bulkActionsText: {
-        color: 'white',
-        fontWeight: '600',
-        fontSize: 16,
-    },
-    bulkActionButton: {
+    bulkLeft: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        borderRadius: 12,
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        gap: 6,
+        gap: 8,
     },
-    bulkActionButtonText: {
-        color: 'white',
+    bulkRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    bulkActionsText: {
+        color: colors.COLOR_BLACK,
         fontWeight: '600',
         fontSize: 14,
+    },
+    bulkIconBtn: {
+        backgroundColor: '#fff',
+        borderRadius: 100,
+        padding: 6,
+        borderWidth: 1,
+        borderColor: '#eaeaea',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 2,
+        elevation: 2,
     },
 
     // Property Cards
