@@ -6,7 +6,7 @@ import LoadingSpinner from './LoadingSpinner';
 import { SaveToFolderBottomSheet } from './SaveToFolderBottomSheet';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { Property } from '@homiio/shared-types';
-import { useSavedProfiles } from '@/context/SavedProfilesContext';
+import { useSavedProfiles } from '@/store/savedProfilesStore';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 

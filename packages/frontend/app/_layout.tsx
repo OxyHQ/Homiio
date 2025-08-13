@@ -33,7 +33,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import { ProfileProvider } from '@/context/ProfileContext';
 import { SavedPropertiesProvider } from '@/context/SavedPropertiesContext';
 import { BottomSheetProvider } from '@/context/BottomSheetContext';
-import { SavedProfilesProvider } from '@/context/SavedProfilesContext';
+// import { SavedProfilesProvider } from '@/context/SavedProfilesContext';
 import { OxyProvider, OxyServices } from '@oxyhq/services';
 import { generateWebsiteStructuredData, injectStructuredData } from '@/utils/structuredData';
 import { PostHogProvider } from 'posthog-react-native';
@@ -229,23 +229,22 @@ export default function RootLayout() {
                 <SavedPropertiesProvider>
                   <I18nextProvider i18n={i18n}>
                     <BottomSheetProvider>
-                      <SavedProfilesProvider>
-                        <MenuProvider>
-                          <ErrorBoundary>
-                            <View style={styles.container}>
-                              <SideBar />
-                              <View style={styles.mainContentWrapper}>
-                                <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0 }} />
-                                <Slot />
-                              </View>
-                              <RightBar />
+                      {/* SavedProfilesProvider replaced by Zustand store; no provider needed */}
+                      <MenuProvider>
+                        <ErrorBoundary>
+                          <View style={styles.container}>
+                            <SideBar />
+                            <View style={styles.mainContentWrapper}>
+                              <LoadingTopSpinner showLoading={false} size={20} style={{ paddingBottom: 0 }} />
+                              <Slot />
                             </View>
-                            <StatusBar style="auto" />
-                            <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
-                            {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
-                          </ErrorBoundary>
-                        </MenuProvider>
-                      </SavedProfilesProvider>
+                            <RightBar />
+                          </View>
+                          <StatusBar style="auto" />
+                          <Toaster position="bottom-center" swipeToDismissDirection="left" offset={15} />
+                          {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
+                        </ErrorBoundary>
+                      </MenuProvider>
                     </BottomSheetProvider>
                   </I18nextProvider>
                 </SavedPropertiesProvider>

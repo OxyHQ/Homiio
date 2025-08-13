@@ -18,6 +18,7 @@ import savedPropertyService from '@/services/savedPropertyService';
 import type { SavedProperty } from '@homiio/shared-types';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
+import { useSavedPropertiesStore, useSavedPropertiesSelectors } from '@/store/savedPropertiesStore';
 // import { useSavedProfiles } from '@/context/SavedProfilesContext';
 import { api } from '@/utils/api';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
@@ -63,13 +64,11 @@ export default function SavedPropertiesScreen() {
     const bottomSheetContext = useContext(BottomSheetContext);
 
     // Use the new Zustand-based favorites system
-    const {
-        toggleFavorite,
-        isPropertySaving,
-        clearError: clearFavoritesError
-    } = useFavorites();
+    const { toggleFavorite, clearError: clearFavoritesError } = useFavorites();
 
     // Local state for saved properties
+    const { savingPropertyIds } = useSavedPropertiesSelectors();
+    const { setProperties: setSavedPropertiesZ } = useSavedPropertiesStore.getState();
     const [savedProperties, setSavedProperties] = useState<SavedPropertyWithUI[]>([]);
     const [savedProfiles, setSavedProfiles] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -108,6 +107,7 @@ export default function SavedPropertiesScreen() {
             setError(null);
             const response = await savedPropertyService.getSavedProperties(oxyServices, activeSessionId);
             setSavedProperties(response.properties);
+            setSavedPropertiesZ(response.properties as any);
             // Load saved profiles
             const res = await api.get('/api/profiles/me/saved-profiles', { oxyServices, activeSessionId });
             setSavedProfiles(res.data?.data || res.data || []);
@@ -117,7 +117,7 @@ export default function SavedPropertiesScreen() {
         } finally {
             setIsLoading(false);
         }
-    }, [oxyServices, activeSessionId]);
+    }, [oxyServices, activeSessionId, setSavedPropertiesZ]);
 
     // Load properties on mount
     useEffect(() => {
@@ -346,7 +346,7 @@ export default function SavedPropertiesScreen() {
     // Render functions
     const renderPropertyItem = useCallback(({ item }: { item: SavedPropertyWithUI }) => {
         const propertyId = item._id || item.id || '';
-        const isProcessing = isPropertySaving(propertyId);
+        const isProcessing = savingPropertyIds.includes(propertyId);
         const isSelected = selectedProperties.has(propertyId);
 
         return (
@@ -382,7 +382,7 @@ export default function SavedPropertiesScreen() {
                 />
             </View>
         );
-    }, [viewMode, isPropertySaving, selectedProperties, bulkActionMode, handlePropertyPress, handleEditNotes]);
+    }, [viewMode, savingPropertyIds, selectedProperties, bulkActionMode, handlePropertyPress, handleEditNotes]);
 
     const keyExtractor = useCallback((item: SavedPropertyWithUI) =>
         item._id || item.id || '', []

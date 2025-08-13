@@ -4,7 +4,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Header } from '@/components/Header';
 import { SaveButton } from '@/components/SaveButton';
-import { useSavedProfiles } from '@/context/SavedProfilesContext';
+import { useSavedProfiles } from '@/store/savedProfilesStore';
 import { PropertyCard } from '@/components/PropertyCard';
 import { colors } from '@/styles/colors';
 import { useOxy } from '@oxyhq/services';
