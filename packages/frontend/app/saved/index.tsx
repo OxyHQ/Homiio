@@ -1,14 +1,10 @@
 import React, { useState, useCallback, useMemo, useEffect, useContext } from 'react';
-import { View, FlatList, StyleSheet, Dimensions, Alert, TouchableOpacity, TextInput, ScrollView, Text, Modal, RefreshControl } from 'react-native';
+import { View, FlatList, StyleSheet, Dimensions, Alert, TouchableOpacity, TextInput, Text, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ThemedView } from '@/components/ThemedView';
-import { ThemedText } from '@/components/ThemedText';
 import LoadingTopSpinner from '@/components/LoadingTopSpinner';
 import { Header } from '@/components/Header';
-import { IconButton } from '@/components/IconButton';
 import { PropertyCard } from '@/components/PropertyCard';
-import Button from '@/components/Button';
 import { colors } from '@/styles/colors';
 import { useSEO } from '@/hooks/useDocumentTitle';
 import { getPropertyTitle } from '@/utils/propertyUtils';
@@ -16,18 +12,16 @@ import { useFavorites } from '@/hooks/useFavorites';
 import { useOxy } from '@oxyhq/services';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import type { Property } from '@/services/propertyService';
-import savedPropertyService, { SavedProperty } from '@/services/savedPropertyService';
+
+import savedPropertyService from '@/services/savedPropertyService';
+import type { SavedProperty } from '@homiio/shared-types';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { EditNotesBottomSheet } from '@/components/EditNotesBottomSheet';
 
 // Extended interface for saved properties
-interface SavedPropertyWithUI extends SavedProperty {
-    // Additional UI-specific properties can be added here
-}
+type SavedPropertyWithUI = SavedProperty;
 
 const IconComponent = Ionicons as any;
 const { width: screenWidth } = Dimensions.get('window');
@@ -54,6 +48,10 @@ const CATEGORIES = [
     { id: 'folders', name: 'Folders', icon: 'folder-outline' },
 ];
 
+// Grid layout constants (style-based, no runtime calculations)
+const GRID_GAP = 16; // desired gap between cards
+const H_PADDING = 16; // desired outer padding
+
 export default function SavedPropertiesScreen() {
     const { t } = useTranslation();
     const { oxyServices, activeSessionId } = useOxy();
@@ -61,12 +59,7 @@ export default function SavedPropertiesScreen() {
 
     // Use the new Zustand-based favorites system
     const {
-        favoriteIds,
-        isLoading: favoritesLoading,
-        error: favoritesError,
-        isSaving,
         toggleFavorite,
-        isFavorite,
         isPropertySaving,
         clearError: clearFavoritesError
     } = useFavorites();
@@ -89,7 +82,6 @@ export default function SavedPropertiesScreen() {
 
     // Folder functionality
     const { folders, loadFolders } = useSavedPropertiesContext();
-    const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
 
     // Debounced search
     const debouncedSearchQuery = useDebounce(searchQuery, 300);
@@ -154,7 +146,7 @@ export default function SavedPropertiesScreen() {
                     case 'quick-saves':
                         return !property.notes || property.notes.trim().length === 0;
                     case 'folders':
-                        return property.folderId != null;
+                        return Boolean((property as any).folderId);
                     default:
                         return true;
                 }
@@ -195,9 +187,19 @@ export default function SavedPropertiesScreen() {
             }).length,
             noted: savedProperties.filter(p => p.notes && p.notes.trim().length > 0).length,
             'quick-saves': savedProperties.filter(p => !p.notes || p.notes.trim().length === 0).length,
-            folders: savedProperties.filter(p => p.folderId != null).length,
+            folders: folders.length,
         };
-    }, [savedProperties]);
+    }, [savedProperties, folders]);
+
+    // Folders filtered for Folders tab
+    const filteredFolders = useMemo(() => {
+        if (!searchQuery.trim()) return folders;
+        const q = searchQuery.toLowerCase().trim();
+        return folders.filter(f =>
+            f.name.toLowerCase().includes(q) ||
+            (f.description || '').toLowerCase().includes(q)
+        );
+    }, [folders, searchQuery]);
 
     // SEO
     useSEO({
@@ -216,20 +218,7 @@ export default function SavedPropertiesScreen() {
         await loadSavedProperties();
     }, [oxyServices, activeSessionId, loadSavedProperties, clearFavoritesError]);
 
-    const handleUnsaveProperty = useCallback(async (propertyId: string) => {
-        if (!oxyServices || !activeSessionId) return;
-
-        try {
-            await toggleFavorite(propertyId);
-            // Refresh the saved properties list
-            await loadSavedProperties();
-        } catch (error) {
-            Alert.alert(
-                'Error',
-                `Failed to unsave property. ${error instanceof Error ? error.message : 'Please try again.'}`
-            );
-        }
-    }, [oxyServices, activeSessionId, toggleFavorite, loadSavedProperties]);
+    // Using only bulk unsave for now; individual unsave action handled elsewhere
 
     const handleEditNotes = useCallback((property: SavedPropertyWithUI) => {
         if (!bottomSheetContext) return;
@@ -320,7 +309,7 @@ export default function SavedPropertiesScreen() {
 
                             setSelectedProperties(new Set());
                             setBulkActionMode(false);
-                        } catch (error) {
+                        } catch {
                             Alert.alert('Error', 'Failed to unsave some properties. Please try again.');
                         }
                     }
@@ -336,20 +325,15 @@ export default function SavedPropertiesScreen() {
         const isSelected = selectedProperties.has(propertyId);
 
         return (
-            <View style={StyleSheet.flatten([
-                styles.propertyCardWrapper,
-                viewMode === 'grid' && styles.gridCardWrapper
-            ])}>
+            <View style={viewMode === 'grid' ? styles.gridItemContainer : undefined}>
                 <PropertyCard
                     property={item}
                     variant={viewMode === 'grid' ? 'compact' : 'saved'}
                     onPress={() => !isProcessing && handlePropertyPress(item)}
-                    // Long press is now handled globally via FolderContext
-                    style={StyleSheet.flatten([
-                        styles.propertyCard,
-                        isSelected && styles.selectedCard,
-                        isProcessing && styles.processingCard
-                    ])}
+                    noteText={item.notes || ''}
+                    onPressNote={() => !isProcessing && handleEditNotes(item)}
+                    isSelected={isSelected}
+                    isProcessing={isProcessing}
                     overlayContent={bulkActionMode ? (
                         <TouchableOpacity
                             style={styles.selectionButton}
@@ -369,92 +353,6 @@ export default function SavedPropertiesScreen() {
                             </View>
                         </TouchableOpacity>
                     ) : null}
-                    footerContent={viewMode === 'list' ? (
-                        <View style={styles.listFooter}>
-                            <View style={styles.notesSection}>
-                                <View style={styles.notesHeader}>
-                                    <Text style={styles.notesLabel}>My Notes</Text>
-                                    <TouchableOpacity
-                                        style={styles.editNotesButton}
-                                        onPress={() => !isProcessing && handleEditNotes(item)}
-                                        disabled={isProcessing}
-                                    >
-                                        <IconComponent
-                                            name="create-outline"
-                                            size={16}
-                                            color={colors.primaryColor}
-                                        />
-                                    </TouchableOpacity>
-                                </View>
-                                <TouchableOpacity
-                                    style={styles.notesContainer}
-                                    onPress={() => !isProcessing && handleEditNotes(item)}
-                                    disabled={isProcessing}
-                                >
-                                    <Text style={StyleSheet.flatten([
-                                        styles.notesText,
-                                        !item.notes && styles.notesPlaceholder
-                                    ])} numberOfLines={2}>
-                                        {item.notes || 'Tap to add notes about this property...'}
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
-
-                            {/* Folder indicator */}
-                            {item.folderId && (
-                                <View style={styles.folderSection}>
-                                    <View style={styles.folderHeader}>
-                                        <Text style={styles.folderLabel}>Folder</Text>
-                                    </View>
-                                    <View style={styles.folderContainer}>
-                                        <IconComponent
-                                            name="folder-outline"
-                                            size={16}
-                                            color={colors.primaryColor}
-                                        />
-                                        <Text style={styles.folderText} numberOfLines={1}>
-                                            {(() => {
-                                                const folder = folders.find(f => f._id === item.folderId);
-                                                if (folder) {
-                                                    return `${folder.name} (${folder.propertyCount} ${folder.propertyCount === 1 ? 'property' : 'properties'})`;
-                                                }
-                                                return 'Unknown Folder';
-                                            })()}
-                                        </Text>
-                                    </View>
-                                </View>
-                            )}
-
-                            {isProcessing && (
-                                <View style={styles.processingOverlay}>
-                                    <Text style={styles.processingText}>Processing...</Text>
-                                </View>
-                            )}
-                        </View>
-                    ) : (
-                        viewMode === 'grid' && (item.notes || item.folderId) ? (
-                            <View style={styles.gridIndicators}>
-                                {item.notes && (
-                                    <View style={styles.gridNotesIndicator}>
-                                        <IconComponent
-                                            name="document-text"
-                                            size={12}
-                                            color={colors.primaryColor}
-                                        />
-                                    </View>
-                                )}
-                                {item.folderId && (
-                                    <View style={styles.gridFolderIndicator}>
-                                        <IconComponent
-                                            name="folder-outline"
-                                            size={12}
-                                            color={colors.primaryColor}
-                                        />
-                                    </View>
-                                )}
-                            </View>
-                        ) : null
-                    )}
                 />
             </View>
         );
@@ -503,60 +401,38 @@ export default function SavedPropertiesScreen() {
                 </View>
             </View>
 
-            {/* Category Filter Pills */}
-            <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.categoryContainer}
-                style={styles.categoryScroll}
-            >
-                {CATEGORIES.map(category => (
-                    <TouchableOpacity
-                        key={category.id}
-                        style={StyleSheet.flatten([
-                            styles.categoryPill,
-                            selectedCategory === category.id && styles.categoryPillActive
-                        ])}
-                        onPress={() => setSelectedCategory(category.id as FilterCategory)}
-                    >
-                        <IconComponent
-                            name={category.icon}
-                            size={16}
-                            color={selectedCategory === category.id ? 'white' : colors.primaryColor}
-                        />
-                        <Text style={StyleSheet.flatten([
-                            styles.categoryPillText,
-                            selectedCategory === category.id && styles.categoryPillTextActive
-                        ])}>
-                            {category.name} ({(categoryCounts as any)[category.id] || 0})
-                        </Text>
-                    </TouchableOpacity>
-                ))}
-            </ScrollView>
+            {/* Tabs */}
+            <View style={styles.tabsContainer}>
+                {CATEGORIES.map(category => {
+                    const isActive = selectedCategory === category.id;
+                    return (
+                        <TouchableOpacity
+                            key={category.id}
+                            style={StyleSheet.flatten([
+                                styles.tabItem,
+                                isActive && styles.tabItemActive,
+                            ])}
+                            onPress={() => setSelectedCategory(category.id as FilterCategory)}
+                        >
+                            <Text style={StyleSheet.flatten([
+                                styles.tabText,
+                                isActive && styles.tabTextActive,
+                            ])}>
+                                {category.name} ({(categoryCounts as any)[category.id] || 0})
+                            </Text>
+                        </TouchableOpacity>
+                    );
+                })}
+            </View>
 
-            {/* Folder Statistics */}
-            {selectedCategory === 'folders' && folders.length > 0 && (
-                <View style={styles.folderStats}>
-                    <Text style={styles.folderStatsTitle}>Folder Breakdown:</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.folderStatsScroll}>
-                        {folders.map(folder => (
-                            <View key={folder._id} style={styles.folderStatItem}>
-                                <View style={[styles.folderStatIcon, { backgroundColor: folder.color }]}>
-                                    <Text style={styles.folderStatEmoji}>{folder.icon}</Text>
-                                </View>
-                                <Text style={styles.folderStatName}>{folder.name}</Text>
-                                <Text style={styles.folderStatCount}>{folder.propertyCount}</Text>
-                            </View>
-                        ))}
-                    </ScrollView>
-                </View>
-            )}
+            {/* Folders tab now shows a proper list below; removed breakdown */}
 
             {/* Controls Bar */}
             <View style={styles.controlsBar}>
                 <View style={styles.leftControls}>
                     <TouchableOpacity
-                        style={StyleSheet.flatten([styles.controlButton, showSortOptions && styles.controlButtonActive])}
+                        accessibilityLabel="Sort"
+                        style={StyleSheet.flatten([styles.viewToggle, showSortOptions && styles.controlButtonActive])}
                         onPress={() => setShowSortOptions(!showSortOptions)}
                     >
                         <IconComponent
@@ -564,15 +440,10 @@ export default function SavedPropertiesScreen() {
                             size={18}
                             color={showSortOptions ? 'white' : colors.primaryColor}
                         />
-                        <Text style={StyleSheet.flatten([
-                            styles.controlButtonText,
-                            showSortOptions && styles.controlButtonTextActive
-                        ])}>
-                            Sort
-                        </Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
+                        accessibilityLabel="Toggle view"
                         style={styles.viewToggle}
                         onPress={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
                     >
@@ -586,7 +457,8 @@ export default function SavedPropertiesScreen() {
 
                 <View style={styles.rightControls}>
                     <TouchableOpacity
-                        style={StyleSheet.flatten([styles.controlButton, bulkActionMode && styles.controlButtonActive])}
+                        accessibilityLabel={bulkActionMode ? 'Cancel selection' : 'Select items'}
+                        style={StyleSheet.flatten([styles.viewToggle, bulkActionMode && styles.controlButtonActive])}
                         onPress={() => {
                             setBulkActionMode(!bulkActionMode);
                             setSelectedProperties(new Set());
@@ -597,12 +469,6 @@ export default function SavedPropertiesScreen() {
                             size={18}
                             color={bulkActionMode ? 'white' : colors.primaryColor}
                         />
-                        <Text style={StyleSheet.flatten([
-                            styles.controlButtonText,
-                            bulkActionMode && styles.controlButtonTextActive
-                        ])}>
-                            {bulkActionMode ? 'Cancel' : 'Select'}
-                        </Text>
                     </TouchableOpacity>
 
                     <Text style={styles.resultCount}>
@@ -757,30 +623,69 @@ export default function SavedPropertiesScreen() {
             )}
 
             {!isLoading && !error && (
-                <FlatList
-                    data={filteredProperties}
-                    renderItem={renderPropertyItem}
-                    keyExtractor={keyExtractor}
-                    getItemLayout={getItemLayout}
-                    contentContainerStyle={StyleSheet.flatten([
-                        styles.listContent,
-                        filteredProperties.length === 0 && styles.emptyListContent
-                    ])}
-                    showsVerticalScrollIndicator={false}
-                    numColumns={viewMode === 'grid' ? 2 : 1}
-                    key={viewMode}
-                    columnWrapperStyle={viewMode === 'grid' ? styles.gridRow : undefined}
-                    ListHeaderComponent={renderHeader}
-                    ListEmptyComponent={renderEmptyState}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={isLoading}
-                            onRefresh={handleRefresh}
-                            colors={[colors.primaryColor]}
-                            tintColor={colors.primaryColor}
-                        />
-                    }
-                />
+                selectedCategory === 'folders' ? (
+                    <FlatList
+                        data={filteredFolders}
+                        keyExtractor={(item) => item._id}
+                        renderItem={({ item }) => (
+                            <TouchableOpacity
+                                style={styles.folderRow}
+                                onPress={() => router.push(`/saved/${item._id}`)}
+                            >
+                                <View style={[styles.folderBadge, { backgroundColor: item.color || colors.primaryLight }]}>
+                                    <Text style={styles.folderBadgeText}>{item.icon || '📁'}</Text>
+                                </View>
+                                <View style={styles.folderInfo}>
+                                    <Text style={styles.folderTitle} numberOfLines={1}>{item.name}</Text>
+                                    {item.description ? (
+                                        <Text style={styles.folderSubtitle} numberOfLines={1}>{item.description}</Text>
+                                    ) : null}
+                                </View>
+                                <Text style={styles.folderCount}>{item.propertyCount}</Text>
+                                <IconComponent name="chevron-forward" size={18} color={colors.COLOR_BLACK_LIGHT_4} />
+                            </TouchableOpacity>
+                        )}
+                        contentContainerStyle={StyleSheet.flatten([
+                            styles.listContent,
+                            filteredFolders.length === 0 && styles.emptyListContent
+                        ])}
+                        ListHeaderComponent={renderHeader}
+                        ListEmptyComponent={renderEmptyState}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={isLoading}
+                                onRefresh={handleRefresh}
+                                colors={[colors.primaryColor]}
+                                tintColor={colors.primaryColor}
+                            />
+                        }
+                    />
+                ) : (
+                    <FlatList
+                        data={filteredProperties}
+                        renderItem={renderPropertyItem}
+                        keyExtractor={keyExtractor}
+                        getItemLayout={getItemLayout}
+                        contentContainerStyle={StyleSheet.flatten([
+                            styles.listContent,
+                            filteredProperties.length === 0 && styles.emptyListContent
+                        ])}
+                        showsVerticalScrollIndicator={false}
+                        numColumns={viewMode === 'grid' ? 2 : 1}
+                        key={viewMode}
+                        columnWrapperStyle={viewMode === 'grid' ? styles.gridRow : undefined}
+                        ListHeaderComponent={renderHeader}
+                        ListEmptyComponent={renderEmptyState}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={isLoading}
+                                onRefresh={handleRefresh}
+                                colors={[colors.primaryColor]}
+                                tintColor={colors.primaryColor}
+                            />
+                        }
+                    />
+                )
             )}
 
 
@@ -790,7 +695,6 @@ export default function SavedPropertiesScreen() {
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
         backgroundColor: '#fafbfc',
     },
     headerButton: {
@@ -837,43 +741,34 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
 
-    // Category Pills
-    categoryScroll: {
-        marginBottom: 20,
-    },
-    categoryContainer: {
-        paddingHorizontal: 4,
-        gap: 8,
-    },
-    categoryPill: {
+    // Tabs
+    tabsContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'white',
-        borderRadius: 20,
-        paddingHorizontal: 16,
+        gap: 12,
+        marginBottom: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eaeaea',
+        paddingHorizontal: 4,
+        // Removed web-only sticky style to satisfy native style typing
+    },
+    tabItem: {
         paddingVertical: 10,
+        paddingHorizontal: 4,
         marginRight: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.04,
-        shadowRadius: 4,
-        elevation: 1,
-        borderWidth: 1,
-        borderColor: '#f1f3f4',
+        borderBottomWidth: 2,
+        borderBottomColor: 'transparent',
     },
-    categoryPillActive: {
-        backgroundColor: colors.primaryColor,
-        borderColor: colors.primaryColor,
-        shadowOpacity: 0.15,
+    tabItemActive: {
+        borderBottomColor: colors.COLOR_BLACK,
     },
-    categoryPillText: {
-        marginLeft: 6,
+    tabText: {
         fontSize: 14,
-        color: colors.primaryColor,
+        color: colors.COLOR_BLACK_LIGHT_4,
         fontWeight: '600',
     },
-    categoryPillTextActive: {
-        color: 'white',
+    tabTextActive: {
+        color: colors.COLOR_BLACK,
     },
 
     // Controls Bar
@@ -925,11 +820,6 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
         borderRadius: 12,
         padding: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.04,
-        shadowRadius: 4,
-        elevation: 1,
         borderWidth: 1,
         borderColor: '#f1f3f4',
     },
@@ -1013,34 +903,20 @@ const styles = StyleSheet.create({
     },
 
     // Property Cards
-    propertyCardWrapper: {
-        marginBottom: 16,
-    },
-    gridCardWrapper: {
+    propertyCardWrapper: {},
+    gridItemContainer: {
         flex: 1,
-        marginHorizontal: 4,
+        paddingHorizontal: 8,
+        marginBottom: GRID_GAP,
     },
     gridRow: {
         justifyContent: 'space-between',
-        paddingHorizontal: 4,
+        paddingHorizontal: H_PADDING,
     },
     propertyCard: {
-        borderRadius: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-        elevation: 3,
     },
-    selectedCard: {
-        borderWidth: 2,
-        borderColor: colors.primaryColor,
-        shadowColor: colors.primaryColor,
-        shadowOpacity: 0.2,
-    },
-    processingCard: {
-        opacity: 0.7,
-    },
+    selectedCard: {},
+    processingCard: {},
 
     // Selection
     selectionButton: {
@@ -1064,44 +940,7 @@ const styles = StyleSheet.create({
         borderColor: colors.primaryColor,
     },
 
-    // List Footer (Notes)
-    listFooter: {
-        backgroundColor: '#f8f9fa',
-        borderBottomLeftRadius: 16,
-        borderBottomRightRadius: 16,
-        padding: 16,
-        borderTopWidth: 1,
-        borderTopColor: '#f1f3f4',
-    },
-    notesSection: {
-        gap: 8,
-    },
-    notesHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    notesLabel: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: colors.COLOR_BLACK,
-    },
-    editNotesButton: {
-        padding: 4,
-    },
-    notesContainer: {
-        minHeight: 40,
-        justifyContent: 'center',
-    },
-    notesText: {
-        fontSize: 14,
-        color: colors.COLOR_BLACK_LIGHT_2,
-        lineHeight: 20,
-    },
-    notesPlaceholder: {
-        color: colors.COLOR_BLACK_LIGHT_4,
-        fontStyle: 'italic',
-    },
+    // List Footer (Notes) removed; notes now render inline inside PropertyCard
     processingOverlay: {
         position: 'absolute',
         top: 0,
@@ -1165,6 +1004,56 @@ const styles = StyleSheet.create({
         flex: 1,
     },
 
+    // Folders list
+    folderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'white',
+        borderRadius: 14,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        borderWidth: 1,
+        borderColor: '#f1f3f4',
+        marginBottom: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
+        elevation: 1,
+        gap: 12,
+    },
+    folderBadge: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    folderBadgeText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    folderInfo: {
+        flex: 1,
+    },
+    folderTitle: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: colors.COLOR_BLACK,
+    },
+    folderSubtitle: {
+        fontSize: 12,
+        color: colors.COLOR_BLACK_LIGHT_4,
+        marginTop: 2,
+    },
+    folderCount: {
+        fontSize: 13,
+        color: colors.COLOR_BLACK_LIGHT_3,
+        fontWeight: '600',
+        marginRight: 6,
+    },
+
     // Grid Indicators
     gridIndicators: {
         position: 'absolute',
@@ -1188,47 +1077,5 @@ const styles = StyleSheet.create({
 
 
 
-    // Folder Statistics
-    folderStats: {
-        marginTop: 16,
-        marginBottom: 8,
-    },
-    folderStatsTitle: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: colors.COLOR_BLACK_LIGHT_2,
-        marginBottom: 8,
-    },
-    folderStatsScroll: {
-        marginBottom: 8,
-    },
-    folderStatItem: {
-        alignItems: 'center',
-        marginRight: 16,
-        minWidth: 60,
-    },
-    folderStatIcon: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 4,
-    },
-    folderStatEmoji: {
-        fontSize: 16,
-        color: 'white',
-    },
-    folderStatName: {
-        fontSize: 12,
-        fontWeight: '500',
-        color: colors.COLOR_BLACK_LIGHT_2,
-        textAlign: 'center',
-        marginBottom: 2,
-    },
-    folderStatCount: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: colors.COLOR_BLACK,
-    },
+    // Removed old folder breakdown styles
 }); 

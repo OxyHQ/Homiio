@@ -1,11 +1,10 @@
 import { OxyServices } from '@oxyhq/services';
-import type { Property } from '@homiio/shared-types';
+import type { SavedProperty as SharedSavedProperty } from '@homiio/shared-types';
 
-export interface SavedProperty extends Property {
-  notes?: string;
+export type SavedProperty = SharedSavedProperty & {
   savedAt?: string;
   folderId?: string;
-}
+};
 
 export interface SavedPropertiesResponse {
   properties: SavedProperty[];

@@ -1434,7 +1434,7 @@ class ProfileController {
             profileId: activeProfile._id,
             name: "Favorites",
             description: "Default folder for saved properties",
-            icon: "heart",
+            icon: "❤️",
             isDefault: true,
             properties: []
           });

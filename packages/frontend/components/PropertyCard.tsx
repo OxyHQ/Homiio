@@ -1,15 +1,16 @@
-import React, { useMemo, useState } from 'react';
-import { View, Image, StyleSheet, TouchableOpacity, ViewStyle, Dimensions } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Image, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 import { colors } from '@/styles/colors';
 import { IconButton } from './IconButton';
 import { Property, PropertyType, PriceUnit } from '@homiio/shared-types';
 import { getPropertyTitle, getPropertyImageSource } from '@/utils/propertyUtils';
-import { useFavorites } from '@/hooks/useFavorites';
+
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 
 import { SaveButton } from './SaveButton';
 import { CurrencyFormatter } from './CurrencyFormatter';
 import { ThemedText } from '@/components/ThemedText';
+import { Ionicons } from '@expo/vector-icons';
 
 
 
@@ -47,6 +48,8 @@ type PropertyCardProps = {
 
     // State
     isVerified?: boolean;
+    isSelected?: boolean;
+    isProcessing?: boolean;
 
     // Actions
     onPress?: () => void;
@@ -62,10 +65,13 @@ type PropertyCardProps = {
     footerContent?: React.ReactNode;
     badgeContent?: React.ReactNode;
     overlayContent?: React.ReactNode;
+
+    // Saved-specific
+    noteText?: string;
+    onPressNote?: () => void;
 };
 
-const { width: screenWidth } = Dimensions.get('window');
-const CARD_MAX_WIDTH = 350;
+// const { width: screenWidth } = Dimensions.get('window');
 
 
 
@@ -126,6 +132,8 @@ export function PropertyCard({
 
     // State
     isVerified = false,
+    isSelected = false,
+    isProcessing = false,
 
     // Actions
     onPress,
@@ -141,6 +149,8 @@ export function PropertyCard({
     footerContent,
     badgeContent,
     overlayContent,
+    noteText,
+    onPressNote,
 }: PropertyCardProps) {
     // Use saved properties context to check if property is saved
     const { isPropertySaved, isInitialized } = useSavedPropertiesContext();
@@ -220,6 +230,7 @@ export function PropertyCard({
                 orientation === 'horizontal' ? styles.horizontalContainer : null,
                 style as ViewStyle,
                 isFeatured ? styles.featuredCard : null,
+                isProcessing ? { opacity: 0.7 } : null,
             ]}
             onPress={onPress}
             onLongPress={onLongPress}
@@ -229,6 +240,7 @@ export function PropertyCard({
                 styles.imageContainer,
                 orientation === 'horizontal' ? styles.horizontalImageContainer : null,
                 isFeatured ? styles.featuredImageContainer : null,
+                isSelected ? styles.selectedImage : null,
             ]}>
                 <Image
                     source={propertyData.imageSource}
@@ -374,6 +386,36 @@ export function PropertyCard({
                     </View>
                 )}
             </View>
+
+            {/* Inline Note (inside card content area) */}
+            {(onPressNote || (noteText && noteText.trim().length > 0)) && (
+                <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={onPressNote}
+                    style={StyleSheet.flatten([
+                        styles.noteContainer,
+                        (!noteText || noteText.trim().length === 0) && styles.noteEmpty,
+                        variant === 'compact' && styles.compactNoteContainer,
+                    ])}
+                >
+                    <View style={styles.noteRow}>
+                        <View style={styles.noteIconWrap}>
+                            <Ionicons name="document-text-outline" size={14} color={colors.primaryColor} />
+                        </View>
+                        <ThemedText
+                            numberOfLines={variant === 'compact' ? 1 : 2}
+                            style={StyleSheet.flatten([
+                                styles.noteText,
+                                (!noteText || noteText.trim().length === 0) && styles.notePlaceholder,
+                                variant === 'compact' && styles.compactNoteText,
+                            ])}
+                        >
+                            {noteText && noteText.trim().length > 0 ? noteText : 'Add a note'}
+                        </ThemedText>
+                        <Ionicons name="create-outline" size={16} color={colors.primaryColor} />
+                    </View>
+                </TouchableOpacity>
+            )}
 
             {/* Footer Content */}
             {footerContent && (
@@ -564,6 +606,60 @@ const styles = StyleSheet.create({
         paddingTop: 8,
         borderTopWidth: 1,
         borderTopColor: '#f0f0f0',
+    },
+    selectedImage: {
+        borderWidth: 2,
+        borderColor: colors.primaryColor,
+        borderRadius: 25,
+    },
+    noteContainer: {
+        marginTop: 8,
+        backgroundColor: '#ffffff',
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderWidth: 1,
+        borderColor: '#efefef',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 3,
+        elevation: 1,
+    },
+    noteEmpty: {
+        backgroundColor: '#fafafa',
+        borderStyle: 'dashed',
+    },
+    noteRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 8,
+    },
+    noteIconWrap: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.primaryLight,
+    },
+    compactNoteContainer: {
+        paddingVertical: 6,
+        paddingHorizontal: 8,
+    },
+    noteText: {
+        fontSize: 13,
+        color: '#444444',
+        lineHeight: 18,
+    },
+    notePlaceholder: {
+        color: '#999999',
+        fontStyle: 'italic',
+    },
+    compactNoteText: {
+        fontSize: 12,
+        lineHeight: 16,
     },
     customBadge: {
         position: 'absolute',
