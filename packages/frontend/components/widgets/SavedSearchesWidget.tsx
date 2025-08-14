@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
+import { BottomSheetContext } from '@/context/BottomSheetContext';
+import { SavedSearchActionsBottomSheet } from '@/components/SavedSearchActionsBottomSheet';
 
 // Define SavedSearch type locally since we're no longer using Redux
 interface SavedSearch {
@@ -42,14 +44,8 @@ const IconComponent = Ionicons as any;
 export function SavedSearchesWidget() {
   const { t } = useTranslation();
   const router = useRouter();
-  const {
-    searches,
-    isLoading,
-    isAuthenticated,
-    deleteSavedSearch,
-    updateSearch,
-    toggleNotifications,
-  } = useSavedSearches();
+  const { searches, isAuthenticated, deleteSavedSearch, updateSearch, toggleNotifications } =
+    useSavedSearches();
 
   // Actions modal state
   const [showActionsModal, setShowActionsModal] = useState(false);
@@ -68,9 +64,18 @@ export function SavedSearchesWidget() {
   };
 
   // Actions for saved searches using custom hook
+  const bottomSheet = useContext(BottomSheetContext);
   const handleShowActions = (search: SavedSearch) => {
     setSelectedSearch(search);
-    setShowActionsModal(true);
+    bottomSheet.openBottomSheet(
+      <SavedSearchActionsBottomSheet
+        search={{ id: search.id, name: search.name, query: search.query, notificationsEnabled: search.notificationsEnabled }}
+        onClose={() => bottomSheet.closeBottomSheet()}
+        onEdit={(s) => handleEditSearch(s as any)}
+        onToggleNotifications={(s) => handleToggleSearchNotifications(s as any)}
+        onDelete={(s) => handleDeleteSavedSearch(s as any)}
+      />,
+    );
   };
 
   const handleDeleteSavedSearch = async (search: SavedSearch) => {
@@ -128,7 +133,7 @@ export function SavedSearchesWidget() {
       });
       setShowEditModal(false);
       setEditingSearch(null);
-    } catch (error) {
+    } catch {
       setEditError('Failed to update search');
     }
   };
