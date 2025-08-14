@@ -107,20 +107,6 @@ export default function RoommatePreferencesPage() {
     },
   });
 
-  const savePrefsMutation = useMutation({
-    mutationKey: ['roommates', 'savePreferences'],
-    mutationFn: async (prefs: any) => {
-      return roommateService.updateRoommatePreferences(prefs, oxyServices!, activeSessionId!);
-    },
-    onSuccess: async () => {
-      await useProfileStore.getState().fetchPrimaryProfile(oxyServices!, activeSessionId!);
-      await queryClient.invalidateQueries({ queryKey: ['roommates', 'preferences'] });
-      Alert.alert('Success', 'Preferences saved successfully');
-    },
-    onError: () => {
-      Alert.alert('Error', 'Failed to save preferences');
-    },
-  });
 
   const handleToggleRoommateMatching = async (enabled: boolean) => {
     if (!oxyServices || !activeSessionId) {
@@ -135,16 +121,7 @@ export default function RoommatePreferencesPage() {
     }
   };
 
-  const handleSavePreferences = async () => {
-    if (!oxyServices || !activeSessionId) return;
-    setIsSaving(true);
-    try {
-      // Save preferences; toggle is handled via dedicated endpoint for clarity
-      await savePrefsMutation.mutateAsync({ ...preferences } as any);
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  // Save preferences removed; editing is handled in the profile edit screen
 
   const renderPreferenceItem = (title: string, value: any, onPress?: () => void) => (
     <TouchableOpacity style={styles.preferenceItem} onPress={onPress} disabled={!onPress}>
@@ -249,10 +226,10 @@ export default function RoommatePreferencesPage() {
               </View>
             </View>
 
-            {/* Save Button */}
+            {/* Edit Profile Button */}
             <View style={styles.saveSection}>
-              <Button onPress={handleSavePreferences} disabled={isSaving || savePrefsMutation.isPending} style={styles.saveButton}>
-                {isSaving || savePrefsMutation.isPending ? 'Saving...' : 'Save Preferences'}
+              <Button onPress={() => router.push('/profile/edit')} style={styles.saveButton}>
+                Edit Profile
               </Button>
             </View>
           </>
