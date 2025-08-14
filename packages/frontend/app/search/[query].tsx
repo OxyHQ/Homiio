@@ -18,6 +18,10 @@ import { colors } from '@/styles/colors';
 import { PropertyCard } from '@/components/PropertyCard';
 import { useSearchProperties } from '@/hooks';
 import { Property, PropertyFilters } from '@/services/propertyService';
+import { useSavedSearches } from '@/hooks/useSavedSearches';
+import { useContext } from 'react';
+import { BottomSheetContext } from '@/context/BottomSheetContext';
+import { SaveSearchBottomSheet } from '@/components/SaveSearchBottomSheet';
 
 interface SearchFilters extends PropertyFilters {
     amenities?: string[];
@@ -65,6 +69,9 @@ export default function SearchScreen() {
     const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
     const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
     const [viewMode, setViewMode] = useState<'list' | 'grid'>(isMobile ? 'grid' : 'list');
+
+    const { saveSearch, isAuthenticated } = useSavedSearches();
+    const bottomSheet = useContext(BottomSheetContext);
 
     // Use the search hook
     const { searchResults, pagination, loading, error, search, clearSearchResults } =
@@ -293,6 +300,27 @@ export default function SearchScreen() {
         </View>
     );
 
+    const handleOpenSaveModal = () => {
+        if (!isAuthenticated) {
+            router.push('/profile');
+            return;
+        }
+        const currentFilters: SearchFilters = {
+            ...filters,
+            amenities: selectedAmenities.length > 0 ? selectedAmenities : undefined,
+            type: selectedTypes.length > 0 ? selectedTypes.join(',') : undefined,
+        };
+        bottomSheet.openBottomSheet(
+            <SaveSearchBottomSheet
+                defaultName={searchQuery}
+                query={searchQuery}
+                filters={currentFilters}
+                onClose={() => bottomSheet.closeBottomSheet()}
+                onSaved={() => { }}
+            />,
+        );
+    };
+
     const renderEmptyState = () => (
         <View style={styles.emptyContainer}>
             <Ionicons name="search-outline" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
@@ -358,6 +386,15 @@ export default function SearchScreen() {
                             size={24}
                             color={colors.primaryColor}
                         />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.saveButton}
+                        onPress={handleOpenSaveModal}
+                        accessibilityLabel={t('Save Search')}
+                    >
+                        <Ionicons name="bookmark-outline" size={20} color={colors.primaryColor} />
+                        {!isMobile && <Text style={styles.saveButtonText}>{t('Save')}</Text>}
                     </TouchableOpacity>
                 </View>
             </View>
@@ -437,6 +474,8 @@ export default function SearchScreen() {
                     }
                 />
             )}
+
+            {/* Save handled via BottomSheet */}
         </SafeAreaView>
     );
 }
@@ -482,6 +521,22 @@ const styles = StyleSheet.create({
     },
     filterButton: {
         padding: 8,
+    },
+    saveButton: {
+        paddingVertical: 8,
+        paddingHorizontal: 10,
+        borderWidth: 1,
+        borderColor: colors.primaryColor,
+        borderRadius: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginLeft: 6,
+        backgroundColor: colors.primaryLight,
+    },
+    saveButtonText: {
+        color: colors.primaryColor,
+        fontWeight: '600',
     },
     resultsHeader: {
         flexDirection: 'row',

@@ -7,7 +7,7 @@ interface PropertyState {
   properties: Property[];
   currentProperty: Property | null;
   propertyStats: Record<string, any>;
-  propertyEnergyStats: Record<string, Record<string, any>>;
+  // energy removed
   searchResults: Property[];
   filters: PropertyFilters | null;
   pagination: {
@@ -22,7 +22,7 @@ interface PropertyState {
     properties: boolean;
     currentProperty: boolean;
     stats: boolean;
-    energy: boolean;
+    // energy: boolean;
     search: boolean;
     create: boolean;
     update: boolean;
@@ -36,7 +36,7 @@ interface PropertyState {
   setProperties: (properties: Property[]) => void;
   setCurrentProperty: (property: Property | null) => void;
   setPropertyStats: (propertyId: string, stats: any) => void;
-  setPropertyEnergyStats: (propertyId: string, period: string, stats: any) => void;
+  // setPropertyEnergyStats: (propertyId: string, period: string, stats: any) => void;
   setSearchResults: (results: Property[]) => void;
   setFilters: (filters: PropertyFilters | null) => void;
   setPagination: (pagination: Partial<PropertyState['pagination']>) => void;
@@ -53,7 +53,7 @@ export const usePropertyStore = create<PropertyState>()((set, get) => ({
   properties: [],
   currentProperty: null,
   propertyStats: {},
-  propertyEnergyStats: {},
+  // energy removed
   searchResults: [],
   filters: null,
   pagination: {
@@ -66,7 +66,7 @@ export const usePropertyStore = create<PropertyState>()((set, get) => ({
     properties: false,
     currentProperty: false,
     stats: false,
-    energy: false,
+    // energy: false,
     search: false,
     create: false,
     update: false,
@@ -81,16 +81,7 @@ export const usePropertyStore = create<PropertyState>()((set, get) => ({
     set((state) => ({
       propertyStats: { ...state.propertyStats, [propertyId]: stats },
     })),
-  setPropertyEnergyStats: (propertyId, period, stats) =>
-    set((state) => ({
-      propertyEnergyStats: {
-        ...state.propertyEnergyStats,
-        [propertyId]: {
-          ...state.propertyEnergyStats[propertyId],
-          [period]: stats,
-        },
-      },
-    })),
+  // energy removed
   setSearchResults: (results) => set({ searchResults: results }),
   setFilters: (filters) => set({ filters }),
   setPagination: (pagination) =>
@@ -113,7 +104,7 @@ export const usePropertySelectors = () => {
   const properties = usePropertyStore((state) => state.properties);
   const currentProperty = usePropertyStore((state) => state.currentProperty);
   const propertyStats = usePropertyStore((state) => state.propertyStats);
-  const propertyEnergyStats = usePropertyStore((state) => state.propertyEnergyStats);
+  // const propertyEnergyStats = usePropertyStore((state) => state.propertyEnergyStats);
   const searchResults = usePropertyStore((state) => state.searchResults);
   const filters = usePropertyStore((state) => state.filters);
   const pagination = usePropertyStore((state) => state.pagination);
@@ -124,7 +115,7 @@ export const usePropertySelectors = () => {
     properties,
     currentProperty,
     propertyStats,
-    propertyEnergyStats,
+    // propertyEnergyStats,
     searchResults,
     filters,
     pagination,

@@ -17,7 +17,7 @@ export function EcoCertificationWidget() {
         <Text style={styles.ecoText}>
           {t(
             'home.eco.description',
-            'Find sustainable properties that meet our energy efficiency and eco-friendly standards',
+            'Find sustainable properties that meet eco-friendly standards',
           )}
         </Text>
         <TouchableOpacity style={styles.learnMoreButton}>

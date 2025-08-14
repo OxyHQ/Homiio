@@ -111,40 +111,38 @@ export default function SavedPropertiesScreen() {
   const [showSortOptions, setShowSortOptions] = useState(false);
 
   // Folder functionality
-  const { folders, loadFolders } = useSavedPropertiesContext();
+  const { folders, loadFolders, loadSavedProperties: loadSavedFromCtx } = useSavedPropertiesContext();
 
   // Search query (filtering directly for now for reliability)
 
-  // Load saved properties
-  const loadSavedProperties = useCallback(async () => {
+  // Load saved properties using React Query-backed context + saved profiles
+  const refreshSavedData = useCallback(async () => {
     if (!oxyServices || !activeSessionId) return;
 
     try {
       setIsLoading(true);
       setError(null);
-      const response = await savedPropertyService.getSavedProperties(oxyServices, activeSessionId);
-      setSavedPropertiesZ(response.properties as any);
-      // Load saved profiles
+      await loadSavedFromCtx();
       const res = await api.get('/api/profiles/me/saved-profiles', {
         oxyServices,
         activeSessionId,
       });
       setSavedProfiles(res.data?.data || res.data || []);
     } catch (error: any) {
-      console.error('Failed to load saved properties:', error);
-      setError(error.message || 'Failed to load saved properties');
+      console.error('Failed to load saved data:', error);
+      setError(error.message || 'Failed to load saved data');
     } finally {
       setIsLoading(false);
     }
-  }, [oxyServices, activeSessionId, setSavedPropertiesZ]);
+  }, [oxyServices, activeSessionId, loadSavedFromCtx]);
 
   // Load properties on mount
   useEffect(() => {
     if (oxyServices && activeSessionId) {
-      loadSavedProperties();
+      refreshSavedData();
       loadFolders();
     }
-  }, [oxyServices, activeSessionId, loadSavedProperties, loadFolders]);
+  }, [oxyServices, activeSessionId, refreshSavedData, loadFolders]);
 
   // Memoized filtered properties
   const filteredProperties = useMemo(() => {
@@ -254,8 +252,8 @@ export default function SavedPropertiesScreen() {
 
     setError(null);
     clearFavoritesError();
-    await loadSavedProperties();
-  }, [oxyServices, activeSessionId, loadSavedProperties, clearFavoritesError]);
+    await refreshSavedData();
+  }, [oxyServices, activeSessionId, refreshSavedData, clearFavoritesError]);
 
   // Using only bulk unsave for now; individual unsave action handled elsewhere
 
@@ -351,7 +349,7 @@ export default function SavedPropertiesScreen() {
               await Promise.all(unsavePromises);
 
               // Refresh the saved properties list
-              await loadSavedProperties();
+              await refreshSavedData();
 
               setSelectedProperties(new Set());
               setBulkActionMode(false);
@@ -362,7 +360,7 @@ export default function SavedPropertiesScreen() {
         },
       ],
     );
-  }, [selectedProperties, oxyServices, activeSessionId, toggleFavorite, loadSavedProperties]);
+  }, [selectedProperties, oxyServices, activeSessionId, toggleFavorite, refreshSavedData]);
 
   // Render functions
   const renderPropertyItem = useCallback(

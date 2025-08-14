@@ -26,18 +26,5 @@ export async function prefetchPropertyStats(queryClient: QueryClient, id: string
   });
 }
 
-export async function prefetchPropertyEnergy(
-  queryClient: QueryClient,
-  id: string,
-  period: 'day' | 'week' | 'month' = 'day',
-) {
-  if (!id) return;
-  await queryClient.prefetchQuery({
-    queryKey: ['propertyEnergy', id, period],
-    queryFn: async () => propertyService.getPropertyEnergyStats(id, period),
-    staleTime: 1000 * 30,
-    gcTime: 1000 * 60 * 10,
-  });
-}
 
 

@@ -217,10 +217,7 @@ class PropertyService {
     return response.data.data || response.data.stats;
   }
 
-  async getPropertyEnergyStats(id: string, period: 'day' | 'week' | 'month' = 'day'): Promise<any> {
-    const response = await api.get(`${this.baseUrl}/${id}/energy`, { params: { period } });
-    return response.data;
-  }
+  // energy API removed
 
   async calculateEthicalPricing(data: EthicalPricingRequest): Promise<EthicalPricingResponse> {
     try {

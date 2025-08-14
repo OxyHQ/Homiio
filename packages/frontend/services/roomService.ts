@@ -16,26 +16,7 @@ export interface Room {
   leaseId?: string;
   createdAt: string;
   updatedAt: string;
-  energyStats?: {
-    current: {
-      voltage: number;
-      current: number;
-      power: number;
-      powerFactor: number;
-      frequency: number;
-    };
-    consumption: {
-      daily: number;
-      weekly: number;
-      monthly: number;
-      cost: {
-        daily: number;
-        weekly: number;
-        monthly: number;
-        currency: string;
-      };
-    };
-  };
+  // energy removed
 }
 
 export interface CreateRoomData {
@@ -138,22 +119,14 @@ class RoomService {
     averageStayDuration: number;
     monthlyRevenue: number;
     maintenanceRequests: number;
-    energyConsumption: number;
+    // energy removed
   }> {
     const url = `${this.baseUrl}/${propertyId}/rooms/${roomId}/stats`;
     const response = await api.get(url);
     return response.data.stats;
   }
 
-  async getRoomEnergyStats(
-    propertyId: string,
-    roomId: string,
-    period: 'day' | 'week' | 'month' = 'day',
-  ): Promise<any> {
-    const url = `${this.baseUrl}/${propertyId}/rooms/${roomId}/energy`;
-    const response = await api.get(url, { params: { period } });
-    return response.data;
-  }
+  // energy endpoints removed
 
   async assignTenant(propertyId: string, roomId: string, tenantId: string): Promise<Room> {
     const url = `${this.baseUrl}/${propertyId}/rooms/${roomId}/assign`;

@@ -1,7 +1,7 @@
 import { api } from '@/utils/api';
 
 export type AnalyticsTrends = {
-  energyUsage: { current: number; change: number; period: string };
+  // energy removed
   propertyRevenue: { current: number; change: number; period: string };
   tenantSatisfaction: { current: number; change: number; period: string };
 };
@@ -34,12 +34,12 @@ class AnalyticsService {
         crossAppActions: 23,
         dataShared: 8,
         insights: [
-          'Your energy usage is 15% below average',
+          'Your usage is 15% below average',
           'You have 2 pending lease renewals',
           'Property occupancy rate is 85%',
         ],
         trends: {
-          energyUsage: { current: 450, change: -15, period: 'last_30_days' },
+          // energy removed
           propertyRevenue: { current: 5200, change: 8, period: 'last_30_days' },
           tenantSatisfaction: { current: 4.2, change: 0.3, period: 'last_30_days' },
         },

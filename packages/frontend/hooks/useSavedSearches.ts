@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useSavedSearchesStore, useSavedSearchesSelectors } from '@/store/savedSearchesStore';
 import { useOxy } from '@oxyhq/services';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
 export const useSavedSearches = () => {
   const { searches, isLoading, error } = useSavedSearchesSelectors();
@@ -16,8 +17,9 @@ export const useSavedSearches = () => {
   } = useSavedSearchesStore();
   const { oxyServices, activeSessionId } = useOxy();
   const hasFetchedRef = useRef(false);
+  const queryClient = useQueryClient();
 
-  // Fetch saved searches from backend using Zustand store
+  // Fetch saved searches via React Query and sync to Zustand
   const fetchSavedSearchesCallback = useCallback(async () => {
     if (!oxyServices || !activeSessionId) {
       console.log('useSavedSearches: No authentication, skipping fetch');
@@ -28,9 +30,13 @@ export const useSavedSearches = () => {
       setLoading(true);
       setError(null);
 
-      // Import the API function
       const { userApi } = await import('@/utils/api');
-      const response = await userApi.getSavedSearches(oxyServices, activeSessionId);
+      const response = await queryClient.fetchQuery({
+        queryKey: ['savedSearches'],
+        queryFn: async () => userApi.getSavedSearches(oxyServices, activeSessionId),
+        staleTime: 1000 * 30,
+        gcTime: 1000 * 60 * 10,
+      });
 
       setSearches(response.data?.searches || response.data || []);
     } catch (error: any) {
@@ -39,7 +45,7 @@ export const useSavedSearches = () => {
     } finally {
       setLoading(false);
     }
-  }, [oxyServices, activeSessionId, setSearches, setLoading, setError]);
+  }, [oxyServices, activeSessionId, setSearches, setLoading, setError, queryClient]);
 
   // Save a new search using Zustand store
   const saveSearch = useCallback(
@@ -69,6 +75,9 @@ export const useSavedSearches = () => {
         // Add to store
         addSearch(response.data?.search || response.data);
 
+        // Invalidate cache
+        await queryClient.invalidateQueries({ queryKey: ['savedSearches'] });
+
         toast.success(`Search "${name}" saved successfully`);
         return true;
       } catch (error: any) {
@@ -79,7 +88,7 @@ export const useSavedSearches = () => {
         return false;
       }
     },
-    [oxyServices, activeSessionId, addSearch, setError],
+    [oxyServices, activeSessionId, addSearch, setError, queryClient],
   );
 
   // Delete a saved search using Zustand store
@@ -98,6 +107,9 @@ export const useSavedSearches = () => {
         // Remove from store
         removeSearch(searchId);
 
+        // Invalidate cache
+        await queryClient.invalidateQueries({ queryKey: ['savedSearches'] });
+
         toast.success(`Search ${searchName ? `"${searchName}"` : ''} deleted successfully`);
         return true;
       } catch (error: any) {
@@ -108,7 +120,7 @@ export const useSavedSearches = () => {
         return false;
       }
     },
-    [oxyServices, activeSessionId, removeSearch, setError],
+    [oxyServices, activeSessionId, removeSearch, setError, queryClient],
   );
 
   // Update a saved search using Zustand store
@@ -130,6 +142,8 @@ export const useSavedSearches = () => {
         // Update in store
         updateSearchAction(searchId, updates);
 
+        await queryClient.invalidateQueries({ queryKey: ['savedSearches'] });
+
         toast.success('Search updated successfully');
         return true;
       } catch (error: any) {
@@ -140,7 +154,7 @@ export const useSavedSearches = () => {
         return false;
       }
     },
-    [oxyServices, activeSessionId, updateSearchAction, setError],
+    [oxyServices, activeSessionId, updateSearchAction, setError, queryClient],
   );
 
   // Toggle notifications for a search using Zustand store
@@ -159,6 +173,8 @@ export const useSavedSearches = () => {
         // Toggle in store
         toggleNotificationsAction(searchId);
 
+        await queryClient.invalidateQueries({ queryKey: ['savedSearches'] });
+
         toast.success(`Notifications ${enabled ? 'enabled' : 'disabled'} for search`);
         return true;
       } catch (error: any) {
@@ -168,7 +184,7 @@ export const useSavedSearches = () => {
         return false;
       }
     },
-    [oxyServices, activeSessionId, toggleNotificationsAction, setError],
+    [oxyServices, activeSessionId, toggleNotificationsAction, setError, queryClient],
   );
 
   // Check if a search exists by name or query

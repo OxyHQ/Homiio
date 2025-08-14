@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { View, Image, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 import { colors } from '@/styles/colors';
 import { IconButton } from './IconButton';
@@ -11,6 +11,8 @@ import { SaveButton } from './SaveButton';
 import { CurrencyFormatter } from './CurrencyFormatter';
 import { ThemedText } from '@/components/ThemedText';
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
+import { prefetchProperty, prefetchPropertyStats } from '@/utils/queryPrefetch';
 
 export type PropertyCardVariant = 'default' | 'compact' | 'featured' | 'saved';
 export type PropertyCardOrientation = 'vertical' | 'horizontal';
@@ -154,42 +156,42 @@ export function PropertyCard({
   // Use property object if provided, otherwise use individual props
   const propertyData = property
     ? {
-        id: property._id || property.id,
-        title: getPropertyTitle(property),
-        location: `${property.address?.city || ''}, ${property.address?.state || ''}`,
-        price: property.rent.amount,
-        currency: property.rent.currency,
-        type:
-          property.type === 'room'
+      id: property._id || property.id,
+      title: getPropertyTitle(property),
+      location: `${property.address?.city || ''}, ${property.address?.state || ''}`,
+      price: property.rent.amount,
+      currency: property.rent.currency,
+      type:
+        property.type === 'room'
+          ? 'apartment'
+          : property.type === 'studio'
             ? 'apartment'
-            : property.type === 'studio'
-              ? 'apartment'
-              : property.type === 'house'
-                ? 'house'
-                : ('apartment' as PropertyType),
-        imageSource: getPropertyImageSource(property),
-        bedrooms: property.bedrooms || 0,
-        bathrooms: property.bathrooms || 0,
-        size: property.squareFootage || 0,
-        isVerified: false,
-        rating: 4.5, // Default rating since Property interface doesn't have this
-        reviewCount: 12, // Default review count since Property interface doesn't have this
-      }
+            : property.type === 'house'
+              ? 'house'
+              : ('apartment' as PropertyType),
+      imageSource: getPropertyImageSource(property),
+      bedrooms: property.bedrooms || 0,
+      bathrooms: property.bathrooms || 0,
+      size: property.squareFootage || 0,
+      isVerified: false,
+      rating: 4.5, // Default rating since Property interface doesn't have this
+      reviewCount: 12, // Default review count since Property interface doesn't have this
+    }
     : {
-        id,
-        title,
-        location,
-        price,
-        currency,
-        type,
-        imageSource,
-        bedrooms,
-        bathrooms,
-        size,
-        isVerified,
-        rating,
-        reviewCount,
-      };
+      id,
+      title,
+      location,
+      price,
+      currency,
+      type,
+      imageSource,
+      bedrooms,
+      bathrooms,
+      size,
+      isVerified,
+      rating,
+      reviewCount,
+    };
 
   const isEco = Boolean(
     property && typeof property === 'object' && 'ecoCertified' in property && property.ecoCertified,
@@ -229,6 +231,15 @@ export function PropertyCard({
   const shouldShowFeatures = showFeatures && variantStyles.showFeatures;
   const shouldShowRating = showRating && variantStyles.showRating;
 
+  const queryClient = useQueryClient();
+  const handlePressIn = useCallback(() => {
+    const idToPrefetch = property?._id || property?.id || id;
+    if (idToPrefetch) {
+      prefetchProperty(queryClient, idToPrefetch as string);
+      prefetchPropertyStats(queryClient, idToPrefetch as string);
+    }
+  }, [queryClient, property?._id, property?.id, id]);
+
   return (
     <TouchableOpacity
       style={[
@@ -239,6 +250,7 @@ export function PropertyCard({
         isProcessing ? { opacity: 0.7 } : null,
       ]}
       onPress={onPress}
+      onPressIn={handlePressIn}
       onLongPress={onLongPress}
       activeOpacity={0.9}
     >

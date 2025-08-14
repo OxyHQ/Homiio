@@ -58,7 +58,7 @@ type PropertyDetail = {
   availableFrom: string;
   minStay: string;
   rating: number;
-  energyRating: string;
+  // energyRating removed
   images: string[] | PropertyImage[];
 };
 
@@ -244,7 +244,7 @@ export default function PropertyDetailPage() {
         availableFrom: apiProperty.createdAt?.split('T')[0] || '',
         minStay: 'N/A',
         rating: 0,
-        energyRating: apiProperty.energyStats ? 'A' : 'N/A',
+        // energyRating removed
         images: apiProperty.images || [],
       };
     } catch (err) {
@@ -740,29 +740,7 @@ export default function PropertyDetailPage() {
               />
             </View>
 
-            {/* Eco Rating */}
-            {property.isEcoCertified && (
-              <>
-                <View style={styles.ecoRatingContainer}>
-                  <View style={styles.ratingHeader}>
-                    <ThemedText style={styles.ratingTitle}>
-                      {t('Energy Efficiency') || 'Energy Efficiency'}
-                    </ThemedText>
-                  </View>
-                  <View style={styles.energyRatingContainer}>
-                    <View style={[styles.energyRatingBadge, { backgroundColor: '#2e7d32' }]}>
-                      <ThemedText style={styles.energyRatingText}>
-                        {property.energyRating}
-                      </ThemedText>
-                    </View>
-                    <ThemedText style={styles.energyRatingDesc}>
-                      {t('This property meets high standards for energy efficiency') ||
-                        'This property meets high standards for energy efficiency'}
-                    </ThemedText>
-                  </View>
-                </View>
-              </>
-            )}
+            {/* Eco Rating removed (energy-related) per request */}
 
             {/* Description */}
             {property.description && property.description.trim() !== '' && (
@@ -1160,54 +1138,7 @@ export default function PropertyDetailPage() {
               </View>
             </View>
 
-            {/* Energy Efficiency & Sustainability */}
-            {property.isEcoCertified && (
-              <View style={styles.energyContainer}>
-                <ThemedText style={styles.sectionTitle}>
-                  {t('Energy Efficiency & Sustainability')}
-                </ThemedText>
-                <View style={styles.energyCard}>
-                  <View style={styles.energyHeader}>
-                    <IconComponent name="leaf" size={24} color="#2e7d32" />
-                    <ThemedText style={styles.energyTitle}>
-                      {t('Eco-Certified Property')}
-                    </ThemedText>
-                  </View>
-                  <View style={styles.energyRatingContainer}>
-                    <View style={[styles.energyRatingBadge, { backgroundColor: '#2e7d32' }]}>
-                      <ThemedText style={styles.energyRatingText}>
-                        {property.energyRating}
-                      </ThemedText>
-                    </View>
-                    <ThemedText style={styles.energyDescription}>
-                      {t(
-                        'This property meets high standards for energy efficiency and sustainability',
-                      )}
-                    </ThemedText>
-                  </View>
-                  <View style={styles.energyFeatures}>
-                    <View style={styles.energyFeature}>
-                      <IconComponent name="checkmark-circle" size={16} color="#2e7d32" />
-                      <ThemedText style={styles.energyFeatureText}>
-                        {t('Energy-efficient appliances')}
-                      </ThemedText>
-                    </View>
-                    <View style={styles.energyFeature}>
-                      <IconComponent name="checkmark-circle" size={16} color="#2e7d32" />
-                      <ThemedText style={styles.energyFeatureText}>
-                        {t('Sustainable building materials')}
-                      </ThemedText>
-                    </View>
-                    <View style={styles.energyFeature}>
-                      <IconComponent name="checkmark-circle" size={16} color="#2e7d32" />
-                      <ThemedText style={styles.energyFeatureText}>
-                        {t('Reduced carbon footprint')}
-                      </ThemedText>
-                    </View>
-                  </View>
-                </View>
-              </View>
-            )}
+            {/* Energy Efficiency section removed per request */}
 
             {/* Neighborhood Information */}
             <View style={styles.neighborhoodContainer}>
@@ -1669,27 +1600,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  energyRatingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  energyRatingBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  energyRatingText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  energyRatingDesc: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
+  // energy rating styles removed
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',

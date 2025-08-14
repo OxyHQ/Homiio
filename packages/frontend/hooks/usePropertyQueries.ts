@@ -130,31 +130,7 @@ export const usePropertyStats = (id: string) => {
   };
 };
 
-export const usePropertyEnergyStats = (id: string, period: 'day' | 'week' | 'month' = 'day') => {
-  const { propertyEnergyStats } = usePropertySelectors();
-  const { setPropertyEnergyStats } = usePropertyStore();
-
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['propertyEnergy', id, period],
-    queryFn: async () => propertyService.getPropertyEnergyStats(id, period),
-    enabled: Boolean(id && period),
-    staleTime: 1000 * 30,
-    gcTime: 1000 * 60 * 10,
-  });
-
-  useEffect(() => {
-    if (data) {
-      setPropertyEnergyStats(id, period, data);
-    }
-  }, [data, id, period, setPropertyEnergyStats]);
-
-  return {
-    stats: data ?? propertyEnergyStats[id]?.[period] ?? null,
-    loading: isLoading,
-    error: error instanceof Error ? error.message : null,
-    loadEnergyStats: refetch,
-  };
-};
+// Removed energy stats hook per request (perf and not needed)
 
 export const useSearchProperties = () => {
   const { searchResults, pagination, loading, error } = usePropertySelectors();
