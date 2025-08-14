@@ -238,12 +238,17 @@
     "searchNamePlaceholder": "Enter a name for this search",
     "enableNotifications": "Enable Notifications",
     "notificationsDescription": "Get notified when new properties match this search",
+    "enableNotifications": "Enable notifications",
+    "disableNotifications": "Disable notifications",
     "withFilters": "With filters",
     "error": "Error",
     "enterSearchQuery": "Please enter a search query first",
     "deleteSearch": "Delete Search",
     "deleteSearchConfirm": "Are you sure you want to delete the search \"{{name}}\"?",
     "viewAllSaved": "View All Saved",
+    "duplicateName": "A search with this name already exists",
+    "duplicateExact": "You already saved this exact search",
+    "tryDifferentName": "Please choose a different name",
     "more": "more",
     "Eco-friendly": "Eco-friendly",
     "Co-living": "Co-living",
@@ -821,6 +826,15 @@
       "quickSaves": "Quick Saves",
       "folders": "Folders",
       "profiles": "Profiles"
+    },
+    "tabs": {
+      "all": "All",
+      "recent": "Recent",
+      "noted": "With Notes",
+      "quickSaves": "Quick Saves",
+      "folders": "Folders",
+      "profiles": "Profiles",
+      "searches": "Saved Searches"
     },
     "view": {
       "list": "List",

@@ -683,7 +683,8 @@ export const userApi = {
     oxyServices: OxyServices,
     activeSessionId: string,
   ): Promise<ApiResponse> {
-    const response = await api.patch<ApiResponse>(
+    // Backend uses PUT for update and PUT for notifications per profiles routes
+    const response = await api.put<ApiResponse>(
       `${API_CONFIG.endpoints.profiles.savedSearches}/${searchId}/notifications`,
       { notificationsEnabled },
       {

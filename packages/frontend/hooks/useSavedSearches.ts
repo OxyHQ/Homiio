@@ -2,9 +2,34 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useSavedSearchesStore, useSavedSearchesSelectors } from '@/store/savedSearchesStore';
 import { useOxy } from '@oxyhq/services';
 import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 
-export const useSavedSearches = () => {
+export const useSavedSearches = (): {
+  searches: any[];
+  isLoading: boolean;
+  isSaving: boolean;
+  error: string | null;
+  lastSynced: any;
+  fetchSavedSearches: () => Promise<void>;
+  saveSearch: (
+    name: string,
+    query: string,
+    filters?: any,
+    notificationsEnabled?: boolean,
+  ) => Promise<boolean>;
+  deleteSavedSearch: (searchId: string, searchName?: string) => Promise<boolean>;
+  updateSearch: (
+    searchId: string,
+    updates: { name?: string; query?: string; filters?: any; notificationsEnabled?: boolean },
+  ) => Promise<boolean>;
+  toggleNotifications: (searchId: string, enabled: boolean) => Promise<boolean>;
+  searchExists: (name: string, query?: string) => boolean;
+  getSearchById: (id: string) => any;
+  hasSearches: boolean;
+  isAuthenticated: boolean;
+} => {
+  const { t } = useTranslation();
   const { searches, isLoading, error } = useSavedSearchesSelectors();
   const {
     setSearches,
@@ -18,6 +43,63 @@ export const useSavedSearches = () => {
   const { oxyServices, activeSessionId } = useOxy();
   const hasFetchedRef = useRef(false);
   const queryClient = useQueryClient();
+
+  // Save search mutation using React Query
+  const saveSearchMutation = useMutation({
+    mutationKey: ['saveSearch'],
+    mutationFn: async (vars: {
+      name: string;
+      query: string;
+      filters?: any;
+      notificationsEnabled?: boolean;
+    }) => {
+      const { userApi } = await import('@/utils/api');
+      const response = await userApi.saveSearch(
+        {
+          name: vars.name,
+          query: vars.query,
+          filters: vars.filters,
+          notificationsEnabled: Boolean(vars.notificationsEnabled),
+        },
+        oxyServices!,
+        activeSessionId!,
+      );
+
+      const s = (response as any).data?.search || (response as any).data || {};
+      const normalized = {
+        id: s.id || s._id,
+        name: s.name || s.title || vars.name,
+        query: s.query || s.search || vars.query,
+        filters: s.filters || s.criteria || vars.filters,
+        notifications:
+          typeof s.notifications === 'boolean'
+            ? s.notifications
+            : Boolean(s.notificationsEnabled ?? s.emailNotifications ?? s.pushNotifications ?? false),
+        createdAt: s.createdAt || s.created_at || new Date().toISOString(),
+        updatedAt: s.updatedAt || s.updated_at || new Date().toISOString(),
+      };
+      return normalized;
+    },
+    onSuccess: async (normalized) => {
+      addSearch(normalized as any);
+      await queryClient.invalidateQueries({ queryKey: ['savedSearches'] });
+      toast.success(`Search "${normalized.name}" saved successfully`);
+    },
+    onError: (error: any) => {
+      if (error?.status === 409) {
+        const message =
+          typeof error?.response?.message === 'string'
+            ? error.response.message
+            : t('search.duplicateName');
+        toast.error(message + '. ' + t('search.tryDifferentName'));
+        setError(message);
+        return;
+      }
+      const msg = (error && error.message) || 'Failed to save search';
+      toast.error(msg);
+      setError(msg);
+    },
+  });
 
   // Fetch saved searches via React Query and sync to Zustand
   const fetchSavedSearchesCallback = useCallback(async () => {
@@ -38,7 +120,21 @@ export const useSavedSearches = () => {
         gcTime: 1000 * 60 * 10,
       });
 
-      setSearches(response.data?.searches || response.data || []);
+      const raw = response.data?.searches || response.data || [];
+      const normalized = (Array.isArray(raw) ? raw : []).map((s: any) => ({
+        id: s.id || s._id,
+        name: s.name || s.title || '',
+        query: s.query || s.search || '',
+        filters: s.filters || s.criteria || undefined,
+        notifications:
+          typeof s.notifications === 'boolean'
+            ? s.notifications
+            : Boolean(s.notificationsEnabled ?? s.emailNotifications ?? s.pushNotifications ?? false),
+        createdAt: s.createdAt || s.created_at || new Date().toISOString(),
+        updatedAt: s.updatedAt || s.updated_at || new Date().toISOString(),
+      }));
+
+      setSearches(normalized);
     } catch (error: any) {
       console.error('Failed to fetch saved searches:', error);
       setError(error.message || 'Failed to fetch saved searches');
@@ -61,34 +157,39 @@ export const useSavedSearches = () => {
       }
 
       try {
-        const searchData = {
-          name: name.trim(),
-          query: query.trim(),
+        // Prevent obvious duplicates client-side
+        const normalizedName = name.trim();
+        const normalizedQuery = query.trim();
+        const duplicateByName = searches.some(
+          (s) => String(s.name).toLowerCase() === normalizedName.toLowerCase(),
+        );
+        const duplicateExact = searches.some(
+          (s) =>
+            String(s.name).toLowerCase() === normalizedName.toLowerCase() &&
+            String(s.query).toLowerCase() === normalizedQuery.toLowerCase(),
+        );
+        if (duplicateExact) {
+          toast.error(t('search.duplicateExact'));
+          return false;
+        }
+        if (duplicateByName) {
+          toast.error(t('search.duplicateName') + '. ' + t('search.tryDifferentName'));
+          return false;
+        }
+        await saveSearchMutation.mutateAsync({
+          name: normalizedName,
+          query: normalizedQuery,
           filters,
           notificationsEnabled,
-        };
-
-        // Import the API function
-        const { userApi } = await import('@/utils/api');
-        const response = await userApi.saveSearch(searchData, oxyServices, activeSessionId);
-
-        // Add to store
-        addSearch(response.data?.search || response.data);
-
-        // Invalidate cache
-        await queryClient.invalidateQueries({ queryKey: ['savedSearches'] });
-
-        toast.success(`Search "${name}" saved successfully`);
+        });
         return true;
       } catch (error: any) {
         console.error('Failed to save search:', error);
-        const errorMessage = error.message || 'Failed to save search';
-        toast.error(errorMessage);
-        setError(errorMessage);
+        // onError already handled toast/error
         return false;
       }
     },
-    [oxyServices, activeSessionId, addSearch, setError, queryClient],
+    [oxyServices, activeSessionId, searches, t, saveSearchMutation],
   );
 
   // Delete a saved search using Zustand store
@@ -166,6 +267,9 @@ export const useSavedSearches = () => {
       }
 
       try {
+        if (!searchId) {
+          throw new Error('Invalid saved search');
+        }
         // Import the API function
         const { userApi } = await import('@/utils/api');
         await userApi.toggleSearchNotifications(searchId, enabled, oxyServices, activeSessionId);
@@ -175,16 +279,22 @@ export const useSavedSearches = () => {
 
         await queryClient.invalidateQueries({ queryKey: ['savedSearches'] });
 
-        toast.success(`Notifications ${enabled ? 'enabled' : 'disabled'} for search`);
+        toast.success(
+          enabled ? t('search.enableNotifications') : t('search.disableNotifications')
+        );
         return true;
       } catch (error: any) {
         console.error('Failed to toggle notifications:', error);
-        toast.error(error.message || 'Failed to update notifications');
-        setError(error.message || 'Failed to update notifications');
+        const message =
+          error && typeof error === 'object' && typeof (error as any).message === 'string'
+            ? (error as any).message
+            : 'Failed to update notifications';
+        toast.error(message);
+        setError(message);
         return false;
       }
     },
-    [oxyServices, activeSessionId, toggleNotificationsAction, setError, queryClient],
+    [oxyServices, activeSessionId, toggleNotificationsAction, setError, queryClient, t],
   );
 
   // Check if a search exists by name or query
@@ -232,7 +342,7 @@ export const useSavedSearches = () => {
     // State
     searches,
     isLoading,
-    isSaving: false, // Not implemented in Zustand store yet
+    isSaving: saveSearchMutation.isPending,
     error,
     lastSynced: null, // Not implemented in Zustand store yet
 

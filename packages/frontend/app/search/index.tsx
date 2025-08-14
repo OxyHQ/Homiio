@@ -57,7 +57,12 @@ export default function SearchScreen() {
   const isMobile = screenWidth < 600;
 
   const [searchQuery, setSearchQuery] = useState(decodeURIComponent(initialQuery));
+  const [inputValue, setInputValue] = useState(decodeURIComponent(initialQuery));
   const [filters, setFilters] = useState<SearchFilters>({
+    page: 1,
+    limit: 10,
+  });
+  const [draftFilters, setDraftFilters] = useState<SearchFilters>({
     page: 1,
     limit: 10,
   });
@@ -66,17 +71,19 @@ export default function SearchScreen() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>(isMobile ? 'grid' : 'list');
 
-  // Use the search hook
-  const { searchResults, pagination, loading, error, search, clearSearchResults } =
-    useSearchProperties();
-
-  const properties = searchResults || [];
-  const totalResults = pagination.total || 0;
+  // Use the search hook (React Query)
+  const rq = useSearchProperties(searchQuery.trim() || undefined, {
+    ...filters,
+  });
+  const loading = rq.isLoading;
+  const error = rq.error ? String((rq.error as any)?.message || rq.error) : null;
+  const properties = (rq.data?.properties as any[]) || [];
+  const totalResults = rq.data?.total || 0;
 
   const handleSearch = useCallback(() => {
-    if (searchQuery.trim()) {
+    if (inputValue.trim()) {
       const newFilters: SearchFilters = {
-        ...filters,
+        ...draftFilters,
         amenities: selectedAmenities.length > 0 ? selectedAmenities : undefined,
         type: selectedTypes.length > 0 ? selectedTypes.join(',') : undefined,
         page: 1, // Reset to first page on new search
@@ -84,9 +91,10 @@ export default function SearchScreen() {
       };
       setFilters(newFilters);
       // Reflect the query in the route: /search/:query
-      router.push(`/search/${encodeURIComponent(searchQuery)}`);
+      setSearchQuery(inputValue);
+      router.push(`/search/${encodeURIComponent(inputValue)}`);
     }
-  }, [router, searchQuery, filters, selectedAmenities, selectedTypes, setFilters]);
+  }, [router, inputValue, draftFilters, selectedAmenities, selectedTypes, setFilters]);
 
   const handleLoadMore = () => {
     if (properties.length < totalResults) {
@@ -112,17 +120,16 @@ export default function SearchScreen() {
   const clearFilters = () => {
     setSelectedAmenities([]);
     setSelectedTypes([]);
-    setFilters({
-      page: 1,
-      limit: 10,
-    });
+    setDraftFilters({ page: 1, limit: 10 });
   };
 
   // Do not auto-search on typing or filter changes; only search on submit
 
   // Keep local state in sync with route param
   useEffect(() => {
-    setSearchQuery(decodeURIComponent(initialQuery || ''));
+    const q = decodeURIComponent(initialQuery || '');
+    setSearchQuery(q);
+    setInputValue(q);
     // Reset to first page when query changes
     setFilters((prev) => ({ ...(prev || {}), page: 1, limit: 10 }));
   }, [initialQuery, setFilters]);
@@ -138,7 +145,7 @@ export default function SearchScreen() {
         page: 1,
         limit: 10,
       };
-      search(q, newFilters);
+      // navigation triggers re-run of hook via searchQuery
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuery]);
@@ -312,7 +319,7 @@ export default function SearchScreen() {
       <Ionicons name="alert-circle-outline" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
       <Text style={styles.emptyTitle}>{t('Search Error')}</Text>
       <Text style={styles.emptySubtitle}>{t('Something went wrong. Please try again.')}</Text>
-      <TouchableOpacity style={styles.retryButton} onPress={() => search(searchQuery, filters)}>
+      <TouchableOpacity style={styles.retryButton} onPress={() => rq.refetch()}>
         <Text style={styles.retryButtonText}>{t('Retry')}</Text>
       </TouchableOpacity>
     </View>
@@ -332,16 +339,16 @@ export default function SearchScreen() {
             <TextInput
               style={styles.searchInput}
               placeholder={t('Search properties...')}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
+              value={inputValue}
+              onChangeText={setInputValue}
               onSubmitEditing={handleSearch}
               returnKeyType="search"
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity
                 onPress={() => {
+                  setInputValue('');
                   setSearchQuery('');
-                  clearSearchResults();
                 }}
               >
                 <Ionicons name="close-circle" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
@@ -411,7 +418,7 @@ export default function SearchScreen() {
           refreshControl={
             <RefreshControl
               refreshing={loading && properties.length === 0}
-              onRefresh={() => search(searchQuery, filters)}
+              onRefresh={() => rq.refetch()}
               colors={[colors.primaryColor]}
             />
           }

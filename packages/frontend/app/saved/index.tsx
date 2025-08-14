@@ -32,6 +32,8 @@ import { useSavedPropertiesStore, useSavedPropertiesSelectors } from '@/store/sa
 // import { useSavedProfiles } from '@/context/SavedProfilesContext';
 import { api } from '@/utils/api';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
+import { useSavedSearches } from '@/hooks/useSavedSearches';
+import { SavedSearchActionsBottomSheet } from '@/components/SavedSearchActionsBottomSheet';
 import { EditNotesBottomSheet } from '@/components/EditNotesBottomSheet';
 import { parseNotesString } from '@/utils/notes';
 
@@ -44,7 +46,7 @@ const { width: screenWidth } = Dimensions.get('window');
 // Types
 export type SortOption = 'recent' | 'price-low' | 'price-high' | 'title' | 'notes';
 export type ViewMode = 'list' | 'grid';
-export type FilterCategory = 'all' | 'recent' | 'noted' | 'quick-saves' | 'folders' | 'profiles';
+export type FilterCategory = 'all' | 'recent' | 'noted' | 'quick-saves' | 'folders' | 'profiles' | 'searches';
 
 // Constants
 const SORT_OPTIONS = [
@@ -60,6 +62,7 @@ const CATEGORIES = [
   { id: 'recent', name: 'saved.tabs.recent', icon: 'time-outline' },
   { id: 'noted', name: 'saved.tabs.noted', icon: 'document-text-outline' },
   { id: 'quick-saves', name: 'saved.tabs.quickSaves', icon: 'bookmark-outline' },
+  { id: 'searches', name: 'saved.tabs.searches', icon: 'bookmark-outline' },
   { id: 'folders', name: 'saved.tabs.folders', icon: 'folder-outline' },
   { id: 'profiles', name: 'saved.tabs.profiles', icon: 'person-circle-outline' },
 ];
@@ -93,6 +96,7 @@ export default function SavedPropertiesScreen() {
     value === 'recent' ||
       value === 'noted' ||
       value === 'quick-saves' ||
+      value === 'searches' ||
       value === 'folders' ||
       value === 'profiles'
       ? value
@@ -112,6 +116,13 @@ export default function SavedPropertiesScreen() {
 
   // Folder functionality
   const { folders, loadFolders, loadSavedProperties: loadSavedFromCtx } = useSavedPropertiesContext();
+
+  // Saved searches (React Query-backed)
+  const {
+    searches: savedSearches,
+    toggleNotifications: toggleSavedSearchNotifications,
+    deleteSavedSearch: deleteSavedSearchHook,
+  } = useSavedSearches();
 
   // Search query (filtering directly for now for reliability)
 
@@ -224,7 +235,7 @@ export default function SavedPropertiesScreen() {
   // Memoized category counts
   const categoryCounts = useMemo(() => {
     const now = Date.now();
-    return {
+    const counts = {
       all: savedProperties.length,
       recent: savedProperties.filter((p) => {
         const savedTime = p.savedAt ? new Date(p.savedAt).getTime() : now;
@@ -234,8 +245,10 @@ export default function SavedPropertiesScreen() {
       'quick-saves': savedProperties.filter((p) => !p.notes || p.notes.trim().length === 0).length,
       folders: folders.length,
       profiles: savedProfiles.length,
-    };
-  }, [savedProperties, folders, savedProfiles]);
+      searches: savedSearches.length,
+    } as const;
+    return counts;
+  }, [savedProperties, folders, savedProfiles, savedSearches.length]);
 
   // Folders filtered for Folders tab
   const filteredFolders = useMemo(() => {
@@ -583,7 +596,9 @@ export default function SavedPropertiesScreen() {
           <Text style={styles.resultCount}>
             {selectedCategory === 'profiles'
               ? `${savedProfiles.length} ${t('saved.profilesLabel', 'profiles')}`
-              : `${filteredProperties.length} ${t('search.properties')}`}
+              : selectedCategory === 'searches'
+                ? `${savedSearches.length} ${t('search.savedSearches')}`
+                : `${filteredProperties.length} ${t('search.properties')}`}
           </Text>
         </View>
       </View>
@@ -810,6 +825,56 @@ export default function SavedPropertiesScreen() {
                 description={t('saved.noProfilesDescription', 'Follow profiles to see them here')}
               />
             }
+            refreshControl={
+              <RefreshControl
+                refreshing={isLoading}
+                onRefresh={handleRefresh}
+                colors={[colors.primaryColor]}
+                tintColor={colors.primaryColor}
+              />
+            }
+            removeClippedSubviews
+            windowSize={7}
+            initialNumToRender={12}
+            maxToRenderPerBatch={10}
+            updateCellsBatchingPeriod={50}
+          />
+        ) : selectedCategory === 'searches' ? (
+          <FlatList
+            data={savedSearches as any}
+            keyExtractor={(item: any) => item.id}
+            renderItem={({ item }: any) => (
+              <ListItem
+                title={item.name}
+                description={item.query}
+                onPress={() => router.push(`/search/${encodeURIComponent(item.query)}`)}
+                rightElement={
+                  <TouchableOpacity
+                    style={styles.bulkIconBtn}
+                    onPress={() =>
+                      bottomSheetContext?.openBottomSheet(
+                        <SavedSearchActionsBottomSheet
+                          search={{ id: item.id, name: item.name, query: item.query, notificationsEnabled: item.notifications }}
+                          onClose={() => bottomSheetContext?.closeBottomSheet()}
+                          onEdit={(s) => router.push(`/search/${encodeURIComponent(s.query)}`)}
+                          onToggleNotifications={(s) =>
+                            toggleSavedSearchNotifications(s.id, !s.notificationsEnabled)
+                          }
+                          onDelete={(s) => deleteSavedSearchHook(s.id, s.name)}
+                        />,
+                      )
+                    }
+                  >
+                    <IconComponent name="ellipsis-vertical" size={18} color={colors.primaryColor} />
+                  </TouchableOpacity>
+                }
+              />
+            )}
+            contentContainerStyle={StyleSheet.flatten([
+              styles.listContent,
+              (savedSearches as any).length === 0 && styles.emptyListContent,
+            ])}
+            ListEmptyComponent={renderEmptyState}
             refreshControl={
               <RefreshControl
                 refreshing={isLoading}

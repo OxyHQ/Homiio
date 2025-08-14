@@ -132,54 +132,38 @@ export const usePropertyStats = (id: string) => {
 
 // Removed energy stats hook per request (perf and not needed)
 
-export const useSearchProperties = () => {
-  const { searchResults, pagination, loading, error } = usePropertySelectors();
-  const { setSearchResults, setLoading, setError, clearSearchResults, setPagination } =
-    usePropertyStore();
-  const queryClient = useQueryClient();
+export const useSearchProperties = (query?: string, filters?: PropertyFilters) => {
+  const { setSearchResults, setError, setPagination } = usePropertyStore();
+  const enabled = Boolean(query && query.length > 0);
 
-  const search = useCallback(
-    async (query: string, filters?: PropertyFilters) => {
-      if (!query || query.length === 0) return { properties: [], total: 0 };
-      try {
-        setLoading('search', true);
-        setError(null);
-        const response = await queryClient.fetchQuery({
-          queryKey: ['propertiesSearch', { query, filters: filters ?? null }],
-          queryFn: async () => propertyService.searchProperties(query, filters),
-          staleTime: 1000 * 30,
-          gcTime: 1000 * 60 * 10,
-        });
-        setSearchResults(response.properties || []);
-        setPagination({
-          page: 1,
-          total: response.total || 0,
-          totalPages: Math.ceil((response.total || 0) / 10),
-          limit: 10,
-        });
-        return response;
-      } catch (e: any) {
-        setError(e.message || 'Failed to search properties');
-        return { properties: [], total: 0 };
-      } finally {
-        setLoading('search', false);
-      }
-    },
-    [queryClient, setSearchResults, setLoading, setError, setPagination],
-  );
+  const result = useQuery({
+    queryKey: ['propertiesSearch', { query, filters: filters ?? null }],
+    queryFn: async () => propertyService.searchProperties(query as string, filters),
+    enabled,
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
+  });
 
-  const clearSearchResultsAction = useCallback(() => {
-    clearSearchResults();
-  }, [clearSearchResults]);
+  useEffect(() => {
+    if (result.data) {
+      setSearchResults(result.data.properties || []);
+      setPagination({
+        page: 1,
+        total: result.data.total || 0,
+        totalPages: Math.ceil((result.data.total || 0) / 10),
+        limit: 10,
+      });
+    }
+  }, [result.data, setSearchResults, setPagination]);
 
-  return {
-    searchResults,
-    pagination,
-    loading: loading.search,
-    error,
-    search,
-    clearSearchResults: clearSearchResultsAction,
-  };
+  useEffect(() => {
+    if (result.error) {
+      const e = result.error as Error;
+      setError(e.message || 'Failed to search properties');
+    }
+  }, [result.error, setError]);
+
+  return result;
 };
 
 export const useCreateProperty = () => {

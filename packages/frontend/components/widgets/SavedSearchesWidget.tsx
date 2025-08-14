@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   FlatList,
   Modal,
-  Alert,
   Switch,
   TextInput,
 } from 'react-native';
@@ -16,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
+import { webAlert } from '@/utils/api';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SavedSearchActionsBottomSheet } from '@/components/SavedSearchActionsBottomSheet';
 
@@ -79,7 +79,7 @@ export function SavedSearchesWidget() {
   };
 
   const handleDeleteSavedSearch = async (search: SavedSearch) => {
-    Alert.alert(t('search.deleteSearch'), t('search.deleteSearchConfirm', { name: search.name }), [
+    webAlert(t('search.deleteSearch'), t('search.deleteSearchConfirm', { name: search.name }), [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('common.delete'),
