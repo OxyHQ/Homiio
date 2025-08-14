@@ -22,6 +22,7 @@ import { useRoommate } from '@/hooks/useRoommate';
 import { useOxy } from '@oxyhq/services';
 import { roommateService } from '@/services/roommateService';
 import { useProfileStore } from '@/store/profileStore';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 // Type assertion for Ionicons compatibility
 const IconComponent = Ionicons as any;
@@ -45,13 +46,30 @@ export default function RoommatesPage() {
   } = useRoommate();
 
   const { oxyServices, activeSessionId } = useOxy();
+  const queryClient = useQueryClient();
 
   const { primaryProfile, isPersonalProfile, hasPersonalProfile } = useProfile();
 
-  const hasRoommateMatching =
+  // Authoritative status from backend
+  const statusQuery = useQuery({
+    queryKey: ['roommates', 'status'],
+    queryFn: async () => roommateService.getMyRoommateStatus(oxyServices!, activeSessionId!),
+    enabled: Boolean(oxyServices && activeSessionId),
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
+  });
+
+  const computedEnabledFromProfile = Boolean(
     isPersonalProfile &&
     hasPersonalProfile &&
-    (primaryProfile?.personalProfile?.settings?.roommate?.enabled || false);
+    primaryProfile?.personalProfile?.settings?.roommate?.enabled,
+  );
+
+  const hasRoommateMatching = Boolean(
+    statusQuery.data?.hasRoommateMatching ?? computedEnabledFromProfile,
+  );
+
+  const [isToggling, setIsToggling] = useState(false);
 
   useEffect(() => {
     if (!isPersonalProfile || !hasPersonalProfile) return;
@@ -67,14 +85,29 @@ export default function RoommatesPage() {
         fetchRelationships();
         break;
     }
-  }, [
-    activeTab,
-    isPersonalProfile,
-    hasPersonalProfile,
-    fetchProfiles,
-    fetchRequests,
-    fetchRelationships,
-  ]);
+    // Intentionally depend only on tab/auth status to avoid refetch loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, isPersonalProfile, hasPersonalProfile]);
+
+  // Refetch when auth becomes available (initial mount race fix)
+  useEffect(() => {
+    if (!oxyServices || !activeSessionId) return;
+    if (!isPersonalProfile || !hasPersonalProfile) return;
+    // Ensure primary profile is refreshed on mount so enabled state is current
+    useProfileStore.getState().fetchPrimaryProfile(oxyServices, activeSessionId);
+    if (activeTab === 'discover') fetchProfiles();
+    if (activeTab === 'requests') fetchRequests();
+    if (activeTab === 'relationships') fetchRelationships();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [oxyServices, activeSessionId]);
+
+  // If matching just became enabled, ensure profiles are fetched
+  useEffect(() => {
+    if (hasRoommateMatching && activeTab === 'discover') {
+      fetchProfiles();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasRoommateMatching]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -97,18 +130,25 @@ export default function RoommatesPage() {
 
   const handleToggleMatching = async () => {
     if (!oxyServices || !activeSessionId) return;
+    if (isToggling) return;
+    setIsToggling(true);
     try {
-      // Toggle the current state
-      const newState = !hasRoommateMatching;
-      await roommateService.toggleRoommateMatching(newState, oxyServices, activeSessionId);
+      const intendedState = !hasRoommateMatching;
+      const result = await roommateService.toggleRoommateMatching(intendedState, oxyServices, activeSessionId);
+      // Refresh profile to maintain single source of truth
       await useProfileStore.getState().fetchPrimaryProfile(oxyServices, activeSessionId);
-      if (newState) {
-        await fetchProfiles();
+      // Update status query cache immediately
+      queryClient.setQueryData(['roommates', 'status'], { hasRoommateMatching: result.enabled });
+      // Stay on the same screen; refetch silently if enabling
+      if (result.enabled) {
+        fetchProfiles();
       }
-      Alert.alert('Success', `Roommate matching ${newState ? 'enabled' : 'disabled'}`);
+      Alert.alert('Success', result.message || `Roommate matching ${result.enabled ? 'enabled' : 'disabled'}`);
     } catch (error: any) {
       console.error('Error toggling roommate matching:', error);
       Alert.alert('Error', 'Failed to toggle roommate matching');
+    } finally {
+      setIsToggling(false);
     }
   };
 
@@ -130,21 +170,22 @@ export default function RoommatesPage() {
       );
     }
 
-    if (!hasRoommateMatching) {
+    // While fetching, prefer showing a spinner over the enable CTA
+    if (isLoading) {
+      return <LoadingSpinner />;
+    }
+
+    if (!hasRoommateMatching && profiles.length === 0) {
       return (
         <EmptyState
           icon="people-outline"
           title="Enable Roommate Matching"
           description="Turn on roommate matching to discover potential roommates based on your preferences."
-          actionText="Enable Matching"
+          actionText={isToggling ? 'Enabling…' : 'Enable Matching'}
           actionIcon="checkmark-circle"
           onAction={handleToggleMatching}
         />
       );
-    }
-
-    if (isLoading) {
-      return <LoadingSpinner />;
     }
 
     if (profiles.length === 0) {

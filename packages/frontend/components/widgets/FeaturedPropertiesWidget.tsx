@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import LoadingSpinner from '../LoadingSpinner';
 import { Link, useRouter } from 'expo-router';
@@ -19,37 +19,39 @@ export function FeaturedPropertiesWidget() {
   const { properties, loading, error, loadProperties } = useProperties();
   const router = useRouter();
 
+  // Attempt to fetch location-aware featured list on mount
   useEffect(() => {
-    loadProperties({ limit: 4, status: 'available' });
-  }, [loadProperties]);
-
-  const featured = properties || [];
-  // Single fetch path: attempt location; on denial or error, fallback to default
-  useEffect(() => {
+    let cancelled = false;
     (async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-          await loadProperties({ limit: 4, status: 'available' });
+          if (!cancelled) await loadProperties({ limit: 4, status: 'available' });
           return;
         }
         try {
           const location = await Location.getCurrentPositionAsync({});
-          await loadProperties({
-            limit: 4,
-            status: 'available',
-            lat: location.coords.latitude as any,
-            lng: location.coords.longitude as any,
-            radius: 45000 as any,
-          });
+          if (!cancelled)
+            await loadProperties({
+              limit: 4,
+              status: 'available',
+              lat: location.coords.latitude as any,
+              lng: location.coords.longitude as any,
+              radius: 45000 as any,
+            });
         } catch {
-          await loadProperties({ limit: 4, status: 'available' });
+          if (!cancelled) await loadProperties({ limit: 4, status: 'available' });
         }
       } catch {
-        await loadProperties({ limit: 4, status: 'available' });
+        if (!cancelled) await loadProperties({ limit: 4, status: 'available' });
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [loadProperties]);
+
+  const featured = useMemo(() => properties || [], [properties]);
 
   // No client-side ordering; backend provides preferred order and savesCount
 
@@ -101,10 +103,10 @@ function FeaturedProperties({ properties }: { properties: any[] }) {
   // Order most saved to less saved, then limit to 4
   const sorted = Array.isArray(properties)
     ? [...properties].sort((a, b) => {
-        const aSaves = typeof a.savesCount === 'number' ? a.savesCount : 0;
-        const bSaves = typeof b.savesCount === 'number' ? b.savesCount : 0;
-        return bSaves - aSaves;
-      })
+      const aSaves = typeof a.savesCount === 'number' ? a.savesCount : 0;
+      const bSaves = typeof b.savesCount === 'number' ? b.savesCount : 0;
+      return bSaves - aSaves;
+    })
     : [];
   const limited = sorted.slice(0, 4);
 

@@ -70,6 +70,23 @@ class RoommateService {
     }
   }
 
+  // Get current user's roommate matching status (enabled flag)
+  async getMyRoommateStatus(
+    oxyServices?: OxyServices,
+    activeSessionId?: string,
+  ): Promise<{ hasRoommateMatching: boolean } | null> {
+    try {
+      const response = await api.get(`${this.baseUrl}/status`, {
+        oxyServices,
+        activeSessionId,
+      });
+      return { hasRoommateMatching: Boolean(response.data.hasRoommateMatching) };
+    } catch (error) {
+      console.error('Error fetching roommate status:', error);
+      return null;
+    }
+  }
+
   // Update roommate preferences
   async updateRoommatePreferences(
     preferences: RoommatePreferences,
@@ -93,9 +110,9 @@ class RoommateService {
     enabled: boolean,
     oxyServices?: OxyServices,
     activeSessionId?: string,
-  ): Promise<void> {
+  ): Promise<{ enabled: boolean; message: string }> {
     try {
-      await api.patch(
+      const response = await api.patch(
         `${this.baseUrl}/toggle`,
         { enabled },
         {
@@ -103,6 +120,12 @@ class RoommateService {
           activeSessionId,
         },
       );
+      const data = response.data as any;
+      // Fallback if backend doesn't include enabled for some reason
+      return {
+        enabled: typeof data.enabled === 'boolean' ? data.enabled : !!enabled,
+        message: data.message ?? `Roommate matching ${enabled ? 'enabled' : 'disabled'} successfully`,
+      };
     } catch (error) {
       console.error('Error toggling roommate matching:', error);
       throw error;
@@ -208,30 +231,13 @@ class RoommateService {
     }
   }
 
-  // Get roommate relationships
+  // Get roommate relationships (not yet implemented on backend)
   async getRoommateRelationships(
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ): Promise<{
-    data: any[];
-  }> {
-    try {
-      const response = await api.get(`${this.baseUrl}/relationships`, {
-        oxyServices,
-        activeSessionId,
-      });
-      const data = response.data;
-      if (Array.isArray(data?.data)) {
-        data.data = data.data.map((r: any) => ({
-          ...r,
-          matchScore: r.matchPercentage ?? r.matchScore,
-        }));
-      }
-      return data;
-    } catch (error) {
-      console.error('Error fetching roommate relationships:', error);
-      return { data: [] };
-    }
+    _oxyServices?: OxyServices,
+    _activeSessionId?: string,
+  ): Promise<{ data: any[] }> {
+    // Gracefully return empty list to avoid 404s until backend is ready
+    return { data: [] };
   }
 
   // End roommate relationship

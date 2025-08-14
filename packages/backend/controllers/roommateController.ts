@@ -174,7 +174,7 @@ const getMyRoommatePreferences = async (req, res) => {
 const updateRoommatePreferences = async (req, res) => {
   try {
     const oxyUserId = req.user?.id || req.user?._id;
-    const { ageRange, gender, lifestyle, budget, moveInDate, leaseDuration, interests, location } = req.body;
+    const { ageRange, gender, lifestyle, budget, moveInDate, leaseDuration, interests, location, enabled } = req.body;
 
     if (!oxyUserId) {
       return res.status(401).json({ error: 'Authentication required' });
@@ -192,7 +192,7 @@ const updateRoommatePreferences = async (req, res) => {
       return res.status(403).json({ error: 'Roommate preferences are only available for personal profiles' });
     }
 
-    const updateData = {
+    const updateData: any = {
       'personalProfile.settings.roommate.preferences': {
         ageRange,
         gender,
@@ -201,9 +201,12 @@ const updateRoommatePreferences = async (req, res) => {
         moveInDate,
         leaseDuration,
         interests,
-        location
-      }
+        location,
+      },
     };
+    if (typeof enabled === 'boolean') {
+      updateData['personalProfile.settings.roommate.enabled'] = enabled;
+    }
 
     const updatedProfile = await Profile.findByIdAndUpdate(
       profile._id,
@@ -211,7 +214,7 @@ const updateRoommatePreferences = async (req, res) => {
       { new: true }
     );
 
-    res.json({ data: updatedProfile.personalProfile.settings.roommate.preferences });
+    res.json({ data: updatedProfile.personalProfile.settings.roommate.preferences, enabled: updatedProfile.personalProfile.settings?.roommate?.enabled || false });
   } catch (error) {
     console.error('Error updating roommate preferences:', error);
     res.status(500).json({ error: 'Failed to update roommate preferences' });
@@ -241,12 +244,19 @@ const toggleRoommateMatching = async (req, res) => {
     }
 
     const updateData = {
-      'personalProfile.settings.roommate.enabled': enabled
+      'personalProfile.settings.roommate.enabled': enabled,
     };
 
-    await Profile.findByIdAndUpdate(profile._id, updateData);
+    const updatedProfile = await Profile.findByIdAndUpdate(profile._id, updateData, { new: true });
 
-    res.json({ message: `Roommate matching ${enabled ? 'enabled' : 'disabled'} successfully` });
+    const updatedEnabled = Boolean(
+      updatedProfile?.personalProfile?.settings?.roommate?.enabled,
+    );
+
+    res.json({
+      message: `Roommate matching ${updatedEnabled ? 'enabled' : 'disabled'} successfully`,
+      enabled: updatedEnabled,
+    });
   } catch (error) {
     console.error('Error toggling roommate matching:', error);
     res.status(500).json({ error: 'Failed to toggle roommate matching' });
