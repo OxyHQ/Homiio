@@ -1,4 +1,4 @@
-import React, { createContext, ReactNode, useRef, useCallback, useEffect, useState } from 'react';
+import React, { createContext, ReactNode, useRef, useCallback, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import {
   BottomSheetModal,
@@ -19,8 +19,8 @@ interface BottomSheetContextProps {
 }
 
 export const BottomSheetContext = createContext<BottomSheetContextProps>({
-  openBottomSheet: () => {},
-  closeBottomSheet: () => {},
+  openBottomSheet: () => { },
+  closeBottomSheet: () => { },
   isOpen: false,
   bottomSheetRef: { current: null } as React.RefObject<BottomSheetModal | null>,
 });

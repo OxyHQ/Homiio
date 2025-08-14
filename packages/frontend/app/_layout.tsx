@@ -4,7 +4,7 @@ import {
   SafeAreaProvider,
   initialWindowMetrics,
 } from 'react-native-safe-area-context';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { GestureHandlerRootView, ScrollView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import { Slot } from 'expo-router';
@@ -150,59 +150,61 @@ export default function RootLayout() {
   }, [loaded, splashState.initializationComplete, splashState.startFade]);
 
   return (
-    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <GestureHandlerRootView>
-        {!appIsReady ? (
-          <AppSplashScreen
-            startFade={splashState.startFade}
-            onFadeComplete={handleSplashFadeComplete}
-          />
-        ) : (
-          <PostHogProvider
-            apiKey={posthogApiKey}
-            options={{
-              host: posthogHost,
-              enableSessionReplay: true,
-            }}
-            autocapture
-          >
-            <OxyProvider
-              oxyServices={oxyServices}
-              initialScreen="SignIn"
-              autoPresent={false}
-              storageKeyPrefix="oxy_example"
-              theme="light"
+    <View style={{ flex: 1 }}>
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          {!appIsReady ? (
+            <AppSplashScreen
+              startFade={splashState.startFade}
+              onFadeComplete={handleSplashFadeComplete}
+            />
+          ) : (
+            <PostHogProvider
+              apiKey={posthogApiKey}
+              options={{
+                host: posthogHost,
+                enableSessionReplay: true,
+              }}
+              autocapture
             >
-              <ProfileProvider>
-                <SavedPropertiesProvider>
-                  <I18nextProvider i18n={i18n}>
-                    <BottomSheetProvider>
-                      <MenuProvider>
-                        <ErrorBoundary>
-                          <View style={styles.container}>
-                            <SideBar />
-                            <View style={styles.mainContentWrapper}>
-                              <Slot />
-                            </View>
-                            <RightBar />
-                          </View>
-                          <StatusBar style="auto" />
-                          <Toaster
-                            position="bottom-center"
-                            swipeToDismissDirection="left"
-                            offset={15}
-                          />
-                          {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
-                        </ErrorBoundary>
-                      </MenuProvider>
-                    </BottomSheetProvider>
-                  </I18nextProvider>
-                </SavedPropertiesProvider>
-              </ProfileProvider>
-            </OxyProvider>
-          </PostHogProvider>
-        )}
-      </GestureHandlerRootView>
-    </SafeAreaProvider>
+              <OxyProvider
+                oxyServices={oxyServices}
+                initialScreen="SignIn"
+                autoPresent={false}
+                storageKeyPrefix="oxy_example"
+                theme="light"
+              >
+                <ProfileProvider>
+                  <SavedPropertiesProvider>
+                    <I18nextProvider i18n={i18n}>
+                      <BottomSheetProvider>
+                        <MenuProvider>
+                          <ErrorBoundary>
+                            <ScrollView contentContainerStyle={styles.container} style={{ flex: 1 }}>
+                              <SideBar />
+                              <View style={styles.mainContentWrapper}>
+                                <Slot />
+                              </View>
+                              <RightBar />
+                            </ScrollView>
+                            <StatusBar style="auto" />
+                            <Toaster
+                              position="bottom-center"
+                              swipeToDismissDirection="left"
+                              offset={15}
+                            />
+                            {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
+                          </ErrorBoundary>
+                        </MenuProvider>
+                      </BottomSheetProvider>
+                    </I18nextProvider>
+                  </SavedPropertiesProvider>
+                </ProfileProvider>
+              </OxyProvider>
+            </PostHogProvider>
+          )}
+        </GestureHandlerRootView>
+      </SafeAreaProvider>
+    </View>
   );
 }
