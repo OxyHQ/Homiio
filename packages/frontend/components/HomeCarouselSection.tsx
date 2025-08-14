@@ -80,9 +80,9 @@ export function HomeCarouselSection<T>({
   const maxCarouselIndex =
     calculatedCardWidth > 0
       ? Math.max(
-          0,
-          Math.ceil((totalContentWidth - containerWidth) / (calculatedCardWidth + cardGap)),
-        )
+        0,
+        Math.ceil((totalContentWidth - containerWidth) / (calculatedCardWidth + cardGap)),
+      )
       : 0;
 
   // Fast magnetic snap function
@@ -124,15 +124,15 @@ export function HomeCarouselSection<T>({
   const handleScroll =
     calculatedCardWidth > 0
       ? (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-          const x = e.nativeEvent.contentOffset.x;
-          const clampedScroll = Math.min(x, maxScroll);
-          setScrollX(clampedScroll);
+        const x = e.nativeEvent.contentOffset.x;
+        const clampedScroll = Math.min(x, maxScroll);
+        setScrollX(clampedScroll);
 
-          // Update carousel index based on current scroll position
-          const currentIndex = Math.round(clampedScroll / (calculatedCardWidth + cardGap));
-          const clampedIndex = Math.max(0, Math.min(currentIndex, items.length - 1));
-          setCarouselIndex(clampedIndex);
-        }
+        // Update carousel index based on current scroll position
+        const currentIndex = Math.round(clampedScroll / (calculatedCardWidth + cardGap));
+        const clampedIndex = Math.max(0, Math.min(currentIndex, items.length - 1));
+        setCarouselIndex(clampedIndex);
+      }
       : undefined;
 
   const handleScrollBeginDrag = () => {
@@ -162,23 +162,23 @@ export function HomeCarouselSection<T>({
   const handleMomentumScrollEnd =
     calculatedCardWidth > 0
       ? (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-          const x = e.nativeEvent.contentOffset.x;
-          const clampedScroll = Math.min(x, maxScroll);
+        const x = e.nativeEvent.contentOffset.x;
+        const clampedScroll = Math.min(x, maxScroll);
 
-          // Apply magnetic snap with very low threshold for faster response
-          const snappedScrollX = snapToNearestCard(clampedScroll);
+        // Apply magnetic snap with very low threshold for faster response
+        const snappedScrollX = snapToNearestCard(clampedScroll);
 
-          if (Math.abs(snappedScrollX - clampedScroll) > 1) {
-            carouselRef.current?.scrollTo({ x: snappedScrollX, animated: true });
-            setScrollX(snappedScrollX);
-          } else {
-            setScrollX(clampedScroll);
-          }
-
-          const snappedIndex = Math.round(snappedScrollX / (calculatedCardWidth + cardGap));
-          const clampedIndex = Math.max(0, Math.min(snappedIndex, items.length - 1));
-          setCarouselIndex(clampedIndex);
+        if (Math.abs(snappedScrollX - clampedScroll) > 1) {
+          carouselRef.current?.scrollTo({ x: snappedScrollX, animated: true });
+          setScrollX(snappedScrollX);
+        } else {
+          setScrollX(clampedScroll);
         }
+
+        const snappedIndex = Math.round(snappedScrollX / (calculatedCardWidth + cardGap));
+        const clampedIndex = Math.max(0, Math.min(snappedIndex, items.length - 1));
+        setCarouselIndex(clampedIndex);
+      }
       : undefined;
 
   const disableRightArrow = scrollX >= maxScroll || maxScroll <= 0;
@@ -238,21 +238,21 @@ export function HomeCarouselSection<T>({
           <View style={{ flexDirection: 'row', gap: 16 }}>
             {loading
               ? Array.from({ length: 4 }).map((_, idx) => (
-                  <View
-                    key={idx}
-                    style={{
-                      width: calculatedCardWidth,
-                      height: 200,
-                      backgroundColor: '#f0f0f0',
-                      borderRadius: 8,
-                    }}
-                  />
-                ))
+                <View
+                  key={idx}
+                  style={{
+                    width: calculatedCardWidth,
+                    height: 200,
+                    backgroundColor: '#f0f0f0',
+                    borderRadius: 8,
+                  }}
+                />
+              ))
               : items.map((item, idx) => (
-                  <View key={idx} style={{ width: calculatedCardWidth }}>
-                    {renderItem(item, idx)}
-                  </View>
-                ))}
+                <View key={idx} style={{ width: calculatedCardWidth }}>
+                  {renderItem(item, idx)}
+                </View>
+              ))}
           </View>
         </ScrollView>
       </View>

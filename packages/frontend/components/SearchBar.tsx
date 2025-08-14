@@ -29,22 +29,19 @@ export const SearchBar = ({ hideFilterIcon = false }: SearchBarProps) => {
   const router = useRouter();
   const { t } = useTranslation();
 
-  const handleSearch = useCallback(
-    debounce(async (query: string) => {
-      if (!query.trim()) return;
-      setIsLoading(true);
-      try {
-        await router.push(`/search/${encodeURIComponent(query)}`);
-      } finally {
-        setIsLoading(false);
-      }
-    }, 300),
-    [],
-  );
+  const handleSubmit = useCallback(async () => {
+    const q = searchQuery.trim();
+    if (!q) return;
+    setIsLoading(true);
+    try {
+      await router.push(`/search/${encodeURIComponent(q)}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [router, searchQuery]);
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
-    handleSearch(query);
   };
 
   return (
@@ -92,7 +89,7 @@ export const SearchBar = ({ hideFilterIcon = false }: SearchBarProps) => {
           value={searchQuery}
           onChangeText={handleSearchChange}
           returnKeyType="search"
-          onSubmitEditing={() => handleSearch(searchQuery)}
+          onSubmitEditing={handleSubmit}
         />
         {hideFilterIcon ? (
           <View

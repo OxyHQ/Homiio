@@ -706,65 +706,67 @@ class PropertyController {
         limit = 10 
       } = req.query;
 
-      // Build search query
-      const searchQuery: any = {};
+      // Helper: escape regex special chars for safe partial search
+      const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-      // Use MongoDB text search when a query string is provided
-      if (query) {
-        searchQuery.$text = { $search: query };
-      }
+      // Build filters using $and to combine filters cleanly
+      const andConditions: any[] = [];
 
       // Filter by property type
       if (type) {
-        searchQuery.type = type;
+        andConditions.push({ type });
       }
 
       // Filter by city/location
       if (city) {
-        searchQuery['address.city'] = new RegExp(city, 'i');
+        andConditions.push({ 'address.city': new RegExp(String(city), 'i') });
       }
 
       // Filter by rent range
       if (minRent || maxRent) {
-        searchQuery['rent.amount'] = {};
-        if (minRent) searchQuery['rent.amount'].$gte = parseInt(minRent);
-        if (maxRent) searchQuery['rent.amount'].$lte = parseInt(maxRent);
+        const rentFilter: any = {};
+        if (minRent) rentFilter.$gte = parseInt(minRent);
+        if (maxRent) rentFilter.$lte = parseInt(maxRent);
+        andConditions.push({ 'rent.amount': rentFilter });
       }
 
       // Filter by bedrooms
       if (bedrooms) {
-        searchQuery.bedrooms = parseInt(bedrooms);
+        andConditions.push({ bedrooms: parseInt(bedrooms) });
       }
 
       // Filter by bathrooms
       if (bathrooms) {
-        searchQuery.bathrooms = parseInt(bathrooms);
+        andConditions.push({ bathrooms: parseInt(bathrooms) });
       }
 
-      // Filter by amenities
+      // Filter by amenities (exact list match)
       if (amenities) {
-        const amenityList = amenities.split(',').map(a => a.trim());
-        searchQuery.amenities = { $in: amenityList };
+        const amenityList = String(amenities).split(',').map(a => a.trim());
+        andConditions.push({ amenities: { $in: amenityList } });
       }
 
       // Filter by verified/eco-friendly
       if (verified === 'true') {
-        searchQuery.isVerified = true;
+        andConditions.push({ isVerified: true });
       }
       if (eco === 'true') {
-        searchQuery.isEcoFriendly = true;
+        andConditions.push({ isEcoFriendly: true });
       }
 
       // Filter by availability
       if (available !== undefined) {
-        searchQuery['availability.isAvailable'] = available === 'true';
+        andConditions.push({ 'availability.isAvailable': available === 'true' });
       } else {
         // Default to available properties
-        searchQuery['availability.isAvailable'] = true;
+        andConditions.push({ 'availability.isAvailable': true });
       }
       
       // Only show active properties
-      searchQuery.status = 'active';
+      andConditions.push({ status: 'active' });
+
+      // Track whether geo filter is applied (for sorting hint)
+      let hasGeo = false;
 
       // Add geospatial query if location parameters are provided
       if (lat && lng && radius) {
@@ -782,49 +784,85 @@ class PropertyController {
         }
 
         // Add geospatial query
-        searchQuery.location = {
-          $near: {
-            $geometry: {
-              type: 'Point',
-              coordinates: [longitude, latitude] // GeoJSON format: [lng, lat]
-            },
-            $maxDistance: radiusInMeters
+        andConditions.push({
+          location: {
+            $near: {
+              $geometry: {
+                type: 'Point',
+                coordinates: [longitude, latitude] // GeoJSON format: [lng, lat]
+              },
+              $maxDistance: radiusInMeters
+            }
           }
-        };
+        });
+        hasGeo = true;
       }
 
-      // Execute search
+      // Execute search with two-phase strategy to support partial matches and text relevance
       const skip = (parseInt(page) - 1) * parseInt(limit);
 
-      const queryOptions = Property.find(searchQuery)
-        .skip(skip)
-        .limit(parseInt(limit));
+      // Base filter from collected conditions
+      const baseFilter = andConditions.length > 0 ? { $and: andConditions } : {};
 
-      // If text search was used, sort by relevance
-      if (searchQuery.$text) {
-        queryOptions
-          .sort({ score: { $meta: 'textScore' } })
-          .select({ score: { $meta: 'textScore' } });
-      } else if (searchQuery.location) {
-        // If geospatial query is used, sort by distance (closest first)
-        queryOptions.sort({ location: { $meta: 'geoNear' } });
+      // Utility to run a query with optional text sort
+      const runQuery = async (filter: any, useTextSort: boolean) => {
+        const q = Property.find(filter).skip(skip).limit(parseInt(limit));
+        if (useTextSort) {
+          q.sort({ score: { $meta: 'textScore' } }).select({ score: { $meta: 'textScore' } });
+        } else if (hasGeo) {
+          // Mongoose doesn't support $meta: 'geoNear' sort here without an aggregate geoNear stage
+          // Fallback to createdAt desc to keep stable ordering when geo filter is applied
+          q.sort({ createdAt: -1 });
+        } else {
+          q.sort({ createdAt: -1 });
+        }
+        const [items, count] = await Promise.all([
+          q.lean(),
+          Property.countDocuments(filter),
+        ]);
+        return { items, count };
+      };
+
+      let resultItems: any[] = [];
+      let resultTotal = 0;
+
+      if (query) {
+        // First attempt: full-text search for better relevance
+        const textFilter: any = { ...baseFilter, $text: { $search: String(query) } };
+        const textRes = await runQuery(textFilter, true);
+        if (textRes.count > 0) {
+          resultItems = textRes.items;
+          resultTotal = textRes.count;
+        } else {
+          // Fallback to case-insensitive partial matching across key fields
+          const safe = escapeRegExp(String(query));
+          const regex = new RegExp(safe, 'i');
+          const orRegex = [
+            { title: regex },
+            { description: regex },
+            { 'address.city': regex },
+            { 'address.state': regex },
+            { 'address.street': regex },
+            { amenities: regex },
+          ];
+          const regexFilter: any = { ...baseFilter, $or: orRegex };
+          const regexRes = await runQuery(regexFilter, false);
+          resultItems = regexRes.items;
+          resultTotal = regexRes.count;
+        }
       } else {
-        queryOptions.sort({ createdAt: -1 });
+        // No query: just apply base filters
+        const baseRes = await runQuery(baseFilter, false);
+        resultItems = baseRes.items;
+        resultTotal = baseRes.count;
       }
-
-      const [properties, total] = await Promise.all([
-        queryOptions.lean(),
-        Property.countDocuments(searchQuery)
-      ]);
-
-      const totalPages = Math.ceil(total / parseInt(limit));
 
       res.json(
         paginationResponse(
-          properties,
+          resultItems,
           parseInt(page),
           parseInt(limit),
-          total,
+          resultTotal,
           "Search completed successfully",
         ),
       );

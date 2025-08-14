@@ -5,7 +5,7 @@ export { useSavedProperties } from './useSavedProperties';
 export { useProfile } from './useProfile';
 
 // Property hooks
-export { useProperties, useProperty, usePropertyStats } from './usePropertyQueries';
+export { useProperties, useProperty, usePropertyStats, useSearchProperties } from './usePropertyQueries';
 
 // Profile hooks
 export { useProfileRedux, useActiveProfile } from './useProfileQueries';

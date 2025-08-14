@@ -10,6 +10,7 @@ export { Search, SearchActive } from './search-icon';
 
 // Sindi icon
 export { SindiIcon, SindiIconActive } from './sindi-icon';
+export { AnalyticsIcon, AnalyticsIconActive } from './analytics-icon';
 
 // Types
 export type { IconProps } from './types';

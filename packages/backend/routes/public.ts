@@ -8,6 +8,7 @@ const propertyController = require('../controllers/propertyController');
 const telegramController = require('../controllers/telegramController');
 const cityController = require('../controllers/cityController').default;
 const tipsController = require('../controllers/tipsController');
+const analyticsController = require('../controllers/analyticsController');
 const { asyncHandler } = require('../middlewares');
 const performanceMonitor = require('../middlewares/performance').default;
 const Conversation = require('../models/schemas/ConversationSchema');
@@ -37,6 +38,8 @@ export default function () {
   // Public tips routes
   router.get('/tips', asyncHandler(tipsController.getAllTips));
   router.get('/tips/featured', asyncHandler(tipsController.getFeaturedTips));
+  // Public analytics/stats (no auth)
+  router.get('/analytics/stats', asyncHandler(analyticsController.getAppStats));
   router.get('/tips/category/:category', asyncHandler(tipsController.getTipsByCategory));
   router.get('/tips/search', asyncHandler(tipsController.searchTips));
   router.get('/tips/:id', asyncHandler(tipsController.getTipById));

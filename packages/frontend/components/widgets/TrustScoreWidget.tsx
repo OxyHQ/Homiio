@@ -108,26 +108,28 @@ export function TrustScoreWidget() {
     if (trustScoreData.type === 'agency') {
       const scoreColor = getScoreColor(trustScoreData.score);
       return (
-        <View style={styles.trustScoreContent}>
-          <View style={styles.verificationCircle}>
-            <ThemedText style={[styles.verificationPercentage, { color: scoreColor }]}>
-              {Math.round(trustScoreData.score)}%
-            </ThemedText>
-            <ThemedText style={styles.verificationLabel}>
-              {t('trust.verified', 'Verified')}
-            </ThemedText>
+        <View style={styles.rowContainer}>
+          <View style={styles.leftCol}>
+            <View style={styles.verificationCircle}>
+              <ThemedText style={[styles.verificationPercentage, { color: scoreColor }]}>
+                {Math.round(trustScoreData.score)}%
+              </ThemedText>
+              <ThemedText style={styles.verificationLabel}>
+                {t('trust.verified', 'Verified')}
+              </ThemedText>
+            </View>
           </View>
-
-          <ThemedText style={[styles.trustScoreText]}>{trustScoreData.level}</ThemedText>
-
-          <TouchableOpacity
-            style={[styles.improveButton, { backgroundColor: scoreColor }]}
-            onPress={handlePress}
-          >
-            <ThemedText style={styles.improveButtonText}>
-              {t('trust.completeVerification', 'Complete Verification')}
-            </ThemedText>
-          </TouchableOpacity>
+          <View style={styles.rightCol}>
+            <ThemedText style={styles.rowTitle}>{trustScoreData.level}</ThemedText>
+            <TouchableOpacity
+              style={[styles.ctaButton, { backgroundColor: scoreColor }]}
+              onPress={handlePress}
+            >
+              <ThemedText style={styles.ctaButtonText}>
+                {t('trust.completeVerification', 'Complete Verification')}
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
         </View>
       );
     }
@@ -135,42 +137,35 @@ export function TrustScoreWidget() {
     // Personal profile rendering
     const scoreColor = getScoreColor(trustScoreData.score);
     return (
-      <View style={styles.trustScoreContent}>
-        <TrustScoreCompact score={trustScoreData.score} size="large" showLabel={false} />
-
-        <ThemedText style={[styles.trustScoreText]}>
-          {t('trust.yourScoreIs', 'Your trust score is')} {trustScoreData.level}
-        </ThemedText>
-
-        <View style={styles.factorsPreview}>
-          {trustScoreData.factors.map((factor, index) => (
-            <View key={index} style={styles.factorPreview}>
-              <ThemedText style={styles.factorLabel}>
-                {factor.type.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
-              </ThemedText>
-              <View style={styles.factorProgress}>
-                <View
-                  style={[
-                    styles.factorProgressFill,
-                    {
-                      width: `${factor.value}%`,
-                      backgroundColor: scoreColor,
-                    },
-                  ]}
-                />
-              </View>
-            </View>
-          ))}
+      <View style={styles.rowContainer}>
+        <View style={styles.leftCol}>
+          <TrustScoreCompact score={trustScoreData.score} size="large" showLabel={false} />
         </View>
-
-        <TouchableOpacity
-          style={[styles.improveButton, { backgroundColor: scoreColor }]}
-          onPress={handlePress}
-        >
-          <ThemedText style={styles.improveButtonText}>
-            {t('trust.improveScore', 'Improve Score')}
+        <View style={styles.rightCol}>
+          <ThemedText style={styles.rowTitle}>
+            {t('trust.yourScoreIs', 'Your trust score is')} {trustScoreData.level}
           </ThemedText>
-        </TouchableOpacity>
+          <View style={styles.factorsRow}>
+            {trustScoreData.factors.slice(0, 3).map((factor, index) => (
+              <View key={index} style={styles.factorChip}>
+                <ThemedText style={styles.factorChipText}>
+                  {factor.type.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                </ThemedText>
+                <View style={styles.chipProgress}>
+                  <View style={[styles.chipProgressFill, { width: `${factor.value}%`, backgroundColor: scoreColor }]} />
+                </View>
+              </View>
+            ))}
+          </View>
+          <TouchableOpacity
+            style={[styles.ctaButton, { backgroundColor: scoreColor }]}
+            onPress={handlePress}
+          >
+            <ThemedText style={styles.ctaButtonText}>
+              {t('trust.improveScore', 'Improve Score')}
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -199,6 +194,25 @@ const styles = StyleSheet.create({
   trustScoreContent: {
     alignItems: 'center',
     padding: 10,
+  },
+  rowContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  leftCol: {
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  rightCol: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    gap: 8,
+  },
+  rowTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.COLOR_BLACK,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -264,6 +278,11 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: 12,
   },
+  factorsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   factorPreview: {
     marginBottom: 6,
   },
@@ -280,6 +299,42 @@ const styles = StyleSheet.create({
   factorProgressFill: {
     height: '100%',
     borderRadius: 2,
+  },
+  factorChip: {
+    backgroundColor: colors.primaryLight,
+    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  factorChipText: {
+    fontSize: 10,
+    color: colors.COLOR_BLACK,
+    marginBottom: 4,
+  },
+  chipProgress: {
+    height: 3,
+    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
+    borderRadius: 2,
+    width: 80,
+  },
+  chipProgressFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  // CTA button (horizontal layout)
+  ctaButton: {
+    backgroundColor: colors.primaryLight_1,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 18,
+    borderWidth: 0,
+    alignSelf: 'flex-start',
+  },
+  ctaButtonText: {
+    color: colors.primaryLight,
+    fontSize: 13,
+    fontWeight: 'bold',
+    fontFamily: 'Phudu',
   },
   improveButton: {
     backgroundColor: colors.primaryLight_1,
@@ -305,15 +360,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   verificationCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: colors.COLOR_BLACK_LIGHT_6,
     justifyContent: 'center',
     alignItems: 'center',
   },
   verificationPercentage: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     fontFamily: 'Phudu',
   },
