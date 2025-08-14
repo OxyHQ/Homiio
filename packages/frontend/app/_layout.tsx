@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Platform, View, StyleSheet } from 'react-native';
+import { Platform, View, StyleSheet, Animated } from 'react-native';
 import {
   SafeAreaProvider,
   initialWindowMetrics,
 } from 'react-native-safe-area-context';
-import { GestureHandlerRootView, ScrollView } from 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import { Slot } from 'expo-router';
@@ -34,10 +34,14 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import { ProfileProvider } from '@/context/ProfileContext';
 import { SavedPropertiesProvider } from '@/context/SavedPropertiesContext';
 import { BottomSheetProvider } from '@/context/BottomSheetContext';
+import { LayoutScrollProvider } from '@/context/LayoutScrollContext';
 import { OxyProvider, OxyServices } from '@oxyhq/services';
 import { PostHogProvider } from 'posthog-react-native';
 import '../styles/global.css';
 import { OXY_BASE_URL } from '@/config';
+import { QueryClient, QueryClientProvider, onlineManager, focusManager } from '@tanstack/react-query';
+import NetInfo from '@react-native-community/netinfo';
+import { AppState, AppStateStatus } from 'react-native';
 
 i18n
   .use(initReactI18next)
@@ -70,6 +74,8 @@ const getStyles = (isScreenNotMobile: boolean) =>
       }),
     },
     mainContentWrapper: {
+      borderWidth: 0.5,
+      borderColor: '#0d0d0d0d',
       flex: isScreenNotMobile ? 2.2 : 1,
       backgroundColor: colors.primaryLight,
     },
@@ -85,6 +91,18 @@ export default function RootLayout() {
   const styles = useMemo(() => getStyles(isScreenNotMobile), [isScreenNotMobile]);
   const posthogApiKey = process.env.EXPO_PUBLIC_POSTHOG_KEY || 'phc_wRxFcPEaeeRHAKoMi4gzleLdNE9Ny4JEwYe8Z5h3soO';
   const posthogHost = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
+  const layoutScrollY = useMemo(() => new Animated.Value(0), []);
+  const queryClient = useMemo(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: 2,
+        staleTime: 1000 * 30,
+        gcTime: 1000 * 60 * 10,
+        refetchOnReconnect: true,
+        refetchOnWindowFocus: true,
+      },
+    },
+  }), []);
 
   // --- Font Loading ---
   const [loaded] = useFonts({
@@ -140,6 +158,24 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
+    // React Query online manager using NetInfo
+    const unsubscribeNetInfo = NetInfo.addEventListener((state) => {
+      onlineManager.setOnline(Boolean(state.isConnected && state.isInternetReachable !== false));
+    });
+
+    // React Query focus manager using AppState
+    const onAppStateChange = (status: AppStateStatus) => {
+      focusManager.setFocused(status === 'active');
+    };
+    const appStateSub = AppState.addEventListener('change', onAppStateChange);
+
+    return () => {
+      unsubscribeNetInfo();
+      appStateSub.remove();
+    };
+  }, []);
+
+  useEffect(() => {
     initializeApp();
   }, [initializeApp]);
 
@@ -167,40 +203,52 @@ export default function RootLayout() {
               }}
               autocapture
             >
-              <OxyProvider
-                oxyServices={oxyServices}
-                initialScreen="SignIn"
-                autoPresent={false}
-                storageKeyPrefix="oxy_example"
-                theme="light"
-              >
-                <ProfileProvider>
-                  <SavedPropertiesProvider>
-                    <I18nextProvider i18n={i18n}>
-                      <BottomSheetProvider>
-                        <MenuProvider>
-                          <ErrorBoundary>
-                            <ScrollView contentContainerStyle={styles.container} style={{ flex: 1 }}>
-                              <SideBar />
-                              <View style={styles.mainContentWrapper}>
-                                <Slot />
-                              </View>
-                              <RightBar />
-                            </ScrollView>
-                            <StatusBar style="auto" />
-                            <Toaster
-                              position="bottom-center"
-                              swipeToDismissDirection="left"
-                              offset={15}
-                            />
-                            {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
-                          </ErrorBoundary>
-                        </MenuProvider>
-                      </BottomSheetProvider>
-                    </I18nextProvider>
-                  </SavedPropertiesProvider>
-                </ProfileProvider>
-              </OxyProvider>
+              <QueryClientProvider client={queryClient}>
+                <OxyProvider
+                  oxyServices={oxyServices}
+                  initialScreen="SignIn"
+                  autoPresent={false}
+                  storageKeyPrefix="oxy_example"
+                  theme="light"
+                >
+                  <ProfileProvider>
+                    <SavedPropertiesProvider>
+                      <I18nextProvider i18n={i18n}>
+                        <BottomSheetProvider>
+                          <MenuProvider>
+                            <ErrorBoundary>
+                              <LayoutScrollProvider value={{ scrollY: layoutScrollY }}>
+                                <Animated.ScrollView
+                                  contentContainerStyle={styles.container}
+                                  style={{ flex: 1 }}
+                                  onScroll={Animated.event(
+                                    [{ nativeEvent: { contentOffset: { y: layoutScrollY } } }],
+                                    { useNativeDriver: false }
+                                  )}
+                                  scrollEventThrottle={16}
+                                >
+                                  <SideBar />
+                                  <View style={styles.mainContentWrapper}>
+                                    <Slot />
+                                  </View>
+                                  <RightBar />
+                                </Animated.ScrollView>
+                              </LayoutScrollProvider>
+                              <StatusBar style="auto" />
+                              <Toaster
+                                position="bottom-center"
+                                swipeToDismissDirection="left"
+                                offset={15}
+                              />
+                              {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
+                            </ErrorBoundary>
+                          </MenuProvider>
+                        </BottomSheetProvider>
+                      </I18nextProvider>
+                    </SavedPropertiesProvider>
+                  </ProfileProvider>
+                </OxyProvider>
+              </QueryClientProvider>
             </PostHogProvider>
           )}
         </GestureHandlerRootView>

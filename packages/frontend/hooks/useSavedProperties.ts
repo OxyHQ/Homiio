@@ -3,12 +3,14 @@ import { useSavedPropertiesStore } from '@/store/savedPropertiesStore';
 import { Property } from '@homiio/shared-types';
 import { useOxy } from '@oxyhq/services';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
 export const useSavedProperties = () => {
   const { properties, isLoading, error } = useSavedPropertiesStore();
   const { setProperties, setLoading, setError, addProperty, removeProperty } =
     useSavedPropertiesStore();
   const { oxyServices, activeSessionId } = useOxy();
+  const queryClient = useQueryClient();
 
   const loadSavedProperties = useCallback(async () => {
     if (!oxyServices || !activeSessionId) return;
@@ -18,10 +20,13 @@ export const useSavedProperties = () => {
       setError(null);
 
       const savedPropertyService = await import('@/services/savedPropertyService');
-      const response = await savedPropertyService.default.getSavedProperties(
-        oxyServices,
-        activeSessionId,
-      );
+      const response = await queryClient.fetchQuery({
+        queryKey: ['savedProperties'],
+        queryFn: async () =>
+          savedPropertyService.default.getSavedProperties(oxyServices, activeSessionId),
+        staleTime: 1000 * 30,
+        gcTime: 1000 * 60 * 10,
+      });
 
       setProperties(response.properties || []);
     } catch (error: any) {
@@ -30,7 +35,7 @@ export const useSavedProperties = () => {
     } finally {
       setLoading(false);
     }
-  }, [setProperties, setLoading, setError, oxyServices, activeSessionId]);
+  }, [setProperties, setLoading, setError, oxyServices, activeSessionId, queryClient]);
 
   const saveProperty = useCallback(
     async (property: Property) => {
@@ -50,6 +55,7 @@ export const useSavedProperties = () => {
 
         addProperty(property);
         toast.success('Property saved successfully');
+        await queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
       } catch (error: any) {
         setError(error.message || 'Failed to save property');
         toast.error('Failed to save property');
@@ -57,7 +63,7 @@ export const useSavedProperties = () => {
         setLoading(false);
       }
     },
-    [addProperty, setLoading, setError, oxyServices, activeSessionId],
+    [addProperty, setLoading, setError, oxyServices, activeSessionId, queryClient],
   );
 
   const unsaveProperty = useCallback(
@@ -73,6 +79,7 @@ export const useSavedProperties = () => {
 
         removeProperty(propertyId);
         toast.success('Property removed from saved list');
+        await queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
       } catch (error: any) {
         setError(error.message || 'Failed to remove property');
         toast.error('Failed to remove property');
@@ -80,7 +87,7 @@ export const useSavedProperties = () => {
         setLoading(false);
       }
     },
-    [removeProperty, setLoading, setError, oxyServices, activeSessionId],
+    [removeProperty, setLoading, setError, oxyServices, activeSessionId, queryClient],
   );
 
   const isPropertySaved = useCallback(

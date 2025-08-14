@@ -1,4 +1,4 @@
-import React, { useEffect, useState, ReactNode } from 'react';
+import React, { useEffect, useState, ReactNode, useRef } from 'react';
 import { StyleSheet, View, ViewStyle, Platform, Animated, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { phuduFontWeights } from '@/styles/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from './ThemedText';
+import { useLayoutScroll } from '@/context/LayoutScrollContext';
 
 const IconComponent = Ionicons as any;
 
@@ -25,12 +26,12 @@ interface Props {
 }
 
 export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) => {
+  const layoutScroll = useLayoutScroll();
   const router = useRouter();
-  const [isSticky, setIsSticky] = useState(false);
   const [canGoBack, setCanGoBack] = useState(false);
   const insets = useSafeAreaInsets();
-  const internalScrollY = new Animated.Value(0);
-  const scrollY = externalScrollY || internalScrollY;
+  const internalScrollYRef = useRef(new Animated.Value(0));
+  const scrollY = externalScrollY || layoutScroll?.scrollY || internalScrollYRef.current;
 
   const titlePosition = options?.titlePosition || 'left';
   const isTransparent = options?.transparent || false;
@@ -42,25 +43,20 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
   }, [router]);
 
   useEffect(() => {
-    if (Platform.OS === 'web') {
+    if (Platform.OS === 'web' && !externalScrollY && !layoutScroll?.scrollY) {
       const handleScroll = () => {
         const scrollPosition = window.scrollY;
         scrollY.setValue(scrollPosition);
 
-        if (scrollPosition > scrollThreshold) {
-          setIsSticky(true);
-        } else {
-          setIsSticky(false);
-        }
+        // When no external scrollY is provided, derive basic threshold state internally if needed
       };
 
-      // Add scroll listener to document for better web compatibility
       document.addEventListener('scroll', handleScroll, { passive: true });
       return () => {
         document.removeEventListener('scroll', handleScroll);
       };
     }
-  }, [scrollY, scrollThreshold]);
+  }, [scrollY, scrollThreshold, externalScrollY, layoutScroll]);
 
   // Animated values for transparent mode
   const backgroundColorOpacity = scrollY.interpolate({

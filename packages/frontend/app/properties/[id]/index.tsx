@@ -9,7 +9,6 @@ import {
   Modal,
   Image,
   Share,
-  Animated,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -82,7 +81,6 @@ export default function PropertyDetailPage() {
   const { stats, loadStats } = usePropertyStats((id as string) || '');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const hasViewedRef = useRef(false);
-  const scrollY = new Animated.Value(0);
   const [showPhotoGallery, setShowPhotoGallery] = useState(false);
 
   // Zustand stores
@@ -494,17 +492,9 @@ export default function PropertyDetailPage() {
               </View>,
             ],
           }}
-          scrollY={scrollY}
         />
       </View>
-      <Animated.ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
-          useNativeDriver: false,
-        })}
-        scrollEventThrottle={16}
-      >
+      <View style={styles.scrollView}>
         {/* Main Image - Starts from very top, behind header/safe area */}
         <Image
           source={getPropertyImageSource(property.images)}
@@ -1488,7 +1478,7 @@ export default function PropertyDetailPage() {
             </View>
           </View>
         </View>
-      </Animated.ScrollView>
+      </View>
     </View>
   );
 }

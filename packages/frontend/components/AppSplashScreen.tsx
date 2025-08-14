@@ -4,6 +4,7 @@ import { LogoIcon } from '@/assets/logo';
 import LoadingSpinner from './LoadingSpinner';
 import { colors } from '@/styles/colors';
 import { LinearGradient } from 'expo-linear-gradient';
+import { cssInterop } from 'nativewind';
 
 interface AppSplashScreenProps {
   onFadeComplete?: () => void;
@@ -11,6 +12,11 @@ interface AppSplashScreenProps {
 }
 
 const AppSplashScreen: React.FC<AppSplashScreenProps> = ({ onFadeComplete, startFade = false }) => {
+  cssInterop(LinearGradient, {
+    className: {
+      target: 'style',
+    },
+  });
   const fadeAnim = useRef(new Animated.Value(1)).current; // Use useRef to prevent recreation
   const animationRef = useRef<Animated.CompositeAnimation | null>(null);
 

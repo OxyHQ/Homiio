@@ -8,42 +8,33 @@ import {
   propertyService,
 } from '@/services/propertyService';
 import { toast } from 'sonner';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 // Property Hooks
 export const useProperties = () => {
   const { properties, loading, error, pagination } = usePropertySelectors();
-  const {
-    setProperties,
-    setLoading,
-    setError,
-    clearError,
-    setFilters,
-    clearFilters,
-    setPagination,
-  } = usePropertyStore();
+  const { setProperties, clearError, setFilters, clearFilters, setPagination } = usePropertyStore();
+  const queryClient = useQueryClient();
 
   const loadProperties = useCallback(
     async (filters?: PropertyFilters) => {
-      try {
-        setLoading('properties', true);
-        setError(null);
-
-        const response = await propertyService.getProperties(filters);
-
-        setProperties(response.properties);
-        setPagination({
-          page: response.page,
-          total: response.total,
-          totalPages: response.totalPages,
-          limit: 10,
-        });
-      } catch (error: any) {
-        setError(error.message || 'Failed to load properties');
-      } finally {
-        setLoading('properties', false);
-      }
+      const result = await queryClient.fetchQuery({
+        queryKey: ['properties', { filters: filters ?? null }],
+        queryFn: async () => propertyService.getProperties(filters),
+        staleTime: 1000 * 30,
+        gcTime: 1000 * 60 * 10,
+      });
+      setProperties(result.properties);
+      setPagination({
+        page: result.page,
+        total: result.total,
+        totalPages: result.totalPages,
+        limit: 10,
+      });
+      if (filters) setFilters(filters);
+      return result;
     },
-    [setProperties, setLoading, setError, setPagination],
+    [queryClient, setPagination, setProperties, setFilters],
   );
 
   const clearErrorAction = useCallback(() => {
@@ -74,97 +65,94 @@ export const useProperties = () => {
 };
 
 export const useProperty = (id: string) => {
-  const { currentProperty, loading, error } = usePropertySelectors();
-  const { setCurrentProperty, setLoading, setError, clearCurrentProperty } = usePropertyStore();
+  const { currentProperty } = usePropertySelectors();
+  const { setCurrentProperty, clearCurrentProperty } = usePropertyStore();
   const { oxyServices, activeSessionId } = useOxy();
+  const queryClient = useQueryClient();
 
-  const loadProperty = useCallback(async () => {
-    if (id) {
-      try {
-        setLoading('currentProperty', true);
-        setError(null);
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ['property', id],
+    queryFn: async () =>
+      propertyService.getProperty(id, oxyServices, activeSessionId || ''),
+    enabled: Boolean(id),
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
+  });
 
-        const response = await propertyService.getProperty(id, oxyServices, activeSessionId || '');
-
-        setCurrentProperty(response);
-      } catch (error: any) {
-        setError(error.message || 'Failed to load property');
-      } finally {
-        setLoading('currentProperty', false);
-      }
-    }
-  }, [id, oxyServices, activeSessionId, setCurrentProperty, setLoading, setError]);
+  useEffect(() => {
+    if (data) setCurrentProperty(data);
+  }, [data, setCurrentProperty]);
 
   const clearCurrentPropertyAction = useCallback(() => {
     clearCurrentProperty();
-  }, [clearCurrentProperty]);
+    if (id) {
+      queryClient.removeQueries({ queryKey: ['property', id], exact: true });
+    }
+  }, [clearCurrentProperty, queryClient, id]);
 
   return {
-    property: currentProperty,
-    loading: loading.currentProperty,
-    error,
-    loadProperty,
+    property: data ?? currentProperty,
+    loading: isLoading,
+    error: error instanceof Error ? error.message : null,
+    loadProperty: refetch,
     clearCurrentProperty: clearCurrentPropertyAction,
   };
 };
 
 export const usePropertyStats = (id: string) => {
-  const { propertyStats, loading, error } = usePropertySelectors();
-  const { setPropertyStats, setLoading, setError } = usePropertyStore();
+  const { propertyStats } = usePropertySelectors();
+  const { setPropertyStats } = usePropertyStore();
 
-  const loadStats = useCallback(async () => {
-    if (id) {
-      try {
-        setLoading('stats', true);
-        setError(null);
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['propertyStats', id],
+    queryFn: async () => propertyService.getPropertyStats(id),
+    enabled: Boolean(id),
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
+  });
 
-        const response = await propertyService.getPropertyStats(id);
-
-        setPropertyStats(id, response);
-      } catch (error: any) {
-        setError(error.message || 'Failed to load property stats');
-      } finally {
-        setLoading('stats', false);
-      }
+  useEffect(() => {
+    if (data) {
+      setPropertyStats(id, data);
     }
-  }, [id, setPropertyStats, setLoading, setError]);
+  }, [data, id, setPropertyStats]);
 
   return {
-    stats: propertyStats[id] || null,
-    loading: loading.stats,
-    error,
-    loadStats,
+    stats: data ?? propertyStats[id] ?? null,
+    loading: isLoading,
+    error: error instanceof Error ? error.message : null,
+    loadStats: refetch,
   };
 };
 
 export const usePropertyEnergyStats = (id: string, period: 'day' | 'week' | 'month' = 'day') => {
-  const { propertyEnergyStats, loading, error } = usePropertySelectors();
-  const { setPropertyEnergyStats, setLoading, setError } = usePropertyStore();
+  const { propertyEnergyStats } = usePropertySelectors();
+  const { setPropertyEnergyStats } = usePropertyStore();
 
-  const loadEnergyStats = useCallback(async () => {
-    if (id) {
-      try {
-        setLoading('energy', true);
-        setError(null);
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['propertyEnergy', id, period],
+    queryFn: async () => propertyService.getPropertyEnergyStats(id, period),
+    enabled: Boolean(id && period),
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
+  });
 
-        const response = await propertyService.getPropertyEnergyStats(id, period);
-
-        setPropertyEnergyStats(id, period, response);
-      } catch (error: any) {
-        setError(error.message || 'Failed to load energy stats');
-      } finally {
-        setLoading('energy', false);
-      }
+  useEffect(() => {
+    if (data) {
+      setPropertyEnergyStats(id, period, data);
     }
-  }, [id, period, setPropertyEnergyStats, setLoading, setError]);
-
-  const stats = propertyEnergyStats[id]?.[period] || null;
+  }, [data, id, period, setPropertyEnergyStats]);
 
   return {
-    stats,
-    loading: loading.energy,
-    error,
-    loadEnergyStats,
+    stats: data ?? propertyEnergyStats[id]?.[period] ?? null,
+    loading: isLoading,
+    error: error instanceof Error ? error.message : null,
+    loadEnergyStats: refetch,
   };
 };
 
@@ -172,32 +160,36 @@ export const useSearchProperties = () => {
   const { searchResults, pagination, loading, error } = usePropertySelectors();
   const { setSearchResults, setLoading, setError, clearSearchResults, setPagination } =
     usePropertyStore();
+  const queryClient = useQueryClient();
 
   const search = useCallback(
     async (query: string, filters?: PropertyFilters) => {
-      if (query && query.length > 0) {
-        try {
-          setLoading('search', true);
-          setError(null);
-
-          // Use propertyService instead of propertyApi
-          const response = await propertyService.searchProperties(query, filters);
-
-          setSearchResults(response.properties || []);
-          setPagination({
-            page: 1,
-            total: response.total || 0,
-            totalPages: Math.ceil((response.total || 0) / 10),
-            limit: 10,
-          });
-        } catch (error: any) {
-          setError(error.message || 'Failed to search properties');
-        } finally {
-          setLoading('search', false);
-        }
+      if (!query || query.length === 0) return { properties: [], total: 0 };
+      try {
+        setLoading('search', true);
+        setError(null);
+        const response = await queryClient.fetchQuery({
+          queryKey: ['propertiesSearch', { query, filters: filters ?? null }],
+          queryFn: async () => propertyService.searchProperties(query, filters),
+          staleTime: 1000 * 30,
+          gcTime: 1000 * 60 * 10,
+        });
+        setSearchResults(response.properties || []);
+        setPagination({
+          page: 1,
+          total: response.total || 0,
+          totalPages: Math.ceil((response.total || 0) / 10),
+          limit: 10,
+        });
+        return response;
+      } catch (e: any) {
+        setError(e.message || 'Failed to search properties');
+        return { properties: [], total: 0 };
+      } finally {
+        setLoading('search', false);
       }
     },
-    [setSearchResults, setLoading, setError, setPagination],
+    [queryClient, setSearchResults, setLoading, setError, setPagination],
   );
 
   const clearSearchResultsAction = useCallback(() => {

@@ -776,6 +776,11 @@ export default function SavedPropertiesScreen() {
                 tintColor={colors.primaryColor}
               />
             }
+            removeClippedSubviews
+            windowSize={7}
+            initialNumToRender={12}
+            maxToRenderPerBatch={10}
+            updateCellsBatchingPeriod={50}
           />
         ) : selectedCategory === 'profiles' ? (
           <FlatList
@@ -815,6 +820,11 @@ export default function SavedPropertiesScreen() {
                 tintColor={colors.primaryColor}
               />
             }
+            removeClippedSubviews
+            windowSize={7}
+            initialNumToRender={12}
+            maxToRenderPerBatch={10}
+            updateCellsBatchingPeriod={50}
           />
         ) : (
           <FlatList
@@ -842,6 +852,11 @@ export default function SavedPropertiesScreen() {
                 tintColor={colors.primaryColor}
               />
             }
+            removeClippedSubviews
+            windowSize={9}
+            initialNumToRender={8}
+            maxToRenderPerBatch={8}
+            updateCellsBatchingPeriod={50}
           />
         ))}
     </View>
