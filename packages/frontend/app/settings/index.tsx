@@ -72,13 +72,13 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{t('settings.title')}</Text>
       </View>
 
-      <ScrollView style={styles.content}>
+      <View style={styles.content}>
         {/* User Info */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('settings.sections.account')}</Text>
@@ -522,14 +522,13 @@ export default function SettingsScreen() {
             </View>
           </TouchableOpacity>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: '#f2f2f2',
   },
   header: {
@@ -546,7 +545,6 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   content: {
-    flex: 1,
     padding: 16,
   },
   userIcon: {

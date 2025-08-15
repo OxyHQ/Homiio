@@ -1357,50 +1357,6 @@ export default function PropertyDetailPage() {
               </LinearGradient>
             </View>
 
-            {/* Action Buttons */}
-            <View style={styles.actionButtonsContainer}>
-              {apiProperty?.housingType === 'public' ? (
-                <>
-                  <ActionButton
-                    icon="chatbubble-outline"
-                    text={t('Contact Housing Authority')}
-                    onPress={() => { }}
-                    variant="secondary"
-                    size="large"
-                    disabled={true}
-                    style={{ flex: 1, marginRight: 10 }}
-                  />
-                  <ActionButton
-                    icon="globe"
-                    text={t('Apply on State Website')}
-                    onPress={handleApply}
-                    variant="primary"
-                    size="large"
-                    style={{ flex: 1 }}
-                  />
-                </>
-              ) : (
-                <>
-                  <ActionButton
-                    icon="calendar-outline"
-                    text={t('Schedule Viewing')}
-                    onPress={handleScheduleViewing}
-                    variant="outline"
-                    size="large"
-                    style={{ flex: 1, marginRight: 10 }}
-                  />
-                  <ActionButton
-                    icon="checkmark-circle-outline"
-                    text={t('Apply Now')}
-                    onPress={handleApply}
-                    variant="primary"
-                    size="large"
-                    style={{ flex: 1 }}
-                  />
-                </>
-              )}
-            </View>
-
             {/* Fraud Warning */}
             <View style={styles.fraudWarningContainer}>
               <ThemedText style={styles.fraudWarningText}>
@@ -1410,6 +1366,56 @@ export default function PropertyDetailPage() {
           </View>
         </View>
       </View>
+      {/* Sticky Bottom Action Bar */}
+      <SafeAreaView
+        edges={['bottom']}
+        style={
+          styles.bottomBar
+        }
+      >
+        <View style={styles.bottomBarInner}>
+          {apiProperty?.housingType === 'public' ? (
+            <>
+              <ActionButton
+                icon="chatbubble-outline"
+                text={t('Contact')}
+                onPress={() => { }}
+                variant="secondary"
+                size="large"
+                disabled={true}
+                style={{ flex: 1, marginRight: 10 }}
+              />
+              <ActionButton
+                icon="globe"
+                text={t('Apply')}
+                onPress={handleApply}
+                variant="primary"
+                size="large"
+                style={{ flex: 1 }}
+              />
+            </>
+          ) : (
+            <>
+              <ActionButton
+                icon="calendar-outline"
+                text={t('Schedule Viewing')}
+                onPress={handleScheduleViewing}
+                variant="outline"
+                size="large"
+                style={{ flex: 1, marginRight: 10 }}
+              />
+              <ActionButton
+                icon="checkmark-circle-outline"
+                text={t('Apply Now')}
+                onPress={handleApply}
+                variant="primary"
+                size="large"
+                style={{ flex: 1 }}
+              />
+            </>
+          )}
+        </View>
+      </SafeAreaView>
     </View>
   );
 }
@@ -1745,6 +1751,24 @@ const styles = StyleSheet.create({
   actionButtonsContainer: {
     flexDirection: 'row',
     marginVertical: 20,
+  },
+  bottomBar: {
+    position: 'sticky' as any,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#e9ecef',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  bottomBarInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
   },
   fraudWarningContainer: {
     flexDirection: 'row',

@@ -21,8 +21,8 @@ export const Logo = () => {
         styles.container,
       ]}
     >
-      <View style={styles.logo}>
-        <LogoIcon style={styles.logoSvg} size={27} color={colors.primaryColor} />
+      <View style={styles.logoContainer}>
+        <LogoIcon style={styles.logoSvg} size={28} color={colors.primaryColor} />
       </View>
     </Pressable>
   );
@@ -35,14 +35,13 @@ const styles = StyleSheet.create({
     width: 'auto',
     marginBottom: 10,
     borderRadius: 1000,
+    padding: 10,
     ...Platform.select({
       web: {
         cursor: 'pointer',
       },
     }),
   },
-  logo: {
-    padding: 10,
-  },
+  logoContainer: {},
   logoSvg: {},
 });

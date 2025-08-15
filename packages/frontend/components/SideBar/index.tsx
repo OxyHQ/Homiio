@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import { Pressable } from 'react-native-web-hover';
 import { usePathname, useRouter } from 'expo-router';
 import { useMediaQuery } from 'react-responsive';
 import { useTranslation } from 'react-i18next';
@@ -22,7 +23,7 @@ import { Hashtag, HashtagActive } from '@/assets/icons/hashtag-icon';
 import { Search, SearchActive } from '@/assets/icons/search-icon';
 import { Compose } from '@/assets/icons/compose-icon';
 import { Ionicons } from '@expo/vector-icons';
-import { OxySignInButton, useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxyhq/services';
 import { SindiIcon, SindiIconActive } from '@/assets/icons';
 import { ProfileIcon, ProfileIconActive } from '@/assets/icons/profile-icon';
 import { webAlert } from '@/utils/api';
@@ -71,41 +72,41 @@ export function SideBar() {
     iconActive: React.ReactNode;
     route: string;
   }[] = [
-    {
-      title: t('sidebar.navigation.home'),
-      icon: <Home color={colors.COLOR_BLACK} />,
-      iconActive: <HomeActive />,
-      route: '/',
-    },
-    {
-      title: t('sidebar.navigation.search'),
-      icon: <Search color={colors.COLOR_BLACK} />,
-      iconActive: <SearchActive />,
-      route: '/search',
-    },
-    {
-      title: t('sidebar.navigation.saved'),
-      icon: <Bookmark color={colors.COLOR_BLACK} />,
-      iconActive: <BookmarkActive />,
-      route: '/saved',
-    },
-    {
-      title: t('sidebar.navigation.sindi'),
-      icon: <SindiIcon size={24} color={colors.COLOR_BLACK} />,
-      iconActive: <SindiIconActive size={24} color={colors.primaryColor} />,
-      route: '/sindi',
-    },
+      {
+        title: t('sidebar.navigation.home'),
+        icon: <Home color={colors.COLOR_BLACK} />,
+        iconActive: <HomeActive />,
+        route: '/',
+      },
+      {
+        title: t('sidebar.navigation.search'),
+        icon: <Search color={colors.COLOR_BLACK} />,
+        iconActive: <SearchActive />,
+        route: '/search',
+      },
+      {
+        title: t('sidebar.navigation.saved'),
+        icon: <Bookmark color={colors.COLOR_BLACK} />,
+        iconActive: <BookmarkActive />,
+        route: '/saved',
+      },
+      {
+        title: t('sidebar.navigation.sindi'),
+        icon: <SindiIcon size={20} color={colors.COLOR_BLACK} />,
+        iconActive: <SindiIconActive size={20} color={colors.primaryColor} />,
+        route: '/sindi',
+      },
 
-    {
-      title: t('sidebar.navigation.profile'),
-      icon: <ProfileIcon size={24} color={colors.COLOR_BLACK} />,
-      iconActive: <ProfileIconActive size={24} color={colors.primaryColor} />,
-      route: '/profile',
-    },
+      {
+        title: t('sidebar.navigation.profile'),
+        icon: <ProfileIcon size={20} color={colors.COLOR_BLACK} />,
+        iconActive: <ProfileIconActive size={20} color={colors.primaryColor} />,
+        route: '/profile',
+      },
 
-    // Only show roommates for personal profiles
-    ...(isPersonalProfile
-      ? [
+      // Only show roommates for personal profiles
+      ...(isPersonalProfile
+        ? [
           {
             title: t('sidebar.navigation.roommates'),
             icon: <Hashtag color={colors.COLOR_BLACK} />,
@@ -113,155 +114,207 @@ export function SideBar() {
             route: '/roommates',
           },
         ]
-      : []),
-    {
-      title: t('sidebar.navigation.settings'),
-      icon: <Gear color={colors.COLOR_BLACK} />,
-      iconActive: <GearActive />,
-      route: '/settings',
-    },
-  ];
+        : []),
+      {
+        title: t('sidebar.navigation.settings'),
+        icon: <Gear color={colors.COLOR_BLACK} />,
+        iconActive: <GearActive />,
+        route: '/settings',
+      },
+    ];
 
   const pathname = usePathname();
   const isSideBarVisible = useMediaQuery({ minWidth: 500 });
-  const isFullSideBar = useMediaQuery({ minWidth: 1266 });
+  const [isExpanded, setIsExpanded] = React.useState(false);
+  const hoverCollapseTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
+
+  const handleHoverIn = React.useCallback(() => {
+    if (hoverCollapseTimeout.current) {
+      clearTimeout(hoverCollapseTimeout.current);
+      hoverCollapseTimeout.current = null;
+    }
+    setIsExpanded(true);
+  }, []);
+
+  const handleHoverOut = React.useCallback(() => {
+    if (hoverCollapseTimeout.current) {
+      clearTimeout(hoverCollapseTimeout.current);
+    }
+    hoverCollapseTimeout.current = setTimeout(() => setIsExpanded(false), 200);
+  }, []);
 
   if (!isSideBarVisible) return null;
 
   if (isSideBarVisible) {
     return (
-      <View
+      <Pressable
+        {...({ onHoverIn: handleHoverIn, onHoverOut: handleHoverOut } as any)}
         style={[
           styles.container,
           {
-            alignItems: isFullSideBar ? 'flex-start' : 'center',
-            paddingEnd: !isFullSideBar ? 10 : 0,
-            width: isFullSideBar ? 350 : 60,
+            width: isExpanded ? 240 : 60,
+            ...(Platform.select({
+              web: {
+                transition: 'width 220ms cubic-bezier(0.2, 0, 0, 1)',
+                willChange: 'width',
+              },
+            }) as ViewStyle),
           },
         ]}
       >
-        <View style={styles.content}>
-          <Logo />
-          {!user?.id && (
-            <View style={styles.heroSection}>
-              {isFullSideBar && <Text style={styles.heroTagline}>{t('sidebar.hero.tagline')}</Text>}
-              {!isAuthenticated && (
-                <View style={styles.authButtonsContainer}>
-                  <TouchableOpacity
-                    style={styles.signUpButton}
-                    onPress={() => showBottomSheet?.('SignUp')}
-                  >
-                    <Text style={styles.signUpButtonText}>{t('sidebar.actions.signUp')}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.signInButton}
-                    onPress={() => showBottomSheet?.('SignIn')}
-                  >
-                    <Text style={styles.signInButtonText}>{t('sidebar.actions.signIn')}</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          )}
+        <View style={styles.inner}>
+          <View style={styles.headerSection}>
+            <Logo />
+            {!user?.id && (
+              <View style={styles.heroSection}>
+                {isExpanded && (
+                  <Text style={styles.heroTagline}>{t('sidebar.hero.tagline')}</Text>
+                )}
+                {!isAuthenticated && (
+                  <View style={styles.authButtonsContainer}>
+                    <TouchableOpacity
+                      style={styles.signUpButton}
+                      onPress={() => showBottomSheet?.('SignUp')}
+                    >
+                      <Text style={styles.signUpButtonText}>{t('sidebar.actions.signUp')}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.signInButton}
+                      onPress={() => showBottomSheet?.('SignIn')}
+                    >
+                      <Text style={styles.signInButtonText}>{t('sidebar.actions.signIn')}</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+
           {user && user.id && (
             <View style={styles.navigationSection}>
-              {sideBarData.map(({ title, icon, iconActive, route }) => {
-                return (
-                  <SideBarItem
-                    href={route}
-                    key={title}
-                    icon={pathname === route ? iconActive : icon}
-                    text={title}
-                    isActive={pathname === route}
-                  />
-                );
-              })}
+              {sideBarData.map(({ title, icon, iconActive, route }) => (
+                <SideBarItem
+                  href={route}
+                  key={title}
+                  icon={pathname === route ? iconActive : icon}
+                  text={title}
+                  isActive={pathname === route}
+                  isExpanded={isExpanded}
+                  onHoverExpand={handleHoverIn}
+                />
+              ))}
+
               <Button
                 href="/properties/create"
                 renderText={({ state }) =>
-                  state === 'desktop' ? (
+                  isExpanded && state === 'desktop' ? (
                     <Text style={styles.addPropertyButtonText}>
                       {t('sidebar.actions.addProperty')}
                     </Text>
                   ) : null
                 }
-                renderIcon={({ state }) =>
-                  state === 'tablet' ? <Compose size={24} color={colors.primaryLight} /> : null
+                renderIcon={() =>
+                  isExpanded ? null : <Compose size={20} color={colors.primaryLight} />
                 }
-                containerStyle={({ state }) => ({
+                containerStyle={() => ({
                   ...styles.addPropertyButton,
-                  height: state === 'desktop' ? 47 : 50,
-                  width: state === 'desktop' ? 220 : 50,
-                  ...(state === 'desktop' ? {} : styles.addPropertyButtonTablet),
+                  height: 40,
+                  width: isExpanded ? '100%' : 36,
+                  alignSelf: isExpanded ? 'stretch' : 'center',
                 })}
               />
             </View>
           )}
+
+          <View style={styles.footer}>
+            {user && user.id ? (
+              <SideBarItem
+                isActive={false}
+                icon={<IconComponent name="log-out-outline" size={20} color={colors.COLOR_BLACK} />}
+                text={t('settings.signOut')}
+                isExpanded={isExpanded}
+                onHoverExpand={handleHoverIn}
+                onPress={handleSignOut}
+              />
+            ) : (
+              <SideBarItem
+                isActive={false}
+                icon={<IconComponent name="log-in-outline" size={20} color={colors.COLOR_BLACK} />}
+                text={t('sidebar.actions.signIn')}
+                isExpanded={isExpanded}
+                onHoverExpand={handleHoverIn}
+                onPress={() => showBottomSheet?.('SignIn')}
+              />
+            )}
+          </View>
         </View>
-        <View style={styles.spacer}></View>
-        <View style={styles.footer}>
-          {user && user.id ? (
-            <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-              <IconComponent name="log-out-outline" size={20} color={colors.COLOR_BLACK} />
-              {isFullSideBar && <Text style={styles.signOutText}>{t('settings.signOut')}</Text>}
-            </TouchableOpacity>
-          ) : (
-            <OxySignInButton />
-          )}
-          {isFullSideBar && <Text style={styles.brandName}>{t('sidebar.footer.brandName')}</Text>}
-        </View>
-      </View>
+      </Pressable>
     );
-  } else {
-    return null;
   }
+
+  return null;
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 20,
+    backgroundColor: 'transparent',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     height: WindowHeight,
     ...(Platform.select({
       web: {
         position: 'sticky' as any,
+        overflow: 'hidden',
       },
     }) as ViewStyle),
     top: 0,
   },
+  inner: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'flex-start',
+    alignItems: 'stretch',
+  },
+  headerSection: {
+    marginBottom: 8,
+  },
   content: {
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'flex-start',
+    width: '100%',
   },
   heroSection: {
-    marginTop: 16,
+    marginTop: 8,
   },
   heroTagline: {
     color: colors.COLOR_BLACK,
-    fontSize: 25,
+    fontSize: 20,
     fontWeight: 'bold',
     fontFamily: 'Phudu',
     flexWrap: 'wrap',
     textAlign: 'left',
     maxWidth: 200,
-    lineHeight: 30,
+    lineHeight: 24,
   },
   authButtonsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 20,
-    gap: 10,
+    marginVertical: 12,
+    gap: 8,
   },
   signUpButton: {
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.COLOR_BLACK,
     borderRadius: 25,
-    paddingHorizontal: 15,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   signUpButtonText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 'bold',
     fontFamily: 'Phudu',
   },
@@ -270,18 +323,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.primaryColor,
     borderRadius: 25,
-    paddingHorizontal: 15,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   signInButtonText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 'bold',
     fontFamily: 'Phudu',
   },
   navigationSection: {
-    justifyContent: 'center',
-    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+    alignItems: 'stretch',
+    width: '100%',
+    marginTop: 8,
+    gap: 2,
   },
   addPropertyButton: {
     justifyContent: 'center',
@@ -289,47 +345,29 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryColor,
     borderRadius: 100,
     display: 'flex',
+    alignSelf: 'stretch',
+    marginTop: 4,
   },
   addPropertyButtonTablet: {
     alignSelf: 'center',
   },
   addPropertyButtonText: {
     color: 'white',
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
     margin: 'auto',
     fontFamily: 'Phudu',
   },
-  spacer: {
-    flex: 1,
-  },
   footer: {
     flexDirection: 'column',
-    justifyContent: 'flex-start',
+    justifyContent: 'flex-end',
     alignItems: 'flex-start',
     width: '100%',
+    marginTop: 'auto',
   },
-  brandName: {
-    marginTop: 8,
-    fontSize: 14,
-    color: colors.COLOR_BLACK,
-  },
-  signOutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: colors.primaryLight,
-    marginBottom: 8,
-  },
-  signOutText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: colors.COLOR_BLACK,
-    fontWeight: '500',
-  },
+  // removed brandName style (bottom text removed)
+  // removed custom signOut styles; using SideBarItem for consistency
   title: {
     fontSize: 24,
     fontFamily: phuduFontWeights.bold,
@@ -349,3 +387,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+

@@ -101,6 +101,14 @@ export default function ConversationDetail() {
       },
     } as any);
 
+  // Auto-scroll to bottom for new messages
+  const scrollViewRef = React.useRef<ScrollView>(null);
+  const scrollToEnd = React.useCallback(() => {
+    try {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    } catch { }
+  }, []);
+
   // Load conversation on mount
   useEffect(() => {
     if (conversationid && conversationid !== 'undefined' && isAuthenticated) {
@@ -198,6 +206,9 @@ export default function ConversationDetail() {
         return () => clearTimeout(timeoutId);
       }
     }
+
+    // Always scroll to the latest message
+    scrollToEnd();
   }, [
     messages,
     currentConversation,
@@ -206,6 +217,7 @@ export default function ConversationDetail() {
     saveConversation,
     authenticatedFetch,
     router,
+    scrollToEnd,
   ]); // Watch for actual message changes
 
   // Handle initial message from URL parameter
@@ -236,14 +248,22 @@ export default function ConversationDetail() {
   const handleRemoveFile = () => setAttachedFile(null);
 
   // Wrap the original handleSubmit to include file info
-  const handleSubmitWithFile = () => {
+  const handleSubmitWithFile = React.useCallback(() => {
     if (attachedFile) {
       console.log('Sending file:', attachedFile);
       // TODO: Integrate file upload to backend here
       setAttachedFile(null);
     }
     handleSubmit();
-  };
+  }, [attachedFile, handleSubmit]);
+
+  const handleSuggestionPress = React.useCallback(
+    (text: string) => {
+      handleInputChange({ target: { value: text } } as any);
+      setTimeout(() => handleSubmitWithFile(), 0);
+    },
+    [handleInputChange, handleSubmitWithFile],
+  );
 
   // Early return for unauthenticated users
   if (!isAuthenticated) {
@@ -333,6 +353,12 @@ export default function ConversationDetail() {
 
   return (
     <SafeAreaView style={[styles.container, webStyles.container]}>
+      <LinearGradient
+        colors={["#ffffff", `${colors.primaryColor}40`]}
+        style={styles.backgroundGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
       {/* Header */}
       <Header
         options={{
@@ -406,38 +432,53 @@ export default function ConversationDetail() {
 
       {/* Messages */}
       <ScrollView
+        ref={scrollViewRef}
         style={[styles.messagesContainer, webStyles.messagesContainer]}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.messagesContent, webStyles.messagesContent]}
+        onContentSizeChange={scrollToEnd}
       >
         {messages.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <LinearGradient
-              colors={[colors.primaryColor, colors.secondaryLight]}
-              style={styles.emptyHeader}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
+            <View style={styles.emptyCard}>
               <View style={styles.emptyIconContainer}>
-                <SindiIcon size={56} color="white" />
+                <SindiIcon size={56} color={colors.primaryColor} />
               </View>
-              <Text style={styles.emptyTitle}>{t('sindi.conversation.empty.title')}</Text>
-              <Text style={styles.emptySubtitle}>{t('sindi.conversation.empty.subtitle')}</Text>
-              <View style={styles.emptyActions}>
-                <View style={styles.emptyActionItem}>
-                  <IconComponent name="help-circle" size={20} color="rgba(255, 255, 255, 0.8)" />
-                  <Text style={styles.emptyActionText}>Ask about tenant rights</Text>
-                </View>
-                <View style={styles.emptyActionItem}>
-                  <IconComponent name="search" size={20} color="rgba(255, 255, 255, 0.8)" />
-                  <Text style={styles.emptyActionText}>Find housing options</Text>
-                </View>
-                <View style={styles.emptyActionItem}>
-                  <IconComponent name="document-text" size={20} color="rgba(255, 255, 255, 0.8)" />
-                  <Text style={styles.emptyActionText}>Review lease agreements</Text>
-                </View>
+              <Text style={styles.emptyTitle}>Start your conversation</Text>
+              <Text style={styles.emptySubtitle}>
+                Ask about tenant rights, explore housing options, or get a quick lease review.
+              </Text>
+              <View style={styles.suggestionsWrap}>
+                <TouchableOpacity
+                  style={styles.suggestionChip}
+                  onPress={() => handleSuggestionPress('What are my rights if my rent increases by 20%?')}
+                >
+                  <IconComponent name="help-circle-outline" size={16} color={colors.primaryColor} />
+                  <Text style={styles.suggestionText}>Tenant rights</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.suggestionChip}
+                  onPress={() => handleSuggestionPress('Find 2-bedroom apartments under $2000 in Seattle')}
+                >
+                  <IconComponent name="search-outline" size={16} color={colors.primaryColor} />
+                  <Text style={styles.suggestionText}>Find housing</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.suggestionChip}
+                  onPress={() => handleSuggestionPress('Can you review my lease for red flags?')}
+                >
+                  <IconComponent name="document-text-outline" size={16} color={colors.primaryColor} />
+                  <Text style={styles.suggestionText}>Lease review</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.suggestionChip}
+                  onPress={() => handleSuggestionPress('How should I respond to an eviction notice?')}
+                >
+                  <IconComponent name="alert-circle-outline" size={16} color={colors.primaryColor} />
+                  <Text style={styles.suggestionText}>Eviction help</Text>
+                </TouchableOpacity>
               </View>
-            </LinearGradient>
+            </View>
           </View>
         ) : (
           messages.map((m) => (
@@ -497,12 +538,7 @@ export default function ConversationDetail() {
                       <Text
                         style={[
                           styles.markdownParagraph,
-                          {
-                            color: m.role === 'user' ? 'white' : '#2c3e50',
-                            flexWrap: 'wrap',
-                            flexShrink: 1,
-                            width: '100%',
-                          },
+                          m.role === 'user' ? styles.userText : styles.assistantText,
                         ]}
                       >
                         {m.content}
@@ -511,9 +547,13 @@ export default function ConversationDetail() {
                   )
                 }
               </View>
-              <Text style={styles.messageTime}>
-                {m.role === 'user' ? t('sindi.chat.you') : t('sindi.name')} •{' '}
-                {new Date().toLocaleTimeString()}
+              <Text
+                style={[
+                  styles.messageTime,
+                  m.role === 'user' ? styles.messageTimeUser : styles.messageTimeAssistant,
+                ]}
+              >
+                {m.role === 'user' ? t('sindi.chat.you') : t('sindi.name')} • {new Date().toLocaleTimeString()}
               </Text>
             </View>
           ))
@@ -522,14 +562,8 @@ export default function ConversationDetail() {
 
       {/* Sticky Input */}
       <View style={[styles.stickyInput, webStyles.stickyInput]}>
-        <LinearGradient
-          colors={[colors.primaryColor, colors.secondaryLight]}
-          style={styles.inputGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
+        <View style={styles.inputBar}>
           <View style={styles.inputContainer}>
-            {/* File preview */}
             {attachedFile && (
               <View style={styles.filePreviewContainer}>
                 <Text style={styles.filePreviewText}>{attachedFile.name}</Text>
@@ -539,14 +573,13 @@ export default function ConversationDetail() {
               </View>
             )}
             <View style={styles.inputWrapper}>
-              {/* Attach button */}
               <TouchableOpacity onPress={handleAttachFile} style={styles.attachButton}>
-                <IconComponent name="attach" size={20} color="white" />
+                <IconComponent name="attach" size={20} color="#54656f" />
               </TouchableOpacity>
               <TextInput
                 style={styles.textInput}
                 placeholder={t('sindi.chat.placeholder')}
-                placeholderTextColor="rgba(255, 255, 255, 0.6)"
+                placeholderTextColor="#667781"
                 value={input}
                 onChangeText={(text) =>
                   handleInputChange({
@@ -558,20 +591,19 @@ export default function ConversationDetail() {
                 maxLength={1000}
               />
               <TouchableOpacity
-                style={[styles.sendButton, !input.trim() && styles.sendButtonDisabled]}
+                style={[styles.sendButtonPlain, !input.trim() && styles.sendButtonDisabledPlain]}
                 onPress={handleSubmitWithFile}
                 disabled={!input.trim() || isLoading}
               >
                 <IconComponent
                   name={isLoading ? 'hourglass' : 'send'}
                   size={20}
-                  color={input.trim() ? 'white' : 'rgba(255, 255, 255, 0.4)'}
+                  color={input.trim() ? colors.primaryColor : '#99a2a7'}
                 />
               </TouchableOpacity>
             </View>
-            <Text style={styles.disclaimer}>{t('sindi.chat.disclaimer')}</Text>
           </View>
-        </LinearGradient>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -580,7 +612,10 @@ export default function ConversationDetail() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: 'transparent',
+  },
+  backgroundGradient: {
+    ...StyleSheet.absoluteFillObject,
   },
   loadingContainer: {
     flex: 1,
@@ -595,70 +630,72 @@ const styles = StyleSheet.create({
   },
   messagesContainer: {
     flex: 1,
-    marginBottom: 120, // Account for sticky input
+    marginBottom: 72,
   },
   messagesContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
   emptyContainer: {
-    paddingVertical: 40,
-    paddingHorizontal: 20,
+    paddingVertical: 32,
+    paddingHorizontal: 16,
   },
-  emptyHeader: {
+  emptyCard: {
     alignItems: 'center',
-    padding: 32,
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   emptyIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   emptyTitle: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 12,
-    fontFamily: 'Phudu',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111b21',
+    marginBottom: 6,
     textAlign: 'center',
   },
   emptySubtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 14,
+    color: '#667781',
     textAlign: 'center',
-    lineHeight: 24,
-    paddingHorizontal: 20,
-    marginBottom: 24,
+    lineHeight: 20,
+    paddingHorizontal: 8,
+    marginBottom: 12,
   },
-  emptyActions: {
-    alignItems: 'flex-start',
-    gap: 12,
+  suggestionsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
   },
-  emptyActionItem: {
+  suggestionChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f0f2f5',
+    borderWidth: 1,
+    borderColor: '#e9edef',
+    gap: 6,
   },
-  emptyActionText: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginLeft: 12,
-    fontWeight: '500',
+  suggestionText: {
+    color: colors.primaryColor,
+    fontSize: 13,
+    fontWeight: '600',
   },
   messageContainer: {
-    marginVertical: 6,
+    marginVertical: 2,
     paddingHorizontal: 4,
   },
   userMessage: {
@@ -670,33 +707,27 @@ const styles = StyleSheet.create({
     marginRight: 40,
   },
   messageBubble: {
-    maxWidth: '85%',
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    borderRadius: 24,
+    maxWidth: '75%',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 18,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowColor: 'transparent',
+    elevation: 0,
   },
   userBubble: {
     backgroundColor: colors.primaryColor,
-    borderTopRightRadius: 8,
+    borderTopRightRadius: 18,
   },
   assistantBubble: {
-    backgroundColor: 'white',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#e9ecef',
-    borderTopLeftRadius: 8,
+    borderColor: '#e9edef',
+    borderTopLeftRadius: 18,
   },
-  messageTime: {
-    fontSize: 12,
-    color: '#95a5a6',
-    marginTop: 4,
-    marginHorizontal: 8,
-  },
+  timestampInBubble: { display: 'none' },
+  timestampUser: { display: 'none' },
+  timestampAssistant: { display: 'none' },
   stickyInput: {
     position: 'absolute',
     bottom: 0,
@@ -707,66 +738,49 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#e9ecef',
   },
-  inputGradient: {
-    margin: 16,
-    marginBottom: 8,
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
+  inputBar: {
+    backgroundColor: '#f0f2f5',
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e9edef',
   },
   inputContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 8,
+    paddingVertical: 0,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 26,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    minHeight: 52,
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: '#e9edef',
   },
   textInput: {
     flex: 1,
     fontSize: 16,
     maxHeight: 120,
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    color: 'white',
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    color: '#111b21',
     lineHeight: 22,
   },
-  sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+  sendButtonPlain: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    marginLeft: 8,
   },
-  sendButtonDisabled: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    shadowOpacity: 0,
-    elevation: 0,
+  sendButtonDisabledPlain: {
+    opacity: 0.5,
   },
-  disclaimer: {
-    fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.7)',
-    textAlign: 'center',
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
+  disclaimer: { display: 'none' },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -794,9 +808,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   markdownParagraph: {
-    fontSize: 16,
-    lineHeight: 22,
-    marginBottom: 4,
+    fontSize: 15,
+    lineHeight: 20,
+    marginBottom: 2,
+  },
+  userText: {
+    color: 'white',
+  },
+  assistantText: {
+    color: '#111b21',
   },
   propertyCardsContainer: {
     marginVertical: 12,
@@ -822,5 +842,17 @@ const styles = StyleSheet.create({
   attachButton: {
     marginRight: 8,
     padding: 4,
+  },
+  messageTime: {
+    fontSize: 11,
+    color: '#8696a0',
+    marginTop: 2,
+    marginHorizontal: 8,
+  },
+  messageTimeUser: {
+    alignSelf: 'flex-end',
+  },
+  messageTimeAssistant: {
+    alignSelf: 'flex-start',
   },
 });

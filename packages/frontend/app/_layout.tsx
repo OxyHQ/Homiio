@@ -63,19 +63,22 @@ const getStyles = (isScreenNotMobile: boolean) =>
   StyleSheet.create({
     container: {
       width: '100%',
-      paddingHorizontal: isScreenNotMobile ? 10 : 0,
       marginHorizontal: 'auto',
+      flexDirection: isScreenNotMobile ? 'row' : 'column',
+    },
+    mainContent: {
       justifyContent: 'space-between',
       flexDirection: isScreenNotMobile ? 'row' : 'column',
-      ...(!isScreenNotMobile && {
-        flex: 1,
-      }),
+      flex: 1,
+      paddingHorizontal: isScreenNotMobile ? 10 : 0,
     },
     mainContentWrapper: {
-      borderLeftWidth: 0.5,
-      borderRightWidth: 0.5,
-      borderColor: '#0d0d0d0d',
       flex: isScreenNotMobile ? 2.2 : 1,
+      ...(isScreenNotMobile ? {
+        borderLeftWidth: 0.5,
+        borderRightWidth: 0.5,
+        borderColor: '#0d0d0d0d',
+      } : {}),
       backgroundColor: colors.primaryLight,
     },
   });
@@ -227,10 +230,12 @@ export default function RootLayout() {
                                   scrollEventThrottle={16}
                                 >
                                   <SideBar />
-                                  <View style={styles.mainContentWrapper}>
-                                    <Slot />
+                                  <View style={styles.mainContent}>
+                                    <View style={styles.mainContentWrapper}>
+                                      <Slot />
+                                    </View>
+                                    <RightBar />
                                   </View>
-                                  <RightBar />
                                 </Animated.ScrollView>
                               </LayoutScrollProvider>
                               <StatusBar style="auto" />
