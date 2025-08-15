@@ -34,7 +34,7 @@ export default function SavedFolderScreen() {
             if (id) router.push(`/properties/${id}`);
           }}
           noteText={item.notes || ''}
-          onPressNote={() => {}}
+          onPressNote={() => { }}
         />
       </View>
     );
@@ -63,14 +63,14 @@ export default function SavedFolderScreen() {
           rightComponents: folder.isDefault
             ? []
             : [
-                <TouchableOpacity
-                  key="editFolder"
-                  style={styles.headerButton}
-                  onPress={() => router.push(`/saved/${folderId}/edit`)}
-                >
-                  <Ionicons name="create-outline" size={20} color={colors.COLOR_BLACK} />
-                </TouchableOpacity>,
-              ],
+              <TouchableOpacity
+                key="editFolder"
+                style={styles.headerButton}
+                onPress={() => router.push(`/saved/${folderId}/edit`)}
+              >
+                <Ionicons name="create-outline" size={20} color={colors.COLOR_BLACK} />
+              </TouchableOpacity>,
+            ],
         }}
       />
 
@@ -94,7 +94,7 @@ export default function SavedFolderScreen() {
         refreshControl={
           <RefreshControl
             refreshing={false}
-            onRefresh={() => {}}
+            onRefresh={() => { }}
             colors={[colors.primaryColor]}
             tintColor={colors.primaryColor}
           />
@@ -116,8 +116,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingTop: 16,
-    paddingHorizontal: 16,
-    paddingBottom: 100,
   },
   emptyListContent: {
     flexGrow: 1,
@@ -125,11 +123,11 @@ const styles = StyleSheet.create({
   },
   gridRow: {
     justifyContent: 'space-between',
+    gap: 16,
     paddingHorizontal: 16,
   },
   gridItemContainer: {
     flex: 1,
-    paddingHorizontal: 8,
     marginBottom: 16,
   },
 });

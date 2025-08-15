@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect, useContext } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useContext, useRef } from 'react';
 import {
   View,
   FlatList,
@@ -10,6 +10,7 @@ import {
   Text,
   RefreshControl,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -113,6 +114,14 @@ export default function SavedPropertiesScreen() {
   const [selectedProperties, setSelectedProperties] = useState<Set<string>>(new Set());
   const [bulkActionMode, setBulkActionMode] = useState(false);
   const [showSortOptions, setShowSortOptions] = useState(false);
+
+  // Tabs horizontal scroll state (web arrows)
+  const tabsScrollRef = useRef<any>(null);
+  const [tabsContainerWidth, setTabsContainerWidth] = useState(0);
+  const [tabsContentWidth, setTabsContentWidth] = useState(0);
+  const [tabsScrollX, setTabsScrollX] = useState(0);
+  const [tabsCanScrollLeft, setTabsCanScrollLeft] = useState(false);
+  const [tabsCanScrollRight, setTabsCanScrollRight] = useState(false);
 
   // Folder functionality
   const { folders, loadFolders, loadSavedProperties: loadSavedFromCtx } = useSavedPropertiesContext();
@@ -475,133 +484,213 @@ export default function SavedPropertiesScreen() {
       </View>
 
       {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        {CATEGORIES.map((category) => {
-          const isActive = selectedCategory === category.id;
-          return (
-            <TouchableOpacity
-              key={category.id}
-              style={StyleSheet.flatten([styles.tabItem, isActive && styles.tabItemActive])}
-              onPress={() => {
-                const next = category.id as FilterCategory;
-                setSelectedCategory(next);
-                try {
-                  router.setParams?.({ tab: next });
-                } catch { }
-              }}
-            >
-              <Text style={StyleSheet.flatten([styles.tabText, isActive && styles.tabTextActive])}>
-                {t(category.name as any)} ({(categoryCounts as any)[category.id] || 0})
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+      <View
+        style={styles.tabsContainer}
+        onLayout={(e) => {
+          const w = e.nativeEvent.layout.width;
+          setTabsContainerWidth(w);
+          const canRight = tabsContentWidth > w + tabsScrollX + 1;
+          if (canRight !== tabsCanScrollRight) setTabsCanScrollRight(canRight);
+        }}
+      >
+        {Platform.OS === 'web' && tabsCanScrollLeft && (
+          <TouchableOpacity
+            style={StyleSheet.flatten([
+              styles.scrollArrow,
+              styles.scrollArrowLeft,
+            ])}
+            onPress={() => {
+              const nextX = Math.max(0, tabsScrollX - Math.max(120, tabsContainerWidth * 0.8));
+              tabsScrollRef.current?.scrollTo({ x: nextX, animated: true });
+            }}
+            accessibilityLabel="Scroll left"
+          >
+            <View style={styles.scrollArrowCircle}>
+              <IconComponent
+                name="chevron-back"
+                size={18}
+                color={colors.primaryColor}
+              />
+            </View>
+          </TouchableOpacity>
+        )}
+
+        <ScrollView
+          ref={tabsScrollRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabsContent}
+          style={styles.tabsScroll}
+          scrollEventThrottle={16}
+          onContentSizeChange={(w) => {
+            setTabsContentWidth(w);
+            const canRight = w > tabsContainerWidth + tabsScrollX + 1;
+            setTabsCanScrollRight(canRight);
+          }}
+          onScroll={(e) => {
+            const x = e.nativeEvent.contentOffset.x;
+            setTabsScrollX(x);
+            const canLeft = x > 0;
+            const canRight = x + tabsContainerWidth < tabsContentWidth - 1;
+            if (canLeft !== tabsCanScrollLeft) setTabsCanScrollLeft(canLeft);
+            if (canRight !== tabsCanScrollRight) setTabsCanScrollRight(canRight);
+          }}
+        >
+          {CATEGORIES.map((category) => {
+            const isActive = selectedCategory === category.id;
+            return (
+              <TouchableOpacity
+                key={category.id}
+                style={StyleSheet.flatten([styles.tabItem, isActive && styles.tabItemActive])}
+                onPress={() => {
+                  const next = category.id as FilterCategory;
+                  setSelectedCategory(next);
+                  try {
+                    router.setParams?.({ tab: next });
+                  } catch { }
+                }}
+              >
+                <Text style={StyleSheet.flatten([styles.tabText, isActive && styles.tabTextActive])}>
+                  {t(category.name as any)} ({(categoryCounts as any)[category.id] || 0})
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        {Platform.OS === 'web' && tabsCanScrollRight && (
+          <TouchableOpacity
+            style={StyleSheet.flatten([
+              styles.scrollArrow,
+              styles.scrollArrowRight,
+            ])}
+            onPress={() => {
+              const maxX = Math.max(0, tabsContentWidth - tabsContainerWidth);
+              const nextX = Math.min(
+                maxX,
+                tabsScrollX + Math.max(120, tabsContainerWidth * 0.8),
+              );
+              tabsScrollRef.current?.scrollTo({ x: nextX, animated: true });
+            }}
+            accessibilityLabel="Scroll right"
+          >
+            <View style={styles.scrollArrowCircle}>
+              <IconComponent
+                name="chevron-forward"
+                size={18}
+                color={colors.primaryColor}
+              />
+            </View>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Folders/Profiles tabs show custom lists below */}
 
       {/* Controls Bar */}
-      <View style={styles.controlsBar}>
-        <View style={styles.leftControls}>
-          {/* Sort icon */}
-          <TouchableOpacity
-            accessibilityLabel="Sort"
-            style={StyleSheet.flatten([styles.iconPill, showSortOptions && styles.iconPillActive])}
-            onPress={() => setShowSortOptions(!showSortOptions)}
-          >
-            <IconComponent
-              name="filter"
-              size={16}
-              color={showSortOptions ? 'white' : colors.primaryColor}
-            />
-          </TouchableOpacity>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View style={styles.controlsBar}>
+          <View style={styles.leftControls}>
+            {/* Sort icon */}
+            <TouchableOpacity
+              accessibilityLabel="Sort"
+              style={StyleSheet.flatten([styles.iconPill, showSortOptions && styles.iconPillActive])}
+              onPress={() => setShowSortOptions(!showSortOptions)}
+            >
+              <IconComponent
+                name="filter"
+                size={16}
+                color={showSortOptions ? 'white' : colors.primaryColor}
+              />
+            </TouchableOpacity>
 
-          {/* View segmented control */}
-          <View style={styles.segmented}>
+            {/* View segmented control */}
+            <View style={styles.segmented}>
+              <TouchableOpacity
+                accessibilityLabel={t('saved.view.list', 'List')}
+                style={StyleSheet.flatten([
+                  styles.segment,
+                  viewMode === 'list' && styles.segmentActive,
+                ])}
+                onPress={() => setViewMode('list')}
+              >
+                <IconComponent
+                  name="list"
+                  size={14}
+                  color={viewMode === 'list' ? 'white' : colors.primaryColor}
+                />
+                <Text
+                  style={StyleSheet.flatten([
+                    styles.segmentText,
+                    viewMode === 'list' && styles.segmentTextActive,
+                  ])}
+                >
+                  {t('saved.view.list', 'List')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                accessibilityLabel={t('saved.view.grid', 'Grid')}
+                style={StyleSheet.flatten([
+                  styles.segment,
+                  viewMode === 'grid' && styles.segmentActive,
+                ])}
+                onPress={() => setViewMode('grid')}
+              >
+                <IconComponent
+                  name="grid"
+                  size={14}
+                  color={viewMode === 'grid' ? 'white' : colors.primaryColor}
+                />
+                <Text
+                  style={StyleSheet.flatten([
+                    styles.segmentText,
+                    viewMode === 'grid' && styles.segmentTextActive,
+                  ])}
+                >
+                  {t('saved.view.grid', 'Grid')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.rightControls}>
+            {/* Clear search if active */}
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                accessibilityLabel="Clear search"
+                style={styles.iconPill}
+                onPress={() => setSearchQuery('')}
+              >
+                <IconComponent name="close-circle" size={16} color={colors.primaryColor} />
+              </TouchableOpacity>
+            )}
+
+            {/* Selection toggle */}
             <TouchableOpacity
-              accessibilityLabel={t('saved.view.list', 'List')}
-              style={StyleSheet.flatten([
-                styles.segment,
-                viewMode === 'list' && styles.segmentActive,
-              ])}
-              onPress={() => setViewMode('list')}
+              accessibilityLabel={bulkActionMode ? 'Cancel selection' : 'Select items'}
+              style={StyleSheet.flatten([styles.iconPill, bulkActionMode && styles.iconPillActive])}
+              onPress={() => {
+                setBulkActionMode(!bulkActionMode);
+                setSelectedProperties(new Set());
+              }}
             >
               <IconComponent
-                name="list"
-                size={14}
-                color={viewMode === 'list' ? 'white' : colors.primaryColor}
+                name="checkmark-circle"
+                size={16}
+                color={bulkActionMode ? 'white' : colors.primaryColor}
               />
-              <Text
-                style={StyleSheet.flatten([
-                  styles.segmentText,
-                  viewMode === 'list' && styles.segmentTextActive,
-                ])}
-              >
-                {t('saved.view.list', 'List')}
-              </Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              accessibilityLabel={t('saved.view.grid', 'Grid')}
-              style={StyleSheet.flatten([
-                styles.segment,
-                viewMode === 'grid' && styles.segmentActive,
-              ])}
-              onPress={() => setViewMode('grid')}
-            >
-              <IconComponent
-                name="grid"
-                size={14}
-                color={viewMode === 'grid' ? 'white' : colors.primaryColor}
-              />
-              <Text
-                style={StyleSheet.flatten([
-                  styles.segmentText,
-                  viewMode === 'grid' && styles.segmentTextActive,
-                ])}
-              >
-                {t('saved.view.grid', 'Grid')}
-              </Text>
-            </TouchableOpacity>
+
+            <Text style={styles.resultCount}>
+              {selectedCategory === 'profiles'
+                ? `${savedProfiles.length} ${t('saved.profilesLabel', 'profiles')}`
+                : selectedCategory === 'searches'
+                  ? `${savedSearches.length} ${t('search.savedSearches')}`
+                  : `${filteredProperties.length} ${t('search.properties')}`}
+            </Text>
           </View>
         </View>
-
-        <View style={styles.rightControls}>
-          {/* Clear search if active */}
-          {searchQuery.length > 0 && (
-            <TouchableOpacity
-              accessibilityLabel="Clear search"
-              style={styles.iconPill}
-              onPress={() => setSearchQuery('')}
-            >
-              <IconComponent name="close-circle" size={16} color={colors.primaryColor} />
-            </TouchableOpacity>
-          )}
-
-          {/* Selection toggle */}
-          <TouchableOpacity
-            accessibilityLabel={bulkActionMode ? 'Cancel selection' : 'Select items'}
-            style={StyleSheet.flatten([styles.iconPill, bulkActionMode && styles.iconPillActive])}
-            onPress={() => {
-              setBulkActionMode(!bulkActionMode);
-              setSelectedProperties(new Set());
-            }}
-          >
-            <IconComponent
-              name="checkmark-circle"
-              size={16}
-              color={bulkActionMode ? 'white' : colors.primaryColor}
-            />
-          </TouchableOpacity>
-
-          <Text style={styles.resultCount}>
-            {selectedCategory === 'profiles'
-              ? `${savedProfiles.length} ${t('saved.profilesLabel', 'profiles')}`
-              : selectedCategory === 'searches'
-                ? `${savedSearches.length} ${t('search.savedSearches')}`
-                : `${filteredProperties.length} ${t('search.properties')}`}
-          </Text>
-        </View>
-      </View>
+      </ScrollView>
 
       {/* Sort Options Dropdown */}
       {showSortOptions && (
@@ -968,13 +1057,9 @@ const styles = StyleSheet.create({
 
   // Tabs
   tabsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
     marginBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#eaeaea',
-    paddingHorizontal: 4,
     ...Platform.select({
       web: {
         position: 'sticky',
@@ -983,6 +1068,15 @@ const styles = StyleSheet.create({
         zIndex: 1000,
       },
     }),
+  },
+  tabsContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 4,
+  },
+  tabsScroll: {
+    // keep sticky container styles on wrapper; content styles in contentContainerStyle
   },
   tabItem: {
     paddingVertical: 10,
@@ -1020,6 +1114,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 4,
+    minWidth: '100%',
   },
   leftControls: {
     flexDirection: 'row',
@@ -1157,6 +1252,48 @@ const styles = StyleSheet.create({
   sortOptionTextActive: {
     color: 'white',
     fontWeight: '600',
+  },
+
+  // Web-only tab scroll arrows
+  scrollArrow: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+    zIndex: 1100,
+    ...Platform.select({
+      web: {
+        display: 'flex',
+      },
+      default: {
+        display: 'none' as any,
+      },
+    }),
+  },
+  scrollArrowLeft: {
+    left: 0,
+  },
+  scrollArrowRight: {
+    right: 0,
+  },
+  scrollArrowDisabled: {
+    opacity: 0.4,
+  },
+  scrollArrowCircle: {
+    backgroundColor: 'white',
+    borderRadius: 999,
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#eaeaea',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 2,
   },
 
   // Bulk Actions
