@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
-import { generateAPIUrl } from '@/utils/generateAPIUrl';
+import { API_URL } from '@/config';
 import { fetch as expoFetch } from 'expo/fetch';
 import { colors } from '@/styles/colors';
 import { SindiIcon } from '@/assets/icons';
@@ -41,7 +41,7 @@ export default function SharedConversationView() {
 
       try {
         setLoading(true);
-        const response = await expoFetch(generateAPIUrl(`/api/ai/shared/${token}`));
+        const response = await expoFetch(`${API_URL}/api/ai/shared/${token}`);
 
         if (response.ok) {
           const data = await response.json();
@@ -128,9 +128,9 @@ export default function SharedConversationView() {
   const webStyles =
     Platform.OS === 'web'
       ? {
-          container: { height: '100vh', display: 'flex', flexDirection: 'column' } as any,
-          messagesContainer: { flex: 1, overflow: 'auto' } as any,
-        }
+        container: { height: '100vh', display: 'flex', flexDirection: 'column' } as any,
+        messagesContainer: { flex: 1, overflow: 'auto' } as any,
+      }
       : {};
 
   return (

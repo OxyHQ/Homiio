@@ -1,4 +1,4 @@
-import { generateAPIUrl } from '@/utils/generateAPIUrl';
+import { API_URL } from '@/config';
 import { useChat } from '@ai-sdk/react';
 import { fetch as expoFetch } from 'expo/fetch';
 import {
@@ -47,7 +47,6 @@ export default function ConversationDetail() {
   const {
     currentConversation,
     loading,
-    error: storeError,
     loadConversation,
     saveConversation,
     updateConversationMessages,
@@ -92,7 +91,7 @@ export default function ConversationDetail() {
   const { messages, error, handleInputChange, input, handleSubmit, isLoading, setMessages } =
     useChat({
       fetch: authenticatedFetch as unknown as typeof globalThis.fetch,
-      api: generateAPIUrl('/api/ai/stream'),
+      api: `${API_URL}/api/ai/stream`,
       onError: (error: any) => console.error(error, 'ERROR'),
       enabled: isAuthenticated,
       initialMessages: currentConversation?.messages || [],
@@ -175,10 +174,10 @@ export default function ConversationDetail() {
             // Update title based on first user message if it's still the default
             title:
               currentConversation.title === 'New Conversation' &&
-              messages.length > 0 &&
-              messages[0].role === 'user'
+                messages.length > 0 &&
+                messages[0].role === 'user'
                 ? messages[0].content.substring(0, 50) +
-                  (messages[0].content.length > 50 ? '...' : '')
+                (messages[0].content.length > 50 ? '...' : '')
                 : currentConversation.title,
           };
 
@@ -324,12 +323,12 @@ export default function ConversationDetail() {
   const webStyles =
     Platform.OS === 'web'
       ? {
-          container: { height: '100vh', display: 'flex', flexDirection: 'column' } as any,
-          stickyHeader: { position: 'sticky', top: 0 } as any,
-          messagesContainer: { marginTop: 0, marginBottom: 0, flex: 1, overflow: 'auto' } as any,
-          stickyInput: { position: 'sticky', bottom: 0 } as any,
-          messagesContent: { paddingBottom: 100 },
-        }
+        container: { height: '100vh', display: 'flex', flexDirection: 'column' } as any,
+        stickyHeader: { position: 'sticky', top: 0 } as any,
+        messagesContainer: { marginTop: 0, marginBottom: 0, flex: 1, overflow: 'auto' } as any,
+        stickyInput: { position: 'sticky', bottom: 0 } as any,
+        messagesContent: { paddingBottom: 100 },
+      }
       : {};
 
   return (

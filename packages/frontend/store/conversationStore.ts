@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { generateAPIUrl } from '@/utils/generateAPIUrl';
+import { API_URL } from '@/config';
 import { fetch as expoFetch } from 'expo/fetch';
 
 export interface ConversationMessage {
@@ -73,7 +73,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
   loadConversations: async (authenticatedFetch) => {
     try {
       set({ loading: true, error: null });
-      const response = await authenticatedFetch(generateAPIUrl('/api/ai/conversations'));
+      const response = await authenticatedFetch(`${API_URL}/api/ai/conversations`);
 
       if (response.ok) {
         const data = await response.json();
@@ -128,9 +128,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
 
       // Try to load from API
       console.log('Store: Fetching conversation from API');
-      const response = await authenticatedFetch(
-        generateAPIUrl(`/api/ai/conversations/${conversationId}`),
-      );
+      const response = await authenticatedFetch(`${API_URL}/api/ai/conversations/${conversationId}`);
 
       if (response.ok) {
         const data = await response.json();
@@ -226,7 +224,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
         };
         console.log('Store: POST request body:', requestBody);
 
-        const response = await authenticatedFetch(generateAPIUrl('/api/ai/conversations'), {
+        const response = await authenticatedFetch(`${API_URL}/api/ai/conversations`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -275,7 +273,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
       console.log('Store: PUT request body:', requestBody);
 
       const response = await authenticatedFetch(
-        generateAPIUrl(`/api/ai/conversations/${conversation.id}`),
+        `${API_URL}/api/ai/conversations/${conversation.id}`,
         {
           method: 'PUT',
           headers: {
@@ -309,7 +307,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     try {
       if (authenticatedFetch) {
         console.log('Store: Creating conversation with title:', title);
-        const response = await authenticatedFetch(generateAPIUrl('/api/ai/conversations'), {
+        const response = await authenticatedFetch(`${API_URL}/api/ai/conversations`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -410,7 +408,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
   generateShareToken: async (conversationId, authenticatedFetch) => {
     try {
       const response = await authenticatedFetch(
-        generateAPIUrl(`/api/ai/conversations/${conversationId}/share`),
+        `${API_URL}/api/ai/conversations/${conversationId}/share`,
         { method: 'POST' },
       );
 
