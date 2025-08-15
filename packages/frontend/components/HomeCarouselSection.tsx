@@ -29,13 +29,13 @@ export function HomeCarouselSection<T>({
   renderItem,
   onViewAll,
   viewAllText = 'View All',
-  minItemsToShow = 2,
+  minItemsToShow: _minItemsToShow = 2,
 }: HomeCarouselSectionProps<T>) {
   const carouselRef = useRef<ScrollView>(null);
-  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [_carouselIndex, setCarouselIndex] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
   const [scrollX, setScrollX] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
+  const [_isDragging, setIsDragging] = useState(false);
 
   // Max card width and gap values
   const maxCardWidth = 180;
@@ -71,7 +71,7 @@ export function HomeCarouselSection<T>({
     containerWidth > 0
       ? Math.floor((availableScrollWidth + cardGap) / (calculatedCardWidth + cardGap))
       : 1;
-  const maxCarouselIndex =
+  const _maxCarouselIndex =
     calculatedCardWidth > 0
       ? Math.max(
         0,
@@ -93,24 +93,29 @@ export function HomeCarouselSection<T>({
 
   const handleScrollLeft = () => {
     if (!disableLeftArrow) {
-      const currentIndex = Math.round(scrollX / (calculatedCardWidth + cardGap));
-      const targetIndex = Math.max(0, currentIndex - 1);
-      const targetScrollX = targetIndex * (calculatedCardWidth + cardGap);
+      const cardSpacing = calculatedCardWidth + cardGap;
+      const pageStride = Math.max(1, itemsPerPage) * cardSpacing;
+      const currentPage = Math.floor(scrollX / pageStride);
+      const targetPage = Math.max(0, currentPage - 1);
+      const targetScrollX = Math.max(0, targetPage * pageStride);
 
       carouselRef.current?.scrollTo({ x: targetScrollX, animated: true });
       setScrollX(targetScrollX);
+      const targetIndex = Math.round(targetScrollX / cardSpacing);
       setCarouselIndex(targetIndex);
     }
   };
 
   const handleScrollRight = () => {
     if (!disableRightArrow) {
-      const currentIndex = Math.round(scrollX / (calculatedCardWidth + cardGap));
-      const targetIndex = Math.min(items.length - 1, currentIndex + 1);
-      const targetScrollX = Math.min(targetIndex * (calculatedCardWidth + cardGap), maxScroll);
+      const cardSpacing = calculatedCardWidth + cardGap;
+      const pageStride = Math.max(1, itemsPerPage) * cardSpacing;
+      const currentPage = Math.floor(scrollX / pageStride);
+      const targetScrollX = Math.min(maxScroll, (currentPage + 1) * pageStride);
 
       carouselRef.current?.scrollTo({ x: targetScrollX, animated: true });
       setScrollX(targetScrollX);
+      const targetIndex = Math.round(targetScrollX / cardSpacing);
       setCarouselIndex(targetIndex);
     }
   };
