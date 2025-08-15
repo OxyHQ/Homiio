@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Platform, View, StyleSheet, Animated } from 'react-native';
+import { Platform, View, StyleSheet, Animated, AppState, AppStateStatus } from 'react-native';
 import {
   SafeAreaProvider,
   initialWindowMetrics,
@@ -20,7 +20,7 @@ import {
   requestNotificationPermissions,
   scheduleDemoNotification,
 } from '@/utils/notifications';
-import i18n from 'i18next';
+import i18n, { use as i18nUse, init as i18nInit } from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import enUS from '@/locales/en.json';
 import esES from '@/locales/es.json';
@@ -41,21 +41,20 @@ import '../styles/global.css';
 import { OXY_BASE_URL } from '@/config';
 import { QueryClient, QueryClientProvider, onlineManager, focusManager } from '@tanstack/react-query';
 import NetInfo from '@react-native-community/netinfo';
-import { AppState, AppStateStatus } from 'react-native';
 
-i18n
-  .use(initReactI18next)
-  .init({
-    resources: {
-      'en-US': { translation: enUS },
-      'es-ES': { translation: esES },
-      'ca-ES': { translation: caES },
-      'it-IT': { translation: itIT },
-    },
-    lng: 'en-US',
-    fallbackLng: 'en-US',
-    interpolation: { escapeValue: false },
-  })
+i18nUse(initReactI18next);
+
+i18nInit({
+  resources: {
+    'en-US': { translation: enUS },
+    'es-ES': { translation: esES },
+    'ca-ES': { translation: caES },
+    'it-IT': { translation: itIT },
+  },
+  lng: 'en-US',
+  fallbackLng: 'en-US',
+  interpolation: { escapeValue: false },
+})
   .catch((error: unknown) => {
     console.error('Failed to initialize i18n:', error);
   });
@@ -63,7 +62,6 @@ i18n
 const getStyles = (isScreenNotMobile: boolean) =>
   StyleSheet.create({
     container: {
-      maxWidth: 1600,
       width: '100%',
       paddingHorizontal: isScreenNotMobile ? 10 : 0,
       marginHorizontal: 'auto',
@@ -74,7 +72,8 @@ const getStyles = (isScreenNotMobile: boolean) =>
       }),
     },
     mainContentWrapper: {
-      borderWidth: 0.5,
+      borderLeftWidth: 0.5,
+      borderRightWidth: 0.5,
       borderColor: '#0d0d0d0d',
       flex: isScreenNotMobile ? 2.2 : 1,
       backgroundColor: colors.primaryLight,

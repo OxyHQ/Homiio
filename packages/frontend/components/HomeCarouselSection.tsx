@@ -37,33 +37,27 @@ export function HomeCarouselSection<T>({
   const [scrollX, setScrollX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Fixed card width and gap values
-  const cardWidth = 200;
+  // Max card width and gap values
+  const maxCardWidth = 180;
   const cardGap = 16;
 
-  // Calculate card width to fit properly within container with consistent padding and gaps
+  // Calculate card width to fit within container while respecting a max width
   const horizontalPadding = 32; // 16px left + 16px right
-  let calculatedCardWidth = cardWidth;
+  let calculatedCardWidth = maxCardWidth;
 
   if (containerWidth > 0) {
-    const availableWidth = containerWidth - horizontalPadding;
+    const availableWidth = Math.max(0, containerWidth - horizontalPadding);
 
-    // Calculate how many cards can fit with the desired gap, ensuring minimum items to show
-    const maxCardsToFit = Math.floor((availableWidth + cardGap) / (cardWidth + cardGap));
-    const cardsToFit = Math.max(minItemsToShow, Math.min(items.length, maxCardsToFit));
+    // Minimum number of cards needed so that per-card width does not exceed maxCardWidth
+    const minCardsToFit = Math.max(1, Math.ceil((availableWidth + cardGap) / (maxCardWidth + cardGap)));
 
-    if (cardsToFit > 0) {
-      // Calculate the exact card width needed to fit the cards with proper gaps
-      const totalGaps = (cardsToFit - 1) * cardGap;
-      const calculatedWidth = (availableWidth - totalGaps) / cardsToFit;
-
-      // Use the calculated width if it's reasonable (minimum 140px)
-      if (calculatedWidth >= 140) {
-        calculatedCardWidth = Math.floor(calculatedWidth);
-      } else {
-        // If calculated width is too small, use the fixed card width
-        calculatedCardWidth = cardWidth;
-      }
+    if (items.length >= minCardsToFit) {
+      const totalGaps = (minCardsToFit - 1) * cardGap;
+      const exactWidth = (availableWidth - totalGaps) / minCardsToFit;
+      calculatedCardWidth = Math.min(maxCardWidth, Math.floor(exactWidth));
+    } else {
+      // Not enough cards to fill the viewport; keep max size and align left
+      calculatedCardWidth = maxCardWidth;
     }
   }
 
@@ -223,7 +217,7 @@ export function HomeCarouselSection<T>({
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.horizontalScroll}
-          contentContainerStyle={{ paddingHorizontal: 16 }}
+          contentContainerStyle={{ paddingHorizontal: 16, justifyContent: 'flex-start' }}
           scrollEnabled={true}
           onScrollBeginDrag={handleScrollBeginDrag}
           onScrollEndDrag={handleScrollEndDrag}
@@ -301,3 +295,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 });
+
+
+
+

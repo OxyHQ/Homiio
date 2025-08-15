@@ -326,7 +326,7 @@ export function PropertyCard({
           isFeatured ? styles.featuredContent : null,
         ]}
       >
-        {/* Title - Airbnb style */}
+        {/* Title */}
         <ThemedText
           style={[
             styles.title,

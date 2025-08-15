@@ -35,9 +35,9 @@ export function PropertyList({
       ...styles.card,
       ...(isGrid
         ? {
-            width: Math.min((screenWidth - 48) / numColumns, AIRBNB_CARD_WIDTH),
-            marginHorizontal: 4,
-          }
+          width: Math.min((screenWidth - 48) / numColumns, AIRBNB_CARD_WIDTH),
+          marginHorizontal: 4,
+        }
         : {}),
       ...(horizontal ? styles.horizontalCard : {}),
     };
