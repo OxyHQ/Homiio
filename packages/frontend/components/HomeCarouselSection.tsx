@@ -38,7 +38,7 @@ export function HomeCarouselSection<T>({
   const [_isDragging, setIsDragging] = useState(false);
 
   // Max card width and gap values
-  const maxCardWidth = 180;
+  const maxCardWidth = 220;
   const cardGap = 16;
 
   // Calculate card width to fit within container while respecting a max width

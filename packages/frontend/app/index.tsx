@@ -1123,7 +1123,7 @@ const styles = StyleSheet.create({
     // Reduced gap for tighter layout
     gap: 4,
     paddingHorizontal: 16,
-    // Allow natural distribution; space-evenly can look nicer for single row cases
+    // Distribute chips across the row while allowing them to grow
     justifyContent: 'flex-start',
   },
   propertyChip: {
@@ -1142,8 +1142,7 @@ const styles = StyleSheet.create({
     flexBasis: '30%',
     // Prevent chips from becoming too narrow on small widths
     minWidth: 140,
-    // Cap width so very wide screens show more columns instead of huge chips
-    maxWidth: 260,
+    // Allow chips to expand to fill available width per row
   },
   propertyChipGradient: {
     flexDirection: 'row',
