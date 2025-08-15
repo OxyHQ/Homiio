@@ -39,7 +39,7 @@ export function HomeCarouselSection<T>({
 
   // Max card width and gap values
   const maxCardWidth = 220;
-  const cardGap = 16;
+  const cardGap = 15;
 
   // Calculate card width to fit within container while respecting a max width
   const horizontalPadding = 32; // 16px left + 16px right
