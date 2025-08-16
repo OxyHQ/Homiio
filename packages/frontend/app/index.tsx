@@ -408,11 +408,8 @@ export default function HomePage() {
                   onPress={() => router.push(`/properties/type/${type.id}`)}
                   activeOpacity={0.8}
                 >
-                  <LinearGradient
-                    colors={[colors.primaryColor, colors.secondaryLight]}
-                    style={styles.propertyChipGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
+                  <View
+                    style={[styles.propertyChipContent, { backgroundColor: colors.primaryColor }]}
                   >
                     <IconComponent
                       name={type.icon as keyof typeof IconComponent.glyphMap}
@@ -423,7 +420,7 @@ export default function HomePage() {
                     <View style={styles.propertyChipCountBadge}>
                       <ThemedText style={styles.propertyChipCountText}>{type.count}</ThemedText>
                     </View>
-                  </LinearGradient>
+                  </View>
                 </TouchableOpacity>
               );
             })}
@@ -1191,14 +1188,11 @@ const createStyles = (isScreenNotMobile: boolean) => StyleSheet.create({
     minWidth: 140,
     // Allow chips to expand to fill available width per row
   },
-  propertyChipGradient: {
+  propertyChipContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    // Slightly reduced internal padding for compact chips
-    paddingHorizontal: 6,
-    paddingVertical: 6,
+    padding: 6,
     justifyContent: 'space-between',
-    // Make gradient fill the chip container width
     flex: 1,
   },
   propertyChipName: {
@@ -1210,11 +1204,12 @@ const createStyles = (isScreenNotMobile: boolean) => StyleSheet.create({
   },
   propertyChipCountBadge: {
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    minWidth: 24,
+    borderRadius: 35,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    minWidth: 28,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   propertyChipCountText: {
     fontSize: 12,
