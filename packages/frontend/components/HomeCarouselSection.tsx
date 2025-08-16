@@ -20,6 +20,7 @@ interface HomeCarouselSectionProps<T> {
   onViewAll?: () => void;
   viewAllText?: string;
   minItemsToShow?: number; // Minimum number of items to show at start
+  maxCardWidth?: number;
 }
 
 export function HomeCarouselSection<T>({
@@ -30,15 +31,13 @@ export function HomeCarouselSection<T>({
   onViewAll,
   viewAllText = 'View All',
   minItemsToShow: _minItemsToShow = 2,
+  maxCardWidth = 220,
 }: HomeCarouselSectionProps<T>) {
   const carouselRef = useRef<ScrollView>(null);
   const [_carouselIndex, setCarouselIndex] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
   const [scrollX, setScrollX] = useState(0);
   const [_isDragging, setIsDragging] = useState(false);
-
-  // Max card width and gap values
-  const maxCardWidth = 220;
   const cardGap = 16;
 
   // Calculate card width to fit within container while respecting a max width

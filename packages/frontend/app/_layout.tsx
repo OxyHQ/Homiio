@@ -69,7 +69,6 @@ const getStyles = (isScreenNotMobile: boolean) =>
       width: '100%',
       marginHorizontal: 'auto',
       flexDirection: isScreenNotMobile ? 'row' : 'column',
-      backgroundColor: `${colors.primaryColor}10`,
     },
     mainContent: {
       maxWidth: 1600,

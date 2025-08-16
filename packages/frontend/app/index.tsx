@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
+import { Home } from '@/assets/icons';
 
 // Import real data hooks
 import { useProperties } from '@/hooks';
@@ -267,62 +268,71 @@ export default function HomePage() {
   // Tip card styles for carousel (StyleSheet)
   const tipCarouselCardStyles = StyleSheet.create({
     card: {
-      backgroundColor: '#fff',
-      borderRadius: 16,
-      padding: 16,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 8,
-      elevation: 3,
-      minHeight: 180,
+      backgroundColor: '#ffffff',
+      borderRadius: 12,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: colors.COLOR_BLACK_LIGHT_6,
+      overflow: 'hidden',
       flex: 1,
-      justifyContent: 'space-between',
     },
-    iconContainer: {
-      alignItems: 'center',
+    imageContainer: {
+      height: 160,
+      position: 'relative',
+    },
+    image: {
+      width: '100%',
+      height: '100%',
       justifyContent: 'center',
-      marginBottom: 12,
+      alignItems: 'center',
+    },
+    badge: {
+      position: 'absolute',
+      top: 10,
+      left: 10,
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      borderRadius: 35,
+      paddingHorizontal: 8,
+      paddingVertical: 1,
+    },
+    badgeText: {
+      fontSize: 10,
+      fontWeight: '500' as any,
+      color: colors.COLOR_BLACK,
+      textTransform: 'uppercase' as const,
+      letterSpacing: 0.3,
+      fontFamily: phuduFontWeights.medium,
+    },
+    content: {
+      padding: 12,
     },
     title: {
-      fontSize: 16,
-      fontWeight: '700' as any,
+      fontSize: 15,
+      fontWeight: '600' as any,
       color: colors.COLOR_BLACK,
       marginBottom: 6,
-      textAlign: 'center' as any,
+      fontFamily: phuduFontWeights.medium,
+      lineHeight: 20,
     },
     description: {
       fontSize: 13,
       color: colors.COLOR_BLACK_LIGHT_3,
+      lineHeight: 18,
       marginBottom: 10,
-      textAlign: 'center' as any,
     },
-    metaRow: {
-      flexDirection: 'row' as const,
-      justifyContent: 'center' as const,
-      marginTop: 4,
+    meta: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
     },
     metaItem: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      marginRight: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
     },
     metaText: {
       fontSize: 12,
       color: colors.COLOR_BLACK_LIGHT_4,
-    },
-    badge: {
-      alignSelf: 'center' as const,
-      backgroundColor: colors.primaryColor,
-      borderRadius: 8,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      marginBottom: 8,
-    },
-    badgeText: {
-      color: '#fff',
-      fontSize: 11,
-      fontWeight: '600' as any,
+      marginLeft: 4,
     },
   });
 
@@ -595,45 +605,33 @@ export default function HomePage() {
           </View>
           <View style={styles.statsChipsContainer}>
             <TouchableOpacity style={styles.statChip} activeOpacity={0.8}>
-              <LinearGradient
-                colors={[colors.primaryColor, colors.secondaryLight]}
-                style={styles.statChipGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <IconComponent name="home" size={20} color="white" />
+              <View style={styles.statChipGradient}>
                 <View style={styles.statChipContent}>
                   <ThemedText style={styles.statChipNumber}>{properties?.length || 0}</ThemedText>
                   <ThemedText style={styles.statChipLabel}>Total Properties</ThemedText>
                 </View>
-              </LinearGradient>
+                <View style={styles.statChipIcon}>
+                  <Home size={22} color={colors.COLOR_BLACK} />
+                </View>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.statChip} activeOpacity={0.8}>
-              <LinearGradient
-                colors={[colors.primaryColor, colors.secondaryLight]}
-                style={styles.statChipGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <IconComponent name="people" size={20} color="white" />
+              <View style={styles.statChipGradient}>
                 <View style={styles.statChipContent}>
                   <ThemedText style={styles.statChipNumber}>
                     {properties?.filter((p) => p.status === 'available').length || 0}
                   </ThemedText>
                   <ThemedText style={styles.statChipLabel}>Available Now</ThemedText>
                 </View>
-              </LinearGradient>
+                <View style={styles.statChipIcon}>
+                  <IconComponent name="people" size={22} color={colors.COLOR_BLACK} />
+                </View>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.statChip} activeOpacity={0.8}>
-              <LinearGradient
-                colors={['#16a34a', '#22c55e']}
-                style={styles.statChipGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <IconComponent name="leaf" size={20} color="white" />
+              <View style={styles.statChipGradient}>
                 <View style={styles.statChipContent}>
                   <ThemedText style={styles.statChipNumber}>
                     {properties?.filter((p) =>
@@ -644,22 +642,22 @@ export default function HomePage() {
                   </ThemedText>
                   <ThemedText style={styles.statChipLabel}>Eco-Friendly</ThemedText>
                 </View>
-              </LinearGradient>
+                <View style={styles.statChipIcon}>
+                  <IconComponent name="leaf" size={22} color={colors.COLOR_BLACK} />
+                </View>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.statChip} activeOpacity={0.8}>
-              <LinearGradient
-                colors={['#f59e0b', '#fbbf24']}
-                style={styles.statChipGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <IconComponent name="star" size={20} color="white" />
+              <View style={styles.statChipGradient}>
                 <View style={styles.statChipContent}>
                   <ThemedText style={styles.statChipNumber}>{topCities.length}</ThemedText>
                   <ThemedText style={styles.statChipLabel}>Cities Covered</ThemedText>
                 </View>
-              </LinearGradient>
+                <View style={styles.statChipIcon}>
+                  <IconComponent name="star" size={22} color={colors.COLOR_BLACK} />
+                </View>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
@@ -671,51 +669,50 @@ export default function HomePage() {
           loading={tipsLoading}
           onViewAll={() => router.push('/tips')}
           viewAllText={t('home.viewAll')}
+          minItemsToShow={1}
+          maxCardWidth={420}
           renderItem={(tip) => (
             <TouchableOpacity
               key={tip.id}
               style={{ flex: 1 }}
-              onPress={() => router.push('/tips')}
+              onPress={() => router.push(`/tips/${tip.id}`)}
               activeOpacity={0.85}
             >
               <View style={tipCarouselCardStyles.card}>
-                <View style={tipCarouselCardStyles.iconContainer}>
+                <View style={tipCarouselCardStyles.imageContainer}>
                   <LinearGradient
                     colors={tip.gradientColors as [string, string]}
-                    style={{ borderRadius: 16, padding: 10, marginBottom: 4 }}
+                    style={tipCarouselCardStyles.image}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                   >
-                    <Ionicons name={tip.icon as any} size={28} color="#fff" />
+                    <IconComponent name={tip.icon} size={32} color="white" />
                   </LinearGradient>
-                </View>
-                <View style={tipCarouselCardStyles.badge}>
-                  <ThemedText style={tipCarouselCardStyles.badgeText}>
-                    {t(`home.tips.categories.${tip.category}`)}
-                  </ThemedText>
-                </View>
-                <ThemedText style={tipCarouselCardStyles.title} numberOfLines={2}>
-                  {tip.title}
-                </ThemedText>
-                <ThemedText style={tipCarouselCardStyles.description} numberOfLines={2}>
-                  {tip.description}
-                </ThemedText>
-                <View style={tipCarouselCardStyles.metaRow}>
-                  <View style={tipCarouselCardStyles.metaItem}>
-                    <Ionicons name="time-outline" size={14} color={colors.COLOR_BLACK_LIGHT_4} />
-                    <ThemedText style={tipCarouselCardStyles.metaText}>{tip.readTime}</ThemedText>
-                  </View>
-                  <View style={tipCarouselCardStyles.metaItem}>
-                    <Ionicons
-                      name="calendar-outline"
-                      size={14}
-                      color={colors.COLOR_BLACK_LIGHT_4}
-                    />
-                    <ThemedText style={tipCarouselCardStyles.metaText}>
-                      {tip.publishDate}
+                  <View style={tipCarouselCardStyles.badge}>
+                    <ThemedText style={tipCarouselCardStyles.badgeText}>
+                      {tip.category}
                     </ThemedText>
                   </View>
                 </View>
+                <View style={tipCarouselCardStyles.content}>
+                  <ThemedText style={tipCarouselCardStyles.title} numberOfLines={2}>
+                    {tip.title}
+                  </ThemedText>
+                  <ThemedText style={tipCarouselCardStyles.description} numberOfLines={2}>
+                    {tip.description}
+                  </ThemedText>
+                  <View style={tipCarouselCardStyles.meta}>
+                    <View style={tipCarouselCardStyles.metaItem}>
+                      <IconComponent name="time-outline" size={14} color={colors.COLOR_BLACK_LIGHT_4} />
+                      <ThemedText style={tipCarouselCardStyles.metaText}>{tip.readTime}</ThemedText>
+                    </View>
+                    <View style={tipCarouselCardStyles.metaItem}>
+                      <IconComponent name="calendar-outline" size={14} color={colors.COLOR_BLACK_LIGHT_4} />
+                      <ThemedText style={tipCarouselCardStyles.metaText}>{tip.publishDate}</ThemedText>
+                    </View>
+                  </View>
+                </View>
+
               </View>
             </TouchableOpacity>
           )}
@@ -727,7 +724,7 @@ export default function HomePage() {
             <ThemedText style={styles.sectionTitle}>{t('home.faq.title')}</ThemedText>
           </View>
           <View style={styles.faqContainer}>
-            <View style={styles.faqItem}>
+            <View style={[styles.faqItem, styles.faqItemFirst]}>
               <TouchableOpacity
                 style={styles.faqQuestion}
                 onPress={() => {
@@ -809,7 +806,7 @@ export default function HomePage() {
               )}
             </View>
 
-            <View style={styles.faqItem}>
+            <View style={[styles.faqItem, styles.faqItemLast]}>
               <TouchableOpacity
                 style={styles.faqQuestion}
                 onPress={() => {
@@ -855,7 +852,7 @@ const createStyles = (isScreenNotMobile: boolean) => StyleSheet.create({
       margin: 20,
       paddingHorizontal: 50,
     } : {
-      paddingHorizontal: 20,
+      paddingHorizontal: 16,
     }),
     justifyContent: 'center',
     alignItems: 'center',
@@ -1173,20 +1170,10 @@ const createStyles = (isScreenNotMobile: boolean) => StyleSheet.create({
   propertyChip: {
     borderRadius: 25,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-    // Reduced vertical spacing
     marginBottom: 4,
-    // Flex-based responsive sizing
     flexGrow: 1,
-    // Target about 3 columns when space allows; will wrap naturally
     flexBasis: '30%',
-    // Prevent chips from becoming too narrow on small widths
     minWidth: 140,
-    // Allow chips to expand to fill available width per row
   },
   propertyChipContent: {
     flexDirection: 'row',
@@ -1217,7 +1204,7 @@ const createStyles = (isScreenNotMobile: boolean) => StyleSheet.create({
     color: colors.COLOR_BLACK,
   },
   statsSection: {
-    paddingVertical: 12,
+    paddingVertical: 8,
   },
   statsChipsContainer: {
     flexDirection: 'row',
@@ -1228,35 +1215,35 @@ const createStyles = (isScreenNotMobile: boolean) => StyleSheet.create({
   statChip: {
     flex: 1,
     minWidth: '45%',
-    borderRadius: 25,
+    borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: colors.COLOR_BLACK_LIGHT_6,
+    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
   },
   statChipGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 8,
+    position: 'relative',
+    padding: 10,
   },
   statChipContent: {
-    flex: 1,
-    marginLeft: 6,
     alignItems: 'flex-start',
   },
+  statChipIcon: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+  },
   statChipNumber: {
-    fontFamily: phuduFontWeights.bold,
-    fontSize: 20,
-    color: 'white',
-    marginBottom: 2,
+    fontFamily: 'Phudu',
+    fontSize: 28,
+    color: colors.COLOR_BLACK,
+    marginBottom: 8,
+    fontWeight: 'bold',
   },
   statChipLabel: {
-    fontSize: 12,
-    color: 'white',
-    opacity: 0.9,
+    fontSize: 14,
+    color: colors.COLOR_BLACK_LIGHT_3,
+    fontWeight: '500',
   },
   verifiedBadge: {
     backgroundColor: colors.primaryColor,
@@ -1486,22 +1473,26 @@ const createStyles = (isScreenNotMobile: boolean) => StyleSheet.create({
     paddingHorizontal: 16,
   },
   faqItem: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
+    borderRadius: 8,
+    marginBottom: 1,
     overflow: 'hidden',
+  },
+  faqItemFirst: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  faqItemLast: {
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    marginBottom: 0,
   },
   faqQuestion: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#ffffff',
+    padding: 12,
+    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
   },
   faqQuestionText: {
     fontSize: 16,
@@ -1511,9 +1502,9 @@ const createStyles = (isScreenNotMobile: boolean) => StyleSheet.create({
     fontFamily: phuduFontWeights.medium,
   },
   faqAnswer: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    backgroundColor: '#f8f9fa',
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    backgroundColor: colors.COLOR_BLACK_LIGHT_8,
   },
   faqAnswerText: {
     fontSize: 14,
