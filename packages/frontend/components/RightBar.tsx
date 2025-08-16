@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { useMediaQuery } from 'react-responsive';
-import { SearchBar } from './SearchBar';
 import { usePathname } from 'expo-router';
 import { WidgetManager } from './widgets';
 
@@ -79,7 +78,6 @@ export function RightBar() {
     return {};
   };
 
-  const isSearchScreen = pathname === '/search' || pathname.startsWith('/search/');
   const propertyInfo = getPropertyInfo();
 
   if (!isRightBarVisible) return null;
@@ -88,7 +86,6 @@ export function RightBar() {
     <View style={styles.container}>
       {/* Sticky Widgets Container */}
       <View style={styles.stickyWidgetsContainer}>
-        <SearchBar hideFilterIcon={isSearchScreen} />
         <WidgetManager
           screenId={getScreenId()}
           propertyId={propertyInfo.propertyId}

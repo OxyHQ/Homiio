@@ -333,16 +333,6 @@ export default function PropertyDetailPage() {
     router.push(`/properties/${property?.id}/book-viewing`);
   };
 
-  const handleApply = () => {
-    // For public housing, redirect to state website
-    if (apiProperty?.housingType === 'public') {
-      handlePublicHousingApply();
-      return;
-    }
-    // In a real app, this would navigate to a rental application form
-    router.push(`/properties/${property?.id}/apply`);
-  };
-
   const handlePublicHousingApply = () => {
     // Get state from property address to redirect to appropriate website
     const state = (apiProperty?.address?.state || '').toLowerCase();
@@ -1377,18 +1367,9 @@ export default function PropertyDetailPage() {
           {apiProperty?.housingType === 'public' ? (
             <>
               <ActionButton
-                icon="chatbubble-outline"
-                text={t('Contact')}
-                onPress={() => { }}
-                variant="secondary"
-                size="large"
-                disabled={true}
-                style={{ flex: 1, marginRight: 10 }}
-              />
-              <ActionButton
                 icon="globe"
-                text={t('Apply')}
-                onPress={handleApply}
+                text={t('Apply on State Website')}
+                onPress={handlePublicHousingApply}
                 variant="primary"
                 size="large"
                 style={{ flex: 1 }}
@@ -1397,19 +1378,21 @@ export default function PropertyDetailPage() {
           ) : (
             <>
               <ActionButton
-                icon="calendar-outline"
-                text={t('Schedule Viewing')}
-                onPress={handleScheduleViewing}
-                variant="outline"
+                icon="chatbubble-outline"
+                text={t('Message')}
+                onPress={handleContact}
+                variant="primary"
                 size="large"
+                disabled={!landlordProfile}
                 style={{ flex: 1, marginRight: 10 }}
               />
               <ActionButton
-                icon="checkmark-circle-outline"
-                text={t('Apply Now')}
-                onPress={handleApply}
-                variant="primary"
+                icon="call-outline"
+                text={t('Call')}
+                onPress={handleContact}
+                variant="secondary"
                 size="large"
+                disabled={!landlordProfile}
                 style={{ flex: 1 }}
               />
             </>
