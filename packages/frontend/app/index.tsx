@@ -339,7 +339,11 @@ export default function HomePage() {
           source={require('@/assets/images/hero.jpg')}
           style={[styles.heroSection, { paddingTop: insets.top + 50 }]}
           resizeMode="cover"
-          imageStyle={{ width: '100%', height: '100%' }}
+          imageStyle={{
+            width: Platform.select({ web: '100%', default: undefined }),
+            height: Platform.select({ web: '100%', default: undefined }),
+            flex: Platform.select({ web: undefined, default: 1 })
+          }}
         >
           <View style={styles.heroOverlay} />
           <View style={styles.heroContent}>
