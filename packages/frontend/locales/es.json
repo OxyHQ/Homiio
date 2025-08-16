@@ -426,6 +426,27 @@
       }
     }
   },
+  "viewings": {
+    "success": {
+      "created": "¡Solicitud de visita enviada con éxito!"
+    },
+    "validation": {
+      "selectDateTime": "Por favor selecciona una fecha y hora",
+      "invalidProperty": "Propiedad inválida"
+    },
+    "error": {
+      "generic": "No se pudo enviar la solicitud de visita. Por favor, inténtalo de nuevo.",
+      "alreadyRequested": "Ya tienes una solicitud de visita activa para esta propiedad.",
+      "timeConflict": "Ese horario ya no está disponible. Por favor elige otro.",
+      "timeInPast": "La hora programada debe ser en el futuro.",
+      "authRequired": "Por favor inicia sesión para solicitar una visita."
+    },
+    "selectDate": "Seleccionar fecha",
+    "availableTimeSlots": "Horarios disponibles",
+    "additionalNotes": "Notas adicionales",
+    "notesPlaceholder": "¿Alguna pregunta para el propietario? (opcional)",
+    "policy": "Por favor llega a tiempo a tu cita. Si necesitas cancelar, hazlo con al menos 2 horas de antelación."
+  },
   "payments": {
     "title": "Pagos",
     "upcoming": "Pagos Próximos",

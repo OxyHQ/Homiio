@@ -13,6 +13,7 @@ const analytics = require('./analytics');
 const profiles = require('./profiles').default;
 const ai = require('./ai').default;
 const roommates = require('./roommates').default;
+const viewings = require('./viewings').default;
 const telegram = require('./telegram');
 const tips = require('./tips').default;
 const test = require('./test').default;
@@ -28,6 +29,7 @@ export default function() {
   const profileRoutes = profiles();
   const aiRoutes = ai();
   const roommateRoutes = roommates();
+  const viewingRoutes = viewings();
   const telegramRoutes = telegram();
   const tipsRoutes = tips();
   const testRoutes = test();
@@ -36,6 +38,7 @@ export default function() {
 
   // Protected routes (authentication handled globally in server.ts)
   router.use('/properties', propertyRoutes);
+  router.use('/viewings', viewingRoutes);
   router.use('/rooms', roomRoutes);
   router.use('/devices', deviceRoutes);
   router.use('/leases', leaseRoutes);

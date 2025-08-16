@@ -451,6 +451,27 @@
       }
     }
   },
+  "viewings": {
+    "success": {
+      "created": "Sol·licitud de visita enviada amb èxit!"
+    },
+    "validation": {
+      "selectDateTime": "Si us plau, seleccioneu una data i hora",
+      "invalidProperty": "Propietat no vàlida"
+    },
+    "error": {
+      "generic": "No s'ha pogut enviar la sol·licitud de visita. Torneu-ho a provar.",
+      "alreadyRequested": "Ja teniu una sol·licitud de visita activa per a aquesta propietat.",
+      "timeConflict": "Aquest horari ja no està disponible. Si us plau, trieu-ne un altre.",
+      "timeInPast": "L'hora programada ha de ser en el futur.",
+      "authRequired": "Si us plau, inicieu sessió per sol·licitar una visita."
+    },
+    "selectDate": "Selecciona data",
+    "availableTimeSlots": "Franges horàries disponibles",
+    "additionalNotes": "Notes addicionals",
+    "notesPlaceholder": "Alguna pregunta per al propietari? (opcional)",
+    "policy": "Si us plau, arribeu puntuals a la vostra cita. Si necessiteu cancel·lar, feu-ho amb almenys 2 hores d'antelació."
+  },
   "payments": {
     "title": "Pagaments",
     "upcoming": "Pagaments Propers",

@@ -1182,7 +1182,7 @@ export default function PropertyDetailPage() {
                   <TouchableOpacity style={styles.contactMethod} onPress={handleScheduleViewing}>
                     <IconComponent name="calendar-outline" size={24} color={colors.primaryColor} />
                     <ThemedText style={styles.contactMethodText}>
-                      {t('Schedule Viewing')}
+                      {t('properties.bookViewing')}
                     </ThemedText>
                   </TouchableOpacity>
                 </View>
@@ -1295,7 +1295,7 @@ export default function PropertyDetailPage() {
                   <View style={styles.landlordActions}>
                     <ActionButton
                       icon="chatbubble-outline"
-                      text={t('Message')}
+                      text={t('properties.contact')}
                       onPress={handleContact}
                       variant="primary"
                       size="medium"
@@ -1304,7 +1304,7 @@ export default function PropertyDetailPage() {
                     />
                     <ActionButton
                       icon="call-outline"
-                      text={t('Call')}
+                      text={t('properties.contact')}
                       onPress={handleContact}
                       variant="secondary"
                       size="medium"
@@ -1379,7 +1379,7 @@ export default function PropertyDetailPage() {
             <>
               <ActionButton
                 icon="chatbubble-outline"
-                text={t('Message')}
+                text={t('properties.contact')}
                 onPress={handleContact}
                 variant="primary"
                 size="large"
@@ -1388,7 +1388,7 @@ export default function PropertyDetailPage() {
               />
               <ActionButton
                 icon="call-outline"
-                text={t('Call')}
+                text={t('properties.contact')}
                 onPress={handleContact}
                 variant="secondary"
                 size="large"

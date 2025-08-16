@@ -483,6 +483,43 @@
       }
     }
   },
+  "viewings": {
+    "success": {
+      "created": "Richiesta di visita inviata con successo!"
+    },
+    "validation": {
+      "selectDateTime": "Seleziona una data e un orario",
+      "invalidProperty": "Proprietà non valida"
+    },
+    "error": {
+      "generic": "Invio della richiesta di visita non riuscito. Riprova.",
+      "alreadyRequested": "Hai già una richiesta di visita attiva per questa proprietà.",
+      "timeConflict": "Quella fascia oraria non è più disponibile. Scegline un'altra.",
+      "timeInPast": "L'orario programmato deve essere nel futuro.",
+      "authRequired": "Accedi per richiedere una visita."
+    },
+    "selectDate": "Seleziona data",
+    "availableTimeSlots": "Fasce orarie disponibili",
+    "additionalNotes": "Note aggiuntive",
+    "notesPlaceholder": "Domande per il proprietario? (opzionale)",
+    "policy": "Arriva puntuale all'appuntamento. Se devi annullare, fallo almeno 2 ore prima."
+  },
+  "viewings": {
+    "success": {
+      "created": "Richiesta di visita inviata con successo!"
+    },
+    "validation": {
+      "selectDateTime": "Seleziona una data e un orario",
+      "invalidProperty": "Proprietà non valida"
+    },
+    "error": {
+      "generic": "Invio della richiesta di visita non riuscito. Riprova.",
+      "alreadyRequested": "Hai già una richiesta di visita attiva per questa proprietà.",
+      "timeConflict": "Quella fascia oraria non è più disponibile. Scegline un'altra.",
+      "timeInPast": "L'orario programmato deve essere nel futuro.",
+      "authRequired": "Accedi per richiedere una visita."
+    }
+  },
   "payments": {
     "title": "Pagamenti",
     "upcoming": "Pagamenti Imminenti",

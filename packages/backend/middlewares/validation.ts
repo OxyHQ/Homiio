@@ -195,3 +195,15 @@ export {
   validateDateRange,
   validateFileUpload,
 };
+/**
+ * Viewing request validation rules
+ */
+const validateViewingRequest = [
+  param('propertyId').isString().notEmpty().withMessage('Property ID is required'),
+  body('date').isISO8601().withMessage('Valid date is required'),
+  body('time').matches(/^\d{2}:\d{2}$/).withMessage('Time must be in HH:MM format'),
+  body('message').optional().isString().isLength({ max: 1000 }).withMessage('Message max length is 1000'),
+  handleValidationErrors
+];
+
+export { validateViewingRequest };

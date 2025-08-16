@@ -12,6 +12,7 @@ export default function () {
 
   const propertyController = require("../controllers/propertyController");
   const profileController = require("../controllers/profileController");
+  const viewingController = require("../controllers/viewingController");
 
   // Performance monitoring for all property routes
   router.use(performanceMonitor);
@@ -33,6 +34,17 @@ export default function () {
 
   // Property view tracking (authenticated) - uses profileController
   router.post("/:propertyId/track-view", asyncHandler(profileController.trackPropertyView));
+
+  // Viewing requests
+  router.post(
+    "/:propertyId/viewings",
+    validation.validateViewingRequest,
+    asyncHandler(viewingController.createViewingRequest)
+  );
+  router.get(
+    "/:propertyId/viewings",
+    asyncHandler(viewingController.listPropertyViewingRequests)
+  );
 
   // Property-specific authenticated routes
   router.get("/:propertyId/energy", asyncHandler(propertyController.getPropertyEnergyData));

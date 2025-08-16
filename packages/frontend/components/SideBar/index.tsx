@@ -104,6 +104,14 @@ export function SideBar() {
         route: '/profile',
       },
 
+      // Viewings entry
+      {
+        title: t('viewings.title', { defaultValue: 'Viewings' }) as string,
+        icon: <IconComponent name="calendar-outline" size={20} color={colors.COLOR_BLACK} />,
+        iconActive: <IconComponent name="calendar" size={20} color={colors.primaryColor} />,
+        route: '/viewings',
+      },
+
       // Only show roommates for personal profiles
       ...(isPersonalProfile
         ? [

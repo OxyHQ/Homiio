@@ -18,6 +18,11 @@ import { Header } from '@/components/Header';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { useProperty } from '@/hooks';
 import { ActionButton } from '@/components/ui/ActionButton';
+import { PropertyType } from '@homiio/shared-types';
+import { useOxy } from '@oxyhq/services';
+import viewingService from '@/services/viewingService';
+import { ApiError } from '@/utils/api';
+import { toast } from 'sonner';
 
 type PropertyData = {
   id: string;
@@ -31,6 +36,7 @@ export default function BookViewingPage() {
   const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams();
+  const { oxyServices, activeSessionId } = useOxy();
   const [property, setProperty] = useState<PropertyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string>('');
@@ -50,22 +56,56 @@ export default function BookViewingPage() {
     loadProperty();
   }, [id, loadProperty]);
 
+  const extractErrorMessage = (err: unknown): string => {
+    let fallback = t('viewings.error.generic');
+    try {
+      if (err instanceof ApiError) {
+        const resp: any = err.response;
+        const code = (resp?.error?.code || resp?.code || resp?.error) as string | undefined;
+        let msg: string | undefined;
+        if (typeof resp?.error?.message === 'string') msg = resp.error.message;
+        else if (typeof resp?.message === 'string') msg = resp.message;
+        else if (typeof resp?.data?.message === 'string') msg = resp.data.message;
+        else if (typeof resp?.error === 'string') msg = resp.error;
+        else if (typeof resp?.data?.error === 'string') msg = resp.data.error;
+        else if (Array.isArray(resp?.details) && resp.details.length > 0) {
+          const first = resp.details[0];
+          if (typeof first?.message === 'string') msg = first.message;
+        }
+        if (code === 'ALREADY_REQUESTED') return t('viewings.error.alreadyRequested');
+        if (code === 'TIME_CONFLICT') return t('viewings.error.timeConflict');
+        if (code === 'TIME_IN_PAST') return t('viewings.error.timeInPast');
+        if (code === 'AUTHENTICATION_REQUIRED') return t('viewings.error.authRequired');
+        if (msg) return msg;
+        if (err.message) return err.message;
+      } else if (err && typeof err === 'object') {
+        const anyErr: any = err as any;
+        if (typeof anyErr.message === 'string') return anyErr.message;
+        try {
+          return JSON.stringify(anyErr);
+        } catch { }
+      } else if (typeof err === 'string') {
+        return err;
+      }
+    } catch { }
+    return fallback;
+  };
+
   useEffect(() => {
     if (apiProperty) {
       // Map API property type to PropertyData type
-      const mapPropertyType = (
-        type: string,
-      ): 'apartment' | 'house' | 'room' | 'studio' | 'duplex' | 'penthouse' | undefined => {
+      const mapPropertyType = (type: string): PropertyType | undefined => {
         switch (type) {
           case 'apartment':
+            return PropertyType.APARTMENT;
           case 'house':
+            return PropertyType.HOUSE;
           case 'room':
+            return PropertyType.ROOM;
           case 'studio':
-          case 'duplex':
-          case 'penthouse':
-            return type;
+            return PropertyType.STUDIO;
           default:
-            return 'apartment'; // Default fallback
+            return PropertyType.APARTMENT; // Default fallback
         }
       };
 
@@ -113,27 +153,35 @@ export default function BookViewingPage() {
 
   const handleSubmit = async () => {
     if (!selectedDate || !selectedTime) {
-      Alert.alert(t('Error'), t('Please select a date and time'));
+      toast.error(t('viewings.validation.selectDateTime'));
+      return;
+    }
+
+    if (!oxyServices || !activeSessionId) {
+      toast.error(t('viewings.error.authRequired'));
+      return;
+    }
+
+    if (!property?.id) {
+      toast.error(t('viewings.validation.invalidProperty'));
       return;
     }
 
     setSubmitting(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      Alert.alert(
-        t('Success'),
-        t('Viewing request submitted successfully! We will contact you soon.'),
-        [
-          {
-            text: t('OK'),
-            onPress: () => router.back(),
-          },
-        ],
+      await viewingService.createViewingRequest(
+        property.id,
+        { date: selectedDate, time: selectedTime, message: message?.trim() || undefined },
+        oxyServices,
+        activeSessionId,
       );
+      toast.success(t('viewings.success.created'));
+      router.back();
     } catch (error) {
-      Alert.alert(t('Error'), t('Failed to submit viewing request. Please try again.'));
+      const msg = extractErrorMessage(error);
+      // If backend returned a raw string, show it; else fallback to translated generic
+      toast.error(typeof msg === 'string' ? msg : t('viewings.error.generic'));
     } finally {
       setSubmitting(false);
     }
@@ -151,7 +199,7 @@ export default function BookViewingPage() {
         />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primaryColor} />
-          <Text style={styles.loadingText}>{t('Loading property details...')}</Text>
+          <Text style={styles.loadingText}>{t('property.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -162,7 +210,7 @@ export default function BookViewingPage() {
       <Header
         options={{
           showBackButton: true,
-          title: t('Schedule Viewing'),
+          title: t('properties.bookViewing'),
           titlePosition: 'center',
         }}
       />
@@ -190,7 +238,7 @@ export default function BookViewingPage() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('Select Date')}</Text>
+          <Text style={styles.sectionTitle}>{t('viewings.selectDate')}</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -221,7 +269,7 @@ export default function BookViewingPage() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            {t('Available Time Slots')} -{' '}
+            {t('viewings.availableTimeSlots')} -{' '}
             {selectedDate && new Date(selectedDate).toLocaleDateString()}
           </Text>
 
@@ -247,12 +295,12 @@ export default function BookViewingPage() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('Additional Notes')}</Text>
+          <Text style={styles.sectionTitle}>{t('viewings.additionalNotes')}</Text>
           <TextInput
             style={styles.notesInput}
             multiline
             numberOfLines={4}
-            placeholder={t('Any questions for the landlord? (optional)')}
+            placeholder={t('viewings.notesPlaceholder')}
             placeholderTextColor={colors.COLOR_BLACK_LIGHT_3}
             value={message}
             onChangeText={setMessage}
@@ -262,15 +310,13 @@ export default function BookViewingPage() {
         <View style={styles.policyContainer}>
           <Ionicons name="information-circle" size={20} color={colors.COLOR_BLACK_LIGHT_3} />
           <Text style={styles.policyText}>
-            {t(
-              'Please be on time for your appointment. If you need to cancel, please do so at least 2 hours in advance.',
-            )}
+            {t('viewings.policy')}
           </Text>
         </View>
 
         <ActionButton
           icon="calendar-outline"
-          text={t('Request Viewing')}
+          text={t('properties.bookViewing')}
           onPress={handleSubmit}
           variant="primary"
           size="large"

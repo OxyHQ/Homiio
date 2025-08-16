@@ -895,5 +895,26 @@
     "notFound": "Property not found",
     "bed": "Bed",
     "bath": "Bath"
+  },
+  "viewings": {
+    "success": {
+      "created": "Viewing request submitted successfully!"
+    },
+    "validation": {
+      "selectDateTime": "Please select a date and time",
+      "invalidProperty": "Invalid property"
+    },
+    "error": {
+      "generic": "Failed to submit viewing request. Please try again.",
+      "alreadyRequested": "You already have an active viewing request for this property.",
+      "timeConflict": "That time slot is no longer available. Please pick another.",
+      "timeInPast": "Scheduled time must be in the future.",
+      "authRequired": "Please sign in to request a viewing."
+    },
+    "selectDate": "Select Date",
+    "availableTimeSlots": "Available Time Slots",
+    "additionalNotes": "Additional Notes",
+    "notesPlaceholder": "Any questions for the landlord? (optional)",
+    "policy": "Please be on time for your appointment. If you need to cancel, please do so at least 2 hours in advance."
   }
 }
