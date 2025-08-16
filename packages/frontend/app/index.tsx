@@ -332,7 +332,7 @@ export default function HomePage() {
 
   const translateY = scrollY.interpolate({
     inputRange: [-300, 0, 1000],
-    outputRange: [-100, 0, 200],
+    outputRange: [-150, 0, 300],
     extrapolate: 'clamp'
   });
 
@@ -353,10 +353,10 @@ export default function HomePage() {
         <View style={[styles.heroSection, { paddingTop: insets.top + 50, overflow: 'hidden' }]}>
           <Animated.View style={{
             position: 'absolute',
-            top: -100,
+            top: -150,
             left: 0,
             right: 0,
-            bottom: -100,
+            bottom: -150,
             transform: [{ translateY }]
           }}>
             <Image
