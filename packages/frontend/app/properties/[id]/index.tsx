@@ -26,13 +26,19 @@ import { toast } from 'sonner';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
-import { PropertyType, RecentlyViewedType, PropertyImage } from '@homiio/shared-types';
+import { PropertyType, RecentlyViewedType, PropertyImage, Property } from '@homiio/shared-types';
+import { PropertyCard } from '@/components/PropertyCard';
+import { HomeCarouselSection } from '@/components/HomeCarouselSection';
+import ProfileAvatar from '@/components/ProfileAvatar';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 
 import { useRecentlyViewedStore } from '@/store/recentlyViewedStore';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { userApi } from '@/utils/api';
 import { SaveButton } from '@/components/SaveButton';
+import * as Linking from 'expo-linking';
+import { propertyService } from '@/services/propertyService';
+import ViewingService from '@/services/viewingService';
 import { ActionButton } from '@/components/ui/ActionButton';
 import Button from '@/components/Button';
 import type { Profile } from '@/services/profileService';
@@ -82,6 +88,7 @@ export default function PropertyDetailPage() {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const hasViewedRef = useRef(false);
   const [showPhotoGallery, setShowPhotoGallery] = useState(false);
+  const [hasActiveViewing, setHasActiveViewing] = useState(false);
 
   // Zustand stores
   const { items: recentlyViewed, addItem } = useRecentlyViewedStore();
@@ -91,6 +98,7 @@ export default function PropertyDetailPage() {
   // TODO: Implement landlord profile fetching with Zustand
   // For now, we'll use placeholder values
   const [landlordProfile, setLandlordProfile] = useState<Profile | null>(null);
+  const [ownerProperties, setOwnerProperties] = useState<Property[]>([]);
 
   // Normalize landlordProfileId to string if it's an object (MongoDB $oid)
   let normalizedLandlordProfileId: string | undefined = undefined;
@@ -106,26 +114,37 @@ export default function PropertyDetailPage() {
     }
   }
 
-  // Fetch landlord profile
+  // Fetch landlord profile and their properties
   useEffect(() => {
-    const fetchLandlordProfile = async () => {
+    const fetchLandlordData = async () => {
       if (normalizedLandlordProfileId && oxyServices && activeSessionId) {
         try {
+          // Fetch landlord profile
           const profile = await profileService.getProfileById(
             normalizedLandlordProfileId,
             oxyServices,
             activeSessionId,
           );
           setLandlordProfile(profile);
+
+          // Fetch owner's other properties
+          const { properties } = await propertyService.getOwnerProperties(
+            normalizedLandlordProfileId,
+            id as string, // Exclude current property
+            oxyServices,
+            activeSessionId,
+          );
+          setOwnerProperties(properties);
         } catch (error) {
-          console.error('Error fetching landlord profile:', error);
+          console.error('Error fetching landlord data:', error);
           setLandlordProfile(null);
+          setOwnerProperties([]);
         }
       }
     };
 
-    fetchLandlordProfile();
-  }, [normalizedLandlordProfileId, oxyServices, activeSessionId]);
+    fetchLandlordData();
+  }, [normalizedLandlordProfileId, oxyServices, activeSessionId, id]);
 
   // Helper function to safely get landlord display name
   const getLandlordDisplayName = (profile: Profile | null): string => {
@@ -300,6 +319,31 @@ export default function PropertyDetailPage() {
     }
   }, [id, loadProperty]);
 
+  // Check for active viewing requests
+  React.useEffect(() => {
+    const checkActiveViewing = async () => {
+      if (!id || !oxyServices || !activeSessionId) return;
+
+      try {
+        const response = await ViewingService.listMyViewingRequests(
+          { page: 1, limit: 50 },
+          oxyServices,
+          activeSessionId,
+        );
+
+        const viewings = Array.isArray(response?.data) ? response.data : [];
+        const hasActive = viewings.some(
+          v => v.propertyId === id && ['pending', 'approved'].includes(v.status)
+        );
+        setHasActiveViewing(hasActive);
+      } catch (error) {
+        console.error('Failed to check active viewings:', error);
+      }
+    };
+
+    checkActiveViewing();
+  }, [id, oxyServices, activeSessionId]);
+
   // Load stats when id is available
   React.useEffect(() => {
     if (id) {
@@ -324,12 +368,67 @@ export default function PropertyDetailPage() {
   }, [id, isPropertySavedState, loadStats]);
 
   const handleContact = () => {
-    // In a real app, this would open a chat with the landlord
+    if (!oxyServices || !activeSessionId) {
+      toast.error(t('error.auth.required', 'Please sign in to contact the owner'));
+      return;
+    }
     router.push(`/chat/${property?.id}`);
   };
 
+  const handleCall = async () => {
+    if (!oxyServices || !activeSessionId) {
+      toast.error(t('error.auth.required', 'Please sign in to call the owner'));
+      return;
+    }
+
+    if (!landlordProfile) {
+      toast.error(t('error.profile.notFound', 'Owner profile not found'));
+      return;
+    }
+
+    // Get phone number based on profile type
+    let phoneNumber: string | undefined;
+    let allowCalls = false;
+
+    if (landlordProfile.personalProfile) {
+      // For personal profiles, check contact info in rental history or references
+      const latestRental = landlordProfile.personalProfile.rentalHistory?.[0];
+      phoneNumber = latestRental?.landlordContact?.phone;
+      allowCalls = landlordProfile.personalProfile.settings?.privacy?.showContactInfo ?? false;
+    } else if (landlordProfile.agencyProfile) {
+      // For agencies, check business details
+      phoneNumber = landlordProfile.agencyProfile.businessDetails?.licenseNumber; // Using licenseNumber as a placeholder
+      allowCalls = true; // Agencies typically allow calls
+    } else if (landlordProfile.businessProfile) {
+      // For businesses, check business details
+      phoneNumber = landlordProfile.businessProfile.businessDetails?.licenseNumber; // Using licenseNumber as a placeholder
+      allowCalls = true; // Businesses typically allow calls
+    } else if (landlordProfile.cooperativeProfile) {
+      // For cooperatives, use legal name as identifier
+      phoneNumber = landlordProfile.cooperativeProfile.legalName; // Using legalName as a placeholder
+      allowCalls = true; // Cooperatives typically allow calls
+    }
+
+    if (!allowCalls) {
+      toast.error(t('error.call.notAllowed', 'Owner does not accept calls'));
+      return;
+    }
+
+    if (!phoneNumber) {
+      toast.error(t('error.call.noPhone', 'No phone number available'));
+      return;
+    }
+
+    // Open phone dialer using Expo Linking
+    try {
+      await Linking.openURL(`tel:${phoneNumber}`);
+    } catch (error) {
+      console.error('Error opening phone dialer:', error);
+      toast.error(t('error.call.failed', 'Could not open phone dialer'));
+    }
+  };
+
   const handleScheduleViewing = () => {
-    // In a real app, this would navigate to a booking screen
     router.push(`/properties/${property?.id}/book-viewing`);
   };
 
@@ -466,6 +565,20 @@ export default function PropertyDetailPage() {
               ) : null,
               <TouchableOpacity key="share" style={styles.headerButton} onPress={handleShare}>
                 <IconComponent name="share-outline" size={24} color="#222" />
+              </TouchableOpacity>,
+              <TouchableOpacity
+                key="viewings"
+                style={styles.headerButton}
+                onPress={() => router.push('/viewings')}
+              >
+                <View style={styles.viewingIconContainer}>
+                  <IconComponent name="calendar-outline" size={24} color="#222" />
+                  {hasActiveViewing && (
+                    <View style={styles.viewingBadge}>
+                      <IconComponent name="checkmark" size={12} color="#fff" />
+                    </View>
+                  )}
+                </View>
               </TouchableOpacity>,
               <View
                 key="save-with-count"
@@ -744,6 +857,25 @@ export default function PropertyDetailPage() {
                   </View>
                 </View>
               </>
+            )}
+
+            {hasActiveViewing && (
+              <View style={styles.viewingBanner}>
+                <View style={styles.viewingBannerContent}>
+                  <IconComponent name="calendar" size={20} color={colors.primaryColor} />
+                  <ThemedText style={styles.viewingBannerText}>
+                    {t('viewings.banner.hasViewing', 'You have a viewing request for this property')}
+                  </ThemedText>
+                  <TouchableOpacity
+                    style={styles.viewingBannerButton}
+                    onPress={() => router.push('/viewings')}
+                  >
+                    <ThemedText style={styles.viewingBannerButtonText}>
+                      {t('viewings.banner.viewDetails', 'View Details')}
+                    </ThemedText>
+                  </TouchableOpacity>
+                </View>
+              </View>
             )}
 
             {/* Detailed Property Information */}
@@ -1175,10 +1307,21 @@ export default function PropertyDetailPage() {
                     <IconComponent name="mail-outline" size={24} color={colors.primaryColor} />
                     <ThemedText style={styles.contactMethodText}>{t('Send Message')}</ThemedText>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.contactMethod} onPress={handleContact}>
-                    <IconComponent name="call-outline" size={24} color={colors.primaryColor} />
-                    <ThemedText style={styles.contactMethodText}>{t('Call Now')}</ThemedText>
-                  </TouchableOpacity>
+                  {oxyServices && activeSessionId && landlordProfile && (
+                    <TouchableOpacity
+                      style={styles.contactMethod}
+                      onPress={handleCall}
+                    >
+                      <IconComponent
+                        name="call-outline"
+                        size={24}
+                        color={colors.primaryColor}
+                      />
+                      <ThemedText style={styles.contactMethodText}>
+                        {t('Call Now')}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity style={styles.contactMethod} onPress={handleScheduleViewing}>
                     <IconComponent name="calendar-outline" size={24} color={colors.primaryColor} />
                     <ThemedText style={styles.contactMethodText}>
@@ -1186,12 +1329,7 @@ export default function PropertyDetailPage() {
                     </ThemedText>
                   </TouchableOpacity>
                 </View>
-                <View style={styles.responseTime}>
-                  <IconComponent name="time-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
-                  <ThemedText style={styles.responseTimeText}>
-                    {t('Average response time: 2 hours')}
-                  </ThemedText>
-                </View>
+
               </View>
             </View>
 
@@ -1257,7 +1395,7 @@ export default function PropertyDetailPage() {
                       </ThemedText>
                     </View>
                   </View>
-                  <View style={styles.landlordActions}>
+                  <View>
                     <ActionButton
                       icon="globe"
                       text={t('Apply on State Website')}
@@ -1270,12 +1408,15 @@ export default function PropertyDetailPage() {
                 </>
               ) : (
                 <>
-                  <View style={styles.landlordHeader}>
-                    <View style={styles.landlordAvatar}>
-                      <ThemedText style={styles.landlordInitial}>
-                        {getLandlordDisplayName(landlordProfile)}
-                      </ThemedText>
-                    </View>
+                  <TouchableOpacity
+                    style={styles.landlordHeader}
+                    onPress={() => router.push(`/profile/${landlordProfile?._id || landlordProfile?.id}`)}
+                  >
+                    <ProfileAvatar
+                      profile={landlordProfile}
+                      size={56}
+                      style={styles.landlordAvatar}
+                    />
                     <View style={styles.landlordInfo}>
                       <View style={styles.landlordNameRow}>
                         <ThemedText style={styles.landlordName}>
@@ -1291,27 +1432,26 @@ export default function PropertyDetailPage() {
                         {getLandlordTrustScore(landlordProfile)}
                       </ThemedText>
                     </View>
-                  </View>
-                  <View style={styles.landlordActions}>
-                    <ActionButton
-                      icon="chatbubble-outline"
-                      text={t('properties.contact')}
-                      onPress={handleContact}
-                      variant="primary"
-                      size="medium"
-                      disabled={!landlordProfile}
-                      style={{ flex: 1, marginRight: 8 }}
+                    <IconComponent name="chevron-forward" size={20} color={colors.COLOR_BLACK_LIGHT_3} />
+                  </TouchableOpacity>
+                  {/* Other Properties by this Owner */}
+                  {landlordProfile && ownerProperties.length > 0 && (
+                    <HomeCarouselSection
+                      title={t('More properties by this owner')}
+                      items={ownerProperties}
+                      loading={false}
+                      renderItem={(prop) => (
+                        <PropertyCard
+                          property={prop}
+                          variant="compact"
+                          onPress={() => router.push(`/properties/${prop._id || prop.id}`)}
+                          showFavoriteButton={false}
+                          showVerifiedBadge={false}
+                          showRating={false}
+                        />
+                      )}
                     />
-                    <ActionButton
-                      icon="call-outline"
-                      text={t('properties.contact')}
-                      onPress={handleContact}
-                      variant="secondary"
-                      size="medium"
-                      disabled={!landlordProfile}
-                      style={{ flex: 1, marginLeft: 8 }}
-                    />
-                  </View>
+                  )}
                 </>
               )}
             </View>
@@ -1386,15 +1526,16 @@ export default function PropertyDetailPage() {
                 disabled={!landlordProfile}
                 style={{ flex: 1, marginRight: 10 }}
               />
-              <ActionButton
-                icon="call-outline"
-                text={t('properties.contact')}
-                onPress={handleContact}
-                variant="secondary"
-                size="large"
-                disabled={!landlordProfile}
-                style={{ flex: 1 }}
-              />
+              {oxyServices && activeSessionId && landlordProfile && (
+                <ActionButton
+                  icon="call-outline"
+                  text={t('Call Now')}
+                  onPress={handleCall}
+                  variant="secondary"
+                  size="large"
+                  style={{ flex: 1 }}
+                />
+              )}
             </>
           )}
         </View>
@@ -1634,27 +1775,19 @@ const styles = StyleSheet.create({
   },
   landlordCard: {
     borderRadius: 16,
-    padding: 20,
     marginBottom: 20,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: colors.COLOR_BLACK_LIGHT_6,
   },
   landlordHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
+    padding: 20,
+    paddingBottom: 0,
   },
   landlordAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#4F46E5',
-    justifyContent: 'center',
-    alignItems: 'center',
     marginRight: 16,
   },
   governmentAvatar: {
@@ -1701,11 +1834,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontWeight: '500',
   },
-  landlordActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
+
 
   trustContainer: {
     flexDirection: 'row',
@@ -2110,15 +2239,8 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_3,
     marginTop: 5,
   },
-  responseTime: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  responseTimeText: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    marginLeft: 5,
-  },
+
+
   photoGalleryContainer: {
     marginBottom: 20,
     padding: 10,
@@ -2326,5 +2448,52 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 1000,
+  },
+  viewingIconContainer: {
+    position: 'relative',
+  },
+  viewingBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: colors.primaryColor,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  viewingBanner: {
+    width: '100%',
+    backgroundColor: '#EBF5FF',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  viewingBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  viewingBannerText: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.COLOR_BLACK,
+    marginLeft: 8,
+  },
+  viewingBannerButton: {
+    backgroundColor: colors.primaryColor,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  viewingBannerButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '500',
   },
 });

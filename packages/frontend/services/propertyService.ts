@@ -274,6 +274,26 @@ class PropertyService {
       total: response.data.pagination?.total || 0,
     };
   }
+
+  async getOwnerProperties(
+    profileId: string,
+    excludePropertyId?: string,
+    oxyServices?: any,
+    activeSessionId?: string,
+  ): Promise<{
+    properties: Property[];
+    total: number;
+  }> {
+    const response = await api.get(`${this.baseUrl}/owner/${profileId}`, {
+      params: { exclude: excludePropertyId },
+      oxyServices,
+      activeSessionId,
+    });
+    return {
+      properties: response.data.data || [],
+      total: response.data.pagination?.total || 0,
+    };
+  }
 }
 
 export const propertyService = new PropertyService();

@@ -25,6 +25,7 @@ export interface PersonalInfo {
   employmentStatus?: EmploymentStatus;
   moveInDate?: string;
   leaseDuration?: LeaseDuration;
+  avatar?: string;
 }
 
 export interface PropertyPreferences {
@@ -156,6 +157,7 @@ export interface BusinessDetails {
   specialties?: string[];
   serviceAreas?: Location[];
   industry?: string;
+  logo?: string;
 }
 
 export interface BusinessVerification {
@@ -215,6 +217,7 @@ export interface Profile {
   profileType: ProfileType;
   isPrimary: boolean;
   isActive: boolean;
+  avatar?: string;
   personalProfile?: PersonalProfile;
   agencyProfile?: AgencyProfile;
   businessProfile?: BusinessProfile;

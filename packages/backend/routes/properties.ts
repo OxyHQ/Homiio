@@ -56,6 +56,9 @@ export default function () {
 
   // User's properties (requires authentication)
   router.get("/me/list", asyncHandler(propertyController.getMyProperties));
+  
+  // Get properties by owner profile ID
+  router.get("/owner/:profileId", asyncHandler(propertyController.getPropertiesByOwner));
 
   return router;
 };

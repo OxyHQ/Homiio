@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Platform,
+  ImageBackground,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
@@ -28,6 +29,7 @@ import { useSavedProperties } from '@/hooks/useSavedProperties';
 import { PropertyCard } from '@/components/PropertyCard';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';
 import { ThemedText } from '@/components/ThemedText';
+import { useMediaQuery } from 'react-responsive';
 
 // Type assertion for Ionicons compatibility with React 19
 const IconComponent = Ionicons as any;
@@ -50,6 +52,7 @@ export default function HomePage() {
   const [nearbyCities, setNearbyCities] = useState<any[]>([]);
   const [nearbyProperties, setNearbyProperties] = useState<{ [cityId: string]: any[] }>({});
   const [nearbyLoading, setNearbyLoading] = useState(false);
+  const isScreenNotMobile = useMediaQuery({ minWidth: 500 });
 
   // Get user location on mount
   useEffect(() => {
@@ -321,6 +324,8 @@ export default function HomePage() {
     },
   });
 
+  const styles = React.useMemo(() => createStyles(isScreenNotMobile), [isScreenNotMobile]);
+
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
@@ -330,12 +335,13 @@ export default function HomePage() {
         showsVerticalScrollIndicator={false}
       >
         {/* Hero Section */}
-        <LinearGradient
-          // Background Linear Gradient
-          colors={[colors.primaryColor, colors.secondaryLight, colors.primaryLight]}
-          locations={[0, 0.8, 1]}
+        <ImageBackground
+          source={require('@/assets/images/hero.jpg')}
           style={[styles.heroSection, { paddingTop: insets.top + 50 }]}
+          resizeMode="cover"
+          imageStyle={{ width: '100%', height: '100%' }}
         >
+          <View style={styles.heroOverlay} />
           <View style={styles.heroContent}>
             <ThemedText style={styles.heroTitle}>{t('home.hero.title')}</ThemedText>
             <ThemedText style={styles.heroSubtitle}>{t('home.hero.subtitle')}</ThemedText>
@@ -358,7 +364,7 @@ export default function HomePage() {
               </TouchableOpacity>
             </View>
           </View>
-        </LinearGradient>
+        </ImageBackground>
 
         {/* Property Types */}
         <View style={styles.typesSection}>
@@ -366,7 +372,7 @@ export default function HomePage() {
             <ThemedText style={styles.sectionTitle}>{t('home.categories.title')}</ThemedText>
           </View>
           <View style={styles.propertyChipsContainer}>
-            {propertyTypeCounts.map((type, idx) => {
+            {propertyTypeCounts.map((type) => {
               // Determine if last item in a row to avoid right margin if using margins (we're using gap via wrap so optional)
               return (
                 <TouchableOpacity
@@ -490,7 +496,7 @@ export default function HomePage() {
         ) : null}
 
         {/* Nearby Cities Sections */}
-        {nearbyCities.map((city, idx) => {
+        {nearbyCities.map((city) => {
           const cityProperties = nearbyProperties[city._id || city.id];
           if (!cityProperties || cityProperties.length === 0) return null;
 
@@ -518,7 +524,7 @@ export default function HomePage() {
             items={topCities}
             loading={citiesLoading}
             minItemsToShow={1}
-            renderItem={(city, index) => (
+            renderItem={(city) => (
               <TouchableOpacity
                 key={city.id}
                 style={styles.cityCard}
@@ -641,7 +647,7 @@ export default function HomePage() {
           loading={tipsLoading}
           onViewAll={() => router.push('/tips')}
           viewAllText={t('home.viewAll')}
-          renderItem={(tip, idx) => (
+          renderItem={(tip) => (
             <TouchableOpacity
               key={tip.id}
               style={{ flex: 1 }}
@@ -812,23 +818,37 @@ export default function HomePage() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (isScreenNotMobile: boolean) => StyleSheet.create({
   container: {
     flex: 1,
   },
   heroSection: {
-    ...Platform.select({
-      web: { minHeight: 300 },
-      default: {},
+    flex: 1,
+    maxWidth: '100%',
+    ...(isScreenNotMobile ? {
+      borderRadius: 250,
+      minHeight: 400,
+      margin: 20,
+      paddingHorizontal: 50,
+    } : {
+      paddingHorizontal: 20,
     }),
-    backgroundColor: colors.primaryColor,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
     paddingVertical: 20,
-    marginBottom: 8,
     position: 'relative',
     zIndex: 1000,
+    overflow: 'hidden',
+  },
+  heroOverlay: {
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   heroContent: {
     width: '100%',

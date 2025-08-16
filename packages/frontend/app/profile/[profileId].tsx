@@ -14,6 +14,7 @@ import { Header } from '@/components/Header';
 import { SaveButton } from '@/components/SaveButton';
 import { useSavedProfiles } from '@/store/savedProfilesStore';
 import { PropertyCard } from '@/components/PropertyCard';
+import ProfileAvatar from '@/components/ProfileAvatar';
 import { colors } from '@/styles/colors';
 import { useOxy } from '@oxyhq/services';
 import { api } from '@/utils/api';
@@ -128,24 +129,19 @@ export default function PublicProfileScreen() {
         <View>
           <View style={styles.cover} />
           <View style={styles.profileHeaderCard}>
-            <View style={styles.avatarLarge}>
-              <Text style={styles.avatarTextLarge}>
-                {profile.profileType === ProfileType.PERSONAL
-                  ? profile.personalProfile?.personalInfo?.bio?.[0] || 'P'
-                  : profile.agencyProfile?.legalCompanyName?.[0] ||
-                    profile.businessProfile?.legalCompanyName?.[0] ||
-                    profile.cooperativeProfile?.legalName?.[0] ||
-                    'P'}
-              </Text>
-            </View>
+            <ProfileAvatar
+              profile={profile}
+              size={56}
+              style={styles.avatarLarge}
+            />
             <View style={styles.profileHeaderInfo}>
               <Text style={styles.profileNameLarge} numberOfLines={1}>
                 {profile.profileType === ProfileType.PERSONAL
                   ? profile.personalProfile?.personalInfo?.bio || profile.oxyUserId
                   : profile.agencyProfile?.legalCompanyName ||
-                    profile.businessProfile?.legalCompanyName ||
-                    profile.cooperativeProfile?.legalName ||
-                    profile.oxyUserId}
+                  profile.businessProfile?.legalCompanyName ||
+                  profile.cooperativeProfile?.legalName ||
+                  profile.oxyUserId}
               </Text>
               <Text style={styles.handleText}>@{String(profile._id).slice(-6)}</Text>
               {listingsTotal > 0 ? (
@@ -243,17 +239,17 @@ export default function PublicProfileScreen() {
             profile.agencyProfile?.description ||
             profile.businessProfile?.description ||
             profile.cooperativeProfile?.description) && (
-            <View style={styles.bioCard}>
-              <Text style={styles.sectionText}>
-                {profile.profileType === ProfileType.PERSONAL
-                  ? profile.personalProfile?.personalInfo?.occupation || ''
-                  : profile.agencyProfile?.description ||
+              <View style={styles.bioCard}>
+                <Text style={styles.sectionText}>
+                  {profile.profileType === ProfileType.PERSONAL
+                    ? profile.personalProfile?.personalInfo?.occupation || ''
+                    : profile.agencyProfile?.description ||
                     profile.businessProfile?.description ||
                     profile.cooperativeProfile?.description ||
                     ''}
-              </Text>
-            </View>
-          )}
+                </Text>
+              </View>
+            )}
           {/* Tabs */}
           <View style={styles.tabsRow}>
             <TouchableOpacity
@@ -334,7 +330,7 @@ export default function PublicProfileScreen() {
                 </Text>
               ) : null}
               {profile.personalProfile?.preferences?.minBedrooms ||
-              profile.personalProfile?.preferences?.minBathrooms ? (
+                profile.personalProfile?.preferences?.minBathrooms ? (
                 <Text style={styles.aboutItem}>
                   {t('profile.preferences', 'Preferences')}:{' '}
                   {profile.personalProfile?.preferences?.minBedrooms ?? 0} bd •{' '}
@@ -485,18 +481,7 @@ const styles = StyleSheet.create({
     maxWidth: '48%',
   },
   avatarLarge: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primaryColor,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginRight: 12,
-  },
-  avatarTextLarge: {
-    color: 'white',
-    fontWeight: '700',
-    fontSize: 18,
   },
   profileHeaderInfo: {
     flex: 1,
@@ -591,19 +576,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primaryColor,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    color: 'white',
-    fontWeight: '700',
-  },
+
   profileInfo: {
     flex: 1,
   },

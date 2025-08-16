@@ -1076,6 +1076,60 @@ class PropertyController {
   /**
    * Get property statistics
    */
+  /**
+   * Get properties by owner profile ID
+   */
+  async getPropertiesByOwner(req, res, next) {
+    try {
+      const { profileId } = req.params;
+      const { exclude } = req.query;
+      const { page = 1, limit = 10 } = req.query;
+
+      // Validate profileId
+      const mongoose = require('mongoose');
+      if (!mongoose.Types.ObjectId.isValid(profileId)) {
+        return next(new AppError('Invalid profile ID', 400, 'INVALID_ID'));
+      }
+
+      // Build query
+      const query: any = {
+        profileId: new mongoose.Types.ObjectId(profileId),
+        status: 'active',
+      };
+
+      // Exclude specific property if requested
+      if (exclude && mongoose.Types.ObjectId.isValid(exclude)) {
+        query._id = { $ne: new mongoose.Types.ObjectId(exclude) };
+      }
+
+      // Execute query with pagination
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+      const [properties, total] = await Promise.all([
+        Property.find(query)
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(parseInt(limit))
+          .lean(),
+        Property.countDocuments(query),
+      ]);
+
+      res.json(
+        paginationResponse(
+          properties,
+          parseInt(page),
+          parseInt(limit),
+          total,
+          "Owner's properties retrieved successfully",
+        ),
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get property statistics
+   */
   async getPropertyStats(req, res, next) {
     try {
       const { propertyId } = req.params;

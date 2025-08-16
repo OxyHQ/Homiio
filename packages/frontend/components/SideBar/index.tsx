@@ -267,9 +267,8 @@ export function SideBar() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'transparent',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    backgroundColor: colors.primaryLight,
+    padding: 12,
     height: WindowHeight,
     ...(Platform.select({
       web: {

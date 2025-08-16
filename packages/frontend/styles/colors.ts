@@ -8,7 +8,7 @@ function lightenColor(hex: string, percent: number): string {
 }
 
 // Updated primary color for better contrast and modern feel
-const primaryColor = '#0047bf';
+const primaryColor = '#0070e9';
 
 export const colors = {
   primaryColor,

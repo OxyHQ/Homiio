@@ -6,7 +6,7 @@ import { Header } from '@/components/Header';
 import { ThemedText } from '@/components/ThemedText';
 import { colors } from '@/styles/colors';
 import { useOxy } from '@oxyhq/services';
-import ViewingService, { ViewingRequest } from '@/services/viewingService';
+import { viewingService, ViewingRequest } from '@/services/viewingService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner-native';
 import { ApiError } from '@/utils/api';
@@ -20,7 +20,7 @@ export default function ViewingsPage() {
     const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ['viewings', 'me'],
         queryFn: async () => {
-            const res = await ViewingService.listMyViewingRequests(
+            const res = await viewingService.listMyViewingRequests(
                 { page: 1, limit: 50 },
                 oxyServices!,
                 activeSessionId!,
@@ -32,7 +32,7 @@ export default function ViewingsPage() {
 
     const cancelMutation = useMutation({
         mutationFn: async (viewingId: string) => {
-            return await ViewingService.cancel(viewingId, oxyServices!, activeSessionId!);
+            return await viewingService.cancel(viewingId, oxyServices!, activeSessionId!);
         },
         onSuccess: () => {
             toast.success(t('viewings.success.cancelled'));

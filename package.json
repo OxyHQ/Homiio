@@ -31,6 +31,7 @@
         "npm": ">=8.0.0"
     },
     "dependencies": {
+        "@gorhom/bottom-sheet": "^5.1.8",
         "@oxyhq/services": "^5.11.8"
     }
 }

@@ -62,11 +62,18 @@ i18nInit({
 const getStyles = (isScreenNotMobile: boolean) =>
   StyleSheet.create({
     container: {
+      ...(isScreenNotMobile ? {
+      } : {
+        flex: 1,
+      }),
       width: '100%',
       marginHorizontal: 'auto',
       flexDirection: isScreenNotMobile ? 'row' : 'column',
+      backgroundColor: `${colors.primaryColor}10`,
     },
     mainContent: {
+      maxWidth: 1600,
+      marginHorizontal: isScreenNotMobile ? 'auto' : 0,
       justifyContent: 'space-between',
       flexDirection: isScreenNotMobile ? 'row' : 'column',
       flex: 1,

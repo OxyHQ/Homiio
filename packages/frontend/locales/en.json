@@ -373,6 +373,26 @@
     }
   },
   "properties": {
+    "type": {
+      "title": "{{type}}",
+      "subtitle": "{{count}} {{type}} available",
+      "empty": "No {{type}} available at the moment",
+      "filters": {
+        "title": "Filters",
+        "price": "Price Range",
+        "bedrooms": "Bedrooms",
+        "bathrooms": "Bathrooms",
+        "amenities": "Amenities",
+        "sort": {
+          "title": "Sort By",
+          "newest": "Newest First",
+          "priceAsc": "Price: Low to High",
+          "priceDesc": "Price: High to Low"
+        },
+        "apply": "Apply Filters",
+        "clear": "Clear All"
+      }
+    },
     "title": "Properties",
     "filters": "Filters",
     "sort": "Sort",

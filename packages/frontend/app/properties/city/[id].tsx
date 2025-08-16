@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useContext } from 'react';
 import {
   View,
   Text,
@@ -11,25 +11,81 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/styles/colors';
-import { Ionicons } from '@expo/vector-icons';
+
 import { Header } from '@/components/Header';
 import { PropertyCard } from '@/components/PropertyCard';
 import { Property } from '@/services/propertyService';
 import { cityService, City } from '@/services/cityService';
 import { LinearGradient } from 'expo-linear-gradient';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { FiltersBar } from '@/components/FiltersBar';
+import { FiltersBottomSheet, FilterSection } from '@/components/FiltersBar/FiltersBottomSheet';
+
+import { BottomSheetContext } from '@/context/BottomSheetContext';
 
 export default function CityPropertiesPage() {
   const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const [activeFilter, setActiveFilter] = useState<string | null>(null);
-  const [activeSort, setActiveSort] = useState<string | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
   const [city, setCity] = useState<City | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
+  const bottomSheet = useContext(BottomSheetContext);
+
+  const [filters, setFilters] = useState({
+    verified: false,
+    ecoFriendly: false,
+    bedrooms: '',
+    bathrooms: '',
+    amenities: [] as string[],
+    sortBy: 'newest'
+  });
+
+  const filterSections: FilterSection[] = useMemo(() => [
+    {
+      id: 'verified',
+      title: t('Verified Properties'),
+      type: 'chips',
+      options: [
+        { id: 'true', label: t('Verified Only'), value: 'true' }
+      ],
+      value: filters.verified ? 'true' : undefined
+    },
+    {
+      id: 'ecoFriendly',
+      title: t('Eco-Friendly'),
+      type: 'chips',
+      options: [
+        { id: 'true', label: t('Eco-Friendly Only'), value: 'true' }
+      ],
+      value: filters.ecoFriendly ? 'true' : undefined
+    },
+    {
+      id: 'bedrooms',
+      title: t('Bedrooms'),
+      type: 'chips',
+      options: [
+        { id: '1', label: '1+', value: '1' },
+        { id: '2', label: '2+', value: '2' },
+        { id: '3', label: '3+', value: '3' },
+        { id: '4', label: '4+', value: '4' },
+      ],
+      value: filters.bedrooms
+    },
+    {
+      id: 'bathrooms',
+      title: t('Bathrooms'),
+      type: 'chips',
+      options: [
+        { id: '1', label: '1+', value: '1' },
+        { id: '2', label: '2+', value: '2' },
+        { id: '3', label: '3+', value: '3' },
+      ],
+      value: filters.bathrooms
+    }
+  ], [t, filters]);
 
   // Load city and properties data
   useEffect(() => {
@@ -70,21 +126,45 @@ export default function CityPropertiesPage() {
     }
   }, [id]);
 
-  const filterOptions = [
-    { id: 'verified', label: t('Verified'), icon: 'shield-checkmark' },
-    { id: 'eco', label: t('Eco-Friendly'), icon: 'leaf' },
-    { id: '1bed', label: t('1+ Bed'), icon: 'bed' },
-    { id: '2bed', label: t('2+ Bed'), icon: 'bed' },
-  ];
+  const handleFilterChange = useCallback((sectionId: string, value: any) => {
+    setFilters(prev => {
+      switch (sectionId) {
+        case 'verified':
+          return { ...prev, verified: value === 'true' };
+        case 'ecoFriendly':
+          return { ...prev, ecoFriendly: value === 'true' };
+        case 'bedrooms':
+          return { ...prev, bedrooms: value };
+        case 'bathrooms':
+          return { ...prev, bathrooms: value };
+        default:
+          return prev;
+      }
+    });
+  }, []);
 
-  const sortOptions = [
-    { id: 'price_asc', label: t('Price: Low to High'), icon: 'arrow-up' },
-    { id: 'price_desc', label: t('Price: High to Low'), icon: 'arrow-down' },
-    { id: 'rating', label: t('Rating'), icon: 'star' },
-  ];
+  const handleOpenFilters = useCallback(() => {
+    bottomSheet.openBottomSheet(
+      <FiltersBottomSheet
+        sections={filterSections}
+        onFilterChange={handleFilterChange}
+        onApply={bottomSheet.closeBottomSheet}
+        onClear={() => {
+          setFilters({
+            verified: false,
+            ecoFriendly: false,
+            bedrooms: '',
+            bathrooms: '',
+            amenities: [],
+            sortBy: 'newest'
+          });
+          bottomSheet.closeBottomSheet();
+        }}
+      />
+    );
+  }, [bottomSheet, filterSections, handleFilterChange]);
 
   const getFilteredAndSortedProperties = () => {
-    // Ensure properties is an array
     if (!properties || !Array.isArray(properties)) {
       return [];
     }
@@ -92,79 +172,44 @@ export default function CityPropertiesPage() {
     let result = [...properties];
 
     // Apply filters
-    if (activeFilter) {
-      switch (activeFilter) {
-        case 'verified':
-          result = result.filter((p) => p.status === 'available');
-          break;
-        case 'eco':
-          result = result.filter((p) =>
-            p.amenities?.some(
-              (a) =>
-                a.toLowerCase().includes('eco') ||
-                a.toLowerCase().includes('green') ||
-                a.toLowerCase().includes('solar'),
-            ),
-          );
-          break;
-        case '1bed':
-          result = result.filter((p) => (p.bedrooms || 0) >= 1);
-          break;
-        case '2bed':
-          result = result.filter((p) => (p.bedrooms || 0) >= 2);
-          break;
-      }
+    if (filters.verified) {
+      result = result.filter(p => p.status === 'available');
+    }
+
+    if (filters.ecoFriendly) {
+      result = result.filter(p =>
+        p.amenities?.some(a =>
+          a.toLowerCase().includes('eco') ||
+          a.toLowerCase().includes('green') ||
+          a.toLowerCase().includes('solar')
+        )
+      );
+    }
+
+    if (filters.bedrooms) {
+      result = result.filter(p => (p.bedrooms || 0) >= parseInt(filters.bedrooms));
+    }
+
+    if (filters.bathrooms) {
+      result = result.filter(p => (p.bathrooms || 0) >= parseInt(filters.bathrooms));
     }
 
     // Apply sorting
-    if (activeSort) {
-      switch (activeSort) {
-        case 'price_asc':
-          result.sort((a, b) => {
-            const priceA = a.rent?.amount || 0;
-            const priceB = b.rent?.amount || 0;
-            return priceA - priceB;
-          });
-          break;
-        case 'price_desc':
-          result.sort((a, b) => {
-            const priceA = a.rent?.amount || 0;
-            const priceB = b.rent?.amount || 0;
-            return priceB - priceA;
-          });
-          break;
-        case 'rating':
-          // Use a default rating since it's not in the API
-          result.sort((a, b) => 4.5 - 4.5); // No change since we don't have ratings
-          break;
-      }
+    switch (filters.sortBy) {
+      case 'priceAsc':
+        result.sort((a, b) => (a.rent?.amount || 0) - (b.rent?.amount || 0));
+        break;
+      case 'priceDesc':
+        result.sort((a, b) => (b.rent?.amount || 0) - (a.rent?.amount || 0));
+        break;
+      case 'newest':
+      default:
+        result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        break;
     }
 
     return result;
   };
-
-  const toggleFilter = (filterId: string) => {
-    setActiveFilter(activeFilter === filterId ? null : filterId);
-  };
-
-  const renderFilterOption = (option: { id: string; label: string; icon: string }) => (
-    <TouchableOpacity
-      key={option.id}
-      style={[styles.filterChip, activeFilter === option.id && styles.activeFilterChip]}
-      onPress={() => toggleFilter(option.id)}
-    >
-      <Ionicons
-        name={option.icon as any}
-        size={16}
-        color={activeFilter === option.id ? 'white' : colors.COLOR_BLACK}
-      />
-      <Text
-        style={[styles.filterChipText, activeFilter === option.id && styles.activeFilterChipText]}
-      >
-        {option.label}
-      </Text>
-    </TouchableOpacity>
-  );
 
   const renderPropertyItem = ({ item }: { item: Property }) => (
     <PropertyCard
@@ -301,58 +346,45 @@ export default function CityPropertiesPage() {
                 {getFilteredAndSortedProperties().length} {t('properties found')}
               </Text>
             </View>
-
-            <View style={styles.sortContainer}>
-              <TouchableOpacity
-                style={styles.sortButton}
-                onPress={() => setActiveSort(activeSort === 'price_asc' ? null : 'price_asc')}
-              >
-                <Ionicons
-                  name="arrow-up"
-                  size={16}
-                  color={
-                    activeSort === 'price_asc' ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3
-                  }
-                />
-                <Text
-                  style={[
-                    styles.sortButtonText,
-                    activeSort === 'price_asc' && styles.activeSortButtonText,
-                  ]}
-                >
-                  {t('Price')}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.sortButton}
-                onPress={() => setActiveSort(activeSort === 'rating' ? null : 'rating')}
-              >
-                <Ionicons
-                  name="star"
-                  size={16}
-                  color={activeSort === 'rating' ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3}
-                />
-                <Text
-                  style={[
-                    styles.sortButtonText,
-                    activeSort === 'rating' && styles.activeSortButtonText,
-                  ]}
-                >
-                  {t('Rating')}
-                </Text>
-              </TouchableOpacity>
-            </View>
           </View>
 
-          {/* Filters */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filtersScroll}
-          >
-            {filterOptions.map(renderFilterOption)}
-          </ScrollView>
+          <FiltersBar
+            activeFiltersCount={
+              Object.values(filters).filter(value =>
+                value !== false &&
+                value !== '' &&
+                value !== 'newest' &&
+                (Array.isArray(value) ? value.length > 0 : true)
+              ).length
+            }
+            onFilterPress={handleOpenFilters}
+            sortBy={filters.sortBy}
+            onSortPress={() => {
+              bottomSheet.openBottomSheet(
+                <FiltersBottomSheet
+                  sections={[
+                    {
+                      id: 'sort',
+                      title: t('Sort By'),
+                      type: 'chips',
+                      options: [
+                        { id: 'newest', label: t('Newest First'), value: 'newest' },
+                        { id: 'priceAsc', label: t('Price: Low to High'), value: 'priceAsc' },
+                        { id: 'priceDesc', label: t('Price: High to Low'), value: 'priceDesc' },
+                      ],
+                      value: filters.sortBy
+                    }
+                  ]}
+                  onFilterChange={(_, value) => setFilters(prev => ({ ...prev, sortBy: value.toString() }))}
+                  onApply={bottomSheet.closeBottomSheet}
+                  onClear={() => {
+                    setFilters(prev => ({ ...prev, sortBy: 'newest' }));
+                    bottomSheet.closeBottomSheet();
+                  }}
+                />
+              );
+            }}
+          />
 
           {/* Properties List */}
           <FlatList
@@ -369,8 +401,15 @@ export default function CityPropertiesPage() {
                 actionText={t('Clear Filters')}
                 actionIcon="refresh"
                 onAction={() => {
-                  setActiveFilter(null);
-                  setActiveSort(null);
+                  setFilters(prev => ({
+                    ...prev,
+                    verified: false,
+                    ecoFriendly: false,
+                    bedrooms: '',
+                    bathrooms: '',
+                    amenities: [],
+                    sortBy: 'newest'
+                  }));
                 }}
               />
             }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     View,
     Text,
@@ -22,6 +22,8 @@ import { useSavedSearches } from '@/hooks/useSavedSearches';
 import { useContext } from 'react';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SaveSearchBottomSheet } from '@/components/SaveSearchBottomSheet';
+import { FiltersBar } from '@/components/FiltersBar';
+import { FiltersBottomSheet, FilterSection } from '@/components/FiltersBar/FiltersBottomSheet';
 
 interface SearchFilters extends PropertyFilters {
     amenities?: string[];
@@ -70,10 +72,65 @@ export default function SearchScreen() {
         page: 1,
         limit: 10,
     });
-    const [showFilters, setShowFilters] = useState(false);
-    const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
-    const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
     const [viewMode, setViewMode] = useState<'list' | 'grid'>(isMobile ? 'grid' : 'list');
+
+    const filterSections: FilterSection[] = useMemo(() => [
+        {
+            id: 'type',
+            title: t('Property Type'),
+            type: 'chips',
+            options: PROPERTY_TYPES.map(type => ({
+                id: type.id,
+                label: t(type.label),
+                value: type.id
+            })),
+            value: filters.type
+        },
+        {
+            id: 'price',
+            title: t('Price Range'),
+            type: 'range',
+            min: 0,
+            max: 10000,
+            value: filters.minRent || filters.maxRent ? [filters.minRent, filters.maxRent] : undefined
+        },
+        {
+            id: 'bedrooms',
+            title: t('Bedrooms'),
+            type: 'chips',
+            options: [
+                { id: '1', label: '1', value: '1' },
+                { id: '2', label: '2', value: '2' },
+                { id: '3', label: '3', value: '3' },
+                { id: '4', label: '4', value: '4' },
+                { id: '5', label: '5+', value: '5' },
+            ],
+            value: filters.bedrooms?.toString()
+        },
+        {
+            id: 'bathrooms',
+            title: t('Bathrooms'),
+            type: 'chips',
+            options: [
+                { id: '1', label: '1', value: '1' },
+                { id: '2', label: '2', value: '2' },
+                { id: '3', label: '3', value: '3' },
+                { id: '4', label: '4+', value: '4' },
+            ],
+            value: filters.bathrooms?.toString()
+        },
+        {
+            id: 'amenities',
+            title: t('Amenities'),
+            type: 'chips',
+            options: AMENITIES.map(amenity => ({
+                id: amenity,
+                label: t(amenity.replace('_', ' ')),
+                value: amenity
+            })),
+            value: filters.amenities
+        }
+    ], [t, filters]);
 
     const { saveSearch, isAuthenticated } = useSavedSearches();
     const bottomSheet = useContext(BottomSheetContext);
@@ -91,8 +148,6 @@ export default function SearchScreen() {
         if (inputValue.trim()) {
             const newFilters: SearchFilters = {
                 ...draftFilters,
-                amenities: selectedAmenities.length > 0 ? selectedAmenities : undefined,
-                type: selectedTypes.length > 0 ? selectedTypes.join(',') : undefined,
                 page: 1, // Reset to first page on new search
                 limit: 10,
             };
@@ -101,7 +156,7 @@ export default function SearchScreen() {
             setSearchQuery(inputValue);
             router.push(`/search/${encodeURIComponent(inputValue)}`);
         }
-    }, [router, inputValue, draftFilters, selectedAmenities, selectedTypes, setFilters]);
+    }, [router, inputValue, draftFilters, setFilters]);
 
     const handleLoadMore = () => {
         if (properties.length < totalResults) {
@@ -112,23 +167,48 @@ export default function SearchScreen() {
         }
     };
 
-    const toggleAmenity = (amenity: string) => {
-        setSelectedAmenities((prev) =>
-            prev.includes(amenity) ? prev.filter((a) => a !== amenity) : [...prev, amenity],
-        );
-    };
+    const handleFilterChange = useCallback((sectionId: string, value: any) => {
+        setFilters(prev => {
+            switch (sectionId) {
+                case 'price':
+                    if (Array.isArray(value)) {
+                        return {
+                            ...prev,
+                            minRent: value[0],
+                            maxRent: value[1]
+                        };
+                    }
+                    return prev;
+                case 'type':
+                    return { ...prev, type: value };
+                case 'bedrooms':
+                    return { ...prev, bedrooms: parseInt(value) };
+                case 'bathrooms':
+                    return { ...prev, bathrooms: parseInt(value) };
+                case 'amenities':
+                    return { ...prev, amenities: value };
+                default:
+                    return prev;
+            }
+        });
+    }, []);
 
-    const togglePropertyType = (type: string) => {
-        setSelectedTypes((prev) =>
-            prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
+    const handleOpenFilters = useCallback(() => {
+        bottomSheet.openBottomSheet(
+            <FiltersBottomSheet
+                sections={filterSections}
+                onFilterChange={handleFilterChange}
+                onApply={bottomSheet.closeBottomSheet}
+                onClear={() => {
+                    setFilters({
+                        page: 1,
+                        limit: 10
+                    });
+                    bottomSheet.closeBottomSheet();
+                }}
+            />
         );
-    };
-
-    const clearFilters = () => {
-        setSelectedAmenities([]);
-        setSelectedTypes([]);
-        setDraftFilters({ page: 1, limit: 10 });
-    };
+    }, [bottomSheet, filterSections, handleFilterChange]);
 
     // Do not auto-search on typing or filter changes; only search on submit
 
@@ -147,8 +227,6 @@ export default function SearchScreen() {
         if (q) {
             const newFilters: SearchFilters = {
                 ...filters,
-                amenities: selectedAmenities.length > 0 ? selectedAmenities : undefined,
-                type: selectedTypes.length > 0 ? selectedTypes.join(',') : undefined,
                 page: 1,
                 limit: 10,
             };
@@ -166,146 +244,7 @@ export default function SearchScreen() {
         />
     );
 
-    const renderFilterSection = () => (
-        <View style={styles.filterSection}>
-            <View style={styles.filterHeader}>
-                <Text style={styles.filterTitle}>{t('Filters')}</Text>
-                <TouchableOpacity onPress={clearFilters}>
-                    <Text style={styles.clearFiltersText}>{t('Clear All')}</Text>
-                </TouchableOpacity>
-            </View>
 
-            {/* Property Types */}
-            <View style={styles.filterGroup}>
-                <Text style={styles.filterGroupTitle}>{t('Property Type')}</Text>
-                <View style={styles.filterChips}>
-                    {PROPERTY_TYPES.map((type) => (
-                        <TouchableOpacity
-                            key={type.id}
-                            style={[
-                                styles.filterChip,
-                                selectedTypes.includes(type.id) && styles.filterChipActive,
-                            ]}
-                            onPress={() => togglePropertyType(type.id)}
-                        >
-                            <Ionicons
-                                name={type.icon as any}
-                                size={16}
-                                color={selectedTypes.includes(type.id) ? 'white' : colors.primaryColor}
-                            />
-                            <Text
-                                style={[
-                                    styles.filterChipText,
-                                    selectedTypes.includes(type.id) && styles.filterChipTextActive,
-                                ]}
-                            >
-                                {t(type.label)}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-            </View>
-
-            {/* Amenities */}
-            <View style={styles.filterGroup}>
-                <Text style={styles.filterGroupTitle}>{t('Amenities')}</Text>
-                <View style={styles.filterChips}>
-                    {AMENITIES.map((amenity) => (
-                        <TouchableOpacity
-                            key={amenity}
-                            style={[
-                                styles.filterChip,
-                                selectedAmenities.includes(amenity) && styles.filterChipActive,
-                            ]}
-                            onPress={() => toggleAmenity(amenity)}
-                        >
-                            <Text
-                                style={[
-                                    styles.filterChipText,
-                                    selectedAmenities.includes(amenity) && styles.filterChipTextActive,
-                                ]}
-                            >
-                                {t(amenity.replace('_', ' '))}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-            </View>
-
-            {/* Price Range */}
-            <View style={styles.filterGroup}>
-                <Text style={styles.filterGroupTitle}>{t('Price Range')}</Text>
-                <View style={styles.priceInputs}>
-                    <TextInput
-                        style={styles.priceInput}
-                        placeholder={t('Min')}
-                        keyboardType="numeric"
-                        value={filters.minRent?.toString() || ''}
-                        onChangeText={(text) =>
-                            setFilters((prev) => ({
-                                ...prev,
-                                minRent: text ? parseInt(text) : undefined,
-                            }))
-                        }
-                    />
-                    <Text style={styles.priceSeparator}>-</Text>
-                    <TextInput
-                        style={styles.priceInput}
-                        placeholder={t('Max')}
-                        keyboardType="numeric"
-                        value={filters.maxRent?.toString() || ''}
-                        onChangeText={(text) =>
-                            setFilters((prev) => ({
-                                ...prev,
-                                maxRent: text ? parseInt(text) : undefined,
-                            }))
-                        }
-                    />
-                </View>
-            </View>
-
-            {/* Bedrooms & Bathrooms */}
-            <View style={styles.filterGroup}>
-                <Text style={styles.filterGroupTitle}>{t('Rooms')}</Text>
-                <View style={styles.roomInputs}>
-                    <View style={styles.roomInput}>
-                        <Text style={styles.roomLabel}>{t('Bedrooms')}</Text>
-                        <TextInput
-                            style={styles.roomTextInput}
-                            placeholder="Any"
-                            keyboardType="numeric"
-                            value={filters.bedrooms?.toString() || ''}
-                            onChangeText={(text) =>
-                                setFilters((prev) => ({
-                                    ...prev,
-                                    bedrooms: text ? parseInt(text) : undefined,
-                                }))
-                            }
-                        />
-                    </View>
-                    <View style={styles.roomInput}>
-                        <Text style={styles.roomLabel}>{t('Bathrooms')}</Text>
-                        <TextInput
-                            style={styles.roomTextInput}
-                            placeholder="Any"
-                            keyboardType="numeric"
-                            value={filters.bathrooms?.toString() || ''}
-                            onChangeText={(text) =>
-                                setFilters((prev) => ({
-                                    ...prev,
-                                    bathrooms: text ? parseInt(text) : undefined,
-                                }))
-                            }
-                        />
-                    </View>
-                </View>
-            </View>
-
-            <TouchableOpacity style={styles.applyFiltersButton} onPress={handleSearch}>
-                <Text style={styles.applyFiltersButtonText}>{t('Apply Filters')}</Text>
-            </TouchableOpacity>
-        </View>
-    );
 
     const handleOpenSaveModal = () => {
         if (!isAuthenticated) {
@@ -313,9 +252,7 @@ export default function SearchScreen() {
             return;
         }
         const currentFilters: SearchFilters = {
-            ...filters,
-            amenities: selectedAmenities.length > 0 ? selectedAmenities : undefined,
-            type: selectedTypes.length > 0 ? selectedTypes.join(',') : undefined,
+            ...filters
         };
         bottomSheet.openBottomSheet(
             <SaveSearchBottomSheet
@@ -384,16 +321,44 @@ export default function SearchScreen() {
                         )}
                     </View>
 
-                    <TouchableOpacity
-                        style={styles.filterButton}
-                        onPress={() => setShowFilters(!showFilters)}
-                    >
-                        <Ionicons
-                            name={showFilters ? 'options' : 'options-outline'}
-                            size={24}
-                            color={colors.primaryColor}
-                        />
-                    </TouchableOpacity>
+                    <FiltersBar
+                        activeFiltersCount={
+                            Object.values(filters).filter(value =>
+                                value !== undefined &&
+                                value !== null &&
+                                value !== '' &&
+                                value !== 'newest' &&
+                                (Array.isArray(value) ? value.length > 0 : true)
+                            ).length - 2 // Subtract page and limit
+                        }
+                        onFilterPress={handleOpenFilters}
+                        sortBy={filters.sortBy || 'newest'}
+                        onSortPress={() => {
+                            bottomSheet.openBottomSheet(
+                                <FiltersBottomSheet
+                                    sections={[
+                                        {
+                                            id: 'sort',
+                                            title: t('Sort By'),
+                                            type: 'chips',
+                                            options: [
+                                                { id: 'newest', label: t('Newest First'), value: 'newest' },
+                                                { id: 'priceAsc', label: t('Price: Low to High'), value: 'priceAsc' },
+                                                { id: 'priceDesc', label: t('Price: High to Low'), value: 'priceDesc' },
+                                            ],
+                                            value: filters.sortBy || 'newest'
+                                        }
+                                    ]}
+                                    onFilterChange={(_, value) => setFilters(prev => ({ ...prev, sortBy: value.toString() }))}
+                                    onApply={bottomSheet.closeBottomSheet}
+                                    onClear={() => {
+                                        setFilters(prev => ({ ...prev, sortBy: 'newest' }));
+                                        bottomSheet.closeBottomSheet();
+                                    }}
+                                />
+                            );
+                        }}
+                    />
 
                     <TouchableOpacity
                         style={styles.saveButton}
@@ -436,9 +401,6 @@ export default function SearchScreen() {
                     </View>
                 </View>
             )}
-
-            {/* Filters Panel */}
-            {showFilters && renderFilterSection()}
 
             {/* Properties List */}
             {error ? (
