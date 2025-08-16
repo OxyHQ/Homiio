@@ -2,11 +2,12 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   View,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   RefreshControl,
   Platform,
-  ImageBackground,
+  Image,
+  Animated,
+  ScrollView,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
@@ -30,6 +31,7 @@ import { PropertyCard } from '@/components/PropertyCard';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';
 import { ThemedText } from '@/components/ThemedText';
 import { useMediaQuery } from 'react-responsive';
+import { useLayoutScroll } from '@/context/LayoutScrollContext';
 
 // Type assertion for Ionicons compatibility with React 19
 const IconComponent = Ionicons as any;
@@ -324,7 +326,15 @@ export default function HomePage() {
     },
   });
 
+  const layoutScroll = useLayoutScroll();
+  const scrollY = layoutScroll?.scrollY || new Animated.Value(0);
   const styles = React.useMemo(() => createStyles(isScreenNotMobile), [isScreenNotMobile]);
+
+  const translateY = scrollY.interpolate({
+    inputRange: [-300, 0, 1000],
+    outputRange: [-100, 0, 200],
+    extrapolate: 'clamp'
+  });
 
   return (
     <View style={{ flex: 1 }}>
@@ -333,18 +343,31 @@ export default function HomePage() {
         contentContainerStyle={{ paddingBottom: 20 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
       >
         {/* Hero Section */}
-        <ImageBackground
-          source={require('@/assets/images/hero.jpg')}
-          style={[styles.heroSection, { paddingTop: insets.top + 50 }]}
-          resizeMode="cover"
-          imageStyle={{
-            width: Platform.select({ web: '100%', default: undefined }),
-            height: Platform.select({ web: '100%', default: undefined }),
-            flex: Platform.select({ web: undefined, default: 1 })
-          }}
-        >
+        <View style={[styles.heroSection, { paddingTop: insets.top + 50, overflow: 'hidden' }]}>
+          <Animated.View style={{
+            position: 'absolute',
+            top: -100,
+            left: 0,
+            right: 0,
+            bottom: -100,
+            transform: [{ translateY }]
+          }}>
+            <Image
+              source={require('@/assets/images/hero.jpg')}
+              style={{
+                width: '100%',
+                height: '100%',
+              }}
+              resizeMode="cover"
+            />
+          </Animated.View>
           <View style={styles.heroOverlay} />
           <View style={styles.heroContent}>
             <ThemedText style={styles.heroTitle}>{t('home.hero.title')}</ThemedText>
@@ -368,7 +391,7 @@ export default function HomePage() {
               </TouchableOpacity>
             </View>
           </View>
-        </ImageBackground>
+        </View>
 
         {/* Property Types */}
         <View style={styles.typesSection}>
