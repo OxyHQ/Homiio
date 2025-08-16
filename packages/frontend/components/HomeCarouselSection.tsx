@@ -185,8 +185,6 @@ export function HomeCarouselSection<T>({
 
   return (
     <View style={[styles.section, { paddingHorizontal: 0 }]}>
-      {' '}
-      {/* Remove extra section padding */}
       <View style={styles.sectionHeader}>
         <ThemedText style={styles.sectionTitle}>{title}</ThemedText>
         {onViewAll && (
