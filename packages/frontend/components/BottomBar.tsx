@@ -10,6 +10,7 @@ import {
   Gear,
   GearActive,
 } from '@/assets/icons';
+import { colors } from '@/styles/colors';
 import { useRouter, usePathname } from 'expo-router';
 import React from 'react';
 import Avatar from './Avatar';
@@ -42,7 +43,7 @@ export const BottomBar = () => {
       justifyContent: 'space-around',
       alignItems: 'center',
       borderTopWidth: 1,
-      borderTopColor: '#eeeeee',
+      borderTopColor: colors.COLOR_BLACK_LIGHT_6,
       elevation: 8,
       paddingBottom: insets.bottom,
       ...Platform.select({
@@ -73,9 +74,9 @@ export const BottomBar = () => {
         style={[styles.tab, activeRoute === '/' && styles.active]}
       >
         {activeRoute === '/' ? (
-          <HomeActive size={28} color="#4E67EB" />
+          <HomeActive size={28} color={colors.primaryColor} />
         ) : (
-          <Home size={28} color="#000" />
+          <Home size={28} color={colors.COLOR_BLACK} />
         )}
       </Pressable>
       <Pressable
@@ -83,9 +84,9 @@ export const BottomBar = () => {
         style={[styles.tab, activeRoute === '/properties' && styles.active]}
       >
         {activeRoute === '/properties' ? (
-          <SearchActive size={28} color="#4E67EB" />
+          <SearchActive size={28} color={colors.primaryColor} />
         ) : (
-          <Search size={28} color="#000" />
+          <Search size={28} color={colors.COLOR_BLACK} />
         )}
       </Pressable>
       <Pressable
@@ -93,9 +94,9 @@ export const BottomBar = () => {
         style={[styles.tab, activeRoute === '/saved' && styles.active]}
       >
         {activeRoute === '/saved' ? (
-          <BookmarkActive size={28} color="#4E67EB" />
+          <BookmarkActive size={28} color={colors.primaryColor} />
         ) : (
-          <Bookmark size={28} color="#000" />
+          <Bookmark size={28} color={colors.COLOR_BLACK} />
         )}
       </Pressable>
       <Pressable
@@ -103,9 +104,9 @@ export const BottomBar = () => {
         style={[styles.tab, activeRoute === '/sindi' && styles.active]}
       >
         {activeRoute === '/sindi' ? (
-          <SindiIconActive size={28} color="#4E67EB" />
+          <SindiIconActive size={28} color={colors.primaryColor} />
         ) : (
-          <SindiIcon size={28} color="#000" />
+          <SindiIcon size={28} color={colors.COLOR_BLACK} />
         )}
       </Pressable>
       {/* Only show contracts tab if user has rental properties */}
@@ -116,9 +117,9 @@ export const BottomBar = () => {
         >
           {/* No custom contract icon found, fallback to Gear/GearActive for demo */}
           {activeRoute === '/contracts' ? (
-            <GearActive size={28} color="#4E67EB" />
+            <GearActive size={28} color={colors.primaryColor} />
           ) : (
-            <Gear size={28} color="#000" />
+            <Gear size={28} color={colors.COLOR_BLACK} />
           )}
         </Pressable>
       )}
