@@ -26,6 +26,12 @@ export default function () {
     asyncHandler(viewingController.cancelViewingRequest)
   );
 
+  // Update a viewing request
+  router.put(
+    "/:viewingId",
+    asyncHandler(viewingController.updateViewingRequest)
+  );
+
   return router;
 }
 

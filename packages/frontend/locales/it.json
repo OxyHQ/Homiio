@@ -484,8 +484,11 @@
     }
   },
   "viewings": {
+    "title": "Visite",
     "success": {
-      "created": "Richiesta di visita inviata con successo!"
+      "created": "Richiesta di visita inviata con successo!",
+      "cancelled": "Richiesta di visita cancellata con successo!",
+      "modified": "Richiesta di visita modificata con successo!"
     },
     "validation": {
       "selectDateTime": "Seleziona una data e un orario",
@@ -496,28 +499,31 @@
       "alreadyRequested": "Hai già una richiesta di visita attiva per questa proprietà.",
       "timeConflict": "Quella fascia oraria non è più disponibile. Scegline un'altra.",
       "timeInPast": "L'orario programmato deve essere nel futuro.",
-      "authRequired": "Accedi per richiedere una visita."
+      "authRequired": "Accedi per richiedere una visita.",
+      "notFound": "Richiesta di visita non trovata.",
+      "cannotCancel": "Impossibile cancellare questa richiesta di visita."
     },
     "selectDate": "Seleziona data",
     "availableTimeSlots": "Fasce orarie disponibili",
     "additionalNotes": "Note aggiuntive",
     "notesPlaceholder": "Domande per il proprietario? (opzionale)",
-    "policy": "Arriva puntuale all'appuntamento. Se devi annullare, fallo almeno 2 ore prima."
-  },
-  "viewings": {
-    "success": {
-      "created": "Richiesta di visita inviata con successo!"
+    "policy": "Arriva puntuale all'appuntamento. Se devi annullare, fallo almeno 2 ore prima.",
+    "empty": {
+      "title": "Nessuna Richiesta di Visita",
+      "description": "Non hai ancora richiesto visite per proprietà. Inizia a esplorare le proprietà per programmare la tua prima visita!"
     },
-    "validation": {
-      "selectDateTime": "Seleziona una data e un orario",
-      "invalidProperty": "Proprietà non valida"
+    "status": {
+      "pending": "In Attesa",
+      "approved": "Approvata",
+      "declined": "Rifiutata",
+      "cancelled": "Cancellata"
     },
-    "error": {
-      "generic": "Invio della richiesta di visita non riuscito. Riprova.",
-      "alreadyRequested": "Hai già una richiesta di visita attiva per questa proprietà.",
-      "timeConflict": "Quella fascia oraria non è più disponibile. Scegline un'altra.",
-      "timeInPast": "L'orario programmato deve essere nel futuro.",
-      "authRequired": "Accedi per richiedere una visita."
+    "actions": {
+      "cancel": "Cancella",
+      "modify": "Modifica"
+    },
+    "cancel": {
+      "confirmMessage": "Sei sicuro di voler cancellare questa richiesta di visita?"
     }
   },
   "payments": {

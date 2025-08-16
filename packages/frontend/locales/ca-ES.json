@@ -452,8 +452,11 @@
     }
   },
   "viewings": {
+    "title": "Visites",
     "success": {
-      "created": "Sol·licitud de visita enviada amb èxit!"
+      "created": "Sol·licitud de visita enviada amb èxit!",
+      "cancelled": "Sol·licitud de visita cancel·lada amb èxit!",
+      "modified": "Sol·licitud de visita modificada amb èxit!"
     },
     "validation": {
       "selectDateTime": "Si us plau, seleccioneu una data i hora",
@@ -464,13 +467,32 @@
       "alreadyRequested": "Ja teniu una sol·licitud de visita activa per a aquesta propietat.",
       "timeConflict": "Aquest horari ja no està disponible. Si us plau, trieu-ne un altre.",
       "timeInPast": "L'hora programada ha de ser en el futur.",
-      "authRequired": "Si us plau, inicieu sessió per sol·licitar una visita."
+      "authRequired": "Si us plau, inicieu sessió per sol·licitar una visita.",
+      "notFound": "Sol·licitud de visita no trobada.",
+      "cannotCancel": "No es pot cancel·lar aquesta sol·licitud de visita."
     },
     "selectDate": "Selecciona data",
     "availableTimeSlots": "Franges horàries disponibles",
     "additionalNotes": "Notes addicionals",
     "notesPlaceholder": "Alguna pregunta per al propietari? (opcional)",
-    "policy": "Si us plau, arribeu puntuals a la vostra cita. Si necessiteu cancel·lar, feu-ho amb almenys 2 hores d'antelació."
+    "policy": "Si us plau, arribeu puntuals a la vostra cita. Si necessiteu cancel·lar, feu-ho amb almenys 2 hores d'antelació.",
+    "empty": {
+      "title": "Cap Sol·licitud de Visita",
+      "description": "Encara no heu sol·licitat cap visita de propietat. Començeu a explorar propietats per programar la vostra primera visita!"
+    },
+    "status": {
+      "pending": "Pendent",
+      "approved": "Aprovada",
+      "declined": "Rebutjada",
+      "cancelled": "Cancel·lada"
+    },
+    "actions": {
+      "cancel": "Cancel·lar",
+      "modify": "Modificar"
+    },
+    "cancel": {
+      "confirmMessage": "Esteu segur que voleu cancel·lar aquesta sol·licitud de visita?"
+    }
   },
   "payments": {
     "title": "Pagaments",

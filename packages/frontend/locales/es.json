@@ -427,8 +427,11 @@
     }
   },
   "viewings": {
+    "title": "Visitas",
     "success": {
-      "created": "¡Solicitud de visita enviada con éxito!"
+      "created": "¡Solicitud de visita enviada con éxito!",
+      "cancelled": "¡Solicitud de visita cancelada con éxito!",
+      "modified": "¡Solicitud de visita modificada con éxito!"
     },
     "validation": {
       "selectDateTime": "Por favor selecciona una fecha y hora",
@@ -439,13 +442,32 @@
       "alreadyRequested": "Ya tienes una solicitud de visita activa para esta propiedad.",
       "timeConflict": "Ese horario ya no está disponible. Por favor elige otro.",
       "timeInPast": "La hora programada debe ser en el futuro.",
-      "authRequired": "Por favor inicia sesión para solicitar una visita."
+      "authRequired": "Por favor inicia sesión para solicitar una visita.",
+      "notFound": "Solicitud de visita no encontrada.",
+      "cannotCancel": "No se puede cancelar esta solicitud de visita."
     },
     "selectDate": "Seleccionar fecha",
     "availableTimeSlots": "Horarios disponibles",
     "additionalNotes": "Notas adicionales",
     "notesPlaceholder": "¿Alguna pregunta para el propietario? (opcional)",
-    "policy": "Por favor llega a tiempo a tu cita. Si necesitas cancelar, hazlo con al menos 2 horas de antelación."
+    "policy": "Por favor llega a tiempo a tu cita. Si necesitas cancelar, hazlo con al menos 2 horas de antelación.",
+    "empty": {
+      "title": "Sin Solicitudes de Visita",
+      "description": "Aún no has solicitado ninguna visita de propiedad. ¡Comienza a explorar propiedades para programar tu primera visita!"
+    },
+    "status": {
+      "pending": "Pendiente",
+      "approved": "Aprobada",
+      "declined": "Rechazada",
+      "cancelled": "Cancelada"
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "modify": "Modificar"
+    },
+    "cancel": {
+      "confirmMessage": "¿Estás seguro de que quieres cancelar esta solicitud de visita?"
+    }
   },
   "payments": {
     "title": "Pagos",

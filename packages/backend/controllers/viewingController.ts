@@ -38,7 +38,10 @@ class ViewingController {
       }
 
       // Build scheduledAt from date (YYYY-MM-DD) and time (HH:mm)
-      const scheduledAtString = `${date}T${time}:00.000Z`;
+      // Create date in local timezone first
+      const localDate = new Date(`${date}T${time}`);
+      // Convert to UTC ISO string
+      const scheduledAtString = localDate.toISOString();
       const scheduledAt = new Date(scheduledAtString);
       if (Number.isNaN(scheduledAt.getTime())) {
         return next(new AppError('Invalid date or time', 400, 'INVALID_DATETIME'));
@@ -256,6 +259,74 @@ class ViewingController {
       viewing.cancelledBy = isOwner ? 'owner' : 'requester';
       await viewing.save();
       res.json(successResponse(viewing.toJSON(), 'Viewing request cancelled'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /** Update a pending viewing request (requester only) */
+  async updateViewingRequest(req, res, next) {
+    try {
+      const { viewingId } = req.params;
+      const { date, time, message } = req.body;
+      const oxyUserId = req.user?.id || req.user?._id || req.userId;
+      
+      if (!oxyUserId) {
+        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
+      }
+
+      const viewing = await ViewingRequest.findById(viewingId);
+      if (!viewing) return next(new AppError('Viewing request not found', 404, 'NOT_FOUND'));
+
+      // Only allow updating pending requests
+      if (viewing.status !== 'pending') {
+        return next(new AppError('Can only modify pending viewing requests', 400, 'CANNOT_MODIFY'));
+      }
+
+      // Get active profile for requester
+      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
+
+      // Only allow requester to modify
+      const isRequester = String(viewing.requesterProfileId) === String(activeProfile._id);
+      if (!isRequester) {
+        return next(new AppError('Not authorized to modify this viewing request', 403, 'FORBIDDEN'));
+      }
+
+      // Build scheduledAt from date (YYYY-MM-DD) and time (HH:mm)
+      // Create date in local timezone first
+      const localDate = new Date(`${date}T${time}`);
+      // Convert to UTC ISO string
+      const scheduledAtString = localDate.toISOString();
+      const scheduledAt = new Date(scheduledAtString);
+      if (Number.isNaN(scheduledAt.getTime())) {
+        return next(new AppError('Invalid date or time', 400, 'INVALID_DATETIME'));
+      }
+
+      const now = new Date();
+      if (scheduledAt.getTime() <= now.getTime()) {
+        return next(new AppError('Scheduled time must be in the future', 400, 'TIME_IN_PAST'));
+      }
+
+      // Check for conflicts for the same property/time with non-cancelled/declined status, excluding this request
+      const conflict = await ViewingRequest.findOne({
+        _id: { $ne: viewingId }, // Exclude this request
+        propertyId: viewing.propertyId,
+        scheduledAt,
+        status: { $in: ['pending', 'approved'] },
+      }).lean();
+
+      if (conflict) {
+        return next(new AppError('Time slot is no longer available', 409, 'TIME_CONFLICT'));
+      }
+
+      // Update the viewing request
+      viewing.scheduledAt = scheduledAt;
+      if (message !== undefined) viewing.message = message;
+      await viewing.save();
+
+      logger.info('Viewing request updated', { viewingId, scheduledAt });
+      res.json(successResponse(viewing.toJSON(), 'Viewing request updated'));
     } catch (error) {
       next(error);
     }

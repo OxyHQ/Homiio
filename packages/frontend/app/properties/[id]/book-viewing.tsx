@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -20,9 +19,10 @@ import { useProperty } from '@/hooks';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { PropertyType } from '@homiio/shared-types';
 import { useOxy } from '@oxyhq/services';
-import viewingService from '@/services/viewingService';
+import ViewingService from '@/services/viewingService';
 import { ApiError } from '@/utils/api';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
 type PropertyData = {
   id: string;
@@ -35,20 +35,24 @@ type PropertyData = {
 export default function BookViewingPage() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { id } = useLocalSearchParams();
+  const { id, modifyViewingId } = useLocalSearchParams();
   const { oxyServices, activeSessionId } = useOxy();
+  const queryClient = useQueryClient();
   const [property, setProperty] = useState<PropertyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [message, setMessage] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
+  const [_existingViewing, setExistingViewing] = useState<any>(null);
+
+  // Check if we're in modify mode
+  const isModifyMode = Boolean(modifyViewingId);
+  const modifyViewingIdString = Array.isArray(modifyViewingId) ? modifyViewingId[0] : modifyViewingId;
 
   const normalizedId = Array.isArray(id) ? id[0] : id;
   const {
     property: apiProperty,
-    loading: apiLoading,
-    error: apiError,
     loadProperty,
   } = useProperty(normalizedId || '');
 
@@ -129,6 +133,47 @@ export default function BookViewingPage() {
     }
   }, [apiProperty]);
 
+  // Load existing viewing data if in modify mode
+  useEffect(() => {
+    const loadExistingViewing = async () => {
+      if (!isModifyMode || !modifyViewingIdString || !oxyServices || !activeSessionId) {
+        return;
+      }
+
+      try {
+        // Get user's viewing requests and find the one we're modifying
+        const response = await ViewingService.listMyViewingRequests(
+          { page: 1, limit: 50 },
+          oxyServices,
+          activeSessionId,
+        );
+
+        const viewings = Array.isArray(response?.data) ? response.data : [];
+        const viewing = viewings.find(v => v._id === modifyViewingIdString);
+
+        if (viewing) {
+          setExistingViewing(viewing);
+          // Parse date and time from scheduledAt, adjusting for timezone
+          const scheduledDate = new Date(viewing.scheduledAt);
+          const dateStr = scheduledDate.toISOString().split('T')[0]; // YYYY-MM-DD
+          const timeStr = scheduledDate.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          }); // HH:MM in local time
+          setSelectedDate(dateStr);
+          setSelectedTime(timeStr);
+          setMessage(viewing.message || '');
+        }
+      } catch (error) {
+        console.error('Failed to load existing viewing:', error);
+        toast.error(t('viewings.error.generic'));
+      }
+    };
+
+    loadExistingViewing();
+  }, [isModifyMode, modifyViewingIdString, oxyServices, activeSessionId, t]);
+
   const timeSlots = [
     '09:00',
     '09:30',
@@ -170,13 +215,28 @@ export default function BookViewingPage() {
     setSubmitting(true);
 
     try {
-      await viewingService.createViewingRequest(
-        property.id,
-        { date: selectedDate, time: selectedTime, message: message?.trim() || undefined },
-        oxyServices,
-        activeSessionId,
-      );
-      toast.success(t('viewings.success.created'));
+      if (isModifyMode && modifyViewingIdString) {
+        // Update the existing viewing request
+        await ViewingService.update(
+          modifyViewingIdString,
+          { date: selectedDate, time: selectedTime, message: message?.trim() || undefined },
+          oxyServices,
+          activeSessionId,
+        );
+        toast.success(t('viewings.success.modified'));
+        // Invalidate both the viewing list and the specific viewing
+        await queryClient.invalidateQueries({ queryKey: ['viewings', 'me'] });
+      } else {
+        await ViewingService.createViewingRequest(
+          property.id,
+          { date: selectedDate, time: selectedTime, message: message?.trim() || undefined },
+          oxyServices,
+          activeSessionId,
+        );
+        toast.success(t('viewings.success.created'));
+        // Invalidate the viewing list
+        await queryClient.invalidateQueries({ queryKey: ['viewings', 'me'] });
+      }
       router.back();
     } catch (error) {
       const msg = extractErrorMessage(error);
@@ -210,7 +270,7 @@ export default function BookViewingPage() {
       <Header
         options={{
           showBackButton: true,
-          title: t('properties.bookViewing'),
+          title: isModifyMode ? t('viewings.actions.modify') : t('properties.bookViewing'),
           titlePosition: 'center',
         }}
       />
@@ -316,7 +376,7 @@ export default function BookViewingPage() {
 
         <ActionButton
           icon="calendar-outline"
-          text={t('properties.bookViewing')}
+          text={isModifyMode ? t('viewings.actions.modify') : t('properties.bookViewing')}
           onPress={handleSubmit}
           variant="primary"
           size="large"

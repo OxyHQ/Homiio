@@ -9,9 +9,12 @@ export interface ViewingRequest {
   requesterProfileId: string;
   ownerProfileId: string;
   scheduledAt: string;
+  date: string; // Derived from scheduledAt for convenience
+  time: string; // Derived from scheduledAt for convenience
   message?: string;
   status: ViewingStatus;
   cancelledBy?: 'requester' | 'owner';
+  propertyTitle?: string; // Might be populated by backend
   createdAt: string;
   updatedAt: string;
 }
@@ -93,6 +96,20 @@ export const viewingService = {
     const response = await api.post<ApiResponse<ViewingRequest>>(
       `/api/viewings/${viewingId}/cancel`,
       {},
+      { oxyServices, activeSessionId },
+    );
+    return response.data;
+  },
+
+  async update(
+    viewingId: string,
+    payload: { date: string; time: string; message?: string },
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ): Promise<ApiResponse<ViewingRequest>> {
+    const response = await api.put<ApiResponse<ViewingRequest>>(
+      `/api/viewings/${viewingId}`,
+      payload,
       { oxyServices, activeSessionId },
     );
     return response.data;
