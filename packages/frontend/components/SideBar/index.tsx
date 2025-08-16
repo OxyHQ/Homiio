@@ -269,11 +269,14 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.primaryLight,
     padding: 12,
-    height: WindowHeight,
     ...(Platform.select({
       web: {
         position: 'sticky' as any,
         overflow: 'hidden',
+        height: '100vh' as any,
+      },
+      default: {
+        height: WindowHeight,
       },
     }) as ViewStyle),
     top: 0,

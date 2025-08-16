@@ -26,7 +26,6 @@ export { EcoCertification } from './EcoCertification';
 export { VerificationBadge } from './VerificationBadge';
 export { RoommateMatch } from './RoommateMatch';
 export { PropertyMonitoring } from './PropertyMonitoring';
-export { FraudAlert } from './FraudAlert';
 export { ListItem } from './ListItem';
 export { IconButton } from './IconButton';
 export { default as LoadingTopSpinner } from './LoadingTopSpinner';

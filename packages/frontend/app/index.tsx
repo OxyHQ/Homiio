@@ -33,6 +33,7 @@ import { HomeCarouselSection } from '@/components/HomeCarouselSection';
 import { ThemedText } from '@/components/ThemedText';
 import { useMediaQuery } from 'react-responsive';
 import { useLayoutScroll } from '@/context/LayoutScrollContext';
+import { useWindowDimensions } from 'react-native';
 
 // Type assertion for Ionicons compatibility with React 19
 const IconComponent = Ionicons as any;
@@ -55,7 +56,7 @@ export default function HomePage() {
   const [nearbyCities, setNearbyCities] = useState<any[]>([]);
   const [nearbyProperties, setNearbyProperties] = useState<{ [cityId: string]: any[] }>({});
   const [nearbyLoading, setNearbyLoading] = useState(false);
-  const isScreenNotMobile = useMediaQuery({ minWidth: 500 });
+  const isScreenNotMobile = useMediaQuery({ minWidth: 700 });
 
   // Get user location on mount
   useEffect(() => {
@@ -338,7 +339,8 @@ export default function HomePage() {
 
   const layoutScroll = useLayoutScroll();
   const scrollY = layoutScroll?.scrollY || new Animated.Value(0);
-  const styles = React.useMemo(() => createStyles(isScreenNotMobile), [isScreenNotMobile]);
+  const { height: windowHeight } = useWindowDimensions();
+  const styles = React.useMemo(() => createStyles(isScreenNotMobile, windowHeight), [isScreenNotMobile, windowHeight]);
 
   const translateY = scrollY.interpolate({
     inputRange: [-300, 0, 1000],
@@ -379,7 +381,21 @@ export default function HomePage() {
             />
           </Animated.View>
           <View style={styles.heroOverlay} />
-          <View style={styles.heroContent}>
+          {!isScreenNotMobile && (
+            <LinearGradient
+              colors={['transparent', colors.primaryLight]}
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 200,
+                zIndex: 1,
+              }}
+              pointerEvents="none"
+            />
+          )}
+          <View style={[styles.heroContent, { zIndex: 2 }]}>
             <ThemedText style={styles.heroTitle}>{t('home.hero.title')}</ThemedText>
             <ThemedText style={styles.heroSubtitle}>{t('home.hero.subtitle')}</ThemedText>
 
@@ -400,40 +416,28 @@ export default function HomePage() {
                 </View>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
 
-        {/* Property Types */}
-        <View style={styles.typesSection}>
-          <View style={styles.sectionHeader}>
-            <ThemedText style={styles.sectionTitle}>{t('home.categories.title')}</ThemedText>
-          </View>
-          <View style={styles.propertyChipsContainer}>
-            {propertyTypeCounts.map((type) => {
-              // Determine if last item in a row to avoid right margin if using margins (we're using gap via wrap so optional)
-              return (
+            {/* Property Types */}
+            <View style={styles.propertyChipsContainer}>
+              {propertyTypeCounts.map((type) => (
                 <TouchableOpacity
                   key={type.id}
                   style={styles.propertyChip}
                   onPress={() => router.push(`/properties/type/${type.id}`)}
                   activeOpacity={0.8}
                 >
-                  <View
-                    style={[styles.propertyChipContent, { backgroundColor: colors.primaryColor }]}
-                  >
-                    <IconComponent
-                      name={type.icon as keyof typeof IconComponent.glyphMap}
-                      size={20}
-                      color="white"
-                    />
-                    <ThemedText style={styles.propertyChipName}>{type.name}</ThemedText>
-                    <View style={styles.propertyChipCountBadge}>
-                      <ThemedText style={styles.propertyChipCountText}>{type.count}</ThemedText>
-                    </View>
+                  <IconComponent
+                    name={type.icon as keyof typeof IconComponent.glyphMap}
+                    size={20}
+                    color={colors.COLOR_BLACK}
+                  />
+                  <ThemedText style={styles.propertyChipName}>{type.name}</ThemedText>
+                  <View style={styles.propertyChipCountBadge}>
+                    <ThemedText style={styles.propertyChipCountText}>{type.count}</ThemedText>
                   </View>
                 </TouchableOpacity>
-              );
-            })}
+              ))}
+            </View>
           </View>
         </View>
 
@@ -601,7 +605,7 @@ export default function HomePage() {
         {/* Stats Section */}
         <View style={styles.statsSection}>
           <View style={styles.sectionHeader}>
-            <ThemedText style={styles.sectionTitle}>Platform Statistics</ThemedText>
+            <ThemedText style={styles.sectionTitle}>{t('home.insights.title')}</ThemedText>
           </View>
           <View style={styles.statsChipsContainer}>
             <TouchableOpacity style={styles.statChip} activeOpacity={0.8}>
@@ -839,7 +843,7 @@ export default function HomePage() {
   );
 }
 
-const createStyles = (isScreenNotMobile: boolean) => StyleSheet.create({
+const createStyles = (isScreenNotMobile: boolean, windowHeight: number) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -847,12 +851,16 @@ const createStyles = (isScreenNotMobile: boolean) => StyleSheet.create({
     flex: 1,
     maxWidth: '100%',
     ...(isScreenNotMobile ? {
-      borderRadius: 250,
-      minHeight: 400,
-      margin: 20,
-      paddingHorizontal: 50,
+      borderRadius: 200,
+      height: 400,
+      marginTop: Math.max(0, (windowHeight - 400) / 2), // Center vertically by calculating (window height - hero height) / 2
+      marginHorizontal: 20,
+      marginBottom: 20,
+      paddingHorizontal: 120,
     } : {
       paddingHorizontal: 16,
+      minHeight: 550,
+      marginTop: 0,
     }),
     justifyContent: 'center',
     alignItems: 'center',
@@ -912,7 +920,6 @@ const createStyles = (isScreenNotMobile: boolean) => StyleSheet.create({
     padding: 8,
     paddingLeft: 20,
     height: 52,
-    marginRight: 12,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -1161,47 +1168,43 @@ const createStyles = (isScreenNotMobile: boolean) => StyleSheet.create({
   propertyChipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    // Reduced gap for tighter layout
-    gap: 4,
-    paddingHorizontal: 16,
-    // Distribute chips across the row while allowing them to grow
+    gap: 8,
+    marginTop: 16,
     justifyContent: 'flex-start',
   },
   propertyChip: {
-    borderRadius: 25,
+    borderRadius: 35,
     overflow: 'hidden',
-    marginBottom: 4,
     flexGrow: 1,
     flexBasis: '30%',
     minWidth: 140,
-  },
-  propertyChipContent: {
+    backgroundColor: '#ffffff',
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 6,
+    padding: 8,
+    paddingHorizontal: 12,
     justifyContent: 'space-between',
-    flex: 1,
   },
   propertyChipName: {
-    fontFamily: phuduFontWeights.medium,
-    fontSize: 14,
-    color: 'white',
+    fontSize: 13,
+    color: colors.COLOR_BLACK,
+    fontWeight: '500',
     flex: 1,
     marginLeft: 6,
   },
   propertyChipCountBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: colors.COLOR_BLACK,
     borderRadius: 35,
-    paddingHorizontal: 4,
+    paddingHorizontal: 6,
     paddingVertical: 2,
-    minWidth: 28,
+    minWidth: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
   propertyChipCountText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: colors.COLOR_BLACK,
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#ffffff',
   },
   statsSection: {
     paddingVertical: 8,

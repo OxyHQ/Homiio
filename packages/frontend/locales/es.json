@@ -100,6 +100,9 @@
   "profile.edit": "Editar perfil",
   "profile.chat": "Chat",
   "home": {
+    "insights": {
+      "title": "Información de la Plataforma"
+    },
     "hero": {
       "title": "Encuentra tu hogar ético",
       "subtitle": "Alquileres transparentes con acuerdos justos y propiedades verificadas",

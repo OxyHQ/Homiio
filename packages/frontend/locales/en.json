@@ -100,6 +100,9 @@
   "profile.edit": "Edit profile",
   "profile.chat": "Chat",
   "home": {
+    "insights": {
+      "title": "Platform Insights"
+    },
     "hero": {
       "title": "Find your ethical home",
       "subtitle": "Transparent rentals with fair agreements and verified properties",
