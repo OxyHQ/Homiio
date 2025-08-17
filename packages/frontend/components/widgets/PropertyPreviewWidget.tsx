@@ -1,15 +1,15 @@
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { colors } from '@/styles/colors';
 import { ThemedText } from '../ThemedText';
 import { Ionicons } from '@expo/vector-icons';
 import { BaseWidget } from './BaseWidget';
 import { useCreatePropertyFormStore } from '@/store/createPropertyFormStore';
-import { LinearGradient } from 'expo-linear-gradient';
+
 import { PropertyCard } from '../PropertyCard';
 
 const IconComponent = Ionicons as any;
-const { width: screenWidth } = Dimensions.get('window');
+
 
 interface PreviewSection {
   id: string;
@@ -24,7 +24,7 @@ export function PropertyPreviewWidget() {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(['basic', 'pricing']),
   );
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [_isCollapsed, _setIsCollapsed] = useState(false);
 
   // Helper function for amenity lookup - defined before useMemo hooks
   const getAmenityById = (id: string) => {
@@ -120,8 +120,8 @@ export function PropertyPreviewWidget() {
     });
   }, []);
 
-  const toggleCollapse = useCallback(() => {
-    setIsCollapsed((prev) => !prev);
+  const _toggleCollapse = useCallback(() => {
+    _setIsCollapsed((prev: boolean) => !prev);
   }, []);
 
   // Auto-toggle section based on current step
@@ -137,7 +137,7 @@ export function PropertyPreviewWidget() {
 
     const sectionToToggle = stepToSectionMap[currentStep];
     if (sectionToToggle) {
-      setExpandedSections((prev) => {
+      setExpandedSections((_prev) => {
         const newSet = new Set<string>();
         // Only keep the current step's section expanded, collapse all others
         newSet.add(sectionToToggle);
@@ -170,7 +170,7 @@ export function PropertyPreviewWidget() {
   }, [formData?.basicInfo?.propertyType, formData?.basicInfo?.bedrooms, formData?.location?.city]);
 
   // Memoized price display
-  const priceDisplay = useMemo(() => {
+  const _priceDisplay = useMemo(() => {
     if (!formData?.pricing?.monthlyRent || formData.pricing.monthlyRent <= 0) return null;
     return `$${formData.pricing.monthlyRent.toLocaleString()}/month`;
   }, [formData?.pricing?.monthlyRent]);

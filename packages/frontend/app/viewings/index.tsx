@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +17,7 @@ export default function ViewingsPage() {
     const { oxyServices, activeSessionId } = useOxy();
     const queryClient = useQueryClient();
 
-    const { data, isLoading, isError, refetch } = useQuery({
+    const { data, isLoading, isError, _refetch } = useQuery({
         queryKey: ['viewings', 'me'],
         queryFn: async () => {
             const res = await viewingService.listMyViewingRequests(
@@ -91,15 +91,15 @@ export default function ViewingsPage() {
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'pending':
-                return colors.COLOR_WARNING || '#f59e0b';
+                return '#f59e0b';
             case 'approved':
-                return colors.COLOR_SUCCESS || '#10b981';
+                return '#10b981';
             case 'declined':
-                return colors.COLOR_ERROR || '#ef4444';
+                return '#ef4444';
             case 'cancelled':
-                return colors.COLOR_BLACK_LIGHT_3 || '#6b7280';
+                return colors.COLOR_BLACK_LIGHT_3;
             default:
-                return colors.COLOR_BLACK_LIGHT_3 || '#6b7280';
+                return colors.COLOR_BLACK_LIGHT_3;
         }
     };
 
@@ -135,7 +135,7 @@ export default function ViewingsPage() {
                             <ThemedText style={styles.emptyDescription}>{t('viewings.empty.description')}</ThemedText>
                         </View>
                     ) : (
-                        data.map((viewing) => (
+                        data.map((viewing: ViewingRequest) => (
                             <View key={viewing._id} style={styles.card}>
                                 <View style={styles.cardHeader}>
                                     <View style={styles.cardTitleRow}>

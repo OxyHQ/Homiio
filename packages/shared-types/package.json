@@ -1,6 +1,7 @@
 {
     "name": "@homiio/shared-types",
     "version": "1.0.0",
+    "type": "module",
     "description": "Shared TypeScript types for Homiio frontend and backend",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
@@ -22,7 +23,11 @@
     "license": "UNLICENSED",
     "devDependencies": {
         "typescript": "^5.0.0",
-        "@types/node": "^20.0.0"
+        "@types/node": "^20.0.0",
+        "eslint": "^9.0.0",
+        "@eslint/js": "^9.0.0",
+        "@typescript-eslint/eslint-plugin": "^7.0.0",
+        "@typescript-eslint/parser": "^7.0.0"
     },
     "files": [
         "dist/**/*"

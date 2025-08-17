@@ -2,7 +2,7 @@
  * Lease-related types shared across Homiio frontend and backend
  */
 
-import { Timestamps } from './common';
+
 import { Property } from './property';
 import { Profile } from './profile';
 

@@ -62,12 +62,9 @@ export function SideBar() {
     gcTime: 1000 * 60 * 10,
   });
 
-  const savedProperties = savedPropertiesData?.properties || [];
-  const folders = foldersData?.folders || [];
-
   // Get all saved items (folders and properties) ordered by recency
   const recentSavedItems = React.useMemo(() => {
-    const allItems: Array<{
+    const allItems: {
       type: 'folder' | 'property';
       id: string;
       name: string;
@@ -79,7 +76,10 @@ export function SideBar() {
       latestImages?: string[];
       href: string;
       timestamp: number;
-    }> = [];
+    }[] = [];
+
+    const savedProperties = savedPropertiesData?.properties || [];
+    const folders = foldersData?.folders || [];
 
     // Add folders with their most recent activity (excluding default folder)
     folders.forEach((folder: any) => {
@@ -148,7 +148,7 @@ export function SideBar() {
     return allItems
       .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, 5);
-  }, [folders, savedProperties]);
+  }, [savedPropertiesData, foldersData]);
 
   // Only show roommates for personal profiles and when profile data is loaded
   // If still loading profiles, don't show roommates to avoid flickering
@@ -334,7 +334,7 @@ export function SideBar() {
               <View style={styles.addPropertyButtonContainer}>
                 <Button
                   href="/properties/create"
-                  renderText={({ state }) => (
+                  renderText={() => (
                     <Text style={[
                       styles.addPropertyButtonText,
                       {
@@ -405,7 +405,7 @@ export function SideBar() {
                 {t('sidebar.savedProperties.title', { defaultValue: 'Saved Properties' })}
               </Text>
               <View style={styles.recentlySavedList}>
-                {recentSavedItems.map((item, index) => {
+                {recentSavedItems.map((item, _index) => {
                   if (item.type === 'folder') {
                     return (
                       <SavedFolderItem

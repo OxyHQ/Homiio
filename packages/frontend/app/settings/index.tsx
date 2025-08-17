@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, Switch } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Switch } from 'react-native';
 import { useOxy } from '@oxyhq/services';
 import { useTranslation } from 'react-i18next';
-import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
@@ -17,7 +17,7 @@ export default function SettingsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { user, showBottomSheet } = useOxy();
-  const { currentCurrency } = useCurrency();
+  const { getCurrentCurrency } = useCurrency();
 
   // Settings state
   const [notifications, setNotifications] = useState(true);
@@ -332,7 +332,10 @@ export default function SettingsScreen() {
                   {t('settings.preferences.currency', 'Currency')}
                 </Text>
                 <Text style={styles.settingDescription}>
-                  {currentCurrency.flag} {currentCurrency.name} ({currentCurrency.code})
+                  {(() => {
+                    const currency = getCurrentCurrency();
+                    return `${currency.symbol} ${currency.name} (${currency.code})`;
+                  })()}
                 </Text>
               </View>
             </View>

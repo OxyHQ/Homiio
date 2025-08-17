@@ -14,14 +14,13 @@ import { useTranslation } from 'react-i18next';
 import { ThemedText } from './ThemedText';
 import { colors } from '@/styles/colors';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
-import { SavedPropertyFolder } from '@/services/savedPropertyFolderService';
+import { SavedPropertyFolder, savedPropertyFolderService } from '@/services/savedPropertyFolderService';
 import Button from './Button';
 import { Property } from '@homiio/shared-types';
 import { PropertyCard } from './PropertyCard';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useOxy } from '@oxyhq/services';
 import savedPropertyService from '@/services/savedPropertyService';
-import savedPropertyFolderService from '@/services/savedPropertyFolderService';
 import { toast } from 'sonner';
 
 const IconComponent = Ionicons as any;
@@ -54,7 +53,7 @@ export function SaveToFolderBottomSheet({
   onClose,
   onSave,
 }: SaveToFolderBottomSheetProps) {
-  const { t } = useTranslation();
+  const { _t } = useTranslation();
   const { folders, isLoading, loadFolders } = useSavedPropertiesContext();
   const { oxyServices, activeSessionId } = useOxy();
   const queryClient = useQueryClient();

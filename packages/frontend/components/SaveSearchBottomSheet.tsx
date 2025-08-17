@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TextInput, Switch, TouchableOpacity } from 'react-native';
-import { BottomSheetView } from '@gorhom/bottom-sheet';
+
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';

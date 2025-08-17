@@ -29,7 +29,7 @@ import { toast } from 'sonner';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
-import { PropertyType, RecentlyViewedType, PropertyImage, Property } from '@homiio/shared-types';
+import { PropertyType, PropertyImage, Property } from '@homiio/shared-types';
 import { PropertyCard } from '@/components/PropertyCard';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';
 import ProfileAvatar from '@/components/ProfileAvatar';
@@ -37,7 +37,7 @@ import { getPropertyImageSource } from '@/utils/propertyUtils';
 
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
-import { userApi } from '@/utils/api';
+
 import { SaveButton } from '@/components/SaveButton';
 import * as Linking from 'expo-linking';
 import { propertyService } from '@/services/propertyService';
@@ -92,9 +92,9 @@ export default function PropertyDetailPage() {
   } = useProperty(id as string);
   const { stats, loadStats } = usePropertyStats((id as string) || '');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [imageScale, setImageScale] = useState(1);
-  const [imageTranslateX, setImageTranslateX] = useState(0);
-  const [imageTranslateY, setImageTranslateY] = useState(0);
+  const [_imageScale, _setImageScale] = useState(1);
+  const [_imageTranslateX, _setImageTranslateX] = useState(0);
+  const [_imageTranslateY, _setImageTranslateY] = useState(0);
   const [currentZoomScale, setCurrentZoomScale] = useState(1);
   const [translateX, setTranslateX] = useState(0);
   const [translateY, setTranslateY] = useState(0);
@@ -107,8 +107,8 @@ export default function PropertyDetailPage() {
   const hasViewedRef = useRef(false);
   const [showPhotoGallery, setShowPhotoGallery] = useState(false);
   const [hasActiveViewing, setHasActiveViewing] = useState(false);
-  const lastPanX = useRef(0);
-  const lastPanY = useRef(0);
+  const _lastPanX = useRef(0);
+  const _lastPanY = useRef(0);
 
   // Touch handlers for drag functionality
   const handleTouchStart = (event: any) => {
@@ -121,7 +121,7 @@ export default function PropertyDetailPage() {
     }
   };
 
-  const handleTouchMove = (event: any) => {
+  const _handleTouchMove = (event: any) => {
     if (isDragging.current && currentZoomScale > 1) {
       const touch = event.nativeEvent.touches[0];
       const deltaX = touch.pageX - lastTouchX.current;

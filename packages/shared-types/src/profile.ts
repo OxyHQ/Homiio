@@ -14,7 +14,6 @@ import {
   CooperativeRole,
   PriceUnit,
   Location,
-  Timestamps
 } from './common';
 
 export interface PersonalInfo {

@@ -11,7 +11,7 @@ import {
   UtilitiesIncluded, 
   PriceUnit,
   GeoJSONPoint,
-  Timestamps,
+
   DeepPartial
 } from './common';
 import { Address } from './address';

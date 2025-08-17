@@ -35,11 +35,11 @@ export function useMemoizedCallback<T extends (...args: any[]) => any>(
 ): T {
     const memoizedCallback = React.useCallback(callback, dependencies);
 
-    if (__DEV__) {
-        React.useEffect(() => {
+    React.useEffect(() => {
+        if (__DEV__) {
             console.log(`🔄 Memoized callback "${callbackName || 'anonymous'}" updated`);
-        }, [memoizedCallback, callbackName]);
-    }
+        }
+    }, [memoizedCallback, callbackName]);
 
     return memoizedCallback;
 }
@@ -53,13 +53,13 @@ export function useMemoizedValue<T>(
     dependencies: React.DependencyList,
     valueName?: string
 ): T {
-    const memoizedValue = React.useMemo(factory, dependencies);
+    const memoizedValue = React.useMemo(() => factory(), dependencies);
 
-    if (__DEV__) {
-        React.useEffect(() => {
+    React.useEffect(() => {
+        if (__DEV__) {
             console.log(`🔄 Memoized value "${valueName || 'anonymous'}" updated`);
-        }, [memoizedValue, valueName]);
-    }
+        }
+    }, [memoizedValue, valueName]);
 
     return memoizedValue;
 }

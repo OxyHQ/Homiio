@@ -7,7 +7,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { AnimatedSearchPlaceholder } from './AnimatedSearchPlaceholder';
 
-const debounce = (func: Function, wait: number) => {
+const _debounce = (func: Function, wait: number) => {
   let timeout: NodeJS.Timeout;
   return function executedFunction(...args: any[]) {
     const later = () => {

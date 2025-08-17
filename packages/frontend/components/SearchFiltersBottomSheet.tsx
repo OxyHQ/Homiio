@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiltersBottomSheet, FilterSection } from '@/components/FiltersBar/FiltersBottomSheet';
 
