@@ -3,6 +3,7 @@ import { View, StyleSheet, Platform } from 'react-native';
 import { usePathname } from 'expo-router';
 import { WidgetManager } from './widgets';
 import { useIsRightBarVisible } from '@/hooks/useOptimizedMediaQuery';
+import { useSearchMode } from '@/context/SearchModeContext';
 
 // Global form data store for create property screen
 let createPropertyFormData: any = null;
@@ -15,6 +16,15 @@ export const updateCreatePropertyFormData = (formData: any) => {
 export const RightBar = React.memo(function RightBar() {
   const isRightBarVisible = useIsRightBarVisible();
   const pathname = usePathname() || '/';
+
+  // Get search mode with fallback for backward compatibility
+  let isMapMode = true; // Default to true for backward compatibility
+  try {
+    const searchMode = useSearchMode();
+    isMapMode = searchMode.isMapMode;
+  } catch (error) {
+    // Context not available, use default
+  }
 
   // Memoize screen ID calculation
   const screenId = useMemo(() => {
@@ -87,8 +97,8 @@ export const RightBar = React.memo(function RightBar() {
   // Memoize styles
   const containerStyle = useMemo(() => [
     styles.container,
-    isSearchScreen && styles.fixedContainer
-  ], [isSearchScreen]);
+    isSearchScreen && isMapMode && styles.fixedContainer
+  ], [isSearchScreen, isMapMode]);
 
   const stickyWidgetsContainerStyle = useMemo(() => [
     styles.stickyWidgetsContainer

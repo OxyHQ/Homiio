@@ -226,7 +226,7 @@ export const useDebouncedAddressSearch = (
  * const { reverseGeocode, result, loading, error } = useReverseGeocode();
  *
  * // Get address from coordinates
- * await reverseGeocode(40.7128, -74.0060);
+ * await reverseGeocode(41.38723, 2.16538);
  * ```
  */
 export const useReverseGeocode = () => {

@@ -131,8 +131,8 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()((set
       state: '',
       zipCode: '',
       country: 'Spain',
-      latitude: 40.7128, // Default to New York City
-      longitude: -74.006, // Default to New York City
+                latitude: 41.38723, // Default to Barcelona
+          longitude: 2.16538, // Default to Barcelona
       availableFrom: undefined,
       leaseTerm: undefined,
       walkScore: undefined,
@@ -230,8 +230,8 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()((set
           state: '',
           zipCode: '',
           country: 'Spain',
-          latitude: 40.7128, // Default to New York City
-          longitude: -74.006, // Default to New York City
+          latitude: 41.38723, // Default to Barcelona
+          longitude: 2.16538, // Default to Barcelona
           availableFrom: undefined,
           leaseTerm: undefined,
         },

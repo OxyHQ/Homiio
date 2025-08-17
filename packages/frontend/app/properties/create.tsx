@@ -303,9 +303,11 @@ export default function CreatePropertyScreen() {
           return;
         }
 
-        // Get current position
+        // Get current position with high accuracy
         const location = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
+          accuracy: Location.Accuracy.High,
+          timeInterval: 10000,
+          distanceInterval: 10,
         });
 
         console.log('User location obtained:', {
@@ -328,7 +330,7 @@ export default function CreatePropertyScreen() {
       currentStep === 1 &&
       (!formData.location.latitude ||
         !formData.location.longitude ||
-        (formData.location.latitude === 40.7128 && formData.location.longitude === -74.006))
+        (formData.location.latitude === 41.38723 && formData.location.longitude === 2.16538))
     ) {
       getUserLocation();
     }

@@ -9,6 +9,7 @@ import {
     ActivityIndicator,
     RefreshControl,
     Dimensions,
+    ScrollView,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -17,20 +18,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/colors';
 import { PropertyCard } from '@/components/PropertyCard';
 import { useSearchProperties } from '@/hooks';
-import { Property, PropertyFilters } from '@/services/propertyService';
+import { Property, PropertyFilters } from '@homiio/shared-types';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
 import { useContext } from 'react';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SaveSearchBottomSheet } from '@/components/SaveSearchBottomSheet';
 import { FiltersBar } from '@/components/FiltersBar';
 import { FiltersBottomSheet, FilterSection } from '@/components/FiltersBar/FiltersBottomSheet';
+import { FilterChip } from '@/components/ui/FilterChip';
 
 interface SearchFilters extends PropertyFilters {
-    amenities?: string[];
-    furnished?: boolean;
-    petsAllowed?: boolean;
-    ecoFriendly?: boolean;
-    verified?: boolean;
+    // Additional filters specific to search screen
+    // All other properties are inherited from PropertyFilters
 }
 
 const AMENITIES = [
@@ -54,6 +53,15 @@ const PROPERTY_TYPES = [
     { id: 'studio', label: 'Studios', icon: 'square-outline' },
 ];
 
+const QUICK_FILTERS = [
+    { id: 'eco', label: 'Eco-friendly', icon: 'leaf-outline', color: '#16a34a' },
+    { id: 'furnished', label: 'Furnished', icon: 'bed-outline', color: '#f59e0b' },
+    { id: 'pets', label: 'Pets Allowed', icon: 'paw-outline', color: '#10b981' },
+    { id: 'verified', label: 'Verified', icon: 'checkmark-circle-outline', color: '#059669' },
+    { id: 'budget', label: '< €1000', icon: 'wallet-outline', color: '#3b82f6' },
+    { id: 'coliving', label: 'Co-living', icon: 'people-outline', color: '#8b5cf6' },
+];
+
 export default function SearchScreen() {
     const { t } = useTranslation();
     const router = useRouter();
@@ -73,6 +81,7 @@ export default function SearchScreen() {
         limit: 10,
     });
     const [viewMode, setViewMode] = useState<'list' | 'grid'>(isMobile ? 'grid' : 'list');
+    const [activeQuickFilters, setActiveQuickFilters] = useState<string[]>([]);
 
     const filterSections: FilterSection[] = useMemo(() => [
         {
@@ -92,7 +101,7 @@ export default function SearchScreen() {
             type: 'range',
             min: 0,
             max: 10000,
-            value: filters.minRent || filters.maxRent ? [filters.minRent, filters.maxRent] : undefined
+            value: filters.minRent || filters.maxRent ? [filters.minRent || 0, filters.maxRent || 10000] : undefined
         },
         {
             id: 'bedrooms',
@@ -210,7 +219,62 @@ export default function SearchScreen() {
         );
     }, [bottomSheet, filterSections, handleFilterChange]);
 
-    // Do not auto-search on typing or filter changes; only search on submit
+    const handleQuickFilterToggle = useCallback((filterId: string) => {
+        setActiveQuickFilters(prev => {
+            const newFilters = prev.includes(filterId)
+                ? prev.filter(id => id !== filterId)
+                : [...prev, filterId];
+
+            // Apply quick filter logic
+            let newSearchFilters = { ...filters };
+
+            switch (filterId) {
+                case 'eco':
+                    newSearchFilters.eco = !prev.includes(filterId);
+                    break;
+                case 'furnished':
+                    newSearchFilters.furnished = !prev.includes(filterId);
+                    break;
+                case 'pets':
+                    newSearchFilters.petFriendly = !prev.includes(filterId);
+                    break;
+                case 'verified':
+                    newSearchFilters.verified = !prev.includes(filterId);
+                    break;
+                case 'budget':
+                    if (!prev.includes(filterId)) {
+                        newSearchFilters.maxRent = 1000;
+                    } else {
+                        newSearchFilters.maxRent = undefined;
+                    }
+                    break;
+                case 'coliving':
+                    // Handle co-living filter logic
+                    break;
+            }
+
+            setFilters(newSearchFilters);
+            return newFilters;
+        });
+    }, [filters]);
+
+    const getActiveFiltersCount = useCallback(() => {
+        return Object.values(filters).filter(value =>
+            value !== undefined &&
+            value !== null &&
+            value !== '' &&
+            value !== 'newest' &&
+            (Array.isArray(value) ? value.length > 0 : true)
+        ).length - 2 + activeQuickFilters.length; // Subtract page and limit, add quick filters
+    }, [filters, activeQuickFilters]);
+
+    const clearAllFilters = useCallback(() => {
+        setFilters({
+            page: 1,
+            limit: 10,
+        });
+        setActiveQuickFilters([]);
+    }, []);
 
     // Keep local state in sync with route param
     useEffect(() => {
@@ -290,6 +354,63 @@ export default function SearchScreen() {
         </View>
     );
 
+    const renderFiltersToolbar = () => (
+        <View style={styles.filtersToolbar}>
+            <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filtersScrollContent}
+            >
+                {/* Quick Filters */}
+                {QUICK_FILTERS.map((filter) => (
+                    <FilterChip
+                        key={filter.id}
+                        label={filter.label}
+                        selected={activeQuickFilters.includes(filter.id)}
+                        onPress={() => handleQuickFilterToggle(filter.id)}
+                        style={{
+                            ...styles.quickFilterChip,
+                            ...(activeQuickFilters.includes(filter.id) ? {
+                                backgroundColor: filter.color,
+                                borderColor: filter.color,
+                            } : {})
+                        }}
+                        textStyle={activeQuickFilters.includes(filter.id) ? styles.quickFilterTextActive : undefined}
+                    />
+                ))}
+            </ScrollView>
+
+            {/* Advanced Filters Button */}
+            <View style={styles.advancedFiltersContainer}>
+                <TouchableOpacity
+                    style={[styles.advancedFiltersButton, getActiveFiltersCount() > 0 && styles.advancedFiltersButtonActive]}
+                    onPress={handleOpenFilters}
+                >
+                    <Ionicons
+                        name="options-outline"
+                        size={18}
+                        color={getActiveFiltersCount() > 0 ? '#fff' : colors.primaryColor}
+                    />
+                    <Text style={[
+                        styles.advancedFiltersText,
+                        getActiveFiltersCount() > 0 && styles.advancedFiltersTextActive
+                    ]}>
+                        {getActiveFiltersCount() > 0 ? `${getActiveFiltersCount()} Filters` : 'More Filters'}
+                    </Text>
+                </TouchableOpacity>
+
+                {getActiveFiltersCount() > 0 && (
+                    <TouchableOpacity
+                        style={styles.clearFiltersButton}
+                        onPress={clearAllFilters}
+                    >
+                        <Ionicons name="close-circle" size={16} color={colors.COLOR_BLACK_LIGHT_4} />
+                    </TouchableOpacity>
+                )}
+            </View>
+        </View>
+    );
+
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             {/* Search Header */}
@@ -321,45 +442,6 @@ export default function SearchScreen() {
                         )}
                     </View>
 
-                    <FiltersBar
-                        activeFiltersCount={
-                            Object.values(filters).filter(value =>
-                                value !== undefined &&
-                                value !== null &&
-                                value !== '' &&
-                                value !== 'newest' &&
-                                (Array.isArray(value) ? value.length > 0 : true)
-                            ).length - 2 // Subtract page and limit
-                        }
-                        onFilterPress={handleOpenFilters}
-                        sortBy={filters.sortBy || 'newest'}
-                        onSortPress={() => {
-                            bottomSheet.openBottomSheet(
-                                <FiltersBottomSheet
-                                    sections={[
-                                        {
-                                            id: 'sort',
-                                            title: t('Sort By'),
-                                            type: 'chips',
-                                            options: [
-                                                { id: 'newest', label: t('Newest First'), value: 'newest' },
-                                                { id: 'priceAsc', label: t('Price: Low to High'), value: 'priceAsc' },
-                                                { id: 'priceDesc', label: t('Price: High to Low'), value: 'priceDesc' },
-                                            ],
-                                            value: filters.sortBy || 'newest'
-                                        }
-                                    ]}
-                                    onFilterChange={(_, value) => setFilters(prev => ({ ...prev, sortBy: value.toString() }))}
-                                    onApply={bottomSheet.closeBottomSheet}
-                                    onClear={() => {
-                                        setFilters(prev => ({ ...prev, sortBy: 'newest' }));
-                                        bottomSheet.closeBottomSheet();
-                                    }}
-                                />
-                            );
-                        }}
-                    />
-
                     <TouchableOpacity
                         style={styles.saveButton}
                         onPress={handleOpenSaveModal}
@@ -370,6 +452,9 @@ export default function SearchScreen() {
                     </TouchableOpacity>
                 </View>
             </View>
+
+            {/* Filters Toolbar */}
+            {renderFiltersToolbar()}
 
             {/* Results Count */}
             {searchQuery && (
@@ -488,9 +573,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: colors.COLOR_BLACK_LIGHT_4,
     },
-    filterButton: {
-        padding: 8,
-    },
     saveButton: {
         paddingVertical: 8,
         paddingHorizontal: 10,
@@ -506,6 +588,60 @@ const styles = StyleSheet.create({
     saveButtonText: {
         color: colors.primaryColor,
         fontWeight: '600',
+    },
+    filtersToolbar: {
+        backgroundColor: 'white',
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
+    },
+    filtersScrollContent: {
+        paddingHorizontal: 16,
+        gap: 8,
+    },
+    quickFilterChip: {
+        borderWidth: 1,
+        borderColor: colors.COLOR_BLACK_LIGHT_5,
+        backgroundColor: colors.primaryLight,
+    },
+    quickFilterTextActive: {
+        color: 'white',
+        fontWeight: '600',
+    },
+    advancedFiltersContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: colors.COLOR_BLACK_LIGHT_6,
+        marginTop: 12,
+    },
+    advancedFiltersButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: colors.primaryLight,
+        borderWidth: 1,
+        borderColor: colors.primaryColor,
+        gap: 6,
+    },
+    advancedFiltersButtonActive: {
+        backgroundColor: colors.primaryColor,
+    },
+    advancedFiltersText: {
+        fontSize: 14,
+        color: colors.primaryColor,
+        fontWeight: '500',
+    },
+    advancedFiltersTextActive: {
+        color: 'white',
+    },
+    clearFiltersButton: {
+        padding: 4,
     },
     resultsHeader: {
         flexDirection: 'row',

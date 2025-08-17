@@ -44,31 +44,31 @@ const WebPropertiesMap: React.FC<PropertiesMapProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [map, setMap] = useState<any>(null);
   const [markers, setMarkers] = useState<any[]>([]);
-  
+
   // Get saved map state if screenId is provided
   const savedState = screenId ? getMapState(screenId) : null;
 
   // Calculate center if not provided
   const mapCenter =
     savedState?.center ? { lat: savedState.center[1], lng: savedState.center[0] } :
-    center ||
-    (() => {
-      const validProperties = properties.filter(
-        (p) => p.location?.coordinates && p.location.coordinates.length === 2,
-      );
+      center ||
+      (() => {
+        const validProperties = properties.filter(
+          (p) => p.location?.coordinates && p.location.coordinates.length === 2,
+        );
 
-      if (validProperties.length > 0) {
-        const avgLat =
-          validProperties.reduce((sum, p) => sum + (p.location?.coordinates?.[1] || 0), 0) /
-          validProperties.length;
-        const avgLng =
-          validProperties.reduce((sum, p) => sum + (p.location?.coordinates?.[0] || 0), 0) /
-          validProperties.length;
-        return { lat: avgLat, lng: avgLng };
-      }
+        if (validProperties.length > 0) {
+          const avgLat =
+            validProperties.reduce((sum, p) => sum + (p.location?.coordinates?.[1] || 0), 0) /
+            validProperties.length;
+          const avgLng =
+            validProperties.reduce((sum, p) => sum + (p.location?.coordinates?.[0] || 0), 0) /
+            validProperties.length;
+          return { lat: avgLat, lng: avgLng };
+        }
 
-      return { lat: 40.7128, lng: -74.006 }; // Default to NYC
-    })();
+        return { lat: 41.38723, lng: 2.16538 }; // Default to Barcelona
+      })();
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -363,31 +363,31 @@ const MobilePropertiesMap: React.FC<PropertiesMapProps> = (props) => {
   const [mapHtml, setMapHtml] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Get saved map state if screenId is provided
   const savedState = props.screenId ? getMapState(props.screenId) : null;
 
   // Calculate center if not provided
   const mapCenter =
     savedState?.center ? { lat: savedState.center[1], lng: savedState.center[0] } :
-    props.center ||
-    (() => {
-      const validProperties = props.properties.filter(
-        (p) => p.address?.coordinates?.lat && p.address?.coordinates?.lng,
-      );
+      props.center ||
+      (() => {
+        const validProperties = props.properties.filter(
+          (p) => p.address?.coordinates?.lat && p.address?.coordinates?.lng,
+        );
 
-      if (validProperties.length > 0) {
-        const avgLat =
-          validProperties.reduce((sum, p) => sum + (p.address.coordinates?.lat || 0), 0) /
-          validProperties.length;
-        const avgLng =
-          validProperties.reduce((sum, p) => sum + (p.address.coordinates?.lng || 0), 0) /
-          validProperties.length;
-        return { lat: avgLat, lng: avgLng };
-      }
+        if (validProperties.length > 0) {
+          const avgLat =
+            validProperties.reduce((sum, p) => sum + (p.address.coordinates?.lat || 0), 0) /
+            validProperties.length;
+          const avgLng =
+            validProperties.reduce((sum, p) => sum + (p.address.coordinates?.lng || 0), 0) /
+            validProperties.length;
+          return { lat: avgLat, lng: avgLng };
+        }
 
-      return { lat: 40.7128, lng: -74.006 }; // Default to NYC
-    })();
+        return { lat: 41.38723, lng: 2.16538 }; // Default to Barcelona
+      })();
 
   useEffect(() => {
     const propertiesData = props.properties

@@ -301,6 +301,7 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     const { getMapState, setMapState } = useMapState();
 
     const [userCoord, setUserCoord] = useState<LonLat | null>(null);
+    const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
     const [childReady, setChildReady] = useState(false);
     const pending = useRef<string[]>([]);
     const mapInitialized = useRef(false);
@@ -333,8 +334,27 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
         const getUserLocation = async () => {
             try {
                 const { status } = await Location.requestForegroundPermissionsAsync();
-                if (status !== 'granted') return;
-                const loc = await Location.getCurrentPositionAsync({});
+                if (status !== 'granted') {
+                    console.log('Location permission denied');
+                    return;
+                }
+
+                // Get location with high accuracy and fresh data
+                const loc = await Location.getCurrentPositionAsync({
+                    accuracy: Location.Accuracy.High,
+                    timeInterval: 10000, // 10 seconds
+                    distanceInterval: 10, // 10 meters
+                });
+
+                console.log('User location obtained:', {
+                    lat: loc.coords.latitude,
+                    lng: loc.coords.longitude,
+                    accuracy: loc.coords.accuracy,
+                    timestamp: new Date(loc.timestamp).toISOString()
+                });
+
+                // Store location accuracy
+                setLocationAccuracy(loc.coords.accuracy || null);
                 setUserCoord([loc.coords.longitude, loc.coords.latitude]);
             } catch (error) {
                 console.warn('Failed to get user location:', error);
@@ -466,7 +486,14 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
         post({ type: 'setUserLocation', coordinates: userCoord });
 
         if (!hasCenteredOnce.current && !savedState) {
-            post({ type: 'setView', center: userCoord, zoom: Math.max(initialZoom, 14) });
+            console.log('Centering map on user location:', userCoord, 'accuracy:', locationAccuracy);
+
+            // If location accuracy is poor, use a lower zoom level to show a wider area
+            const zoomLevel = locationAccuracy && locationAccuracy > 1000
+                ? Math.max(initialZoom, 10) // Lower zoom for poor accuracy
+                : Math.max(initialZoom, 14); // Higher zoom for good accuracy
+
+            post({ type: 'setView', center: userCoord, zoom: zoomLevel });
             hasCenteredOnce.current = true;
         }
     }, [userCoord, post, initialZoom, savedState]);
@@ -603,7 +630,7 @@ const Map = React.memo(MapComponent, (prevProps, nextProps) => {
     }
 
     // For search screens, allow re-renders for marker updates
-    if (nextProps.screenId === 'search') {
+    if (nextProps.screenId === 'search' || nextProps.screenId === 'search-screen') {
         return (
             prevProps.screenId === nextProps.screenId &&
             prevProps.styleURL === nextProps.styleURL &&
