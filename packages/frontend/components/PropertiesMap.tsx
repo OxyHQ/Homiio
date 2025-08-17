@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { colors } from '@/styles/colors';
 import { Property } from '@homiio/shared-types';
+import { useMapState } from '@/context/MapStateContext';
 
 interface MapProperty extends Property {
   title: string;
@@ -23,6 +24,7 @@ interface PropertiesMapProps {
   onPropertySelect?: (property: Property) => void;
   onPropertyPress?: (property: Property) => void;
   selectedPropertyId?: string;
+  screenId?: string; // Unique identifier for the screen to persist state
 }
 
 // Web-specific properties map component
@@ -34,15 +36,21 @@ const WebPropertiesMap: React.FC<PropertiesMapProps> = ({
   onPropertySelect,
   onPropertyPress,
   selectedPropertyId,
+  screenId,
 }) => {
+  const { getMapState, setMapState } = useMapState();
   const mapRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [map, setMap] = useState<any>(null);
   const [markers, setMarkers] = useState<any[]>([]);
+  
+  // Get saved map state if screenId is provided
+  const savedState = screenId ? getMapState(screenId) : null;
 
   // Calculate center if not provided
   const mapCenter =
+    savedState?.center ? { lat: savedState.center[1], lng: savedState.center[0] } :
     center ||
     (() => {
       const validProperties = properties.filter(
@@ -133,7 +141,7 @@ const WebPropertiesMap: React.FC<PropertiesMapProps> = ({
       const mapInstance = L.map(mapRef.current, {
         attributionControl: false,
         zoomControl: true,
-      }).setView([mapCenter.lat, mapCenter.lng], zoom);
+      }).setView([mapCenter.lat, mapCenter.lng], savedState?.zoom || zoom);
 
       // Add OpenStreetMap tiles
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -285,6 +293,28 @@ const WebPropertiesMap: React.FC<PropertiesMapProps> = ({
     }
   }, [center, zoom]);
 
+  // Add map move event to save state
+  useEffect(() => {
+    if (map && screenId) {
+      const handleMoveEnd = () => {
+        const center = map.getCenter();
+        const zoom = map.getZoom();
+        setMapState(screenId, {
+          center: [center.lng, center.lat],
+          zoom: zoom,
+        });
+      };
+
+      map.on('moveend', handleMoveEnd);
+      map.on('zoomend', handleMoveEnd);
+
+      return () => {
+        map.off('moveend', handleMoveEnd);
+        map.off('zoomend', handleMoveEnd);
+      };
+    }
+  }, [map, screenId, setMapState]);
+
   if (error) {
     return (
       <View style={[styles.container, { height }, styles.errorContainer]}>
@@ -328,13 +358,18 @@ const WebPropertiesMap: React.FC<PropertiesMapProps> = ({
 // Mobile-specific properties map component
 const MobilePropertiesMap: React.FC<PropertiesMapProps> = (props) => {
   const { WebView } = require('react-native-webview');
+  const { getMapState, setMapState } = useMapState();
   const webViewRef = useRef<any>(null);
   const [mapHtml, setMapHtml] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Get saved map state if screenId is provided
+  const savedState = props.screenId ? getMapState(props.screenId) : null;
 
   // Calculate center if not provided
   const mapCenter =
+    savedState?.center ? { lat: savedState.center[1], lng: savedState.center[0] } :
     props.center ||
     (() => {
       const validProperties = props.properties.filter(
@@ -460,7 +495,7 @@ const MobilePropertiesMap: React.FC<PropertiesMapProps> = (props) => {
             map = L.map('map', {
               zoomControl: true,
               attributionControl: false,
-            }).setView([${mapCenter.lat}, ${mapCenter.lng}], ${props.zoom || 12});
+            }).setView([${mapCenter.lat}, ${mapCenter.lng}], ${savedState?.zoom || props.zoom || 12});
             
             // Add OpenStreetMap tiles
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
@@ -542,6 +577,12 @@ const MobilePropertiesMap: React.FC<PropertiesMapProps> = (props) => {
         if (property) {
           props.onPropertyPress(property);
         }
+      } else if (data.type === 'mapMoved' && props.screenId) {
+        // Save map state when map is moved
+        setMapState(props.screenId, {
+          center: [data.center.lng, data.center.lat],
+          zoom: data.zoom,
+        });
       }
     } catch (error) {
       console.error('Error parsing map message:', error);

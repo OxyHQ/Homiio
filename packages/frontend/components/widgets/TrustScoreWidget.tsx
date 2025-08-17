@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import LoadingSpinner from '../LoadingSpinner';
@@ -10,14 +10,17 @@ import { useTrustScore } from '@/hooks/useTrustScore';
 import { useActiveProfile } from '@/hooks/useProfileQueries';
 import { ThemedText } from '../ThemedText';
 
-export function TrustScoreWidget() {
+export const TrustScoreWidget = React.memo(function TrustScoreWidget() {
   const { t } = useTranslation();
   const { isAuthenticated } = useOxy();
   const router = useRouter();
   const { data: activeProfile } = useActiveProfile();
 
   // Get the current profile ID
-  const currentProfileId = activeProfile?.id || activeProfile?._id;
+  const currentProfileId = useMemo(() => 
+    activeProfile?.id || activeProfile?._id, 
+    [activeProfile?.id, activeProfile?._id]
+  );
 
   const {
     trustScoreData,
@@ -36,105 +39,104 @@ export function TrustScoreWidget() {
     }
   }, [currentProfileId, setCurrentProfileId, fetchTrustScoreData]);
 
-  const handlePress = useMemo(
-    () => () => {
-      if (profileType === 'agency') {
-        router.push('/profile/edit');
-      } else {
-        router.push('/profile/trust-score');
-      }
-    },
-    [router, profileType],
-  );
+  const handlePress = useCallback(() => {
+    if (profileType === 'agency') {
+      router.push('/profile/edit');
+    } else {
+      router.push('/profile/trust-score');
+    }
+  }, [router, profileType]);
 
   // Helper function to get color based on score percentage
-  const getScoreColor = (score: number) => {
+  const getScoreColor = useCallback((score: number) => {
     if (score >= 90) return '#4CAF50';
     if (score >= 70) return '#8BC34A';
     if (score >= 50) return '#FFC107';
     if (score >= 30) return '#FF9800';
     return '#F44336';
-  };
+  }, []);
 
-  const renderContent = () => {
-    if (isLoading) {
-      return (
-        <View style={styles.loadingContainer}>
-          <LoadingSpinner size={16} showText={false} />
-          <ThemedText style={styles.loadingText}>
-            {profileType === 'agency'
-              ? t('trust.loadingVerification', 'Loading verification status...')
-              : t('trust.loadingScore', 'Loading trust score...')}
-          </ThemedText>
+  // Memoize loading content
+  const loadingContent = useMemo(() => (
+    <View style={styles.loadingContainer}>
+      <LoadingSpinner size={16} showText={false} />
+      <ThemedText style={styles.loadingText}>
+        {profileType === 'agency'
+          ? t('trust.loadingVerification', 'Loading verification status...')
+          : t('trust.loadingScore', 'Loading trust score...')}
+      </ThemedText>
+    </View>
+  ), [profileType, t]);
+
+  // Memoize error content
+  const errorContent = useMemo(() => (
+    <View style={styles.errorContainer}>
+      <ThemedText style={styles.errorText}>
+        {profileType === 'agency'
+          ? t('trust.errorVerification', 'Unable to load verification status')
+          : t('trust.errorScore', 'Unable to load trust score')}
+      </ThemedText>
+      <TouchableOpacity style={[styles.retryButton]} onPress={handlePress}>
+        <ThemedText style={styles.retryButtonText}>
+          {t('trust.viewDetails', 'View Details')}
+        </ThemedText>
+      </TouchableOpacity>
+    </View>
+  ), [profileType, t, handlePress]);
+
+  // Memoize no profile content
+  const noProfileContent = useMemo(() => (
+    <View style={styles.noProfileContainer}>
+      <Text style={styles.noProfileText}>
+        {profileType === 'agency'
+          ? t('trust.noVerification', 'No verification data')
+          : t('trust.noScore', 'No trust score data')}
+      </Text>
+      <TouchableOpacity
+        style={[styles.setupButton, { backgroundColor: colors.primaryColor }]}
+        onPress={handlePress}
+      >
+        <Text style={styles.setupButtonText}>{t('trust.viewDetails', 'View Details')}</Text>
+      </TouchableOpacity>
+    </View>
+  ), [profileType, t, handlePress]);
+
+  // Memoize agency content
+  const agencyContent = useMemo(() => {
+    if (!trustScoreData || trustScoreData.type !== 'agency') return null;
+    
+    const scoreColor = getScoreColor(trustScoreData.score);
+    return (
+      <View style={styles.rowContainer}>
+        <View style={styles.leftCol}>
+          <View style={styles.verificationCircle}>
+            <ThemedText style={[styles.verificationPercentage, { color: scoreColor }]}>
+              {Math.round(trustScoreData.score)}%
+            </ThemedText>
+            <ThemedText style={styles.verificationLabel}>
+              {t('trust.verified', 'Verified')}
+            </ThemedText>
+          </View>
         </View>
-      );
-    }
-
-    if (error) {
-      return (
-        <View style={styles.errorContainer}>
-          <ThemedText style={styles.errorText}>
-            {profileType === 'agency'
-              ? t('trust.errorVerification', 'Unable to load verification status')
-              : t('trust.errorScore', 'Unable to load trust score')}
-          </ThemedText>
-          <TouchableOpacity style={[styles.retryButton]} onPress={handlePress}>
-            <ThemedText style={styles.retryButtonText}>
-              {t('trust.viewDetails', 'View Details')}
+        <View style={styles.rightCol}>
+          <ThemedText style={styles.rowTitle}>{trustScoreData.level}</ThemedText>
+          <TouchableOpacity
+            style={[styles.ctaButton, { backgroundColor: scoreColor }]}
+            onPress={handlePress}
+          >
+            <ThemedText style={styles.ctaButtonText}>
+              {t('trust.completeVerification', 'Complete Verification')}
             </ThemedText>
           </TouchableOpacity>
         </View>
-      );
-    }
+      </View>
+    );
+  }, [trustScoreData, getScoreColor, t, handlePress]);
 
-    if (!trustScoreData) {
-      return (
-        <View style={styles.noProfileContainer}>
-          <Text style={styles.noProfileText}>
-            {profileType === 'agency'
-              ? t('trust.noVerification', 'No verification data')
-              : t('trust.noScore', 'No trust score data')}
-          </Text>
-          <TouchableOpacity
-            style={[styles.setupButton, { backgroundColor: colors.primaryColor }]}
-            onPress={handlePress}
-          >
-            <Text style={styles.setupButtonText}>{t('trust.viewDetails', 'View Details')}</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    if (trustScoreData.type === 'agency') {
-      const scoreColor = getScoreColor(trustScoreData.score);
-      return (
-        <View style={styles.rowContainer}>
-          <View style={styles.leftCol}>
-            <View style={styles.verificationCircle}>
-              <ThemedText style={[styles.verificationPercentage, { color: scoreColor }]}>
-                {Math.round(trustScoreData.score)}%
-              </ThemedText>
-              <ThemedText style={styles.verificationLabel}>
-                {t('trust.verified', 'Verified')}
-              </ThemedText>
-            </View>
-          </View>
-          <View style={styles.rightCol}>
-            <ThemedText style={styles.rowTitle}>{trustScoreData.level}</ThemedText>
-            <TouchableOpacity
-              style={[styles.ctaButton, { backgroundColor: scoreColor }]}
-              onPress={handlePress}
-            >
-              <ThemedText style={styles.ctaButtonText}>
-                {t('trust.completeVerification', 'Complete Verification')}
-              </ThemedText>
-            </TouchableOpacity>
-          </View>
-        </View>
-      );
-    }
-
-    // Personal profile rendering
+  // Memoize personal profile content
+  const personalContent = useMemo(() => {
+    if (!trustScoreData || trustScoreData.type === 'agency') return null;
+    
     const scoreColor = getScoreColor(trustScoreData.score);
     return (
       <View style={styles.rowContainer}>
@@ -168,7 +170,16 @@ export function TrustScoreWidget() {
         </View>
       </View>
     );
-  };
+  }, [trustScoreData, getScoreColor, t, handlePress]);
+
+  // Memoize main content
+  const renderContent = useMemo(() => {
+    if (isLoading) return loadingContent;
+    if (error) return errorContent;
+    if (!trustScoreData) return noProfileContent;
+    if (trustScoreData.type === 'agency') return agencyContent;
+    return personalContent;
+  }, [isLoading, error, trustScoreData, loadingContent, errorContent, noProfileContent, agencyContent, personalContent]);
 
   if (!isAuthenticated) {
     return null; // Don't show the widget if the user is not authenticated
@@ -177,10 +188,10 @@ export function TrustScoreWidget() {
   return (
     <View style={styles.widgetContainer}>
       {/* Widget Content */}
-      <View style={styles.widgetContent}>{renderContent()}</View>
+      <View style={styles.widgetContent}>{renderContent}</View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   widgetContainer: {

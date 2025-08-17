@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
-import { useMediaQuery } from 'react-responsive';
 import { usePathname } from 'expo-router';
 import { WidgetManager } from './widgets';
+import { useIsRightBarVisible } from '@/hooks/useOptimizedMediaQuery';
 
 // Global form data store for create property screen
 let createPropertyFormData: any = null;
@@ -12,12 +12,12 @@ export const updateCreatePropertyFormData = (formData: any) => {
   createPropertyFormData = formData;
 };
 
-export function RightBar() {
-  const isRightBarVisible = useMediaQuery({ minWidth: 990 });
-  const pathname = usePathname();
+export const RightBar = React.memo(function RightBar() {
+  const isRightBarVisible = useIsRightBarVisible();
+  const pathname = usePathname() || '/';
 
-  // Determine which screen we're on based on the pathname
-  const getScreenId = () => {
+  // Memoize screen ID calculation
+  const screenId = useMemo(() => {
     if (pathname === '/') return 'home';
     if (pathname === '/properties') return 'properties';
     if (pathname === '/properties/create') return 'create-property';
@@ -35,10 +35,16 @@ export function RightBar() {
     if (pathname === '/search') return 'search';
     if (pathname.startsWith('/search/')) return 'search-results';
     return 'home'; // Default to home
-  };
+  }, [pathname]);
 
-  // Extract property information from URL
-  const getPropertyInfo = () => {
+  // Memoize search screen check
+  const isSearchScreen = useMemo(() =>
+    pathname === '/search' || pathname.startsWith('/search/'),
+    [pathname]
+  );
+
+  // Memoize property information extraction
+  const propertyInfo = useMemo(() => {
     // Extract property ID from property details page
     if (
       pathname.startsWith('/properties/') &&
@@ -76,18 +82,26 @@ export function RightBar() {
     }
 
     return {};
-  };
+  }, [pathname]);
 
-  const propertyInfo = getPropertyInfo();
+  // Memoize styles
+  const containerStyle = useMemo(() => [
+    styles.container,
+    isSearchScreen && styles.fixedContainer
+  ], [isSearchScreen]);
+
+  const stickyWidgetsContainerStyle = useMemo(() => [
+    styles.stickyWidgetsContainer
+  ], []);
 
   if (!isRightBarVisible) return null;
 
   return (
-    <View style={styles.container}>
+    <View style={containerStyle}>
       {/* Sticky Widgets Container */}
-      <View style={styles.stickyWidgetsContainer}>
+      <View style={stickyWidgetsContainerStyle}>
         <WidgetManager
-          screenId={getScreenId()}
+          screenId={screenId}
           propertyId={propertyInfo.propertyId}
           neighborhoodName={propertyInfo.neighborhoodName}
           city={propertyInfo.city}
@@ -96,7 +110,7 @@ export function RightBar() {
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -104,15 +118,25 @@ const styles = StyleSheet.create({
     paddingStart: 20,
     flexDirection: 'column',
   },
-  stickyWidgetsContainer: {
-    gap: 10,
+  fixedContainer: {
     ...Platform.select({
       web: {
-        position: 'sticky' as any,
+        position: 'fixed' as any,
         top: 0,
-        zIndex: 10,
-        paddingVertical: 20,
+        right: 20,
+        zIndex: 1000,
+        overflowY: 'auto' as any,
+        height: '100vh' as any,
+        pointerEvents: 'none' as any,
       },
     }),
+  },
+  stickyWidgetsContainer: {
+    gap: 10,
+    position: 'sticky' as any,
+    top: 0,
+    zIndex: 10,
+    paddingVertical: 20,
+    pointerEvents: 'none' as any,
   },
 });

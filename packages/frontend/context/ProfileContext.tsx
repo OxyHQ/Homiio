@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useCallback } from 'react';
 import { useOxy } from '@oxyhq/services';
 import { useProfileStore } from '@/store/profileStore';
 import { useRecentlyViewedStore } from '@/store/recentlyViewedStore';
@@ -36,36 +36,38 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     setError,
   } = useProfileStore();
 
+  // Memoize load profiles function
+  const loadProfiles = useCallback(async () => {
+    try {
+      console.log('ProfileContext: Loading profiles for authenticated user');
+      await useProfileStore
+        .getState()
+        .fetchPrimaryProfile(oxyServices, activeSessionId || undefined);
+      await useProfileStore
+        .getState()
+        .fetchUserProfiles(oxyServices, activeSessionId || undefined);
+      console.log('ProfileContext: Profiles loaded successfully');
+    } catch (err: any) {
+      console.error('ProfileContext: Error loading profiles:', err);
+      setError(err.message || 'Failed to load profiles');
+    }
+  }, [oxyServices, activeSessionId, setError]);
+
+  // Memoize load recently viewed function
+  const loadRecentlyViewed = useCallback(async () => {
+    try {
+      console.log('ProfileContext: Loading recently viewed for authenticated user');
+      if (activeSessionId) {
+        await useRecentlyViewedStore.getState().loadFromDatabase(oxyServices, activeSessionId);
+        console.log('ProfileContext: Recently viewed loaded successfully');
+      }
+    } catch (err: any) {
+      console.error('ProfileContext: Error loading recently viewed:', err);
+      // Don't set profile error for recently viewed errors
+    }
+  }, [oxyServices, activeSessionId]);
+
   useEffect(() => {
-    const loadProfiles = async () => {
-      try {
-        console.log('ProfileContext: Loading profiles for authenticated user');
-        await useProfileStore
-          .getState()
-          .fetchPrimaryProfile(oxyServices, activeSessionId || undefined);
-        await useProfileStore
-          .getState()
-          .fetchUserProfiles(oxyServices, activeSessionId || undefined);
-        console.log('ProfileContext: Profiles loaded successfully');
-      } catch (err: any) {
-        console.error('ProfileContext: Error loading profiles:', err);
-        setError(err.message || 'Failed to load profiles');
-      }
-    };
-
-    const loadRecentlyViewed = async () => {
-      try {
-        console.log('ProfileContext: Loading recently viewed for authenticated user');
-        if (activeSessionId) {
-          await useRecentlyViewedStore.getState().loadFromDatabase(oxyServices, activeSessionId);
-          console.log('ProfileContext: Recently viewed loaded successfully');
-        }
-      } catch (err: any) {
-        console.error('ProfileContext: Error loading recently viewed:', err);
-        // Don't set profile error for recently viewed errors
-      }
-    };
-
     if (oxyServices && activeSessionId) {
       console.log('ProfileContext: User authenticated, loading profiles and recently viewed...');
       loadProfiles();
@@ -76,67 +78,101 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
       setAllProfiles([]);
       useRecentlyViewedStore.getState().clearAll();
     }
-  }, [oxyServices, activeSessionId, setPrimaryProfile, setAllProfiles, setError]);
+  }, [oxyServices, activeSessionId, setPrimaryProfile, setAllProfiles, loadProfiles, loadRecentlyViewed]);
 
-  // Memoized profile helpers
-  const personalProfile = React.useMemo(
+  // Memoize profile helpers
+  const personalProfile = useMemo(
     () => allProfiles.find((profile) => profile.profileType === 'personal') || null,
     [allProfiles],
   );
 
-  const agencyProfiles = React.useMemo(
+  const agencyProfiles = useMemo(
     () => allProfiles.filter((profile) => profile.profileType === 'agency'),
     [allProfiles],
   );
 
-  const businessProfiles = React.useMemo(
+  const businessProfiles = useMemo(
     () => allProfiles.filter((profile) => profile.profileType === 'business'),
     [allProfiles],
   );
 
-  const ownedAgencyProfiles = React.useMemo(() => {
+  const ownedAgencyProfiles = useMemo(() => {
     if (!oxyServices || !activeSessionId) return [];
 
     return allProfiles.filter(
       (profile) =>
         profile.profileType === 'agency' &&
-        profile.agencyProfile?.members.some(
-          (member) =>
-            member.oxyUserId === activeSessionId && ['owner', 'admin'].includes(member.role),
-        ),
+        profile.ownerId === activeSessionId,
     );
   }, [allProfiles, oxyServices, activeSessionId]);
 
-  // Profile state checks
-  const hasPrimaryProfile = !!primaryProfile;
-  const hasPersonalProfile = !!personalProfile;
-  const isPersonalProfile = primaryProfile?.profileType === 'personal';
-  const canAccessRoommates = isPersonalProfile && hasPersonalProfile;
+  // Memoize profile checks
+  const isPersonalProfile = useMemo(
+    () => primaryProfile?.profileType === 'personal',
+    [primaryProfile?.profileType],
+  );
 
-  const refetch = () => {
+  const hasPersonalProfile = useMemo(
+    () => personalProfile !== null,
+    [personalProfile],
+  );
+
+  const hasPrimaryProfile = useMemo(
+    () => primaryProfile !== null,
+    [primaryProfile],
+  );
+
+  const canAccessRoommates = useMemo(
+    () => hasPersonalProfile && isPersonalProfile,
+    [hasPersonalProfile, isPersonalProfile],
+  );
+
+  // Memoize refetch function
+  const refetch = useCallback(() => {
     if (oxyServices && activeSessionId) {
-      useProfileStore.getState().fetchPrimaryProfile(oxyServices, activeSessionId || undefined);
-      useProfileStore.getState().fetchUserProfiles(oxyServices, activeSessionId || undefined);
+      loadProfiles();
     }
-  };
+  }, [oxyServices, activeSessionId, loadProfiles]);
 
-  const value: ProfileContextType = {
-    primaryProfile,
-    allProfiles,
-    isLoading,
-    error: error as Error | null,
-    hasPrimaryProfile,
-    refetch,
-    personalProfile,
-    agencyProfiles,
-    businessProfiles,
-    ownedAgencyProfiles,
-    isPersonalProfile,
-    hasPersonalProfile,
-    canAccessRoommates,
-  };
+  // Memoize context value
+  const contextValue = useMemo(
+    () => ({
+      primaryProfile,
+      allProfiles,
+      isLoading,
+      error,
+      hasPrimaryProfile,
+      refetch,
+      personalProfile,
+      agencyProfiles,
+      businessProfiles,
+      ownedAgencyProfiles,
+      isPersonalProfile,
+      hasPersonalProfile,
+      canAccessRoommates,
+    }),
+    [
+      primaryProfile,
+      allProfiles,
+      isLoading,
+      error,
+      hasPrimaryProfile,
+      refetch,
+      personalProfile,
+      agencyProfiles,
+      businessProfiles,
+      ownedAgencyProfiles,
+      isPersonalProfile,
+      hasPersonalProfile,
+      canAccessRoommates,
+    ],
+  );
 
-  return <ProfileContext.Provider value={value}>{children}</ProfileContext.Provider>;
+  return (
+    <ProfileContext.Provider value={contextValue}>
+      {children}
+    </ProfileContext.Provider>
+  );
 }
 
 export function useProfile() {

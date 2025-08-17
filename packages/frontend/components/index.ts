@@ -17,7 +17,7 @@ export { default as Button } from './Button';
 export { NotificationItem } from './NotificationItem';
 export { ThemedText } from './ThemedText';
 export { ThemedView } from './ThemedView';
-export { PropertyMap } from './PropertyMap';
+
 export { default as Avatar } from './Avatar';
 export { ContractCard } from './ContractCard';
 export { PaymentCard } from './PaymentCard';

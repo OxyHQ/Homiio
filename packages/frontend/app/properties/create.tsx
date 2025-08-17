@@ -15,7 +15,7 @@ import { colors } from '@/styles/colors';
 import { Header } from '@/components/Header';
 import { ThemedText } from '@/components/ThemedText';
 import { AmenitiesSelector } from '@/components/AmenitiesSelector';
-import { PropertyMap } from '@/components/PropertyMap';
+import Map from '@/components/Map';
 import { PropertyPreviewWidget } from '@/components/widgets/PropertyPreviewWidget';
 import {
   useCreatePropertyFormStore,
@@ -24,7 +24,7 @@ import {
 import { useCreateProperty, useUpdateProperty, useProperty } from '@/hooks/usePropertyQueries';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SearchablePickerBottomSheet } from '@/components/SearchablePickerBottomSheet';
-import { PropertyService } from '@/services/propertyService';
+
 import * as Location from 'expo-location';
 const IconComponent = Ionicons as any;
 
@@ -387,14 +387,14 @@ export default function CreatePropertyScreen() {
           amount: formData.pricing.monthlyRent
             ? parseFloat(formData.pricing.monthlyRent.toString())
             : 0,
-          currency: PropertyService.getCurrencyCode(formData.pricing.currency || 'USD'),
+          currency: formData.pricing.currency || 'USD',
           paymentFrequency: 'monthly' as 'monthly',
           deposit: formData.pricing.securityDeposit
             ? parseFloat(formData.pricing.securityDeposit.toString())
             : 0,
           utilities:
             typeof formData.pricing.utilities === 'string' &&
-            ['included', 'excluded', 'partial'].includes(formData.pricing.utilities)
+              ['included', 'excluded', 'partial'].includes(formData.pricing.utilities)
               ? (formData.pricing.utilities as 'included' | 'excluded' | 'partial')
               : 'excluded',
         },
@@ -403,9 +403,9 @@ export default function CreatePropertyScreen() {
         location:
           formData.location.latitude && formData.location.longitude
             ? {
-                type: 'Point',
-                coordinates: [formData.location.longitude, formData.location.latitude], // [longitude, latitude]
-              }
+              type: 'Point',
+              coordinates: [formData.location.longitude, formData.location.latitude], // [longitude, latitude]
+            }
             : undefined,
       };
       if (formData.basicInfo.propertyType === 'coliving') {
@@ -847,7 +847,7 @@ export default function CreatePropertyScreen() {
                     style={[
                       styles.propertyTypeButton,
                       formData.basicInfo.propertyType === type.id &&
-                        styles.propertyTypeButtonSelected,
+                      styles.propertyTypeButtonSelected,
                     ]}
                     onPress={() => updateFormField('basicInfo', 'propertyType', type.id)}
                   >
@@ -855,7 +855,7 @@ export default function CreatePropertyScreen() {
                       style={[
                         styles.propertyTypeText,
                         formData.basicInfo.propertyType === type.id &&
-                          styles.propertyTypeTextSelected,
+                        styles.propertyTypeTextSelected,
                       ]}
                     >
                       {type.label}
@@ -988,15 +988,47 @@ export default function CreatePropertyScreen() {
               </ThemedText>
             </View>
 
-            <View style={styles.mapContainer}>
-              <PropertyMap
-                latitude={formData.location.latitude}
-                longitude={formData.location.longitude}
-                address={formData.location.address}
-                onLocationSelect={handleLocationSelect}
-                height={300}
-                interactive={true}
-              />
+                        <View style={styles.mapContainer}>
+              <View style={styles.mapWrapper}>
+                <Map
+                  style={{ height: 400 }}
+                  initialCoordinates={formData.location.latitude && formData.location.longitude ? [formData.location.longitude, formData.location.latitude] : undefined}
+                  enableAddressLookup={true}
+                  showAddressInstructions={true}
+                  onAddressSelect={(address, coordinates) => {
+                    // Update form with coordinates
+                    updateFormField('location', 'latitude', coordinates[1]);
+                    updateFormField('location', 'longitude', coordinates[0]);
+ 
+                    // Auto-fill address fields
+                    if (address.street) {
+                      updateFormField('location', 'address', address.street);
+                    }
+                    if (address.houseNumber) {
+                      updateFormField('location', 'addressNumber', address.houseNumber);
+                    }
+                    if (address.city) {
+                      updateFormField('location', 'city', address.city);
+                    }
+                    if (address.state) {
+                      updateFormField('location', 'state', address.state);
+                    }
+                    if (address.country) {
+                      updateFormField('location', 'country', address.country);
+                    }
+                    if (address.postalCode) {
+                      updateFormField('location', 'postalCode', address.postalCode);
+                    }
+                  }}
+                  screenId="create-property"
+                />
+                <TouchableOpacity 
+                  style={styles.fullscreenButton}
+                  onPress={() => setShowFullscreenMap(true)}
+                >
+                  <IconComponent name="expand" size={20} color={colors.primaryDark} />
+                </TouchableOpacity>
+              </View>
               {validationErrors.coordinates && (
                 <ThemedText style={styles.errorText}>{validationErrors.coordinates}</ThemedText>
               )}
@@ -1013,7 +1045,7 @@ export default function CreatePropertyScreen() {
                       selected={formData.location.country || ''}
                       onSelect={(value) => updateFormField('location', 'country', value)}
                       title="Country or Region"
-                      onClose={() => {}}
+                      onClose={() => { }}
                     />,
                   )
                 }
@@ -1119,7 +1151,7 @@ export default function CreatePropertyScreen() {
 
             {/* Privacy message - show when either number or floor is hidden */}
             {(formData.location.addressNumber && !formData.location.showAddressNumber) ||
-            (formData.location.floor && !formData.location.showFloor) ? (
+              (formData.location.floor && !formData.location.showFloor) ? (
               <View style={styles.formGroup}>
                 <ThemedText
                   style={[
@@ -1157,7 +1189,7 @@ export default function CreatePropertyScreen() {
                         selected={formData.location.state || ''}
                         onSelect={(value) => updateFormField('location', 'state', value)}
                         title="State/Province/Region"
-                        onClose={() => {}}
+                        onClose={() => { }}
                       />,
                     )
                   }

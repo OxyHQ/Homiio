@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   View, StyleSheet, Dimensions, TextInput, TouchableOpacity,
   Platform, ActivityIndicator, ScrollView, FlatList,
@@ -10,6 +10,7 @@ import { PropertyCard } from '@/components/PropertyCard';
 import { ThemedText } from '@/components/ThemedText';
 import { Property } from '@homiio/shared-types';
 import { propertyService } from '@/services/propertyService';
+import { useMapState } from '@/context/MapStateContext';
 
 const styles = StyleSheet.create({
   container: {
@@ -170,20 +171,42 @@ const defaultFilters: Filters = {
 
 export default function SearchScreen() {
   const router = useRouter();
+  const { getMapState, setMapState } = useMapState();
+  const screenId = 'search-screen';
+
+  // Restore saved state on mount
+  const savedState = getMapState(screenId);
+
   const mapRef = useRef<MapApi>(null);
   const flatListRef = useRef<FlatList>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(savedState?.searchQuery || '');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [showMap, setShowMap] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState<Filters>(defaultFilters);
+  const [filters, setFilters] = useState<Filters>({
+    minPrice: savedState?.filters?.minPrice || defaultFilters.minPrice,
+    maxPrice: savedState?.filters?.maxPrice || defaultFilters.maxPrice,
+    bedrooms: savedState?.filters?.bedrooms || defaultFilters.bedrooms,
+    bathrooms: savedState?.filters?.bathrooms || defaultFilters.bathrooms,
+  });
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoadingProperties, setIsLoadingProperties] = useState(false);
-  const [highlightedPropertyId, setHighlightedPropertyId] = useState<string | null>(null);
+  const [highlightedPropertyId, setHighlightedPropertyId] = useState<string | null>(savedState?.highlightedMarkerId || null);
   const regionChangeDebounce = useRef<NodeJS.Timeout | null>(null);
-  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 70 }).current;
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50,
+  }).current;
+
+  // Memoize markers to prevent unnecessary re-renders
+  const mapMarkers = useMemo(() => {
+    return (properties || []).filter(p => p?.location?.coordinates?.length === 2).map(p => ({
+      id: p._id,
+      coordinates: p.location!.coordinates as [number, number],
+      priceLabel: `€${p.rent?.amount?.toLocaleString() || 0}`,
+    }));
+  }, [properties]);
 
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -213,7 +236,23 @@ export default function SearchScreen() {
         bedrooms: typeof filters.bedrooms === 'string' ? 5 : filters.bedrooms,
         bathrooms: typeof filters.bathrooms === 'string' ? 4 : filters.bathrooms,
       });
-      setProperties(response.properties);
+
+      // Only update properties if they've actually changed
+      setProperties(prevProperties => {
+        const newProperties = response.properties;
+
+        // Check if properties have actually changed
+        if (prevProperties.length !== newProperties.length) {
+          return newProperties;
+        }
+
+        const hasChanged = newProperties.some((newProp, index) => {
+          const prevProp = prevProperties[index];
+          return !prevProp || prevProp._id !== newProp._id;
+        });
+
+        return hasChanged ? newProperties : prevProperties;
+      });
     } catch (error) {
       console.error('Error fetching properties:', error);
       setProperties([]);
@@ -235,6 +274,9 @@ export default function SearchScreen() {
     const bounds = result.bbox ? { west: result.bbox[0], south: result.bbox[1], east: result.bbox[2], north: result.bbox[3] }
       : { west: lng - radius, south: lat - radius, east: lng + radius, north: lat + radius };
     fetchProperties(bounds);
+
+    // Save search query to state
+    setMapState(screenId, { searchQuery: result.place_name });
   };
 
   const handleMarkerPress = ({ id }: { id: string; lngLat: [number, number] }) => {
@@ -242,16 +284,34 @@ export default function SearchScreen() {
     if (index !== -1) {
       setHighlightedPropertyId(id);
       flatListRef.current?.scrollToIndex({ animated: true, index });
+
+      // Save highlighted marker to state
+      setMapState(screenId, { highlightedMarkerId: id });
     }
   };
 
   const handleRegionChange = useCallback(({ bounds }: { bounds: { west: number; south: number; east: number; north: number } }) => {
     if (regionChangeDebounce.current) clearTimeout(regionChangeDebounce.current);
     if (!bounds) return;
+
+    // Increase debounce time to reduce API calls and prevent map reloading
     regionChangeDebounce.current = setTimeout(() => {
+      // Only fetch if bounds have changed significantly (to prevent unnecessary API calls)
+      const currentBounds = savedState?.bounds;
+      if (currentBounds) {
+        const boundsChanged = Math.abs(currentBounds.west - bounds.west) > 0.01 ||
+          Math.abs(currentBounds.south - bounds.south) > 0.01 ||
+          Math.abs(currentBounds.east - bounds.east) > 0.01 ||
+          Math.abs(currentBounds.north - bounds.north) > 0.01;
+
+        if (!boundsChanged) {
+          return; // Skip API call if bounds haven't changed significantly
+        }
+      }
+
       fetchProperties(bounds);
-    }, 500);
-  }, [fetchProperties]);
+    }, 1000); // Increased from 500ms to 1000ms
+  }, [fetchProperties, savedState?.bounds]);
 
   const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: { item: Property }[] }) => {
     if (viewableItems.length > 0) {
@@ -264,8 +324,35 @@ export default function SearchScreen() {
     router.push(`/properties/${property._id}`);
   }, [router]);
 
+  const handleResetMap = useCallback(() => {
+    // Clear saved map state and reset to current location
+    setMapState(screenId, {
+      center: undefined,
+      zoom: undefined,
+      bounds: undefined,
+      markers: undefined,
+      highlightedMarkerId: undefined,
+      searchQuery: '',
+      filters: undefined,
+    });
+    // Force reload by updating a state
+    setSearchQuery('');
+  }, [setMapState, screenId]);
+
   useEffect(() => {
-    return () => { if (regionChangeDebounce.current) clearTimeout(regionChangeDebounce.current); };
+    return () => {
+      if (regionChangeDebounce.current) clearTimeout(regionChangeDebounce.current);
+    };
+  }, []);
+
+  // Clear map state after a delay when component unmounts (to allow for quick navigation back)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      // Only clear state if user hasn't navigated back within 5 minutes
+      // This allows for quick back/forward navigation while clearing stale state
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearTimeout(timeoutId);
   }, []);
 
   const renderFilters = () => (
@@ -357,12 +444,9 @@ export default function SearchScreen() {
           <Map
             ref={mapRef}
             style={styles.map}
-            startFromCurrentLocation
-            markers={(properties || []).filter(p => p?.location?.coordinates?.length === 2).map(p => ({
-              id: p._id,
-              coordinates: p.location!.coordinates as [number, number],
-              priceLabel: `€${p.rent?.amount?.toLocaleString() || 0}`,
-            }))}
+            screenId={screenId}
+            startFromCurrentLocation={!savedState} // Only start from current location if no saved state
+            markers={mapMarkers}
             onRegionChange={handleRegionChange}
             onMarkerPress={handleMarkerPress}
           />

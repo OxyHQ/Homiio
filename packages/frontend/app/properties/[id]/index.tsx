@@ -15,7 +15,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
-import { PropertyMap } from '@/components/PropertyMap';
+import Map from '@/components/Map';
 import { ThemedText } from '@/components/ThemedText';
 import { AmenitiesDisplay } from '@/components/AmenitiesDisplay';
 import { CurrencyFormatter } from '@/components/CurrencyFormatter';
@@ -660,23 +660,19 @@ export default function PropertyDetailPage() {
                   {apiProperty?.location?.coordinates &&
                     apiProperty.location.coordinates.length === 2 &&
                     (apiProperty?.address?.showAddressNumber ?? true) ? (
-                    <PropertyMap
-                      latitude={apiProperty.location.coordinates[1]}
-                      longitude={apiProperty.location.coordinates[0]}
-                      address={property.location}
-                      height={96}
-                      interactive={false}
-                      showMarker={true}
+                    <Map
+                      style={{ height: 96 }}
+                      initialCoordinates={[apiProperty.location.coordinates[0], apiProperty.location.coordinates[1]]}
+                      initialZoom={15}
+                      screenId={`property-${property.id}`}
                     />
                   ) : apiProperty?.location?.coordinates &&
                     apiProperty.location.coordinates.length === 2 ? (
-                    <PropertyMap
-                      latitude={apiProperty.location.coordinates[1]}
-                      longitude={apiProperty.location.coordinates[0]}
-                      address={property.location}
-                      height={96}
-                      interactive={false}
-                      showMarker={false}
+                    <Map
+                      style={{ height: 96 }}
+                      initialCoordinates={[apiProperty.location.coordinates[0], apiProperty.location.coordinates[1]]}
+                      initialZoom={15}
+                      screenId={`property-${property.id}`}
                     />
                   ) : (
                     <View
@@ -1357,13 +1353,11 @@ export default function PropertyDetailPage() {
               apiProperty.location.coordinates.length === 2 && (
                 <>
                   <ThemedText style={styles.sectionTitle}>{t('Location')}</ThemedText>
-                  <PropertyMap
-                    latitude={apiProperty.location.coordinates[1]}
-                    longitude={apiProperty.location.coordinates[0]}
-                    address={property.location}
-                    height={200}
-                    interactive={false}
-                    showMarker={apiProperty?.address?.showAddressNumber ?? true}
+                  <Map
+                    style={{ height: 200 }}
+                    initialCoordinates={[apiProperty.location.coordinates[0], apiProperty.location.coordinates[1]]}
+                    initialZoom={15}
+                    screenId={`property-${property.id}`}
                   />
                 </>
               )}

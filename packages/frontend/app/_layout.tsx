@@ -7,9 +7,9 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
-import { Slot } from 'expo-router';
-import { useMediaQuery } from 'react-responsive';
+import { Slot, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { SideBar } from '@/components/SideBar';
 import { RightBar } from '@/components/RightBar';
 import { colors } from '@/styles/colors';
@@ -35,6 +35,7 @@ import { ProfileProvider } from '@/context/ProfileContext';
 import { SavedPropertiesProvider } from '@/context/SavedPropertiesContext';
 import { BottomSheetProvider } from '@/context/BottomSheetContext';
 import { LayoutScrollProvider } from '@/context/LayoutScrollContext';
+import { MapStateProvider } from '@/context/MapStateContext';
 import { OxyProvider, OxyServices } from '@oxyhq/services';
 import { PostHogProvider } from 'posthog-react-native';
 import '../styles/global.css';
@@ -59,8 +60,24 @@ i18nInit({
     console.error('Failed to initialize i18n:', error);
   });
 
-const getStyles = (isScreenNotMobile: boolean) =>
-  StyleSheet.create({
+
+
+export default function RootLayout() {
+  const [appIsReady, setAppIsReady] = useState(false);
+  const [splashState, setSplashState] = useState({
+    initializationComplete: false,
+    startFade: false,
+  });
+  const isScreenNotMobile = useIsScreenNotMobile();
+  const pathname = usePathname() || '/';
+
+  // Memoize search screen check
+  const isSearchScreen = useMemo(() =>
+    pathname === '/search' || pathname.startsWith('/search/'),
+    [pathname]
+  );
+
+  const styles = useMemo(() => StyleSheet.create({
     container: {
       backgroundColor: `${colors.primaryColor}20`,
       ...(isScreenNotMobile ? {
@@ -78,6 +95,9 @@ const getStyles = (isScreenNotMobile: boolean) =>
       flexDirection: isScreenNotMobile ? 'row' : 'column',
       flex: 1,
       paddingRight: isScreenNotMobile ? 20 : 0,
+      ...(isSearchScreen && isScreenNotMobile ? {
+        paddingRight: 0, // Account for fixed right bar width (350 + 20 padding)
+      } : {}),
     },
     mainContentWrapper: {
       flex: isScreenNotMobile ? 2.2 : 1,
@@ -88,16 +108,7 @@ const getStyles = (isScreenNotMobile: boolean) =>
       } : {}),
       backgroundColor: colors.primaryLight,
     },
-  });
-
-export default function RootLayout() {
-  const [appIsReady, setAppIsReady] = useState(false);
-  const [splashState, setSplashState] = useState({
-    initializationComplete: false,
-    startFade: false,
-  });
-  const isScreenNotMobile = useMediaQuery({ minWidth: 500 });
-  const styles = useMemo(() => getStyles(isScreenNotMobile), [isScreenNotMobile]);
+  }), [isScreenNotMobile, isSearchScreen]);
   const posthogApiKey = process.env.EXPO_PUBLIC_POSTHOG_KEY || 'phc_wRxFcPEaeeRHAKoMi4gzleLdNE9Ny4JEwYe8Z5h3soO';
   const posthogHost = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
   const layoutScrollY = useMemo(() => new Animated.Value(0), []);
@@ -226,25 +237,27 @@ export default function RootLayout() {
                         <BottomSheetProvider>
                           <MenuProvider>
                             <ErrorBoundary>
-                              <LayoutScrollProvider value={{ scrollY: layoutScrollY }}>
-                                <Animated.ScrollView
-                                  contentContainerStyle={styles.container}
-                                  style={{ flex: 1 }}
-                                  onScroll={Animated.event(
-                                    [{ nativeEvent: { contentOffset: { y: layoutScrollY } } }],
-                                    { useNativeDriver: false }
-                                  )}
-                                  scrollEventThrottle={16}
-                                >
-                                  <SideBar />
-                                  <View style={styles.mainContent}>
-                                    <View style={styles.mainContentWrapper}>
-                                      <Slot />
+                              <MapStateProvider>
+                                <LayoutScrollProvider value={{ scrollY: layoutScrollY }}>
+                                  <Animated.ScrollView
+                                    contentContainerStyle={styles.container}
+                                    style={{ flex: 1 }}
+                                    onScroll={Animated.event(
+                                      [{ nativeEvent: { contentOffset: { y: layoutScrollY } } }],
+                                      { useNativeDriver: false }
+                                    )}
+                                    scrollEventThrottle={16}
+                                  >
+                                    <SideBar />
+                                    <View style={styles.mainContent}>
+                                      <View style={styles.mainContentWrapper}>
+                                        <Slot />
+                                      </View>
+                                      <RightBar />
                                     </View>
-                                    <RightBar />
-                                  </View>
-                                </Animated.ScrollView>
-                              </LayoutScrollProvider>
+                                  </Animated.ScrollView>
+                                </LayoutScrollProvider>
+                              </MapStateProvider>
                               <StatusBar style="auto" />
                               <Toaster
                                 position="bottom-center"

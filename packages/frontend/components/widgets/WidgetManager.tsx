@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { TrustScoreWidget } from './TrustScoreWidget';
 import { FeaturedPropertiesWidget } from './FeaturedPropertiesWidget';
@@ -43,105 +43,88 @@ interface WidgetManagerProps {
  * This component controls which widgets should appear on which screens.
  * It provides a centralized way to manage widget visibility based on screen context.
  */
-export function WidgetManager({
+export const WidgetManager = React.memo(function WidgetManager({
   screenId,
   propertyId,
   neighborhoodName,
   city,
   state,
 }: WidgetManagerProps) {
-  // Define which widgets should appear on which screens
-  const getWidgetsForScreen = (screen: ScreenId): ReactNode[] => {
-    switch (screen) {
-      case 'home':
-        return [
-          <TrustScoreWidget key="trust-score" />,
-          <RecentlyViewedWidget key="recently-viewed" />,
-          <FeaturedPropertiesWidget key="featured-properties" />,
-          <HorizonInitiativeWidget key="horizon" />,
-          <EcoCertificationWidget key="eco-cert" />,
-        ];
+  // Memoize widget configuration to prevent recreation on every render
+  const widgetConfig = useMemo(() => {
+    const config: Record<ScreenId, ReactNode[]> = {
+      home: [
+        <TrustScoreWidget key="trust-score" />,
+        <RecentlyViewedWidget key="recently-viewed" />,
+        <FeaturedPropertiesWidget key="featured-properties" />,
+        <HorizonInitiativeWidget key="horizon" />,
+        <EcoCertificationWidget key="eco-cert" />,
+      ],
+      properties: [
+        <PropertyAlertWidget key="property-alert" />,
+        <SavedSearchesWidget key="saved-searches" />,
+        <NeighborhoodRatingWidget
+          key="neighborhood"
+          neighborhoodName={neighborhoodName}
+          city={city}
+          state={state}
+        />,
+        <EcoCertificationWidget key="eco-cert" />,
+      ],
+      'property-details': [
+        <NeighborhoodRatingWidget
+          key="neighborhood"
+          propertyId={propertyId}
+          neighborhoodName={neighborhoodName}
+          city={city}
+          state={state}
+        />,
+        <RecentlyViewedWidget key="recently-viewed" />,
+        <EcoCertificationWidget key="eco-cert" />,
+      ],
+      'saved-properties': [
+        <PropertyAlertWidget key="property-alert" />,
+        <NeighborhoodRatingWidget
+          key="neighborhood"
+          neighborhoodName={neighborhoodName}
+          city={city}
+          state={state}
+        />,
+      ],
+      profile: [<TrustScoreWidget key="trust-score" />],
+      contracts: [],
+      payments: [],
+      messages: [],
+      search: [
+        <QuickFiltersWidget key="quick-filters" />,
+        <SavedSearchesWidget key="saved-searches" />,
+        <PropertyAlertWidget key="property-alert" />,
+      ],
+      'search-results': [
+        <QuickFiltersWidget key="quick-filters" />,
+        <SavedSearchesWidget key="saved-searches" />,
+        <PropertyAlertWidget key="property-alert" />,
+      ],
+      'create-property': [<PropertyPreviewWidget key="property-preview" />],
+    };
+    return config;
+  }, [propertyId, neighborhoodName, city, state]);
 
-      case 'properties':
-        return [
-          <PropertyAlertWidget key="property-alert" />,
-          <SavedSearchesWidget key="saved-searches" />,
-          <NeighborhoodRatingWidget
-            key="neighborhood"
-            neighborhoodName={neighborhoodName}
-            city={city}
-            state={state}
-          />,
-          <EcoCertificationWidget key="eco-cert" />,
-        ];
+  // Memoize screen widgets to prevent recreation
+  const screenWidgets = useMemo(() => {
+    return widgetConfig[screenId] || [];
+  }, [widgetConfig, screenId]);
 
-      case 'property-details':
-        return [
-          <NeighborhoodRatingWidget
-            key="neighborhood"
-            propertyId={propertyId}
-            neighborhoodName={neighborhoodName}
-            city={city}
-            state={state}
-          />,
-          <RecentlyViewedWidget key="recently-viewed" />,
-          <EcoCertificationWidget key="eco-cert" />,
-        ];
-
-      case 'saved-properties':
-        return [
-          <PropertyAlertWidget key="property-alert" />,
-          <NeighborhoodRatingWidget
-            key="neighborhood"
-            neighborhoodName={neighborhoodName}
-            city={city}
-            state={state}
-          />,
-        ];
-
-      case 'profile':
-        return [<TrustScoreWidget key="trust-score" />];
-
-      case 'contracts':
-        return [];
-
-      case 'payments':
-        return [];
-
-      case 'messages':
-        return [];
-
-      case 'search':
-        return [
-          <QuickFiltersWidget key="quick-filters" />,
-          <SavedSearchesWidget key="saved-searches" />,
-          <PropertyAlertWidget key="property-alert" />,
-        ];
-
-      case 'search-results':
-        return [
-          <QuickFiltersWidget key="quick-filters" />,
-          <SavedSearchesWidget key="saved-searches" />,
-          <PropertyAlertWidget key="property-alert" />,
-        ];
-
-      case 'create-property':
-        return [<PropertyPreviewWidget key="property-preview" />];
-
-      default:
-        return [];
+  // Memoize filtered widgets
+  const filteredScreenWidgets = useMemo(() => {
+    if (NEIGHBORHOOD_WIDGET_ENABLED) {
+      return screenWidgets;
     }
-  };
-
-  const screenWidgets = getWidgetsForScreen(screenId);
-
-  // If disabled, remove NeighborhoodRatingWidget elements entirely
-  const filteredScreenWidgets = NEIGHBORHOOD_WIDGET_ENABLED
-    ? screenWidgets
-    : screenWidgets.filter((widget) => {
-        if (!React.isValidElement(widget)) return true;
-        return widget.type !== NeighborhoodRatingWidget;
-      });
+    return screenWidgets.filter((widget) => {
+      if (!React.isValidElement(widget)) return true;
+      return widget.type !== NeighborhoodRatingWidget;
+    });
+  }, [screenWidgets]);
 
   if (filteredScreenWidgets.length === 0) {
     return null;
@@ -156,7 +139,7 @@ export function WidgetManager({
       ))}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
