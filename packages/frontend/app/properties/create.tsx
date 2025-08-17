@@ -187,6 +187,8 @@ const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
   },
 };
 
+
+
 export default function CreatePropertyScreen() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -351,6 +353,75 @@ export default function CreatePropertyScreen() {
   const [showFullscreenMap, setShowFullscreenMap] = useState(false);
   const mapRef = useRef<any>(null);
   const fullscreenMapRef = useRef<any>(null);
+
+  // Memoize the address selection callback to prevent unnecessary re-renders
+  const handleAddressSelect = React.useCallback((address: any, coordinates: [number, number]) => {
+    // Update form with coordinates
+    updateFormField('location', 'latitude', coordinates[1]);
+    updateFormField('location', 'longitude', coordinates[0]);
+
+    // Auto-fill address fields
+    if (address.street) {
+      updateFormField('location', 'address', address.street);
+    }
+    if (address.houseNumber) {
+      updateFormField('location', 'addressNumber', address.houseNumber);
+    }
+    if (address.city) {
+      updateFormField('location', 'city', address.city);
+    }
+    if (address.state) {
+      updateFormField('location', 'state', address.state);
+    }
+    if (address.country) {
+      updateFormField('location', 'country', address.country);
+    }
+    if (address.postalCode) {
+      updateFormField('location', 'zipCode', address.postalCode);
+    }
+
+    // Move map to selected location
+    if (mapRef.current) {
+      mapRef.current.navigateToLocation(coordinates, 15);
+    }
+  }, [updateFormField]);
+
+  // Memoize the fullscreen address selection callback
+  const handleFullscreenAddressSelect = React.useCallback((address: any, coordinates: [number, number]) => {
+    // Update form with coordinates
+    updateFormField('location', 'latitude', coordinates[1]);
+    updateFormField('location', 'longitude', coordinates[0]);
+
+    // Auto-fill address fields
+    if (address.street) {
+      updateFormField('location', 'address', address.street);
+    }
+    if (address.houseNumber) {
+      updateFormField('location', 'addressNumber', address.houseNumber);
+    }
+    if (address.city) {
+      updateFormField('location', 'city', address.city);
+    }
+    if (address.state) {
+      updateFormField('location', 'state', address.state);
+    }
+    if (address.country) {
+      updateFormField('location', 'country', address.country);
+    }
+    if (address.postalCode) {
+      updateFormField('location', 'zipCode', address.postalCode);
+    }
+
+    // Move main map to selected location
+    if (mapRef.current) {
+      mapRef.current.navigateToLocation(coordinates, 15);
+    }
+
+    // Close modal after selection
+    setShowFullscreenMap(false);
+  }, [updateFormField]);
+
+
 
   // Handle form submission
   const handleSubmit = async () => {
@@ -993,45 +1064,15 @@ export default function CreatePropertyScreen() {
             </View>
 
             <View style={styles.mapContainer}>
-              <View style={styles.mapWrapper}>
-                                <Map
-                  ref={mapRef}
-                  style={{ height: 400 }}
-                  initialCoordinates={formData.location.latitude && formData.location.longitude ? [formData.location.longitude, formData.location.latitude] : undefined}
-                  enableAddressLookup={true}
-                  showAddressInstructions={true}
-                  onAddressSelect={(address, coordinates) => {
-                    // Update form with coordinates
-                    updateFormField('location', 'latitude', coordinates[1]);
-                    updateFormField('location', 'longitude', coordinates[0]);
- 
-                    // Auto-fill address fields
-                    if (address.street) {
-                      updateFormField('location', 'address', address.street);
-                    }
-                    if (address.houseNumber) {
-                      updateFormField('location', 'addressNumber', address.houseNumber);
-                    }
-                    if (address.city) {
-                      updateFormField('location', 'city', address.city);
-                    }
-                    if (address.state) {
-                      updateFormField('location', 'state', address.state);
-                    }
-                    if (address.country) {
-                      updateFormField('location', 'country', address.country);
-                    }
-                    if (address.postalCode) {
-                      updateFormField('location', 'zipCode', address.postalCode);
-                    }
-
-                    // Move map to selected location
-                    if (mapRef.current) {
-                      mapRef.current.navigateToLocation(coordinates, 15);
-                    }
-                  }}
-                  screenId="create-property"
-                />
+                              <View style={styles.mapWrapper}>
+                  <Map
+                    ref={mapRef}
+                    style={{ height: 400 }}
+                    enableAddressLookup={true}
+                    showAddressInstructions={true}
+                    onAddressSelect={handleAddressSelect}
+                    screenId="create-property"
+                  />
                 <TouchableOpacity
                   style={styles.fullscreenButton}
                   onPress={() => setShowFullscreenMap(true)}
@@ -1844,41 +1885,8 @@ export default function CreatePropertyScreen() {
           <Map
             ref={fullscreenMapRef}
             style={{ flex: 1 }}
-            initialCoordinates={formData.location.latitude && formData.location.longitude ? [formData.location.longitude, formData.location.latitude] : undefined}
             enableAddressLookup={true}
-            onAddressSelect={(address, coordinates) => {
-              // Update form with coordinates
-              updateFormField('location', 'latitude', coordinates[1]);
-              updateFormField('location', 'longitude', coordinates[0]);
-              
-              // Auto-fill address fields
-              if (address.street) {
-                updateFormField('location', 'address', address.street);
-              }
-              if (address.houseNumber) {
-                updateFormField('location', 'addressNumber', address.houseNumber);
-              }
-              if (address.city) {
-                updateFormField('location', 'city', address.city);
-              }
-              if (address.state) {
-                updateFormField('location', 'state', address.state);
-              }
-              if (address.country) {
-                updateFormField('location', 'country', address.country);
-              }
-              if (address.postalCode) {
-                updateFormField('location', 'zipCode', address.postalCode);
-              }
-
-              // Move main map to selected location
-              if (mapRef.current) {
-                mapRef.current.navigateToLocation(coordinates, 15);
-              }
-              
-              // Close modal after selection
-              setShowFullscreenMap(false);
-            }}
+            onAddressSelect={handleFullscreenAddressSelect}
             screenId="create-property-fullscreen"
           />
         </View>

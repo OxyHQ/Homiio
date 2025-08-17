@@ -319,7 +319,7 @@ const buildHTML = (
  * />
  * ```
  */
-const Map = React.forwardRef<MapApi, MapProps>(function Map(props, ref) {
+const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref) {
     const {
         style, initialCoordinates = DEFAULT_CENTER, initialZoom = DEFAULT_ZOOM, styleURL = DEFAULT_STYLE,
         startFromCurrentLocation = true, markers = [], cluster, markerStyle, screenId,
@@ -365,6 +365,7 @@ const Map = React.forwardRef<MapApi, MapProps>(function Map(props, ref) {
         })();
     }, [startFromCurrentLocation]);
 
+    // Use effective coordinates for HTML generation to ensure proper marker display
     const html = useMemo(
         () =>
             buildHTML(
@@ -401,9 +402,11 @@ const Map = React.forwardRef<MapApi, MapProps>(function Map(props, ref) {
         if (childReady && mapInitialized.current) {
             post({ type: 'setData', features: markers });
         }
+    }, [markers, childReady]);
 
+    // Separate effect for saving markers to state to avoid unnecessary re-renders
+    useEffect(() => {
         // Only save markers to state if screenId is provided AND markers have actually changed
-        // This prevents unnecessary state updates that can cause re-renders
         if (screenId && markers.length > 0) {
             const currentState = getMapState(screenId);
             const currentMarkers = currentState?.markers || [];
@@ -423,7 +426,7 @@ const Map = React.forwardRef<MapApi, MapProps>(function Map(props, ref) {
                 setMapState(screenId, { markers });
             }
         }
-    }, [markers, post, screenId, setMapState, getMapState, childReady]);
+    }, [markers, screenId, setMapState, getMapState]);
 
     const hasCenteredOnce = useRef(false);
     useEffect(() => {
@@ -437,13 +440,22 @@ const Map = React.forwardRef<MapApi, MapProps>(function Map(props, ref) {
         }
     }, [userCoord, post, initialZoom, savedState]);
 
-    const handleMessage = (event: any) => {
+    const handleMessage = React.useCallback((event: any) => {
         try {
             const msg = JSON.parse(event?.data || event?.nativeEvent?.data || '{}') as MapEvent;
             if (msg.type === 'ready') {
                 setChildReady(true);
                 mapInitialized.current = true;
                 flushPending();
+
+                // Set initial view based on saved state or props
+                if (savedState) {
+                    // Use saved state
+                    post({ type: 'setView', center: savedState.center, zoom: savedState.zoom, duration: 0 });
+                } else {
+                    // Use effective coordinates (which might be different from initial)
+                    post({ type: 'setView', center: effectiveCoordinates, zoom: effectiveZoom, duration: 0 });
+                }
 
                 // Restore saved markers if available
                 if (savedState?.markers && savedState.markers.length > 0) {
@@ -470,7 +482,7 @@ const Map = React.forwardRef<MapApi, MapProps>(function Map(props, ref) {
                 onRegionChange?.(msg);
             }
         } catch { }
-    };
+    }, [onMapPress, onMarkerPress, onClusterPress, onAddressSelect, onRegionChange, screenId, setMapState, flushPending, post, savedState, effectiveCoordinates, effectiveZoom]);
 
     useEffect(() => {
         if (Platform.OS !== 'web') return;
@@ -479,7 +491,7 @@ const Map = React.forwardRef<MapApi, MapProps>(function Map(props, ref) {
             window.removeEventListener('message', handleMessage);
             mapInitialized.current = false;
         };
-    }, [onMapPress, onMarkerPress, onRegionChange, onClusterPress, onAddressSelect, onAddressLookupStart, onAddressLookupEnd, flushPending]);
+    }, [handleMessage]);
 
     const handleNativeMessage = (event: any) => handleMessage(event);
 
@@ -524,5 +536,7 @@ const Map = React.forwardRef<MapApi, MapProps>(function Map(props, ref) {
         </View>
     );
 });
+
+const Map = React.memo(MapComponent);
 
 export default Map;
