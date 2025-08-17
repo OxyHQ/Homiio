@@ -1697,12 +1697,6 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   scrollView: {
-    flex: 1,
-    ...Platform.select({
-      web: {
-        marginTop: -80, // Compensate for header height on web
-      },
-    }),
   },
   contentArea: {
     flex: 1,
