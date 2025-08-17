@@ -1,7 +1,7 @@
 {
     "name": "@homiio/shared-types",
     "version": "1.0.0",
-    "type": "module",
+    "type": "commonjs",
     "description": "Shared TypeScript types for Homiio frontend and backend",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",

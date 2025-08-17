@@ -89,7 +89,7 @@ export class ImageController {
         return;
       }
 
-      const files = req.files as Express.Multer.File[];
+      const files = req.files as any[];
       const folder = req.body.folder || 'general';
       const uploadedImages: any[] = [];
 
