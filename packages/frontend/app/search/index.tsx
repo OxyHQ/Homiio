@@ -4,6 +4,7 @@ import {
   Platform, ActivityIndicator, ScrollView, FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import Map, { MapApi } from '@/components/Map';
 import { PropertyCard } from '@/components/PropertyCard';
 import { ThemedText } from '@/components/ThemedText';
@@ -168,6 +169,7 @@ const defaultFilters: Filters = {
 };
 
 export default function SearchScreen() {
+  const router = useRouter();
   const mapRef = useRef<MapApi>(null);
   const flatListRef = useRef<FlatList>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -198,7 +200,7 @@ export default function SearchScreen() {
       } catch (error) { console.error('Geocoding error:', error); }
       finally { setIsSearching(false); }
     };
-    const timeoutId = setTimeout(searchPlaces, 300);
+    const timeoutId = setTimeout(searchPlaces, 100);
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
@@ -243,7 +245,7 @@ export default function SearchScreen() {
     }
   };
 
-  const handleRegionChange = useCallback(({ bounds }) => {
+  const handleRegionChange = useCallback(({ bounds }: { bounds: { west: number; south: number; east: number; north: number } }) => {
     if (regionChangeDebounce.current) clearTimeout(regionChangeDebounce.current);
     if (!bounds) return;
     regionChangeDebounce.current = setTimeout(() => {
@@ -251,12 +253,16 @@ export default function SearchScreen() {
     }, 500);
   }, [fetchProperties]);
 
-  const onViewableItemsChanged = useCallback(({ viewableItems }) => {
+  const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: Array<{ item: Property }> }) => {
     if (viewableItems.length > 0) {
       const visibleId = viewableItems[0].item._id;
       setHighlightedPropertyId(visibleId);
     }
   }, []);
+
+  const handlePropertyPress = useCallback((property: Property) => {
+    router.push(`/properties/${property._id}`);
+  }, [router]);
 
   useEffect(() => {
     return () => { if (regionChangeDebounce.current) clearTimeout(regionChangeDebounce.current); };
@@ -303,12 +309,7 @@ export default function SearchScreen() {
         : !properties || properties.length === 0 ? <ThemedText style={styles.noResults}>No properties found.</ThemedText>
           : properties.map((property) => (
             <PropertyCard key={property._id} property={property}
-              onPress={() => {
-                if (property.location?.coordinates) {
-                  mapRef.current?.navigateToLocation(property.location.coordinates as [number, number]);
-                  setShowMap(true);
-                }
-              }}
+              onPress={() => handlePropertyPress(property)}
               showFavoriteButton showVerifiedBadge style={{ marginBottom: 16 }} />
           ))}
     </ScrollView>
@@ -396,12 +397,14 @@ export default function SearchScreen() {
                       property={item}
                       variant="compact"
                       orientation="horizontal"
+                      onPress={() => handlePropertyPress(item)}
                       style={{
                         backgroundColor: '#fff',
                         borderRadius: 12,
                         overflow: 'hidden',
                         borderWidth: item._id === highlightedPropertyId ? 2 : 0,
                         borderColor: '#007AFF',
+                        padding: 10,
                       }}
                     />
                   </View>

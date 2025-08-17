@@ -83,14 +83,8 @@ const buildHTML = (
   const map=new mapboxgl.Map({container:'map',style:${JSON.stringify(styleURL)},center:${JSON.stringify(center)},zoom:${JSON.stringify(zoom)},attributionControl:true,hash:false});
 
   const toGeoJSON=(list)=>({type:'FeatureCollection',features:(Array.isArray(list)?list:[]).map(p=>({
-    type:'Feature',
-    // The 'id' property is crucial for feature state to work
-    id: p.id,
-    geometry:{type:'Point',coordinates:p.coordinates},
-    properties:{
-      id: String(p.id),
-      price: String(p.priceLabel||'')
-    }
+    type:'Feature', id: p.id, geometry:{type:'Point',coordinates:p.coordinates},
+    properties:{ id: String(p.id), price: String(p.priceLabel||'') }
   }))});
 
   const srcId='markers';
@@ -100,18 +94,10 @@ const buildHTML = (
   let highlightedFeatureId = null;
   
   map.on('load', () => {
-    // Add the main data source
     map.addSource(srcId, {
-        type:'geojson',
-        data:toGeoJSON([]),
-        cluster:cluster,
-        clusterRadius:cRad,
-        clusterMaxZoom:cMax,
-        // This tells Mapbox to use our 'id' field for feature states
-        promoteId: 'id'
+        type:'geojson', data:toGeoJSON([]), cluster:cluster, clusterRadius:cRad, clusterMaxZoom:cMax, promoteId: 'id'
     });
     
-    // Layer for CLUSTERS (the numbered groups)
     if(cluster){
       map.addLayer({id:'clusters',type:'circle',source:srcId,filter:['has','point_count'],paint:{
         'circle-color':cColor,'circle-radius':['step',['get','point_count'],16,20,18,50,22],
@@ -120,63 +106,33 @@ const buildHTML = (
         'text-field':['get','point_count_abbreviated'],'text-font':['Open Sans Bold'],'text-size':12},paint:{'text-color':cText}});
     }
 
-    // Layer for INDIVIDUAL property markers (background circle)
     map.addLayer({
-        id: 'unclustered-point-bg',
-        type: 'circle',
-        source: srcId,
-        filter: ['!', ['has', 'point_count']],
+        id: 'unclustered-point-bg', type: 'circle', source: srcId, filter: ['!', ['has', 'point_count']],
         paint: {
-            'circle-color': chipBg,
-            'circle-radius': 18,
-            'circle-stroke-width': [
-                'case',
-                ['boolean', ['feature-state', 'highlighted'], false],
-                3, // stroke width when highlighted
-                1  // default stroke width
-            ],
-            'circle-stroke-color': [
-                'case',
-                ['boolean', ['feature-state', 'highlighted'], false],
-                '#007AFF', // stroke color when highlighted
-                '#FFFFFF'  // default stroke color
-            ]
+            'circle-color': chipBg, 'circle-radius': 18,
+            'circle-stroke-width': ['case', ['boolean', ['feature-state', 'highlighted'], false], 3, 1],
+            'circle-stroke-color': ['case', ['boolean', ['feature-state', 'highlighted'], false], '#007AFF', '#FFFFFF']
         }
     });
 
-    // Layer for INDIVIDUAL property markers (price text)
     map.addLayer({
-        id: 'unclustered-point-text',
-        type: 'symbol',
-        source: srcId,
-        filter: ['!', ['has', 'point_count']],
-        layout: {
-            'text-field': ['get', 'price'],
-            'text-font': ['Open Sans Bold'],
-            'text-size': 11,
-            'text-allow-overlap': true
-        },
-        paint: {
-            'text-color': chipText
-        }
+        id: 'unclustered-point-text', type: 'symbol', source: srcId, filter: ['!', ['has', 'point_count']],
+        layout: { 'text-field': ['get', 'price'], 'text-font': ['Open Sans Bold'], 'text-size': 11, 'text-allow-overlap': true },
+        paint: { 'text-color': chipText }
     });
 
-    // --- CLICK HANDLERS ---
     map.on('click','clusters',(e)=>{
       const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
       if (!features.length) return;
       const clusterId = features[0].properties.cluster_id;
-      const source = map.getSource(srcId);
-      source.getClusterExpansionZoom(clusterId,(err,z)=>{ if(err) return; map.easeTo({center: features[0].geometry.coordinates, zoom:z}); });
+      map.getSource(srcId).getClusterExpansionZoom(clusterId,(err,z)=>{ if(err) return; map.easeTo({center: features[0].geometry.coordinates, zoom:z}); });
     });
 
     map.on('click', 'unclustered-point-bg', (e) => {
         if (!e.features || !e.features.length) return;
-        const feature = e.features[0];
-        post({ type: 'markerClick', id: feature.properties.id, lngLat: feature.geometry.coordinates });
+        post({ type: 'markerClick', id: e.features[0].properties.id, lngLat: e.features[0].geometry.coordinates });
     });
 
-    // Change cursor to pointer on hover
     map.on('mouseenter', 'clusters', () => { map.getCanvas().style.cursor = 'pointer'; });
     map.on('mouseleave', 'clusters', () => { map.getCanvas().style.cursor = ''; });
     map.on('mouseenter', 'unclustered-point-bg', () => { map.getCanvas().style.cursor = 'pointer'; });
@@ -185,11 +141,23 @@ const buildHTML = (
     post({ type:'ready' });
   });
 
-  // --- EVENT EMITTERS AND MESSAGE HANDLERS ---
+  // --- RESTORED THIS ENTIRE BLOCK ---
   let last = 0;
-  const emit = (force=false) => { /* ... same as before ... */ };
+  const emit = (force=false) => {
+    const now = Date.now();
+    if (!force && now - last < 100) return;
+    last = now;
+    const c = map.getCenter();
+    const b = map.getBounds();
+    const boundsPayload = { west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() };
+    post({ type:'region', center:[c.lng,c.lat], zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch(), bounds: boundsPayload });
+  };
+  
+  // Continuous events for smooth updates
   ['move','zoom','rotate','pitch'].forEach(ev => map.on(ev, () => { emit(false); }));
+  // End events for definitive state updates
   ['moveend','zoomend','rotateend','pitchend'].forEach(ev => map.on(ev, () => { emit(true); }));
+  // --- END OF RESTORED BLOCK ---
 
   const handle=(raw)=>{ try{
     const m = JSON.parse(raw.data || raw);
@@ -197,11 +165,9 @@ const buildHTML = (
     if(m.type==='setView'){ map.easeTo({ center: m.center, zoom: m.zoom, duration: m.duration || 500 }); }
     if(m.type==='setData'){ const s = map.getSource(srcId); if (s) s.setData(toGeoJSON(m.features || [])); }
     if(m.type==='highlightMarker'){
-        // Remove previous highlight
         if (highlightedFeatureId) {
             map.setFeatureState({ source: srcId, id: highlightedFeatureId }, { highlighted: false });
         }
-        // Add new highlight
         if (m.id) {
             map.setFeatureState({ source: srcId, id: m.id }, { highlighted: true });
             highlightedFeatureId = m.id;
