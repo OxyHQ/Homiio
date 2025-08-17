@@ -24,6 +24,10 @@
     },
     "devDependencies": {
         "@types/node": "^20.0.0",
+        "ajv": "^8.17.1",
+        "ajv-keywords": "^5.1.0",
+        "prettier-plugin-tailwindcss": "^0.5.14",
+        "tailwindcss": "^3.4.17",
         "typescript": "^5.8.3"
     },
     "engines": {
@@ -33,5 +37,6 @@
     "dependencies": {
         "@gorhom/bottom-sheet": "^5.1.8",
         "@oxyhq/services": "^5.11.8"
-    }
+    },
+    "overrides": {}
 }

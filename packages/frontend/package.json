@@ -27,12 +27,13 @@
     "@gorhom/bottom-sheet": "^5.1.6",
     "@homiio/shared-types": "file:../shared-types",
     "@oxyhq/services": "^5.8.2",
-    "@react-native-async-storage/async-storage": "1.25.0",
+    "@react-native-async-storage/async-storage": "^2.1.2",
     "@react-native-community/netinfo": "11.4.1",
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.3.8",
     "@react-navigation/native": "^7.1.6",
     "@tanstack/react-query": "^5.85.1",
+    "date-fns": "^4.1.0",
     "expo": "~53.0.20",
     "expo-application": "~6.1.5",
     "expo-blur": "~14.1.5",
@@ -112,5 +113,8 @@
       }
     }
   },
-  "private": true
+  "private": true,
+  "overrides": {
+    "@react-native-async-storage/async-storage": "^1.23.1"
+  }
 }

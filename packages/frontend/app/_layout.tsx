@@ -37,6 +37,7 @@ import { BottomSheetProvider } from '@/context/BottomSheetContext';
 import { LayoutScrollProvider } from '@/context/LayoutScrollContext';
 import { MapStateProvider } from '@/context/MapStateContext';
 import { SearchModeProvider } from '@/context/SearchModeContext';
+import { NotificationProvider } from '@/context/NotificationContext';
 import { OxyProvider, OxyServices } from '@oxyhq/services';
 import { PostHogProvider } from 'posthog-react-native';
 import '../styles/global.css';
@@ -232,44 +233,46 @@ export default function RootLayout() {
                 >
                   <ProfileProvider>
                     <SavedPropertiesProvider>
-                      <I18nextProvider i18n={i18n}>
-                        <BottomSheetProvider>
-                          <MenuProvider>
-                            <ErrorBoundary>
-                              <MapStateProvider>
-                                <SearchModeProvider>
-                                  <LayoutScrollProvider value={{ scrollY: layoutScrollY }}>
-                                    <Animated.ScrollView
-                                      contentContainerStyle={styles.container}
-                                      style={{ flex: 1 }}
-                                      onScroll={Animated.event(
-                                        [{ nativeEvent: { contentOffset: { y: layoutScrollY } } }],
-                                        { useNativeDriver: false }
-                                      )}
-                                      scrollEventThrottle={16}
-                                    >
-                                      <SideBar />
-                                      <View style={styles.mainContent}>
-                                        <View style={styles.mainContentWrapper}>
-                                          <Slot />
+                      <NotificationProvider>
+                        <I18nextProvider i18n={i18n}>
+                          <BottomSheetProvider>
+                            <MenuProvider>
+                              <ErrorBoundary>
+                                <MapStateProvider>
+                                  <SearchModeProvider>
+                                    <LayoutScrollProvider value={{ scrollY: layoutScrollY }}>
+                                      <Animated.ScrollView
+                                        contentContainerStyle={styles.container}
+                                        style={{ flex: 1 }}
+                                        onScroll={Animated.event(
+                                          [{ nativeEvent: { contentOffset: { y: layoutScrollY } } }],
+                                          { useNativeDriver: false }
+                                        )}
+                                        scrollEventThrottle={16}
+                                      >
+                                        <SideBar />
+                                        <View style={styles.mainContent}>
+                                          <View style={styles.mainContentWrapper}>
+                                            <Slot />
+                                          </View>
+                                          <RightBar />
                                         </View>
-                                        <RightBar />
-                                      </View>
-                                    </Animated.ScrollView>
-                                  </LayoutScrollProvider>
-                                </SearchModeProvider>
-                              </MapStateProvider>
-                              <StatusBar style="auto" />
-                              <Toaster
-                                position="bottom-center"
-                                swipeToDismissDirection="left"
-                                offset={15}
-                              />
-                              {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
-                            </ErrorBoundary>
-                          </MenuProvider>
-                        </BottomSheetProvider>
-                      </I18nextProvider>
+                                      </Animated.ScrollView>
+                                    </LayoutScrollProvider>
+                                  </SearchModeProvider>
+                                </MapStateProvider>
+                                <StatusBar style="auto" />
+                                <Toaster
+                                  position="bottom-center"
+                                  swipeToDismissDirection="left"
+                                  offset={15}
+                                />
+                                {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
+                              </ErrorBoundary>
+                            </MenuProvider>
+                          </BottomSheetProvider>
+                        </I18nextProvider>
+                      </NotificationProvider>
                     </SavedPropertiesProvider>
                   </ProfileProvider>
                 </OxyProvider>
