@@ -421,8 +421,6 @@ export default function CreatePropertyScreen() {
     setShowFullscreenMap(false);
   }, [updateFormField]);
 
-
-
   // Handle form submission
   const handleSubmit = async () => {
     try {
@@ -1064,15 +1062,15 @@ export default function CreatePropertyScreen() {
             </View>
 
             <View style={styles.mapContainer}>
-                              <View style={styles.mapWrapper}>
-                  <Map
-                    ref={mapRef}
-                    style={{ height: 400 }}
-                    enableAddressLookup={true}
-                    showAddressInstructions={true}
-                    onAddressSelect={handleAddressSelect}
-                    screenId="create-property"
-                  />
+              <View style={styles.mapWrapper}>
+                <Map
+                  ref={mapRef}
+                  style={{ height: 400 }}
+                  enableAddressLookup={true}
+                  showAddressInstructions={true}
+                  onAddressSelect={handleAddressSelect}
+                  screenId="create-property"
+                />
                 <TouchableOpacity
                   style={styles.fullscreenButton}
                   onPress={() => setShowFullscreenMap(true)}

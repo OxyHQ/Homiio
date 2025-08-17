@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect, useState } from 'react';
+import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react';
 import { Platform, View, ViewStyle } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
@@ -66,13 +66,13 @@ export interface MapProps {
     markers?: MarkerInput[];
     cluster?: ClusterOptions;
     markerStyle?: MarkerStyle;
-    screenId?: string; // Unique identifier for the screen to persist state
-    enableAddressLookup?: boolean; // Enable address lookup on map click
-    showAddressInstructions?: boolean; // Show instructions for address lookup
+    screenId?: string;
+    enableAddressLookup?: boolean;
+    showAddressInstructions?: boolean;
     onMapPress?: (e: { lngLat: LonLat }) => void;
-    onAddressSelect?: (address: AddressData, coordinates: LonLat) => void; // New callback for address selection
-    onAddressLookupStart?: () => void; // Callback when address lookup starts
-    onAddressLookupEnd?: () => void; // Callback when address lookup ends
+    onAddressSelect?: (address: AddressData, coordinates: LonLat) => void;
+    onAddressLookupStart?: () => void;
+    onAddressLookupEnd?: () => void;
     onRegionChange?: (e: { center: LonLat; zoom: number; bearing: number; pitch: number; bounds: { west: number; south: number; east: number; north: number } }) => void;
     onMarkerPress?: (e: { id: string; lngLat: LonLat }) => void;
     onClusterPress?: (e: { leaves: any[] }) => void;
@@ -102,7 +102,6 @@ const lookupAddressFromCoordinates = async (coordinates: LonLat): Promise<Addres
             return null;
         }
 
-        // Parse address components
         const context = feature.context || [];
         const addressComponents = {
             street: feature.text || '',
@@ -136,7 +135,6 @@ const buildHTML = (
 <style>
   html,body,#map{height:100%;margin:0;padding:0}
   #map{position:absolute;inset:0}
-
 </style>
 </head><body>
   <div id="map"></div>
@@ -207,24 +205,19 @@ const buildHTML = (
     post({ type:'ready' });
   });
 
-  // Handle map click for address lookup
   map.on('click', (e) => {
     const coordinates = e.lngLat.toArray();
     post({ type: 'mapClick', lngLat: coordinates });
     
-    // If address lookup is enabled, perform reverse geocoding
     if (${enableAddressLookup}) {
-      // Remove previous marker if exists
       if (selectedMarker) {
         selectedMarker.remove();
       }
       
-      // Add new marker at clicked location
       selectedMarker = new mapboxgl.Marker({ color: '#007AFF' })
         .setLngLat(coordinates)
         .addTo(map);
       
-      // Perform address lookup
       fetch(\`https://api.mapbox.com/geocoding/v5/mapbox.places/\${coordinates[0]},\${coordinates[1]}.json?access_token=${MAPBOX_TOKEN}&types=address,poi&limit=1\`)
         .then(response => response.json())
         .then(data => {
@@ -249,7 +242,6 @@ const buildHTML = (
     }
   });
 
-  // --- RESTORED THIS ENTIRE BLOCK ---
   let last = 0;
   const emit = (force=false) => {
     const now = Date.now();
@@ -261,11 +253,8 @@ const buildHTML = (
     post({ type:'region', center:[c.lng,c.lat], zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch(), bounds: boundsPayload });
   };
   
-  // Continuous events for smooth updates
   ['move','zoom','rotate','pitch'].forEach(ev => map.on(ev, () => { emit(false); }));
-  // End events for definitive state updates
   ['moveend','zoomend','rotateend','pitchend'].forEach(ev => map.on(ev, () => { emit(true); }));
-  // --- END OF RESTORED BLOCK ---
 
   const handle=(raw)=>{ try{
     const m = JSON.parse(raw.data || raw);
@@ -287,44 +276,26 @@ const buildHTML = (
   if(isRN) document.addEventListener('message',handle); else window.addEventListener('message',(e)=>handle(e));
 })();</script></body></html>`;
 
-/**
- * Enhanced Map Component with Address Lookup Support
- * 
- * This component provides a Mapbox-based map with the following features:
- * - Interactive map with marker clustering
- * - Address lookup on map click (when enabled)
- * - State persistence across screen changes
- * - Custom styling and marker options
- * - Reverse geocoding using Mapbox Geocoding API
- * 
- * @example
- * ```tsx
- * // Basic usage
- * <Map
- *   style={{ height: 300 }}
- *   initialCoordinates={[2.16538, 41.38723]}
- *   screenId="my-screen"
- * />
- * 
- * // With address lookup enabled
- * <Map
- *   style={{ height: 300 }}
- *   enableAddressLookup={true}
- *   showAddressInstructions={true}
- *   onAddressSelect={(address, coordinates) => {
- *     console.log('Selected address:', address);
- *     console.log('Coordinates:', coordinates);
- *   }}
- *   screenId="create-property"
- * />
- * ```
- */
 const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref) {
     const {
-        style, initialCoordinates = DEFAULT_CENTER, initialZoom = DEFAULT_ZOOM, styleURL = DEFAULT_STYLE,
-        startFromCurrentLocation = true, markers = [], cluster, markerStyle, screenId,
-        enableAddressLookup = false, showAddressInstructions = false,
-        onMapPress, onAddressSelect, onAddressLookupStart, onAddressLookupEnd, onRegionChange, onMarkerPress, onClusterPress,
+        style,
+        initialCoordinates = DEFAULT_CENTER,
+        initialZoom = DEFAULT_ZOOM,
+        styleURL = DEFAULT_STYLE,
+        startFromCurrentLocation = true,
+        markers = [],
+        cluster,
+        markerStyle,
+        screenId,
+        enableAddressLookup = false,
+        showAddressInstructions = false,
+        onMapPress,
+        onAddressSelect,
+        onAddressLookupStart,
+        onAddressLookupEnd,
+        onRegionChange,
+        onMarkerPress,
+        onClusterPress,
     } = props;
 
     const { getMapState, setMapState } = useMapState();
@@ -339,12 +310,14 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     const effectiveCoordinates = savedState?.center || initialCoordinates;
     const effectiveZoom = savedState?.zoom || initialZoom;
 
+    // Memoize marker style configuration
     const markerStyleFinal = useMemo<Required<MarkerStyle>>(() => ({
         chipBg: markerStyle?.chipBg ?? '#111827',
         chipText: markerStyle?.chipText ?? '#FFFFFF',
         onMarkerZoom: markerStyle?.onMarkerZoom ?? 15.5,
     }), [markerStyle]);
 
+    // Memoize cluster configuration
     const clusterFinal = useMemo<Required<ClusterOptions>>(() => ({
         enabled: cluster?.enabled ?? true,
         radius: cluster?.radius ?? 40,
@@ -353,32 +326,43 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
         textColor: cluster?.textColor ?? '#FFFFFF'
     }), [cluster]);
 
+    // Get user location
     useEffect(() => {
         if (!startFromCurrentLocation) return;
-        (async () => {
+
+        const getUserLocation = async () => {
             try {
                 const { status } = await Location.requestForegroundPermissionsAsync();
                 if (status !== 'granted') return;
                 const loc = await Location.getCurrentPositionAsync({});
                 setUserCoord([loc.coords.longitude, loc.coords.latitude]);
-            } catch { }
-        })();
+            } catch (error) {
+                console.warn('Failed to get user location:', error);
+            }
+        };
+
+        getUserLocation();
     }, [startFromCurrentLocation]);
 
-    // Use effective coordinates for HTML generation to ensure proper marker display
+    // Generate HTML once with default coordinates to prevent iframe reloads
     const html = useMemo(
-        () =>
-            buildHTML(
-                MAPBOX_TOKEN, effectiveCoordinates, effectiveZoom, styleURL,
-                markerStyleFinal, clusterFinal, enableAddressLookup
-            ),
-        [effectiveCoordinates, effectiveZoom, styleURL, markerStyleFinal, clusterFinal, enableAddressLookup]
+        () => buildHTML(
+            MAPBOX_TOKEN,
+            DEFAULT_CENTER, // Always use default center for HTML generation
+            DEFAULT_ZOOM,   // Always use default zoom for HTML generation
+            styleURL,
+            markerStyleFinal,
+            clusterFinal,
+            enableAddressLookup
+        ),
+        [styleURL, markerStyleFinal, clusterFinal, enableAddressLookup] // Only regenerate when these change
     );
 
     const webviewRef = useRef<any>(null);
     const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
-    const reallyPost = React.useCallback((str: string) => {
+    // Memoize post function
+    const reallyPost = useCallback((str: string) => {
         if (Platform.OS === 'web' && iframeRef.current?.contentWindow) {
             iframeRef.current.contentWindow.postMessage(str, '*');
         } else {
@@ -387,31 +371,77 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
         }
     }, []);
 
-    const post = React.useCallback((payload: any) => {
+    const post = useCallback((payload: any) => {
         const str = JSON.stringify(payload);
-        if (childReady) reallyPost(str);
-        else pending.current.push(str);
+        if (childReady) {
+            reallyPost(str);
+        } else {
+            pending.current.push(str);
+        }
     }, [childReady, reallyPost]);
 
-    const flushPending = React.useCallback(() => {
-        while (pending.current.length) reallyPost(pending.current.shift() as string);
+    const flushPending = useCallback(() => {
+        while (pending.current.length) {
+            reallyPost(pending.current.shift() as string);
+        }
     }, [reallyPost]);
 
+    // Handle marker updates efficiently
     useEffect(() => {
-        // Only send marker updates if the map is ready and initialized
-        if (childReady && mapInitialized.current) {
+        console.log('Map marker update effect - childReady:', childReady, 'mapInitialized:', mapInitialized.current, 'markers length:', markers.length);
+        if (childReady && mapInitialized.current && screenId) {
+            // Only update markers if they've actually changed
+            const currentState = getMapState(screenId);
+            const currentMarkers = currentState?.markers || [];
+
+            const markersChanged = markers.length !== currentMarkers.length ||
+                markers.some((marker, index) => {
+                    const current = currentMarkers[index];
+                    return !current ||
+                        marker.id !== current.id ||
+                        marker.coordinates[0] !== current.coordinates[0] ||
+                        marker.coordinates[1] !== current.coordinates[1] ||
+                        marker.priceLabel !== current.priceLabel;
+                });
+
+            if (markersChanged) {
+                console.log('Sending markers to map (with screenId):', markers.length);
+                post({ type: 'setData', features: markers });
+            }
+        } else if (childReady && mapInitialized.current) {
+            // If no screenId, always update markers
+            console.log('Sending markers to map (no screenId):', markers.length);
             post({ type: 'setData', features: markers });
         }
-    }, [markers, childReady]);
+    }, [markers, childReady, post, screenId, getMapState]);
 
-    // Separate effect for saving markers to state to avoid unnecessary re-renders
+    // Send markers when map becomes initialized
     useEffect(() => {
-        // Only save markers to state if screenId is provided AND markers have actually changed
+        if (childReady && mapInitialized.current && markers.length > 0) {
+            console.log('Map initialized, sending initial markers:', markers.length);
+            post({ type: 'setData', features: markers });
+        }
+    }, [childReady, mapInitialized.current, markers, post]);
+
+    // Fallback: Send markers after a delay if map doesn't initialize
+    useEffect(() => {
+        if (childReady && !mapInitialized.current && markers.length > 0) {
+            const timeoutId = setTimeout(() => {
+                console.log('Fallback: Sending markers after delay:', markers.length);
+                mapInitialized.current = true; // Force initialization
+                post({ type: 'setData', features: markers });
+            }, 2000); // 2 second delay
+
+            return () => clearTimeout(timeoutId);
+        }
+    }, [childReady, markers, post]);
+
+    // Save markers to state
+    useEffect(() => {
         if (screenId && markers.length > 0) {
             const currentState = getMapState(screenId);
             const currentMarkers = currentState?.markers || [];
 
-            // Only update if markers have actually changed (compare by ID and coordinates)
             const markersChanged = markers.length !== currentMarkers.length ||
                 markers.some((marker, index) => {
                     const current = currentMarkers[index];
@@ -428,42 +458,47 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
         }
     }, [markers, screenId, setMapState, getMapState]);
 
+    // Handle user location centering
     const hasCenteredOnce = useRef(false);
     useEffect(() => {
         if (!userCoord) return;
+
         post({ type: 'setUserLocation', coordinates: userCoord });
 
-        // Only center on user location if there's no saved state and we haven't centered before
         if (!hasCenteredOnce.current && !savedState) {
             post({ type: 'setView', center: userCoord, zoom: Math.max(initialZoom, 14) });
             hasCenteredOnce.current = true;
         }
     }, [userCoord, post, initialZoom, savedState]);
 
-    const handleMessage = React.useCallback((event: any) => {
+    // Memoize message handler
+    const handleMessage = useCallback((event: any) => {
         try {
+            console.log('Map message received:', event?.data || event?.nativeEvent?.data);
             const msg = JSON.parse(event?.data || event?.nativeEvent?.data || '{}') as MapEvent;
+            console.log('Parsed map message:', msg);
+
             if (msg.type === 'ready') {
+                console.log('Map ready event received!');
                 setChildReady(true);
                 mapInitialized.current = true;
                 flushPending();
 
-                // Set initial view based on saved state or props
+                // Always set the correct initial view since HTML uses default coordinates
                 if (savedState) {
-                    // Use saved state
                     post({ type: 'setView', center: savedState.center, zoom: savedState.zoom, duration: 0 });
                 } else {
-                    // Use effective coordinates (which might be different from initial)
                     post({ type: 'setView', center: effectiveCoordinates, zoom: effectiveZoom, duration: 0 });
                 }
 
-                // Restore saved markers if available
+                // Restore saved markers
                 if (savedState?.markers && savedState.markers.length > 0) {
                     post({ type: 'setData', features: savedState.markers });
                 }
 
                 return;
             }
+
             if (msg.type === 'mapClick') onMapPress?.(msg);
             if (msg.type === 'markerClick') onMarkerPress?.(msg);
             if (msg.type === 'clusterClick') onClusterPress?.(msg);
@@ -471,7 +506,6 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
                 onAddressSelect(msg.address, msg.coordinates);
             }
             if (msg.type === 'region') {
-                // Save map state when region changes
                 if (screenId) {
                     setMapState(screenId, {
                         center: msg.center,
@@ -481,11 +515,15 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
                 }
                 onRegionChange?.(msg);
             }
-        } catch { }
+        } catch (error) {
+            console.warn('Error handling map message:', error);
+        }
     }, [onMapPress, onMarkerPress, onClusterPress, onAddressSelect, onRegionChange, screenId, setMapState, flushPending, post, savedState, effectiveCoordinates, effectiveZoom]);
 
+    // Set up message listeners
     useEffect(() => {
         if (Platform.OS !== 'web') return;
+
         window.addEventListener('message', handleMessage);
         return () => {
             window.removeEventListener('message', handleMessage);
@@ -493,14 +531,15 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
         };
     }, [handleMessage]);
 
-    const handleNativeMessage = (event: any) => handleMessage(event);
+    const handleNativeMessage = useCallback((event: any) => handleMessage(event), [handleMessage]);
 
+    // Expose map API
     React.useImperativeHandle(ref, () => ({
         navigateToLocation: (center: LonLat, zoom: number = 15) => {
             post({ type: 'setView', center, zoom, duration: 500 });
         },
         highlightMarker: (id: string | null) => {
-            post({ type: 'highlightMarker', id: id });
+            post({ type: 'highlightMarker', id });
         },
         lookupAddress: async (coordinates: LonLat) => {
             return await lookupAddressFromCoordinates(coordinates);
@@ -511,11 +550,12 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
         return (
             <View style={{ flex: 1, ...style }}>
                 <iframe
-                    ref={iframeRef} title="mapbox-map" srcDoc={html}
+                    ref={iframeRef}
+                    title="mapbox-map"
+                    srcDoc={html}
                     style={{ border: '0', width: '100%', height: '100%' }}
                     sandbox="allow-scripts allow-same-origin"
                     onLoad={() => {
-                        // Reset initialization flag when iframe loads
                         mapInitialized.current = false;
                     }}
                 />
@@ -526,9 +566,16 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     return (
         <View style={[{ flex: 1 }, style]}>
             <WebView
-                ref={webviewRef} originWhitelist={['*']} source={{ html }} onMessage={handleNativeMessage}
-                javaScriptEnabled domStorageEnabled allowFileAccess allowsInlineMediaPlayback
-                setSupportMultipleWindows={false} injectedJavaScriptBeforeContentLoaded={`true;`}
+                ref={webviewRef}
+                originWhitelist={['*']}
+                source={{ html }}
+                onMessage={handleNativeMessage}
+                javaScriptEnabled
+                domStorageEnabled
+                allowFileAccess
+                allowsInlineMediaPlayback
+                setSupportMultipleWindows={false}
+                injectedJavaScriptBeforeContentLoaded={`true;`}
                 onUnload={() => {
                     mapInitialized.current = false;
                 }}
@@ -537,6 +584,43 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     );
 });
 
-const Map = React.memo(MapComponent);
+// Optimized memoization with custom comparison
+const Map = React.memo(MapComponent, (prevProps, nextProps) => {
+    // For create property screens, ignore coordinate changes to prevent reloads
+    if (nextProps.screenId === 'create-property' || nextProps.screenId === 'create-property-fullscreen') {
+        return (
+            prevProps.screenId === nextProps.screenId &&
+            prevProps.enableAddressLookup === nextProps.enableAddressLookup &&
+            prevProps.showAddressInstructions === nextProps.showAddressInstructions &&
+            prevProps.styleURL === nextProps.styleURL &&
+            prevProps.initialZoom === nextProps.initialZoom &&
+            prevProps.startFromCurrentLocation === nextProps.startFromCurrentLocation &&
+            JSON.stringify(prevProps.markers) === JSON.stringify(nextProps.markers) &&
+            JSON.stringify(prevProps.cluster) === JSON.stringify(nextProps.cluster) &&
+            JSON.stringify(prevProps.markerStyle) === JSON.stringify(nextProps.markerStyle) &&
+            JSON.stringify(prevProps.style) === JSON.stringify(nextProps.style)
+        );
+    }
+
+    // For search screens, allow re-renders for marker updates
+    if (nextProps.screenId === 'search') {
+        return (
+            prevProps.screenId === nextProps.screenId &&
+            prevProps.styleURL === nextProps.styleURL &&
+            prevProps.initialZoom === nextProps.initialZoom &&
+            prevProps.startFromCurrentLocation === nextProps.startFromCurrentLocation &&
+            JSON.stringify(prevProps.cluster) === JSON.stringify(nextProps.cluster) &&
+            JSON.stringify(prevProps.markerStyle) === JSON.stringify(nextProps.markerStyle) &&
+            JSON.stringify(prevProps.style) === JSON.stringify(nextProps.style) &&
+            prevProps.onMapPress === nextProps.onMapPress &&
+            prevProps.onMarkerPress === nextProps.onMarkerPress &&
+            prevProps.onRegionChange === nextProps.onRegionChange
+            // Note: We allow marker changes to trigger re-renders for search screens
+        );
+    }
+
+    // For other screens, allow normal re-renders
+    return false;
+});
 
 export default Map;

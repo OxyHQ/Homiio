@@ -79,7 +79,6 @@ export default function RootLayout() {
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
-      backgroundColor: `${colors.primaryColor}20`,
       ...(isScreenNotMobile ? {
       } : {
         flex: 1,
@@ -94,7 +93,6 @@ export default function RootLayout() {
       justifyContent: 'space-between',
       flexDirection: isScreenNotMobile ? 'row' : 'column',
       flex: 1,
-      paddingRight: isScreenNotMobile ? 20 : 0,
       ...(isSearchScreen && isScreenNotMobile ? {
         paddingRight: 0, // Account for fixed right bar width (350 + 20 padding)
       } : {}),

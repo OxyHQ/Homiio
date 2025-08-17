@@ -201,11 +201,28 @@ export default function SearchScreen() {
 
   // Memoize markers to prevent unnecessary re-renders
   const mapMarkers = useMemo(() => {
-    return (properties || []).filter(p => p?.location?.coordinates?.length === 2).map(p => ({
+    console.log('mapMarkers memo - properties length:', properties?.length);
+    if (!properties || properties.length === 0) {
+      console.log('No properties, returning empty markers');
+      return [];
+    }
+
+    const validProperties = properties.filter(p => p?.location?.coordinates?.length === 2);
+    console.log('Valid properties with coordinates:', validProperties.length);
+
+    if (validProperties.length === 0 && properties.length > 0) {
+      console.log('No valid properties found. Sample property location:', properties[0]?.location);
+      console.log('Sample property coordinates:', properties[0]?.location?.coordinates);
+    }
+
+    const markers = validProperties.map(p => ({
       id: p._id,
       coordinates: p.location!.coordinates as [number, number],
       priceLabel: `€${p.rent?.amount?.toLocaleString() || 0}`,
     }));
+
+    console.log('Generated markers:', markers.length, markers.slice(0, 2));
+    return markers;
   }, [properties]);
 
   useEffect(() => {
@@ -228,6 +245,7 @@ export default function SearchScreen() {
   }, [searchQuery]);
 
   const fetchProperties = useCallback(async (bounds: { west: number; south: number; east: number; north: number }) => {
+    console.log('fetchProperties called with bounds:', bounds);
     setIsLoadingProperties(true);
     setHighlightedPropertyId(null);
     try {
@@ -237,20 +255,36 @@ export default function SearchScreen() {
         bathrooms: typeof filters.bathrooms === 'string' ? 4 : filters.bathrooms,
       });
 
+      console.log('API response:', response);
+      console.log('API response properties:', response.properties.length, 'properties');
+      if (response.properties.length > 0) {
+        console.log('First property sample:', response.properties[0]);
+        console.log('First property location:', response.properties[0].location);
+        console.log('First property coordinates:', response.properties[0].location?.coordinates);
+      }
+
       // Only update properties if they've actually changed
       setProperties(prevProperties => {
         const newProperties = response.properties;
 
         // Check if properties have actually changed
         if (prevProperties.length !== newProperties.length) {
+          console.log('Properties count changed, updating');
           return newProperties;
         }
 
+        // Deep comparison to check if properties have actually changed
         const hasChanged = newProperties.some((newProp, index) => {
           const prevProp = prevProperties[index];
-          return !prevProp || prevProp._id !== newProp._id;
+          return !prevProp ||
+            prevProp._id !== newProp._id ||
+            prevProp.rent?.amount !== newProp.rent?.amount ||
+            JSON.stringify(prevProp.location?.coordinates) !== JSON.stringify(newProp.location?.coordinates);
         });
 
+        if (hasChanged) {
+          console.log('Properties content changed, updating');
+        }
         return hasChanged ? newProperties : prevProperties;
       });
     } catch (error) {
@@ -299,10 +333,10 @@ export default function SearchScreen() {
       // Only fetch if bounds have changed significantly (to prevent unnecessary API calls)
       const currentBounds = savedState?.bounds;
       if (currentBounds) {
-        const boundsChanged = Math.abs(currentBounds.west - bounds.west) > 0.01 ||
-          Math.abs(currentBounds.south - bounds.south) > 0.01 ||
-          Math.abs(currentBounds.east - bounds.east) > 0.01 ||
-          Math.abs(currentBounds.north - bounds.north) > 0.01;
+        const boundsChanged = Math.abs(currentBounds.west - bounds.west) > 0.02 ||
+          Math.abs(currentBounds.south - bounds.south) > 0.02 ||
+          Math.abs(currentBounds.east - bounds.east) > 0.02 ||
+          Math.abs(currentBounds.north - bounds.north) > 0.02;
 
         if (!boundsChanged) {
           return; // Skip API call if bounds haven't changed significantly
@@ -310,7 +344,7 @@ export default function SearchScreen() {
       }
 
       fetchProperties(bounds);
-    }, 1000); // Increased from 500ms to 1000ms
+    }, 500); // Increased to 500ms to reduce frequency
   }, [fetchProperties, savedState?.bounds]);
 
   const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: { item: Property }[] }) => {
@@ -338,6 +372,55 @@ export default function SearchScreen() {
     // Force reload by updating a state
     setSearchQuery('');
   }, [setMapState, screenId]);
+
+  // Initial fetch of properties when component mounts
+  useEffect(() => {
+    console.log('Initial fetch effect - properties length:', properties.length, 'savedState:', !!savedState);
+    // Only fetch if we don't have properties and no saved state
+    if (properties.length === 0 && !savedState) {
+      console.log('Fetching initial properties for Barcelona area');
+      // Fetch properties for a default area (Barcelona)
+      const defaultBounds = {
+        west: 2.0,
+        south: 41.3,
+        east: 2.3,
+        north: 41.5,
+      };
+      fetchProperties(defaultBounds);
+    }
+  }, [properties.length, savedState, fetchProperties]);
+
+  // Add some test data if no properties are found (for debugging)
+  useEffect(() => {
+    if (properties.length === 0 && !isLoadingProperties) {
+      console.log('No properties found, adding test data');
+      const testProperties = [
+        {
+          _id: 'test1',
+          address: { street: 'Test Street 1', city: 'Barcelona', state: 'Catalonia', country: 'Spain', zipCode: '08001' },
+          rent: { amount: 1200, currency: 'EUR', paymentFrequency: 'monthly', deposit: 1200, utilities: 'included' },
+          location: { type: 'Point', coordinates: [2.16538, 41.38723] } as any,
+          type: 'apartment' as any,
+          status: 'available' as any,
+          ownerId: 'test-owner',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          _id: 'test2',
+          address: { street: 'Test Street 2', city: 'Barcelona', state: 'Catalonia', country: 'Spain', zipCode: '08002' },
+          rent: { amount: 1500, currency: 'EUR', paymentFrequency: 'monthly', deposit: 1500, utilities: 'included' },
+          location: { type: 'Point', coordinates: [2.17538, 41.39723] } as any,
+          type: 'apartment' as any,
+          status: 'available' as any,
+          ownerId: 'test-owner',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+      ] as Property[];
+      setProperties(testProperties);
+    }
+  }, [properties.length, isLoadingProperties]);
 
   useEffect(() => {
     return () => {
@@ -442,6 +525,7 @@ export default function SearchScreen() {
       {showMap ? (
         <>
           <Map
+            key="search-map"
             ref={mapRef}
             style={styles.map}
             screenId={screenId}

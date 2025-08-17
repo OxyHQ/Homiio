@@ -115,7 +115,6 @@ export const RightBar = React.memo(function RightBar() {
 const styles = StyleSheet.create({
   container: {
     width: 350,
-    paddingStart: 20,
     flexDirection: 'column',
   },
   fixedContainer: {
