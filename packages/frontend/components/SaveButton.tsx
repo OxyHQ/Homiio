@@ -1,4 +1,4 @@
-import React, { useRef, useState, useContext } from 'react';
+import React, { useState, useContext } from 'react';
 import { TouchableOpacity, StyleSheet, ViewStyle, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
@@ -7,14 +7,16 @@ import { SaveToFolderBottomSheet } from './SaveToFolderBottomSheet';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { Property } from '@homiio/shared-types';
 import { useSavedProfiles } from '@/store/savedProfilesStore';
-import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { getPropertyTitle } from '@/utils/propertyUtils';
-
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useOxy } from '@oxyhq/services';
+import savedPropertyService from '@/services/savedPropertyService';
+import { toast } from 'sonner';
 
 const IconComponent = Ionicons as any;
 
 interface SaveButtonProps {
-  isSaved: boolean;
+  isSaved?: boolean; // Made optional since we'll determine this from React Query
   onPress?: () => void; // Optional for backward compatibility
   onLongPress?: () => void;
   size?: number;
@@ -32,7 +34,7 @@ interface SaveButtonProps {
 }
 
 export function SaveButton({
-  isSaved,
+  isSaved: propIsSaved,
   onPress,
   onLongPress,
   size = 24,
@@ -48,14 +50,71 @@ export function SaveButton({
   profileId,
 }: SaveButtonProps) {
   const [isPressed, setIsPressed] = useState(false);
-  const [internalLoading, setInternalLoading] = useState(false);
-  const isProcessingRef = useRef(false);
   const bottomSheetContext = useContext(BottomSheetContext);
-  const { savePropertyToFolder, unsaveProperty } = useSavedPropertiesContext();
   const { saveProfile, unsaveProfile } = useSavedProfiles();
+  const { oxyServices, activeSessionId } = useOxy();
+  const queryClient = useQueryClient();
 
-  // Extract propertyId and propertyTitle from property object
+  // Get saved properties from React Query to determine saved state
+  const { data: savedPropertiesData } = useQuery({
+    queryKey: ['savedProperties'],
+    queryFn: () => savedPropertyService.getSavedProperties(oxyServices!, activeSessionId!),
+    enabled: !!oxyServices && !!activeSessionId && !!property,
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
+  });
+
+  // Determine if property is saved from React Query data
+  const savedProperties = savedPropertiesData?.properties || [];
   const propertyId = property?._id || property?.id;
+  const isSaved = propertyId
+    ? savedProperties.some((p: any) => (p._id || p.id) === propertyId)
+    : propIsSaved; // Fallback to prop if no propertyId
+
+  // React Query mutations for instant updates
+  const savePropertyMutation = useMutation({
+    mutationFn: async (propertyId: string) => {
+      if (!oxyServices || !activeSessionId) {
+        throw new Error('Authentication required');
+      }
+      return savedPropertyService.saveProperty(propertyId, undefined, oxyServices, activeSessionId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
+      queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
+      toast.success('Property saved successfully');
+    },
+    onError: (error: any) => {
+      console.error('Failed to save property:', error);
+      toast.error('Failed to save property');
+    },
+  });
+
+  const unsavePropertyMutation = useMutation({
+    mutationFn: async (propertyId: string) => {
+      if (!oxyServices || !activeSessionId) {
+        throw new Error('Authentication required');
+      }
+      return savedPropertyService.unsaveProperty(propertyId, oxyServices, activeSessionId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
+      queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
+      toast.success('Property removed from saved');
+    },
+    onError: (error: any) => {
+      console.error('Failed to unsave property:', error);
+      if (error?.status === 404 || error?.message?.includes('not found')) {
+        console.log('Property already unsaved (404), updating UI state');
+        queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
+        queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
+        return; // Don't show error toast for 404
+      }
+      toast.error('Failed to unsave property');
+    },
+  });
+
+  // Extract propertyTitle from property object
   const propertyTitle = property ? getPropertyTitle(property) : '';
 
   const getIconName = () => {
@@ -70,15 +129,13 @@ export function SaveButton({
     return isSaved ? activeColor : color;
   };
 
-  const isButtonDisabled = disabled || isLoading || internalLoading || isPressed;
+  const isButtonDisabled = disabled || isLoading || isPressed ||
+    savePropertyMutation.isPending || unsavePropertyMutation.isPending;
 
   const handleInternalSave = async () => {
-    if (isProcessingRef.current || !propertyId) return;
+    if (!propertyId) return;
 
     try {
-      isProcessingRef.current = true;
-      setInternalLoading(true);
-
       if (profileId) {
         if (isSaved) {
           await unsaveProfile(profileId);
@@ -87,25 +144,13 @@ export function SaveButton({
         }
       } else if (propertyId) {
         if (isSaved) {
-          try {
-            await unsaveProperty(propertyId);
-          } catch (error: any) {
-            // If we get a 404, the property is already not saved, so treat as success
-            if (error?.status === 404 || error?.message?.includes('not found')) {
-              console.log('Property not found in database, treating as already unsaved');
-              return; // Success - don't throw error
-            }
-            throw error; // Re-throw other errors
-          }
+          await unsavePropertyMutation.mutateAsync(propertyId);
         } else {
-          await savePropertyToFolder(propertyId, null);
+          await savePropertyMutation.mutateAsync(propertyId);
         }
       }
     } catch (error) {
       console.error('Failed to toggle save:', error);
-    } finally {
-      setInternalLoading(false);
-      isProcessingRef.current = false;
     }
   };
 
@@ -194,7 +239,7 @@ export function SaveButton({
           justifyContent: 'center',
         }}
       >
-        {showLoading && (isLoading || internalLoading) ? (
+        {showLoading && (isLoading || savePropertyMutation.isPending || unsavePropertyMutation.isPending) ? (
           <LoadingSpinner size={size * 0.8} color={getIconColor()} showText={false} />
         ) : (
           <IconComponent name={getIconName()} size={size} color={getIconColor()} />

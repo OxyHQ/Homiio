@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import LoadingTopSpinner from '@/components/LoadingTopSpinner';
 import { Header } from '@/components/Header';
 import { PropertyCard } from '@/components/PropertyCard';
@@ -26,10 +27,10 @@ import { useOxy } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
 
 import savedPropertyService from '@/services/savedPropertyService';
+import savedPropertyFolderService from '@/services/savedPropertyFolderService';
 import type { SavedProperty } from '@homiio/shared-types';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
-import { useSavedPropertiesStore, useSavedPropertiesSelectors } from '@/store/savedPropertiesStore';
+
 // import { useSavedProfiles } from '@/context/SavedProfilesContext';
 import { api } from '@/utils/api';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
@@ -74,18 +75,32 @@ const LIST_GAP = 16; // desired gap between list rows
 export default function SavedPropertiesScreen() {
   const { t } = useTranslation();
   const { oxyServices, activeSessionId } = useOxy();
+  const queryClient = useQueryClient();
   const bottomSheetContext = useContext(BottomSheetContext);
 
   // Use the new Zustand-based favorites system
   const { toggleFavorite, clearError: clearFavoritesError } = useFavorites();
 
-  // Local state for saved properties
-  const { properties: storeProperties, savingPropertyIds } = useSavedPropertiesSelectors();
-  const { setProperties: setSavedPropertiesZ } = useSavedPropertiesStore.getState();
-  const savedProperties: SavedPropertyWithUI[] = useMemo(
-    () => storeProperties as any,
-    [storeProperties],
-  );
+  // Use React Query directly for instant updates
+  const { data: savedPropertiesData, isLoading: savedLoading } = useQuery({
+    queryKey: ['savedProperties'],
+    queryFn: () => savedPropertyService.getSavedProperties(oxyServices!, activeSessionId!),
+    enabled: !!oxyServices && !!activeSessionId,
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
+  });
+
+  const { data: foldersData, isLoading: foldersLoading } = useQuery({
+    queryKey: ['savedFolders'],
+    queryFn: () => savedPropertyFolderService.getSavedPropertyFolders(oxyServices!, activeSessionId!),
+    enabled: !!oxyServices && !!activeSessionId,
+    staleTime: 1000 * 60,
+    gcTime: 1000 * 60 * 10,
+  });
+
+  const savedProperties: SavedPropertyWithUI[] = savedPropertiesData?.properties || [];
+  const folders = foldersData?.folders || [];
+
   const [savedProfiles, setSavedProfiles] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,9 +138,6 @@ export default function SavedPropertiesScreen() {
   const [tabsCanScrollLeft, setTabsCanScrollLeft] = useState(false);
   const [tabsCanScrollRight, setTabsCanScrollRight] = useState(false);
 
-  // Folder functionality
-  const { folders, loadFolders, loadSavedProperties: loadSavedFromCtx } = useSavedPropertiesContext();
-
   // Saved searches (React Query-backed)
   const {
     searches: savedSearches,
@@ -133,36 +145,27 @@ export default function SavedPropertiesScreen() {
     deleteSavedSearch: deleteSavedSearchHook,
   } = useSavedSearches();
 
-  // Search query (filtering directly for now for reliability)
-
-  // Load saved properties using React Query-backed context + saved profiles
-  const refreshSavedData = useCallback(async () => {
+  // Load saved profiles
+  const refreshSavedProfiles = useCallback(async () => {
     if (!oxyServices || !activeSessionId) return;
 
     try {
-      setIsLoading(true);
-      setError(null);
-      await loadSavedFromCtx();
       const res = await api.get('/api/profiles/me/saved-profiles', {
         oxyServices,
         activeSessionId,
       });
       setSavedProfiles(res.data?.data || res.data || []);
     } catch (error: any) {
-      console.error('Failed to load saved data:', error);
-      setError(error.message || 'Failed to load saved data');
-    } finally {
-      setIsLoading(false);
+      console.error('Failed to load saved profiles:', error);
     }
-  }, [oxyServices, activeSessionId, loadSavedFromCtx]);
+  }, [oxyServices, activeSessionId]);
 
-  // Load properties on mount
+  // Load profiles on mount
   useEffect(() => {
     if (oxyServices && activeSessionId) {
-      refreshSavedData();
-      loadFolders();
+      refreshSavedProfiles();
     }
-  }, [oxyServices, activeSessionId, refreshSavedData, loadFolders]);
+  }, [oxyServices, activeSessionId, refreshSavedProfiles]);
 
   // Memoized filtered properties
   const filteredProperties = useMemo(() => {
@@ -264,7 +267,7 @@ export default function SavedPropertiesScreen() {
     if (!searchQuery.trim()) return folders;
     const q = searchQuery.toLowerCase().trim();
     return folders.filter(
-      (f) => f.name.toLowerCase().includes(q) || (f.description || '').toLowerCase().includes(q),
+      (f: any) => f.name.toLowerCase().includes(q) || (f.description || '').toLowerCase().includes(q),
     );
   }, [folders, searchQuery]);
 
@@ -274,8 +277,10 @@ export default function SavedPropertiesScreen() {
 
     setError(null);
     clearFavoritesError();
-    await refreshSavedData();
-  }, [oxyServices, activeSessionId, refreshSavedData, clearFavoritesError]);
+    await queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
+    await queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
+    await refreshSavedProfiles();
+  }, [oxyServices, activeSessionId, queryClient, clearFavoritesError, refreshSavedProfiles]);
 
   // Using only bulk unsave for now; individual unsave action handled elsewhere
 
@@ -306,12 +311,8 @@ export default function SavedPropertiesScreen() {
                 activeSessionId,
               );
 
-              // Update the Zustand state for notes
-              // setProperties in store expects an array; compute and pass
-              const updated = ((useSavedPropertiesStore.getState().properties as any[]) || []).map(
-                (p: any) => ((p._id || p.id) === propertyId ? { ...p, notes } : p),
-              );
-              setSavedPropertiesZ(updated as any);
+              // Invalidate the saved properties query to refresh the data
+              await queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
             } catch (error) {
               console.error('Failed to update notes:', error);
               throw error; // Re-throw to let the bottom sheet handle the error
@@ -320,7 +321,7 @@ export default function SavedPropertiesScreen() {
         />,
       );
     },
-    [bottomSheetContext, oxyServices, activeSessionId, setSavedPropertiesZ],
+    [bottomSheetContext, oxyServices, activeSessionId, queryClient],
   );
 
   const handlePropertyPress = useCallback(
@@ -371,7 +372,7 @@ export default function SavedPropertiesScreen() {
               await Promise.all(unsavePromises);
 
               // Refresh the saved properties list
-              await refreshSavedData();
+              await queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
 
               setSelectedProperties(new Set());
               setBulkActionMode(false);
@@ -382,13 +383,12 @@ export default function SavedPropertiesScreen() {
         },
       ],
     );
-  }, [selectedProperties, oxyServices, activeSessionId, toggleFavorite, refreshSavedData]);
+  }, [selectedProperties, oxyServices, activeSessionId, toggleFavorite, queryClient]);
 
   // Render functions
   const renderPropertyItem = useCallback(
     ({ item }: { item: SavedPropertyWithUI }) => {
       const propertyId = item._id || item.id || '';
-      const isProcessing = savingPropertyIds.includes(propertyId);
       const isSelected = selectedProperties.has(propertyId);
 
       return (
@@ -397,16 +397,15 @@ export default function SavedPropertiesScreen() {
             property={item}
             variant={viewMode === 'grid' ? 'compact' : 'saved'}
             orientation={viewMode === 'grid' ? 'vertical' : 'horizontal'}
-            onPress={() => !isProcessing && handlePropertyPress(item)}
+            onPress={() => handlePropertyPress(item)}
             noteText={
               (parseNotesString(item.notes as any)[0]?.text ?? '') +
               (parseNotesString(item.notes as any).length > 1
                 ? ` (+${parseNotesString(item.notes as any).length - 1} more)`
                 : '')
             }
-            onPressNote={() => !isProcessing && handleEditNotes(item)}
+            onPressNote={() => handleEditNotes(item)}
             isSelected={isSelected}
-            isProcessing={isProcessing}
             overlayContent={
               bulkActionMode ? (
                 <TouchableOpacity
@@ -430,7 +429,6 @@ export default function SavedPropertiesScreen() {
     },
     [
       viewMode,
-      savingPropertyIds,
       selectedProperties,
       bulkActionMode,
       handlePropertyPress,
@@ -838,9 +836,9 @@ export default function SavedPropertiesScreen() {
 
       {renderHeader()}
 
-      {isLoading && savedProperties.length === 0 && <LoadingTopSpinner showLoading={true} />}
+      {(savedLoading || foldersLoading) && savedProperties.length === 0 && <LoadingTopSpinner showLoading={true} />}
 
-      {error && !isLoading && (
+      {error && !savedLoading && !foldersLoading && (
         <EmptyState
           icon="alert-circle"
           title="Something went wrong"
@@ -851,7 +849,8 @@ export default function SavedPropertiesScreen() {
         />
       )}
 
-      {!isLoading &&
+      {!savedLoading &&
+        !foldersLoading &&
         !error &&
         (selectedCategory === 'folders' ? (
           <FlatList
@@ -872,7 +871,7 @@ export default function SavedPropertiesScreen() {
             ListEmptyComponent={renderEmptyState}
             refreshControl={
               <RefreshControl
-                refreshing={isLoading}
+                refreshing={savedLoading || foldersLoading}
                 onRefresh={handleRefresh}
                 colors={[colors.primaryColor]}
                 tintColor={colors.primaryColor}
@@ -916,7 +915,7 @@ export default function SavedPropertiesScreen() {
             }
             refreshControl={
               <RefreshControl
-                refreshing={isLoading}
+                refreshing={savedLoading || foldersLoading}
                 onRefresh={handleRefresh}
                 colors={[colors.primaryColor]}
                 tintColor={colors.primaryColor}
@@ -966,7 +965,7 @@ export default function SavedPropertiesScreen() {
             ListEmptyComponent={renderEmptyState}
             refreshControl={
               <RefreshControl
-                refreshing={isLoading}
+                refreshing={savedLoading || foldersLoading}
                 onRefresh={handleRefresh}
                 colors={[colors.primaryColor]}
                 tintColor={colors.primaryColor}
@@ -998,7 +997,7 @@ export default function SavedPropertiesScreen() {
             ListEmptyComponent={renderEmptyState}
             refreshControl={
               <RefreshControl
-                refreshing={isLoading}
+                refreshing={savedLoading || foldersLoading}
                 onRefresh={handleRefresh}
                 colors={[colors.primaryColor]}
                 tintColor={colors.primaryColor}
@@ -1060,14 +1059,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#eaeaea',
-    ...Platform.select({
-      web: {
-        position: 'sticky',
-        top: 50,
-        backgroundColor: 'white',
-        zIndex: 1000,
-      },
-    }),
+    ...(Platform.OS === 'web' ? {
+      position: 'sticky' as any,
+      top: 50,
+      backgroundColor: 'white',
+      zIndex: 1000,
+    } : {}),
   },
   tabsContent: {
     flexDirection: 'row',

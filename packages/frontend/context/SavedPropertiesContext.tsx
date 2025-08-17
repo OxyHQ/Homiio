@@ -313,6 +313,15 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         await loadFolders();
         await queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
       } catch (error: any) {
+        // If we get a 404, the property is already not saved, so treat as success
+        if (error?.status === 404 || error?.message?.includes('not found')) {
+          console.log('Property already unsaved (404), updating UI state');
+          removeSavingPropertyId(propertyId);
+          // Don't revert optimistic update since the property is actually unsaved
+          // Don't show error toast since this is expected behavior
+          return; // Success - don't throw error
+        }
+
         console.error('Failed to unsave property:', error);
 
         // Revert optimistic update on error
