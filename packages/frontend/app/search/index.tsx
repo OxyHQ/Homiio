@@ -299,10 +299,12 @@ export default function SearchScreen() {
 
   const mapRef = useRef<MapApi>(null);
   const flatListRef = useRef<FlatList>(null);
+  const searchInputRef = useRef<TextInput>(null);
   const [searchQuery, setSearchQuery] = useState(savedState?.searchQuery || '');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showResults, setShowResults] = useState(false);
+  const [isSelectingResult, setIsSelectingResult] = useState(false);
   const { isMapMode, setIsMapMode } = useSearchMode();
   const [showMap, setShowMap] = useState(true);
 
@@ -320,9 +322,6 @@ export default function SearchScreen() {
   const [isLoadingProperties, setIsLoadingProperties] = useState(false);
   const [highlightedPropertyId, setHighlightedPropertyId] = useState<string | null>(savedState?.highlightedMarkerId || null);
   const regionChangeDebounce = useRef<NodeJS.Timeout | null>(null);
-  const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 50,
-  }).current;
 
   // Memoize markers to prevent unnecessary re-renders
   const mapMarkers = useMemo(() => {
@@ -454,17 +453,33 @@ export default function SearchScreen() {
   }, [highlightedPropertyId]);
 
   const handleSelectLocation = (result: SearchResult) => {
+    setIsSelectingResult(true);
     const [lng, lat] = result.center;
-    setSearchQuery(result.place_name);
-    setShowResults(false);
-    mapRef.current?.navigateToLocation(result.center, 14);
-    const radius = 0.05;
-    const bounds = result.bbox ? { west: result.bbox[0], south: result.bbox[1], east: result.bbox[2], north: result.bbox[3] }
-      : { west: lng - radius, south: lat - radius, east: lng + radius, north: lat + radius };
-    fetchProperties(bounds);
 
-    // Save search query to state
-    setMapState(screenId, { searchQuery: result.place_name });
+    // Clear search query and results immediately to prevent reopening
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowResults(false);
+
+    // Close search results and blur the input immediately
+    searchInputRef.current?.blur();
+
+    // Navigate map after a short delay to prevent focus issues
+    setTimeout(() => {
+      mapRef.current?.navigateToLocation(result.center, 14);
+      const radius = 0.05;
+      const bounds = result.bbox ? { west: result.bbox[0], south: result.bbox[1], east: result.bbox[2], north: result.bbox[3] }
+        : { west: lng - radius, south: lat - radius, east: lng + radius, north: lat + radius };
+      fetchProperties(bounds);
+
+      // Save search query to state
+      setMapState(screenId, { searchQuery: result.place_name });
+    }, 50);
+
+    // Reset the flag after a longer delay
+    setTimeout(() => {
+      setIsSelectingResult(false);
+    }, 500);
   };
 
   const handleMarkerPress = ({ id }: { id: string; lngLat: [number, number] }) => {
@@ -507,6 +522,10 @@ export default function SearchScreen() {
       setHighlightedPropertyId(visibleId);
     }
   }, []);
+
+  const viewabilityConfig = useMemo(() => ({
+    itemVisiblePercentThreshold: 50,
+  }), []);
 
   const handlePropertyPress = useCallback((property: Property) => {
     router.push(`/properties/${property._id}`);
@@ -582,6 +601,15 @@ export default function SearchScreen() {
       fetchProperties(defaultBounds);
     }
   }, [properties.length, savedState, fetchProperties]);
+
+  // Auto-focus search input when component mounts
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 100); // Small delay to ensure component is fully rendered
+
+    return () => clearTimeout(timer);
+  }, []);
 
 
 
@@ -669,6 +697,7 @@ export default function SearchScreen() {
       <View style={styles.searchInputContainer}>
         <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
         <TextInput
+          ref={searchInputRef}
           style={styles.searchInput}
           placeholder="Search for a city, neighborhood, or address..."
           value={searchQuery}
@@ -678,8 +707,13 @@ export default function SearchScreen() {
           }}
           returnKeyType="search"
           onFocus={() => {
-            console.log('Search input focused (header)');
-            setShowResults(true);
+            console.log('Search input focused (header), isSelectingResult:', isSelectingResult);
+            if (!isSelectingResult && searchQuery.trim()) {
+              setShowResults(true);
+            }
+          }}
+          onBlur={() => {
+            console.log('Search input blurred (header)');
           }}
         />
         {isSearching ? <ActivityIndicator size="small" color="#666" style={styles.searchIcon} />
@@ -780,6 +814,7 @@ export default function SearchScreen() {
       <View style={styles.searchInputContainer}>
         <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
         <TextInput
+          ref={searchInputRef}
           style={styles.searchInput}
           placeholder="Search for a city, neighborhood, or address..."
           value={searchQuery}
@@ -789,8 +824,13 @@ export default function SearchScreen() {
           }}
           returnKeyType="search"
           onFocus={() => {
-            console.log('Search input focused (bar)');
-            setShowResults(true);
+            console.log('Search input focused (bar), isSelectingResult:', isSelectingResult);
+            if (!isSelectingResult && searchQuery.trim()) {
+              setShowResults(true);
+            }
+          }}
+          onBlur={() => {
+            console.log('Search input blurred (bar)');
           }}
         />
         {isSearching ? <ActivityIndicator size="small" color="#666" style={styles.searchIcon} />
@@ -842,21 +882,6 @@ export default function SearchScreen() {
           <View style={styles.searchHeaderContainer}>
             {renderSearchHeader()}
           </View>
-
-          {/* Backdrop for search results */}
-          {showResults && (
-            <TouchableWithoutFeedback onPress={handleClickOutside}>
-              <View style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(0,0,0,0.1)',
-                zIndex: 999,
-              }} />
-            </TouchableWithoutFeedback>
-          )}
 
           {properties.length > 0 && (
             <View style={styles.propertyCarouselContainer}>
