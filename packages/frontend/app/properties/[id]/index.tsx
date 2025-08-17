@@ -35,7 +35,7 @@ import { HomeCarouselSection } from '@/components/HomeCarouselSection';
 import ProfileAvatar from '@/components/ProfileAvatar';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 
-import { useRecentlyViewedStore } from '@/store/recentlyViewedStore';
+import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { userApi } from '@/utils/api';
 import { SaveButton } from '@/components/SaveButton';
@@ -173,8 +173,8 @@ export default function PropertyDetailPage() {
     ]).start();
   }, [activeImageIndex, animatedZoomScale, animatedTranslateX, animatedTranslateY]);
 
-  // Zustand stores
-  const { items: recentlyViewed, addItem } = useRecentlyViewedStore();
+  // Recently viewed functionality
+  const { addProperty } = useRecentlyViewed();
 
   const { isPropertySaved, isInitialized } = useSavedPropertiesContext();
 
@@ -366,37 +366,32 @@ export default function PropertyDetailPage() {
   }, [apiProperty]);
   // Track property view when property is loaded and user is authenticated
   useEffect(() => {
+    // Only track if we haven't already tracked this property
     if (apiProperty && !hasViewedRef.current) {
-      hasViewedRef.current = true;
-
       const propertyId = apiProperty._id || apiProperty.id;
+      const currentId = typeof id === 'string' ? id : undefined;
 
-      if (oxyServices && activeSessionId) {
-        console.log('PropertyDetailPage: Tracking property view for authenticated user', {
+      // Ensure we're tracking the correct property
+      if (propertyId && currentId && propertyId === currentId) {
+        console.log('PropertyDetailPage: Tracking property view', {
           propertyId,
-          hasOxyServices: !!oxyServices,
-          hasActiveSession: !!activeSessionId,
+          currentId,
+          propertyTitle: (apiProperty as any).title || 'No title',
         });
 
-        // Add property to Zustand state immediately for instant UI feedback
-        if (propertyId) {
-          addItem(propertyId, RecentlyViewedType.PROPERTY, apiProperty);
-        }
+        // Mark as viewed to prevent duplicate tracking
+        hasViewedRef.current = true;
 
-        // Call the backend to track the view in database
-        if (propertyId) {
-          addProperty(apiProperty);
-        }
-      } else {
-        console.log('PropertyDetailPage: User not authenticated, adding to local state only');
-
-        // For unauthenticated users, only add to local Zustand state
-        if (propertyId) {
-          addItem(propertyId, RecentlyViewedType.PROPERTY, apiProperty);
-        }
+        // Add property to recently viewed
+        addProperty(apiProperty);
       }
     }
-  }, [apiProperty, oxyServices, activeSessionId, recentlyViewed, addItem]);
+  }, [apiProperty, id, addProperty]);
+
+  // Reset hasViewedRef when property ID changes
+  useEffect(() => {
+    hasViewedRef.current = false;
+  }, [id]);
 
   // Load property on component mount
   React.useEffect(() => {

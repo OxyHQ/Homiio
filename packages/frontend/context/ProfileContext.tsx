@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useCallback } from 'react';
 import { useOxy } from '@oxyhq/services';
 import { useProfileStore } from '@/store/profileStore';
-import { useRecentlyViewedStore } from '@/store/recentlyViewedStore';
+// Recently viewed is now handled by React Query hooks
 import type { Profile } from '@/services/profileService';
 
 interface ProfileContextType {
@@ -53,32 +53,18 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     }
   }, [oxyServices, activeSessionId, setError]);
 
-  // Memoize load recently viewed function
-  const loadRecentlyViewed = useCallback(async () => {
-    try {
-      console.log('ProfileContext: Loading recently viewed for authenticated user');
-      if (activeSessionId) {
-        await useRecentlyViewedStore.getState().loadFromDatabase(oxyServices, activeSessionId);
-        console.log('ProfileContext: Recently viewed loaded successfully');
-      }
-    } catch (err: any) {
-      console.error('ProfileContext: Error loading recently viewed:', err);
-      // Don't set profile error for recently viewed errors
-    }
-  }, [oxyServices, activeSessionId]);
+  // Recently viewed is now handled by React Query hooks automatically
 
   useEffect(() => {
     if (oxyServices && activeSessionId) {
-      console.log('ProfileContext: User authenticated, loading profiles and recently viewed...');
+      console.log('ProfileContext: User authenticated, loading profiles...');
       loadProfiles();
-      loadRecentlyViewed();
     } else {
-      console.log('ProfileContext: User not authenticated, clearing profiles and recently viewed');
+      console.log('ProfileContext: User not authenticated, clearing profiles');
       setPrimaryProfile(null);
       setAllProfiles([]);
-      useRecentlyViewedStore.getState().clearAll();
     }
-  }, [oxyServices, activeSessionId, setPrimaryProfile, setAllProfiles, loadProfiles, loadRecentlyViewed]);
+  }, [oxyServices, activeSessionId, setPrimaryProfile, setAllProfiles, loadProfiles]);
 
   // Memoize profile helpers
   const personalProfile = useMemo(
