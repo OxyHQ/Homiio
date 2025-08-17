@@ -1,5 +1,6 @@
 import { Property, PropertyFilters } from '@homiio/shared-types';
 import { api } from '@/utils/api';
+import { OxyServices } from '@oxyhq/services';
 
 export interface SearchPropertiesParams extends PropertyFilters {
   lat?: number;
@@ -29,10 +30,10 @@ export interface MapBounds {
 
 export const propertyService = {
   async getProperties(filters?: PropertyFilters): Promise<{ properties: Property[]; page: number; total: number; totalPages: number }> {
-    const response = await api.get<{ properties: Property[]; page: number; total: number; totalPages: number }>('/api/properties', {
+    const response = await api.get<{ success: boolean; message: string; data: { properties: Property[]; page: number; total: number; totalPages: number } }>('/api/properties', {
       params: filters,
     });
-    return response.data;
+    return response.data.data;
   },
 
   async findPropertiesInBounds(bounds: MapBounds, filters?: PropertyFilters): Promise<{ properties: Property[]; page: number; total: number; totalPages: number }> {
@@ -70,10 +71,10 @@ export const propertyService = {
   },
 
   async searchProperties(params: SearchPropertiesParams): Promise<SearchPropertiesResponse> {
-    const response = await api.get<SearchPropertiesResponse>('/api/properties/search', {
+    const response = await api.get<{ success: boolean; message: string; data: SearchPropertiesResponse }>('/api/properties/search', {
       params,
     });
-    return response.data;
+    return response.data.data;
   },
 
   async findPropertiesInRadius(lat: number, lng: number, radius: number): Promise<Property[]> {
@@ -89,7 +90,51 @@ export const propertyService = {
   },
 
   async getPropertyById(id: string): Promise<Property> {
-    const response = await api.get<{ property: Property }>(`/api/properties/${id}`);
-    return response.data.property;
+    const response = await api.get<{ success: boolean; message: string; data: Property }>(`/api/properties/${id}`);
+    return response.data.data;
+  },
+
+  // Add the missing getProperty method that the useProperty hook expects
+  async getProperty(id: string, oxyServices?: OxyServices, activeSessionId?: string): Promise<Property> {
+    const response = await api.get<{ success: boolean; message: string; data: Property }>(`/api/properties/${id}`, {
+      oxyServices,
+      activeSessionId,
+    });
+    return response.data.data;
+  },
+
+  // Add missing methods that might be needed
+  async getPropertyStats(id: string): Promise<any> {
+    const response = await api.get<{ success: boolean; message: string; data: any }>(`/api/properties/${id}/stats`);
+    return response.data.data;
+  },
+
+  async createProperty(data: any, oxyServices?: OxyServices, activeSessionId?: string): Promise<Property> {
+    const response = await api.post<{ success: boolean; message: string; data: Property }>('/api/properties', data, {
+      oxyServices,
+      activeSessionId,
+    });
+    return response.data.data;
+  },
+
+  async updateProperty(id: string, data: any, oxyServices?: OxyServices, activeSessionId?: string): Promise<Property> {
+    const response = await api.put<{ success: boolean; message: string; data: Property }>(`/api/properties/${id}`, data, {
+      oxyServices,
+      activeSessionId,
+    });
+    return response.data.data;
+  },
+
+  async deleteProperty(id: string): Promise<void> {
+    await api.delete(`/api/properties/${id}`);
+  },
+
+  async getOwnerProperties(ownerId: string, excludePropertyId?: string, oxyServices?: OxyServices, activeSessionId?: string): Promise<{ properties: Property[] }> {
+    const response = await api.get<{ success: boolean; message: string; data: Property[] }>(`/api/properties/owner/${ownerId}`, {
+      params: { exclude: excludePropertyId },
+      oxyServices,
+      activeSessionId,
+    });
+    return { properties: response.data.data };
   },
 };

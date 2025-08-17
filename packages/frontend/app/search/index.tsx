@@ -8,7 +8,7 @@ import { useRouter } from 'expo-router';
 import Map, { MapApi } from '@/components/Map';
 import { PropertyCard } from '@/components/PropertyCard';
 import { ThemedText } from '@/components/ThemedText';
-import { Property, PaymentFrequency } from '@homiio/shared-types';
+import { Property } from '@homiio/shared-types';
 import { propertyService } from '@/services/propertyService';
 
 const styles = StyleSheet.create({
@@ -253,7 +253,7 @@ export default function SearchScreen() {
     }, 500);
   }, [fetchProperties]);
 
-  const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: Array<{ item: Property }> }) => {
+  const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: { item: Property }[] }) => {
     if (viewableItems.length > 0) {
       const visibleId = viewableItems[0].item._id;
       setHighlightedPropertyId(visibleId);
