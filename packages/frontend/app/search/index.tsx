@@ -4,7 +4,7 @@ import {
   Platform, ActivityIndicator, ScrollView, FlatList, TouchableWithoutFeedback,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import Map, { MapApi } from '@/components/Map';
 import { PropertyCard } from '@/components/PropertyCard';
 import { ThemedText } from '@/components/ThemedText';
@@ -289,6 +289,7 @@ const defaultFilters: Filters = {
 export default function SearchScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const params = useLocalSearchParams();
   const { getMapState, setMapState } = useMapState();
   const { saveSearch, isAuthenticated } = useSavedSearches();
   const bottomSheet = useContext(BottomSheetContext);
@@ -297,14 +298,22 @@ export default function SearchScreen() {
   // Restore saved state on mount
   const savedState = getMapState(screenId);
 
+  // Get search query from URL params
+  const urlQuery = params.query as string;
+
   const mapRef = useRef<MapApi>(null);
   const flatListRef = useRef<FlatList>(null);
   const searchInputRef = useRef<TextInput>(null);
-  const [searchQuery, setSearchQuery] = useState(savedState?.searchQuery || '');
+  const [searchQuery, setSearchQuery] = useState(urlQuery || savedState?.searchQuery || '');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showResults, setShowResults] = useState(false);
-  const [isSelectingResult, setIsSelectingResult] = useState(false);
+
+  // Simple search query setter
+  const setSearchQuerySafely = useCallback((query: string) => {
+    console.log('setSearchQuerySafely called with:', query);
+    setSearchQuery(query);
+  }, []);
   const { isMapMode, setIsMapMode } = useSearchMode();
   const [showMap, setShowMap] = useState(true);
 
@@ -322,6 +331,7 @@ export default function SearchScreen() {
   const [isLoadingProperties, setIsLoadingProperties] = useState(false);
   const [highlightedPropertyId, setHighlightedPropertyId] = useState<string | null>(savedState?.highlightedMarkerId || null);
   const regionChangeDebounce = useRef<NodeJS.Timeout | null>(null);
+  const lastSelectedLocationRef = useRef<string>('');
 
   // Memoize markers to prevent unnecessary re-renders
   const mapMarkers = useMemo(() => {
@@ -350,13 +360,28 @@ export default function SearchScreen() {
   }, [properties]);
 
   useEffect(() => {
-    console.log('Search query changed:', searchQuery);
+    console.log('Search query changed:', searchQuery, 'lastSelectedLocation:', lastSelectedLocationRef.current);
+
     if (!searchQuery.trim()) {
       console.log('Empty search query, clearing results');
       setSearchResults([]);
       setShowResults(false);
       return;
     }
+
+    if (!searchQuery.trim()) {
+      console.log('Empty search query, clearing results');
+      setSearchResults([]);
+      setShowResults(false);
+      return;
+    }
+
+    // Don't search if the query matches the last selected location
+    if (searchQuery === lastSelectedLocationRef.current) {
+      console.log('Query matches last selected location, not searching');
+      return;
+    }
+
     const searchPlaces = async () => {
       console.log('Starting search for:', searchQuery);
       setIsSearching(true);
@@ -393,7 +418,8 @@ export default function SearchScreen() {
         setIsSearching(false);
       }
     };
-    const timeoutId = setTimeout(searchPlaces, 100);
+
+    const timeoutId = setTimeout(searchPlaces, 300); // Increased debounce to 300ms
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
@@ -453,33 +479,26 @@ export default function SearchScreen() {
   }, [highlightedPropertyId]);
 
   const handleSelectLocation = (result: SearchResult) => {
-    setIsSelectingResult(true);
+    console.log('handleSelectLocation called');
     const [lng, lat] = result.center;
 
-    // Clear search query and results immediately to prevent reopening
-    setSearchQuery('');
+    // Clear search results and hide results immediately
     setSearchResults([]);
     setShowResults(false);
 
     // Close search results and blur the input immediately
     searchInputRef.current?.blur();
 
-    // Navigate map after a short delay to prevent focus issues
-    setTimeout(() => {
-      mapRef.current?.navigateToLocation(result.center, 14);
-      const radius = 0.05;
-      const bounds = result.bbox ? { west: result.bbox[0], south: result.bbox[1], east: result.bbox[2], north: result.bbox[3] }
-        : { west: lng - radius, south: lat - radius, east: lng + radius, north: lat + radius };
-      fetchProperties(bounds);
+    // Set the search query to the selected location name
+    setSearchQuery(result.place_name);
+    lastSelectedLocationRef.current = result.place_name;
 
-      // Save search query to state
-      setMapState(screenId, { searchQuery: result.place_name });
-    }, 50);
-
-    // Reset the flag after a longer delay
-    setTimeout(() => {
-      setIsSelectingResult(false);
-    }, 500);
+    // Navigate map and fetch properties immediately
+    mapRef.current?.navigateToLocation(result.center, 14);
+    const radius = 0.05;
+    const bounds = result.bbox ? { west: result.bbox[0], south: result.bbox[1], east: result.bbox[2], north: result.bbox[3] }
+      : { west: lng - radius, south: lat - radius, east: lng + radius, north: lat + radius };
+    fetchProperties(bounds);
   };
 
   const handleMarkerPress = ({ id }: { id: string; lngLat: [number, number] }) => {
@@ -546,12 +565,7 @@ export default function SearchScreen() {
     setSearchQuery('');
   }, [setMapState, screenId]);
 
-  const handleClickOutside = useCallback(() => {
-    if (showResults) {
-      console.log('Clicking outside search area, hiding results');
-      setShowResults(false);
-    }
-  }, [showResults]);
+
 
   const handleRefreshLocation = useCallback(async () => {
     try {
@@ -610,6 +624,15 @@ export default function SearchScreen() {
 
     return () => clearTimeout(timer);
   }, []);
+
+  // Handle URL query changes
+  useEffect(() => {
+    if (urlQuery && urlQuery !== searchQuery) {
+      console.log('URL query changed:', urlQuery);
+      setSearchQuery(urlQuery);
+      setShowResults(true);
+    }
+  }, [urlQuery, searchQuery]);
 
 
 
@@ -703,12 +726,13 @@ export default function SearchScreen() {
           value={searchQuery}
           onChangeText={(text) => {
             console.log('Search input changed (header):', text);
-            setSearchQuery(text);
+            setSearchQuerySafely(text);
           }}
           returnKeyType="search"
           onFocus={() => {
-            console.log('Search input focused (header), isSelectingResult:', isSelectingResult);
-            if (!isSelectingResult && searchQuery.trim()) {
+            console.log('Search input focused (header), searchQuery:', searchQuery, 'searchResults.length:', searchResults.length);
+            // Only show results if we have a query and have results
+            if (searchQuery.trim() && searchResults.length > 0) {
               setShowResults(true);
             }
           }}
@@ -718,7 +742,7 @@ export default function SearchScreen() {
         />
         {isSearching ? <ActivityIndicator size="small" color="#666" style={styles.searchIcon} />
           : searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+            <TouchableOpacity onPress={() => setSearchQuerySafely('')} style={styles.clearButton}>
               <Ionicons name="close-circle" size={20} color="#999" />
             </TouchableOpacity>
           )}
@@ -807,7 +831,7 @@ export default function SearchScreen() {
       {__DEV__ && (
         <View style={{ padding: 4, backgroundColor: '#f0f0f0', marginBottom: 4 }}>
           <ThemedText style={{ fontSize: 10 }}>
-            Debug: query="{searchQuery}", results={searchResults.length}, show={showResults.toString()}, searching={isSearching.toString()}
+            Debug: query=&quot;{searchQuery}&quot;, results={searchResults.length}, show={showResults.toString()}, searching={isSearching.toString()}
           </ThemedText>
         </View>
       )}
@@ -820,12 +844,13 @@ export default function SearchScreen() {
           value={searchQuery}
           onChangeText={(text) => {
             console.log('Search input changed (bar):', text);
-            setSearchQuery(text);
+            setSearchQuerySafely(text);
           }}
           returnKeyType="search"
           onFocus={() => {
-            console.log('Search input focused (bar), isSelectingResult:', isSelectingResult);
-            if (!isSelectingResult && searchQuery.trim()) {
+            console.log('Search input focused (bar), searchQuery:', searchQuery, 'searchResults.length:', searchResults.length);
+            // Only show results if we have a query and have results
+            if (searchQuery.trim() && searchResults.length > 0) {
               setShowResults(true);
             }
           }}
@@ -835,7 +860,7 @@ export default function SearchScreen() {
         />
         {isSearching ? <ActivityIndicator size="small" color="#666" style={styles.searchIcon} />
           : searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+            <TouchableOpacity onPress={() => setSearchQuerySafely('')} style={styles.clearButton}>
               <Ionicons name="close-circle" size={20} color="#999" />
             </TouchableOpacity>
           )}
