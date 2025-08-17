@@ -66,15 +66,7 @@ export function RecentlyViewedWidget() {
     setCanScrollRight(scrollPosition < maxScroll - 5);
   };
 
-  // Debug logging
-  console.log('RecentlyViewedWidget Debug:', {
-    isAuthenticated,
-    oxyServices: !!oxyServices,
-    activeSessionId: !!activeSessionId,
-    recentPropertiesCount: recentProperties?.length || 0,
-    isLoading,
-    error: error || null,
-  });
+
 
   const navigateToProperty = (property: Property) => {
     router.push(`/properties/${property._id || property.id}`);
@@ -82,12 +74,10 @@ export function RecentlyViewedWidget() {
 
   // Hide widget completely if not authenticated
   if (!isAuthenticated) {
-    console.log('RecentlyViewedWidget: User not authenticated, hiding widget');
     return null;
   }
 
   if (error) {
-    console.log('RecentlyViewedWidget Error:', error);
     return (
       <BaseWidget
         title={t('home.recentlyViewed.title')}
@@ -100,17 +90,7 @@ export function RecentlyViewedWidget() {
     );
   }
 
-  console.log(
-    'RecentlyViewedWidget: User authenticated, showing properties:',
-    recentProperties?.length || 0,
-  );
-  console.log('Arrow Debug:', {
-    isNative,
-    showArrows,
-    propertiesLength: recentProperties.length,
-    canScrollLeft,
-    canScrollRight,
-  });
+
 
   return (
     <BaseWidget

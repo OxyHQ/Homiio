@@ -18,36 +18,31 @@ export const useRecentlyViewedProperties = () => {
         throw new Error('Authentication required');
       }
       
-      console.log('useRecentlyViewedProperties: Fetching from database');
-      const response = await recentlyViewedService.getRecentlyViewedProperties(oxyServices, activeSessionId);
-      
-      if (!response.success) {
-        throw new Error(response.error || 'Failed to fetch recently viewed properties');
-      }
-      
-      // Only update store if it's empty (initial load)
-      const currentItems = useRecentlyViewedStore.getState().items;
-      if (currentItems.length === 0) {
-        // Transform database response to store format
-        const items = (response.data || []).map((property: any) => ({
-          id: property._id || property.id,
-          type: RecentlyViewedType.PROPERTY,
-          data: property,
-          viewedAt: property.viewedAt || new Date().toISOString(),
-        }));
-        
-        // Update store with fetched data
-        useRecentlyViewedStore.setState({
-          items,
-          isInitialized: true,
-          isLoading: false,
-          error: null,
-        });
-        
-        console.log(`useRecentlyViewedProperties: Loaded ${items.length} items from database (initial load)`);
-      } else {
-        console.log(`useRecentlyViewedProperties: Skipping database update, local data exists (${currentItems.length} items)`);
-      }
+                     const response = await recentlyViewedService.getRecentlyViewedProperties(oxyServices, activeSessionId);
+               
+               if (!response.success) {
+                 throw new Error(response.error || 'Failed to fetch recently viewed properties');
+               }
+               
+               // Only update store if it's empty (initial load)
+               const currentItems = useRecentlyViewedStore.getState().items;
+               if (currentItems.length === 0) {
+                 // Transform database response to store format
+                 const items = (response.data || []).map((property: any) => ({
+                   id: property._id || property.id,
+                   type: RecentlyViewedType.PROPERTY,
+                   data: property,
+                   viewedAt: property.viewedAt || new Date().toISOString(),
+                 }));
+                 
+                 // Update store with fetched data
+                 useRecentlyViewedStore.setState({
+                   items,
+                   isInitialized: true,
+                   isLoading: false,
+                   error: null,
+                 });
+               }
       
       return response.data || [];
     },
@@ -89,11 +84,7 @@ export const useTrackPropertyView = () => {
       console.error('Error tracking property view:', err);
       toast.error('Failed to track property view');
     },
-    onSettled: async () => {
-      // Don't automatically refetch as it might overwrite our local cache updates
-      // The cache is already updated by the main hook, so we don't need to refetch
-      console.log('useTrackPropertyView: Mutation settled, keeping local cache updates');
-    },
+    // No onSettled callback to avoid interfering with local cache updates
   });
 };
 

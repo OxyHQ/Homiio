@@ -364,31 +364,20 @@ export default function PropertyDetailPage() {
       return null;
     }
   }, [apiProperty]);
-  // Track property view when property is loaded and user is authenticated
+  // Track property view when property is loaded
   useEffect(() => {
-    // Only track if we haven't already tracked this property
     if (apiProperty && !hasViewedRef.current) {
       const propertyId = apiProperty._id || apiProperty.id;
       const currentId = typeof id === 'string' ? id : undefined;
 
-      // Ensure we're tracking the correct property
       if (propertyId && currentId && propertyId === currentId) {
-        console.log('PropertyDetailPage: Tracking property view', {
-          propertyId,
-          currentId,
-          propertyTitle: (apiProperty as any).title || 'No title',
-        });
-
-        // Mark as viewed to prevent duplicate tracking
         hasViewedRef.current = true;
-
-        // Add property to recently viewed
         addProperty(apiProperty);
       }
     }
   }, [apiProperty, id, addProperty]);
 
-  // Reset hasViewedRef when property ID changes
+  // Reset tracking state when property ID changes
   useEffect(() => {
     hasViewedRef.current = false;
   }, [id]);

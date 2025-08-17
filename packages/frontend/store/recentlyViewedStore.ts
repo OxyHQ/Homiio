@@ -47,33 +47,11 @@ export const useRecentlyViewedStore = create<RecentlyViewedState>()((set, get) =
         viewedAt: new Date().toISOString(),
       };
 
-      console.log('RecentlyViewedStore: Adding item:', {
-        id,
-        type,
-        currentItemsCount: state.items.length,
-        existingIds: state.items.map(item => item.id),
-      });
-
       // Remove any existing item with the same id to prevent duplicates
       const filteredItems = state.items.filter((item) => item.id !== id);
       
-      console.log('RecentlyViewedStore: After filtering duplicates:', {
-        filteredItemsCount: filteredItems.length,
-        removedCount: state.items.length - filteredItems.length,
-      });
-      
       // Add new item to the beginning and keep only the 20 most recent
       const updatedItems = [newItem, ...filteredItems].slice(0, 20);
-      
-      console.log('RecentlyViewedStore: Final items:', {
-        updatedItemsCount: updatedItems.length,
-        itemIds: updatedItems.map(item => item.id),
-        firstItem: updatedItems[0] ? {
-          id: updatedItems[0].id,
-          title: (updatedItems[0].data as any)?.title || 'No title',
-          viewedAt: updatedItems[0].viewedAt,
-        } : null,
-      });
       
       return { items: updatedItems };
     }),
@@ -87,19 +65,10 @@ export const useRecentlyViewedStore = create<RecentlyViewedState>()((set, get) =
 
   getRecentProperties: () => {
     const state = get();
-    const properties = state.items
+    return state.items
       .filter((item) => item.type === RecentlyViewedType.PROPERTY)
       .map((item) => item.data)
       .slice(0, 10);
-    
-    console.log('RecentlyViewedStore: getRecentProperties called:', {
-      totalItems: state.items.length,
-      propertyItems: state.items.filter(item => item.type === RecentlyViewedType.PROPERTY).length,
-      returnedProperties: properties.length,
-      propertyIds: properties.map(p => p._id || p.id),
-    });
-    
-    return properties;
   },
 
   getRecentRooms: () => {
