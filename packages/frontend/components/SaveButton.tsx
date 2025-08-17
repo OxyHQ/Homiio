@@ -10,6 +10,7 @@ import { useSavedProfiles } from '@/store/savedProfilesStore';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 
+
 const IconComponent = Ionicons as any;
 
 interface SaveButtonProps {
@@ -72,7 +73,7 @@ export function SaveButton({
   const isButtonDisabled = disabled || isLoading || internalLoading || isPressed;
 
   const handleInternalSave = async () => {
-    if (isProcessingRef.current) return;
+    if (isProcessingRef.current || !propertyId) return;
 
     try {
       isProcessingRef.current = true;
@@ -86,7 +87,16 @@ export function SaveButton({
         }
       } else if (propertyId) {
         if (isSaved) {
-          await unsaveProperty(propertyId);
+          try {
+            await unsaveProperty(propertyId);
+          } catch (error: any) {
+            // If we get a 404, the property is already not saved, so treat as success
+            if (error?.status === 404 || error?.message?.includes('not found')) {
+              console.log('Property not found in database, treating as already unsaved');
+              return; // Success - don't throw error
+            }
+            throw error; // Re-throw other errors
+          }
         } else {
           await savePropertyToFolder(propertyId, null);
         }
@@ -106,9 +116,12 @@ export function SaveButton({
 
     // Use internal save logic if propertyId is provided, otherwise use external onPress
     if (profileId || propertyId) {
-      handleInternalSave();
+      handleInternalSave().finally(() => {
+        setIsPressed(false);
+      });
     } else if (onPress) {
       onPress();
+      setIsPressed(false);
     }
   };
 
@@ -126,6 +139,7 @@ export function SaveButton({
       // If property is not saved, save it first, then open folder selection
       if (!isSaved) {
         handleInternalSave().then(() => {
+          setIsPressed(false);
           bottomSheetContext.openBottomSheet(
             <SaveToFolderBottomSheet
               propertyId={propertyId}
@@ -140,9 +154,12 @@ export function SaveButton({
               }}
             />,
           );
+        }).catch(() => {
+          setIsPressed(false);
         });
       } else {
         // Property is already saved, just open folder selection
+        setIsPressed(false);
         bottomSheetContext.openBottomSheet(
           <SaveToFolderBottomSheet
             propertyId={propertyId}

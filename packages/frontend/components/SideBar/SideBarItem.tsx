@@ -44,7 +44,7 @@ export function SideBarItem({
           alignSelf: isExpanded ? 'stretch' : 'flex-start',
           marginBottom: 6,
           marginEnd: 0,
-          borderRadius: 12,
+          borderRadius: 35,
           paddingVertical: 10,
           paddingHorizontal: isExpanded ? 16 : 12,
           marginLeft: 0,
@@ -55,8 +55,6 @@ export function SideBarItem({
               : isActive
                 ? `${colors.primaryColor}15`
                 : 'transparent',
-          borderWidth: isActive ? 1 : 0,
-          borderColor: isActive ? `${colors.primaryColor}40` : 'transparent',
           ...(Platform.select({
             web: {
               transition: 'all 200ms cubic-bezier(0.2, 0, 0, 1)',
@@ -68,7 +66,6 @@ export function SideBarItem({
               cursor: 'pointer',
             },
           }),
-          transform: [{ scale: pressed ? 0.98 : 1 }],
         },
       ]}
     >
@@ -97,6 +94,7 @@ export function SideBarItem({
                 web: {
                   transition: 'color 200ms cubic-bezier(0.2, 0, 0, 1)',
                   fontFamily: 'Phudu',
+                  whiteSpace: 'nowrap',
                 },
               }) as any),
             }}

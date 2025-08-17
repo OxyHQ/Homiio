@@ -2,11 +2,15 @@ import React, { useMemo, useState } from 'react';
 import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useOxy } from '@oxyhq/services';
 
 import { Header } from '@/components/Header';
 import Button from '@/components/Button';
 import { colors } from '@/styles/colors';
-import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
+import savedPropertyFolderService from '@/services/savedPropertyFolderService';
+import { toast } from 'sonner';
+
 // Reuse the color palette from SaveToFolderBottomSheet
 const FOLDER_COLORS = [
   '#3B82F6',
@@ -22,13 +26,48 @@ const FOLDER_COLORS = [
 export default function EditFolderScreen() {
   const { t } = useTranslation();
   const { folderId } = useLocalSearchParams<{ folderId: string }>();
-  const { folders, updateFolder } = useSavedPropertiesContext();
+  const { oxyServices, activeSessionId } = useOxy();
+  const queryClient = useQueryClient();
 
-  const folder = useMemo(() => folders.find((f) => f._id === folderId), [folders, folderId]);
+  // Use React Query for folders data
+  const { data: foldersData, isLoading: foldersLoading } = useQuery({
+    queryKey: ['savedFolders'],
+    queryFn: () => savedPropertyFolderService.getSavedPropertyFolders(oxyServices!, activeSessionId!),
+    enabled: !!oxyServices && !!activeSessionId,
+    staleTime: 1000 * 60,
+    gcTime: 1000 * 60 * 10,
+  });
+
+  const folders = foldersData?.folders || [];
+
+  const folder = useMemo(() => folders.find((f: any) => f._id === folderId), [folders, folderId]);
   const [name, setName] = useState(folder?.name || '');
   const [emoji, setEmoji] = useState(folder?.icon || '📁');
   const [color, setColor] = useState(folder?.color || colors.primaryColor);
-  const [saving, setSaving] = useState(false);
+
+  // React Query mutation for updating folder
+  const updateFolderMutation = useMutation({
+    mutationFn: async (folderData: { name: string; icon: string; color: string }) => {
+      if (!oxyServices || !activeSessionId) {
+        throw new Error('Authentication required');
+      }
+      return savedPropertyFolderService.updateSavedPropertyFolder(
+        folderId,
+        folderData,
+        oxyServices,
+        activeSessionId
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
+      toast.success('Folder updated successfully');
+      router.back();
+    },
+    onError: (error: any) => {
+      console.error('Failed to update folder:', error);
+      toast.error('Failed to update folder');
+    },
+  });
 
   const handleSave = async () => {
     if (!folder) return;
@@ -40,15 +79,12 @@ export default function EditFolderScreen() {
       Alert.alert('Validation', 'Folder name is required');
       return;
     }
-    try {
-      setSaving(true);
-      await updateFolder(folder._id, { name: name.trim(), icon: emoji, color });
-      router.back();
-    } catch {
-      Alert.alert('Error', 'Failed to update folder');
-    } finally {
-      setSaving(false);
-    }
+
+    updateFolderMutation.mutate({
+      name: name.trim(),
+      icon: emoji,
+      color,
+    });
   };
 
   if (!folder) {
@@ -95,7 +131,7 @@ export default function EditFolderScreen() {
                   folder.isDefault && { opacity: 0.6 },
                 ])}
                 onPress={() => {
-                  if (saving || folder.isDefault) return;
+                  if (updateFolderMutation.isPending || folder.isDefault) return;
                   setColor(c);
                 }}
               />
@@ -103,8 +139,12 @@ export default function EditFolderScreen() {
           })}
         </View>
 
-        <Button onPress={handleSave} style={saving ? { opacity: 0.6 } : undefined}>
-          {saving ? t('common.saving') : t('common.save')}
+        <Button
+          onPress={handleSave}
+          style={updateFolderMutation.isPending ? { opacity: 0.6 } : undefined}
+          disabled={updateFolderMutation.isPending}
+        >
+          {updateFolderMutation.isPending ? t('common.saving') : t('common.save')}
         </Button>
       </View>
     </View>

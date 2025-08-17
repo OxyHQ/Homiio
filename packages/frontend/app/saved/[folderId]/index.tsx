@@ -3,25 +3,54 @@ import { View, FlatList, StyleSheet, TouchableOpacity, RefreshControl } from 're
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useOxy } from '@oxyhq/services';
 
 import { Header } from '@/components/Header';
 import { PropertyCard } from '@/components/PropertyCard';
 import { colors } from '@/styles/colors';
-import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
+import savedPropertyService from '@/services/savedPropertyService';
+import savedPropertyFolderService from '@/services/savedPropertyFolderService';
 
 export default function SavedFolderScreen() {
   const { t } = useTranslation();
   const { folderId } = useLocalSearchParams<{ folderId: string }>();
-  const { savedProperties, folders } = useSavedPropertiesContext();
+  const { oxyServices, activeSessionId } = useOxy();
+  const queryClient = useQueryClient();
   const bottomSheetContext = useContext(BottomSheetContext);
 
-  const folder = useMemo(() => folders.find((f) => f._id === folderId), [folders, folderId]);
+  // Use React Query directly for instant updates
+  const { data: savedPropertiesData, isLoading: savedLoading } = useQuery({
+    queryKey: ['savedProperties'],
+    queryFn: () => savedPropertyService.getSavedProperties(oxyServices!, activeSessionId!),
+    enabled: !!oxyServices && !!activeSessionId,
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
+  });
+
+  const { data: foldersData, isLoading: foldersLoading } = useQuery({
+    queryKey: ['savedFolders'],
+    queryFn: () => savedPropertyFolderService.getSavedPropertyFolders(oxyServices!, activeSessionId!),
+    enabled: !!oxyServices && !!activeSessionId,
+    staleTime: 1000 * 60,
+    gcTime: 1000 * 60 * 10,
+  });
+
+  const savedProperties = savedPropertiesData?.properties || [];
+  const folders = foldersData?.folders || [];
+
+  const folder = useMemo(() => folders.find((f: any) => f._id === folderId), [folders, folderId]);
   const propertiesInFolder = useMemo(
-    () => savedProperties.filter((p) => (p as any).folderId === folderId),
+    () => savedProperties.filter((p: any) => (p as any).folderId === folderId),
     [savedProperties, folderId],
   );
+
+  const handleRefresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
+    await queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
+  }, [queryClient]);
 
   const renderItem = useCallback(({ item }: { item: any }) => {
     return (
@@ -93,8 +122,8 @@ export default function SavedFolderScreen() {
         )}
         refreshControl={
           <RefreshControl
-            refreshing={false}
-            onRefresh={() => { }}
+            refreshing={savedLoading || foldersLoading}
+            onRefresh={handleRefresh}
             colors={[colors.primaryColor]}
             tintColor={colors.primaryColor}
           />

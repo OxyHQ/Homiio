@@ -18,6 +18,11 @@ import { SavedPropertyFolder } from '@/services/savedPropertyFolderService';
 import Button from './Button';
 import { Property } from '@homiio/shared-types';
 import { PropertyCard } from './PropertyCard';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useOxy } from '@oxyhq/services';
+import savedPropertyService from '@/services/savedPropertyService';
+import savedPropertyFolderService from '@/services/savedPropertyFolderService';
+import { toast } from 'sonner';
 
 const IconComponent = Ionicons as any;
 
@@ -50,14 +55,50 @@ export function SaveToFolderBottomSheet({
   onSave,
 }: SaveToFolderBottomSheetProps) {
   const { t } = useTranslation();
-  const { folders, isLoading, loadFolders, createFolder, savePropertyToFolder } =
-    useSavedPropertiesContext();
+  const { folders, isLoading, loadFolders } = useSavedPropertiesContext();
+  const { oxyServices, activeSessionId } = useOxy();
+  const queryClient = useQueryClient();
 
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [selectedColor, setSelectedColor] = useState(FOLDER_COLORS[0]);
   const [selectedEmoji, setSelectedEmoji] = useState(FOLDER_EMOJIS[0]);
-  const [isCreating, setIsCreating] = useState(false);
+
+  // React Query mutations
+  const saveToFolderMutation = useMutation({
+    mutationFn: async ({ propertyId, folderId }: { propertyId: string; folderId: string | null }) => {
+      if (!oxyServices || !activeSessionId) {
+        throw new Error('Authentication required');
+      }
+      return savedPropertyService.saveProperty(propertyId, undefined, oxyServices, activeSessionId, folderId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
+      queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
+      toast.success('Property saved to folder');
+    },
+    onError: (error: any) => {
+      console.error('Failed to save to folder:', error);
+      toast.error('Failed to save to folder');
+    },
+  });
+
+  const createFolderMutation = useMutation({
+    mutationFn: async (folderData: { name: string; color: string; icon: string }) => {
+      if (!oxyServices || !activeSessionId) {
+        throw new Error('Authentication required');
+      }
+      return savedPropertyFolderService.createSavedPropertyFolder(folderData, oxyServices, activeSessionId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
+      toast.success('Folder created successfully');
+    },
+    onError: (error: any) => {
+      console.error('Failed to create folder:', error);
+      toast.error('Failed to create folder');
+    },
+  });
 
   useEffect(() => {
     loadFolders();
@@ -66,14 +107,14 @@ export function SaveToFolderBottomSheet({
   const handleSaveToFolder = useCallback(
     async (folderId: string | null) => {
       try {
-        await savePropertyToFolder(propertyId, folderId);
+        await saveToFolderMutation.mutateAsync({ propertyId, folderId });
         onSave(folderId);
         onClose();
       } catch (error) {
         console.error('Failed to save to folder:', error);
       }
     },
-    [propertyId, savePropertyToFolder, onSave, onClose],
+    [propertyId, saveToFolderMutation, onSave, onClose],
   );
 
   const handleCreateFolder = useCallback(async () => {
@@ -83,8 +124,7 @@ export function SaveToFolderBottomSheet({
     }
 
     try {
-      setIsCreating(true);
-      const newFolder = await createFolder({
+      const newFolder = await createFolderMutation.mutateAsync({
         name: newFolderName.trim(),
         color: selectedColor,
         icon: selectedEmoji,
@@ -96,17 +136,15 @@ export function SaveToFolderBottomSheet({
       }
     } catch (error) {
       console.error('Failed to create folder:', error);
-    } finally {
-      setIsCreating(false);
     }
-  }, [newFolderName, selectedColor, selectedEmoji, createFolder, handleSaveToFolder]);
+  }, [newFolderName, selectedColor, selectedEmoji, createFolderMutation, handleSaveToFolder]);
 
   const renderFolderItem = (folder: SavedPropertyFolder) => (
     <TouchableOpacity
       key={folder._id}
       style={styles.folderItem}
       onPress={() => handleSaveToFolder(folder._id)}
-      disabled={isLoading}
+      disabled={isLoading || saveToFolderMutation.isPending}
     >
       <View style={[styles.folderIcon, { backgroundColor: folder.color }]}>
         <Text style={styles.folderEmojiText}>{folder.icon}</Text>
@@ -171,10 +209,10 @@ export function SaveToFolderBottomSheet({
         </TouchableOpacity>
         <Button
           onPress={handleCreateFolder}
-          disabled={isCreating || !newFolderName.trim()}
+          disabled={createFolderMutation.isPending || !newFolderName.trim()}
           style={styles.createButton}
         >
-          {isCreating ? 'Creating...' : 'Create & Save'}
+          {createFolderMutation.isPending ? 'Creating...' : 'Create & Save'}
         </Button>
       </View>
     </View>

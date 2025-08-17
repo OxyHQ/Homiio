@@ -13,6 +13,8 @@ import { usePathname, useRouter } from 'expo-router';
 import { useMediaQuery } from 'react-responsive';
 import { useTranslation } from 'react-i18next';
 import { SideBarItem } from './SideBarItem';
+import { SavedPropertyItem } from './SavedPropertyItem';
+import { SavedFolderItem } from './SavedFolderItem';
 import { colors } from '@/styles/colors';
 import { Button } from '@/components/SideBar/Button';
 import { Logo } from '@/components/Logo';
@@ -29,6 +31,9 @@ import { ProfileIcon, ProfileIconActive } from '@/assets/icons/profile-icon';
 import { webAlert } from '@/utils/api';
 import { phuduFontWeights } from '@/styles/fonts';
 import { useProfile } from '@/context/ProfileContext';
+import { useQuery } from '@tanstack/react-query';
+import savedPropertyService from '@/services/savedPropertyService';
+import savedPropertyFolderService from '@/services/savedPropertyFolderService';
 
 const IconComponent = Ionicons as any;
 
@@ -38,8 +43,112 @@ export function SideBar() {
   const { t } = useTranslation();
   const router = useRouter();
   const { primaryProfile, isLoading } = useProfile();
+  const { isAuthenticated, user, showBottomSheet, logout, oxyServices, activeSessionId } = useOxy();
 
-  const { isAuthenticated, user, showBottomSheet, logout } = useOxy();
+  // Use React Query directly for instant updates
+  const { data: savedPropertiesData, isLoading: savedLoading } = useQuery({
+    queryKey: ['savedProperties'],
+    queryFn: () => savedPropertyService.getSavedProperties(oxyServices!, activeSessionId!),
+    enabled: !!isAuthenticated && !!oxyServices && !!activeSessionId,
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
+  });
+
+  const { data: foldersData, isLoading: foldersLoading } = useQuery({
+    queryKey: ['savedFolders'],
+    queryFn: () => savedPropertyFolderService.getSavedPropertyFolders(oxyServices!, activeSessionId!),
+    enabled: !!isAuthenticated && !!oxyServices && !!activeSessionId,
+    staleTime: 1000 * 60,
+    gcTime: 1000 * 60 * 10,
+  });
+
+  const savedProperties = savedPropertiesData?.properties || [];
+  const folders = foldersData?.folders || [];
+
+  // Get all saved items (folders and properties) ordered by recency
+  const recentSavedItems = React.useMemo(() => {
+    const allItems: Array<{
+      type: 'folder' | 'property';
+      id: string;
+      name: string;
+      subtitle?: string;
+      color?: string;
+      icon?: string;
+      propertyCount?: number;
+      imageUrl?: string;
+      latestImages?: string[];
+      href: string;
+      timestamp: number;
+    }> = [];
+
+    // Add folders with their most recent activity (excluding default folder)
+    folders.forEach((folder: any) => {
+      // Skip the default folder
+      if (folder.isDefault) return;
+
+      // Get properties saved to this folder
+      const folderProperties = savedProperties.filter((property: any) =>
+        property.folderId === folder._id
+      );
+
+      // Get the most recently saved property in this folder
+      const mostRecentProperty = folderProperties
+        .sort((a: any, b: any) =>
+          new Date((b as any).savedAt || b.updatedAt || b.createdAt).getTime() -
+          new Date((a as any).savedAt || a.updatedAt || a.createdAt).getTime()
+        )[0];
+
+      const latestImages = folderProperties
+        .sort((a: any, b: any) =>
+          new Date((b as any).savedAt || b.updatedAt || b.createdAt).getTime() -
+          new Date((a as any).savedAt || a.updatedAt || a.createdAt).getTime()
+        )
+        .slice(0, 2)
+        .map((property: any) => property.images?.[0]?.url)
+        .filter(Boolean);
+
+      // Use the timestamp of the most recently saved property, or fall back to folder's timestamp
+      const folderTimestamp = mostRecentProperty
+        ? new Date((mostRecentProperty as any).savedAt || mostRecentProperty.updatedAt || mostRecentProperty.createdAt).getTime()
+        : new Date(folder.updatedAt || folder.createdAt).getTime();
+
+      allItems.push({
+        type: 'folder',
+        id: folder._id,
+        name: folder.name,
+        color: folder.color,
+        icon: folder.icon,
+        propertyCount: folder.propertyCount || 0,
+        href: `/saved/${folder._id}`,
+        latestImages,
+        timestamp: folderTimestamp,
+      });
+    });
+
+    // Add properties (including those in default folder, excluding those in custom folders)
+    savedProperties.forEach((property: any) => {
+      // Get the default folder
+      const defaultFolder = folders.find((folder: any) => folder.isDefault);
+
+      // Skip properties that are saved to custom folders (but allow default folder)
+      if (property.folderId && property.folderId !== defaultFolder?._id) return;
+
+      allItems.push({
+        type: 'property',
+        id: property._id || property.id,
+        name: property.title || `${property.type} in ${property.address?.city || 'Unknown'}`,
+        subtitle: property.address?.city ? `${property.address.city}, ${property.address.state || ''}` : 'Location not specified',
+        imageUrl: property.images?.[0]?.url,
+        href: `/properties/${property._id || property.id}`,
+        timestamp: new Date((property as any).savedAt || property.updatedAt || property.createdAt).getTime(),
+      });
+    });
+
+    // Sort all items by timestamp (most recent first) and take the first 5
+    return allItems
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 5);
+  }, [folders, savedProperties]);
 
   // Only show roommates for personal profiles and when profile data is loaded
   // If still loading profiles, don't show roommates to avoid flickering
@@ -222,57 +331,117 @@ export function SideBar() {
                 />
               ))}
 
-              <Button
-                href="/properties/create"
-                renderText={({ state }) => (
-                  <Text style={[
-                    styles.addPropertyButtonText,
-                    {
-                      opacity: isExpanded ? 1 : 0,
-                      width: isExpanded ? 'auto' : 0,
-                      overflow: 'hidden',
-                      whiteSpace: 'nowrap',
+              <View style={styles.addPropertyButtonContainer}>
+                <Button
+                  href="/properties/create"
+                  renderText={({ state }) => (
+                    <Text style={[
+                      styles.addPropertyButtonText,
+                      {
+                        opacity: isExpanded ? 1 : 0,
+                        width: isExpanded ? 'auto' : 0,
+                        overflow: 'hidden',
+                        whiteSpace: 'nowrap',
+                        ...(Platform.select({
+                          web: {
+                            transition: 'opacity 220ms cubic-bezier(0.2, 0, 0, 1), width 220ms cubic-bezier(0.2, 0, 0, 1)',
+                            willChange: 'opacity, width',
+                          },
+                        }) as any),
+                      }
+                    ]}>
+                      {t('sidebar.actions.addProperty')}
+                    </Text>
+                  )}
+                  renderIcon={() => (
+                    <View style={{
+                      opacity: isExpanded ? 0 : 1,
+                      position: isExpanded ? 'absolute' : 'relative',
+                      left: isExpanded ? '50%' : 'auto',
+                      top: isExpanded ? '50%' : 'auto',
+                      transform: isExpanded ? 'translate(-50%, -50%)' : 'none',
                       ...(Platform.select({
                         web: {
-                          transition: 'opacity 220ms cubic-bezier(0.2, 0, 0, 1), width 220ms cubic-bezier(0.2, 0, 0, 1)',
-                          willChange: 'opacity, width',
+                          transition: 'opacity 220ms cubic-bezier(0.2, 0, 0, 1)',
+                          willChange: 'opacity',
                         },
                       }) as any),
-                    }
-                  ]}>
-                    {t('sidebar.actions.addProperty')}
-                  </Text>
-                )}
-                renderIcon={() => (
-                  <View style={{
-                    opacity: isExpanded ? 0 : 1,
-                    position: isExpanded ? 'absolute' : 'relative',
-                    left: isExpanded ? '50%' : 'auto',
-                    top: isExpanded ? '50%' : 'auto',
-                    transform: isExpanded ? 'translate(-50%, -50%)' : 'none',
+                    }}>
+                      <Compose size={20} color={colors.primaryLight} />
+                    </View>
+                  )}
+                  containerStyle={() => ({
+                    ...styles.addPropertyButton,
+                    height: isExpanded ? 40 : 48,
+                    width: isExpanded ? '100%' : 48,
+                    alignSelf: isExpanded ? 'stretch' : 'center',
                     ...(Platform.select({
                       web: {
-                        transition: 'opacity 220ms cubic-bezier(0.2, 0, 0, 1)',
-                        willChange: 'opacity',
+                        transition: 'width 220ms cubic-bezier(0.2, 0, 0, 1), height 220ms cubic-bezier(0.2, 0, 0, 1)',
+                        willChange: 'width, height',
                       },
-                    }) as any),
-                  }}>
-                    <Compose size={20} color={colors.primaryLight} />
-                  </View>
-                )}
-                containerStyle={() => ({
-                  ...styles.addPropertyButton,
-                  height: isExpanded ? 40 : 48,
-                  width: isExpanded ? '100%' : 48,
-                  alignSelf: isExpanded ? 'stretch' : 'center',
+                    }) as ViewStyle),
+                  })}
+                />
+              </View>
+            </View>
+          )}
+
+          {/* Recently Saved Section */}
+          {user && user.id && (
+            <View style={styles.recentlySavedSection}>
+              <Text style={[
+                styles.sectionTitle,
+                {
+                  opacity: isExpanded ? 1 : 0,
                   ...(Platform.select({
                     web: {
-                      transition: 'width 220ms cubic-bezier(0.2, 0, 0, 1), height 220ms cubic-bezier(0.2, 0, 0, 1)',
-                      willChange: 'width, height',
+                      transition: 'opacity 220ms cubic-bezier(0.2, 0, 0, 1)',
+                      willChange: 'opacity',
                     },
-                  }) as ViewStyle),
+                  }) as any),
+                }
+              ]}>
+                {t('sidebar.savedProperties.title', { defaultValue: 'Saved Properties' })}
+              </Text>
+              <View style={styles.recentlySavedList}>
+                {recentSavedItems.map((item, index) => {
+                  if (item.type === 'folder') {
+                    return (
+                      <SavedFolderItem
+                        key={item.id}
+                        name={item.name}
+                        color={item.color || '#000000'}
+                        icon={item.icon || 'folder'}
+                        propertyCount={item.propertyCount || 0}
+                        href={item.href}
+                        isExpanded={isExpanded}
+                        onHoverExpand={handleHoverIn}
+                        latestImages={item.latestImages}
+                      />
+                    );
+                  } else {
+                    return (
+                      <SavedPropertyItem
+                        key={item.id}
+                        imageUrl={item.imageUrl || ''}
+                        title={item.name}
+                        subtitle={item.subtitle || ''}
+                        href={item.href}
+                        isExpanded={isExpanded}
+                        onHoverExpand={handleHoverIn}
+                      />
+                    );
+                  }
                 })}
-              />
+                {recentSavedItems.length === 0 && !savedLoading && !foldersLoading && isExpanded && (
+                  <View style={styles.emptyRecentlySaved}>
+                    <Text style={styles.emptyRecentlySavedText}>
+                      {t('sidebar.savedProperties.empty', { defaultValue: 'No saved properties or folders' })}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
           )}
 
@@ -314,6 +483,7 @@ const styles = StyleSheet.create({
         position: 'sticky' as any,
         overflow: 'hidden',
         height: '100vh' as any,
+        cursor: 'initial',
       },
       default: {
         height: WindowHeight,
@@ -401,8 +571,11 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     marginTop: 4,
   },
-  addPropertyButtonTablet: {
-    alignSelf: 'center',
+  addPropertyButtonContainer: {
+    minHeight: 60,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addPropertyButtonText: {
     color: 'white',
@@ -419,8 +592,51 @@ const styles = StyleSheet.create({
     width: '100%',
     marginTop: 'auto',
   },
-  // removed brandName style (bottom text removed)
-  // removed custom signOut styles; using SideBarItem for consistency
+  recentlySavedSection: {
+    marginTop: 20,
+    marginBottom: 20,
+    width: '100%',
+    ...(Platform.select({
+      web: {
+        transition: 'all 220ms cubic-bezier(0.2, 0, 0, 1)',
+        willChange: 'margin',
+      },
+    }) as any),
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primaryDark,
+    marginBottom: 4,
+    paddingHorizontal: 8,
+    fontFamily: 'Phudu',
+    ...(Platform.select({
+      web: {
+        whiteSpace: 'nowrap',
+      },
+    }) as any),
+  },
+  recentlySavedList: {
+    width: '100%',
+    ...(Platform.select({
+      web: {
+        transition: 'gap 220ms cubic-bezier(0.2, 0, 0, 1)',
+        willChange: 'gap',
+      },
+    }) as any),
+  },
+  emptyRecentlySaved: {
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyRecentlySavedText: {
+    fontSize: 12,
+    color: colors.primaryDark_2,
+    fontFamily: 'Phudu',
+    textAlign: 'center',
+  },
   title: {
     fontSize: 24,
     fontFamily: phuduFontWeights.bold,
