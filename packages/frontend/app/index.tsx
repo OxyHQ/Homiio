@@ -486,20 +486,27 @@ export default function HomePage() {
         </View>
 
         {/* Featured Properties */}
-        {featuredProperties.length > 0 ? (
-          <HomeCarouselSection
-            title={t('home.featured.title')}
-            items={featuredProperties}
-            loading={propertiesLoading}
-            renderItem={(property) => (
-              <PropertyCard
-                property={property}
-                variant="featured"
-                onPress={() => router.push(`/properties/${property._id || property.id}`)}
-              />
-            )}
-          />
-        ) : null}
+        {(() => {
+          console.log('Featured Properties Section Debug:', {
+            featuredPropertiesLength: featuredProperties.length,
+            propertiesLoading,
+            hasProperties: featuredProperties.length > 0
+          });
+          return featuredProperties.length > 0 ? (
+            <HomeCarouselSection
+              title={t('home.featured.title')}
+              items={featuredProperties}
+              loading={propertiesLoading}
+              renderItem={(property) => (
+                <PropertyCard
+                  property={property}
+                  variant="featured"
+                  onPress={() => router.push(`/properties/${property._id || property.id}`)}
+                />
+              )}
+            />
+          ) : null;
+        })()}
 
         {/* Recently Viewed Properties */}
         {recentlyViewedProperties && recentlyViewedProperties.length > 0 ? (

@@ -272,7 +272,7 @@ export function PropertyPreviewWidget() {
             bathrooms={formData.basicInfo?.bathrooms || 0}
             size={formData.basicInfo?.squareFootage || 0}
             sizeUnit="sqft"
-            imageSource={formData.media?.images && formData.media.images.length > 0 ? formData.media.images[0] : undefined}
+            imageSource={formData.media?.images && formData.media.images.length > 0 ? formData.media.images[0].urls.medium : undefined}
             variant="default"
             showFavoriteButton={false}
             showVerifiedBadge={false}

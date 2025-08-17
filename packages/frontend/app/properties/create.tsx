@@ -18,6 +18,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { AmenitiesSelector } from '@/components/AmenitiesSelector';
 import Map from '@/components/Map';
 import { PropertyPreviewWidget } from '@/components/widgets/PropertyPreviewWidget';
+import { ImageUpload } from '@/components/ImageUpload';
 import {
   useCreatePropertyFormStore,
   useCreatePropertyFormSelectors,
@@ -472,7 +473,11 @@ export default function CreatePropertyScreen() {
               : 'excluded',
         },
         amenities: formData.amenities.selectedAmenities || [],
-        images: formData.media.images || [],
+        images: formData.media.images?.map(img => ({
+          url: img.urls.original,
+          caption: img.caption || '',
+          isPrimary: img.isPrimary || false
+        })) || [],
         location:
           formData.location.latitude && formData.location.longitude
             ? {
@@ -1673,26 +1678,13 @@ export default function CreatePropertyScreen() {
               Media
             </ThemedText>
 
-            <View style={styles.mediaUploadContainer}>
-              <TouchableOpacity style={styles.uploadButton}>
-                <IconComponent name="cloud-upload-outline" size={32} color={colors.primaryLight} />
-                <ThemedText style={styles.uploadText}>Upload Images</ThemedText>
-              </TouchableOpacity>
-
-              <ThemedText style={styles.helperText}>
-                Upload high-quality images of your property. Include photos of all rooms, exterior,
-                and any special features.
-              </ThemedText>
-            </View>
-
-            {/* Image preview would go here */}
-            <View style={styles.imagePreviewContainer}>
-              {formData.media.images && formData.media.images.length > 0 ? (
-                <ThemedText>Image preview would go here</ThemedText>
-              ) : (
-                <ThemedText style={styles.noImagesText}>No images uploaded yet</ThemedText>
-              )}
-            </View>
+            <ImageUpload
+              images={formData.media.images}
+              onImagesChange={(images) => updateFormField('media', 'images', images)}
+              maxImages={10}
+              folder="properties"
+              disabled={isLoading}
+            />
           </View>
         );
 

@@ -30,10 +30,17 @@ export interface MapBounds {
 
 export const propertyService = {
   async getProperties(filters?: PropertyFilters): Promise<{ properties: Property[]; page: number; total: number; totalPages: number }> {
-    const response = await api.get<{ success: boolean; message: string; data: { properties: Property[]; page: number; total: number; totalPages: number } }>('/api/properties', {
+    const response = await api.get<{ success: boolean; message: string; data: Property[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>('/api/properties', {
       params: filters,
     });
-    return response.data.data;
+    
+    // Handle the actual API response structure
+    return {
+      properties: response.data.data || [],
+      page: response.data.pagination?.page || 1,
+      total: response.data.pagination?.total || 0,
+      totalPages: response.data.pagination?.totalPages || 1,
+    };
   },
 
   async findPropertiesInBounds(bounds: MapBounds, filters?: PropertyFilters): Promise<{ properties: Property[]; page: number; total: number; totalPages: number }> {

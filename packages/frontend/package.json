@@ -27,6 +27,7 @@
     "@gorhom/bottom-sheet": "^5.1.6",
     "@homiio/shared-types": "file:../shared-types",
     "@oxyhq/services": "^5.8.2",
+    "@react-native-async-storage/async-storage": "1.25.0",
     "@react-native-community/netinfo": "11.4.1",
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.3.8",

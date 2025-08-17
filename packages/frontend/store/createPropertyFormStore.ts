@@ -55,7 +55,26 @@ interface CreatePropertyFormState {
       maxGuests?: number;
     };
     media: {
-      images: any[];
+      images: Array<{
+        imageId: string;
+        urls: {
+          small: string;
+          medium: string;
+          large: string;
+          original: string;
+        };
+        keys: {
+          original: string;
+          variants: Record<string, string>;
+        };
+        metadata: {
+          originalSize: number;
+          originalFormat: string;
+          uploadedAt: Date;
+        };
+        isPrimary?: boolean;
+        caption?: string;
+      }>;
       videos?: any[];
     };
     colivingFeatures: {

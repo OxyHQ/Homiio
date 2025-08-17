@@ -9,6 +9,7 @@ import {
   Modal,
   Image,
   Share,
+  Dimensions,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -69,12 +70,14 @@ type PropertyDetail = {
 };
 
 const IconComponent = Ionicons as any;
+const { width: screenWidth } = Dimensions.get('window');
 
 export default function PropertyDetailPage() {
   const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const { oxyServices, activeSessionId } = useOxy();
+  const scrollViewRef = useRef<ScrollView>(null);
 
   // Safe translation helper was unused; keep i18n hook only
 
@@ -86,6 +89,9 @@ export default function PropertyDetailPage() {
   } = useProperty(id as string);
   const { stats, loadStats } = usePropertyStats((id as string) || '');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [imageScale, setImageScale] = useState(1);
+  const [imageTranslateX, setImageTranslateX] = useState(0);
+  const [imageTranslateY, setImageTranslateY] = useState(0);
   const hasViewedRef = useRef(false);
   const [showPhotoGallery, setShowPhotoGallery] = useState(false);
   const [hasActiveViewing, setHasActiveViewing] = useState(false);
@@ -200,6 +206,16 @@ export default function PropertyDetailPage() {
   const property = useMemo<PropertyDetail | null>(() => {
     try {
       if (!apiProperty) return null;
+
+      console.log('Property Data Debug:', {
+        apiProperty,
+        images: apiProperty.images,
+        imagesLength: apiProperty.images?.length,
+        imagesType: typeof apiProperty.images,
+        isArray: Array.isArray(apiProperty.images),
+        firstImage: apiProperty.images?.[0],
+        firstImageType: typeof apiProperty.images?.[0],
+      });
       // Defensive ID
       const id = apiProperty._id || apiProperty.id || '';
 
@@ -711,6 +727,7 @@ export default function PropertyDetailPage() {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 style={styles.galleryScroll}
+                contentContainerStyle={styles.galleryScrollContent}
               >
                 {property.images.slice(0, 5).map((image, index) => (
                   <TouchableOpacity
@@ -720,6 +737,7 @@ export default function PropertyDetailPage() {
                       setActiveImageIndex(index);
                       setShowPhotoGallery(true);
                     }}
+                    activeOpacity={0.8}
                   >
                     <Image
                       source={getPropertyImageSource([image as any])}
@@ -742,23 +760,30 @@ export default function PropertyDetailPage() {
           {/* Full-Screen Photo Gallery Modal */}
           <Modal
             visible={showPhotoGallery}
-            transparent={true}
+            transparent={false}
             animationType="fade"
             onRequestClose={() => setShowPhotoGallery(false)}
+            statusBarTranslucent={true}
           >
-            <View style={styles.photoModalContainer}>
+            <SafeAreaView style={styles.photoModalContainer}>
+              {/* Header */}
               <View style={styles.photoModalHeader}>
                 <TouchableOpacity
                   style={styles.closeButton}
                   onPress={() => setShowPhotoGallery(false)}
+                  activeOpacity={0.7}
                 >
                   <IconComponent name="close" size={24} color="white" />
                 </TouchableOpacity>
                 <ThemedText style={styles.photoModalTitle}>
                   {activeImageIndex + 1} / {property.images.length}
                 </ThemedText>
+                <View style={{ width: 24 }} /> {/* Spacer for centering */}
               </View>
+
+              {/* Image Gallery */}
               <ScrollView
+                ref={scrollViewRef}
                 horizontal
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}
@@ -780,6 +805,8 @@ export default function PropertyDetailPage() {
                   </View>
                 ))}
               </ScrollView>
+
+              {/* Footer Navigation */}
               <View style={styles.photoModalFooter}>
                 <TouchableOpacity
                   style={styles.photoModalButton}
@@ -787,10 +814,16 @@ export default function PropertyDetailPage() {
                     const newIndex =
                       activeImageIndex > 0 ? activeImageIndex - 1 : property.images.length - 1;
                     setActiveImageIndex(newIndex);
+                    scrollViewRef.current?.scrollTo({
+                      x: newIndex * screenWidth,
+                      animated: true,
+                    });
                   }}
+                  activeOpacity={0.7}
                 >
                   <IconComponent name="chevron-back" size={24} color="white" />
                 </TouchableOpacity>
+
                 <View style={styles.photoModalDots}>
                   {property.images.map((_, index) => (
                     <View
@@ -802,18 +835,24 @@ export default function PropertyDetailPage() {
                     />
                   ))}
                 </View>
+
                 <TouchableOpacity
                   style={styles.photoModalButton}
                   onPress={() => {
                     const newIndex =
                       activeImageIndex < property.images.length - 1 ? activeImageIndex + 1 : 0;
                     setActiveImageIndex(newIndex);
+                    scrollViewRef.current?.scrollTo({
+                      x: newIndex * screenWidth,
+                      animated: true,
+                    });
                   }}
+                  activeOpacity={0.7}
                 >
                   <IconComponent name="chevron-forward" size={24} color="white" />
                 </TouchableOpacity>
               </View>
-            </View>
+            </SafeAreaView>
           </Modal>
 
           {/* Basic Info */}
@@ -2237,7 +2276,9 @@ const styles = StyleSheet.create({
 
   photoGalleryContainer: {
     marginBottom: 20,
-    padding: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+
   },
   galleryHeader: {
     flexDirection: 'row',
@@ -2257,12 +2298,16 @@ const styles = StyleSheet.create({
   galleryScroll: {
     height: 100, // Fixed height for the horizontal scroll
   },
+  galleryScrollContent: {
+    paddingHorizontal: 16,
+  },
   galleryImageContainer: {
     width: 100,
     height: 100,
-    borderRadius: 8,
-    marginRight: 10,
+    borderRadius: 12,
+    marginRight: 12,
     overflow: 'hidden',
+    backgroundColor: '#f0f0f0',
   },
   galleryImage: {
     width: '100%',
@@ -2271,76 +2316,96 @@ const styles = StyleSheet.create({
   moreImagesOverlay: {
     position: 'absolute',
     top: 0,
+    left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 8,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   moreImagesText: {
     color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
   },
   photoModalContainer: {
     flex: 1,
     backgroundColor: 'black',
-    justifyContent: 'center',
-    alignItems: 'center',
+    position: 'relative',
   },
   photoModalHeader: {
     position: 'absolute',
-    top: 50,
-    left: 20,
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     zIndex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   closeButton: {
-    padding: 10,
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
   photoModalTitle: {
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
-    marginLeft: 10,
   },
   photoModalScroll: {
-    width: '100%',
-    height: '80%',
+    flex: 1,
+    backgroundColor: 'black',
+  },
+  photoModalScrollContent: {
+    flexDirection: 'row',
   },
   photoModalImageContainer: {
-    width: '100%',
+    width: screenWidth,
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'black',
   },
   photoModalImage: {
     width: '100%',
     height: '100%',
+    backgroundColor: 'transparent',
+    minWidth: 300,
+    minHeight: 300,
   } as any,
   photoModalFooter: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     zIndex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   photoModalButton: {
-    padding: 10,
+    padding: 12,
+    borderRadius: 24,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
   photoModalDots: {
     flexDirection: 'row',
-    alignSelf: 'center',
-    marginHorizontal: 10,
+    alignItems: 'center',
+    gap: 8,
   },
   photoModalDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.5)',
-    marginHorizontal: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: 'rgba(255,255,255,0.4)',
   },
   photoModalDotActive: {
     backgroundColor: 'white',

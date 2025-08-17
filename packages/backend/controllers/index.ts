@@ -13,6 +13,7 @@ const profileController = require('./profileController');
 const telegramController = require('./telegramController');
 const cityController = require('./cityController');
 const tipsController = require('./tipsController');
+const imageController = require('./imageController');
 
 module.exports = {
   propertyController,
@@ -25,4 +26,5 @@ module.exports = {
   telegramController,
   cityController,
   tipsController,
+  imageController,
 };

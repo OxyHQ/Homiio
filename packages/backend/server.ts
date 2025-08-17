@@ -116,7 +116,25 @@ const ensureDatabaseConnection = async (req: any, res: any, next: any) => {
 
 // Middleware
 app.use(cors(corsOptions));
-app.use(bodyParser.json());
+
+// Apply body parser only for non-multipart requests
+app.use((req, res, next) => {
+  const contentType = req.headers['content-type'] || '';
+  
+  if (contentType.includes('multipart/form-data')) {
+    console.log('Skipping body parser for multipart request');
+    next();
+  } else if (contentType.includes('application/json')) {
+    console.log('Applying JSON body parser');
+    bodyParser.json({ limit: '10mb' })(req, res, next);
+  } else if (contentType.includes('application/x-www-form-urlencoded')) {
+    console.log('Applying urlencoded body parser');
+    bodyParser.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
+  } else {
+    console.log('No specific body parser for content-type:', contentType);
+    next();
+  }
+});
 app.use(requestLogger);
 
 // Apply database middleware in serverless environments (before routes)

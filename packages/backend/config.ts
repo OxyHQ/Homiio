@@ -44,6 +44,13 @@ export interface Config {
     user?: string;
     password?: string;
   };
+  s3: {
+    endpoint: string;
+    region: string;
+    accessKeyId: string;
+    secretAccessKey: string;
+    bucketName: string;
+  };
   rateLimit: {
     windowMs: number;
     max: number;
@@ -127,6 +134,15 @@ const config: Config = {
     service: process.env.EMAIL_SERVICE || 'gmail',
     user: process.env.EMAIL_USER,
     password: process.env.EMAIL_PASSWORD,
+  },
+  
+  // S3 Configuration (DigitalOcean Spaces)
+  s3: {
+    endpoint: process.env.AWS_ENDPOINT_URL || 'https://nyc3.digitaloceanspaces.com',
+    region: process.env.AWS_REGION || 'nyc3',
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+    bucketName: process.env.AWS_S3_BUCKET || 'homiio-images',
   },
   
   // Rate Limiting

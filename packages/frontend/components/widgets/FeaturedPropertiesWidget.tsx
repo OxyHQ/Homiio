@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import LoadingSpinner from '../LoadingSpinner';
 import { Link, useRouter } from 'expo-router';
@@ -10,57 +10,29 @@ import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '../ThemedText';
-import * as Location from 'expo-location';
 
 const IconComponent = Ionicons as any;
 
 export function FeaturedPropertiesWidget() {
   const { t } = useTranslation();
-  const { properties, loading, error, loadProperties } = useProperties();
   const router = useRouter();
 
-  // Attempt to fetch location-aware featured list on mount
+  // Use the same pattern as the main homepage
+  const { properties, loading, error, loadProperties } = useProperties();
+
+  // Load properties on mount if not already loaded
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          if (!cancelled) await loadProperties({ limit: 4, status: 'available' });
-          return;
-        }
-        try {
-          const location = await Location.getCurrentPositionAsync({});
-          if (!cancelled)
-            await loadProperties({
-              limit: 4,
-              status: 'available',
-              lat: location.coords.latitude as any,
-              lng: location.coords.longitude as any,
-              radius: 45000 as any,
-            });
-        } catch {
-          if (!cancelled) await loadProperties({ limit: 4, status: 'available' });
-        }
-      } catch {
-        if (!cancelled) await loadProperties({ limit: 4, status: 'available' });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [loadProperties]);
+    if (!properties || properties.length === 0) {
+      loadProperties({
+        limit: 4,
+        status: 'available',
+      });
+    }
+  }, [loadProperties, properties]);
 
-  const featured = useMemo(() => properties || [], [properties]);
-
-  // No client-side ordering; backend provides preferred order and savesCount
-
-  // Basic monitoring log
-  console.log('FeaturedPropertiesWidget:', {
-    loading,
-    propertiesCount: featured.length || 0,
-    hasError: !!error,
-  });
+  const featured = useMemo(() => {
+    return properties || [];
+  }, [properties]);
 
   if (error) {
     console.error('FeaturedPropertiesWidget Error:', error);
@@ -68,9 +40,7 @@ export function FeaturedPropertiesWidget() {
       <BaseWidget title={t('home.featured.title', 'Featured Properties')}>
         <View style={styles.errorContainer}>
           <ThemedText style={styles.errorText}>
-            {typeof error === 'string'
-              ? error
-              : (error as Error)?.message || 'Failed to load properties'}
+            {error instanceof Error ? error.message : 'Failed to load properties'}
           </ThemedText>
         </View>
       </BaseWidget>
@@ -155,7 +125,13 @@ function FeaturedProperties({ properties }: { properties: any[] }) {
       {propertyItems.map((property) => (
         <Link href={`/properties/${property.id}`} key={property.id} asChild>
           <TouchableOpacity style={styles.propertyItem}>
-            <Image source={property.imageSource} style={styles.propertyImage} />
+            <View style={styles.imageContainer}>
+              <Image source={property.imageSource} style={styles.propertyImage} />
+              <View style={styles.savesBadge}>
+                <ThemedText style={styles.savesCountText}>{property.savesCount || 0}</ThemedText>
+                <IconComponent name="heart" size={10} color="#ef4444" />
+              </View>
+            </View>
             <View style={styles.propertyContent}>
               <View style={styles.propertyHeader}>
                 <ThemedText style={styles.propertyTitle} numberOfLines={2}>
@@ -166,10 +142,6 @@ function FeaturedProperties({ properties }: { properties: any[] }) {
               <ThemedText style={styles.propertyLocation}>{property.location}</ThemedText>
               <View style={styles.propertyFooter}>
                 <ThemedText style={styles.propertyPrice}>{property.price}</ThemedText>
-                <View style={styles.ratingContainer}>
-                  <IconComponent name="heart" size={14} color="#ef4444" />
-                  <ThemedText style={styles.ratingText}>{property.savesCount || 0}</ThemedText>
-                </View>
               </View>
             </View>
           </TouchableOpacity>
@@ -217,20 +189,48 @@ const styles = StyleSheet.create({
   },
   propertyItem: {
     flexDirection: 'row',
-    marginBottom: 15,
+    marginBottom: 10,
     borderBottomWidth: 0.5,
     borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
-    paddingBottom: 15,
+    paddingBottom: 10,
+  },
+  imageContainer: {
+    position: 'relative',
   },
   propertyImage: {
-    width: 80,
-    height: 80,
+    width: 60,
+    height: 60,
     borderRadius: 8,
+  },
+  savesBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    zIndex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    justifyContent: 'center',
+  },
+  savesCountText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#222222',
+    marginRight: 1,
+    fontFamily: 'Phudu',
+    lineHeight: 18,
   },
   propertyContent: {
     flex: 1,
     marginLeft: 10,
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
   },
   propertyHeader: {
     flexDirection: 'row',
@@ -239,24 +239,27 @@ const styles = StyleSheet.create({
   },
   propertyTitle: {
     fontWeight: 'bold',
-    fontSize: 15,
+    fontSize: 14,
     flex: 1,
     marginRight: 5,
+    marginBottom: 3,
+    lineHeight: 16,
   },
   propertyLocation: {
     color: colors.COLOR_BLACK_LIGHT_4,
-    fontSize: 13,
-    marginTop: 4,
+    fontSize: 12,
+    marginTop: 3,
+    lineHeight: 14,
   },
   propertyFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 4,
   },
   propertyPrice: {
     fontWeight: '600',
-    color: colors.primaryColor,
+    lineHeight: 16,
   },
   ratingContainer: {
     flexDirection: 'row',

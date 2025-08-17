@@ -17,6 +17,7 @@ const viewings = require('./viewings').default;
 const telegram = require('./telegram');
 const tips = require('./tips').default;
 const test = require('./test').default;
+const images = require('./images');
 const { asyncHandler } = require('../middlewares');
 
 export default function() {
@@ -33,6 +34,7 @@ export default function() {
   const telegramRoutes = telegram();
   const tipsRoutes = tips();
   const testRoutes = test();
+  const imageRoutes = images;
 
   const router = express.Router();
 
@@ -50,6 +52,7 @@ export default function() {
   router.use('/telegram', telegramRoutes);
   router.use('/tips', tipsRoutes);
   router.use('/test', testRoutes);
+  router.use('/images', imageRoutes);
 
   // Admin-only city routes (authenticated)
   router.post('/cities', asyncHandler(require('../controllers/cityController').default.createCity));

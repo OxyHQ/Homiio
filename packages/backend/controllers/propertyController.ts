@@ -364,6 +364,145 @@ class PropertyController {
         ordered = properties.map((p: any) => ({ ...p, savesCount: savesMap[String(p._id)] || 0 }));
       }
 
+      // Personalized recommendations for authenticated users
+      if (req.user?.id || req.user?._id) {
+        try {
+          const oxyUserId = req.user.id || req.user._id;
+          console.log(`[getProperties] Applying personalized recommendations for user: ${oxyUserId}`);
+          
+          // Get user's profile and preferences
+          const { Profile, RecentlyViewed, Saved } = require('../models');
+          const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+          
+          if (activeProfile) {
+            // Get user's recently viewed properties to understand preferences
+            const recentlyViewed = await RecentlyViewed.find({ profileId: activeProfile._id })
+              .sort({ viewedAt: -1 })
+              .limit(10)
+              .lean();
+            
+            // Get user's saved properties
+            const savedProperties = await Saved.find({ 
+              profileId: activeProfile._id, 
+              targetType: 'property' 
+            }).lean();
+            
+            // Create preference weights based on user behavior
+            const preferenceWeights = {
+              propertyTypes: {},
+              priceRanges: {},
+              locations: {},
+              amenities: {}
+            };
+            
+            // Analyze recently viewed properties
+            recentlyViewed.forEach(view => {
+              const property = ordered.find(p => p._id.toString() === view.propertyId.toString());
+              if (property) {
+                // Property type preference
+                preferenceWeights.propertyTypes[property.type] = 
+                  (preferenceWeights.propertyTypes[property.type] || 0) + 1;
+                
+                // Price range preference
+                const rent = property.rent?.amount || 0;
+                if (rent > 0) {
+                  const priceRange = rent < 1000 ? 'low' : rent < 2000 ? 'medium' : 'high';
+                  preferenceWeights.priceRanges[priceRange] = 
+                    (preferenceWeights.priceRanges[priceRange] || 0) + 1;
+                }
+                
+                // Location preference
+                if (property.address?.city) {
+                  preferenceWeights.locations[property.address.city] = 
+                    (preferenceWeights.locations[property.address.city] || 0) + 1;
+                }
+                
+                // Amenities preference
+                if (property.amenities) {
+                  property.amenities.forEach(amenity => {
+                    preferenceWeights.amenities[amenity] = 
+                      (preferenceWeights.amenities[amenity] || 0) + 1;
+                  });
+                }
+              }
+            });
+            
+            // Apply personalized scoring
+            const personalizedProperties = ordered.map(property => {
+              let personalizedScore = 0;
+              
+              // Base score from saves count (popularity)
+              personalizedScore += (property.savesCount || 0) * 10;
+              
+              // Property type preference bonus
+              const typeWeight = preferenceWeights.propertyTypes[property.type] || 0;
+              personalizedScore += typeWeight * 15;
+              
+              // Price range preference bonus
+              const rent = property.rent?.amount || 0;
+              if (rent > 0) {
+                const priceRange = rent < 1000 ? 'low' : rent < 2000 ? 'medium' : 'high';
+                const priceWeight = preferenceWeights.priceRanges[priceRange] || 0;
+                personalizedScore += priceWeight * 12;
+              }
+              
+              // Location preference bonus
+              if (property.address?.city) {
+                const locationWeight = preferenceWeights.locations[property.address.city] || 0;
+                personalizedScore += locationWeight * 20;
+              }
+              
+              // Amenities preference bonus
+              if (property.amenities) {
+                property.amenities.forEach(amenity => {
+                  const amenityWeight = preferenceWeights.amenities[amenity] || 0;
+                  personalizedScore += amenityWeight * 5;
+                });
+              }
+              
+              // Verified properties bonus
+              if (property.isVerified) {
+                personalizedScore += 25;
+              }
+              
+              // Eco-friendly bonus
+              if (property.isEcoFriendly) {
+                personalizedScore += 15;
+              }
+              
+              // Recently viewed penalty (avoid showing same properties)
+              const isRecentlyViewed = recentlyViewed.some(view => 
+                view.propertyId.toString() === property._id.toString()
+              );
+              if (isRecentlyViewed) {
+                personalizedScore -= 30;
+              }
+              
+              // Saved properties penalty (avoid showing already saved)
+              const isSaved = savedProperties.some(saved => 
+                saved.targetId.toString() === property._id.toString()
+              );
+              if (isSaved) {
+                personalizedScore -= 20;
+              }
+              
+              return { ...property, personalizedScore };
+            });
+            
+            // Sort by personalized score
+            personalizedProperties.sort((a, b) => (b.personalizedScore || 0) - (a.personalizedScore || 0));
+            
+            // Update the ordered list with personalized results
+            ordered = personalizedProperties;
+            
+            console.log(`[getProperties] Applied personalized scoring for ${personalizedProperties.length} properties`);
+          }
+        } catch (error) {
+          console.error('[getProperties] Error applying personalized recommendations:', error);
+          // Continue with non-personalized results if there's an error
+        }
+      }
+
       const totalPages = Math.ceil(total / limitNumber);
 
       res.json(
