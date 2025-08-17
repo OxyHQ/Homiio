@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo, useContext } from 'react';
 import {
   View, StyleSheet, Dimensions, TextInput, TouchableOpacity,
-  Platform, ActivityIndicator, ScrollView, FlatList, TouchableWithoutFeedback,
+  Platform, ActivityIndicator, ScrollView, FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -187,20 +187,6 @@ const styles = StyleSheet.create({
   carouselList: {
     paddingHorizontal: 16,
   },
-  cardWrapper: {
-    width: Dimensions.get('window').width * 0.85,
-    marginRight: 12,
-    maxWidth: 400,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
-  },
 
   searchHeader: {
     flexDirection: 'row',
@@ -291,7 +277,7 @@ export default function SearchScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { getMapState, setMapState } = useMapState();
-  const { saveSearch, isAuthenticated } = useSavedSearches();
+  const { isAuthenticated } = useSavedSearches();
   const bottomSheet = useContext(BottomSheetContext);
   const screenId = 'search-screen';
 
@@ -314,7 +300,7 @@ export default function SearchScreen() {
     console.log('setSearchQuerySafely called with:', query);
     setSearchQuery(query);
   }, []);
-  const { isMapMode, setIsMapMode } = useSearchMode();
+  const { setIsMapMode } = useSearchMode();
   const [showMap, setShowMap] = useState(true);
 
   // Sync local showMap state with context isMapMode
@@ -550,7 +536,7 @@ export default function SearchScreen() {
     router.push(`/properties/${property._id}`);
   }, [router]);
 
-  const handleResetMap = useCallback(() => {
+  const _handleResetMap = useCallback(() => {
     // Clear saved map state and reset to current location
     setMapState(screenId, {
       center: undefined,
@@ -825,7 +811,7 @@ export default function SearchScreen() {
     </ScrollView>
   );
 
-  const renderSearchBar = (containerStyle: any) => (
+  const _renderSearchBar = (containerStyle: any) => (
     <View style={containerStyle}>
       {/* Debug info */}
       {__DEV__ && (
@@ -923,22 +909,24 @@ export default function SearchScreen() {
                   { length: Dimensions.get('window').width * 0.85 + 12, offset: (Dimensions.get('window').width * 0.85 + 12) * index, index }
                 )}
                 renderItem={({ item }) => (
-                  <View style={styles.cardWrapper}>
-                    <PropertyCard
-                      property={item}
-                      variant="compact"
-                      orientation="horizontal"
-                      onPress={() => handlePropertyPress(item)}
-                      style={{
-                        backgroundColor: '#fff',
-                        borderRadius: 12,
-                        overflow: 'hidden',
-                        borderWidth: item._id === highlightedPropertyId ? 2 : 0,
-                        borderColor: '#007AFF',
-                        padding: 10,
-                      }}
-                    />
-                  </View>
+                  <PropertyCard
+                    property={item}
+                    variant="compact"
+                    orientation="horizontal"
+                    onPress={() => handlePropertyPress(item)}
+                    style={{
+                      backgroundColor: '#fff',
+                      borderRadius: 12,
+                      overflow: 'hidden',
+                      borderWidth: item._id === highlightedPropertyId ? 2 : 0,
+                      borderColor: '#007AFF',
+                      padding: 10,
+                      height: '100%',
+                      width: Dimensions.get('window').width * 0.85,
+                      marginRight: 12,
+                      maxWidth: 400,
+                    }}
+                  />
                 )}
               />
             </View>

@@ -169,6 +169,13 @@ export function SideBar() {
                 willChange: 'width',
               },
             }) as ViewStyle),
+            ...(pathname === '/search' ? {
+              shadowColor: colors.primaryDark,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.25,
+              shadowRadius: 3.84,
+              elevation: 5,
+            } : {}),
           },
         ]}
       >
@@ -280,6 +287,7 @@ const styles = StyleSheet.create({
       },
     }) as ViewStyle),
     top: 0,
+    zIndex: 1000,
   },
   inner: {
     flex: 1,
