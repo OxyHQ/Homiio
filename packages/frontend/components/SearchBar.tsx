@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../styles/colors';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { AnimatedSearchPlaceholder } from './AnimatedSearchPlaceholder';
 
 const debounce = (func: Function, wait: number) => {
   let timeout: NodeJS.Timeout;
@@ -78,19 +79,33 @@ export const SearchBar = ({ hideFilterIcon = false }: SearchBarProps) => {
         ) : (
           <Ionicons name="search" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
         )}
-        <TextInput
-          style={{
-            fontSize: 16,
-            color: colors.COLOR_BLACK_LIGHT_4,
-            marginHorizontal: 17,
-            flex: 1,
-          }}
-          placeholder={t('Search properties')}
-          value={searchQuery}
-          onChangeText={handleSearchChange}
-          returnKeyType="search"
-          onSubmitEditing={handleSubmit}
-        />
+        <View style={{ flex: 1, marginHorizontal: 17 }}>
+          <TextInput
+            style={{
+              fontSize: 16,
+              color: colors.COLOR_BLACK_LIGHT_4,
+              width: '100%',
+              height: '100%',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+            }}
+            placeholder=""
+            value={searchQuery}
+            onChangeText={handleSearchChange}
+            returnKeyType="search"
+            onSubmitEditing={handleSubmit}
+          />
+          {!searchQuery && (
+            <AnimatedSearchPlaceholder
+              style={{
+                fontSize: 16,
+                color: colors.COLOR_BLACK_LIGHT_4,
+                opacity: 0.6,
+              }}
+            />
+          )}
+        </View>
         {hideFilterIcon ? (
           <View
             style={{

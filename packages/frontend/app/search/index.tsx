@@ -1,698 +1,564 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
+  Dimensions,
   TextInput,
   TouchableOpacity,
-  FlatList,
+  Platform,
   ActivityIndicator,
-  RefreshControl,
-  Dimensions,
+  ScrollView,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '@/styles/colors';
+import Map from '@/components/Map';
 import { PropertyCard } from '@/components/PropertyCard';
-import { useSearchProperties } from '@/hooks';
-import { Property, PropertyFilters } from '@/services/propertyService';
+import { ThemedText } from '@/components/ThemedText';
+import { Property, PaymentFrequency } from '@homiio/shared-types';
+import { propertyService } from '@/services/propertyService';
 
-interface SearchFilters extends PropertyFilters {
-  amenities?: string[];
-  furnished?: boolean;
-  petsAllowed?: boolean;
-  ecoFriendly?: boolean;
-  verified?: boolean;
-}
-
-const AMENITIES = [
-  'wifi',
-  'parking',
-  'gym',
-  'pool',
-  'balcony',
-  'garden',
-  'elevator',
-  'air_conditioning',
-  'heating',
-  'dishwasher',
-  'washing_machine',
-];
-
-const PROPERTY_TYPES = [
-  { id: 'apartment', label: 'Apartments', icon: 'business-outline' },
-  { id: 'house', label: 'Houses', icon: 'home-outline' },
-  { id: 'room', label: 'Rooms', icon: 'bed-outline' },
-  { id: 'studio', label: 'Studios', icon: 'square-outline' },
-];
-
-export default function SearchScreen() {
-  const { t } = useTranslation();
-  const router = useRouter();
-  const { query: initialQuery = '' } = useLocalSearchParams<{ query: string }>();
-
-  const screenWidth = Dimensions.get('window').width;
-  const isMobile = screenWidth < 600;
-
-  const [searchQuery, setSearchQuery] = useState(decodeURIComponent(initialQuery));
-  const [inputValue, setInputValue] = useState(decodeURIComponent(initialQuery));
-  const [filters, setFilters] = useState<SearchFilters>({
-    page: 1,
-    limit: 10,
-  });
-  const [draftFilters, setDraftFilters] = useState<SearchFilters>({
-    page: 1,
-    limit: 10,
-  });
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>(isMobile ? 'grid' : 'list');
-
-  // Use the search hook (React Query)
-  const rq = useSearchProperties(searchQuery.trim() || undefined, {
-    ...filters,
-  });
-  const loading = rq.isLoading;
-  const error = rq.error ? String((rq.error as any)?.message || rq.error) : null;
-  const properties = (rq.data?.properties as any[]) || [];
-  const totalResults = rq.data?.total || 0;
-
-  const handleSearch = useCallback(() => {
-    if (inputValue.trim()) {
-      const newFilters: SearchFilters = {
-        ...draftFilters,
-        amenities: selectedAmenities.length > 0 ? selectedAmenities : undefined,
-        type: selectedTypes.length > 0 ? selectedTypes.join(',') : undefined,
-        page: 1, // Reset to first page on new search
-        limit: 10,
-      };
-      setFilters(newFilters);
-      // Reflect the query in the route: /search/:query
-      setSearchQuery(inputValue);
-      router.push(`/search/${encodeURIComponent(inputValue)}`);
-    }
-  }, [router, inputValue, draftFilters, selectedAmenities, selectedTypes, setFilters]);
-
-  const handleLoadMore = () => {
-    if (properties.length < totalResults) {
-      setFilters((prev) => ({
-        ...prev,
-        page: (prev.page || 1) + 1,
-      }));
-    }
-  };
-
-  const toggleAmenity = (amenity: string) => {
-    setSelectedAmenities((prev) =>
-      prev.includes(amenity) ? prev.filter((a) => a !== amenity) : [...prev, amenity],
-    );
-  };
-
-  const togglePropertyType = (type: string) => {
-    setSelectedTypes((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
-    );
-  };
-
-  const clearFilters = () => {
-    setSelectedAmenities([]);
-    setSelectedTypes([]);
-    setDraftFilters({ page: 1, limit: 10 });
-  };
-
-  // Do not auto-search on typing or filter changes; only search on submit
-
-  // Keep local state in sync with route param
-  useEffect(() => {
-    const q = decodeURIComponent(initialQuery || '');
-    setSearchQuery(q);
-    setInputValue(q);
-    // Reset to first page when query changes
-    setFilters((prev) => ({ ...(prev || {}), page: 1, limit: 10 }));
-  }, [initialQuery, setFilters]);
-
-  // If navigated to /search/:query (e.g., from the top SearchBar submit), run search once
-  useEffect(() => {
-    const q = decodeURIComponent(initialQuery || '').trim();
-    if (q) {
-      const newFilters: SearchFilters = {
-        ...filters,
-        amenities: selectedAmenities.length > 0 ? selectedAmenities : undefined,
-        type: selectedTypes.length > 0 ? selectedTypes.join(',') : undefined,
-        page: 1,
-        limit: 10,
-      };
-      // navigation triggers re-run of hook via searchQuery
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialQuery]);
-
-  const renderPropertyItem = ({ item }: { item: Property }) => (
-    <PropertyCard
-      property={item}
-      variant={viewMode === 'grid' ? 'compact' : 'default'}
-      onPress={() => router.push(`/properties/${item._id || item.id}`)}
-      style={viewMode === 'grid' ? styles.gridCard : undefined}
-    />
-  );
-
-  const renderFilterSection = () => (
-    <View style={styles.filterSection}>
-      <View style={styles.filterHeader}>
-        <Text style={styles.filterTitle}>{t('Filters')}</Text>
-        <TouchableOpacity onPress={clearFilters}>
-          <Text style={styles.clearFiltersText}>{t('Clear All')}</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Property Types */}
-      <View style={styles.filterGroup}>
-        <Text style={styles.filterGroupTitle}>{t('Property Type')}</Text>
-        <View style={styles.filterChips}>
-          {PROPERTY_TYPES.map((type) => (
-            <TouchableOpacity
-              key={type.id}
-              style={[
-                styles.filterChip,
-                selectedTypes.includes(type.id) && styles.filterChipActive,
-              ]}
-              onPress={() => togglePropertyType(type.id)}
-            >
-              <Ionicons
-                name={type.icon as any}
-                size={16}
-                color={selectedTypes.includes(type.id) ? 'white' : colors.primaryColor}
-              />
-              <Text
-                style={[
-                  styles.filterChipText,
-                  selectedTypes.includes(type.id) && styles.filterChipTextActive,
-                ]}
-              >
-                {t(type.label)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* Amenities */}
-      <View style={styles.filterGroup}>
-        <Text style={styles.filterGroupTitle}>{t('Amenities')}</Text>
-        <View style={styles.filterChips}>
-          {AMENITIES.map((amenity) => (
-            <TouchableOpacity
-              key={amenity}
-              style={[
-                styles.filterChip,
-                selectedAmenities.includes(amenity) && styles.filterChipActive,
-              ]}
-              onPress={() => toggleAmenity(amenity)}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  selectedAmenities.includes(amenity) && styles.filterChipTextActive,
-                ]}
-              >
-                {t(amenity.replace('_', ' '))}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* Price Range */}
-      <View style={styles.filterGroup}>
-        <Text style={styles.filterGroupTitle}>{t('Price Range')}</Text>
-        <View style={styles.priceInputs}>
-          <TextInput
-            style={styles.priceInput}
-            placeholder={t('Min')}
-            keyboardType="numeric"
-            value={filters.minRent?.toString() || ''}
-            onChangeText={(text) =>
-              setFilters((prev) => ({
-                ...prev,
-                minRent: text ? parseInt(text) : undefined,
-              }))
-            }
-          />
-          <Text style={styles.priceSeparator}>-</Text>
-          <TextInput
-            style={styles.priceInput}
-            placeholder={t('Max')}
-            keyboardType="numeric"
-            value={filters.maxRent?.toString() || ''}
-            onChangeText={(text) =>
-              setFilters((prev) => ({
-                ...prev,
-                maxRent: text ? parseInt(text) : undefined,
-              }))
-            }
-          />
-        </View>
-      </View>
-
-      {/* Bedrooms & Bathrooms */}
-      <View style={styles.filterGroup}>
-        <Text style={styles.filterGroupTitle}>{t('Rooms')}</Text>
-        <View style={styles.roomInputs}>
-          <View style={styles.roomInput}>
-            <Text style={styles.roomLabel}>{t('Bedrooms')}</Text>
-            <TextInput
-              style={styles.roomTextInput}
-              placeholder="Any"
-              keyboardType="numeric"
-              value={filters.bedrooms?.toString() || ''}
-              onChangeText={(text) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  bedrooms: text ? parseInt(text) : undefined,
-                }))
-              }
-            />
-          </View>
-          <View style={styles.roomInput}>
-            <Text style={styles.roomLabel}>{t('Bathrooms')}</Text>
-            <TextInput
-              style={styles.roomTextInput}
-              placeholder="Any"
-              keyboardType="numeric"
-              value={filters.bathrooms?.toString() || ''}
-              onChangeText={(text) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  bathrooms: text ? parseInt(text) : undefined,
-                }))
-              }
-            />
-          </View>
-        </View>
-      </View>
-
-      <TouchableOpacity style={styles.applyFiltersButton} onPress={handleSearch}>
-        <Text style={styles.applyFiltersButtonText}>{t('Apply Filters')}</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const renderEmptyState = () => (
-    <View style={styles.emptyContainer}>
-      <Ionicons name="search-outline" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
-      <Text style={styles.emptyTitle}>
-        {searchQuery ? t('No properties found') : t('Start your search')}
-      </Text>
-      <Text style={styles.emptySubtitle}>
-        {searchQuery
-          ? t('Try adjusting your search criteria or filters')
-          : t('Enter a location, property type, or use filters to find your perfect home')}
-      </Text>
-    </View>
-  );
-
-  const renderErrorState = () => (
-    <View style={styles.emptyContainer}>
-      <Ionicons name="alert-circle-outline" size={60} color={colors.COLOR_BLACK_LIGHT_3} />
-      <Text style={styles.emptyTitle}>{t('Search Error')}</Text>
-      <Text style={styles.emptySubtitle}>{t('Something went wrong. Please try again.')}</Text>
-      <TouchableOpacity style={styles.retryButton} onPress={() => rq.refetch()}>
-        <Text style={styles.retryButtonText}>{t('Retry')}</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Search Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={colors.primaryColor} />
-        </TouchableOpacity>
-
-        <View style={styles.searchContainer}>
-          <View style={styles.searchInputContainer}>
-            <Ionicons name="search" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder={t('Search properties...')}
-              value={inputValue}
-              onChangeText={setInputValue}
-              onSubmitEditing={handleSearch}
-              returnKeyType="search"
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity
-                onPress={() => {
-                  setInputValue('');
-                  setSearchQuery('');
-                }}
-              >
-                <Ionicons name="close-circle" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          <TouchableOpacity
-            style={styles.filterButton}
-            onPress={() => setShowFilters(!showFilters)}
-          >
-            <Ionicons
-              name={showFilters ? 'options' : 'options-outline'}
-              size={24}
-              color={colors.primaryColor}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Results Count */}
-      {searchQuery && (
-        <View style={styles.resultsHeader}>
-          <Text style={styles.resultsCount}>
-            {loading ? t('Searching...') : t('{{count}} properties found', { count: totalResults })}
-          </Text>
-          <View style={styles.viewModeToggle}>
-            <TouchableOpacity
-              style={[styles.toggleButton, viewMode === 'grid' && styles.toggleButtonActive]}
-              onPress={() => setViewMode('grid')}
-            >
-              <Ionicons
-                name="grid-outline"
-                size={20}
-                color={viewMode === 'grid' ? 'white' : colors.primaryColor}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.toggleButton, viewMode === 'list' && styles.toggleButtonActive]}
-              onPress={() => setViewMode('list')}
-            >
-              <Ionicons
-                name="list-outline"
-                size={20}
-                color={viewMode === 'list' ? 'white' : colors.primaryColor}
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-
-      {/* Filters Panel */}
-      {showFilters && renderFilterSection()}
-
-      {/* Properties List */}
-      {error ? (
-        renderErrorState()
-      ) : (
-        <FlatList
-          data={properties}
-          renderItem={renderPropertyItem}
-          keyExtractor={(item) => item._id || item.id || Math.random().toString()}
-          key={viewMode}
-          numColumns={viewMode === 'grid' ? 2 : 1}
-          columnWrapperStyle={viewMode === 'grid' ? styles.gridRow : undefined}
-          contentContainerStyle={styles.listContainer}
-          refreshControl={
-            <RefreshControl
-              refreshing={loading && properties.length === 0}
-              onRefresh={() => rq.refetch()}
-              colors={[colors.primaryColor]}
-            />
-          }
-          ListEmptyComponent={
-            loading && properties.length === 0 ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={colors.primaryColor} />
-                <Text style={styles.loadingText}>{t('Searching properties...')}</Text>
-              </View>
-            ) : (
-              renderEmptyState()
-            )
-          }
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.1}
-          ListFooterComponent={
-            loading && properties.length > 0 ? (
-              <View style={styles.loadingMoreContainer}>
-                <ActivityIndicator size="small" color={colors.primaryColor} />
-                <Text style={styles.loadingMoreText}>{t('Loading more...')}</Text>
-              </View>
-            ) : null
-          }
-        />
-      )}
-    </SafeAreaView>
-  );
-}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.primaryLight,
+    width: '100%',
+    height: '100%',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
+  map: {
+    width: '100%',
+    height: '100%',
   },
-  backButton: {
-    marginRight: 12,
-    padding: 4,
+  searchContainerAbsolute: {
+    position: 'absolute',
+    top: Platform.OS === 'web' ? 16 : 48,
+    left: 16,
+    right: 16,
+    zIndex: 1,
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
   },
-  searchContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+  searchContainerRelative: {
+    padding: 16,
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
   },
   searchInputContainer: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primaryLight,
-    borderRadius: 24,
+    backgroundColor: '#fff',
+    borderRadius: 12,
     paddingHorizontal: 12,
+    paddingVertical: Platform.OS === 'web' ? 8 : 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  searchIcon: {
     marginRight: 8,
-    height: 40,
   },
-  searchInput: {
+  searchInput: Platform.select({
+    web: {
+      flex: 1,
+      fontSize: 16,
+      color: '#333',
+      paddingVertical: 8,
+      outline: 'none',
+    },
+    default: {
+      flex: 1,
+      fontSize: 16,
+      color: '#333',
+      paddingVertical: 8,
+    },
+  }),
+  clearButton: {
+    padding: 4,
+  },
+  searchResults: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginTop: 8,
+    maxHeight: 300,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  locationIcon: {
+    marginRight: 12,
+  },
+  searchResultText: {
     flex: 1,
-    marginLeft: 8,
-    fontSize: 16,
-    color: colors.COLOR_BLACK_LIGHT_4,
   },
-  filterButton: {
+  primaryText: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 2,
+  },
+  secondaryText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  controlsContainer: {
+    position: 'absolute',
+    top: Platform.OS === 'web' ? 80 : 112,
+    right: 16,
+    zIndex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 12,
     padding: 8,
-  },
-  resultsHeader: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
-  },
-  resultsCount: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    fontWeight: '500',
-  },
-  filterSection: {
-    backgroundColor: 'white',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
-  },
-  filterHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  filterTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.primaryDark,
-  },
-  clearFiltersText: {
-    fontSize: 14,
-    color: colors.primaryColor,
-    fontWeight: '500',
-  },
-  filterGroup: {
-    marginBottom: 20,
-  },
-  filterGroupTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.primaryDark,
-    marginBottom: 12,
-  },
-  filterChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
   },
-  filterChip: {
+  filtersContainer: {
+    position: 'absolute',
+    top: Platform.OS === 'web' ? 132 : 164,
+    left: 16,
+    right: 16,
+    zIndex: 1,
+    maxWidth: 600,
+    alignSelf: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  filterRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  filterLabel: {
+    fontSize: 14,
+    color: '#333',
+    marginRight: 8,
+  },
+  filterValue: {
+    fontSize: 14,
+    color: '#666',
+  },
+  sliderContainer: {
+    flex: 1,
+    marginHorizontal: 8,
+  },
+  buttonGroup: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  button: {
+    backgroundColor: '#f0f0f0',
     paddingHorizontal: 12,
-    borderRadius: 20,
-    backgroundColor: colors.primaryLight,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_5,
-    gap: 6,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
-  filterChipActive: {
-    backgroundColor: colors.primaryColor,
-    borderColor: colors.primaryColor,
+  buttonSelected: {
+    backgroundColor: '#007AFF',
   },
-  filterChipText: {
+  buttonText: {
     fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_4,
+    color: '#333',
   },
-  filterChipTextActive: {
-    color: 'white',
-    fontWeight: '500',
-  },
-  priceInputs: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  priceInput: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: colors.primaryLight,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_5,
-    fontSize: 16,
-  },
-  priceSeparator: {
-    fontSize: 16,
-    color: colors.COLOR_BLACK_LIGHT_4,
-  },
-  roomInputs: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  roomInput: {
-    flex: 1,
-  },
-  roomLabel: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    marginBottom: 8,
-  },
-  roomTextInput: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: colors.primaryLight,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_5,
-    fontSize: 16,
-  },
-  applyFiltersButton: {
-    backgroundColor: colors.primaryColor,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  applyFiltersButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+  buttonTextSelected: {
+    color: '#fff',
   },
   listContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
+    padding: 16,
   },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: colors.primaryDark,
-    marginTop: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontSize: 16,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  loadingContainer: {
+  propertiesList: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
   },
-  loadingText: {
-    marginTop: 12,
+  noResults: {
+    textAlign: 'center',
     fontSize: 16,
-    color: colors.primaryDark_1,
-  },
-  loadingMoreContainer: {
-    paddingVertical: 20,
-    alignItems: 'center',
-  },
-  loadingMoreText: {
-    marginTop: 8,
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_4,
-  },
-  retryButton: {
-    backgroundColor: colors.primaryColor,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    marginTop: 16,
-  },
-  retryButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  viewModeToggle: {
-    flexDirection: 'row',
-    backgroundColor: colors.primaryLight_1,
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: colors.primaryColor,
-    overflow: 'hidden',
-  },
-  toggleButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-  },
-  toggleButtonActive: {
-    backgroundColor: colors.primaryColor,
-  },
-  gridRow: {
-    justifyContent: 'space-between',
-    paddingHorizontal: 4,
-  },
-  gridCard: {
-    width: (Dimensions.get('window').width - 48) / 2,
-    marginHorizontal: 4,
+    color: '#666',
+    marginTop: 32,
   },
 });
+
+interface SearchResult {
+  place_name: string;
+  center: [number, number];
+  text: string;
+  context?: { text: string }[];
+}
+
+interface Filters {
+  radius: number;
+  minPrice: number;
+  maxPrice: number;
+  bedrooms: number;
+  bathrooms: number;
+}
+
+const defaultFilters: Filters = {
+  radius: 5,
+  minPrice: 0,
+  maxPrice: 5000,
+  bedrooms: 1,
+  bathrooms: 1,
+};
+
+export default function SearchScreen() {
+  const { width: _width, height: _height } = Dimensions.get('window');
+  const mapRef = useRef<{ navigateToLocation: (center: [number, number], zoom?: number) => void }>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  const [showMap, setShowMap] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<Filters>(defaultFilters);
+  const [selectedLocation, setSelectedLocation] = useState<[number, number] | null>(null);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [isLoadingProperties, setIsLoadingProperties] = useState(false);
+
+
+  useEffect(() => {
+    const searchPlaces = async () => {
+      if (!searchQuery.trim()) {
+        setSearchResults([]);
+        return;
+      }
+      setIsSearching(true);
+      try {
+        const response = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchQuery)}.json?access_token=${process.env.EXPO_PUBLIC_MAPBOX_TOKEN}`
+        );
+        const data = await response.json();
+        if (data.features) {
+          setSearchResults(data.features);
+          setShowResults(true);
+        }
+      } catch (error) {
+        console.error('Geocoding error:', error);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const timeoutId = setTimeout(searchPlaces, 300);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  const fetchProperties = React.useCallback(async (location?: [number, number]) => {
+    setIsLoadingProperties(true);
+    try {
+      let props;
+      if (location) {
+        props = await propertyService.findPropertiesInRadius(
+          location[1],
+          location[0],
+          filters.radius
+        );
+      } else {
+        props = await propertyService.getProperties({
+          minRent: filters.minPrice,
+          maxRent: filters.maxPrice,
+          bedrooms: filters.bedrooms,
+          bathrooms: filters.bathrooms,
+        });
+      }
+      setProperties(Array.isArray(props) ? props : props.properties);
+    } catch (error) {
+      console.error('Error fetching properties:', error);
+    } finally {
+      setIsLoadingProperties(false);
+    }
+  }, [filters]);
+
+  useEffect(() => {
+    if (selectedLocation) {
+      fetchProperties(selectedLocation);
+    } else {
+      fetchProperties();
+    }
+  }, [selectedLocation, filters, fetchProperties]);
+
+  const handleSelectLocation = (result: SearchResult) => {
+    mapRef.current?.navigateToLocation(result.center, 15);
+    setShowResults(false);
+    setSearchQuery(result.place_name);
+    setSelectedLocation(result.center);
+  };
+
+  const handleMarkerPress = ({ lngLat }: { id: string; lngLat: [number, number] }) => {
+    mapRef.current?.navigateToLocation(lngLat, 15);
+  };
+
+  const [lastRegionChange, setLastRegionChange] = useState<number>(0);
+  const REGION_CHANGE_DELAY = 500; // ms
+
+  const handleRegionChange = React.useCallback(({ center: _center, zoom: _zoom, bounds }: { center: [number, number]; zoom: number; bounds?: { west: number; south: number; east: number; north: number } }) => {
+    const now = Date.now();
+    if (now - lastRegionChange < REGION_CHANGE_DELAY || !bounds) {
+      return;
+    }
+    setLastRegionChange(now);
+
+    setIsLoadingProperties(true);
+    propertyService.findPropertiesInBounds(bounds, {
+      minRent: filters.minPrice,
+      maxRent: filters.maxPrice,
+      bedrooms: filters.bedrooms,
+      bathrooms: filters.bathrooms,
+    }).then(props => {
+      setProperties(props.properties);
+    }).catch(error => {
+      console.error('Error fetching properties in bounds:', error);
+    }).finally(() => {
+      setIsLoadingProperties(false);
+    });
+  }, [lastRegionChange, filters.minPrice, filters.maxPrice, filters.bedrooms, filters.bathrooms]);
+
+  const renderFilters = () => (
+    <View style={styles.filtersContainer}>
+      <View style={styles.filterRow}>
+        <ThemedText style={styles.filterLabel}>Radius</ThemedText>
+        <View style={styles.buttonGroup}>
+          {[1, 2, 5, 10, 20, 50].map((value) => (
+            <TouchableOpacity
+              key={value}
+              style={[
+                styles.button,
+                filters.radius === value && styles.buttonSelected,
+              ]}
+              onPress={() => setFilters({ ...filters, radius: value })}
+            >
+              <ThemedText style={[
+                styles.buttonText,
+                filters.radius === value && styles.buttonTextSelected,
+              ]}>{value}km</ThemedText>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.filterRow}>
+        <ThemedText style={styles.filterLabel}>Price Range</ThemedText>
+        <View style={styles.buttonGroup}>
+          {[500, 1000, 2000, 5000, 10000].map((value) => (
+            <TouchableOpacity
+              key={value}
+              style={[
+                styles.button,
+                filters.maxPrice === value && styles.buttonSelected,
+              ]}
+              onPress={() => setFilters({ ...filters, maxPrice: value })}
+            >
+              <ThemedText style={[
+                styles.buttonText,
+                filters.maxPrice === value && styles.buttonTextSelected,
+              ]}>€{value}</ThemedText>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.filterRow}>
+        <ThemedText style={styles.filterLabel}>Bedrooms</ThemedText>
+        <View style={styles.buttonGroup}>
+          {[1, 2, 3, 4, '5+'].map((num) => (
+            <TouchableOpacity
+              key={num}
+              style={[
+                styles.button,
+                filters.bedrooms === num && styles.buttonSelected,
+              ]}
+              onPress={() => setFilters({ ...filters, bedrooms: num as number })}
+            >
+              <ThemedText style={[
+                styles.buttonText,
+                filters.bedrooms === num && styles.buttonTextSelected,
+              ]}>{num}</ThemedText>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.filterRow}>
+        <ThemedText style={styles.filterLabel}>Bathrooms</ThemedText>
+        <View style={styles.buttonGroup}>
+          {[1, 2, 3, '4+'].map((num) => (
+            <TouchableOpacity
+              key={num}
+              style={[
+                styles.button,
+                filters.bathrooms === num && styles.buttonSelected,
+              ]}
+              onPress={() => setFilters({ ...filters, bathrooms: num as number })}
+            >
+              <ThemedText style={[
+                styles.buttonText,
+                filters.bathrooms === num && styles.buttonTextSelected,
+              ]}>{num}</ThemedText>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderPropertyList = () => (
+    <ScrollView style={styles.listContainer}>
+      <View style={styles.propertiesList}>
+        {isLoadingProperties ? (
+          <ActivityIndicator size="large" color="#666" />
+        ) : !properties || properties.length === 0 ? (
+          <ThemedText style={styles.noResults}>No properties found</ThemedText>
+        ) : (
+          properties.map((property) => (
+            <PropertyCard
+              key={property._id}
+              property={property}
+              onPress={() => {
+                if (property.location?.coordinates) {
+                  mapRef.current?.navigateToLocation(property.location.coordinates as [number, number]);
+                  setShowMap(true);
+                }
+              }}
+              showFavoriteButton
+              showVerifiedBadge
+              style={{ marginBottom: 16 }}
+            />
+          ))
+        )}
+      </View>
+    </ScrollView>
+  );
+
+  const renderSearchBar = (containerStyle: any) => (
+    <View style={containerStyle}>
+      <View style={styles.searchInputContainer}>
+        <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search location..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          returnKeyType="search"
+        />
+        {isSearching ? (
+          <ActivityIndicator size="small" color="#666" style={styles.searchIcon} />
+        ) : searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+            <Ionicons name="close-circle" size={20} color="#999" />
+          </TouchableOpacity>
+        )}
+      </View>
+      {showResults && searchResults.length > 0 && (
+        <ScrollView style={styles.searchResults} keyboardShouldPersistTaps="handled">
+          {searchResults.map((result, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.searchResultItem}
+              onPress={() => handleSelectLocation(result)}
+            >
+              <Ionicons name="location" size={20} color="#666" style={styles.locationIcon} />
+              <View style={styles.searchResultText}>
+                <ThemedText style={styles.primaryText}>{result.text}</ThemedText>
+                <ThemedText style={styles.secondaryText}>
+                  {result.context?.map(c => c.text).join(', ') || result.place_name}
+                </ThemedText>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+    </View>
+  );
+
+  return (
+    <View style={[styles.container]}>
+      {showMap && renderSearchBar(styles.searchContainerAbsolute)}
+
+      <View style={styles.controlsContainer}>
+        <TouchableOpacity
+          style={[styles.button, showFilters && styles.buttonSelected]}
+          onPress={() => setShowFilters(!showFilters)}
+        >
+          <Ionicons
+            name="options"
+            size={20}
+            color={showFilters ? '#fff' : '#333'}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, showMap && styles.buttonSelected]}
+          onPress={() => setShowMap(!showMap)}
+        >
+          <Ionicons
+            name={showMap ? 'map' : 'list'}
+            size={20}
+            color={showMap ? '#fff' : '#333'}
+          />
+        </TouchableOpacity>
+      </View>
+
+      {showFilters && renderFilters()}
+
+      {showMap ? (
+        <Map
+          ref={mapRef}
+          startFromCurrentLocation
+          markers={[
+            ...(selectedLocation ? [{ id: 'search', coordinates: selectedLocation, priceLabel: '' }] : []),
+            ...(properties || [])
+              .filter(p => p?.location?.coordinates)
+              .map(p => ({
+                id: p._id,
+                coordinates: p.location!.coordinates as [number, number],
+                priceLabel: `${p.rent?.currency === 'EUR' ? '€' : p.rent?.currency === 'USD' ? '$' : p.rent?.currency === 'GBP' ? '£' : ''}${p.rent?.amount?.toLocaleString() || 0}${p.rent?.paymentFrequency === PaymentFrequency.MONTHLY ? '/mo' : p.rent?.paymentFrequency === PaymentFrequency.WEEKLY ? '/wk' : ''}`,
+              })),
+          ]}
+          onMapPress={({ lngLat }) => console.log('map press', lngLat)}
+          onRegionChange={handleRegionChange}
+          onMarkerPress={handleMarkerPress}
+          renderMarkerHover={({ id }) => {
+            const property = (properties || []).find(p => p._id === id);
+            if (!property) return null;
+            return (
+              <div style={{ padding: 8, minWidth: 300 }}>
+                <PropertyCard
+                  property={property}
+                  variant="compact"
+                  orientation="horizontal"
+                  showFavoriteButton={false}
+                  showVerifiedBadge={false}
+                  style={{ backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden' }}
+                />
+              </div>
+            );
+          }}
+        />
+      ) : (
+        <>
+          {renderSearchBar(styles.searchContainerRelative)}
+          {renderPropertyList()}
+        </>
+      )}
+    </View>
+  );
+}

@@ -28,7 +28,7 @@ export const BottomBar = () => {
   const insets = useSafeAreaInsets();
 
   const handlePress = (
-    route: '/' | '/properties' | '/saved' | '/sindi' | '/contracts' | '/profile',
+    route: '/' | '/search' | '/saved' | '/sindi' | '/contracts' | '/profile',
   ) => {
     setActiveRoute(route);
     router.push(route);
@@ -80,7 +80,7 @@ export const BottomBar = () => {
         )}
       </Pressable>
       <Pressable
-        onPress={() => handlePress('/properties')}
+        onPress={() => handlePress('/search')}
         style={[styles.tab, activeRoute === '/properties' && styles.active]}
       >
         {activeRoute === '/properties' ? (

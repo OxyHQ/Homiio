@@ -228,6 +228,12 @@
   "search": {
     "title": "Search",
     "searchPlaceholder": "Search by location, property type...",
+    "placeholder": {
+      "suggestion1": "Find your dream apartment in Barcelona...",
+      "suggestion2": "Looking for a pet-friendly home?",
+      "suggestion3": "Discover eco-friendly properties...",
+      "suggestion4": "Search for furnished studios near you..."
+    },
     "searchButton": "Search",
     "recentSearches": "Recent Searches",
     "popularSearches": "Popular Searches",

@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import { Home } from '@/assets/icons';
+import { AnimatedSearchPlaceholder } from '@/components/AnimatedSearchPlaceholder';
 
 // Import real data hooks
 import { useProperties } from '@/hooks';
@@ -406,10 +407,9 @@ export default function HomePage() {
                 activeOpacity={0.8}
               >
                 <View style={styles.searchInput}>
-                  <ThemedText style={styles.searchPlaceholderText}>
-                    {t('home.hero.searchPlaceholder') ||
-                      'Search by address, city, or neighborhood...'}
-                  </ThemedText>
+                  <AnimatedSearchPlaceholder
+                    style={styles.searchPlaceholderText}
+                  />
                 </View>
                 <View style={styles.searchButton}>
                   <IconComponent name="search" size={20} color={colors.COLOR_BLACK} />
@@ -933,11 +933,15 @@ const createStyles = (isScreenNotMobile: boolean, windowHeight: number) => Style
     flex: 1,
     marginLeft: 10,
     fontSize: 16,
+    height: 52,
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   searchPlaceholderText: {
     fontSize: 16,
     color: '#999',
+    textAlign: 'left',
+    paddingVertical: 8,
   },
   searchButton: {
     backgroundColor: colors.secondaryColor,

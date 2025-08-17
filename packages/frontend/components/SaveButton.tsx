@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useContext } from 'react';
+import React, { useRef, useState, useContext } from 'react';
 import { TouchableOpacity, StyleSheet, ViewStyle, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
@@ -48,7 +48,6 @@ export function SaveButton({
 }: SaveButtonProps) {
   const [isPressed, setIsPressed] = useState(false);
   const [internalLoading, setInternalLoading] = useState(false);
-  const pressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isProcessingRef = useRef(false);
   const bottomSheetContext = useContext(BottomSheetContext);
   const { savePropertyToFolder, unsaveProperty } = useSavedPropertiesContext();
@@ -105,16 +104,6 @@ export function SaveButton({
 
     setIsPressed(true);
 
-    // Clear any existing timeout
-    if (pressTimeoutRef.current) {
-      clearTimeout(pressTimeoutRef.current);
-    }
-
-    // Set a timeout to prevent rapid clicks
-    pressTimeoutRef.current = setTimeout(() => {
-      setIsPressed(false);
-    }, 1000); // 1 second debounce
-
     // Use internal save logic if propertyId is provided, otherwise use external onPress
     if (profileId || propertyId) {
       handleInternalSave();
@@ -137,22 +126,20 @@ export function SaveButton({
       // If property is not saved, save it first, then open folder selection
       if (!isSaved) {
         handleInternalSave().then(() => {
-          setTimeout(() => {
-            bottomSheetContext.openBottomSheet(
-              <SaveToFolderBottomSheet
-                propertyId={propertyId}
-                propertyTitle={propertyTitle}
-                property={property}
-                onClose={() => {
-                  bottomSheetContext?.closeBottomSheet();
-                }}
-                onSave={(folderId: string | null) => {
-                  console.log('Property saved to folder:', folderId);
-                  // The bottom sheet will auto-close after saving
-                }}
-              />,
-            );
-          }, 100);
+          bottomSheetContext.openBottomSheet(
+            <SaveToFolderBottomSheet
+              propertyId={propertyId}
+              propertyTitle={propertyTitle}
+              property={property}
+              onClose={() => {
+                bottomSheetContext?.closeBottomSheet();
+              }}
+              onSave={(folderId: string | null) => {
+                console.log('Property saved to folder:', folderId);
+                // The bottom sheet will auto-close after saving
+              }}
+            />,
+          );
         });
       } else {
         // Property is already saved, just open folder selection
@@ -173,15 +160,6 @@ export function SaveButton({
       }
     }
   };
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (pressTimeoutRef.current) {
-        clearTimeout(pressTimeoutRef.current);
-      }
-    };
-  }, []);
 
   return (
     <TouchableOpacity
