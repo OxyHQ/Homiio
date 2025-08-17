@@ -4,12 +4,14 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   ActivityIndicator,
   Platform,
   Modal,
   Image,
   Share,
   Dimensions,
+  Animated,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -79,6 +81,7 @@ export default function PropertyDetailPage() {
   const { oxyServices, activeSessionId } = useOxy();
   const scrollViewRef = useRef<ScrollView>(null);
 
+
   // Safe translation helper was unused; keep i18n hook only
 
   const {
@@ -92,9 +95,83 @@ export default function PropertyDetailPage() {
   const [imageScale, setImageScale] = useState(1);
   const [imageTranslateX, setImageTranslateX] = useState(0);
   const [imageTranslateY, setImageTranslateY] = useState(0);
+  const [currentZoomScale, setCurrentZoomScale] = useState(1);
+  const [translateX, setTranslateX] = useState(0);
+  const [translateY, setTranslateY] = useState(0);
+  const animatedZoomScale = useRef(new Animated.Value(1)).current;
+  const animatedTranslateX = useRef(new Animated.Value(0)).current;
+  const animatedTranslateY = useRef(new Animated.Value(0)).current;
+  const isDragging = useRef(false);
+  const lastTouchX = useRef(0);
+  const lastTouchY = useRef(0);
   const hasViewedRef = useRef(false);
   const [showPhotoGallery, setShowPhotoGallery] = useState(false);
   const [hasActiveViewing, setHasActiveViewing] = useState(false);
+  const lastPanX = useRef(0);
+  const lastPanY = useRef(0);
+
+  // Touch handlers for drag functionality
+  const handleTouchStart = (event: any) => {
+    if (currentZoomScale > 1) {
+      isDragging.current = true;
+      const touch = event.nativeEvent.touches[0];
+      lastTouchX.current = touch.pageX;
+      lastTouchY.current = touch.pageY;
+      console.log('Touch start - zoom:', currentZoomScale);
+    }
+  };
+
+  const handleTouchMove = (event: any) => {
+    if (isDragging.current && currentZoomScale > 1) {
+      const touch = event.nativeEvent.touches[0];
+      const deltaX = touch.pageX - lastTouchX.current;
+      const deltaY = touch.pageY - lastTouchY.current;
+
+      const newTranslateX = translateX + deltaX;
+      const newTranslateY = translateY + deltaY;
+
+      setTranslateX(newTranslateX);
+      setTranslateY(newTranslateY);
+
+      animatedTranslateX.setValue(newTranslateX);
+      animatedTranslateY.setValue(newTranslateY);
+
+      lastTouchX.current = touch.pageX;
+      lastTouchY.current = touch.pageY;
+
+      console.log('Touch move - deltaX:', deltaX, 'deltaY:', deltaY);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    isDragging.current = false;
+    console.log('Touch end');
+  };
+
+  // Reset zoom and position when changing images
+  useEffect(() => {
+    setCurrentZoomScale(1);
+    setTranslateX(0);
+    setTranslateY(0);
+    isDragging.current = false;
+    Animated.parallel([
+      Animated.timing(animatedZoomScale, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(animatedTranslateX, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(animatedTranslateY, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [activeImageIndex, animatedZoomScale, animatedTranslateX, animatedTranslateY]);
 
   // Zustand stores
   const { items: recentlyViewed, addItem } = useRecentlyViewedStore();
@@ -308,14 +385,7 @@ export default function PropertyDetailPage() {
 
         // Call the backend to track the view in database
         if (propertyId) {
-          userApi
-            .trackPropertyView(propertyId, oxyServices, activeSessionId)
-            .then(() => {
-              console.log('PropertyDetailPage: Successfully tracked property view in backend');
-            })
-            .catch((error) => {
-              console.error('PropertyDetailPage: Failed to track property view in backend:', error);
-            });
+          addProperty(apiProperty);
         }
       } else {
         console.log('PropertyDetailPage: User not authenticated, adding to local state only');
@@ -778,7 +848,40 @@ export default function PropertyDetailPage() {
                 <ThemedText style={styles.photoModalTitle}>
                   {activeImageIndex + 1} / {property.images.length}
                 </ThemedText>
-                <View style={{ width: 24 }} /> {/* Spacer for centering */}
+                <View style={styles.zoomControls}>
+                  <ThemedText style={styles.zoomText}>
+                    {Math.round(currentZoomScale * 100)}%
+                  </ThemedText>
+                  <TouchableOpacity
+                    style={styles.zoomButton}
+                    onPress={() => {
+                      setCurrentZoomScale(1);
+                      Animated.timing(animatedZoomScale, {
+                        toValue: 1,
+                        duration: 300,
+                        useNativeDriver: true,
+                      }).start();
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <IconComponent name="remove" size={20} color="white" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.zoomButton}
+                    onPress={() => {
+                      const newScale = Math.min(currentZoomScale + 0.5, 3);
+                      setCurrentZoomScale(newScale);
+                      Animated.timing(animatedZoomScale, {
+                        toValue: newScale,
+                        duration: 300,
+                        useNativeDriver: true,
+                      }).start();
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <IconComponent name="add" size={20} color="white" />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* Image Gallery */}
@@ -796,13 +899,40 @@ export default function PropertyDetailPage() {
                 style={styles.photoModalScroll}
               >
                 {property.images.map((image, index) => (
-                  <View key={index} style={styles.photoModalImageContainer}>
-                    <Image
-                      source={getPropertyImageSource([image as any])}
-                      style={styles.photoModalImage}
-                      resizeMode="contain"
-                    />
-                  </View>
+                  <TouchableWithoutFeedback
+                    key={index}
+                    onPressIn={index === activeImageIndex ? handleTouchStart : undefined}
+                    onPressOut={index === activeImageIndex ? handleTouchEnd : undefined}
+                  >
+                    <View style={styles.photoModalImageContainer}>
+                      <Animated.Image
+                        source={getPropertyImageSource([image as any])}
+                        style={[
+                          styles.photoModalImage,
+                          {
+                            transform: [
+                              {
+                                scale: index === activeImageIndex
+                                  ? animatedZoomScale
+                                  : 1
+                              },
+                              {
+                                translateX: index === activeImageIndex
+                                  ? animatedTranslateX
+                                  : 0
+                              },
+                              {
+                                translateY: index === activeImageIndex
+                                  ? animatedTranslateY
+                                  : 0
+                              },
+                            ],
+                          },
+                        ]}
+                        resizeMode="contain"
+                      />
+                    </View>
+                  </TouchableWithoutFeedback>
                 ))}
               </ScrollView>
 
@@ -2352,6 +2482,21 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
+  zoomControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  zoomButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  zoomText: {
+    color: 'white',
+    fontSize: 12,
+    opacity: 0.8,
+  },
   photoModalTitle: {
     color: 'white',
     fontSize: 18,
@@ -2372,12 +2517,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'black',
   },
   photoModalImage: {
-    width: '100%',
+    width: screenWidth,
     height: '100%',
     backgroundColor: 'transparent',
-    minWidth: 300,
-    minHeight: 300,
   } as any,
+  zoomContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   photoModalFooter: {
     position: 'absolute',
     bottom: 0,

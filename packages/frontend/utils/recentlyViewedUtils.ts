@@ -1,5 +1,6 @@
 import { useRecentlyViewedStore } from '@/store/recentlyViewedStore';
 import type { Property } from '@homiio/shared-types';
+import { RecentlyViewedType } from '@homiio/shared-types';
 
 /**
  * Add a property to the recently viewed list
@@ -7,7 +8,10 @@ import type { Property } from '@homiio/shared-types';
  * @param property - The property to add
  */
 export function addToRecentlyViewed(property: Property) {
-  useRecentlyViewedStore.getState().addPropertyToRecentlyViewed(property);
+  const propertyId = property._id || property.id;
+  if (propertyId) {
+    useRecentlyViewedStore.getState().addItem(propertyId, RecentlyViewedType.PROPERTY, property);
+  }
 }
 
 /**
@@ -15,14 +19,14 @@ export function addToRecentlyViewed(property: Property) {
  * @param propertyId - The ID of the property to remove
  */
 export function removeFromRecentlyViewed(propertyId: string) {
-  useRecentlyViewedStore.getState().removePropertyFromRecentlyViewed(propertyId);
+  useRecentlyViewedStore.getState().removeItem(propertyId);
 }
 
 /**
  * Clear all recently viewed properties
  */
 export function clearRecentlyViewedProperties() {
-  useRecentlyViewedStore.getState().clearRecentlyViewed();
+  useRecentlyViewedStore.getState().clearAll();
 }
 
 /**
@@ -32,7 +36,7 @@ export function clearRecentlyViewedProperties() {
  */
 export function isInRecentlyViewed(propertyId: string): boolean {
   const state = useRecentlyViewedStore.getState();
-  return state.properties.some((p: Property) => (p._id || p.id || '') === propertyId);
+  return state.items.some((item) => item.id === propertyId && item.type === RecentlyViewedType.PROPERTY);
 }
 
 /**
@@ -41,5 +45,5 @@ export function isInRecentlyViewed(propertyId: string): boolean {
  */
 export function getRecentlyViewedProperties(): Property[] {
   const state = useRecentlyViewedStore.getState();
-  return state.properties;
+  return state.getRecentProperties();
 }

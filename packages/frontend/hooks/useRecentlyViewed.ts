@@ -2,7 +2,12 @@ import { useRecentlyViewedStore } from '@/store/recentlyViewedStore';
 import { useOxy } from '@oxyhq/services';
 import type { Property } from '@homiio/shared-types';
 import { RecentlyViewedType } from '@homiio/shared-types';
-import { useEffect } from 'react';
+import { useCallback } from 'react';
+import { 
+  useRecentlyViewedProperties, 
+  useTrackPropertyView, 
+  useClearRecentlyViewed 
+} from './useRecentlyViewedQueries';
 
 export function useRecentlyViewed() {
   const {
@@ -10,54 +15,56 @@ export function useRecentlyViewed() {
     removeItem,
     clearAll,
     getRecentProperties,
-    loadFromDatabase,
-    syncToDatabase,
-    clearFromDatabase,
-    isLoading,
-    isInitialized,
-    error,
     setError,
     clearError,
   } = useRecentlyViewedStore();
   const { oxyServices, activeSessionId } = useOxy();
 
-  // Debug logging
-  console.log('useRecentlyViewed Hook Debug:', {
-    oxyServices: !!oxyServices,
-    activeSessionId: !!activeSessionId,
-    propertiesCount: getRecentProperties().length,
+  // React Query hooks
+  const {
+    data: properties = [],
     isLoading,
-    isInitialized,
-    error: error || null,
-  });
+    error,
+    refetch,
+  } = useRecentlyViewedProperties();
 
-  const properties = getRecentProperties();
+  const trackPropertyViewMutation = useTrackPropertyView();
+  const clearRecentlyViewedMutation = useClearRecentlyViewed();
 
-  // Load data from database on mount if authenticated and not initialized
-  useEffect(() => {
-    if (oxyServices && activeSessionId && !isInitialized) {
-      console.log('useRecentlyViewed: Loading from database on mount');
-      loadFromDatabase(oxyServices, activeSessionId).catch((error) => {
-        console.error('useRecentlyViewed: Failed to load from database:', error);
-      });
+  // Add property to recently viewed (local state + backend tracking)
+  const addProperty = useCallback(async (property: Property) => {
+    const propertyId = property._id || property.id;
+    console.log('useRecentlyViewed: Adding property to recently viewed:', propertyId);
+
+    if (!propertyId) return;
+
+    // Add to local state immediately for instant UI feedback
+    addItem(propertyId, RecentlyViewedType.PROPERTY, property);
+
+    // Track view in backend if authenticated
+    if (oxyServices && activeSessionId) {
+      try {
+        await trackPropertyViewMutation.mutateAsync(propertyId);
+      } catch (error) {
+        console.error('useRecentlyViewed: Failed to track property view:', error);
+        // Don't show error toast here as the local state was updated successfully
+      }
     }
-  }, [oxyServices, activeSessionId, isInitialized, loadFromDatabase]);
+  }, [addItem, oxyServices, activeSessionId, trackPropertyViewMutation]);
 
-  const refetch = async () => {
-    if (!oxyServices || !activeSessionId) {
-      console.log('useRecentlyViewed: Cannot refetch - not authenticated');
-      return;
-    }
+  // Remove property from recently viewed (local state only)
+  const removeProperty = useCallback(async (propertyId: string) => {
+    console.log('useRecentlyViewed: Removing property from recently viewed:', propertyId);
 
-    console.log('useRecentlyViewed: Refetching from database');
-    try {
-      await loadFromDatabase(oxyServices, activeSessionId);
-    } catch (error) {
-      console.error('useRecentlyViewed: Refetch failed:', error);
-    }
-  };
+    // Remove from local state immediately for instant UI feedback
+    removeItem(propertyId);
 
-  const clear = async () => {
+    // Note: Individual property removal from database would require a new API endpoint
+    // For now, we'll rely on the backend tracking and the clear functionality
+  }, [removeItem]);
+
+  // Clear all recently viewed properties
+  const clear = useCallback(async () => {
     console.log('useRecentlyViewed: Clearing recently viewed properties');
 
     // Clear local state immediately for instant UI feedback
@@ -66,48 +73,25 @@ export function useRecentlyViewed() {
     // Clear from database if authenticated
     if (oxyServices && activeSessionId) {
       try {
-        await clearFromDatabase(oxyServices, activeSessionId);
+        await clearRecentlyViewedMutation.mutateAsync();
       } catch (error) {
         console.error('useRecentlyViewed: Failed to clear from database:', error);
         // Revert local state if database clear failed
         await refetch();
       }
     }
-  };
+  }, [clearAll, oxyServices, activeSessionId, clearRecentlyViewedMutation, refetch]);
 
-  const addProperty = async (property: Property) => {
-    const propertyId = property._id || property.id;
-    console.log('useRecentlyViewed: Adding property to recently viewed:', propertyId);
+  // Get properties from local state (for immediate UI updates)
+  const localProperties = getRecentProperties();
 
-    if (propertyId) {
-      // Add to local state immediately for instant UI feedback
-      addItem(propertyId, RecentlyViewedType.PROPERTY, property);
-
-      // Sync to database if authenticated
-      if (oxyServices && activeSessionId) {
-        try {
-          await syncToDatabase(oxyServices, activeSessionId);
-        } catch (error) {
-          console.error('useRecentlyViewed: Failed to sync to database:', error);
-        }
-      }
-    }
-  };
-
-  const removeProperty = async (propertyId: string) => {
-    console.log('useRecentlyViewed: Removing property from recently viewed:', propertyId);
-
-    // Remove from local state immediately for instant UI feedback
-    removeItem(propertyId);
-
-    // Note: Individual property removal from database would require a new API endpoint
-    // For now, we'll rely on the backend tracking and the clear functionality
-  };
+  // Use query data if available, otherwise fall back to local state
+  const displayProperties = properties.length > 0 ? properties : localProperties;
 
   return {
-    properties,
-    isLoading,
-    error,
+    properties: displayProperties,
+    isLoading: isLoading || trackPropertyViewMutation.isPending || clearRecentlyViewedMutation.isPending,
+    error: error?.message || null,
     refetch,
     clear,
     addProperty,

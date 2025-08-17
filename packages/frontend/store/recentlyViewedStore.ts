@@ -1,7 +1,5 @@
 import { create } from 'zustand';
 import { Property, RecentlyViewedType } from '@homiio/shared-types';
-import { userApi } from '@/utils/api';
-import { OxyServices } from '@oxyhq/services';
 
 // Recently Viewed State Interface
 interface RecentlyViewedState {
@@ -26,10 +24,7 @@ interface RecentlyViewedState {
   getRecentRooms: () => any[];
   getRecentRoommates: () => any[];
 
-  // Database operations
-  loadFromDatabase: (oxyServices: OxyServices, activeSessionId: string) => Promise<void>;
-  syncToDatabase: (oxyServices: OxyServices, activeSessionId: string) => Promise<void>;
-  clearFromDatabase: (oxyServices: OxyServices, activeSessionId: string) => Promise<void>;
+  // State management
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
@@ -52,8 +47,11 @@ export const useRecentlyViewedStore = create<RecentlyViewedState>()((set, get) =
         viewedAt: new Date().toISOString(),
       };
 
-      // Always add new item to the beginning and keep only the 20 most recent
-      const updatedItems = [newItem, ...state.items].slice(0, 20);
+      // Remove any existing item with the same id to prevent duplicates
+      const filteredItems = state.items.filter((item) => item.id !== id);
+      
+      // Add new item to the beginning and keep only the 20 most recent
+      const updatedItems = [newItem, ...filteredItems].slice(0, 20);
       return { items: updatedItems };
     }),
 
@@ -88,105 +86,7 @@ export const useRecentlyViewedStore = create<RecentlyViewedState>()((set, get) =
       .slice(0, 10);
   },
 
-  // Database operations
-  loadFromDatabase: async (oxyServices, activeSessionId) => {
-    const state = get();
-
-    // Don't reload if already initialized and not forced
-    if (state.isInitialized && state.items.length > 0) {
-      console.log('RecentlyViewedStore: Already initialized, skipping database load');
-      return;
-    }
-
-    set({ isLoading: true, error: null });
-
-    try {
-      console.log('RecentlyViewedStore: Loading recently viewed from database');
-      const response = await userApi.getRecentProperties(oxyServices, activeSessionId);
-
-      if (response.success && response.data) {
-        // Transform database response to store format
-        const items = response.data.map((property: any) => ({
-          id: property._id || property.id,
-          type: RecentlyViewedType.PROPERTY,
-          data: property,
-          viewedAt: property.viewedAt || new Date().toISOString(),
-        }));
-
-        set({
-          items,
-          isInitialized: true,
-          isLoading: false,
-          error: null,
-        });
-
-        console.log(`RecentlyViewedStore: Loaded ${items.length} items from database`);
-      } else {
-        set({
-          items: [],
-          isInitialized: true,
-          isLoading: false,
-          error: response.error || 'Failed to load recently viewed items',
-        });
-        console.error('RecentlyViewedStore: Failed to load from database:', response.error);
-      }
-    } catch (error) {
-      console.error('RecentlyViewedStore: Error loading from database:', error);
-      set({
-        isLoading: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
-        isInitialized: true,
-      });
-    }
-  },
-
-  syncToDatabase: async (oxyServices, activeSessionId) => {
-    const state = get();
-
-    try {
-      console.log('RecentlyViewedStore: Syncing to database');
-
-      // For now, we'll rely on the backend tracking when properties are viewed
-      // The backend already handles this in the property view endpoint
-      // This method can be used for future bulk sync operations if needed
-
-      console.log('RecentlyViewedStore: Sync completed (backend handles individual tracking)');
-    } catch (error) {
-      console.error('RecentlyViewedStore: Error syncing to database:', error);
-      set({ error: error instanceof Error ? error.message : 'Sync failed' });
-    }
-  },
-
-  clearFromDatabase: async (oxyServices, activeSessionId) => {
-    set({ isLoading: true, error: null });
-
-    try {
-      console.log('RecentlyViewedStore: Clearing recently viewed from database');
-      const response = await userApi.clearRecentProperties(oxyServices, activeSessionId);
-
-      if (response.success) {
-        set({
-          items: [],
-          isLoading: false,
-          error: null,
-        });
-        console.log('RecentlyViewedStore: Successfully cleared from database');
-      } else {
-        set({
-          isLoading: false,
-          error: response.error || 'Failed to clear recently viewed items',
-        });
-        console.error('RecentlyViewedStore: Failed to clear from database:', response.error);
-      }
-    } catch (error) {
-      console.error('RecentlyViewedStore: Error clearing from database:', error);
-      set({
-        isLoading: false,
-        error: error instanceof Error ? error.message : 'Clear failed',
-      });
-    }
-  },
-
+  // State management
   setLoading: (loading) => set({ isLoading: loading }),
   setError: (error) => set({ error }),
   clearError: () => set({ error: null }),

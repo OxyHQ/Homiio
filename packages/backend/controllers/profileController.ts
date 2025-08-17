@@ -1260,10 +1260,22 @@ class ProfileController {
         });
       });
 
-      const properties = recentViews.map(view => ({
-        ...view.propertyId,
-        viewedAt: view.viewedAt
-      })).filter(item => item._id); // Filter out any null properties
+      // Map and filter properties, ensuring no duplicates by property ID
+      const propertiesMap = new Map();
+      recentViews.forEach(view => {
+        if (view.propertyId && view.propertyId._id) {
+          const propertyId = view.propertyId._id.toString();
+          // Only keep the most recent view for each property
+          if (!propertiesMap.has(propertyId) || view.viewedAt > propertiesMap.get(propertyId).viewedAt) {
+            propertiesMap.set(propertyId, {
+              ...view.propertyId,
+              viewedAt: view.viewedAt
+            });
+          }
+        }
+      });
+      
+      const properties = Array.from(propertiesMap.values());
 
       console.log(`[getRecentProperties] After mapping and filtering:`);
       properties.forEach((prop, index) => {
