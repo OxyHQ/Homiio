@@ -163,6 +163,7 @@ export function SideBar() {
           styles.container,
           {
             width: isExpanded ? 240 : 60,
+            padding: 6,
             ...(Platform.select({
               web: {
                 transition: 'width 220ms cubic-bezier(0.2, 0, 0, 1)',
@@ -224,7 +225,7 @@ export function SideBar() {
               <Button
                 href="/properties/create"
                 renderText={({ state }) =>
-                  isExpanded && state === 'desktop' ? (
+                  isExpanded ? (
                     <Text style={styles.addPropertyButtonText}>
                       {t('sidebar.actions.addProperty')}
                     </Text>
@@ -235,8 +236,8 @@ export function SideBar() {
                 }
                 containerStyle={() => ({
                   ...styles.addPropertyButton,
-                  height: 40,
-                  width: isExpanded ? '100%' : 36,
+                  height: isExpanded ? 40 : 48,
+                  width: isExpanded ? '100%' : 48,
                   alignSelf: isExpanded ? 'stretch' : 'center',
                 })}
               />
@@ -293,7 +294,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     justifyContent: 'flex-start',
-    alignItems: 'stretch',
+    alignItems: 'flex-start',
   },
   headerSection: {
     marginBottom: 8,
@@ -352,10 +353,12 @@ const styles = StyleSheet.create({
   },
   navigationSection: {
     justifyContent: 'flex-start',
-    alignItems: 'stretch',
+    alignItems: 'flex-start',
     width: '100%',
     marginTop: 8,
     gap: 2,
+    paddingLeft: 0,
+    paddingRight: 0,
   },
   addPropertyButton: {
     justifyContent: 'center',
@@ -363,7 +366,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryColor,
     borderRadius: 100,
     display: 'flex',
-    alignSelf: 'stretch',
+    alignSelf: 'flex-start',
     marginTop: 4,
   },
   addPropertyButtonTablet: {

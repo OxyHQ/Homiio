@@ -40,12 +40,14 @@ export function SideBarItem({
         {
           flexDirection: 'row',
           alignItems: 'center',
-          width: '100%',
+          width: isExpanded ? '100%' : 'auto',
+          alignSelf: isExpanded ? 'stretch' : 'flex-start',
           marginBottom: 8,
           marginEnd: 0,
           borderRadius: 999,
           paddingVertical: 8,
-          paddingHorizontal: 12,
+          paddingHorizontal: isExpanded ? 12 : 10,
+          marginLeft: 0,
           backgroundColor: pressed
             ? `${colors.primaryColor}33`
             : isHovered
@@ -64,7 +66,7 @@ export function SideBarItem({
         },
       ]}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', justifyContent: isExpanded ? 'flex-start' : 'center' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', justifyContent: 'flex-start' }}>
         <View style={{ alignItems: 'center', justifyContent: 'center' }}>
           {icon}
         </View>
