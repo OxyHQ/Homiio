@@ -36,13 +36,37 @@ export const propertyService = {
   },
 
   async findPropertiesInBounds(bounds: MapBounds, filters?: PropertyFilters): Promise<{ properties: Property[]; page: number; total: number; totalPages: number }> {
-    const response = await api.get<{ properties: Property[]; page: number; total: number; totalPages: number }>('/api/properties/bounds', {
+    // Calculate center point
+    const longitude = bounds.west + (bounds.east - bounds.west) / 2;
+    const latitude = bounds.south + (bounds.north - bounds.south) / 2;
+    
+    // Calculate radius in kilometers (using the larger dimension)
+    const radiusKm = Math.max(
+      Math.abs(bounds.east - bounds.west),
+      Math.abs(bounds.north - bounds.south)
+    ) * 111 / 2; // Convert degrees to km (roughly 111km per degree)
+
+    const response = await api.get<{ 
+      success: boolean;
+      message: string;
+      data: Property[];
+      pagination: { page: number; limit: number; total: number; totalPages: number };
+    }>('/api/properties/radius', {
       params: {
         ...filters,
-        bounds: `${bounds.west},${bounds.south},${bounds.east},${bounds.north}`,
+        longitude,
+        latitude,
+        radius: radiusKm * 1000, // Convert to meters
       },
     });
-    return response.data;
+    
+    // Transform the API response to match our expected format
+    return {
+      properties: response.data.data,
+      page: response.data.pagination.page,
+      total: response.data.pagination.total,
+      totalPages: response.data.pagination.totalPages,
+    };
   },
 
   async searchProperties(params: SearchPropertiesParams): Promise<SearchPropertiesResponse> {
@@ -53,10 +77,15 @@ export const propertyService = {
   },
 
   async findPropertiesInRadius(lat: number, lng: number, radius: number): Promise<Property[]> {
-    const response = await api.get<{ properties: Property[] }>('/api/properties/radius', {
+    const response = await api.get<{ 
+      success: boolean;
+      message: string;
+      data: Property[];
+      pagination: { page: number; limit: number; total: number; totalPages: number };
+    }>('/api/properties/radius', {
       params: { lat, lng, radius },
     });
-    return response.data.properties;
+    return response.data.data;
   },
 
   async getPropertyById(id: string): Promise<Property> {

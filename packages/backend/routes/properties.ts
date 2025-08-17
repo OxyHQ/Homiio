@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const propertyController = require('../controllers/propertyController');
+const profileController = require('../controllers/profileController');
 const validation = require('../middlewares/validation');
 const { asyncHandler } = require('../middlewares/errorHandler');
 
@@ -37,4 +38,6 @@ router.get("/me/list", asyncHandler(propertyController.getMyProperties));
 // Owner properties
 router.get("/owner/:profileId", asyncHandler(propertyController.getPropertiesByOwner));
 
-module.exports = router;
+export default function() {
+  return router;
+};
