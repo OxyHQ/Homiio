@@ -1,7 +1,6 @@
 // Core hooks
 export { useLocationSearch } from './useLocation';
 export { useEcoProperties } from './usePropertyList';
-export { useSavedProperties } from './useSavedProperties';
 export { useProfile } from './useProfile';
 
 // Property hooks
