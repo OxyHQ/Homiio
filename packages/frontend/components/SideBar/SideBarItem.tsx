@@ -42,20 +42,25 @@ export function SideBarItem({
           alignItems: 'center',
           width: isExpanded ? '100%' : 'auto',
           alignSelf: isExpanded ? 'stretch' : 'flex-start',
-          marginBottom: 8,
+          marginBottom: 6,
           marginEnd: 0,
-          borderRadius: 999,
-          paddingVertical: 8,
-          paddingHorizontal: isExpanded ? 12 : 10,
+          borderRadius: 12,
+          paddingVertical: 10,
+          paddingHorizontal: isExpanded ? 16 : 12,
           marginLeft: 0,
           backgroundColor: pressed
-            ? `${colors.primaryColor}33`
+            ? `${colors.primaryColor}20`
             : isHovered
-              ? `${colors.primaryColor}1A`
-              : 'transparent',
+              ? `${colors.primaryColor}0F`
+              : isActive
+                ? `${colors.primaryColor}15`
+                : 'transparent',
+          borderWidth: isActive ? 1 : 0,
+          borderColor: isActive ? `${colors.primaryColor}40` : 'transparent',
           ...(Platform.select({
             web: {
-              transition: 'background-color 150ms ease',
+              transition: 'all 200ms cubic-bezier(0.2, 0, 0, 1)',
+              willChange: 'background-color, border-color, transform',
             },
           }) as any),
           ...Platform.select({
@@ -63,19 +68,37 @@ export function SideBarItem({
               cursor: 'pointer',
             },
           }),
+          transform: [{ scale: pressed ? 0.98 : 1 }],
         },
       ]}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', justifyContent: 'flex-start' }}>
-        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        width: '100%',
+        justifyContent: 'flex-start',
+        gap: isExpanded ? 12 : 0,
+      }}>
+        <View style={{
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 24,
+          height: 24,
+        }}>
           {icon}
         </View>
         {isExpanded ? (
           <Text
             style={{
-              marginStart: 12,
               fontSize: 15,
+              fontWeight: isActive ? '600' : '500',
               color: isActive || isHovered ? colors.primaryColor : colors.COLOR_BLACK,
+              ...(Platform.select({
+                web: {
+                  transition: 'color 200ms cubic-bezier(0.2, 0, 0, 1)',
+                  fontFamily: 'Phudu',
+                },
+              }) as any),
             }}
           >
             {text}

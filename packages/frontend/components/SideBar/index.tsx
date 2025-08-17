@@ -224,21 +224,53 @@ export function SideBar() {
 
               <Button
                 href="/properties/create"
-                renderText={({ state }) =>
-                  isExpanded ? (
-                    <Text style={styles.addPropertyButtonText}>
-                      {t('sidebar.actions.addProperty')}
-                    </Text>
-                  ) : null
-                }
-                renderIcon={() =>
-                  isExpanded ? null : <Compose size={20} color={colors.primaryLight} />
-                }
+                renderText={({ state }) => (
+                  <Text style={[
+                    styles.addPropertyButtonText,
+                    {
+                      opacity: isExpanded ? 1 : 0,
+                      width: isExpanded ? 'auto' : 0,
+                      overflow: 'hidden',
+                      whiteSpace: 'nowrap',
+                      ...(Platform.select({
+                        web: {
+                          transition: 'opacity 220ms cubic-bezier(0.2, 0, 0, 1), width 220ms cubic-bezier(0.2, 0, 0, 1)',
+                          willChange: 'opacity, width',
+                        },
+                      }) as any),
+                    }
+                  ]}>
+                    {t('sidebar.actions.addProperty')}
+                  </Text>
+                )}
+                renderIcon={() => (
+                  <View style={{
+                    opacity: isExpanded ? 0 : 1,
+                    position: isExpanded ? 'absolute' : 'relative',
+                    left: isExpanded ? '50%' : 'auto',
+                    top: isExpanded ? '50%' : 'auto',
+                    transform: isExpanded ? 'translate(-50%, -50%)' : 'none',
+                    ...(Platform.select({
+                      web: {
+                        transition: 'opacity 220ms cubic-bezier(0.2, 0, 0, 1)',
+                        willChange: 'opacity',
+                      },
+                    }) as any),
+                  }}>
+                    <Compose size={20} color={colors.primaryLight} />
+                  </View>
+                )}
                 containerStyle={() => ({
                   ...styles.addPropertyButton,
                   height: isExpanded ? 40 : 48,
                   width: isExpanded ? '100%' : 48,
                   alignSelf: isExpanded ? 'stretch' : 'center',
+                  ...(Platform.select({
+                    web: {
+                      transition: 'width 220ms cubic-bezier(0.2, 0, 0, 1), height 220ms cubic-bezier(0.2, 0, 0, 1)',
+                      willChange: 'width, height',
+                    },
+                  }) as ViewStyle),
                 })}
               />
             </View>
@@ -377,7 +409,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
-    margin: 'auto',
+    margin: 0,
     fontFamily: 'Phudu',
   },
   footer: {
