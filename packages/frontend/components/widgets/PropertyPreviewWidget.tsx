@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BaseWidget } from './BaseWidget';
 import { useCreatePropertyFormStore } from '@/store/createPropertyFormStore';
 import { LinearGradient } from 'expo-linear-gradient';
+import { PropertyCard } from '../PropertyCard';
 
 const IconComponent = Ionicons as any;
 const { width: screenWidth } = Dimensions.get('window');
@@ -260,88 +261,31 @@ export function PropertyPreviewWidget() {
         </View>
 
         {/* Property Card Preview */}
-        <View style={styles.propertyCard}>
-          {/* Image Section */}
-          <View style={styles.imageSection}>
-            {formData.media?.images && formData.media.images.length > 0 ? (
-              <LinearGradient
-                colors={[colors.primaryColor, colors.secondaryLight]}
-                style={styles.imagePlaceholder}
-              >
-                <IconComponent name="images-outline" size={32} color={colors.primaryLight} />
-                <ThemedText style={styles.imageCountText}>
-                  {formData.media.images.length} photo
-                  {formData.media.images.length !== 1 ? 's' : ''}
-                </ThemedText>
-              </LinearGradient>
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <IconComponent name="camera-outline" size={32} color={colors.COLOR_BLACK_LIGHT_3} />
-                <ThemedText style={styles.placeholderText}>Add photos</ThemedText>
-              </View>
-            )}
-          </View>
-
-          {/* Property Info */}
-          <View style={styles.propertyInfo}>
-            <ThemedText style={styles.propertyTitle} numberOfLines={2}>
-              {propertyTitle}
-            </ThemedText>
-
-            {formData.location?.city && (
-              <ThemedText style={styles.propertyLocation}>
-                {formData.location.city}, {formData.location.state}
-              </ThemedText>
-            )}
-
-            {/* Property Details */}
-            <View style={styles.propertyDetails}>
-              {(formData.basicInfo?.bedrooms || formData.basicInfo?.bedrooms === 0) && (
-                <View style={styles.detailItem}>
-                  <IconComponent name="bed-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} />
-                  <ThemedText style={styles.detailText}>
-                    {formData.basicInfo.bedrooms} bed
-                  </ThemedText>
-                </View>
-              )}
-              {(formData.basicInfo?.bathrooms || formData.basicInfo?.bathrooms === 0) && (
-                <View style={styles.detailItem}>
-                  <IconComponent
-                    name="water-outline"
-                    size={14}
-                    color={colors.COLOR_BLACK_LIGHT_3}
-                  />
-                  <ThemedText style={styles.detailText}>
-                    {formData.basicInfo.bathrooms} bath
-                  </ThemedText>
-                </View>
-              )}
-              {formData.basicInfo?.squareFootage && formData.basicInfo.squareFootage > 0 && (
-                <View style={styles.detailItem}>
-                  <IconComponent
-                    name="resize-outline"
-                    size={14}
-                    color={colors.COLOR_BLACK_LIGHT_3}
-                  />
-                  <ThemedText style={styles.detailText}>
-                    {formData.basicInfo.squareFootage} sqft
-                  </ThemedText>
-                </View>
-              )}
-            </View>
-
-            {/* Price */}
-            {priceDisplay && (
-              <View style={styles.priceContainer}>
-                <ThemedText style={styles.price}>{priceDisplay}</ThemedText>
-                {formData.pricing?.securityDeposit && formData.pricing.securityDeposit > 0 && (
-                  <ThemedText style={styles.depositText}>
-                    Deposit: ${formData.pricing.securityDeposit.toLocaleString()}
-                  </ThemedText>
-                )}
-              </View>
-            )}
-          </View>
+        <View style={styles.propertyCardContainer}>
+          <PropertyCard
+            title={propertyTitle}
+            location={`${formData.location?.city || ''}, ${formData.location?.state || ''}`}
+            price={formData.pricing?.monthlyRent || 0}
+            currency={formData.pricing?.currency || '$'}
+            type={formData.basicInfo?.propertyType as any}
+            bedrooms={formData.basicInfo?.bedrooms || 0}
+            bathrooms={formData.basicInfo?.bathrooms || 0}
+            size={formData.basicInfo?.squareFootage || 0}
+            sizeUnit="sqft"
+            imageSource={formData.media?.images && formData.media.images.length > 0 ? formData.media.images[0] : undefined}
+            variant="default"
+            showFavoriteButton={false}
+            showVerifiedBadge={false}
+            showTypeIcon={true}
+            showFeatures={true}
+            showPrice={true}
+            showLocation={true}
+            showRating={false}
+            imageHeight={160}
+            titleLines={2}
+            locationLines={1}
+            onPress={() => { }} // No action needed for preview
+          />
         </View>
 
         {/* Sections */}
@@ -695,81 +639,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryColor,
     borderRadius: 3,
   },
-  propertyCard: {
-    backgroundColor: colors.primaryLight,
-    borderRadius: 12,
+  propertyCardContainer: {
     marginBottom: 20,
-    overflow: 'hidden',
-    shadowColor: colors.COLOR_BLACK,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  imageSection: {
-    height: 160,
-  },
-  imagePlaceholder: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.COLOR_BLACK_LIGHT_4,
-  },
-  imageCountText: {
-    fontSize: 14,
-    color: colors.primaryLight,
-    marginTop: 8,
-    fontWeight: '500',
-  },
-  placeholderText: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    marginTop: 8,
-  },
-  propertyInfo: {
-    padding: 16,
-  },
-  propertyTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.COLOR_BLACK,
-    marginBottom: 4,
-    lineHeight: 24,
-  },
-  propertyLocation: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    marginBottom: 12,
-  },
-  propertyDetails: {
-    flexDirection: 'row',
-    marginBottom: 12,
-    flexWrap: 'wrap',
-  },
-  detailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 16,
-    marginBottom: 4,
-  },
-  detailText: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    marginLeft: 4,
-  },
-  priceContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-  },
-  price: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.primaryColor,
-  },
-  depositText: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_3,
   },
   sectionContainer: {
     marginBottom: 12,

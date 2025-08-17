@@ -1740,27 +1740,7 @@ export default function CreatePropertyScreen() {
     }
   };
 
-  // Debug section for development
-  const renderDebugInfo = () => {
-    if (!__DEV__) return null;
 
-    return (
-      <View style={styles.debugContainer}>
-        <ThemedText type="subtitle" style={styles.debugTitle}>
-          Debug Info
-        </ThemedText>
-        <ThemedText style={styles.debugText}>
-          Current Step: {currentStep} ({steps[currentStep]})
-        </ThemedText>
-        <ThemedText style={styles.debugText}>
-          Location Data: {JSON.stringify(formData.location, null, 2)}
-        </ThemedText>
-        <ThemedText style={styles.debugText}>
-          Validation Errors: {JSON.stringify(validationErrors, null, 2)}
-        </ThemedText>
-      </View>
-    );
-  };
 
   // Show loading state when in edit mode and property is loading
   if (isEditMode && propertyLoading) {
@@ -1833,7 +1813,6 @@ export default function CreatePropertyScreen() {
         {/* Form content */}
         <View style={styles.formContainer}>
           {renderStepContent()}
-          {renderDebugInfo()}
         </View>
 
         {/* Navigation buttons */}
@@ -1896,7 +1875,6 @@ export default function CreatePropertyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.COLOR_BACKGROUND,
   },
   scrollView: {
     flex: 1,
@@ -1957,6 +1935,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: colors.COLOR_BLACK_LIGHT_6,
   },
   sectionTitle: {
     marginBottom: 16,
@@ -2218,26 +2198,7 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
   },
-  debugContainer: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_9,
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 24,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  debugTitle: {
-    marginBottom: 12,
-    color: colors.primaryDark,
-  },
-  debugText: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    marginBottom: 8,
-  },
+
   formContainer: {
     // This style is used to contain the form content and debug info
     // It's not directly applied to the form content or debug info,
