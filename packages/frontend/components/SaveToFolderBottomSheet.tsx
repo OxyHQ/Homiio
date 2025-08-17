@@ -13,15 +13,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { ThemedText } from './ThemedText';
 import { colors } from '@/styles/colors';
-import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
-import { SavedPropertyFolder, savedPropertyFolderService } from '@/services/savedPropertyFolderService';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useOxy } from '@oxyhq/services';
+import savedPropertyService from '@/services/savedPropertyService';
+import savedPropertyFolderService, { SavedPropertyFolder } from '@/services/savedPropertyFolderService';
+import { toast } from 'sonner';
 import Button from './Button';
 import { Property } from '@homiio/shared-types';
 import { PropertyCard } from './PropertyCard';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useOxy } from '@oxyhq/services';
-import savedPropertyService from '@/services/savedPropertyService';
-import { toast } from 'sonner';
 
 const IconComponent = Ionicons as any;
 
@@ -53,10 +52,20 @@ export function SaveToFolderBottomSheet({
   onClose,
   onSave,
 }: SaveToFolderBottomSheetProps) {
-  const { _t } = useTranslation();
-  const { folders, isLoading, loadFolders } = useSavedPropertiesContext();
+  const { t } = useTranslation();
   const { oxyServices, activeSessionId } = useOxy();
   const queryClient = useQueryClient();
+
+  // Get folders from React Query
+  const { data: foldersData, isLoading } = useQuery({
+    queryKey: ['savedFolders'],
+    queryFn: () => savedPropertyFolderService.getSavedPropertyFolders(oxyServices!, activeSessionId!),
+    enabled: !!oxyServices && !!activeSessionId,
+    staleTime: 1000 * 60,
+    gcTime: 1000 * 60 * 10,
+  });
+
+  const folders = foldersData?.folders || [];
 
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
@@ -98,10 +107,6 @@ export function SaveToFolderBottomSheet({
       toast.error('Failed to create folder');
     },
   });
-
-  useEffect(() => {
-    loadFolders();
-  }, [loadFolders]);
 
   const handleSaveToFolder = useCallback(
     async (folderId: string | null) => {

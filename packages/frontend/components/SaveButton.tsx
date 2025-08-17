@@ -8,10 +8,7 @@ import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { Property } from '@homiio/shared-types';
 import { useSavedProfiles } from '@/store/savedProfilesStore';
 import { getPropertyTitle } from '@/utils/propertyUtils';
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { useOxy } from '@oxyhq/services';
-import savedPropertyService from '@/services/savedPropertyService';
-import { toast } from 'sonner';
+import { useFavorites } from '@/hooks/useFavorites';
 
 const IconComponent = Ionicons as any;
 
@@ -52,70 +49,16 @@ export function SaveButton({
   const [isPressed, setIsPressed] = useState(false);
   const bottomSheetContext = useContext(BottomSheetContext);
   const { saveProfile, unsaveProfile } = useSavedProfiles();
-  const { oxyServices, activeSessionId } = useOxy();
-  const queryClient = useQueryClient();
+  
+  // Use the useFavorites hook for consistent state management
+  const { isFavorite, toggleFavorite, isPropertySaving } = useFavorites();
 
-  // Get saved properties from React Query to determine saved state
-  const { data: savedPropertiesData } = useQuery({
-    queryKey: ['savedProperties'],
-    queryFn: () => savedPropertyService.getSavedProperties(oxyServices!, activeSessionId!),
-    enabled: !!oxyServices && !!activeSessionId && !!property,
-    staleTime: 1000 * 30,
-    gcTime: 1000 * 60 * 10,
-  });
-
-  // Determine if property is saved from React Query data
-  const savedProperties = savedPropertiesData?.properties || [];
+  // Extract propertyTitle and propertyId from property object
   const propertyId = property?._id || property?.id;
-  const isSaved = propertyId
-    ? savedProperties.some((p: any) => (p._id || p.id) === propertyId)
-    : propIsSaved; // Fallback to prop if no propertyId
-
-  // React Query mutations for instant updates
-  const savePropertyMutation = useMutation({
-    mutationFn: async (propertyId: string) => {
-      if (!oxyServices || !activeSessionId) {
-        throw new Error('Authentication required');
-      }
-      return savedPropertyService.saveProperty(propertyId, undefined, oxyServices, activeSessionId);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
-      queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
-      toast.success('Property saved successfully');
-    },
-    onError: (error: any) => {
-      console.error('Failed to save property:', error);
-      toast.error('Failed to save property');
-    },
-  });
-
-  const unsavePropertyMutation = useMutation({
-    mutationFn: async (propertyId: string) => {
-      if (!oxyServices || !activeSessionId) {
-        throw new Error('Authentication required');
-      }
-      return savedPropertyService.unsaveProperty(propertyId, oxyServices, activeSessionId);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
-      queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
-      toast.success('Property removed from saved');
-    },
-    onError: (error: any) => {
-      console.error('Failed to unsave property:', error);
-      if (error?.status === 404 || error?.message?.includes('not found')) {
-        console.log('Property already unsaved (404), updating UI state');
-        queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
-        queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
-        return; // Don't show error toast for 404
-      }
-      toast.error('Failed to unsave property');
-    },
-  });
-
-  // Extract propertyTitle from property object
   const propertyTitle = property ? getPropertyTitle(property) : '';
+  
+  // Determine if property is saved using the favorites hook
+  const isSaved = propertyId ? isFavorite(propertyId) : propIsSaved;
 
   const getIconName = () => {
     if (variant === 'heart') {
@@ -130,7 +73,7 @@ export function SaveButton({
   };
 
   const isButtonDisabled = disabled || isLoading || isPressed ||
-    savePropertyMutation.isPending || unsavePropertyMutation.isPending;
+    (propertyId ? isPropertySaving(propertyId) : false);
 
   const handleInternalSave = async () => {
     if (!propertyId) return;
@@ -143,11 +86,8 @@ export function SaveButton({
           await saveProfile(profileId);
         }
       } else if (propertyId) {
-        if (isSaved) {
-          await unsavePropertyMutation.mutateAsync(propertyId);
-        } else {
-          await savePropertyMutation.mutateAsync(propertyId);
-        }
+        // Use the favorites hook for consistent state management
+        await toggleFavorite(propertyId, property);
       }
     } catch (error) {
       console.error('Failed to toggle save:', error);
@@ -239,7 +179,7 @@ export function SaveButton({
           justifyContent: 'center',
         }}
       >
-        {showLoading && (isLoading || savePropertyMutation.isPending || unsavePropertyMutation.isPending) ? (
+        {showLoading && (isLoading || (propertyId && isPropertySaving(propertyId))) ? (
           <LoadingSpinner size={size * 0.8} color={getIconColor()} showText={false} />
         ) : (
           <IconComponent name={getIconName()} size={size} color={getIconColor()} />

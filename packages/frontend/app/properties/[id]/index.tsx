@@ -36,7 +36,7 @@ import ProfileAvatar from '@/components/ProfileAvatar';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
-import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
+import { useFavorites } from '@/hooks/useFavorites';
 
 import { SaveButton } from '@/components/SaveButton';
 import * as Linking from 'expo-linking';
@@ -176,7 +176,7 @@ export default function PropertyDetailPage() {
   // Recently viewed functionality
   const { addProperty } = useRecentlyViewed();
 
-  const { isPropertySaved, isInitialized } = useSavedPropertiesContext();
+  const { isFavorite } = useFavorites();
 
   // TODO: Implement landlord profile fetching with Zustand
   // For now, we'll use placeholder values
@@ -421,12 +421,11 @@ export default function PropertyDetailPage() {
     }
   }, [id, loadStats]);
 
-  // Determine current saved state early (use apiProperty/id to avoid depending on derived object)
+  // Determine current saved state using the favorites hook
   const currentPropertyId = (apiProperty?._id ||
     apiProperty?.id ||
     (typeof id === 'string' ? id : undefined)) as string | undefined;
-  const isPropertySavedState =
-    currentPropertyId && isInitialized ? isPropertySaved(currentPropertyId) : false;
+  const isPropertySavedState = currentPropertyId ? isFavorite(currentPropertyId) : false;
 
   // Refresh stats shortly after save/unsave to keep count in sync
   React.useEffect(() => {
@@ -655,7 +654,6 @@ export default function PropertyDetailPage() {
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
               >
                 <SaveButton
-                  isSaved={isPropertySavedState}
                   variant="heart"
                   color="#222"
                   activeColor="#EF4444"

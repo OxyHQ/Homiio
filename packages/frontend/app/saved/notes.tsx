@@ -16,7 +16,9 @@ import { useTranslation } from 'react-i18next';
 import { Header } from '@/components/Header';
 import Button from '@/components/Button';
 import { colors } from '@/styles/colors';
-import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useOxy } from '@oxyhq/services';
+import savedPropertyService from '@/services/savedPropertyService';
 import {
   parseNotesString,
   serializeNotesArray,
@@ -34,7 +36,18 @@ import { useOxy } from '@oxyhq/services';
 export default function NotesScreen() {
   const { t } = useTranslation();
   const { oxyServices, activeSessionId } = useOxy();
-  const { savedProperties } = useSavedPropertiesContext();
+  const queryClient = useQueryClient();
+  
+  // Get saved properties from React Query
+  const { data: savedPropertiesData } = useQuery({
+    queryKey: ['savedProperties'],
+    queryFn: () => savedPropertyService.getSavedProperties(oxyServices!, activeSessionId!),
+    enabled: !!oxyServices && !!activeSessionId,
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
+  });
+
+  const savedProperties = savedPropertiesData?.properties || [];
 
   // Flatten notes into a masonry-like grid with property preview
   const flatNotes = useMemo(() => {
@@ -101,11 +114,13 @@ export default function NotesScreen() {
       await savedPropertyService.updateNotes(targetPropId, payload, oxyServices, activeSessionId);
       setEditing(null);
       setText('');
+      // Invalidate React Query cache to refresh data
+      await queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
       Alert.alert(t('common.success'), t('common.update'));
     } catch {
       Alert.alert(t('common.error'), t('saved.errors.updateNotesFailed'));
     }
-  }, [editing, text, oxyServices, activeSessionId, savedProperties, selectedPropertyId, t]);
+  }, [editing, text, oxyServices, activeSessionId, savedProperties, selectedPropertyId, t, queryClient]);
 
   const handleDeleteNote = useCallback(
     async (propertyId: string, noteId: string) => {
@@ -116,12 +131,14 @@ export default function NotesScreen() {
         const payload = serializeNotesArray(updatedNotes);
         if (!oxyServices || !activeSessionId) return;
         await savedPropertyService.updateNotes(propertyId, payload, oxyServices, activeSessionId);
+        // Invalidate React Query cache to refresh data
+        await queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
         Alert.alert(t('common.success'), t('common.update'));
       } catch {
         Alert.alert(t('common.error'), t('saved.errors.updateNotesFailed'));
       }
     },
-    [savedProperties, oxyServices, activeSessionId, t],
+    [savedProperties, oxyServices, activeSessionId, t, queryClient],
   );
 
   const persistNotes = useCallback(
@@ -135,8 +152,10 @@ export default function NotesScreen() {
         oxyServices,
         activeSessionId,
       );
+      // Invalidate React Query cache to refresh data
+      await queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
     },
-    [savedProperties, oxyServices, activeSessionId],
+    [savedProperties, oxyServices, activeSessionId, queryClient],
   );
 
   const handleToggleArchive = useCallback(

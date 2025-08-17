@@ -26,7 +26,9 @@ import { useProperties } from '@/hooks';
 import { cityService } from '@/services/cityService';
 import { tipsService, TipArticle } from '@/services/tipsService';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
-import { useSavedProperties } from '@/hooks/useSavedProperties';
+import { useQuery } from '@tanstack/react-query';
+import { useOxy } from '@oxyhq/services';
+import savedPropertyService from '@/services/savedPropertyService';
 
 // Import components
 import { PropertyCard } from '@/components/PropertyCard';
@@ -134,7 +136,18 @@ export default function HomePage() {
 
   // Recently viewed and saved properties
   const { properties: recentlyViewedProperties } = useRecentlyViewed();
-  const { savedProperties, isLoading: savedLoading } = useSavedProperties();
+  const { oxyServices, activeSessionId } = useOxy();
+  
+  // Get saved properties from React Query
+  const { data: savedPropertiesData, isLoading: savedLoading } = useQuery({
+    queryKey: ['savedProperties'],
+    queryFn: () => savedPropertyService.getSavedProperties(oxyServices!, activeSessionId!),
+    enabled: !!oxyServices && !!activeSessionId,
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
+  });
+
+  const savedProperties = savedPropertiesData?.properties || [];
 
   // Load properties on component mount
   React.useEffect(() => {

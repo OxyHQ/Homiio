@@ -5,7 +5,7 @@ import { IconButton } from './IconButton';
 import { Property, PropertyType, PriceUnit } from '@homiio/shared-types';
 import { getPropertyTitle, getPropertyImageSource } from '@/utils/propertyUtils';
 
-import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
+import { useFavorites } from '@/hooks/useFavorites';
 
 import { SaveButton } from './SaveButton';
 import { CurrencyFormatter } from './CurrencyFormatter';
@@ -150,8 +150,8 @@ export function PropertyCard({
   noteText,
   onPressNote,
 }: PropertyCardProps) {
-  // Use saved properties context to check if property is saved
-  const { isPropertySaved, isInitialized } = useSavedPropertiesContext();
+  // Use favorites hook to check if property is saved
+  const { isFavorite } = useFavorites();
 
   // Use property object if provided, otherwise use individual props
   const propertyData = property
@@ -201,8 +201,6 @@ export function PropertyCard({
     Boolean(
       property && typeof property === 'object' && 'isFeatured' in property && property.isFeatured,
     );
-  const isPropertySavedState =
-    propertyData.id && isInitialized ? isPropertySaved(propertyData.id) : false;
 
   // Get variant-specific styles
   const variantStyles = getVariantStyles(variant);
@@ -282,7 +280,6 @@ export function PropertyCard({
         {/* Save Button - moved to top-right */}
         {showFavoriteButton && (
           <SaveButton
-            isSaved={isPropertySavedState}
             size={24}
             variant="heart"
             color="#222"

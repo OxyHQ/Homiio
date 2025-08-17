@@ -6,7 +6,6 @@ import {
   BottomSheetBackdrop,
   BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
-import { SavedPropertiesProvider } from './SavedPropertiesContext';
 import { ProfileProvider } from './ProfileContext';
 import { I18nextProvider } from 'react-i18next';
 import i18n from 'i18next';
@@ -29,9 +28,7 @@ export const BottomSheetContext = createContext<BottomSheetContextProps>({
 const BottomSheetContentWrapper: React.FC<{ children: ReactNode }> = ({ children }) => {
   return (
     <ProfileProvider>
-      <SavedPropertiesProvider>
-        <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
-      </SavedPropertiesProvider>
+      <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
     </ProfileProvider>
   );
 };
