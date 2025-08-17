@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { Modal } from 'react-native';
 import {
   View,
   StyleSheet,
@@ -347,6 +348,9 @@ export default function CreatePropertyScreen() {
 
   // Local state for form validation
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [showFullscreenMap, setShowFullscreenMap] = useState(false);
+  const mapRef = useRef<any>(null);
+  const fullscreenMapRef = useRef<any>(null);
 
   // Handle form submission
   const handleSubmit = async () => {
@@ -988,9 +992,10 @@ export default function CreatePropertyScreen() {
               </ThemedText>
             </View>
 
-                        <View style={styles.mapContainer}>
+            <View style={styles.mapContainer}>
               <View style={styles.mapWrapper}>
-                <Map
+                                <Map
+                  ref={mapRef}
                   style={{ height: 400 }}
                   initialCoordinates={formData.location.latitude && formData.location.longitude ? [formData.location.longitude, formData.location.latitude] : undefined}
                   enableAddressLookup={true}
@@ -1017,12 +1022,17 @@ export default function CreatePropertyScreen() {
                       updateFormField('location', 'country', address.country);
                     }
                     if (address.postalCode) {
-                      updateFormField('location', 'postalCode', address.postalCode);
+                      updateFormField('location', 'zipCode', address.postalCode);
+                    }
+
+                    // Move map to selected location
+                    if (mapRef.current) {
+                      mapRef.current.navigateToLocation(coordinates, 15);
                     }
                   }}
                   screenId="create-property"
                 />
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.fullscreenButton}
                   onPress={() => setShowFullscreenMap(true)}
                 >
@@ -1807,6 +1817,72 @@ export default function CreatePropertyScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Fullscreen Map Modal */}
+      <Modal
+        visible={showFullscreenMap}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setShowFullscreenMap(false)}
+      >
+        <View style={styles.fullscreenMapContainer}>
+          <View style={styles.fullscreenMapHeader}>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setShowFullscreenMap(false)}
+            >
+              <IconComponent name="close" size={24} color={colors.primaryDark} />
+            </TouchableOpacity>
+            <ThemedText style={styles.fullscreenMapTitle}>Select Location</ThemedText>
+            <TouchableOpacity
+              style={styles.confirmButton}
+              onPress={() => setShowFullscreenMap(false)}
+            >
+              <ThemedText style={styles.confirmButtonText}>Confirm</ThemedText>
+            </TouchableOpacity>
+          </View>
+          <Map
+            ref={fullscreenMapRef}
+            style={{ flex: 1 }}
+            initialCoordinates={formData.location.latitude && formData.location.longitude ? [formData.location.longitude, formData.location.latitude] : undefined}
+            enableAddressLookup={true}
+            onAddressSelect={(address, coordinates) => {
+              // Update form with coordinates
+              updateFormField('location', 'latitude', coordinates[1]);
+              updateFormField('location', 'longitude', coordinates[0]);
+              
+              // Auto-fill address fields
+              if (address.street) {
+                updateFormField('location', 'address', address.street);
+              }
+              if (address.houseNumber) {
+                updateFormField('location', 'addressNumber', address.houseNumber);
+              }
+              if (address.city) {
+                updateFormField('location', 'city', address.city);
+              }
+              if (address.state) {
+                updateFormField('location', 'state', address.state);
+              }
+              if (address.country) {
+                updateFormField('location', 'country', address.country);
+              }
+              if (address.postalCode) {
+                updateFormField('location', 'zipCode', address.postalCode);
+              }
+
+              // Move main map to selected location
+              if (mapRef.current) {
+                mapRef.current.navigateToLocation(coordinates, 15);
+              }
+              
+              // Close modal after selection
+              setShowFullscreenMap(false);
+            }}
+            screenId="create-property-fullscreen"
+          />
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -1951,6 +2027,61 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: colors.COLOR_BLACK_LIGHT_6,
+  },
+  mapWrapper: {
+    position: 'relative',
+  },
+  fullscreenButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  fullscreenMapContainer: {
+    flex: 1,
+    backgroundColor: colors.primaryLight,
+  },
+  fullscreenMapHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.primaryLight,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullscreenMapTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.primaryDark,
+  },
+  confirmButton: {
+    backgroundColor: colors.primaryColor,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  confirmButtonText: {
+    color: colors.primaryLight,
+    fontSize: 14,
+    fontWeight: '600',
   },
   amenitiesSelector: {
     marginTop: 8,
