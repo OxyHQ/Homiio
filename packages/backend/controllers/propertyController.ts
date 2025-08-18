@@ -232,13 +232,36 @@ class PropertyController {
         minRent,
         maxRent,
         city,
+  state,
         bedrooms,
         bathrooms,
+  minBedrooms,
+  maxBedrooms,
+  minBathrooms,
+  maxBathrooms,
+  minSquareFootage,
+  maxSquareFootage,
+  minYearBuilt,
+  maxYearBuilt,
         amenities,
         available,
  hasPhotos,
   verified,
   eco,
+  housingType,
+  layoutType,
+  furnishedStatus,
+  petFriendly,
+  utilitiesIncluded,
+  parkingType,
+  petPolicy,
+  leaseTerm,
+  priceUnit,
+  proximityToTransport,
+  proximityToSchools,
+  proximityToShopping,
+  availableFromBefore,
+  availableFromAfter,
   excludeIds,
         sortBy = "createdAt",
         sortOrder = "desc",
@@ -255,8 +278,39 @@ class PropertyController {
       if (profileId) filters.profileId = profileId;
       if (type) filters.type = type;
       if (city) filters["address.city"] = new RegExp(city, "i");
-      if (bedrooms) filters.bedrooms = parseInt(bedrooms);
-      if (bathrooms) filters.bathrooms = parseInt(bathrooms);
+      if (state) filters["address.state"] = new RegExp(String(state), "i");
+      // Bedrooms exact or range
+      if (minBedrooms || maxBedrooms) {
+        const br: any = {};
+        if (minBedrooms) br.$gte = parseInt(String(minBedrooms));
+        if (maxBedrooms) br.$lte = parseInt(String(maxBedrooms));
+        filters.bedrooms = br;
+      } else if (bedrooms) {
+        filters.bedrooms = parseInt(String(bedrooms));
+      }
+      // Bathrooms exact or range
+      if (minBathrooms || maxBathrooms) {
+        const ba: any = {};
+        if (minBathrooms) ba.$gte = parseInt(String(minBathrooms));
+        if (maxBathrooms) ba.$lte = parseInt(String(maxBathrooms));
+        filters.bathrooms = ba;
+      } else if (bathrooms) {
+        filters.bathrooms = parseInt(String(bathrooms));
+      }
+      // Square footage range
+      if (minSquareFootage || maxSquareFootage) {
+        const sf: any = {};
+        if (minSquareFootage) sf.$gte = parseInt(String(minSquareFootage));
+        if (maxSquareFootage) sf.$lte = parseInt(String(maxSquareFootage));
+        filters.squareFootage = sf;
+      }
+      // Year built range
+      if (minYearBuilt || maxYearBuilt) {
+        const yb: any = {};
+        if (minYearBuilt) yb.$gte = parseInt(String(minYearBuilt));
+        if (maxYearBuilt) yb.$lte = parseInt(String(maxYearBuilt));
+        filters.yearBuilt = yb;
+      }
       if (available !== undefined) {
         filters["availability.isAvailable"] = available === "true";
         filters.status = "active";
@@ -268,7 +322,7 @@ class PropertyController {
 
       // Optional photos filter
       if (hasPhotos === 'true') {
-        filters['images.0'] = { $exists: true };
+        filters['images.url'] = { $exists: true, $nin: [null, ''] };
       }
 
       // Optional verified/eco filters
@@ -277,6 +331,33 @@ class PropertyController {
       }
       if (eco === 'true') {
         filters.isEcoFriendly = true;
+      }
+
+      // Additional attribute filters
+      if (housingType) filters.housingType = String(housingType);
+      if (layoutType) filters.layoutType = String(layoutType);
+      if (furnishedStatus) filters.furnishedStatus = String(furnishedStatus);
+      if (petPolicy) filters.petPolicy = String(petPolicy);
+      if (leaseTerm) filters.leaseTerm = String(leaseTerm);
+      if (priceUnit) filters.priceUnit = String(priceUnit);
+      if (parkingType) filters.parkingType = String(parkingType);
+      if (petFriendly !== undefined) filters.petFriendly = String(petFriendly) === 'true';
+      if (utilitiesIncluded !== undefined) filters.utilitiesIncluded = String(utilitiesIncluded) === 'true';
+      if (proximityToTransport !== undefined) filters.proximityToTransport = String(proximityToTransport) === 'true';
+      if (proximityToSchools !== undefined) filters.proximityToSchools = String(proximityToSchools) === 'true';
+      if (proximityToShopping !== undefined) filters.proximityToShopping = String(proximityToShopping) === 'true';
+      // AvailableFrom date range
+      if (availableFromBefore || availableFromAfter) {
+        const af: any = {};
+        if (availableFromAfter) {
+          const d = new Date(String(availableFromAfter));
+          if (!isNaN(d.getTime())) af.$gte = d;
+        }
+        if (availableFromBefore) {
+          const d = new Date(String(availableFromBefore));
+          if (!isNaN(d.getTime())) af.$lte = d;
+        }
+        if (Object.keys(af).length) filters.availableFrom = af;
       }
 
       // Build rent filter
@@ -852,21 +933,47 @@ class PropertyController {
         minRent, 
         maxRent, 
         city,
+  state,
         bedrooms, 
         bathrooms,
+  minBedrooms,
+  maxBedrooms,
+  minBathrooms,
+  maxBathrooms,
+  minSquareFootage,
+  maxSquareFootage,
+  minYearBuilt,
+  maxYearBuilt,
         amenities,
         available,
  hasPhotos,
   verified,
   eco,
+  housingType,
+  layoutType,
+  furnishedStatus,
+  petFriendly,
+  utilitiesIncluded,
+  parkingType,
+  petPolicy,
+  leaseTerm,
+  priceUnit,
+  proximityToTransport,
+  proximityToSchools,
+  proximityToShopping,
+  availableFromBefore,
+  availableFromAfter,
   excludeIds,
         // Location parameters
         lat,
         lng,
         radius,
+        budgetFriendly,
         page = 1, 
         limit = 10 
       } = req.query;
+
+  // No language-based parsing here. All filters must come via explicit URL params.
 
       // Helper: escape regex special chars for safe partial search
       const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -875,43 +982,78 @@ class PropertyController {
       const andConditions: any[] = [];
 
       // Filter by property type
-      if (type) {
-        andConditions.push({ type });
+  const effType = type;
+      if (effType) {
+        andConditions.push({ type: effType });
       }
 
-      // Filter by city/location
-      if (city) {
-        andConditions.push({ 'address.city': new RegExp(String(city), 'i') });
+      // Filter by city/state/location
+  const effCity = city;
+      if (effCity) {
+        andConditions.push({ 'address.city': new RegExp(String(effCity), 'i') });
+      }
+      if (state) {
+        andConditions.push({ 'address.state': new RegExp(String(state), 'i') });
       }
 
       // Filter by rent range
-      if (minRent || maxRent) {
+  const effMin = minRent;
+  const effMax = maxRent;
+      if (effMin || effMax) {
         const rentFilter: any = {};
-        if (minRent) rentFilter.$gte = parseInt(minRent);
-        if (maxRent) rentFilter.$lte = parseInt(maxRent);
+        if (effMin) rentFilter.$gte = parseInt(String(effMin));
+        if (effMax) rentFilter.$lte = parseInt(String(effMax));
         andConditions.push({ 'rent.amount': rentFilter });
       }
 
-      // Filter by bedrooms
-      if (bedrooms) {
-        andConditions.push({ bedrooms: parseInt(bedrooms) });
+      // Filter by bedrooms (exact or range)
+  const effBeds = bedrooms;
+      if (minBedrooms || maxBedrooms) {
+        const br: any = {};
+        if (minBedrooms) br.$gte = parseInt(String(minBedrooms));
+        if (maxBedrooms) br.$lte = parseInt(String(maxBedrooms));
+        andConditions.push({ bedrooms: br });
+      } else if (effBeds) {
+        andConditions.push({ bedrooms: parseInt(String(effBeds)) });
       }
 
-      // Filter by bathrooms
-      if (bathrooms) {
-        andConditions.push({ bathrooms: parseInt(bathrooms) });
+      // Filter by bathrooms (exact or range)
+  const effBaths = bathrooms;
+      if (minBathrooms || maxBathrooms) {
+        const ba: any = {};
+        if (minBathrooms) ba.$gte = parseInt(String(minBathrooms));
+        if (maxBathrooms) ba.$lte = parseInt(String(maxBathrooms));
+        andConditions.push({ bathrooms: ba });
+      } else if (effBaths) {
+        andConditions.push({ bathrooms: parseInt(String(effBaths)) });
+      }
+
+      // Square footage range
+      if (minSquareFootage || maxSquareFootage) {
+        const sf: any = {};
+        if (minSquareFootage) sf.$gte = parseInt(String(minSquareFootage));
+        if (maxSquareFootage) sf.$lte = parseInt(String(maxSquareFootage));
+        andConditions.push({ squareFootage: sf });
+      }
+
+      // Year built range
+      if (minYearBuilt || maxYearBuilt) {
+        const yb: any = {};
+        if (minYearBuilt) yb.$gte = parseInt(String(minYearBuilt));
+        if (maxYearBuilt) yb.$lte = parseInt(String(maxYearBuilt));
+        andConditions.push({ yearBuilt: yb });
       }
 
       // Filter by amenities (exact list match)
       if (amenities) {
-        const amenityList = String(amenities).split(',').map(a => a.trim());
+        const amenityList = String(amenities).split(',').map(a => a.trim()).filter(Boolean);
         andConditions.push({ amenities: { $in: amenityList } });
       }
 
-      // Filter by photos
-      if (hasPhotos === 'true') {
-        andConditions.push({ 'images.0': { $exists: true } });
-      }
+  // Filter by photos (must have valid image URL)
+  if (hasPhotos === 'true') {
+    andConditions.push({ 'images.url': { $exists: true, $nin: [null, ''] } });
+  }
 
       // Filter by verified/eco-friendly
       if (verified === 'true') {
@@ -921,9 +1063,36 @@ class PropertyController {
         andConditions.push({ isEcoFriendly: true });
       }
 
+      // Additional attribute filters
+      if (housingType) andConditions.push({ housingType: String(housingType) });
+      if (layoutType) andConditions.push({ layoutType: String(layoutType) });
+      if (furnishedStatus) andConditions.push({ furnishedStatus: String(furnishedStatus) });
+      if (petPolicy) andConditions.push({ petPolicy: String(petPolicy) });
+      if (leaseTerm) andConditions.push({ leaseTerm: String(leaseTerm) });
+      if (priceUnit) andConditions.push({ priceUnit: String(priceUnit) });
+      if (parkingType) andConditions.push({ parkingType: String(parkingType) });
+      if (petFriendly !== undefined) andConditions.push({ petFriendly: String(petFriendly) === 'true' });
+      if (utilitiesIncluded !== undefined) andConditions.push({ utilitiesIncluded: String(utilitiesIncluded) === 'true' });
+      if (proximityToTransport !== undefined) andConditions.push({ proximityToTransport: String(proximityToTransport) === 'true' });
+      if (proximityToSchools !== undefined) andConditions.push({ proximityToSchools: String(proximityToSchools) === 'true' });
+      if (proximityToShopping !== undefined) andConditions.push({ proximityToShopping: String(proximityToShopping) === 'true' });
+      if (availableFromBefore || availableFromAfter) {
+        const af: any = {};
+        if (availableFromAfter) {
+          const d = new Date(String(availableFromAfter));
+          if (!isNaN(d.getTime())) af.$gte = d;
+        }
+        if (availableFromBefore) {
+          const d = new Date(String(availableFromBefore));
+          if (!isNaN(d.getTime())) af.$lte = d;
+        }
+        if (Object.keys(af).length) andConditions.push({ availableFrom: af });
+      }
+
       // Filter by availability
-      if (available !== undefined) {
-        andConditions.push({ 'availability.isAvailable': available === 'true' });
+  const effAvailable = available !== undefined ? available === 'true' : undefined;
+      if (effAvailable !== undefined) {
+        andConditions.push({ 'availability.isAvailable': effAvailable });
       } else {
         // Default to available properties
         andConditions.push({ 'availability.isAvailable': true });
@@ -988,10 +1157,19 @@ class PropertyController {
       // Utility to run a query with optional text sort
       const runQuery = async (filter: any, useTextSort: boolean) => {
         const q = Property.find(filter).skip(skip).limit(parseInt(limit));
-  if (useTextSort) {
-          q.sort({ score: { $meta: 'textScore' } }).select({ score: { $meta: 'textScore' } });
-  } else {
-          q.sort({ createdAt: -1 });
+  const effBudget = (String(budgetFriendly).toLowerCase() === 'true');
+        if (useTextSort) {
+          if (effBudget) {
+            q.sort({ score: { $meta: 'textScore' }, 'rent.amount': 1 }).select({ score: { $meta: 'textScore' } });
+          } else {
+            q.sort({ score: { $meta: 'textScore' } }).select({ score: { $meta: 'textScore' } });
+          }
+        } else {
+          if (effBudget) {
+            q.sort({ 'rent.amount': 1 });
+          } else {
+            q.sort({ createdAt: -1 });
+          }
         }
         const [items, count] = await Promise.all([
           q.lean(),
@@ -1057,20 +1235,46 @@ class PropertyController {
         longitude, 
         latitude, 
         maxDistance = 10000,
+        query,
         type, 
         minRent, 
         maxRent, 
+  state,
         bedrooms, 
         bathrooms,
+  minBedrooms,
+  maxBedrooms,
+  minBathrooms,
+  maxBathrooms,
+  minSquareFootage,
+  maxSquareFootage,
+  minYearBuilt,
+  maxYearBuilt,
         amenities,
         available,
  hasPhotos,
   verified,
   eco,
+  housingType,
+  layoutType,
+  furnishedStatus,
+  petFriendly,
+  utilitiesIncluded,
+  parkingType,
+  petPolicy,
+  leaseTerm,
+  priceUnit,
+  proximityToTransport,
+  proximityToSchools,
+  proximityToShopping,
+  availableFromBefore,
+  availableFromAfter,
   excludeIds,
         page = 1, 
         limit = 10 
       } = req.query;
+
+  // No language-based parsing here. All filters must come via explicit URL params.
 
       // Validate required parameters
       if (!longitude || !latitude) {
@@ -1124,21 +1328,74 @@ class PropertyController {
       }
 
       // Add additional filters
-      if (type) searchQuery.type = type;
-      if (minRent || maxRent) {
+  const effTypeN = type;
+      if (effTypeN) searchQuery.type = effTypeN;
+  const effMinN = minRent;
+  const effMaxN = maxRent;
+      if (effMinN || effMaxN) {
         searchQuery['rent.amount'] = {};
-        if (minRent) searchQuery['rent.amount'].$gte = parseInt(minRent);
-        if (maxRent) searchQuery['rent.amount'].$lte = parseInt(maxRent);
+        if (effMinN) searchQuery['rent.amount'].$gte = parseInt(String(effMinN));
+        if (effMaxN) searchQuery['rent.amount'].$lte = parseInt(String(effMaxN));
       }
-      if (bedrooms) searchQuery.bedrooms = parseInt(bedrooms);
-      if (bathrooms) searchQuery.bathrooms = parseInt(bathrooms);
-      if (amenities) {
-        const amenityList = amenities.split(',').map(a => a.trim());
-        searchQuery.amenities = { $in: amenityList };
+  const effBedsN = bedrooms;
+      if (minBedrooms || maxBedrooms) {
+        const br: any = {};
+        if (minBedrooms) br.$gte = parseInt(String(minBedrooms));
+        if (maxBedrooms) br.$lte = parseInt(String(maxBedrooms));
+        searchQuery.bedrooms = br;
+      } else if (effBedsN) {
+        searchQuery.bedrooms = parseInt(String(effBedsN));
       }
-  if (hasPhotos === 'true') searchQuery['images.0'] = { $exists: true };
+  const effBathsN = bathrooms;
+      if (minBathrooms || maxBathrooms) {
+        const ba: any = {};
+        if (minBathrooms) ba.$gte = parseInt(String(minBathrooms));
+        if (maxBathrooms) ba.$lte = parseInt(String(maxBathrooms));
+        searchQuery.bathrooms = ba;
+      } else if (effBathsN) {
+        searchQuery.bathrooms = parseInt(String(effBathsN));
+      }
+      if (minSquareFootage || maxSquareFootage) {
+        const sf: any = {};
+        if (minSquareFootage) sf.$gte = parseInt(String(minSquareFootage));
+        if (maxSquareFootage) sf.$lte = parseInt(String(maxSquareFootage));
+        searchQuery.squareFootage = sf;
+      }
+      if (minYearBuilt || maxYearBuilt) {
+        const yb: any = {};
+        if (minYearBuilt) yb.$gte = parseInt(String(minYearBuilt));
+        if (maxYearBuilt) yb.$lte = parseInt(String(maxYearBuilt));
+        searchQuery.yearBuilt = yb;
+      }
+  const amenityListN = (amenities ? String(amenities).split(',').map(a => a.trim()) : []).filter(Boolean);
+      if (amenityListN.length) searchQuery.amenities = { $in: amenityListN };
+  if (hasPhotos === 'true') searchQuery['images.url'] = { $exists: true, $nin: [null, ''] };
   if (verified === 'true') searchQuery.isVerified = true;
   if (eco === 'true') searchQuery.isEcoFriendly = true;
+      if (housingType) searchQuery.housingType = String(housingType);
+      if (layoutType) searchQuery.layoutType = String(layoutType);
+      if (furnishedStatus) searchQuery.furnishedStatus = String(furnishedStatus);
+      if (petPolicy) searchQuery.petPolicy = String(petPolicy);
+      if (leaseTerm) searchQuery.leaseTerm = String(leaseTerm);
+      if (priceUnit) searchQuery.priceUnit = String(priceUnit);
+      if (parkingType) searchQuery.parkingType = String(parkingType);
+      if (petFriendly !== undefined) searchQuery.petFriendly = String(petFriendly) === 'true';
+      if (utilitiesIncluded !== undefined) searchQuery.utilitiesIncluded = String(utilitiesIncluded) === 'true';
+      if (proximityToTransport !== undefined) searchQuery.proximityToTransport = String(proximityToTransport) === 'true';
+      if (proximityToSchools !== undefined) searchQuery.proximityToSchools = String(proximityToSchools) === 'true';
+      if (proximityToShopping !== undefined) searchQuery.proximityToShopping = String(proximityToShopping) === 'true';
+      if (availableFromBefore || availableFromAfter) {
+        const af: any = {};
+        if (availableFromAfter) {
+          const d = new Date(String(availableFromAfter));
+          if (!isNaN(d.getTime())) af.$gte = d;
+        }
+        if (availableFromBefore) {
+          const d = new Date(String(availableFromBefore));
+          if (!isNaN(d.getTime())) af.$lte = d;
+        }
+        if (Object.keys(af).length) searchQuery.availableFrom = af;
+      }
 
       // Execute search
       const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -1177,20 +1434,46 @@ class PropertyController {
         longitude, 
         latitude, 
         radius,
+        query,
         type, 
         minRent, 
         maxRent, 
+  state,
         bedrooms, 
         bathrooms,
+  minBedrooms,
+  maxBedrooms,
+  minBathrooms,
+  maxBathrooms,
+  minSquareFootage,
+  maxSquareFootage,
+  minYearBuilt,
+  maxYearBuilt,
         amenities,
         available,
  hasPhotos,
   verified,
   eco,
+  housingType,
+  layoutType,
+  furnishedStatus,
+  petFriendly,
+  utilitiesIncluded,
+  parkingType,
+  petPolicy,
+  leaseTerm,
+  priceUnit,
+  proximityToTransport,
+  proximityToSchools,
+  proximityToShopping,
+  availableFromBefore,
+  availableFromAfter,
   excludeIds,
         page = 1, 
         limit = 10 
       } = req.query;
+
+  // No language-based parsing here. All filters must come via explicit URL params.
 
       // Validate required parameters
       if (!longitude || !latitude || !radius) {
@@ -1240,21 +1523,74 @@ class PropertyController {
       }
 
       // Add additional filters
-      if (type) searchQuery.type = type;
-      if (minRent || maxRent) {
+  const effTypeR = type;
+      if (effTypeR) searchQuery.type = effTypeR;
+  const effMinR = minRent;
+  const effMaxR = maxRent;
+      if (effMinR || effMaxR) {
         searchQuery['rent.amount'] = {};
-        if (minRent) searchQuery['rent.amount'].$gte = parseInt(minRent);
-        if (maxRent) searchQuery['rent.amount'].$lte = parseInt(maxRent);
+        if (effMinR) searchQuery['rent.amount'].$gte = parseInt(String(effMinR));
+        if (effMaxR) searchQuery['rent.amount'].$lte = parseInt(String(effMaxR));
       }
-      if (bedrooms) searchQuery.bedrooms = parseInt(bedrooms);
-      if (bathrooms) searchQuery.bathrooms = parseInt(bathrooms);
-      if (amenities) {
-        const amenityList = amenities.split(',').map(a => a.trim());
-        searchQuery.amenities = { $in: amenityList };
+  const effBedsR = bedrooms;
+      if (minBedrooms || maxBedrooms) {
+        const br: any = {};
+        if (minBedrooms) br.$gte = parseInt(String(minBedrooms));
+        if (maxBedrooms) br.$lte = parseInt(String(maxBedrooms));
+        searchQuery.bedrooms = br;
+      } else if (effBedsR) {
+        searchQuery.bedrooms = parseInt(String(effBedsR));
       }
-  if (hasPhotos === 'true') searchQuery['images.0'] = { $exists: true };
+  const effBathsR = bathrooms;
+      if (minBathrooms || maxBathrooms) {
+        const ba: any = {};
+        if (minBathrooms) ba.$gte = parseInt(String(minBathrooms));
+        if (maxBathrooms) ba.$lte = parseInt(String(maxBathrooms));
+        searchQuery.bathrooms = ba;
+      } else if (effBathsR) {
+        searchQuery.bathrooms = parseInt(String(effBathsR));
+      }
+      if (minSquareFootage || maxSquareFootage) {
+        const sf: any = {};
+        if (minSquareFootage) sf.$gte = parseInt(String(minSquareFootage));
+        if (maxSquareFootage) sf.$lte = parseInt(String(maxSquareFootage));
+        searchQuery.squareFootage = sf;
+      }
+      if (minYearBuilt || maxYearBuilt) {
+        const yb: any = {};
+        if (minYearBuilt) yb.$gte = parseInt(String(minYearBuilt));
+        if (maxYearBuilt) yb.$lte = parseInt(String(maxYearBuilt));
+        searchQuery.yearBuilt = yb;
+      }
+  const amenityListR = (amenities ? String(amenities).split(',').map(a => a.trim()) : []).filter(Boolean);
+      if (amenityListR.length) searchQuery.amenities = { $in: amenityListR };
+  if (hasPhotos === 'true') searchQuery['images.url'] = { $exists: true, $nin: [null, ''] };
   if (verified === 'true') searchQuery.isVerified = true;
   if (eco === 'true') searchQuery.isEcoFriendly = true;
+      if (housingType) searchQuery.housingType = String(housingType);
+      if (layoutType) searchQuery.layoutType = String(layoutType);
+      if (furnishedStatus) searchQuery.furnishedStatus = String(furnishedStatus);
+      if (petPolicy) searchQuery.petPolicy = String(petPolicy);
+      if (leaseTerm) searchQuery.leaseTerm = String(leaseTerm);
+      if (priceUnit) searchQuery.priceUnit = String(priceUnit);
+      if (parkingType) searchQuery.parkingType = String(parkingType);
+      if (petFriendly !== undefined) searchQuery.petFriendly = String(petFriendly) === 'true';
+      if (utilitiesIncluded !== undefined) searchQuery.utilitiesIncluded = String(utilitiesIncluded) === 'true';
+      if (proximityToTransport !== undefined) searchQuery.proximityToTransport = String(proximityToTransport) === 'true';
+      if (proximityToSchools !== undefined) searchQuery.proximityToSchools = String(proximityToSchools) === 'true';
+      if (proximityToShopping !== undefined) searchQuery.proximityToShopping = String(proximityToShopping) === 'true';
+      if (availableFromBefore || availableFromAfter) {
+        const af: any = {};
+        if (availableFromAfter) {
+          const d = new Date(String(availableFromAfter));
+          if (!isNaN(d.getTime())) af.$gte = d;
+        }
+        if (availableFromBefore) {
+          const d = new Date(String(availableFromBefore));
+          if (!isNaN(d.getTime())) af.$lte = d;
+        }
+        if (Object.keys(af).length) searchQuery.availableFrom = af;
+      }
 
       // Execute search
       const skip = (parseInt(page) - 1) * parseInt(limit);

@@ -14,19 +14,7 @@ const Conversation = require('../models/schemas/ConversationSchema');
 import mongoose from 'mongoose';
 
 type ChatMessage = { role: 'system' | 'user' | 'assistant' | 'tool'; content: string; timestamp?: Date };
-type Filters = {
-  maxRent?: number;
-  minRent?: number;
-  city?: string;
-  type?: string;
-  bedrooms?: number;
-  bathrooms?: number;
-  amenities?: string[];
-  minSize?: number;
-  availableNow?: boolean;
-  budgetFriendly?: boolean;
-  luxury?: boolean;
-};
+// Filters are now parsed inside the properties API.
 
 const isObjectId = (id: string) => mongoose.Types.ObjectId.isValid(id);
 const getUserId = (req: any) => req.user?.oxyUserId || req.user?._id || req.user?.id;
@@ -41,6 +29,98 @@ export default function aiRouter() {
   const router = express.Router();
 
   // ---------- AI Helpers ----------
+
+  // Extract structured property filters using the model (no code keywords or language-specific parsing).
+  async function extractFiltersWithAI(userText: string): Promise<Record<string, any>> {
+    try {
+      const instruction = `You extract structured search filters for rental properties from the user's message.
+Return ONLY a compact JSON object with any of these keys when applicable; omit keys you cannot infer:
+{
+  "type": string,                  // one of: apartment | house | room | studio | shared
+  "minRent": number,               // minimum monthly rent
+  "maxRent": number,               // maximum monthly rent
+  "city": string,                  // city name
+  "state": string,                 // state/region
+  "bedrooms": number,              // integer
+  "bathrooms": number,             // integer
+  "minBedrooms": number,
+  "maxBedrooms": number,
+  "minBathrooms": number,
+  "maxBathrooms": number,
+  "minSquareFootage": number,
+  "maxSquareFootage": number,
+  "minYearBuilt": number,
+  "maxYearBuilt": number,
+  "amenities": string[],          // amenity slugs (e.g., furnished, parking, pet_friendly, balcony, gym, wifi, air_conditioning, washer, dishwasher, elevator)
+  "hasPhotos": boolean,            // true if the user explicitly requires photos
+  "hasImages": boolean,            // alias accepted; same as hasPhotos
+  "available": boolean,            // true if explicitly available now
+  "verified": boolean,             // true if user asks for verified listings
+  "eco": boolean,                  // true if eco-friendly preferred
+  "budgetFriendly": boolean,       // true if user indicates budget/cheap/affordable preference
+  "housingType": string,
+  "layoutType": string,
+  "furnishedStatus": string,
+  "petFriendly": boolean,
+  "utilitiesIncluded": boolean,
+  "parkingType": string,
+  "petPolicy": string,
+  "leaseTerm": string,
+  "priceUnit": string,
+  "proximityToTransport": boolean,
+  "proximityToSchools": boolean,
+  "proximityToShopping": boolean,
+  "availableFromBefore": string,
+  "availableFromAfter": string
+}`.trim();
+
+      const result = await streamText({
+        model: openai('gpt-4o'),
+        temperature: 0,
+        system: instruction,
+        messages: [{ role: 'user', content: String(userText || '') }],
+        maxTokens: 256,
+      });
+      let text = '';
+      for await (const chunk of result.textStream) text += chunk;
+      const trimmed = text.trim();
+      const jsonStart = trimmed.indexOf('{');
+      const jsonEnd = trimmed.lastIndexOf('}');
+      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+        const json = trimmed.slice(jsonStart, jsonEnd + 1);
+        const obj = JSON.parse(json);
+        // Sanitize values
+        const out: Record<string, any> = {};
+        const put = (k: string, v: any) => { if (v !== undefined && v !== null && v !== '' && !(Array.isArray(v) && v.length === 0)) out[k] = v; };
+        if (typeof obj.type === 'string') put('type', obj.type);
+        if (obj.minRent != null && !isNaN(Number(obj.minRent))) put('minRent', Number(obj.minRent));
+        if (obj.maxRent != null && !isNaN(Number(obj.maxRent))) put('maxRent', Number(obj.maxRent));
+        if (typeof obj.city === 'string') put('city', obj.city);
+          if (typeof obj.state === 'string') put('state', obj.state);
+        if (obj.bedrooms != null && !isNaN(Number(obj.bedrooms))) put('bedrooms', Number(obj.bedrooms));
+        if (obj.bathrooms != null && !isNaN(Number(obj.bathrooms))) put('bathrooms', Number(obj.bathrooms));
+          if (obj.minBedrooms != null && !isNaN(Number(obj.minBedrooms))) put('minBedrooms', Number(obj.minBedrooms));
+          if (obj.maxBedrooms != null && !isNaN(Number(obj.maxBedrooms))) put('maxBedrooms', Number(obj.maxBedrooms));
+          if (obj.minBathrooms != null && !isNaN(Number(obj.minBathrooms))) put('minBathrooms', Number(obj.minBathrooms));
+          if (obj.maxBathrooms != null && !isNaN(Number(obj.maxBathrooms))) put('maxBathrooms', Number(obj.maxBathrooms));
+          if (obj.minSquareFootage != null && !isNaN(Number(obj.minSquareFootage))) put('minSquareFootage', Number(obj.minSquareFootage));
+          if (obj.maxSquareFootage != null && !isNaN(Number(obj.maxSquareFootage))) put('maxSquareFootage', Number(obj.maxSquareFootage));
+          if (obj.minYearBuilt != null && !isNaN(Number(obj.minYearBuilt))) put('minYearBuilt', Number(obj.minYearBuilt));
+          if (obj.maxYearBuilt != null && !isNaN(Number(obj.maxYearBuilt))) put('maxYearBuilt', Number(obj.maxYearBuilt));
+        if (Array.isArray(obj.amenities)) put('amenities', obj.amenities.filter((s: any) => typeof s === 'string' && s.trim()).map((s: string) => s.trim()));
+          if (typeof obj.hasPhotos === 'boolean') put('hasPhotos', obj.hasPhotos);
+          if (typeof obj.hasImages === 'boolean') put('hasPhotos', obj.hasImages);
+        if (typeof obj.available === 'boolean') put('available', obj.available);
+        if (typeof obj.verified === 'boolean') put('verified', obj.verified);
+        if (typeof obj.eco === 'boolean') put('eco', obj.eco);
+        if (typeof obj.budgetFriendly === 'boolean') put('budgetFriendly', obj.budgetFriendly);
+        return out;
+      }
+      return {};
+    } catch (e) {
+      return {};
+    }
+  }
 
   async function generateAITitle(userMessage: string) {
     try {
@@ -65,153 +145,9 @@ export default function aiRouter() {
     }
   }
 
-  async function performWebSearch(query: string) {
-    try {
-      const q = normalize(query);
-      const isCAT =
-        ['catalunya', 'catalonia', 'barcelona', 'catalan', 'lloguer', 'sindicat', 'girona', 'tarragona', 'lleida', 'valencia', 'habitatge', 'propietat']
-          .some(k => q.includes(k));
+  // Web search removed: avoid keyword/language-based heuristics; rely on explicit property API filters only.
 
-      if (isCAT) {
-        try {
-          const r = await fetch('https://sindicatdellogateres.org/', { method: 'GET' });
-          if (r.ok) {
-            return {
-              source: 'Sindicat de Llogateres',
-              content:
-                'Sindicat de Llogateres: sindicado de inquilinas en Catalunya. Recursos: apoyo a huelgas de alquiler, asistencia legal, asambleas territoriales, fondo de resistencia y formación en derechos.',
-              url: 'https://sindicatdellogateres.org/',
-              additionalInfo:
-                'Servicios clave: huelgas de alquiler, asistencia jurídica, asambleas, fondos de resistencia y materiales formativos.',
-            };
-          }
-        } catch {
-          // fall through to DDG
-        }
-      }
-
-      const ddg = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
-      const resp = await fetch(ddg);
-      if (!resp.ok) return null;
-      const data = await resp.json();
-
-      if (data?.Abstract) {
-        return {
-          source: data.AbstractSource || 'DuckDuckGo',
-          content: data.Abstract,
-          url: data.AbstractURL,
-        };
-      }
-
-      const first = data?.RelatedTopics?.[0];
-      if (first) {
-        return {
-          source: 'DuckDuckGo',
-          content: first.Text || first.FirstURL,
-          url: first.FirstURL,
-        };
-      }
-
-      return null;
-    } catch (e) {
-      console.error('[AI] web search error:', e);
-      return null;
-    }
-  }
-
-  function parsePropertyFilters(query: string): Filters {
-    const f: Filters = { amenities: [] };
-    const q = normalize(query);
-
-    // price
-    const max = q.match(/(?:under|less than|max|maximum|up to|cheap|cheaper|budget)\s*\$?(\d+)/);
-    if (max) f.maxRent = parseInt(max[1], 10);
-
-    const min = q.match(/(?:over|more than|minimum|min)\s*\$?(\d+)/);
-    if (min) f.minRent = parseInt(min[1], 10);
-
-    const range = q.match(/\$?(\d+)\s*(?:to|-)\s*\$?(\d+)/);
-    if (range) {
-      f.minRent = parseInt(range[1], 10);
-      f.maxRent = parseInt(range[2], 10);
-    }
-
-    // location (EN/ES/CAT)
-    const locPhrases = [
-      'in', 'near', 'around', 'at', 'close to', 'within',
-      'en', 'cerca de', 'cerca del', 'alrededor de', 'junto a', 'por', 'al lado de', 'cerca de la', 'cerca de los',
-      'a prop de', 'a prop del', 'prop de', 'prop del', 'al costat de', 'a la vora de',
-    ];
-    for (const kw of locPhrases) {
-      const m = q.match(new RegExp(`${kw}\\s+([\\p{L}\\s]+?)(?:\\s|$|,|\\?|!|\\d)`, 'iu'));
-      if (m) {
-        f.city = m[1].trim();
-        break;
-      }
-    }
-
-    // type
-    const types: Record<string, string[]> = {
-      apartment: ['apartment', 'apt', 'flat', 'pisos'],
-      house: ['house', 'home', 'casa'],
-      room: ['room', 'bedroom', 'habitación', 'habitacion'],
-      studio: ['studio', 'loft'],
-      shared: ['shared', 'coliving', 'co-living', 'roommate'],
-    };
-    for (const [t, kws] of Object.entries(types)) {
-      if (kws.some(k => q.includes(k))) {
-        f.type = t;
-        break;
-      }
-    }
-
-    // beds/baths
-    const beds = q.match(/(\d+)\s*(?:bedroom|bed|br|room)s?/);
-    if (beds) f.bedrooms = parseInt(beds[1], 10);
-
-    const baths = q.match(/(\d+)\s*(?:bathroom|bath|ba)s?/);
-    if (baths) f.bathrooms = parseInt(baths[1], 10);
-
-    // amenities
-    const amen: Record<string, string[]> = {
-      furnished: ['furnished', 'furniture', 'mobiliado', 'amueblado'],
-      parking: ['parking', 'garage', 'estacionamiento', 'garaje'],
-      pet_friendly: ['pet', 'dog', 'cat', 'mascota', 'permiten mascotas', 'pet-friendly'],
-      balcony: ['balcony', 'terrace', 'balcón', 'terraza'],
-      gym: ['gym', 'fitness'],
-      wifi: ['wifi', 'internet', 'wifi included'],
-      air_conditioning: ['ac', 'air conditioning', 'aire acondicionado'],
-      washer: ['washer', 'laundry', 'lavadora'],
-      dishwasher: ['dishwasher', 'lavavajillas'],
-      elevator: ['elevator', 'ascensor'],
-    };
-    for (const [feat, kws] of Object.entries(amen)) {
-      if (kws.some(k => q.includes(k))) f.amenities!.push(feat);
-    }
-
-    // size
-    const size = q.match(/(\d+)\s*(?:sq\s*ft|square\s*feet|m2|metros)/);
-    if (size) f.minSize = parseInt(size[1], 10);
-
-    // misc
-    if (/(available now|immediate|urgent)/.test(q)) f.availableNow = true;
-    if (/(cheap|affordable|budget|económico|economico)/.test(q)) f.budgetFriendly = true;
-    // photos: support multilingual cues: en/es/ca
-    // examples: 'with photos', 'only with photos', 'que tengan foto', 'con fotos', 'solo con fotos', 'amb fotos'
-    const photosPatterns = [
-      /\bwith\s+(?:photos|images|pictures)\b/,
-      /\bonly\s+with\s+(?:photos|images|pictures)\b/,
-      /\bphotos?\b/,
-      /\bcon\s+fotos?\b/,
-      /\bsolo\s+con\s+fotos?\b/,
-      /\bque\s+tengan?\s+foto?s?\b/,
-      /\bamb\s+fotos?\b/,
-      /\bamb\s+imatges?\b/,
-    ];
-    if (photosPatterns.some(rx => rx.test(q))) (f as any).hasPhotos = true;
-
-    return f;
-  }
+  // Note: We removed parsePropertyFilters here. The properties controller now owns query parsing.
 
   // Explicit user intent detector for property search
   // (Intentionally removed) No function-based intent detection; the model will decide based on prompt instructions.
@@ -244,9 +180,10 @@ export default function aiRouter() {
 
   async function performAppPropertySearch(query: string, priorMessages: ChatMessage[]) {
     try {
-      const filters = parsePropertyFilters(query);
       // Get previously shown IDs for DB-level exclusion
       const prevIds = extractLastPropertyIdsFromMessages(priorMessages);
+      // Extract structured filters once for this turn
+      const filters = await extractFiltersWithAI(query);
 
       // Always compute NEARBY list when possible (anchor on previous shown property)
       let nearby: any[] = [];
@@ -255,21 +192,44 @@ export default function aiRouter() {
         const coords: number[] | null = anchor?.location?.coordinates || null;
         if (coords && coords.length === 2) {
           const [longitude, latitude] = coords;
-          const params = new URLSearchParams({
-            longitude: String(longitude),
-            latitude: String(latitude),
-            maxDistance: '3000',
-            limit: '12',
-            available: 'true',
-          });
+          const params = new URLSearchParams({ longitude: String(longitude), latitude: String(latitude), maxDistance: '3000', limit: '12' });
+          // Apply extracted filters as URL params
+          if (filters.type) params.set('type', String(filters.type));
+          if (filters.minRent != null) params.set('minRent', String(filters.minRent));
+          if (filters.maxRent != null) params.set('maxRent', String(filters.maxRent));
+          if (filters.bedrooms != null) params.set('bedrooms', String(filters.bedrooms));
+          if (filters.bathrooms != null) params.set('bathrooms', String(filters.bathrooms));
+          if (Array.isArray(filters.amenities) && filters.amenities.length) params.set('amenities', filters.amenities.join(','));
+          if (filters.hasPhotos === true) params.set('hasPhotos', 'true');
+          if (filters.hasImages === true) params.set('hasPhotos', 'true');
+  if (filters.minBedrooms != null) params.set('minBedrooms', String(filters.minBedrooms));
+  if (filters.maxBedrooms != null) params.set('maxBedrooms', String(filters.maxBedrooms));
+  if (filters.minBathrooms != null) params.set('minBathrooms', String(filters.minBathrooms));
+  if (filters.maxBathrooms != null) params.set('maxBathrooms', String(filters.maxBathrooms));
+  if (filters.minSquareFootage != null) params.set('minSquareFootage', String(filters.minSquareFootage));
+  if (filters.maxSquareFootage != null) params.set('maxSquareFootage', String(filters.maxSquareFootage));
+  if (filters.minYearBuilt != null) params.set('minYearBuilt', String(filters.minYearBuilt));
+  if (filters.maxYearBuilt != null) params.set('maxYearBuilt', String(filters.maxYearBuilt));
+          if (filters.verified === true) params.set('verified', 'true');
+          if (filters.eco === true) params.set('eco', 'true');
+          if (filters.available === true) params.set('available', 'true');
+          if (filters.housingType) params.set('housingType', String(filters.housingType));
+          if (filters.layoutType) params.set('layoutType', String(filters.layoutType));
+          if (filters.furnishedStatus) params.set('furnishedStatus', String(filters.furnishedStatus));
+          if (filters.petFriendly != null) params.set('petFriendly', String(filters.petFriendly));
+          if (filters.utilitiesIncluded != null) params.set('utilitiesIncluded', String(filters.utilitiesIncluded));
+          if (filters.parkingType) params.set('parkingType', String(filters.parkingType));
+          if (filters.petPolicy) params.set('petPolicy', String(filters.petPolicy));
+          if (filters.leaseTerm) params.set('leaseTerm', String(filters.leaseTerm));
+          if (filters.priceUnit) params.set('priceUnit', String(filters.priceUnit));
+          if (filters.proximityToTransport != null) params.set('proximityToTransport', String(filters.proximityToTransport));
+          if (filters.proximityToSchools != null) params.set('proximityToSchools', String(filters.proximityToSchools));
+          if (filters.proximityToShopping != null) params.set('proximityToShopping', String(filters.proximityToShopping));
+          if (filters.availableFromBefore) params.set('availableFromBefore', String(filters.availableFromBefore));
+          if (filters.availableFromAfter) params.set('availableFromAfter', String(filters.availableFromAfter));
+          // Note: city is not applied for nearby; it's geo-anchored from previous property
+          if (filters.budgetFriendly === true) params.set('budgetFriendly', 'true');
           if (prevIds.length) params.set('excludeIds', prevIds.join(','));
-          if (filters.type) params.set('type', filters.type);
-          if (filters.minRent) params.set('minRent', String(filters.minRent));
-          if (filters.maxRent) params.set('maxRent', String(filters.maxRent));
-          if (filters.bedrooms) params.set('bedrooms', String(filters.bedrooms));
-          if (filters.bathrooms) params.set('bathrooms', String(filters.bathrooms));
-          if (filters.amenities?.length) params.set('amenities', filters.amenities.join(','));
-          if ((filters as any).hasPhotos) params.set('hasPhotos', 'true');
           const resp = await fetch(`${getBaseUrl()}/api/properties/nearby?${params.toString()}`);
           if (resp.ok) {
             const data = await resp.json();
@@ -281,20 +241,43 @@ export default function aiRouter() {
       // Always compute SEARCH list
       let search: any[] = [];
       {
-        const params = new URLSearchParams({
-          query,
-          limit: '10',
-          available: 'true',
-        });
+        const params = new URLSearchParams({ query, limit: '10' });
+        if (filters.type) params.set('type', String(filters.type));
+        if (filters.minRent != null) params.set('minRent', String(filters.minRent));
+        if (filters.maxRent != null) params.set('maxRent', String(filters.maxRent));
+        if (filters.city) params.set('city', String(filters.city));
+  if (filters.state) params.set('state', String(filters.state));
+        if (filters.bedrooms != null) params.set('bedrooms', String(filters.bedrooms));
+        if (filters.bathrooms != null) params.set('bathrooms', String(filters.bathrooms));
+        if (Array.isArray(filters.amenities) && filters.amenities.length) params.set('amenities', filters.amenities.join(','));
+        if (filters.hasPhotos === true) params.set('hasPhotos', 'true');
+        if (filters.verified === true) params.set('verified', 'true');
+  if (filters.eco === true) params.set('eco', 'true');
+        if (filters.available === true) params.set('available', 'true');
+  if (filters.housingType) params.set('housingType', String(filters.housingType));
+  if (filters.layoutType) params.set('layoutType', String(filters.layoutType));
+  if (filters.furnishedStatus) params.set('furnishedStatus', String(filters.furnishedStatus));
+  if (filters.petFriendly != null) params.set('petFriendly', String(filters.petFriendly));
+  if (filters.utilitiesIncluded != null) params.set('utilitiesIncluded', String(filters.utilitiesIncluded));
+  if (filters.parkingType) params.set('parkingType', String(filters.parkingType));
+  if (filters.petPolicy) params.set('petPolicy', String(filters.petPolicy));
+  if (filters.leaseTerm) params.set('leaseTerm', String(filters.leaseTerm));
+  if (filters.priceUnit) params.set('priceUnit', String(filters.priceUnit));
+  if (filters.proximityToTransport != null) params.set('proximityToTransport', String(filters.proximityToTransport));
+  if (filters.proximityToSchools != null) params.set('proximityToSchools', String(filters.proximityToSchools));
+  if (filters.proximityToShopping != null) params.set('proximityToShopping', String(filters.proximityToShopping));
+  if (filters.availableFromBefore) params.set('availableFromBefore', String(filters.availableFromBefore));
+  if (filters.availableFromAfter) params.set('availableFromAfter', String(filters.availableFromAfter));
+  if (filters.minBedrooms != null) params.set('minBedrooms', String(filters.minBedrooms));
+  if (filters.maxBedrooms != null) params.set('maxBedrooms', String(filters.maxBedrooms));
+  if (filters.minBathrooms != null) params.set('minBathrooms', String(filters.minBathrooms));
+  if (filters.maxBathrooms != null) params.set('maxBathrooms', String(filters.maxBathrooms));
+  if (filters.minSquareFootage != null) params.set('minSquareFootage', String(filters.minSquareFootage));
+  if (filters.maxSquareFootage != null) params.set('maxSquareFootage', String(filters.maxSquareFootage));
+  if (filters.minYearBuilt != null) params.set('minYearBuilt', String(filters.minYearBuilt));
+  if (filters.maxYearBuilt != null) params.set('maxYearBuilt', String(filters.maxYearBuilt));
+        if (filters.budgetFriendly === true) params.set('budgetFriendly', 'true');
         if (prevIds.length) params.set('excludeIds', prevIds.join(','));
-        if (filters.minRent) params.set('minRent', String(filters.minRent));
-        if (filters.maxRent) params.set('maxRent', String(filters.maxRent));
-        if (filters.city) params.set('city', filters.city);
-        if (filters.type) params.set('type', filters.type);
-        if (filters.bedrooms) params.set('bedrooms', String(filters.bedrooms));
-        if (filters.bathrooms) params.set('bathrooms', String(filters.bathrooms));
-        if (filters.amenities?.length) params.set('amenities', filters.amenities.join(','));
-  if ((filters as any).hasPhotos) params.set('hasPhotos', 'true');
         const resp = await fetch(`${getBaseUrl()}/api/properties/search?${params.toString()}`);
         if (resp.ok) {
           const data = await resp.json();
@@ -302,13 +285,9 @@ export default function aiRouter() {
         }
       }
 
-      // Budget friendly ordering if requested (apply to each list)
-      const sortBudget = (arr: any[]) =>
-        filters.budgetFriendly && arr?.length ? arr.slice().sort((a, b) => (a.rent?.amount || 0) - (b.rent?.amount || 0)) : arr;
-
       return {
-        nearby: sortBudget(nearby).slice(0, 5),
-        search: sortBudget(search).slice(0, 5),
+        nearby: nearby.slice(0, 5),
+        search: search.slice(0, 5),
       };
     } catch (e) {
       console.error('[AI] property search error:', e);
@@ -329,8 +308,8 @@ Only if the user explicitly asks in their current message to search/show/find/br
 
 Rules for the properties block:
 - Include at most 5 items.
-- If the user's current message DOES explicitly ask to search/show/find/browse listings or homes AND a <PROPERTIES_HINTS> object is present in the context, you MUST copy the array of IDs EXACTLY from the appropriate list into <PROPERTIES_JSON> (no re-ordering, no changes, no additions). Never fabricate or guess property IDs.
-- Choose the list based on the user's request: if they ask for "nearby", "closest", "around", "others like these" etc., use the IDs from the "nearby" list; otherwise prefer the "search" list. You understand all languages—decide from meaning, not keywords.
+  - If the user's current message DOES explicitly ask to search/show/find/browse listings or homes AND a <PROPERTIES_HINTS> object is present in the context, you MUST copy the array of IDs EXACTLY from the appropriate list into <PROPERTIES_JSON> (no re-ordering, no changes, no additions). Never fabricate or guess property IDs.
+  - Choose the list based on the user's intent (semantics). Do not rely on specific keywords or language. If the request is about items similar/close to previously shown ones, use the "nearby" list; otherwise prefer "search".
 - If the user's current message does NOT explicitly ask to search/show/find/browse listings or homes, DO NOT include a <PROPERTIES_JSON> block under any circumstance, even if a <PROPERTIES_HINT_JSON> is present.
 - If NO <PROPERTIES_HINTS> is present, OMIT the <PROPERTIES_JSON> block entirely.
 - Place the block at the very end of your reply on a new line.
@@ -396,27 +375,12 @@ Examples:
         await conversation.save();
       }
 
-      const last = messages[messages.length - 1];
-      const text = normalize(last?.content || '');
-      const needsCurrentInfo = [
-        'current', 'recent', 'latest', 'new law', 'updated', '2024', '2025', 'recent case', 'local', 'organization',
-        'catalunya', 'catalonia', 'barcelona', 'catalan', 'lloguer', 'sindicat', 'tenant union', 'rent strike',
-      ].some(k => text.includes(k));
-
-      const [searchResults, propertyResults] = await Promise.all([
-        needsCurrentInfo ? performWebSearch(last?.content || '') : Promise.resolve(null),
-        performAppPropertySearch(last?.content || '', messages as ChatMessage[]),
-      ]);
+  const last = messages[messages.length - 1];
+  const propertyResults = await performAppPropertySearch(last?.content || '', messages as ChatMessage[]);
 
       const enhanced: ChatMessage[] = [{ role: 'system', content: SINDI_SYSTEM_PROMPT }, ...messages];
 
-      if (searchResults) {
-        enhanced.push({
-          role: 'system',
-          content:
-            `CURRENT INFO\nSource: ${searchResults.source}\nURL: ${searchResults.url}\nContent: ${searchResults.content}`.trim(),
-        });
-      }
+  // No external web search hints injected.
 
   if ((propertyResults?.nearby?.length || 0) || (propertyResults?.search?.length || 0)) {
         // Provide machine-readable hints for both lists so the model can choose correctly

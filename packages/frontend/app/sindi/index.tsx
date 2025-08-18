@@ -251,12 +251,12 @@ export default function Sindi() {
   const webStyles =
     Platform.OS === 'web'
       ? {
-          container: { height: '100vh', display: 'flex', flexDirection: 'column' } as any,
-          stickyHeader: { position: 'sticky', top: 0 } as any,
-          messagesContainer: { marginTop: 0, marginBottom: 0, flex: 1, overflow: 'auto' } as any,
-          stickyInput: { position: 'sticky', bottom: 0 } as any,
-          messagesContent: { paddingBottom: 100 },
-        }
+        container: { height: '100vh', display: 'flex', flexDirection: 'column' } as any,
+        stickyHeader: { position: 'sticky', top: 0 } as any,
+        messagesContainer: { marginTop: 0, marginBottom: 0, flex: 1, overflow: 'auto' } as any,
+        stickyInput: { position: 'sticky', bottom: 0 } as any,
+        messagesContent: { paddingBottom: 100 },
+      }
       : {};
 
   if (!isAuthenticated) {
