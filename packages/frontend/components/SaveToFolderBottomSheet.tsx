@@ -7,6 +7,7 @@ import {
   TextInput,
   ScrollView,
   Alert,
+  Image,
 } from 'react-native';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,10 +15,10 @@ import { useTranslation } from 'react-i18next';
 import { ThemedText } from './ThemedText';
 import { colors } from '@/styles/colors';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
-import { SavedPropertyFolder, savedPropertyFolderService } from '@/services/savedPropertyFolderService';
+import savedPropertyFolderService, { SavedPropertyFolder } from '@/services/savedPropertyFolderService';
 import Button from './Button';
 import { Property } from '@homiio/shared-types';
-import { PropertyCard } from './PropertyCard';
+import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useOxy } from '@oxyhq/services';
 import savedPropertyService from '@/services/savedPropertyService';
@@ -53,7 +54,7 @@ export function SaveToFolderBottomSheet({
   onClose,
   onSave,
 }: SaveToFolderBottomSheetProps) {
-  const { _t } = useTranslation();
+  const { t: _t } = useTranslation();
   const { folders, isLoading, loadFolders } = useSavedPropertiesContext();
   const { oxyServices, activeSessionId } = useOxy();
   const queryClient = useQueryClient();
@@ -227,17 +228,22 @@ export function SaveToFolderBottomSheet({
       </View>
 
       {property ? (
-        <View style={styles.propertyCardContainer}>
-          <PropertyCard
-            property={property}
-            variant="compact"
-            orientation="horizontal"
-            showFavoriteButton={false}
-            showVerifiedBadge={false}
-            showTypeIcon={false}
-            showFeatures={false}
-            showRating={false}
+        <View style={styles.propertyPreview}>
+          <Image
+            source={getPropertyImageSource(property)}
+            style={styles.previewImage}
+            resizeMode="cover"
           />
+          <View style={styles.previewTexts}>
+            <ThemedText style={styles.previewTitle} numberOfLines={1}>
+              {getPropertyTitle(property)}
+            </ThemedText>
+            {!!property.address?.city && (
+              <ThemedText style={styles.previewSubtitle} numberOfLines={1}>
+                {property.address.city}{property.address?.state ? `, ${property.address.state}` : ''}
+              </ThemedText>
+            )}
+          </View>
         </View>
       ) : (
         <ThemedText style={styles.propertyTitle} numberOfLines={2}>
@@ -271,6 +277,30 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
+  },
+  propertyPreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 20,
+  },
+  previewImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+  },
+  previewTexts: {
+    flex: 1,
+  },
+  previewTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  previewSubtitle: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK_LIGHT_3,
   },
   header: {
     flexDirection: 'row',

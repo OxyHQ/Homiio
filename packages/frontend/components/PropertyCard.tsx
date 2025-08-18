@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Image, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
+import { View, Image, StyleSheet, TouchableOpacity, ViewStyle, Platform } from 'react-native';
 import { colors } from '@/styles/colors';
 import { IconButton } from './IconButton';
 import { Property, PropertyType, PriceUnit } from '@homiio/shared-types';
@@ -564,11 +564,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 20,
     padding: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }),
   },
   ecoBadge: {
     position: 'absolute',
@@ -602,11 +600,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 6,
     paddingVertical: 0,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }),
     justifyContent: 'center',
   },
   ratingBadgeText: {
@@ -626,11 +622,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderWidth: 1,
     borderColor: '#efefef',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 }),
   },
   noteEmpty: {
     backgroundColor: '#fafafa',

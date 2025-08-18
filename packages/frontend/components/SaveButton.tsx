@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { TouchableOpacity, StyleSheet, ViewStyle, View } from 'react-native';
+import { TouchableOpacity, StyleSheet, ViewStyle, View, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import LoadingSpinner from './LoadingSpinner';
@@ -249,16 +249,23 @@ export function SaveButton({
   );
 }
 
-const styles = StyleSheet.create({
-  saveButton: {
-    backgroundColor: colors.primaryLight,
-    borderRadius: 25,
-    padding: 8,
+const webShadow = Platform.select({
+  web: { boxShadow: '0 2px 8px rgba(0,0,0,0.08)' },
+  default: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
+  },
+});
+
+const styles = StyleSheet.create({
+  saveButton: {
+    backgroundColor: colors.primaryLight,
+    borderRadius: 25,
+    padding: 8,
+    ...webShadow,
     alignItems: 'center',
     justifyContent: 'center',
   },

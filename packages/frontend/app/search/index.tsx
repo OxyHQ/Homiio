@@ -20,6 +20,30 @@ import { useTranslation } from 'react-i18next';
 import * as Location from 'expo-location';
 import { useSearchMode } from '@/context/SearchModeContext';
 
+// Small helper to apply platform-appropriate shadows (uses boxShadow on web)
+const shadow = (level: 'sm' | 'md' = 'md') => Platform.select({
+  web: {
+    boxShadow: level === 'md'
+      ? '0 2px 4px rgba(0,0,0,0.1)'
+      : '0 1px 3px rgba(0,0,0,0.08)',
+  },
+  default: level === 'md'
+    ? {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    }
+    : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.08,
+      shadowRadius: 3,
+      elevation: 2,
+    },
+});
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -57,11 +81,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 12,
     paddingVertical: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadow('md'),
   },
   filtersScrollContent: {
     paddingHorizontal: 16,
@@ -127,7 +147,7 @@ const styles = StyleSheet.create({
   },
   searchInput: Platform.select({
     web: {
-      flex: 1, fontSize: 16, color: '#333', paddingVertical: 8, borderWidth: 0, outline: 'none',
+      flex: 1, fontSize: 16, color: '#333', paddingVertical: 8, borderWidth: 0,
     },
     default: {
       flex: 1, fontSize: 16, color: '#333', paddingVertical: 8,
@@ -141,11 +161,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginTop: 8,
     maxHeight: 300,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadow('md'),
     zIndex: 1000,
     position: 'absolute',
     top: '100%',
@@ -196,22 +212,14 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: '#fff',
     borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadow('md'),
     position: 'relative',
   },
   saveButton: {
     backgroundColor: colors.primaryLight,
     borderRadius: 35,
     padding: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    ...shadow('sm'),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -234,11 +242,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryLight,
     borderRadius: 35,
     padding: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    ...shadow('sm'),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -246,11 +250,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryLight,
     borderRadius: 35,
     padding: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    ...shadow('sm'),
     alignItems: 'center',
     justifyContent: 'center',
   },
