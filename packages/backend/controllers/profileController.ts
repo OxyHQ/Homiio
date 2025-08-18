@@ -60,6 +60,52 @@ class ProfileController {
   }
 
   /**
+   * Internal: extract oxyUserId from request safely
+   */
+  _getOxyUserId(req: any): string | undefined {
+    return req?.user?.id || req?.user?._id;
+  }
+
+  /**
+   * Internal: create and activate a minimal personal profile for a user.
+   * Centralized to avoid duplicating defaults across endpoints.
+   * Only used when explicitly creating or ensuring an active profile.
+   */
+  async _createDefaultPersonalProfile(oxyUserId: string) {
+    const personal = new Profile({
+      oxyUserId,
+      profileType: ProfileType.PERSONAL,
+      isActive: true,
+      isPrimary: true,
+      personalProfile: {
+        personalInfo: {
+          bio: "",
+          occupation: "",
+          employer: "",
+          annualIncome: null,
+          employmentStatus: null,
+          moveInDate: null,
+          leaseDuration: null,
+        },
+        preferences: {},
+        references: [],
+        rentalHistory: [],
+        verification: {},
+        trustScore: { score: 50, factors: [] },
+        settings: {
+          notifications: { email: true, push: true, sms: false },
+          privacy: { profileVisibility: "public", showContactInfo: true, showIncome: false },
+          language: "en",
+          timezone: "UTC",
+        },
+      },
+    });
+    personal.calculateTrustScore?.();
+    await personal.save();
+    return personal;
+  }
+
+  /**
    * Save (follow) a profile for the current user's active profile
    */
   async saveProfile(req, res, next) {
@@ -184,7 +230,7 @@ class ProfileController {
   /**
    * Test endpoint to check if the controller is working
    */
-  async test(req, res, next) {
+  async test(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       
@@ -204,9 +250,9 @@ class ProfileController {
   /**
    * Get or create user's active profile
    */
-  async getOrCreateActiveProfile(req, res, next) {
+  async getOrCreateActiveProfile(req: any, res: any, next: any) {
     try {
-      const oxyUserId = req.user?.id || req.user?._id;
+      const oxyUserId = this._getOxyUserId(req);
       
       if (!oxyUserId) {
         return res.status(401).json(
@@ -216,7 +262,7 @@ class ProfileController {
 
       console.log(`ProfileController: Getting or creating active profile for user ${oxyUserId}`);
 
-      // Check cache first
+  // Check cache first
       let profile = this.getCachedProfile(oxyUserId, 'active');
       
       if (!profile) {
@@ -240,46 +286,12 @@ class ProfileController {
             
             profile = personalProfile;
           } else {
-            console.log(`ProfileController: No personal profile found for user ${oxyUserId}, creating default personal profile`);
-            // Create a default personal profile
-            const defaultPersonalProfile = new Profile({
-              oxyUserId,
-              profileType: ProfileType.PERSONAL,
-              isActive: true,
-              isPrimary: true, // First profile is always primary
-              personalProfile: {
-                personalInfo: {
-                  bio: "",
-                  occupation: "",
-                  employer: "",
-                  annualIncome: null,
-                  employmentStatus: "employed",
-                  moveInDate: null,
-                  leaseDuration: "yearly",
-                },
-                preferences: {},
-                references: [],
-                rentalHistory: [],
-                verification: {},
-                trustScore: { score: 50, factors: [] },
-                settings: {
-                  notifications: { email: true, push: true, sms: false },
-                  privacy: { profileVisibility: "public", showContactInfo: true, showIncome: false },
-                  language: "en",
-                  timezone: "UTC"
-                }
-              }
-            });
-            
-            // Calculate initial trust score
-            defaultPersonalProfile.calculateTrustScore();
-            await defaultPersonalProfile.save();
-            
-            // Clear cache after creating new profile
-            this.clearCachedProfile(oxyUserId, 'active');
-            
-            profile = defaultPersonalProfile;
-            console.log(`ProfileController: Successfully created default personal profile for user ${oxyUserId}`);
+    console.log(`ProfileController: No personal profile found for user ${oxyUserId}, creating default personal profile`);
+    const defaultPersonalProfile = await this._createDefaultPersonalProfile(oxyUserId);
+    // Clear cache after creating new profile
+    this.clearCachedProfile(oxyUserId, 'active');
+    profile = defaultPersonalProfile;
+    console.log(`ProfileController: Successfully created default personal profile for user ${oxyUserId}`);
           }
         } else {
           console.log(`ProfileController: Found existing active profile for user ${oxyUserId}`);
@@ -308,7 +320,7 @@ class ProfileController {
   /**
    * Get all profiles for a user
    */
-  async getUserProfiles(req, res, next) {
+  async getUserProfiles(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       
@@ -333,7 +345,7 @@ class ProfileController {
   /**
    * Get profile by type
    */
-  async getProfileByType(req, res, next) {
+  async getProfileByType(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { profileType } = req.params;
@@ -370,15 +382,20 @@ class ProfileController {
   /**
    * Create a new profile
    */
-  async createProfile(req, res, next) {
+  async createProfile(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
-      const { profileType, data } = req.body;
+      let { profileType, data, isPersonalProfile } = req.body as any;
       
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
         );
+      }
+
+      // Support legacy flag from frontend service
+      if (!profileType && isPersonalProfile === true) {
+        profileType = ProfileType.PERSONAL;
       }
 
       if (!Object.values(ProfileType).includes(profileType)) {
@@ -397,20 +414,34 @@ class ProfileController {
 
       // Special handling for personal profiles - only one allowed per user
       if (profileType === ProfileType.PERSONAL) {
-        const existingPersonalProfile = await Profile.findOne({ 
-          oxyUserId, 
-          profileType: ProfileType.PERSONAL 
+        const existingPersonalProfile = await Profile.findOne({
+          oxyUserId,
+          profileType: ProfileType.PERSONAL,
         });
         if (existingPersonalProfile) {
           return res.status(409).json(
-            errorResponse("Personal profile already exists for this user. Only one personal profile is allowed per user.", "PERSONAL_PROFILE_ALREADY_EXISTS")
+            errorResponse(
+              "Personal profile already exists for this user. Only one personal profile is allowed per user.",
+              "PERSONAL_PROFILE_ALREADY_EXISTS",
+            ),
           );
         }
-        
-        // Prevent manual creation of personal profiles - they should be created automatically
-        return res.status(400).json(
-          errorResponse("Personal profiles cannot be created manually. They are created automatically when you first access the system.", "PERSONAL_PROFILE_MANUAL_CREATION_NOT_ALLOWED")
-        );
+        // Create default personal profile or merge provided data
+        const profile = await this._createDefaultPersonalProfile(oxyUserId);
+        if (data && typeof data === 'object') {
+          // Merge any provided partials
+          profile.personalProfile = {
+            ...profile.personalProfile,
+            ...data,
+            personalInfo: { ...profile.personalProfile?.personalInfo, ...data.personalInfo },
+            settings: { ...profile.personalProfile?.settings, ...data.settings },
+          } as any;
+          profile.calculateTrustScore?.();
+          await profile.save();
+        }
+        // Clear cache after creating new profile
+        this.clearCachedProfile(oxyUserId, 'active');
+        return res.status(201).json(successResponse(profile, "Profile created successfully"));
       }
 
       // Check if this is the user's first profile (no active profile exists)
@@ -488,7 +519,7 @@ class ProfileController {
           break;
       }
 
-      const profile = new Profile(profileData);
+  const profile = new Profile(profileData);
       
       // Calculate initial trust score for personal profiles
       if (profileType === ProfileType.PERSONAL) {
@@ -500,7 +531,7 @@ class ProfileController {
       // Clear cache after creating new profile
       this.clearCachedProfile(oxyUserId, 'active');
 
-      res.status(201).json(
+  res.status(201).json(
         successResponse(profile, "Profile created successfully")
       );
     } catch (error) {
@@ -512,7 +543,7 @@ class ProfileController {
   /**
    * Update profile
    */
-  async updateProfile(req, res, next) {
+  async updateProfile(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { profileId } = req.params;
@@ -579,7 +610,7 @@ class ProfileController {
   /**
    * Delete profile
    */
-  async deleteProfile(req, res, next) {
+  async deleteProfile(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { profileId } = req.params;
@@ -635,7 +666,7 @@ class ProfileController {
   /**
    * Get agency memberships for a user
    */
-  async getAgencyMemberships(req, res, next) {
+  async getAgencyMemberships(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       
@@ -659,7 +690,7 @@ class ProfileController {
   /**
    * Add member to agency profile
    */
-  async addAgencyMember(req, res, next) {
+  async addAgencyMember(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { profileId } = req.params;
@@ -711,7 +742,7 @@ class ProfileController {
   /**
    * Remove member from agency profile
    */
-  async removeAgencyMember(req, res, next) {
+  async removeAgencyMember(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { profileId, memberOxyUserId } = req.params;
@@ -764,7 +795,7 @@ class ProfileController {
   /**
    * Update active profile (no profile ID needed)
    */
-  async updateActiveProfile(req, res, next) {
+  async updateActiveProfile(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const updateData = req.body;
@@ -841,7 +872,7 @@ class ProfileController {
   /**
    * Update active profile trust score (no profile ID needed)
    */
-  async updateActiveTrustScore(req, res, next) {
+  async updateActiveTrustScore(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { factor, value } = req.body;
@@ -870,7 +901,10 @@ class ProfileController {
         );
       }
 
-      await profile.updateTrustScore(factor, value);
+  await profile.updateTrustScore(factor, value);
+
+  // Invalidate trust score cache
+  this.clearCachedProfile(oxyUserId, 'trustScore');
 
       res.json(
         successResponse(profile, "Trust score updated successfully")
@@ -884,7 +918,7 @@ class ProfileController {
   /**
    * Update trust score
    */
-  async updateTrustScore(req, res, next) {
+  async updateTrustScore(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { profileId } = req.params;
@@ -916,7 +950,10 @@ class ProfileController {
         );
       }
 
-      await profile.updateTrustScore(factor, value);
+  await profile.updateTrustScore(factor, value);
+
+  // Invalidate trust score cache
+  this.clearCachedProfile(oxyUserId, 'trustScore');
 
       res.json(
         successResponse(profile, "Trust score updated successfully")
@@ -930,7 +967,7 @@ class ProfileController {
   /**
    * Get trust score only (optimized for performance)
    */
-  async getTrustScore(req, res, next) {
+  async getTrustScore(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       
@@ -975,7 +1012,7 @@ class ProfileController {
   /**
    * Recalculate trust score for active profile
    */
-  async recalculateActiveTrustScore(req, res, next) {
+  async recalculateActiveTrustScore(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       
@@ -1022,7 +1059,7 @@ class ProfileController {
   /**
    * Activate a specific profile
    */
-  async activateProfile(req, res, next) {
+  async activateProfile(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { profileId } = req.params;
@@ -1070,7 +1107,7 @@ class ProfileController {
   /**
    * Get profile by ID
    */
-  async getProfileById(req, res, next) {
+  async getProfileById(req: any, res: any, next: any) {
     try {
       const { profileId } = req.params;
       
@@ -1115,7 +1152,7 @@ class ProfileController {
   /**
    * Get properties for the current user's profile
    */
-  async getProfileProperties(req, res, next) {
+  async getProfileProperties(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { page = 1, limit = 10 } = req.query;
@@ -1173,7 +1210,7 @@ class ProfileController {
   /**
    * Get recently viewed properties for the current user's profile
    */
-  async getRecentProperties(req, res, next) {
+  async getRecentProperties(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { limit = 10 } = req.query;
@@ -1188,7 +1225,7 @@ class ProfileController {
       }
 
       // Get the active profile for the current user
-      let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+  let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
       
       console.log(`[getRecentProperties] Active profile lookup result:`, {
         found: !!activeProfile,
@@ -1197,43 +1234,7 @@ class ProfileController {
       });
       
       if (!activeProfile) {
-        console.log(`[getRecentProperties] No active profile found for user ${oxyUserId}, creating default personal profile`);
-        // Create a default personal profile if none exists
-        const defaultPersonalProfile = new Profile({
-          oxyUserId,
-          profileType: ProfileType.PERSONAL,
-          isActive: true,
-          isPrimary: true, // First profile is always primary
-          personalProfile: {
-            personalInfo: {
-              bio: "",
-              occupation: "",
-              employer: "",
-              annualIncome: null,
-              employmentStatus: "employed",
-              moveInDate: null,
-              leaseDuration: "yearly",
-            },
-            preferences: {},
-            references: [],
-            rentalHistory: [],
-            verification: {},
-            trustScore: { score: 50, factors: [] },
-            settings: {
-              notifications: { email: true, push: true, sms: false },
-              privacy: { profileVisibility: "public", showContactInfo: true, showIncome: false },
-              language: "en",
-              timezone: "UTC"
-            }
-          }
-        });
-        
-        // Calculate initial trust score
-        defaultPersonalProfile.calculateTrustScore();
-        await defaultPersonalProfile.save();
-        activeProfile = defaultPersonalProfile;
-        
-        console.log(`[getRecentProperties] Created new profile with ID: ${activeProfile._id}`);
+        return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
       }
 
       // Import RecentlyViewed
@@ -1301,7 +1302,7 @@ class ProfileController {
   /**
    * Get saved properties for the current user's profile
    */
-  async getSavedProperties(req, res, next) {
+  async getSavedProperties(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       
@@ -1319,7 +1320,7 @@ class ProfileController {
       }
 
       // Get the active profile for the current user
-      let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+  let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
       
       console.log('[getSavedProperties] Active profile search result:', {
         found: !!activeProfile,
@@ -1328,46 +1329,7 @@ class ProfileController {
       });
       
       if (!activeProfile) {
-        console.log(`[getSavedProperties] No active profile found for user ${oxyUserId}, creating default personal profile`);
-        // Create a default personal profile if none exists
-        const defaultPersonalProfile = new Profile({
-          oxyUserId,
-          profileType: ProfileType.PERSONAL,
-          isActive: true,
-          isPrimary: true, // First profile is always primary
-          personalProfile: {
-            personalInfo: {
-              bio: "",
-              occupation: "",
-              employer: "",
-              annualIncome: null,
-              employmentStatus: "employed",
-              moveInDate: null,
-              leaseDuration: "yearly",
-            },
-            preferences: {},
-            references: [],
-            rentalHistory: [],
-            verification: {},
-            trustScore: { score: 50, factors: [] },
-            settings: {
-              notifications: { email: true, push: true, sms: false },
-              privacy: { profileVisibility: "public", showContactInfo: true, showIncome: false },
-              language: "en",
-              timezone: "UTC"
-            }
-          }
-        });
-        
-        // Calculate initial trust score
-        defaultPersonalProfile.calculateTrustScore();
-        await defaultPersonalProfile.save();
-        activeProfile = defaultPersonalProfile;
-        
-        console.log('[getSavedProperties] Created new profile:', {
-          profileId: activeProfile._id,
-          profileType: activeProfile.profileType
-        });
+        return res.json(successResponse([], "No profile found for user"));
       }
 
       // Use unified Saved collection
@@ -1416,7 +1378,7 @@ class ProfileController {
   /**
    * Get saved (followed) profiles for the current user's profile
    */
-  async getSavedProfiles(req, res, next) {
+  async getSavedProfiles(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       if (!oxyUserId) {
@@ -1440,7 +1402,7 @@ class ProfileController {
   /**
    * Save a property for the current user's profile
    */
-  async saveProperty(req, res, next) {
+  async saveProperty(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { propertyId, notes, folderId } = req.body;
@@ -1461,43 +1423,8 @@ class ProfileController {
 
       // Get the active profile for the current user
       let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      
       if (!activeProfile) {
-        console.log('No active profile found, creating one...');
-        // Create a default personal profile if none exists
-        const defaultPersonalProfile = new Profile({
-          oxyUserId,
-          profileType: ProfileType.PERSONAL,
-          isActive: true,
-          isPrimary: true, // First profile is always primary
-          personalProfile: {
-            personalInfo: {
-              bio: "",
-              occupation: "",
-              employer: "",
-              annualIncome: null,
-              employmentStatus: "employed",
-              moveInDate: null,
-              leaseDuration: "yearly",
-            },
-            preferences: {},
-            references: [],
-            rentalHistory: [],
-            verification: {},
-            trustScore: { score: 50, factors: [] },
-            settings: {
-              notifications: { email: true, push: true, sms: false },
-              privacy: { profileVisibility: "public", showContactInfo: true, showIncome: false },
-              language: "en",
-              timezone: "UTC"
-            }
-          }
-        });
-        
-        // Calculate initial trust score
-        defaultPersonalProfile.calculateTrustScore();
-        await defaultPersonalProfile.save();
-        activeProfile = defaultPersonalProfile;
+        return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
       }
 
       // Import Saved collection and SavedPropertyFolder model
@@ -1560,7 +1487,7 @@ class ProfileController {
   /**
    * Unsave a property for the current user's profile
    */
-  async unsaveProperty(req, res, next) {
+  async unsaveProperty(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { propertyId } = req.params;
@@ -1605,7 +1532,7 @@ class ProfileController {
   /**
    * Update saved property notes for the current user's profile
    */
-  async updateSavedPropertyNotes(req, res, next) {
+  async updateSavedPropertyNotes(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { propertyId } = req.params;
@@ -1633,22 +1560,10 @@ class ProfileController {
         );
       }
 
-      // Import SavedPropertyFolder
-      const { SavedPropertyFolder } = require('../models');
-      
-      // Find the folder containing this property
-      const folder = await SavedPropertyFolder.findOne({
-        profileId: activeProfile._id,
-        'properties.propertyId': propertyId
-      });
+      // Use unified Saved collection as the source of truth
+      const { Saved, SavedPropertyFolder } = require('../models');
 
-      if (!folder) {
-        return res.status(404).json(
-          errorResponse("Saved property not found", "SAVED_PROPERTY_NOT_FOUND")
-        );
-      }
-
-      const { Saved } = require('../models');
+      // Update notes on the saved record
       const updated = await Saved.findOneAndUpdate(
         { profileId: activeProfile._id, targetType: 'property', targetId: propertyId },
         { $set: { notes: notes || '' } },
@@ -1656,6 +1571,23 @@ class ProfileController {
       );
       if (!updated) {
         return res.status(404).json(errorResponse("Saved property not found", "SAVED_PROPERTY_NOT_FOUND"));
+      }
+
+      // Best-effort: if property exists inside a folder's properties array, mirror notes there too
+      try {
+        const folder = await SavedPropertyFolder.findOne({
+          profileId: activeProfile._id,
+          'properties.propertyId': propertyId
+        });
+        if (folder) {
+          const prop = folder.properties.find((p: any) => String(p.propertyId) === String(propertyId));
+          if (prop) {
+            prop.notes = notes || '';
+            await folder.save();
+          }
+        }
+      } catch (e) {
+        console.warn('Non-fatal: failed to mirror notes to SavedPropertyFolder', e?.message || e);
       }
       res.json(successResponse(updated, "Property notes updated successfully"));
     } catch (error) {
@@ -1667,7 +1599,7 @@ class ProfileController {
   /**
    * Get saved property folders for the current user's profile
    */
-  async getSavedPropertyFolders(req, res, next) {
+  async getSavedPropertyFolders(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       
@@ -1726,7 +1658,7 @@ class ProfileController {
   /**
    * Create a new saved property folder
    */
-  async createSavedPropertyFolder(req, res, next) {
+  async createSavedPropertyFolder(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { name, description, color, icon } = req.body;
@@ -1791,7 +1723,7 @@ class ProfileController {
   /**
    * Update a saved property folder
    */
-  async updateSavedPropertyFolder(req, res, next) {
+  async updateSavedPropertyFolder(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { folderId } = req.params;
@@ -1880,7 +1812,7 @@ class ProfileController {
   /**
    * Delete a saved property folder
    */
-  async deleteSavedPropertyFolder(req, res, next) {
+  async deleteSavedPropertyFolder(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { folderId } = req.params;
@@ -1906,8 +1838,8 @@ class ProfileController {
         );
       }
 
-      // Import models
-      const { SavedPropertyFolder, SavedProperty } = require('../models');
+  // Import models
+  const { SavedPropertyFolder, Saved } = require('../models');
       
       // Find the folder
       const folder = await SavedPropertyFolder.findOne({
@@ -1928,10 +1860,10 @@ class ProfileController {
         );
       }
 
-      // Move all properties in this folder to no folder (null)
-      await SavedProperty.updateMany(
-        { profileId: activeProfile._id, folderId: folderId },
-        { folderId: null }
+      // Move all properties in this folder to no folder (null) in unified Saved collection
+      await Saved.updateMany(
+        { profileId: activeProfile._id, targetType: 'property', folderId: folderId },
+        { $set: { folderId: null } }
       );
 
       // Delete the folder
@@ -1951,7 +1883,7 @@ class ProfileController {
   /**
    * Track property view for the current user's profile
    */
-  async trackPropertyView(req, res, next) {
+  async trackPropertyView(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { propertyId } = req.params;
@@ -1974,43 +1906,7 @@ class ProfileController {
       let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
       
       if (!activeProfile) {
-        console.log(`[trackPropertyView] No active profile found for user ${oxyUserId}, creating default personal profile`);
-        // Create a default personal profile if none exists
-        const defaultPersonalProfile = new Profile({
-          oxyUserId,
-          profileType: ProfileType.PERSONAL,
-          isActive: true,
-          isPrimary: true, // First profile is always primary
-          personalProfile: {
-            personalInfo: {
-              bio: "",
-              occupation: "",
-              employer: "",
-              annualIncome: null,
-              employmentStatus: "employed",
-              moveInDate: null,
-              leaseDuration: "yearly",
-            },
-            preferences: {},
-            references: [],
-            rentalHistory: [],
-            verification: {},
-            trustScore: { score: 50, factors: [] },
-            settings: {
-              notifications: { email: true, push: true, sms: false },
-              privacy: { profileVisibility: "public", showContactInfo: true, showIncome: false },
-              language: "en",
-              timezone: "UTC"
-            }
-          }
-        });
-        
-        // Calculate initial trust score
-        defaultPersonalProfile.calculateTrustScore();
-        await defaultPersonalProfile.save();
-        activeProfile = defaultPersonalProfile;
-        
-        console.log(`[trackPropertyView] Created new profile with ID: ${activeProfile._id}`);
+        return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
       }
 
       // Import RecentlyViewed
@@ -2050,7 +1946,7 @@ class ProfileController {
   /**
    * Clear recently viewed properties for the current user's profile
    */
-  async clearRecentProperties(req, res, next) {
+  async clearRecentProperties(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       
@@ -2089,7 +1985,7 @@ class ProfileController {
   /**
    * Debug endpoint to check recently viewed data
    */
-  async debugRecentProperties(req, res, next) {
+  async debugRecentProperties(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       
@@ -2182,7 +2078,7 @@ class ProfileController {
   /**
    * Get saved searches for the current user's profile
    */
-  async getSavedSearches(req, res, next) {
+  async getSavedSearches(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       
@@ -2200,7 +2096,7 @@ class ProfileController {
       }
 
       // Get the active profile for the current user
-      let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+  let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
       
       console.log('[getSavedSearches] Active profile search result:', {
         found: !!activeProfile,
@@ -2209,45 +2105,8 @@ class ProfileController {
       });
       
       if (!activeProfile) {
-        console.log(`[getSavedSearches] No active profile found for user ${oxyUserId}, creating default personal profile`);
-        // Create a default personal profile if none exists
-        const defaultPersonalProfile = new Profile({
-          oxyUserId,
-          profileType: ProfileType.PERSONAL,
-          isActive: true,
-          isPrimary: true,
-          personalProfile: {
-            personalInfo: {
-              bio: "",
-              occupation: "",
-              employer: "",
-              annualIncome: null,
-              employmentStatus: "employed",
-              moveInDate: null,
-              leaseDuration: "yearly",
-            },
-            preferences: {},
-            references: [],
-            rentalHistory: [],
-            verification: {},
-            trustScore: { score: 50, factors: [] },
-            settings: {
-              notifications: { email: true, push: true, sms: false },
-              privacy: { profileVisibility: "public", showContactInfo: true, showIncome: false },
-              language: "en",
-              timezone: "UTC"
-            }
-          }
-        });
-        
-        defaultPersonalProfile.calculateTrustScore();
-        await defaultPersonalProfile.save();
-        activeProfile = defaultPersonalProfile;
-        
-        console.log('[getSavedSearches] Created new profile:', {
-          profileId: activeProfile._id,
-          profileType: activeProfile.profileType
-        });
+        // If user has no active profile, return empty list rather than creating data implicitly
+        return res.json(successResponse([], "No profile found for user"));
       }
 
       // Import SavedSearchModel
@@ -2288,7 +2147,7 @@ class ProfileController {
   /**
    * Save a search for the current user's profile
    */
-  async saveSearch(req, res, next) {
+  async saveSearch(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { name, query, filters, notificationsEnabled } = req.body;
@@ -2309,41 +2168,8 @@ class ProfileController {
 
       // Get the active profile for the current user
       let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      
       if (!activeProfile) {
-        console.log('No active profile found, creating one...');
-        const defaultPersonalProfile = new Profile({
-          oxyUserId,
-          profileType: ProfileType.PERSONAL,
-          isActive: true,
-          isPrimary: true,
-          personalProfile: {
-            personalInfo: {
-              bio: "",
-              occupation: "",
-              employer: "",
-              annualIncome: null,
-              employmentStatus: "employed",
-              moveInDate: null,
-              leaseDuration: "yearly",
-            },
-            preferences: {},
-            references: [],
-            rentalHistory: [],
-            verification: {},
-            trustScore: { score: 50, factors: [] },
-            settings: {
-              notifications: { email: true, push: true, sms: false },
-              privacy: { profileVisibility: "public", showContactInfo: true, showIncome: false },
-              language: "en",
-              timezone: "UTC"
-            }
-          }
-        });
-        
-        defaultPersonalProfile.calculateTrustScore();
-        await defaultPersonalProfile.save();
-        activeProfile = defaultPersonalProfile;
+        return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
       }
 
       // Import SavedSearch
@@ -2386,7 +2212,7 @@ class ProfileController {
   /**
    * Delete a saved search for the current user's profile
    */
-  async deleteSavedSearch(req, res, next) {
+  async deleteSavedSearch(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { searchId } = req.params;
@@ -2439,7 +2265,7 @@ class ProfileController {
   /**
    * Update a saved search for the current user's profile
    */
-  async updateSavedSearch(req, res, next) {
+  async updateSavedSearch(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { searchId } = req.params;
@@ -2501,7 +2327,7 @@ class ProfileController {
   /**
    * Toggle notifications for a saved search
    */
-  async toggleSearchNotifications(req, res, next) {
+  async toggleSearchNotifications(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { searchId } = req.params;

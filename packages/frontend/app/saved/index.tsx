@@ -23,6 +23,7 @@ import { colors } from '@/styles/colors';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useOxy } from '@oxyhq/services';
+import { useSavedNotesMutation } from '@/hooks/useSavedNotes';
 
 import { Ionicons } from '@expo/vector-icons';
 
@@ -77,6 +78,7 @@ export default function SavedPropertiesScreen() {
   const { oxyServices, activeSessionId } = useOxy();
   const queryClient = useQueryClient();
   const bottomSheetContext = useContext(BottomSheetContext);
+  const { mutateAsync: updateNotesMutate } = useSavedNotesMutation();
 
   // Use the new Zustand-based favorites system
   const { toggleFavorite, clearError: clearFavoritesError } = useFavorites();
@@ -98,11 +100,13 @@ export default function SavedPropertiesScreen() {
     gcTime: 1000 * 60 * 10,
   });
 
-  const savedProperties: SavedPropertyWithUI[] = savedPropertiesData?.properties || [];
-  const folders = foldersData?.folders || [];
+  const savedProperties: SavedPropertyWithUI[] = useMemo(
+    () => savedPropertiesData?.properties || [],
+    [savedPropertiesData?.properties],
+  );
+  const folders = useMemo(() => foldersData?.folders || [], [foldersData?.folders]);
 
   const [savedProfiles, setSavedProfiles] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Local state
@@ -301,27 +305,17 @@ export default function SavedPropertiesScreen() {
             bottomSheetContext?.closeBottomSheet();
           }}
           onSave={async (notes: string) => {
-            if (!oxyServices || !activeSessionId) return;
-
             try {
-              await savedPropertyService.updateNotes(
-                propertyId,
-                notes,
-                oxyServices,
-                activeSessionId,
-              );
-
-              // Invalidate the saved properties query to refresh the data
-              await queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
+              await updateNotesMutate({ propertyId, notes });
             } catch (error) {
               console.error('Failed to update notes:', error);
-              throw error; // Re-throw to let the bottom sheet handle the error
+              throw error;
             }
           }}
         />,
       );
     },
-    [bottomSheetContext, oxyServices, activeSessionId, queryClient],
+    [bottomSheetContext, updateNotesMutate],
   );
 
   const handlePropertyPress = useCallback(

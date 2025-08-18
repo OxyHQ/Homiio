@@ -123,7 +123,7 @@ export function SavedFolderItem({
                             ))}
                         </View>
                     ) : (
-                        <IconComponent name={icon} size={20} color={color} />
+                        <Text style={{ fontSize: 14, fontWeight: '500', color: color }}>{icon}</Text>
                     )}
                 </View>
 

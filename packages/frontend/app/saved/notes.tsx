@@ -28,13 +28,13 @@ import {
 } from '@/utils/notes';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 
-import savedPropertyService from '@/services/savedPropertyService';
-import { useOxy } from '@oxyhq/services';
+import { useSavedNotesMutation } from '@/hooks/useSavedNotes';
+// removed useOxy; mutation hook reads auth internally
 
 export default function NotesScreen() {
   const { t } = useTranslation();
-  const { oxyServices, activeSessionId } = useOxy();
-  const { savedProperties } = useSavedPropertiesContext();
+  const { savedProperties, loadSavedProperties } = useSavedPropertiesContext();
+  const { mutateAsync: updateNotesMutate } = useSavedNotesMutation();
 
   // Flatten notes into a masonry-like grid with property preview
   const flatNotes = useMemo(() => {
@@ -97,15 +97,15 @@ export default function NotesScreen() {
       const currentNotes = parseNotesString(prop.notes as any);
       const updatedNotes = upsertNote(currentNotes, { id: note?.id, text });
       const payload = serializeNotesArray(updatedNotes);
-      if (!oxyServices || !activeSessionId) return;
-      await savedPropertyService.updateNotes(targetPropId, payload, oxyServices, activeSessionId);
+      await updateNotesMutate({ propertyId: targetPropId, notes: payload });
+      await loadSavedProperties();
       setEditing(null);
       setText('');
       Alert.alert(t('common.success'), t('common.update'));
     } catch {
       Alert.alert(t('common.error'), t('saved.errors.updateNotesFailed'));
     }
-  }, [editing, text, oxyServices, activeSessionId, savedProperties, selectedPropertyId, t]);
+  }, [editing, text, updateNotesMutate, savedProperties, selectedPropertyId, t, loadSavedProperties]);
 
   const handleDeleteNote = useCallback(
     async (propertyId: string, noteId: string) => {
@@ -114,29 +114,25 @@ export default function NotesScreen() {
         if (!prop) return;
         const updatedNotes = deleteNote(parseNotesString(prop.notes as any), noteId);
         const payload = serializeNotesArray(updatedNotes);
-        if (!oxyServices || !activeSessionId) return;
-        await savedPropertyService.updateNotes(propertyId, payload, oxyServices, activeSessionId);
+        await updateNotesMutate({ propertyId, notes: payload });
+        await loadSavedProperties();
         Alert.alert(t('common.success'), t('common.update'));
       } catch {
         Alert.alert(t('common.error'), t('saved.errors.updateNotesFailed'));
       }
     },
-    [savedProperties, oxyServices, activeSessionId, t],
+    [savedProperties, updateNotesMutate, t, loadSavedProperties],
   );
 
   const persistNotes = useCallback(
     async (propertyId: string, mutator: (arr: PropertyNote[]) => PropertyNote[]) => {
       const prop = savedProperties.find((p) => (p._id || p.id) === propertyId);
-      if (!prop || !oxyServices || !activeSessionId) return;
+      if (!prop) return;
       const updated = mutator(parseNotesString(prop.notes as any));
-      await savedPropertyService.updateNotes(
-        propertyId,
-        serializeNotesArray(updated),
-        oxyServices,
-        activeSessionId,
-      );
+      await updateNotesMutate({ propertyId, notes: serializeNotesArray(updated) });
+      await loadSavedProperties();
     },
-    [savedProperties, oxyServices, activeSessionId],
+    [savedProperties, updateNotesMutate, loadSavedProperties],
   );
 
   const handleToggleArchive = useCallback(

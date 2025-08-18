@@ -69,7 +69,7 @@ export function EditNotesBottomSheet({
   };
 
   return (
-    <BottomSheetView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <ThemedText style={styles.title}>Edit Notes</ThemedText>
@@ -123,13 +123,12 @@ export function EditNotesBottomSheet({
           {isSaving ? 'Saving...' : 'Save Notes'}
         </Button>
       </View>
-    </BottomSheetView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     padding: 20,
   },
   header: {
@@ -154,7 +153,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   notesSection: {
-    flex: 1,
     marginBottom: 20,
   },
   notesLabel: {
