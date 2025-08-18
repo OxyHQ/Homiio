@@ -6,7 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/colors';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useProfile } from '@/hooks/useProfile';
+import { useCreateProfileMutation } from '@/hooks/query/useProfiles';
+import { ProfileType as SharedProfileType, type CreateProfileData } from '@/services/profileService';
 import { toast } from 'sonner';
 
 // Type assertion for Ionicons compatibility with React 19
@@ -15,9 +16,9 @@ const IconComponent = Ionicons as any;
 type ProfileType = 'agency' | 'business' | 'cooperative';
 
 export default function ProfileCreateScreen() {
-  const { t } = useTranslation();
+  useTranslation();
   const router = useRouter();
-  const { createProfile, isLoading } = useProfile();
+  const { mutateAsync: createProfile, isPending: isCreatingMut } = useCreateProfileMutation();
   const [isCreating, setIsCreating] = useState(false);
   const [selectedType, setSelectedType] = useState<ProfileType | null>(null);
   const [formData, setFormData] = useState({
@@ -63,44 +64,79 @@ export default function ProfileCreateScreen() {
 
     setIsCreating(true);
     try {
-      const profileData = {
-        profileType: selectedType,
+      const toSharedType = (t: ProfileType): SharedProfileType =>
+        ({
+          agency: SharedProfileType.AGENCY,
+          business: SharedProfileType.BUSINESS,
+          cooperative: SharedProfileType.COOPERATIVE,
+        } as const)[t];
+
+      const profileData: any = {
+        profileType: toSharedType(selectedType),
         data: {},
-      };
+      } satisfies Partial<CreateProfileData> as any;
 
       // Add type-specific data
       if (selectedType === 'agency') {
+        // Validate required fields
+        if (!formData.businessType) {
+          toast.error('Please select a business type.');
+          return;
+        }
+
+        const yearEstablished = formData.businessDetails.yearEstablished
+          ? parseInt(formData.businessDetails.yearEstablished)
+          : undefined;
+        const employeeCount = formData.businessDetails.employeeCount || undefined;
+
         profileData.data = {
           businessType: formData.businessType,
           description: formData.description,
           businessDetails: {
-            ...formData.businessDetails,
-            yearEstablished: formData.businessDetails.yearEstablished
-              ? parseInt(formData.businessDetails.yearEstablished)
-              : undefined,
+            licenseNumber: formData.businessDetails.licenseNumber || undefined,
+            taxId: formData.businessDetails.taxId || undefined,
+            yearEstablished,
+            employeeCount,
+            specialties: formData.businessDetails.specialties,
           },
           legalCompanyName: formData.legalCompanyName,
         };
       } else if (selectedType === 'business') {
+        // Validate required fields
+        if (!formData.businessType) {
+          toast.error('Please select a business type.');
+          return;
+        }
+
+        const yearEstablished = formData.businessDetails.yearEstablished
+          ? parseInt(formData.businessDetails.yearEstablished)
+          : undefined;
+        const employeeCount = formData.businessDetails.employeeCount || undefined;
+
         profileData.data = {
           businessType: formData.businessType,
           description: formData.description,
           businessDetails: {
-            ...formData.businessDetails,
-            yearEstablished: formData.businessDetails.yearEstablished
-              ? parseInt(formData.businessDetails.yearEstablished)
-              : undefined,
+            licenseNumber: formData.businessDetails.licenseNumber || undefined,
+            taxId: formData.businessDetails.taxId || undefined,
+            yearEstablished,
+            employeeCount,
+            specialties: formData.businessDetails.specialties,
           },
           legalCompanyName: formData.legalCompanyName,
         };
       } else if (selectedType === 'cooperative') {
+        if (!formData.legalName) {
+          toast.error('Please enter a legal name for the cooperative.');
+          return;
+        }
         profileData.data = {
           legalName: formData.legalName,
           description: formData.description,
         };
       }
 
-      await createProfile(profileData);
+  await createProfile(profileData as CreateProfileData);
       toast.success(
         `${profileTypes.find((p) => p.type === selectedType)?.title} created successfully!`,
       );
@@ -137,9 +173,9 @@ export default function ProfileCreateScreen() {
         <TouchableOpacity
           onPress={handleCreateProfile}
           style={[styles.createButton, !selectedType && styles.createButtonDisabled]}
-          disabled={!selectedType || isCreating}
+          disabled={!selectedType || isCreating || isCreatingMut}
         >
-          {isCreating ? (
+          {isCreating || isCreatingMut ? (
             <IconComponent name="refresh" size={20} color="#fff" />
           ) : (
             <ThemedText style={styles.createButtonText}>Create</ThemedText>

@@ -9,28 +9,19 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useTranslation } from 'react-i18next';
+// import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/colors';
-import { useRouter } from 'expo-router';
+// import { useRouter } from 'expo-router';
 import { TrustScore } from '@/components/TrustScore';
 import { Header } from '@/components/Header';
-import { UpdateProfileData } from '@/services/profileService';
+import { UpdateProfileData, EmploymentStatus, LeaseDuration, PriceUnit, BusinessType, ReferenceRelationship, ReasonForLeaving, ProfileVisibility } from '@/services/profileService';
 import { storeData, getData } from '@/utils/storage';
-import { useOxy } from '@oxyhq/services';
-import { useProfileStore } from '@/store/profileStore';
+import { usePrimaryProfileQuery, useUpdateProfileMutation } from '@/hooks/query/useProfiles';
 
 export default function ProfileEditScreen() {
-  const { t } = useTranslation();
-  const router = useRouter();
-  const { oxyServices, activeSessionId } = useOxy();
-
-  // Use Zustand store to get profile data
-  const {
-    primaryProfile: activeProfile,
-    isLoading: profileLoading,
-    updateProfile,
-  } = useProfileStore();
+  const { data: activeProfile, isLoading: profileLoading } = usePrimaryProfileQuery();
+  const { mutateAsync: updateProfile } = useUpdateProfileMutation();
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [activeSection, setActiveSection] = useState('personal');
@@ -255,6 +246,74 @@ export default function ProfileEditScreen() {
     }[]
   >([]);
 
+  // String literal union aliases to avoid capturing state types in callbacks
+  type EmploymentStatusStr =
+    | 'employed'
+    | 'self_employed'
+    | 'student'
+    | 'retired'
+    | 'unemployed'
+    | 'other';
+  type LeaseDurationStr = 'monthly' | '3_months' | '6_months' | 'yearly' | 'flexible';
+  type AgencyBusinessTypeStr =
+    | 'real_estate_agency'
+    | 'property_management'
+    | 'brokerage'
+    | 'developer'
+    | 'other';
+  type BusinessBusinessTypeStr =
+    | 'small_business'
+    | 'startup'
+    | 'freelancer'
+    | 'consultant'
+    | 'other';
+  type AgencyEmployeeCountStr = '1-10' | '11-50' | '51-200' | '200+';
+  type BusinessEmployeeCountStr = '1-5' | '6-10' | '11-25' | '26+';
+
+  // Helpers to coerce enums safely when reading existing profile values
+  const toEmploymentStatus = useCallback((val?: any): EmploymentStatusStr => {
+    const allowed = [
+      'employed',
+      'self_employed',
+      'student',
+      'retired',
+      'unemployed',
+      'other',
+    ] as const;
+    return allowed.includes(val) ? (val as any) : 'employed';
+  }, []);
+
+  const toLeaseDuration = useCallback((val?: any): LeaseDurationStr => {
+    const allowed = ['monthly', '3_months', '6_months', 'yearly', 'flexible'] as const;
+    return allowed.includes(val) ? (val as any) : 'yearly';
+  }, []);
+
+  const toAgencyBusinessType = useCallback((val?: any): AgencyBusinessTypeStr => {
+    const allowed = [
+      'real_estate_agency',
+      'property_management',
+      'brokerage',
+      'developer',
+      'other',
+    ] as const;
+    return allowed.includes(val) ? (val as any) : 'real_estate_agency';
+  }, []);
+
+  const toBusinessBusinessType = useCallback((val?: any): BusinessBusinessTypeStr => {
+    const allowed = ['small_business', 'startup', 'freelancer', 'consultant', 'other'] as const;
+    return allowed.includes(val) ? (val as any) : 'startup';
+  }, []);
+
+  const toAgencyEmployeeCount = useCallback((val?: any): AgencyEmployeeCountStr => {
+    const allowed = ['1-10', '11-50', '51-200', '200+'] as const;
+    return allowed.includes(val) ? (val as any) : '1-10';
+  }, []);
+
+  const toBusinessEmployeeCount = useCallback((val?: any): BusinessEmployeeCountStr => {
+    const allowed = ['1-5', '6-10', '11-25', '26+'] as const;
+    return allowed.includes(val) ? (val as any) : '1-5';
+  }, []);
+
   // Update form state when profile data loads
   useEffect(() => {
     // Skip if form is already initialized
@@ -291,16 +350,16 @@ export default function ProfileEditScreen() {
       console.log('ProfileEditScreen: personalInfo from profile:', profile?.personalInfo);
 
       // Update personal info
-      const newPersonalInfo = {
+      const newPersonalInfo: typeof personalInfo = {
         bio: profile?.personalInfo?.bio || '',
         occupation: profile?.personalInfo?.occupation || '',
         employer: profile?.personalInfo?.employer || '',
         annualIncome: profile?.personalInfo?.annualIncome?.toString() || '',
-        employmentStatus: profile?.personalInfo?.employmentStatus || 'employed',
+        employmentStatus: toEmploymentStatus(profile?.personalInfo?.employmentStatus),
         moveInDate: profile?.personalInfo?.moveInDate
           ? new Date(profile.personalInfo.moveInDate).toISOString().split('T')[0]
           : '',
-        leaseDuration: profile?.personalInfo?.leaseDuration || 'yearly',
+        leaseDuration: toLeaseDuration(profile?.personalInfo?.leaseDuration),
       };
 
       console.log('ProfileEditScreen: Setting personalInfo to:', newPersonalInfo);
@@ -356,21 +415,21 @@ export default function ProfileEditScreen() {
       setReferences(newReferences);
 
       // Update rental history
-      const newRentalHistory =
-        profile?.rentalHistory?.map((history) => ({
+      const newRentalHistory: typeof rentalHistory =
+        (profile?.rentalHistory?.map((history) => ({
           address: history.address,
           startDate: new Date(history.startDate).toISOString().split('T')[0],
           endDate: history.endDate
             ? new Date(history.endDate).toISOString().split('T')[0]
             : undefined,
           monthlyRent: history.monthlyRent?.toString() || undefined,
-          reasonForLeaving: history.reasonForLeaving || 'lease_ended',
+          reasonForLeaving: (history.reasonForLeaving as any) || 'lease_ended',
           landlordContact: {
             name: history.landlordContact?.name || '',
             phone: history.landlordContact?.phone || '',
             email: history.landlordContact?.email || '',
           },
-        })) || [];
+        })) as any) || [];
 
       console.log('ProfileEditScreen: Setting rentalHistory to:', newRentalHistory);
       setRentalHistory(newRentalHistory);
@@ -383,14 +442,14 @@ export default function ProfileEditScreen() {
       console.log('ProfileEditScreen: Updating agency form state with profile data:', profile);
       // Defensive: ensure all fields and nested fields are set with defaults if missing
       setAgencyInfo({
-        businessType: profile?.businessType || 'real_estate_agency',
+        businessType: toAgencyBusinessType(profile?.businessType),
         legalCompanyName: profile?.legalCompanyName || '',
         description: profile?.description || '',
         businessDetails: {
           licenseNumber: profile?.businessDetails?.licenseNumber || '',
           taxId: profile?.businessDetails?.taxId || '',
           yearEstablished: profile?.businessDetails?.yearEstablished?.toString() || '',
-          employeeCount: profile?.businessDetails?.employeeCount || '1-10',
+          employeeCount: toAgencyEmployeeCount(profile?.businessDetails?.employeeCount),
           specialties: profile?.businessDetails?.specialties || [],
         },
         verification: {
@@ -427,14 +486,14 @@ export default function ProfileEditScreen() {
       console.log('ProfileEditScreen: Updating business form state with profile data:', profile);
       // Defensive: ensure all fields and nested fields are set with defaults if missing
       setBusinessInfo({
-        businessType: profile?.businessType || 'startup',
+        businessType: toBusinessBusinessType(profile?.businessType),
         legalCompanyName: profile?.legalCompanyName || '',
         description: profile?.description || '',
         businessDetails: {
           licenseNumber: profile?.businessDetails?.licenseNumber || '',
           taxId: profile?.businessDetails?.taxId || '',
           yearEstablished: profile?.businessDetails?.yearEstablished?.toString() || '',
-          employeeCount: profile?.businessDetails?.employeeCount || '1-5',
+          employeeCount: toBusinessEmployeeCount(profile?.businessDetails?.employeeCount),
           industry: profile?.businessDetails?.industry || '',
           specialties: profile?.businessDetails?.specialties || [],
         },
@@ -482,7 +541,17 @@ export default function ProfileEditScreen() {
       );
       setIsFormInitialized(true);
     }
-  }, [activeProfile, profileType, isFormInitialized]);
+  }, [
+    activeProfile,
+    profileType,
+    isFormInitialized,
+    toEmploymentStatus,
+    toLeaseDuration,
+    toAgencyBusinessType,
+    toAgencyEmployeeCount,
+    toBusinessBusinessType,
+    toBusinessEmployeeCount,
+  ]);
 
   // Memoize trust score data to prevent unnecessary re-renders
   const trustScoreData = useMemo(() => {
@@ -518,61 +587,144 @@ export default function ProfileEditScreen() {
         throw new Error('Profile ID not found');
       }
 
-      let updateData: UpdateProfileData = {};
+  let updateData: any = {};
 
       if (profileType === 'personal') {
         updateData = {
           personalProfile: {
             personalInfo: {
-              ...personalInfo,
+              bio: personalInfo.bio || undefined,
+              occupation: personalInfo.occupation || undefined,
+              employer: personalInfo.employer || undefined,
               annualIncome: personalInfo.annualIncome
                 ? parseInt(personalInfo.annualIncome)
                 : undefined,
+              employmentStatus: (
+                {
+                  employed: EmploymentStatus.EMPLOYED,
+                  self_employed: EmploymentStatus.SELF_EMPLOYED,
+                  student: EmploymentStatus.STUDENT,
+                  retired: EmploymentStatus.RETIRED,
+                  unemployed: EmploymentStatus.UNEMPLOYED,
+                  other: EmploymentStatus.OTHER,
+                } as const
+              )[personalInfo.employmentStatus],
               moveInDate: personalInfo.moveInDate || undefined,
+              leaseDuration: (
+                {
+                  monthly: LeaseDuration.MONTHLY,
+                  '3_months': LeaseDuration.THREE_MONTHS,
+                  '6_months': LeaseDuration.SIX_MONTHS,
+                  yearly: LeaseDuration.YEARLY,
+                  flexible: LeaseDuration.FLEXIBLE,
+                } as const
+              )[personalInfo.leaseDuration],
             },
             preferences: {
-              ...preferences,
+              propertyTypes: preferences.propertyTypes,
               maxRent: preferences.maxRent ? parseInt(preferences.maxRent) : undefined,
+              priceUnit: (
+                {
+                  day: PriceUnit.DAY,
+                  night: PriceUnit.NIGHT,
+                  week: PriceUnit.WEEK,
+                  month: PriceUnit.MONTH,
+                  year: PriceUnit.YEAR,
+                } as const
+              )[preferences.priceUnit],
               minBedrooms: preferences.minBedrooms ? parseInt(preferences.minBedrooms) : undefined,
               minBathrooms: preferences.minBathrooms
                 ? parseInt(preferences.minBathrooms)
                 : undefined,
+              preferredAmenities: preferences.preferredAmenities,
+              petFriendly: preferences.petFriendly,
+              smokingAllowed: preferences.smokingAllowed,
+              furnished: preferences.furnished,
+              parkingRequired: preferences.parkingRequired,
+              accessibility: preferences.accessibility,
             },
             references: references
               .filter((ref) => ref.name.trim())
               .map((ref) => ({
                 name: ref.name,
-                relationship: ref.relationship,
-                phone: ref.phone,
-                email: ref.email,
+                relationship: (
+                  {
+                    landlord: ReferenceRelationship.LANDLORD,
+                    employer: ReferenceRelationship.EMPLOYER,
+                    personal: ReferenceRelationship.PERSONAL,
+                    other: ReferenceRelationship.OTHER,
+                  } as const
+                )[ref.relationship],
+                phone: ref.phone || undefined,
+                email: ref.email || undefined,
               })),
             rentalHistory: rentalHistory
               .filter((history) => history.address.trim())
               .map((history) => ({
                 address: history.address,
                 startDate: history.startDate,
-                endDate: history.endDate,
+                endDate: history.endDate || undefined,
                 monthlyRent: history.monthlyRent ? parseInt(history.monthlyRent) : undefined,
-                reasonForLeaving: history.reasonForLeaving,
+                reasonForLeaving: history.reasonForLeaving
+                  ? (
+                      {
+                        lease_ended: ReasonForLeaving.LEASE_ENDED,
+                        bought_home: ReasonForLeaving.BOUGHT_HOME,
+                        job_relocation: ReasonForLeaving.JOB_RELOCATION,
+                        family_reasons: ReasonForLeaving.FAMILY_REASONS,
+                        upgrade: ReasonForLeaving.UPGRADE,
+                        other: ReasonForLeaving.OTHER,
+                      } as const
+                    )[history.reasonForLeaving]
+                  : undefined,
                 landlordContact: {
-                  name: history.landlordContact.name,
-                  phone: history.landlordContact.phone,
-                  email: history.landlordContact.email,
+                  name: history.landlordContact.name || undefined,
+                  phone: history.landlordContact.phone || undefined,
+                  email: history.landlordContact.email || undefined,
                 },
               })),
-            settings,
+            settings: {
+              notifications: { ...settings.notifications },
+              privacy: {
+                profileVisibility: (
+                  {
+                    public: ProfileVisibility.PUBLIC,
+                    private: ProfileVisibility.PRIVATE,
+                    contacts_only: ProfileVisibility.CONTACTS_ONLY,
+                  } as const
+                )[settings.privacy.profileVisibility],
+                showContactInfo: settings.privacy.showContactInfo,
+                showIncome: settings.privacy.showIncome,
+                showRentalHistory: settings.privacy.showRentalHistory,
+                showReferences: settings.privacy.showReferences,
+              },
+              language: settings.language,
+              timezone: settings.timezone,
+              currency: settings.currency,
+            },
           },
         };
       } else if (profileType === 'agency') {
         updateData = {
           agencyProfile: {
-            businessType: agencyInfo.businessType,
+            businessType:
+              ({
+                real_estate_agency: BusinessType.REAL_ESTATE_AGENCY,
+                property_management: BusinessType.PROPERTY_MANAGEMENT,
+                brokerage: BusinessType.BROKERAGE,
+                developer: BusinessType.DEVELOPER,
+                other: BusinessType.OTHER,
+              } as const)[agencyInfo.businessType],
             description: agencyInfo.description,
+            legalCompanyName: agencyInfo.legalCompanyName || undefined,
             businessDetails: {
-              ...agencyInfo.businessDetails,
+              licenseNumber: agencyInfo.businessDetails.licenseNumber || undefined,
+              taxId: agencyInfo.businessDetails.taxId || undefined,
               yearEstablished: agencyInfo.businessDetails.yearEstablished
                 ? parseInt(agencyInfo.businessDetails.yearEstablished)
                 : undefined,
+              employeeCount: agencyInfo.businessDetails.employeeCount,
+              specialties: agencyInfo.businessDetails.specialties,
             },
             verification: agencyInfo.verification,
           },
@@ -580,12 +732,19 @@ export default function ProfileEditScreen() {
       } else if (profileType === 'business') {
         updateData = {
           businessProfile: {
-            businessType: businessInfo.businessType,
+            businessType:
+              ({
+                small_business: BusinessType.SMALL_BUSINESS,
+                startup: BusinessType.STARTUP,
+                freelancer: BusinessType.FREELANCER,
+                consultant: BusinessType.CONSULTANT,
+                other: BusinessType.OTHER,
+              } as const)[businessInfo.businessType],
             description: businessInfo.description,
             legalCompanyName: businessInfo.legalCompanyName,
             businessDetails: {
-              licenseNumber: businessInfo.businessDetails.licenseNumber,
-              taxId: businessInfo.businessDetails.taxId,
+              licenseNumber: businessInfo.businessDetails.licenseNumber || undefined,
+              taxId: businessInfo.businessDetails.taxId || undefined,
               yearEstablished: businessInfo.businessDetails.yearEstablished
                 ? parseInt(businessInfo.businessDetails.yearEstablished)
                 : undefined,
@@ -603,10 +762,10 @@ export default function ProfileEditScreen() {
             legalName: cooperativeInfo.legalName,
             description: cooperativeInfo.description,
           },
-        };
+        } as any;
       }
 
-      await updateProfile(profileId, updateData, oxyServices, activeSessionId);
+      await updateProfile({ profileId, data: updateData as UpdateProfileData });
 
       setHasUnsavedChanges(false);
       Alert.alert('Success', 'Profile updated successfully!');
@@ -628,8 +787,6 @@ export default function ProfileEditScreen() {
     businessInfo,
     cooperativeInfo,
     updateProfile,
-    oxyServices,
-    activeSessionId,
   ]);
 
   // Memoized form update functions to prevent unnecessary re-renders
@@ -769,7 +926,7 @@ export default function ProfileEditScreen() {
   );
 
   const toggleVerification = useCallback(
-    (field: keyof typeof agencyInfo.verification) => {
+    (field: 'businessLicense' | 'insurance' | 'bonding' | 'backgroundCheck') => {
       if (profileType === 'agency') {
         setAgencyInfo((prev) => ({
           ...prev,
@@ -795,16 +952,7 @@ export default function ProfileEditScreen() {
     [profileType],
   );
 
-  // Manual refresh function
-  const handleRefresh = useCallback(async () => {
-    try {
-      console.log('Manually refreshing profile data...');
-      // TODO: Implement profile refresh using Redux action
-      console.log('Profile data refreshed successfully');
-    } catch (error) {
-      console.error('Error refreshing profile data:', error);
-    }
-  }, []);
+  // Manual refresh function removed (unused)
 
   const renderSection = () => {
     if (profileType === 'agency') {

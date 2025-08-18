@@ -16,7 +16,7 @@ import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { toast } from 'sonner';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import { useProfile } from '@/hooks/useProfile';
+import { useActivateProfileMutation, useDeleteProfileMutation, usePrimaryProfileQuery, useUserProfilesQuery } from '@/hooks/query/useProfiles';
 import type { Profile } from '@/services/profileService';
 import { ThemedText } from '@/components/ThemedText';
 
@@ -76,33 +76,24 @@ const webAlert = (
 };
 
 export default function ProfileScreen() {
-  const { t } = useTranslation();
+  useTranslation();
   const router = useRouter();
-  const { user, logout, oxyServices, activeSessionId } = useOxy();
+  const { logout, oxyServices, activeSessionId } = useOxy();
 
   // Use Redux hooks consistently
-  const {
-    allProfiles: profiles,
-    primaryProfile,
-    isLoading,
-    error,
-    loadProfiles,
-    updateProfile,
-    deleteProfile,
-    activateProfile,
-  } = useProfile();
+  const { data: _primaryProfile, isLoading: isLoadingPrimary, error: errorPrimary } = usePrimaryProfileQuery();
+  const { data: profiles = [], isLoading: isLoadingAll, error: errorAll, refetch } = useUserProfilesQuery();
+  const { mutateAsync: activateProfile } = useActivateProfileMutation();
+  const { mutateAsync: _deleteProfile } = useDeleteProfileMutation();
 
   const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
   const [isSwitching, setIsSwitching] = useState(false);
 
-  // Check if user has a primary profile
-  const hasPrimaryProfile = !!primaryProfile;
+  // Check if user has a primary profile (not used directly)
 
   useEffect(() => {
-    if (oxyServices && activeSessionId) {
-      loadProfiles();
-    }
-  }, [oxyServices, activeSessionId, loadProfiles]);
+    // queries auto-run via enabled, but keep hook for dependencies if needed
+  }, [oxyServices, activeSessionId]);
 
   useEffect(() => {
     if (profiles && profiles.length > 0) {
@@ -168,42 +159,7 @@ export default function ProfileScreen() {
     ]);
   };
 
-  const handleProfileDelete = async (profileId: string) => {
-    const profile = profiles?.find((p) => p.id === profileId);
-    if (!profile) return;
-
-    // Prevent deletion of personal profiles
-    if (profile.profileType === 'personal') {
-      toast.info('Personal profiles cannot be deleted as they are linked to your main account');
-      return;
-    }
-
-    const profileName = getProfileDisplayName(profile);
-
-    webAlert(
-      'Delete Profile',
-      `Are you sure you want to delete "${profileName}"? This action cannot be undone.`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteProfile(profileId);
-              toast.success(`Profile "${profileName}" deleted`);
-            } catch (error: any) {
-              console.error('Profile deletion failed:', error);
-              toast.error(error.message || 'Failed to delete profile');
-            }
-          },
-        },
-      ],
-    );
-  };
+  // Delete handler is defined inline where needed in UI
 
   const handleLogout = () => {
     webAlert('Sign Out', 'Are you sure you want to sign out?', [
@@ -228,6 +184,9 @@ export default function ProfileScreen() {
     ]);
   };
 
+  const isLoading = isLoadingPrimary || isLoadingAll;
+  const error = errorPrimary || errorAll;
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
@@ -251,7 +210,7 @@ export default function ProfileScreen() {
           <IconComponent name="alert-circle" size={48} color="#ff4757" />
           <ThemedText style={styles.errorTitle}>Failed to load profiles</ThemedText>
           <ThemedText style={styles.errorMessage}>Please try again later</ThemedText>
-          <TouchableOpacity style={styles.retryButton} onPress={() => loadProfiles()}>
+          <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
             <ThemedText style={styles.retryButtonText}>Retry</ThemedText>
           </TouchableOpacity>
         </View>

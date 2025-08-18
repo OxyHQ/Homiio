@@ -127,16 +127,13 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
       }
 
       // Try to load from API
-      console.log('Store: Fetching conversation from API');
       const response = await authenticatedFetch(`${API_URL}/api/ai/conversations/${conversationId}`);
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Store: API response data:', data);
 
         if (data.success && data.conversation) {
           const apiConversation = data.conversation;
-          console.log('Store: Processing API conversation:', apiConversation);
 
           const formattedConversation: Conversation = {
             id: apiConversation._id || apiConversation.id,
@@ -151,7 +148,6 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             updatedAt: new Date(apiConversation.updatedAt || Date.now()),
           };
 
-          console.log('Store: Formatted conversation:', formattedConversation);
           set({ currentConversation: formattedConversation });
           return formattedConversation;
         } else {
@@ -262,6 +258,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
 
       // Update existing conversation
       console.log('Store: Updating existing conversation with ID:', conversation.id);
+      console.log('Store: Messages to save:', conversation.messages.length);
       const requestBody = {
         title: conversation.title,
         messages: conversation.messages.map((msg) => ({
@@ -270,7 +267,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
           timestamp: msg.timestamp,
         })),
       };
-      console.log('Store: PUT request body:', requestBody);
+      console.log('Store: PUT request body:', JSON.stringify(requestBody, null, 2));
 
       const response = await authenticatedFetch(
         `${API_URL}/api/ai/conversations/${conversation.id}`,
@@ -306,16 +303,18 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
   createConversation: async (title, initialMessage, authenticatedFetch) => {
     try {
       if (authenticatedFetch) {
-        console.log('Store: Creating conversation with title:', title);
+        console.log('Store: Creating conversation with title:', title, 'initialMessage:', initialMessage);
+        const requestBody = {
+          title,
+          initialMessage,
+        };
+        console.log('Store: POST request body:', JSON.stringify(requestBody, null, 2));
         const response = await authenticatedFetch(`${API_URL}/api/ai/conversations`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            title,
-            initialMessage,
-          }),
+          body: JSON.stringify(requestBody),
         });
 
         if (response.ok) {
@@ -323,6 +322,13 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
           console.log('Store: Create conversation API response:', data);
 
           if (data.success && data.conversation && data.conversation._id) {
+            console.log('Store: Received conversation from API:', {
+              id: data.conversation._id,
+              title: data.conversation.title,
+              messageCount: data.conversation.messages?.length || 0,
+              messages: data.conversation.messages
+            });
+            
             const newConversation: Conversation = {
               id: data.conversation._id,
               title: data.conversation.title || title,
@@ -331,7 +337,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
               updatedAt: new Date(data.conversation.updatedAt),
             };
 
-            console.log('Store: Created conversation with ID:', newConversation.id);
+            console.log('Store: Created conversation with ID:', newConversation.id, 'and messages:', newConversation.messages.length);
 
             // Add to conversations list
             const { conversations } = get();

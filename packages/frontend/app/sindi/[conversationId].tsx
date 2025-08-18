@@ -37,8 +37,8 @@ export default function ConversationDetail() {
   const { oxyServices, activeSessionId } = useOxy();
   const router = useRouter();
   const { t } = useTranslation();
-  const { conversationid, message } = useLocalSearchParams<{
-    conversationid: string;
+  const { conversationId, message } = useLocalSearchParams<{
+    conversationId: string;
     message?: string;
   }>();
   const [attachedFile, setAttachedFile] = React.useState<any>(null);
@@ -88,16 +88,29 @@ export default function ConversationDetail() {
 
   // Always call useChat, but only enable it if authenticated
   const isAuthenticated = !!oxyServices && !!activeSessionId;
+
+  // Prepare initial messages from current conversation
+  const initialMessages = React.useMemo(() => {
+    if (currentConversation?.messages && currentConversation.messages.length > 0) {
+      return currentConversation.messages.map((msg) => ({
+        id: msg.id || `msg_${Date.now()}_${Math.random()}`,
+        role: msg.role as 'user' | 'assistant' | 'system',
+        content: msg.content,
+      }));
+    }
+    return [];
+  }, [currentConversation?.messages]);
+
   const { messages, error, handleInputChange, input, handleSubmit, isLoading, setMessages } =
     useChat({
       fetch: authenticatedFetch as unknown as typeof globalThis.fetch,
       api: `${API_URL}/api/ai/stream`,
       onError: (error: any) => console.error(error, 'ERROR'),
       enabled: isAuthenticated,
-      initialMessages: currentConversation?.messages || [],
+      initialMessages: initialMessages,
       body: {
         conversationId:
-          conversationid && !conversationid.startsWith('conv_') ? conversationid : undefined,
+          conversationId && !conversationId.startsWith('conv_') ? conversationId : undefined,
       },
     } as any);
 
@@ -111,45 +124,30 @@ export default function ConversationDetail() {
 
   // Load conversation on mount
   useEffect(() => {
-    if (conversationid && conversationid !== 'undefined' && isAuthenticated) {
-      console.log('Loading conversation with ID:', conversationid);
-
+    if (conversationId && conversationId !== 'undefined' && isAuthenticated) {
       // Check if this is a client-side generated ID (starts with 'conv_')
-      if (conversationid.startsWith('conv_')) {
-        console.log('Client-side conversation ID detected, creating new conversation');
+      if (conversationId.startsWith('conv_')) {
         // This is a client-side ID, we need to create a new conversation
-        // For now, just set an empty conversation state
         return;
       }
 
       // Only try to load from database if it's a valid database ID
-      loadConversation(conversationid, authenticatedFetch)
-        .then((conversation) => {
-          console.log('Loaded conversation:', conversation);
-          if (conversation && conversation.messages.length > 0) {
-            // Set messages in the chat hook
-            setMessages(
-              conversation.messages.map((msg) => ({
-                id: msg.id || `msg_${Date.now()}_${Math.random()}`,
-                role: msg.role,
-                content: msg.content,
-              })),
-            );
-          }
-        })
+      loadConversation(conversationId, authenticatedFetch)
         .catch((error) => {
           console.error('Failed to load conversation:', error);
         });
     }
-  }, [conversationid, isAuthenticated, loadConversation, authenticatedFetch, setMessages]);
+  }, [conversationId, isAuthenticated, loadConversation, authenticatedFetch]);
+
+
 
   // Update conversation when messages change (debounced to prevent infinite loops)
   useEffect(() => {
     if (
       currentConversation &&
       messages.length > 0 &&
-      conversationid &&
-      conversationid !== 'undefined'
+      conversationId &&
+      conversationId !== 'undefined'
     ) {
       const conversationMessages: ConversationMessage[] = messages.map((msg) => ({
         id: msg.id,
@@ -170,8 +168,8 @@ export default function ConversationDetail() {
         );
 
       if (messagesChanged) {
-        console.log('Messages changed, updating conversation:', conversationid);
-        updateConversationMessages(conversationid, conversationMessages);
+        console.log('Messages changed, updating conversation:', conversationId);
+        updateConversationMessages(conversationId, conversationMessages);
 
         // Debounce the save operation
         const timeoutId = setTimeout(() => {
@@ -194,7 +192,7 @@ export default function ConversationDetail() {
             .then((savedConversation) => {
               console.log('Conversation saved successfully:', savedConversation?.id);
               // If the conversation ID changed (from client-generated to database ID), update URL
-              if (savedConversation && savedConversation.id !== conversationid) {
+              if (savedConversation && savedConversation.id !== conversationId) {
                 router.replace(`/sindi/${savedConversation.id}`);
               }
             })
@@ -212,7 +210,7 @@ export default function ConversationDetail() {
   }, [
     messages,
     currentConversation,
-    conversationid,
+    conversationId,
     updateConversationMessages,
     saveConversation,
     authenticatedFetch,

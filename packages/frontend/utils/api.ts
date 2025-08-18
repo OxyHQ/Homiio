@@ -48,6 +48,31 @@ export class ApiError extends Error {
   }
 }
 
+function extractErrorMessage(data: any, status: number): string {
+  if (!data) return `HTTP ${status}`;
+  if (typeof data.message === 'string' && data.message.trim()) return data.message;
+  if (typeof data.error === 'string' && data.error.trim()) return data.error;
+  // Handle common validation/error shapes
+  if (data.error && typeof data.error === 'object') {
+    const err = data.error;
+    // Mongoose ValidationError format
+    if (err.errors && typeof err.errors === 'object') {
+      const details = Object.values(err.errors)
+        .map((e: any) => (typeof e?.message === 'string' ? e.message : ''))
+        .filter(Boolean)
+        .join('; ');
+      if (details) return details;
+    }
+    // Generic object -> try string fields
+    if (typeof err.message === 'string' && err.message.trim()) return err.message;
+  }
+  try {
+    return JSON.stringify(data);
+  } catch {
+    return `HTTP ${status}`;
+  }
+}
+
 /**
  * Standard REST API methods for consistent usage across the app
  */
@@ -102,11 +127,7 @@ export const api = {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new ApiError(
-        data.message || data.error || `HTTP ${response.status}`,
-        response.status,
-        data,
-      );
+      throw new ApiError(extractErrorMessage(data, response.status), response.status, data);
     }
 
     return { data };
@@ -152,11 +173,7 @@ export const api = {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new ApiError(
-        data.message || data.error || `HTTP ${response.status}`,
-        response.status,
-        data,
-      );
+      throw new ApiError(extractErrorMessage(data, response.status), response.status, data);
     }
 
     return { data };
@@ -202,11 +219,7 @@ export const api = {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new ApiError(
-        data.message || data.error || `HTTP ${response.status}`,
-        response.status,
-        data,
-      );
+      throw new ApiError(extractErrorMessage(data, response.status), response.status, data);
     }
 
     return { data };
@@ -250,11 +263,7 @@ export const api = {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new ApiError(
-        data.message || data.error || `HTTP ${response.status}`,
-        response.status,
-        data,
-      );
+      throw new ApiError(extractErrorMessage(data, response.status), response.status, data);
     }
 
     return { data };
@@ -300,11 +309,7 @@ export const api = {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new ApiError(
-        data.message || data.error || `HTTP ${response.status}`,
-        response.status,
-        data,
-      );
+      throw new ApiError(extractErrorMessage(data, response.status), response.status, data);
     }
 
     return { data };
@@ -700,11 +705,11 @@ export const userApi = {
 export function webAlert(
   title: string,
   message: string,
-  buttons?: Array<{
+  buttons?: {
     text: string;
     style?: 'default' | 'cancel' | 'destructive';
     onPress?: () => void;
-  }>,
+  }[],
 ) {
   if (Platform.OS === 'web') {
     if (buttons && buttons.length > 1) {
@@ -732,8 +737,9 @@ export function webAlert(
     }
   } else {
     // On mobile, use React Native Alert
-    const { Alert } = require('react-native');
-    Alert.alert(title, message, buttons);
+    // require is discouraged; import at top-level could cause platform issues.
+    // Use dynamic import with then-able.
+    import('react-native').then(({ Alert }) => Alert.alert(title, message, buttons));
   }
 }
 

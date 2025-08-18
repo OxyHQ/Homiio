@@ -26,10 +26,16 @@ const messageSchema = new mongoose.Schema({
   }],
 }, { _id: true });
 
+// Add validation debugging to message schema
+messageSchema.pre('validate', function(next) {
+  console.log('Message validation - role:', this.role, 'content:', this.content ? this.content.substring(0, 50) : 'undefined');
+  next();
+});
+
 // Conversation Schema for Sindi AI conversations
 const conversationSchema = new mongoose.Schema({
-  // User who owns this conversation
-  oxyUserId: {
+  // Profile who owns this conversation
+  profileId: {
     type: String,
     required: true,
     index: true,
@@ -122,8 +128,8 @@ const conversationSchema = new mongoose.Schema({
 });
 
 // Indexes for performance
-conversationSchema.index({ oxyUserId: 1, createdAt: -1 });
-conversationSchema.index({ oxyUserId: 1, status: 1, updatedAt: -1 });
+conversationSchema.index({ profileId: 1, createdAt: -1 });
+conversationSchema.index({ profileId: 1, status: 1, updatedAt: -1 });
 conversationSchema.index({ 'sharing.expiresAt': 1 }, { expireAfterSeconds: 0 });
 
 // Virtual for message count
@@ -141,6 +147,7 @@ conversationSchema.virtual('lastMessage').get(function() {
 
 // Pre-save middleware to update analytics
 conversationSchema.pre('save', function(next) {
+  console.log('Pre-save middleware - messages count:', this.messages ? this.messages.length : 0);
   if (this.messages) {
     this.analytics.messageCount = this.messages.length;
     this.analytics.lastActivity = new Date();
@@ -160,10 +167,27 @@ conversationSchema.pre('save', function(next) {
   next();
 });
 
+// Post-save middleware to debug
+conversationSchema.post('save', function(doc) {
+  console.log('Post-save middleware - saved conversation messages count:', doc.messages ? doc.messages.length : 0);
+});
+
+// Add validation debugging to conversation schema
+conversationSchema.pre('validate', function(next) {
+  console.log('Conversation validation - messages count:', this.messages ? this.messages.length : 0);
+  if (this.messages && this.messages.length > 0) {
+    console.log('Conversation validation - first message:', {
+      role: this.messages[0].role,
+      content: this.messages[0].content ? this.messages[0].content.substring(0, 50) : 'undefined'
+    });
+  }
+  next();
+});
+
 // Static methods
-conversationSchema.statics.findByOxyUserId = function(oxyUserId, status = 'active') {
+conversationSchema.statics.findByProfileId = function(profileId, status = 'active') {
   return this.find({ 
-    oxyUserId, 
+    profileId, 
     status 
   }).sort({ updatedAt: -1 });
 };
@@ -176,9 +200,9 @@ conversationSchema.statics.findByShareToken = function(shareToken) {
   });
 };
 
-conversationSchema.statics.createConversation = function(oxyUserId, data) {
+conversationSchema.statics.createConversation = function(profileId, data) {
   return this.create({
-    oxyUserId,
+    profileId,
     title: data.title || 'New Conversation',
     topic: data.topic || 'general',
     metadata: {
@@ -192,13 +216,22 @@ conversationSchema.statics.createConversation = function(oxyUserId, data) {
 
 // Instance methods
 conversationSchema.methods.addMessage = function(role, content, attachments = []) {
+  console.log('addMessage called with:', { role, content: content.substring(0, 50), attachmentsCount: attachments.length });
+  console.log('Messages before adding:', this.messages.length);
+  
   this.messages.push({
     role,
     content,
     attachments,
     timestamp: new Date(),
   });
-  return this.save();
+  
+  console.log('Messages after adding:', this.messages.length);
+  console.log('About to save conversation with messages:', this.messages.length);
+  return this.save().then(savedDoc => {
+    console.log('Conversation saved successfully. Messages in saved doc:', savedDoc.messages.length);
+    return savedDoc;
+  });
 };
 
 conversationSchema.methods.generateShareToken = function(expiresInHours = 24) {

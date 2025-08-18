@@ -404,13 +404,8 @@ class ProfileController {
         );
       }
 
-      // Check if profile of this type already exists
-      const existingProfile = await Profile.findByOxyUserIdAndType(oxyUserId, profileType);
-      if (existingProfile) {
-        return res.status(409).json(
-          errorResponse("Profile of this type already exists", "PROFILE_ALREADY_EXISTS")
-        );
-      }
+  // Allow multiple profiles for AGENCY/BUSINESS/COOPERATIVE.
+  // Uniqueness is enforced only for PERSONAL profiles below.
 
       // Special handling for personal profiles - only one allowed per user
       if (profileType === ProfileType.PERSONAL) {
@@ -442,6 +437,23 @@ class ProfileController {
         // Clear cache after creating new profile
         this.clearCachedProfile(oxyUserId, 'active');
         return res.status(201).json(successResponse(profile, "Profile created successfully"));
+      }
+
+      // Normalize payload
+      if (!data || typeof data !== 'object') data = {};
+      if (data && typeof data === 'object' && data.businessDetails && typeof data.businessDetails === 'object') {
+        // Coerce empty strings to undefined by deleting them so enums don't get ''
+        if (data.businessDetails.employeeCount === '') delete data.businessDetails.employeeCount;
+        if (data.businessDetails.yearEstablished === '' || data.businessDetails.yearEstablished === null) delete data.businessDetails.yearEstablished;
+        if (data.businessDetails.licenseNumber === '') delete data.businessDetails.licenseNumber;
+        if (data.businessDetails.taxId === '') delete data.businessDetails.taxId;
+      }
+
+      // For business/agency types, ensure businessType provided
+      if ([ProfileType.AGENCY, ProfileType.BUSINESS].includes(profileType) && !data.businessType) {
+        return res.status(400).json(
+          errorResponse("'businessType' is required for this profile type", "BUSINESS_TYPE_REQUIRED")
+        );
       }
 
       // Check if this is the user's first profile (no active profile exists)
@@ -484,6 +496,7 @@ class ProfileController {
         case ProfileType.AGENCY:
           profileData.agencyProfile = {
             businessType: data.businessType,
+            legalCompanyName: data.legalCompanyName || "",
             description: data.description || "",
             businessDetails: data.businessDetails || {},
             verification: data.verification || {},
