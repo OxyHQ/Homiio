@@ -1,6 +1,15 @@
 import { Request, Response } from 'express';
 import imageUploadService, { UploadedImage } from '../services/imageUploadService';
 
+// Minimal shape for an uploaded file to avoid relying on Express.Multer types
+type UploadedFile = {
+  fieldname?: string;
+  originalname: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+};
+
 export class ImageController {
   async uploadImage(req: Request, res: Response): Promise<void> {
     try {
@@ -81,7 +90,7 @@ export class ImageController {
       }
       console.log('=== CONTROLLER DEBUG END ===');
       
-      if (!req.files || req.files.length === 0) {
+      if (!req.files || (Array.isArray(req.files) && req.files.length === 0)) {
         res.status(400).json({
           success: false,
           message: 'No image files provided',
@@ -89,7 +98,12 @@ export class ImageController {
         return;
       }
 
-      const files = req.files as Express.Multer.File[];
+      // Normalize req.files which can be an array or a field map depending on multer usage
+      const files: UploadedFile[] = Array.isArray(req.files)
+        ? (req.files as unknown as UploadedFile[])
+        : Object.values(req.files as Record<string, UploadedFile[]>)
+            .flat()
+            .filter(Boolean) as UploadedFile[];
       const folder = req.body.folder || 'general';
       const uploadedImages: any[] = [];
 

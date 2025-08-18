@@ -51,11 +51,17 @@ const corsOptions = {
       'http://127.0.0.1:19006'
     ];
     
-    // In development, allow all localhost origins
+    // In development, allow localhost and private LAN IPs (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
     if (config.environment === 'development') {
-      if (origin && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
-        console.log('CORS: Allowing development origin:', origin);
-        return callback(null, true);
+      if (origin) {
+        const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1');
+        const isLan192 = /^http:\/\/192\.168\.[0-9]{1,3}\.[0-9]{1,5}$/.test(origin) || /^http:\/\/192\.168\.[0-9]{1,3}\.[0-9]{1,3}(?::\d+)?$/.test(origin);
+        const isLan10 = /^http:\/\/10\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(?::\d+)?$/.test(origin);
+        const isLan172 = /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.[0-9]{1,3}\.[0-9]{1,3}(?::\d+)?$/.test(origin);
+        if (isLocalhost || isLan192 || isLan10 || isLan172) {
+          console.log('CORS: Allowing development LAN origin:', origin);
+          return callback(null, true);
+        }
       }
     }
     
@@ -126,10 +132,11 @@ app.use((req, res, next) => {
     next();
   } else if (contentType.includes('application/json')) {
     console.log('Applying JSON body parser');
-    bodyParser.json({ limit: '10mb' })(req, res, next);
+    // Allow larger payloads to support inline data URLs for image turns in chat
+    bodyParser.json({ limit: '25mb' })(req, res, next);
   } else if (contentType.includes('application/x-www-form-urlencoded')) {
     console.log('Applying urlencoded body parser');
-    bodyParser.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
+    bodyParser.urlencoded({ extended: true, limit: '25mb' })(req, res, next);
   } else {
     console.log('No specific body parser for content-type:', contentType);
     next();

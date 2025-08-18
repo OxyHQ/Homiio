@@ -10,6 +10,7 @@ import {
   StyleSheet,
   Platform,
   Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOxy } from '@oxyhq/services';
@@ -78,17 +79,12 @@ export default function ConversationDetail() {
     conversationId: string;
     message?: string;
   }>();
-  const [attachedFile, setAttachedFile] = React.useState<any>(null);
-  const lastSyncedHash = React.useRef<string>('');
-  const lastMsgKeyRef = React.useRef<string>('');
 
   // Zustand store
   const {
     currentConversation,
     loading,
     loadConversation,
-    saveConversation,
-    updateConversationMessages,
     generateShareToken,
   } = useConversationStore();
 
@@ -114,13 +110,20 @@ export default function ConversationDetail() {
 
       // Create fetch options without null body
       const { body, ...otherOptions } = options;
+
+      // If sending multipart, let fetch set the boundary header automatically
+      if (typeof FormData !== 'undefined' && body instanceof FormData) {
+        delete headers['Content-Type'];
+      }
       const fetchOptions = {
         ...otherOptions,
         headers,
         ...(body !== null && { body }),
       };
 
-      return expoFetch(url, fetchOptions as any);
+      // On web, use the browser's native fetch to preserve ReadableStream semantics
+      const fetchImpl: typeof globalThis.fetch = Platform.OS === 'web' ? (globalThis.fetch as any) : (expoFetch as any);
+      return fetchImpl(url, fetchOptions as any);
     },
     [oxyServices, activeSessionId],
   );
@@ -131,35 +134,22 @@ export default function ConversationDetail() {
   // Prepare initial messages from current conversation
   const initialMessages = React.useMemo(() => {
     if (currentConversation?.messages && currentConversation.messages.length > 0) {
-      return currentConversation.messages.map((msg) => ({
-        id: msg.id || `msg_${Date.now()}_${Math.random()}`,
-        role: msg.role as 'user' | 'assistant' | 'system',
-        content: msg.content,
-      }));
+      return currentConversation.messages.map((msg, index) => {
+        const ts = (msg as any)?.timestamp
+          ? new Date((msg as any).timestamp).getTime()
+          : index;
+        const stableId = msg.id || `${msg.role}-${ts}-${(msg.content || '').length}`;
+        return {
+          id: String(stableId),
+          role: msg.role as 'user' | 'assistant' | 'system',
+          content: msg.content,
+        };
+      });
     }
     return [];
   }, [currentConversation?.messages]);
 
-  const { messages, error, handleInputChange, input, handleSubmit, isLoading } =
-    useChat({
-      fetch: authenticatedFetch as unknown as typeof globalThis.fetch,
-      api: `${API_URL}/api/ai/stream`,
-      onError: (error: any) => console.error(error, 'ERROR'),
-      enabled: isAuthenticated,
-      initialMessages: initialMessages,
-      body: {
-        conversationId:
-          conversationId && !conversationId.startsWith('conv_') ? conversationId : undefined,
-      },
-    } as any);
-
-  // Auto-scroll to bottom for new messages
-  const scrollViewRef = React.useRef<ScrollView>(null);
-  const scrollToEnd = React.useCallback(() => {
-    try {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    } catch { }
-  }, []);
+  // no-op
 
   // Load conversation on mount
   useEffect(() => {
@@ -179,165 +169,6 @@ export default function ConversationDetail() {
   }, [conversationId, isAuthenticated, loadConversation, authenticatedFetch]);
 
 
-
-  // Update conversation when messages change (debounced, hash-gated; wait for stream to finish)
-  useEffect(() => {
-    if (
-      currentConversation &&
-      messages.length > 0 &&
-      conversationId &&
-      conversationId !== 'undefined'
-    ) {
-      // Avoid syncing mid-stream to prevent rapid re-renders and loops
-      if (isLoading) {
-        return;
-      }
-      const conversationMessages: ConversationMessage[] = messages.map((msg, index) => ({
-        id: msg.id,
-        role: msg.role as 'user' | 'assistant' | 'system',
-        content: msg.content,
-        // Preserve existing timestamps when possible to avoid churn
-        timestamp:
-          (currentConversation?.messages?.[index] as any)?.timestamp
-            ? new Date((currentConversation as any).messages[index].timestamp)
-            : new Date(),
-      }));
-
-      // Hash only role+content so streaming updates are captured, but identical content doesn't loop
-      const newHash = JSON.stringify(
-        conversationMessages.map((m) => [m.role, m.content])
-      );
-
-      if (lastSyncedHash.current === newHash) {
-        // No meaningful change since last sync
-        scrollToEnd();
-        return;
-      }
-
-      // Only update if messages actually changed
-      const currentMessages = currentConversation.messages;
-      const messagesChanged =
-        currentMessages.length !== conversationMessages.length ||
-        conversationMessages.some(
-          (msg, index) =>
-            !currentMessages[index] ||
-            currentMessages[index].content !== msg.content ||
-            currentMessages[index].role !== msg.role,
-        );
-
-      if (messagesChanged) {
-        console.log('Messages changed, updating conversation:', conversationId);
-        updateConversationMessages(conversationId, conversationMessages);
-        lastSyncedHash.current = newHash;
-
-        // Debounce the save operation
-        const timeoutId = setTimeout(() => {
-          const updatedConversation: Conversation = {
-            ...currentConversation,
-            messages: conversationMessages,
-            updatedAt: new Date(),
-            // Update title based on first user message if it's still the default
-            title:
-              currentConversation.title === 'New Conversation' &&
-                messages.length > 0 &&
-                messages[0].role === 'user'
-                ? messages[0].content.substring(0, 50) +
-                (messages[0].content.length > 50 ? '...' : '')
-                : currentConversation.title,
-          };
-
-          console.log('Saving conversation with messages:', updatedConversation.messages.length);
-          saveConversation(updatedConversation, authenticatedFetch as unknown as typeof globalThis.fetch)
-            .then((savedConversation) => {
-              console.log('Conversation saved successfully:', savedConversation?.id);
-              // If the conversation ID changed (from client-generated to database ID), update URL
-              if (savedConversation && savedConversation.id !== conversationId) {
-                router.replace(`/sindi/${savedConversation.id}`);
-              }
-            })
-            .catch((error) => {
-              console.error('Failed to save conversation:', error);
-            });
-        }, 1000); // 1 second debounce
-
-        return () => clearTimeout(timeoutId);
-      }
-    }
-
-    // Always scroll to the latest message
-    scrollToEnd();
-  }, [
-    messages,
-    currentConversation,
-    conversationId,
-    updateConversationMessages,
-    saveConversation,
-    authenticatedFetch,
-    router,
-    scrollToEnd,
-    isLoading,
-  ]); // Watch for actual message changes
-
-  // Auto-scroll when last message changes to avoid using onContentSizeChange (prevents loops on web)
-  useEffect(() => {
-    if (!messages.length) return;
-    const last = messages[messages.length - 1];
-    const key = `${last.id}|${messages.length}`;
-    if (lastMsgKeyRef.current !== key) {
-      lastMsgKeyRef.current = key;
-      // Defer to next frame to avoid layout thrash
-      if (typeof requestAnimationFrame !== 'undefined') {
-        requestAnimationFrame(() => scrollToEnd());
-      } else {
-        setTimeout(() => scrollToEnd(), 0);
-      }
-    }
-  }, [messages, scrollToEnd]);
-
-  // Handle initial message from URL parameter
-  useEffect(() => {
-    if (message && currentConversation && !loading) {
-      // Set the initial message in the input field
-      handleInputChange({
-        target: { value: decodeURIComponent(message) },
-      } as any);
-    }
-  }, [message, currentConversation, loading, handleInputChange]);
-
-  const handleAttachFile = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: '*/*',
-        copyToCacheDirectory: true,
-        multiple: false,
-      });
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setAttachedFile(result.assets[0]);
-      }
-    } catch (e) {
-      console.error('File pick error:', e);
-    }
-  };
-
-  const handleRemoveFile = () => setAttachedFile(null);
-
-  // Wrap the original handleSubmit to include file info
-  const handleSubmitWithFile = React.useCallback(() => {
-    if (attachedFile) {
-      console.log('Sending file:', attachedFile);
-      // TODO: Integrate file upload to backend here
-      setAttachedFile(null);
-    }
-    handleSubmit();
-  }, [attachedFile, handleSubmit]);
-
-  const handleSuggestionPress = React.useCallback(
-    (text: string) => {
-      handleInputChange({ target: { value: text } } as any);
-      setTimeout(() => handleSubmitWithFile(), 0);
-    },
-    [handleInputChange, handleSubmitWithFile],
-  );
 
   // Early return for unauthenticated users
   if (!isAuthenticated) {
@@ -389,30 +220,6 @@ export default function ConversationDetail() {
     );
   }
 
-  if (error)
-    return (
-      <SafeAreaView style={styles.container}>
-        <Header
-          options={{
-            title: t('sindi.conversation.error'),
-            showBackButton: true,
-          }}
-        />
-        <LinearGradient
-          colors={[colors.primaryColor, colors.secondaryLight]}
-          style={styles.errorContainer}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <View style={styles.errorContent}>
-            <IconComponent name="alert-circle" size={48} color="white" />
-            <Text style={styles.errorText}>{t('sindi.errors.connection')}</Text>
-            <Text style={styles.errorSubtext}>{t('sindi.errors.connectionMessage')}</Text>
-          </View>
-        </LinearGradient>
-      </SafeAreaView>
-    );
-
   // Web-specific styles for sticky positioning
   const webStyles =
     Platform.OS === 'web'
@@ -426,7 +233,7 @@ export default function ConversationDetail() {
       : {};
 
   return (
-    <SafeAreaView style={[styles.container, webStyles.container]}>
+    <SafeAreaView style={[styles.container, (webStyles as any).container]}>
       <LinearGradient
         colors={["#ffffff", `${colors.primaryColor}40`]}
         style={styles.backgroundGradient}
@@ -503,6 +310,517 @@ export default function ConversationDetail() {
           ],
         }}
       />
+      <ChatContent
+        key={`${conversationId || 'new'}|${initialMessages.length}`}
+        conversationId={conversationId}
+        currentConversation={currentConversation}
+        isAuthenticated={isAuthenticated}
+        authenticatedFetch={authenticatedFetch as unknown as typeof globalThis.fetch}
+        initialMessages={initialMessages}
+        messageFromUrl={message as string | undefined}
+      />
+    </SafeAreaView>
+  );
+}
+
+// Stable, top-level component to fetch and render property cards from IDs
+const PropertiesFromIds = React.memo(function PropertiesFromIds({ ids }: { ids: string[] }) {
+  const router = useRouter();
+  const { data } = useQuery({
+    queryKey: ['chat-properties', ...ids],
+    enabled: ids.length > 0,
+    queryFn: async () => {
+      const results: any[] = [];
+      for (const id of ids) {
+        try {
+          const p = await propertyService.getPropertyById(id);
+          results.push(p);
+        } catch {
+          // ignore missing/bad ids
+        }
+      }
+      return results;
+    },
+  });
+
+  if (!data || data.length === 0) return null;
+
+  return (
+    <View style={styles.propertyCardsContainer}>
+      {data.map((property: any) => (
+        <PropertyCard
+          key={property._id || property.id}
+          property={property}
+          orientation={'horizontal'}
+          variant={'compact'}
+          onPress={() => router.push(`/properties/${property._id || property.id}`)}
+        />
+      ))}
+    </View>
+  );
+});
+
+// Chat pane that mounts after conversation load and initializes useChat with initial history
+function ChatContent({
+  conversationId,
+  currentConversation,
+  isAuthenticated,
+  authenticatedFetch,
+  initialMessages,
+  messageFromUrl,
+}: {
+  conversationId?: string;
+  currentConversation?: Conversation | null;
+  isAuthenticated: boolean;
+  authenticatedFetch: typeof globalThis.fetch;
+  initialMessages: { id: string; role: 'user' | 'assistant' | 'system'; content: string }[];
+  messageFromUrl?: string;
+}) {
+  const router = useRouter();
+  const { t } = useTranslation();
+  const [attachedFile, setAttachedFile] = React.useState<any>(null);
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [isStreamingFile] = React.useState(false);
+  const [streamingAssistantText] = React.useState('');
+  const lastSyncedHash = React.useRef<string>('');
+  const lastMsgKeyRef = React.useRef<string>('');
+  const scrollViewRef = React.useRef<ScrollView>(null);
+  const scrollToEnd = React.useCallback(() => {
+    try {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    } catch { }
+  }, []);
+
+  const {
+    updateConversationMessages,
+    saveConversation,
+  } = useConversationStore();
+
+  // Hermes-friendly markdown renderer for chat messages
+  const renderInlineSpans = React.useCallback((text: string, baseStyle: any, keyPrefix: string) => {
+    // Handle inline code first: `code`
+    const codeSplit = text.split(/(`[^`]+`)/g);
+    const nodes: React.ReactNode[] = [];
+    codeSplit.forEach((segment, i) => {
+      const codeMatch = segment.match(/^`([^`]+)`$/);
+      if (codeMatch) {
+        nodes.push(
+          <Text key={`${keyPrefix}-code-${i}`} style={[baseStyle, styles.codeInline]}>
+            {codeMatch[1]}
+          </Text>,
+        );
+      } else if (segment) {
+        // Handle markdown links: [text](https://...)
+        const linkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+        let lastIndex = 0;
+        let match: RegExpExecArray | null;
+        while ((match = linkRegex.exec(segment)) !== null) {
+          const [full, label, url] = match;
+          const before = segment.substring(lastIndex, match.index);
+          if (before) nodes.push(
+            <Text key={`${keyPrefix}-txt-${i}-${lastIndex}`} style={baseStyle}>{before}</Text>,
+          );
+          nodes.push(
+            <Text
+              key={`${keyPrefix}-lnk-${i}-${match.index}`}
+              style={[baseStyle, styles.link]}
+              onPress={() => Linking.openURL(url)}
+              suppressHighlighting
+            >
+              {label}
+            </Text>,
+          );
+          lastIndex = match.index + full.length;
+        }
+        const rest = segment.substring(lastIndex);
+        if (rest) nodes.push(
+          <Text key={`${keyPrefix}-rest-${i}-${lastIndex}`} style={baseStyle}>{rest}</Text>,
+        );
+      }
+    });
+    return nodes;
+  }, []);
+
+  const renderMarkdown = React.useCallback((content: string, role: 'user' | 'assistant') => {
+    if (!content) return null;
+    const lines = content.split('\n');
+    const out: React.ReactNode[] = [];
+    const baseTextStyle = [styles.markdownParagraph, role === 'user' ? styles.userText : styles.assistantText];
+
+    let inCodeBlock = false;
+    let codeBuffer: string[] = [];
+  // keep simple code fence support without language highlighting
+
+    const flushCode = (key: string) => {
+      if (codeBuffer.length === 0) return;
+      const codeText = codeBuffer.join('\n');
+      out.push(
+        <View key={`code-${key}`} style={styles.codeBlock}>
+          <Text style={[styles.codeText, role === 'user' ? styles.userText : styles.assistantText]}>
+            {codeText}
+          </Text>
+        </View>,
+      );
+      codeBuffer = [];
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const raw = lines[i] ?? '';
+      const line = raw.replace(/\s+$/, '');
+      const key = `ln-${i}`;
+
+  const fence = line.match(/^```\s*(\w+)?\s*$/);
+      if (fence) {
+        if (!inCodeBlock) {
+          inCodeBlock = true;
+        } else {
+          inCodeBlock = false;
+          flushCode(key);
+        }
+        continue;
+      }
+
+      if (inCodeBlock) {
+        codeBuffer.push(line);
+        continue;
+      }
+
+      const trimmed = line.trim();
+      if (!trimmed) {
+        out.push(<View key={`sp-${key}`} style={{ height: 6 }} />);
+        continue;
+      }
+
+      // Headings
+      if (trimmed.startsWith('# ')) {
+        const text = trimmed.substring(2);
+        out.push(
+          <Text key={key} style={[styles.markdownH1, role === 'user' ? styles.userText : styles.assistantText]}>
+            {text}
+          </Text>,
+        );
+        continue;
+      }
+      if (trimmed.startsWith('## ')) {
+        const text = trimmed.substring(3);
+        out.push(
+          <Text key={key} style={[styles.markdownH2, role === 'user' ? styles.userText : styles.assistantText]}>
+            {text}
+          </Text>,
+        );
+        continue;
+      }
+      if (trimmed.startsWith('### ')) {
+        const text = trimmed.substring(4);
+        out.push(
+          <Text key={key} style={[styles.markdownH3, role === 'user' ? styles.userText : styles.assistantText]}>
+            {text}
+          </Text>,
+        );
+        continue;
+      }
+
+      // Lists
+      const ulMatch = trimmed.match(/^[-*]\s+(.*)$/);
+      const olMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
+      if (ulMatch) {
+        const text = ulMatch[1];
+        out.push(
+          <Text key={key} style={[styles.markdownListItem, role === 'user' ? styles.userText : styles.assistantText]}>
+            • {renderInlineSpans(text, [styles.markdownListItem, role === 'user' ? styles.userText : styles.assistantText], `${key}-li`) as any}
+          </Text>,
+        );
+        continue;
+      }
+      if (olMatch) {
+        const num = olMatch[1];
+        const text = olMatch[2];
+        out.push(
+          <Text key={key} style={[styles.markdownListItem, role === 'user' ? styles.userText : styles.assistantText]}>
+            {num}. {renderInlineSpans(text, [styles.markdownListItem, role === 'user' ? styles.userText : styles.assistantText], `${key}-ol`) as any}
+          </Text>,
+        );
+        continue;
+      }
+
+      // Blockquote
+      if (trimmed.startsWith('> ')) {
+        const text = trimmed.substring(2);
+        out.push(
+          <Text key={key} style={[styles.markdownBlockquote, role === 'user' ? styles.userText : styles.assistantText]}>
+            {renderInlineSpans(text, [styles.markdownBlockquote, role === 'user' ? styles.userText : styles.assistantText], `${key}-bq`) as any}
+          </Text>,
+        );
+        continue;
+      }
+
+      // Paragraph
+      out.push(
+        <Text key={key} style={baseTextStyle as any}>
+          {renderInlineSpans(trimmed, baseTextStyle, `${key}-p`) as any}
+        </Text>,
+      );
+    }
+
+    // If file ends while in code block, flush
+    if (inCodeBlock) flushCode('eof');
+
+    return out;
+  }, [renderInlineSpans]);
+
+  const { messages, error, handleInputChange, input, handleSubmit, isLoading, append } = useChat({
+    fetch: authenticatedFetch,
+    api: `${API_URL}/api/ai/stream`,
+    onError: (error: any) => console.error(error, 'ERROR'),
+    enabled: isAuthenticated,
+    initialMessages,
+    body: {
+      conversationId:
+        conversationId && !conversationId.startsWith('conv_') ? conversationId : undefined,
+    },
+  } as any);
+
+  // Sync messages to store (debounced; hash-gated)
+  useEffect(() => {
+    if (
+      currentConversation &&
+      messages.length > 0 &&
+      conversationId &&
+      conversationId !== 'undefined'
+    ) {
+      if (isLoading) return;
+
+      const conversationMessages: ConversationMessage[] = messages.map((msg, index) => ({
+        id: msg.id,
+        role: msg.role as 'user' | 'assistant' | 'system',
+        content: msg.content,
+        timestamp:
+          (currentConversation?.messages?.[index] as any)?.timestamp
+            ? new Date((currentConversation as any).messages[index].timestamp)
+            : new Date(),
+      }));
+
+      const newHash = JSON.stringify(conversationMessages.map((m) => [m.role, m.content]));
+      if (lastSyncedHash.current === newHash) {
+        scrollToEnd();
+        return;
+      }
+
+      const currentMessages = currentConversation.messages;
+      const messagesChanged =
+        currentMessages.length !== conversationMessages.length ||
+        conversationMessages.some(
+          (msg, index) =>
+            !currentMessages[index] ||
+            currentMessages[index].content !== msg.content ||
+            currentMessages[index].role !== msg.role,
+        );
+
+      if (messagesChanged) {
+        updateConversationMessages(conversationId, conversationMessages);
+        lastSyncedHash.current = newHash;
+
+        const timeoutId = setTimeout(() => {
+          const updatedConversation: Conversation = {
+            ...currentConversation,
+            messages: conversationMessages,
+            updatedAt: new Date(),
+            title:
+              currentConversation.title === 'New Conversation' &&
+                messages.length > 0 &&
+                messages[0].role === 'user'
+                ? messages[0].content.substring(0, 50) + (messages[0].content.length > 50 ? '...' : '')
+                : currentConversation.title,
+          } as Conversation;
+
+          saveConversation(updatedConversation, authenticatedFetch)
+            .then((savedConversation) => {
+              if (savedConversation && savedConversation.id !== conversationId) {
+                router.replace(`/sindi/${savedConversation.id}`);
+              }
+            })
+            .catch((e) => console.error('Failed to save conversation:', e));
+        }, 1000);
+
+        return () => clearTimeout(timeoutId);
+      }
+    }
+
+    scrollToEnd();
+  }, [messages, currentConversation, conversationId, updateConversationMessages, saveConversation, authenticatedFetch, router, scrollToEnd, isLoading]);
+
+  // Auto-scroll on new last message
+  useEffect(() => {
+    if (!messages.length) return;
+    const last = messages[messages.length - 1];
+    const key = `${last.id}|${messages.length}`;
+    if (lastMsgKeyRef.current !== key) {
+      lastMsgKeyRef.current = key;
+      if (typeof requestAnimationFrame !== 'undefined') {
+        requestAnimationFrame(() => scrollToEnd());
+      } else {
+        setTimeout(() => scrollToEnd(), 0);
+      }
+    }
+  }, [messages, scrollToEnd]);
+
+  // Auto-scroll while streaming file analysis
+  useEffect(() => {
+    if (isStreamingFile) {
+      if (typeof requestAnimationFrame !== 'undefined') {
+        requestAnimationFrame(() => scrollToEnd());
+      } else {
+        setTimeout(() => scrollToEnd(), 0);
+      }
+    }
+  }, [isStreamingFile, streamingAssistantText, scrollToEnd]);
+
+  // Seed input from URL param
+  useEffect(() => {
+    if (messageFromUrl && currentConversation) {
+      handleInputChange({ target: { value: decodeURIComponent(messageFromUrl) } } as any);
+    }
+  }, [messageFromUrl, currentConversation, handleInputChange]);
+
+  const handleAttachFile = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setAttachedFile(result.assets[0]);
+      }
+    } catch (e) {
+      console.error('File pick error:', e);
+    }
+  };
+
+  const handleRemoveFile = () => setAttachedFile(null);
+
+  const handleSubmitWithFile = React.useCallback(async () => {
+    try {
+      // If a file is attached, send the file (and optional text) appropriately
+      const trimmed = (input || '').trim();
+      if (attachedFile) {
+        if (isUploading) return; // guard against double submits
+        setIsUploading(true);
+        const asset = attachedFile;
+        const formData = new FormData();
+
+        if (Platform.OS === 'web') {
+          // Fetch the blob from the uri for web
+          const resp = await fetch(asset.uri);
+          const blob = await resp.blob();
+          const file = new File([blob], asset.name || 'upload', {
+            type: asset.mimeType || blob.type || 'application/octet-stream',
+          });
+          formData.append('file', file);
+        } else {
+          formData.append('file', {
+            uri: asset.uri,
+            name: asset.name || 'upload',
+            type: asset.mimeType || 'application/octet-stream',
+          } as any);
+          if (trimmed) {
+            formData.append('text', trimmed);
+          }
+        }
+
+        if (Platform.OS === 'web') {
+          // Unify with chat: embed the image/PDF as a data URL hidden tag; let /api/ai/stream handle multimodal
+          const resp = await fetch(asset.uri);
+          const blob = await resp.blob();
+          const dataUrl = await new Promise<string>((resolve, reject) => {
+            const fr = new FileReader();
+            fr.onerror = () => reject(new Error('Failed to read file'));
+            fr.onload = () => resolve(String(fr.result));
+            fr.readAsDataURL(blob);
+          });
+
+          // Send one user message that includes a visible stub and a hidden data URL tag
+          append({
+            id: `${Date.now()}-user-file`,
+            role: 'user',
+            content: `${trimmed ? `${trimmed}\n\n` : ''}Sent a file: ${asset.name || 'attachment'}\n${(blob.type || asset.mimeType || '').startsWith('application/pdf')
+              ? `<FILE_DATA_URL>${dataUrl}</FILE_DATA_URL>`
+              : `<IMAGE_DATA_URL>${dataUrl}</IMAGE_DATA_URL>`}`,
+          });
+
+          setAttachedFile(null);
+          setIsUploading(false);
+          return;
+        } else {
+          // Native: fall back to JSON endpoint
+          // Optimistically append a user message including any provided text and a file upload stub
+          append({ id: `${Date.now()}-user-file`, role: 'user', content: `${trimmed ? `${trimmed}\n\n` : ''}Sent a file: ${asset.name || 'attachment'}` });
+          const res = await authenticatedFetch(`${API_URL}/api/ai/analyze-file`, {
+            method: 'POST',
+            body: formData as any,
+          });
+
+          if (!res.ok) {
+            const txt = await res.text();
+            throw new Error(txt || 'Failed to analyze file');
+          }
+          const data = await res.json();
+
+          // Append assistant response
+          if (data?.output) {
+            append({ id: `${Date.now()}-assistant-file`, role: 'assistant', content: String(data.output) });
+          }
+
+          setAttachedFile(null);
+          setIsUploading(false);
+          return;
+        }
+      }
+
+      // Fallback to normal text submit
+      handleSubmit();
+    } catch (e: any) {
+      console.error('File upload failed:', e);
+      Alert.alert('Upload failed', e?.message || 'Could not analyze the file.');
+    } finally {
+      if (isUploading) setIsUploading(false);
+    }
+  }, [attachedFile, input, append, authenticatedFetch, handleSubmit, isUploading]);
+
+  const handleSuggestionPress = React.useCallback(
+    (text: string) => {
+      handleInputChange({ target: { value: text } } as any);
+      setTimeout(() => handleSubmitWithFile(), 0);
+    },
+    [handleInputChange, handleSubmitWithFile],
+  );
+
+  const webStyles =
+    Platform.OS === 'web'
+      ? {
+        messagesContainer: { marginTop: 0, marginBottom: 0, flex: 1, overflow: 'auto' } as any,
+        stickyInput: { position: 'sticky', bottom: 0 } as any,
+        messagesContent: { paddingBottom: 100 },
+      }
+      : {} as any;
+
+  return (
+    <>
+      {/* Error banner if chat stream fails */}
+      {error && (
+        <LinearGradient
+          colors={[colors.primaryColor, colors.secondaryLight]}
+          style={styles.errorContainer}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View style={styles.errorContent}>
+            <IconComponent name="alert-circle" size={48} color="white" />
+            <Text style={styles.errorText}>{t('sindi.errors.connection')}</Text>
+            <Text style={styles.errorSubtext}>{t('sindi.errors.connectionMessage')}</Text>
+          </View>
+        </LinearGradient>
+      )}
 
       {/* Messages */}
       <ScrollView
@@ -569,7 +887,6 @@ export default function ConversationDetail() {
                 ]}
               >
                 {(() => {
-                  // Prefer machine-readable block in assistant replies
                   if (m.role === 'assistant' && typeof m.content === 'string') {
                     const startTag = '<PROPERTIES_JSON>';
                     const endTag = '</PROPERTIES_JSON>';
@@ -577,13 +894,10 @@ export default function ConversationDetail() {
                     const endIdx = m.content.indexOf(endTag);
                     let visible = m.content;
                     let idList: string[] | null = null;
-                    const isLatestAssistant =
-                      m.role === 'assistant' && messages[messages.length - 1]?.id === m.id;
+                    const isLatestAssistant = m.role === 'assistant' && messages[messages.length - 1]?.id === m.id;
                     const canHydrateCards = !(isLatestAssistant && isLoading);
                     if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-                      const jsonStr = m.content
-                        .substring(startIdx + startTag.length, endIdx)
-                        .trim();
+                      const jsonStr = m.content.substring(startIdx + startTag.length, endIdx).trim();
                       visible = (m.content.substring(0, startIdx) + m.content.substring(endIdx + endTag.length)).trim();
                       try {
                         const parsed = JSON.parse(jsonStr);
@@ -597,24 +911,14 @@ export default function ConversationDetail() {
                       <>
                         {!!visible && (
                           <View style={{ flexShrink: 1, flexWrap: 'wrap', width: '100%' }}>
-                            <Text
-                              style={[
-                                styles.markdownParagraph,
-                                styles.assistantText,
-                              ]}
-                            >
-                              {visible}
-                            </Text>
+                            {renderMarkdown(visible, 'assistant')}
                           </View>
                         )}
-                        {idList && idList.length > 0 && canHydrateCards && (
-                          <PropertiesFromIds ids={idList} />
-                        )}
+                        {idList && idList.length > 0 && canHydrateCards && <PropertiesFromIds ids={idList} />}
                       </>
                     );
                   }
 
-                  // Legacy system-formatted results support (if ever present)
                   if (m.role === 'system' && m.content.startsWith('PROPERTY SEARCH RESULTS:')) {
                     const lines = m.content.split('\n').filter((line) => line.startsWith('- '));
                     const properties = lines
@@ -650,31 +954,42 @@ export default function ConversationDetail() {
                     );
                   }
 
-                  // Default: render plain content
                   return (
                     <View style={{ flexShrink: 1, flexWrap: 'wrap', width: '100%' }}>
-                      <Text
-                        style={[
-                          styles.markdownParagraph,
-                          m.role === 'user' ? styles.userText : styles.assistantText,
-                        ]}
-                      >
-                        {m.content}
-                      </Text>
+                      {renderMarkdown(
+                        m.role === 'user'
+                          ? ((m.content || '')
+                              .replace(/<IMAGE_DATA_URL>[\s\S]*?<\/IMAGE_DATA_URL>/i, '')
+                              .replace(/<FILE_DATA_URL>[\s\S]*?<\/FILE_DATA_URL>/i, '')
+                              .trim() || m.content)
+                          : m.content,
+                        m.role as 'user' | 'assistant',
+                      )}
                     </View>
                   );
                 })()}
               </View>
-              <Text
-                style={[
-                  styles.messageTime,
-                  m.role === 'user' ? styles.messageTimeUser : styles.messageTimeAssistant,
-                ]}
-              >
+              <Text style={[styles.messageTime, m.role === 'user' ? styles.messageTimeUser : styles.messageTimeAssistant]}>
                 {m.role === 'user' ? t('sindi.chat.you') : t('sindi.name')} • {new Date().toLocaleTimeString()}
               </Text>
             </View>
           ))
+        )}
+
+        {/* Live assistant bubble during file streaming (web) */}
+        {isStreamingFile && (
+          <View
+            style={[styles.messageContainer, styles.assistantMessage]}
+          >
+            <View style={[styles.messageBubble, styles.assistantBubble]}>
+              <View style={{ flexShrink: 1, flexWrap: 'wrap', width: '100%' }}>
+                {renderMarkdown(streamingAssistantText || 'Analyzing file…', 'assistant')}
+              </View>
+            </View>
+            <Text style={[styles.messageTime, styles.messageTimeAssistant]}>
+              {t('sindi.name')} • {new Date().toLocaleTimeString()}
+            </Text>
+          </View>
         )}
       </ScrollView>
 
@@ -699,12 +1014,8 @@ export default function ConversationDetail() {
                 placeholder={t('sindi.chat.placeholder')}
                 placeholderTextColor="#667781"
                 value={input}
-                onChangeText={(text) =>
-                  handleInputChange({
-                    target: { value: text },
-                  } as any)
-                }
-                onSubmitEditing={handleSubmitWithFile}
+                onChangeText={(text) => handleInputChange({ target: { value: text } } as any)}
+                onSubmitEditing={Platform.OS !== 'web' ? handleSubmitWithFile : undefined}
                 onKeyPress={(e: any) => {
                   const key = e?.nativeEvent?.key || e?.key;
                   const shift = e?.nativeEvent?.shiftKey || e?.shiftKey;
@@ -713,7 +1024,7 @@ export default function ConversationDetail() {
                       e.preventDefault?.();
                       e.stopPropagation?.();
                     }
-                    if (!isLoading && input.trim()) {
+                    if (!isLoading && !isUploading && (input.trim() || attachedFile)) {
                       handleSubmitWithFile();
                     }
                   }
@@ -724,60 +1035,26 @@ export default function ConversationDetail() {
                 maxLength={1000}
               />
               <TouchableOpacity
-                style={[styles.sendButtonPlain, !input.trim() && styles.sendButtonDisabledPlain]}
+                style={[
+                  styles.sendButtonPlain,
+                  ((!input.trim() && !attachedFile) || isUploading) && styles.sendButtonDisabledPlain,
+                ]}
                 onPress={handleSubmitWithFile}
-                disabled={!input.trim() || isLoading}
+                disabled={(!input.trim() && !attachedFile) || isLoading || isUploading}
               >
                 <IconComponent
-                  name={isLoading ? 'hourglass' : 'send'}
+                  name={(isLoading || isUploading) ? 'hourglass' : 'send'}
                   size={20}
-                  color={input.trim() ? colors.primaryColor : '#99a2a7'}
+                  color={(input.trim() || attachedFile) ? colors.primaryColor : '#99a2a7'}
                 />
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </View>
-    </SafeAreaView>
+    </>
   );
 }
-
-// Stable, top-level component to fetch and render property cards from IDs
-const PropertiesFromIds = React.memo(function PropertiesFromIds({ ids }: { ids: string[] }) {
-  const router = useRouter();
-  const { data } = useQuery({
-    queryKey: ['chat-properties', ...ids],
-    enabled: ids.length > 0,
-    queryFn: async () => {
-      const results: any[] = [];
-      for (const id of ids) {
-        try {
-          const p = await propertyService.getPropertyById(id);
-          results.push(p);
-        } catch {
-          // ignore missing/bad ids
-        }
-      }
-      return results;
-    },
-  });
-
-  if (!data || data.length === 0) return null;
-
-  return (
-    <View style={styles.propertyCardsContainer}>
-      {data.map((property: any) => (
-        <PropertyCard
-          key={property._id || property.id}
-          property={property}
-          orientation={'horizontal'}
-          variant={'compact'}
-          onPress={() => router.push(`/properties/${property._id || property.id}`)}
-        />
-      ))}
-    </View>
-  );
-});
 
 const styles = StyleSheet.create({
   container: {
@@ -981,11 +1258,70 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 2,
   },
+  markdownH1: {
+    fontSize: 20,
+    fontWeight: '700',
+    lineHeight: 26,
+    marginTop: 8,
+    marginBottom: 6,
+  },
+  markdownH2: {
+    fontSize: 18,
+    fontWeight: '600',
+    lineHeight: 24,
+    marginTop: 8,
+    marginBottom: 6,
+  },
+  markdownH3: {
+    fontSize: 16,
+    fontWeight: '600',
+    lineHeight: 22,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  markdownListItem: {
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 2,
+  },
+  markdownBlockquote: {
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 6,
+    borderLeftWidth: 3,
+    borderLeftColor: '#e9edef',
+    paddingLeft: 8,
+    fontStyle: 'italic',
+  },
   userText: {
     color: 'white',
   },
   assistantText: {
     color: '#111b21',
+  },
+  link: {
+    textDecorationLine: 'underline',
+    color: '#1b72e8',
+  },
+  codeInline: {
+    fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
+    backgroundColor: 'rgba(0,0,0,0.06)',
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  codeBlock: {
+    backgroundColor: '#f6f8fa',
+    borderWidth: 1,
+    borderColor: '#e9edef',
+    borderRadius: 8,
+    padding: 8,
+    marginVertical: 6,
+  },
+  codeText: {
+    fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
+    fontSize: 13,
+    lineHeight: 18,
   },
   propertyCardsContainer: {
     marginVertical: 12,

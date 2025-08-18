@@ -1,301 +1,72 @@
 /**
- * AI Routes — streaming, search, conversations
+ * AI Routes — streaming, search, conversations (refactor)
  */
 
 import express, { Request, Response } from 'express';
-import { PassThrough } from 'stream';
+import mongoose from 'mongoose';
+import multer from 'multer';
 import { streamText } from 'ai';
 import { openai } from '@ai-sdk/openai';
-// CJS model exports
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+
+// CJS model exports (mantengo CJS si tus modelos están así)
 const Profile = require('../models/schemas/ProfileSchema');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const Conversation = require('../models/schemas/ConversationSchema');
-import mongoose from 'mongoose';
 
-type ChatMessage = { role: 'system' | 'user' | 'assistant' | 'tool'; content: string; timestamp?: Date };
-// Filters are now parsed inside the properties API.
+// -------------------------------
+// Types
+// -------------------------------
+type Role = 'system' | 'user' | 'assistant' | 'tool';
+type ChatMessage = { role: Role; content: string; timestamp?: Date };
 
-const isObjectId = (id: string) => mongoose.Types.ObjectId.isValid(id);
-const getUserId = (req: any) => req.user?.oxyUserId || req.user?._id || req.user?.id;
-const getBaseUrl = () => process.env.INTERNAL_API_BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
+type PropertyFilters = Partial<{
+  type: string;
+  minRent: number;
+  maxRent: number;
+  city: string;
+  state: string;
+  bedrooms: number;
+  bathrooms: number;
+  minBedrooms: number;
+  maxBedrooms: number;
+  minBathrooms: number;
+  maxBathrooms: number;
+  minSquareFootage: number;
+  maxSquareFootage: number;
+  minYearBuilt: number;
+  maxYearBuilt: number;
+  amenities: string[];
+  hasPhotos: boolean;
+  hasImages: boolean; // alias of hasPhotos
+  available: boolean;
+  verified: boolean;
+  eco: boolean;
+  budgetFriendly: boolean;
+  housingType: string;
+  layoutType: string;
+  furnishedStatus: string;
+  petFriendly: boolean;
+  utilitiesIncluded: boolean;
+  parkingType: string;
+  petPolicy: string;
+  leaseTerm: string;
+  priceUnit: string;
+  proximityToTransport: boolean;
+  proximityToSchools: boolean;
+  proximityToShopping: boolean;
+  availableFromBefore: string;
+  availableFromAfter: string;
+}>;
 
-const ok = (res: Response, data: any) => res.json(data);
-const err = (res: Response, code: number, message: string) => res.status(code).json({ error: message });
+// -------------------------------
+// Constants
+// -------------------------------
+const MAX_FILE_MB = 25;
+const IMAGE_MAX_INLINE_MB = 20;
+const DEFAULT_LIST_LIMIT = 10;
+const NEARBY_LIMIT = 12;
+const RESULTS_RETURN_MAX = 5;
 
-const normalize = (s: string) => (s || '').toLowerCase().trim();
-
-export default function aiRouter() {
-  const router = express.Router();
-
-  // ---------- AI Helpers ----------
-
-  // Extract structured property filters using the model (no code keywords or language-specific parsing).
-  async function extractFiltersWithAI(userText: string): Promise<Record<string, any>> {
-    try {
-      const instruction = `You extract structured search filters for rental properties from the user's message.
-Return ONLY a compact JSON object with any of these keys when applicable; omit keys you cannot infer:
-{
-  "type": string,                  // one of: apartment | house | room | studio | shared
-  "minRent": number,               // minimum monthly rent
-  "maxRent": number,               // maximum monthly rent
-  "city": string,                  // city name
-  "state": string,                 // state/region
-  "bedrooms": number,              // integer
-  "bathrooms": number,             // integer
-  "minBedrooms": number,
-  "maxBedrooms": number,
-  "minBathrooms": number,
-  "maxBathrooms": number,
-  "minSquareFootage": number,
-  "maxSquareFootage": number,
-  "minYearBuilt": number,
-  "maxYearBuilt": number,
-  "amenities": string[],          // amenity slugs (e.g., furnished, parking, pet_friendly, balcony, gym, wifi, air_conditioning, washer, dishwasher, elevator)
-  "hasPhotos": boolean,            // true if the user explicitly requires photos
-  "hasImages": boolean,            // alias accepted; same as hasPhotos
-  "available": boolean,            // true if explicitly available now
-  "verified": boolean,             // true if user asks for verified listings
-  "eco": boolean,                  // true if eco-friendly preferred
-  "budgetFriendly": boolean,       // true if user indicates budget/cheap/affordable preference
-  "housingType": string,
-  "layoutType": string,
-  "furnishedStatus": string,
-  "petFriendly": boolean,
-  "utilitiesIncluded": boolean,
-  "parkingType": string,
-  "petPolicy": string,
-  "leaseTerm": string,
-  "priceUnit": string,
-  "proximityToTransport": boolean,
-  "proximityToSchools": boolean,
-  "proximityToShopping": boolean,
-  "availableFromBefore": string,
-  "availableFromAfter": string
-}`.trim();
-
-      const result = await streamText({
-        model: openai('gpt-4o'),
-        temperature: 0,
-        system: instruction,
-        messages: [{ role: 'user', content: String(userText || '') }],
-        maxTokens: 256,
-      });
-      let text = '';
-      for await (const chunk of result.textStream) text += chunk;
-      const trimmed = text.trim();
-      const jsonStart = trimmed.indexOf('{');
-      const jsonEnd = trimmed.lastIndexOf('}');
-      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-        const json = trimmed.slice(jsonStart, jsonEnd + 1);
-        const obj = JSON.parse(json);
-        // Sanitize values
-        const out: Record<string, any> = {};
-        const put = (k: string, v: any) => { if (v !== undefined && v !== null && v !== '' && !(Array.isArray(v) && v.length === 0)) out[k] = v; };
-        if (typeof obj.type === 'string') put('type', obj.type);
-        if (obj.minRent != null && !isNaN(Number(obj.minRent))) put('minRent', Number(obj.minRent));
-        if (obj.maxRent != null && !isNaN(Number(obj.maxRent))) put('maxRent', Number(obj.maxRent));
-        if (typeof obj.city === 'string') put('city', obj.city);
-          if (typeof obj.state === 'string') put('state', obj.state);
-        if (obj.bedrooms != null && !isNaN(Number(obj.bedrooms))) put('bedrooms', Number(obj.bedrooms));
-        if (obj.bathrooms != null && !isNaN(Number(obj.bathrooms))) put('bathrooms', Number(obj.bathrooms));
-          if (obj.minBedrooms != null && !isNaN(Number(obj.minBedrooms))) put('minBedrooms', Number(obj.minBedrooms));
-          if (obj.maxBedrooms != null && !isNaN(Number(obj.maxBedrooms))) put('maxBedrooms', Number(obj.maxBedrooms));
-          if (obj.minBathrooms != null && !isNaN(Number(obj.minBathrooms))) put('minBathrooms', Number(obj.minBathrooms));
-          if (obj.maxBathrooms != null && !isNaN(Number(obj.maxBathrooms))) put('maxBathrooms', Number(obj.maxBathrooms));
-          if (obj.minSquareFootage != null && !isNaN(Number(obj.minSquareFootage))) put('minSquareFootage', Number(obj.minSquareFootage));
-          if (obj.maxSquareFootage != null && !isNaN(Number(obj.maxSquareFootage))) put('maxSquareFootage', Number(obj.maxSquareFootage));
-          if (obj.minYearBuilt != null && !isNaN(Number(obj.minYearBuilt))) put('minYearBuilt', Number(obj.minYearBuilt));
-          if (obj.maxYearBuilt != null && !isNaN(Number(obj.maxYearBuilt))) put('maxYearBuilt', Number(obj.maxYearBuilt));
-        if (Array.isArray(obj.amenities)) put('amenities', obj.amenities.filter((s: any) => typeof s === 'string' && s.trim()).map((s: string) => s.trim()));
-          if (typeof obj.hasPhotos === 'boolean') put('hasPhotos', obj.hasPhotos);
-          if (typeof obj.hasImages === 'boolean') put('hasPhotos', obj.hasImages);
-        if (typeof obj.available === 'boolean') put('available', obj.available);
-        if (typeof obj.verified === 'boolean') put('verified', obj.verified);
-        if (typeof obj.eco === 'boolean') put('eco', obj.eco);
-        if (typeof obj.budgetFriendly === 'boolean') put('budgetFriendly', obj.budgetFriendly);
-        return out;
-      }
-      return {};
-    } catch (e) {
-      return {};
-    }
-  }
-
-  async function generateAITitle(userMessage: string) {
-    try {
-      const result = await streamText({
-        model: openai('gpt-4o'),
-        system:
-          "Generate a concise, descriptive title (≤50 chars) for a tenant-rights chat based on the first user message. Return ONLY the title, no quotes.",
-        messages: [{ role: 'user', content: userMessage }],
-  temperature: 0.3,
-  maxTokens: 24,
-      });
-
-      let title = '';
-      for await (const chunk of result.textStream) title += chunk;
-
-      title = title.trim().replace(/^["']|["']$/g, '');
-      if (title.length > 50) title = `${title.slice(0, 47)}...`;
-      return title && title !== 'New Conversation' ? title : null;
-    } catch (e) {
-      console.error('[AI] title error:', e);
-      return null;
-    }
-  }
-
-  // Web search removed: avoid keyword/language-based heuristics; rely on explicit property API filters only.
-
-  // Note: We removed parsePropertyFilters here. The properties controller now owns query parsing.
-
-  // Explicit user intent detector for property search
-  // (Intentionally removed) No function-based intent detection; the model will decide based on prompt instructions.
-
-  function extractLastPropertyIdsFromMessages(msgs: ChatMessage[]): string[] {
-    const rev = [...msgs].reverse();
-    for (const m of rev) {
-      if (m.role !== 'assistant' || !m.content) continue;
-      const match = m.content.match(/<PROPERTIES_JSON>([\s\S]*?)<\/PROPERTIES_JSON>/i);
-      if (match) {
-        try {
-          const arr = JSON.parse(match[1].trim());
-          if (Array.isArray(arr)) return arr.map(String).filter(Boolean);
-        } catch {}
-      }
-    }
-    return [];
-  }
-
-  async function getPropertyById(id: string) {
-    try {
-      const resp = await fetch(`${getBaseUrl()}/api/properties/${id}`);
-      if (!resp.ok) return null;
-      const data = await resp.json();
-      return data?.data || data || null;
-    } catch {
-      return null;
-    }
-  }
-
-  async function performAppPropertySearch(query: string, priorMessages: ChatMessage[]) {
-    try {
-      // Get previously shown IDs for DB-level exclusion
-      const prevIds = extractLastPropertyIdsFromMessages(priorMessages);
-      // Extract structured filters once for this turn
-      const filters = await extractFiltersWithAI(query);
-
-      // Always compute NEARBY list when possible (anchor on previous shown property)
-      let nearby: any[] = [];
-      if (prevIds.length) {
-        const anchor = await getPropertyById(prevIds[0]);
-        const coords: number[] | null = anchor?.location?.coordinates || null;
-        if (coords && coords.length === 2) {
-          const [longitude, latitude] = coords;
-          const params = new URLSearchParams({ longitude: String(longitude), latitude: String(latitude), maxDistance: '3000', limit: '12' });
-          // Apply extracted filters as URL params
-          if (filters.type) params.set('type', String(filters.type));
-          if (filters.minRent != null) params.set('minRent', String(filters.minRent));
-          if (filters.maxRent != null) params.set('maxRent', String(filters.maxRent));
-          if (filters.bedrooms != null) params.set('bedrooms', String(filters.bedrooms));
-          if (filters.bathrooms != null) params.set('bathrooms', String(filters.bathrooms));
-          if (Array.isArray(filters.amenities) && filters.amenities.length) params.set('amenities', filters.amenities.join(','));
-          if (filters.hasPhotos === true) params.set('hasPhotos', 'true');
-          if (filters.hasImages === true) params.set('hasPhotos', 'true');
-  if (filters.minBedrooms != null) params.set('minBedrooms', String(filters.minBedrooms));
-  if (filters.maxBedrooms != null) params.set('maxBedrooms', String(filters.maxBedrooms));
-  if (filters.minBathrooms != null) params.set('minBathrooms', String(filters.minBathrooms));
-  if (filters.maxBathrooms != null) params.set('maxBathrooms', String(filters.maxBathrooms));
-  if (filters.minSquareFootage != null) params.set('minSquareFootage', String(filters.minSquareFootage));
-  if (filters.maxSquareFootage != null) params.set('maxSquareFootage', String(filters.maxSquareFootage));
-  if (filters.minYearBuilt != null) params.set('minYearBuilt', String(filters.minYearBuilt));
-  if (filters.maxYearBuilt != null) params.set('maxYearBuilt', String(filters.maxYearBuilt));
-          if (filters.verified === true) params.set('verified', 'true');
-          if (filters.eco === true) params.set('eco', 'true');
-          if (filters.available === true) params.set('available', 'true');
-          if (filters.housingType) params.set('housingType', String(filters.housingType));
-          if (filters.layoutType) params.set('layoutType', String(filters.layoutType));
-          if (filters.furnishedStatus) params.set('furnishedStatus', String(filters.furnishedStatus));
-          if (filters.petFriendly != null) params.set('petFriendly', String(filters.petFriendly));
-          if (filters.utilitiesIncluded != null) params.set('utilitiesIncluded', String(filters.utilitiesIncluded));
-          if (filters.parkingType) params.set('parkingType', String(filters.parkingType));
-          if (filters.petPolicy) params.set('petPolicy', String(filters.petPolicy));
-          if (filters.leaseTerm) params.set('leaseTerm', String(filters.leaseTerm));
-          if (filters.priceUnit) params.set('priceUnit', String(filters.priceUnit));
-          if (filters.proximityToTransport != null) params.set('proximityToTransport', String(filters.proximityToTransport));
-          if (filters.proximityToSchools != null) params.set('proximityToSchools', String(filters.proximityToSchools));
-          if (filters.proximityToShopping != null) params.set('proximityToShopping', String(filters.proximityToShopping));
-          if (filters.availableFromBefore) params.set('availableFromBefore', String(filters.availableFromBefore));
-          if (filters.availableFromAfter) params.set('availableFromAfter', String(filters.availableFromAfter));
-          // Note: city is not applied for nearby; it's geo-anchored from previous property
-          if (filters.budgetFriendly === true) params.set('budgetFriendly', 'true');
-          if (prevIds.length) params.set('excludeIds', prevIds.join(','));
-          const resp = await fetch(`${getBaseUrl()}/api/properties/nearby?${params.toString()}`);
-          if (resp.ok) {
-            const data = await resp.json();
-            nearby = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
-          }
-        }
-      }
-
-      // Always compute SEARCH list
-      let search: any[] = [];
-      {
-        const params = new URLSearchParams({ query, limit: '10' });
-        if (filters.type) params.set('type', String(filters.type));
-        if (filters.minRent != null) params.set('minRent', String(filters.minRent));
-        if (filters.maxRent != null) params.set('maxRent', String(filters.maxRent));
-        if (filters.city) params.set('city', String(filters.city));
-  if (filters.state) params.set('state', String(filters.state));
-        if (filters.bedrooms != null) params.set('bedrooms', String(filters.bedrooms));
-        if (filters.bathrooms != null) params.set('bathrooms', String(filters.bathrooms));
-        if (Array.isArray(filters.amenities) && filters.amenities.length) params.set('amenities', filters.amenities.join(','));
-        if (filters.hasPhotos === true) params.set('hasPhotos', 'true');
-        if (filters.verified === true) params.set('verified', 'true');
-  if (filters.eco === true) params.set('eco', 'true');
-        if (filters.available === true) params.set('available', 'true');
-  if (filters.housingType) params.set('housingType', String(filters.housingType));
-  if (filters.layoutType) params.set('layoutType', String(filters.layoutType));
-  if (filters.furnishedStatus) params.set('furnishedStatus', String(filters.furnishedStatus));
-  if (filters.petFriendly != null) params.set('petFriendly', String(filters.petFriendly));
-  if (filters.utilitiesIncluded != null) params.set('utilitiesIncluded', String(filters.utilitiesIncluded));
-  if (filters.parkingType) params.set('parkingType', String(filters.parkingType));
-  if (filters.petPolicy) params.set('petPolicy', String(filters.petPolicy));
-  if (filters.leaseTerm) params.set('leaseTerm', String(filters.leaseTerm));
-  if (filters.priceUnit) params.set('priceUnit', String(filters.priceUnit));
-  if (filters.proximityToTransport != null) params.set('proximityToTransport', String(filters.proximityToTransport));
-  if (filters.proximityToSchools != null) params.set('proximityToSchools', String(filters.proximityToSchools));
-  if (filters.proximityToShopping != null) params.set('proximityToShopping', String(filters.proximityToShopping));
-  if (filters.availableFromBefore) params.set('availableFromBefore', String(filters.availableFromBefore));
-  if (filters.availableFromAfter) params.set('availableFromAfter', String(filters.availableFromAfter));
-  if (filters.minBedrooms != null) params.set('minBedrooms', String(filters.minBedrooms));
-  if (filters.maxBedrooms != null) params.set('maxBedrooms', String(filters.maxBedrooms));
-  if (filters.minBathrooms != null) params.set('minBathrooms', String(filters.minBathrooms));
-  if (filters.maxBathrooms != null) params.set('maxBathrooms', String(filters.maxBathrooms));
-  if (filters.minSquareFootage != null) params.set('minSquareFootage', String(filters.minSquareFootage));
-  if (filters.maxSquareFootage != null) params.set('maxSquareFootage', String(filters.maxSquareFootage));
-  if (filters.minYearBuilt != null) params.set('minYearBuilt', String(filters.minYearBuilt));
-  if (filters.maxYearBuilt != null) params.set('maxYearBuilt', String(filters.maxYearBuilt));
-        if (filters.budgetFriendly === true) params.set('budgetFriendly', 'true');
-        if (prevIds.length) params.set('excludeIds', prevIds.join(','));
-        const resp = await fetch(`${getBaseUrl()}/api/properties/search?${params.toString()}`);
-        if (resp.ok) {
-          const data = await resp.json();
-          search = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
-        }
-      }
-
-      return {
-        nearby: nearby.slice(0, 5),
-        search: search.slice(0, 5),
-      };
-    } catch (e) {
-      console.error('[AI] property search error:', e);
-      return { nearby: [], search: [] };
-    }
-  }
-
-  const SINDI_SYSTEM_PROMPT = `
+const SINDI_SYSTEM_PROMPT = `
 You are Sindi, an AI tenant-rights assistant for Homiio. Be concise, accurate, and pro-tenant.
 - Prioritize tenant rights, fair housing, and current local law.
 - Search Homiio properties first when asked for places to rent; then add rights tips.
@@ -318,135 +89,411 @@ Strict output discipline:
 - Never mention or list any property IDs in normal visible text. Property IDs may appear ONLY inside the <PROPERTIES_JSON> block when conditions are met.
 - Never invent placeholders or any made-up IDs. If you have no <PROPERTIES_HINT_JSON>, do not claim you found properties and do not output IDs.
 - If asked to search but no hint is present, say you didn’t find matching properties yet and ask for preferences (budget, area), and OMIT the <PROPERTIES_JSON> block.
- - You may use details from <PROPERTIES_CONTEXT> (title, location, rent, amenities, etc.) to write a better natural-language answer, but do not reveal or quote the tag itself. Do not print raw IDs or the JSON; only summarize in your own words.
+- You may use details from <PROPERTIES_CONTEXT> (title, location, rent, amenities, etc.) to write a better natural-language answer, but do not reveal or quote the tag itself. Do not print raw IDs or the JSON; only summarize in your own words.
 
 Avoid repetition:
 - Do not include <PROPERTIES_JSON> unless the user explicitly asks to find/show/search listings in the current turn.
 - If the user is asking about rights, leases, or any non-search topic, omit the properties block.
 - When the user asks for "others" or "closest/nearby", prefer properties that were NOT previously shown and select the nearest options first.
-
-Examples:
-- Good (explicit ask):
-  User: "Can you find budget apartments near Raval?"
-  Assistant: "Here are some budget-friendly options near Raval and a few quick tips..."
-
-  <PROPERTIES_JSON>[COPY THE EXACT IDs FROM the appropriate list in <PROPERTIES_HINTS>]</PROPERTIES_JSON>
-
-- Good (follow-up ask): If the user says "Please search for me" and a hint is present this turn, end with the IDs block. No plain-text lists.
-
-- Bad: "Here are the IDs: property123, property456" (Not allowed: visible-text IDs or invented IDs).
 `.trim();
 
-  // ---------- Routes ----------
+// -------------------------------
+/** Utilities */
+// -------------------------------
+const isObjectId = (id: string) => mongoose.Types.ObjectId.isValid(id);
+const getUserId = (req: any) => req.user?.oxyUserId || req.user?._id || req.user?.id;
+const getBaseUrl = () => process.env.INTERNAL_API_BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
 
-  // Streaming chat
+const ok = (res: Response, data: any) => res.json(data);
+const err = (res: Response, code: number, message: string) => res.status(code).json({ error: message });
+
+const sendEmptyStream = async (res: Response) => {
+  const result = streamText({
+    model: openai('gpt-4o'),
+    temperature: 0,
+    system: 'Return an empty response. Do not output any characters.',
+    messages: [{ role: 'user', content: '' }],
+    maxTokens: 1,
+  } as any);
+  (await result).pipeDataStreamToResponse(res);
+};
+
+const setStreamingHeaders = (res: Response) => {
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  (res as any).setTimeout?.(0);
+};
+
+const onGracefulClose = (req: Request, res: Response) => {
+  const onClose = () => {
+    try {
+  (res as any).end?.();
+    } catch {}
+  };
+  req.on('aborted', onClose);
+  res.on('close', onClose);
+};
+
+const parseDataUrl = (dataUrl: string): { mediaType: string; buffer: Buffer } | null => {
+  try {
+    const match = dataUrl.match(/^data:([^;]+);base64,(.*)$/s);
+    if (!match) return null;
+    return { mediaType: match[1].toLowerCase(), buffer: Buffer.from(match[2], 'base64') };
+  } catch {
+    return null;
+  }
+};
+
+const IMAGE_TAG_RE = /<IMAGE_DATA_URL>([\s\S]*?)<\/IMAGE_DATA_URL>/i;
+const FILE_TAG_RE = /<FILE_DATA_URL>([\s\S]*?)<\/FILE_DATA_URL>/i;
+
+const extractLastPropertyIdsFromMessages = (msgs: ChatMessage[]): string[] => {
+  for (const m of [...msgs].reverse()) {
+    if (m.role !== 'assistant' || !m.content) continue;
+    const match = m.content.match(/<PROPERTIES_JSON>([\s\S]*?)<\/PROPERTIES_JSON>/i);
+    if (!match) continue;
+    try {
+      const arr = JSON.parse(match[1].trim());
+      if (Array.isArray(arr)) return arr.map(String).filter(Boolean);
+    } catch {}
+  }
+  return [];
+};
+
+const getPropertyById = async (id: string) => {
+  try {
+    const resp = await fetch(`${getBaseUrl()}/api/properties/${id}`);
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    return data?.data ?? data ?? null;
+  } catch {
+    return null;
+  }
+};
+
+const addIf = (params: URLSearchParams, key: string, value: any) => {
+  if (value === undefined || value === null || value === '') return;
+  params.set(key, String(value));
+};
+
+const addBool = (params: URLSearchParams, key: string, value?: boolean) => {
+  if (typeof value === 'boolean') params.set(key, String(value));
+};
+
+const addArrayCSV = (params: URLSearchParams, key: string, arr?: string[]) => {
+  if (Array.isArray(arr) && arr.length) params.set(key, arr.join(','));
+};
+
+const buildSearchParams = (
+  filters: PropertyFilters,
+  base: { limit?: number; query?: string; excludeIds?: string[] } = {},
+) => {
+  const params = new URLSearchParams();
+  if (base.query) params.set('query', base.query);
+  params.set('limit', String(base.limit ?? DEFAULT_LIST_LIMIT));
+  if (base.excludeIds?.length) params.set('excludeIds', base.excludeIds.join(','));
+
+  addIf(params, 'type', filters.type);
+  addIf(params, 'minRent', filters.minRent);
+  addIf(params, 'maxRent', filters.maxRent);
+  addIf(params, 'city', filters.city);
+  addIf(params, 'state', filters.state);
+  addIf(params, 'bedrooms', filters.bedrooms);
+  addIf(params, 'bathrooms', filters.bathrooms);
+  addArrayCSV(params, 'amenities', filters.amenities);
+  addBool(params, 'hasPhotos', filters.hasPhotos || filters.hasImages);
+  addBool(params, 'verified', filters.verified);
+  addBool(params, 'eco', filters.eco);
+  addBool(params, 'available', filters.available);
+  addIf(params, 'housingType', filters.housingType);
+  addIf(params, 'layoutType', filters.layoutType);
+  addIf(params, 'furnishedStatus', filters.furnishedStatus);
+  addBool(params, 'petFriendly', filters.petFriendly);
+  addBool(params, 'utilitiesIncluded', filters.utilitiesIncluded);
+  addIf(params, 'parkingType', filters.parkingType);
+  addIf(params, 'petPolicy', filters.petPolicy);
+  addIf(params, 'leaseTerm', filters.leaseTerm);
+  addIf(params, 'priceUnit', filters.priceUnit);
+  addBool(params, 'proximityToTransport', filters.proximityToTransport);
+  addBool(params, 'proximityToSchools', filters.proximityToSchools);
+  addBool(params, 'proximityToShopping', filters.proximityToShopping);
+  addIf(params, 'availableFromBefore', filters.availableFromBefore);
+  addIf(params, 'availableFromAfter', filters.availableFromAfter);
+  addIf(params, 'minBedrooms', filters.minBedrooms);
+  addIf(params, 'maxBedrooms', filters.maxBedrooms);
+  addIf(params, 'minBathrooms', filters.minBathrooms);
+  addIf(params, 'maxBathrooms', filters.maxBathrooms);
+  addIf(params, 'minSquareFootage', filters.minSquareFootage);
+  addIf(params, 'maxSquareFootage', filters.maxSquareFootage);
+  addIf(params, 'minYearBuilt', filters.minYearBuilt);
+  addIf(params, 'maxYearBuilt', filters.maxYearBuilt);
+  addBool(params, 'budgetFriendly', filters.budgetFriendly);
+
+  return params;
+};
+
+// -------------------------------
+// AI helpers
+// -------------------------------
+async function generateAITitle(userMessage: string) {
+  try {
+    const result = await streamText({
+      model: openai('gpt-4o'),
+      system:
+        "Generate a concise, descriptive title (≤50 chars) for a tenant-rights chat based on the first user message. Return ONLY the title, no quotes.",
+      messages: [{ role: 'user', content: userMessage }],
+      temperature: 0.3,
+      maxTokens: 24,
+    });
+
+    let title = '';
+    for await (const chunk of result.textStream) title += chunk;
+    title = title.trim().replace(/^["']|["']$/g, '');
+    if (title.length > 50) title = `${title.slice(0, 47)}...`;
+    return title && title !== 'New Conversation' ? title : null;
+  } catch (e) {
+    console.error('[AI] title error:', e);
+    return null;
+  }
+}
+
+async function extractFiltersWithAI(userText: string): Promise<PropertyFilters> {
+  const instruction = `You extract structured search filters for rental properties from the user's message.
+Return ONLY a compact JSON object with the allowed keys; omit unknown/empty fields.`;
+  try {
+    const result = await streamText({
+      model: openai('gpt-4o'),
+      temperature: 0,
+      system: instruction,
+      messages: [{ role: 'user', content: String(userText || '') }],
+      maxTokens: 256,
+    });
+
+    let text = '';
+    for await (const chunk of result.textStream) text += chunk;
+    const trimmed = text.trim();
+    const start = trimmed.indexOf('{');
+    const end = trimmed.lastIndexOf('}');
+    if (start === -1 || end === -1 || end <= start) return {};
+
+    const raw = JSON.parse(trimmed.slice(start, end + 1));
+    const out: PropertyFilters = {};
+
+    const numberish = (v: any) => (v != null && !isNaN(Number(v)) ? Number(v) : undefined);
+    const put = (k: keyof PropertyFilters, v: any) => {
+      const valid = Array.isArray(v) ? v.length > 0 : v !== undefined && v !== null && v !== '';
+      if (valid) (out as any)[k] = v;
+    };
+
+    put('type', typeof raw.type === 'string' ? raw.type : undefined);
+    put('minRent', numberish(raw.minRent));
+    put('maxRent', numberish(raw.maxRent));
+    put('city', typeof raw.city === 'string' ? raw.city : undefined);
+    put('state', typeof raw.state === 'string' ? raw.state : undefined);
+    put('bedrooms', numberish(raw.bedrooms));
+    put('bathrooms', numberish(raw.bathrooms));
+    put('minBedrooms', numberish(raw.minBedrooms));
+    put('maxBedrooms', numberish(raw.maxBedrooms));
+    put('minBathrooms', numberish(raw.minBathrooms));
+    put('maxBathrooms', numberish(raw.maxBathrooms));
+    put('minSquareFootage', numberish(raw.minSquareFootage));
+    put('maxSquareFootage', numberish(raw.maxSquareFootage));
+    put('minYearBuilt', numberish(raw.minYearBuilt));
+    put('maxYearBuilt', numberish(raw.maxYearBuilt));
+    put(
+      'amenities',
+      Array.isArray(raw.amenities) ? raw.amenities.filter((s: any) => typeof s === 'string' && s.trim()).map((s: string) => s.trim()) : undefined,
+    );
+    put('hasPhotos', typeof raw.hasPhotos === 'boolean' ? raw.hasPhotos : undefined);
+    put('hasImages', typeof raw.hasImages === 'boolean' ? raw.hasImages : undefined);
+    put('available', typeof raw.available === 'boolean' ? raw.available : undefined);
+    put('verified', typeof raw.verified === 'boolean' ? raw.verified : undefined);
+    put('eco', typeof raw.eco === 'boolean' ? raw.eco : undefined);
+    put('budgetFriendly', typeof raw.budgetFriendly === 'boolean' ? raw.budgetFriendly : undefined);
+    put('housingType', typeof raw.housingType === 'string' ? raw.housingType : undefined);
+    put('layoutType', typeof raw.layoutType === 'string' ? raw.layoutType : undefined);
+    put('furnishedStatus', typeof raw.furnishedStatus === 'string' ? raw.furnishedStatus : undefined);
+    put('petFriendly', typeof raw.petFriendly === 'boolean' ? raw.petFriendly : undefined);
+    put('utilitiesIncluded', typeof raw.utilitiesIncluded === 'boolean' ? raw.utilitiesIncluded : undefined);
+    put('parkingType', typeof raw.parkingType === 'string' ? raw.parkingType : undefined);
+    put('petPolicy', typeof raw.petPolicy === 'string' ? raw.petPolicy : undefined);
+    put('leaseTerm', typeof raw.leaseTerm === 'string' ? raw.leaseTerm : undefined);
+    put('priceUnit', typeof raw.priceUnit === 'string' ? raw.priceUnit : undefined);
+    put('proximityToTransport', typeof raw.proximityToTransport === 'boolean' ? raw.proximityToTransport : undefined);
+    put('proximityToSchools', typeof raw.proximityToSchools === 'boolean' ? raw.proximityToSchools : undefined);
+    put('proximityToShopping', typeof raw.proximityToShopping === 'boolean' ? raw.proximityToShopping : undefined);
+    put('availableFromBefore', typeof raw.availableFromBefore === 'string' ? raw.availableFromBefore : undefined);
+    put('availableFromAfter', typeof raw.availableFromAfter === 'string' ? raw.availableFromAfter : undefined);
+
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+async function performAppPropertySearch(query: string, priorMessages: ChatMessage[]) {
+  try {
+    const prevIds = extractLastPropertyIdsFromMessages(priorMessages);
+    const filters = await extractFiltersWithAI(query);
+
+    // Nearby (anchor on previous shown property)
+    let nearby: any[] = [];
+    if (prevIds.length) {
+      const anchor = await getPropertyById(prevIds[0]);
+      const coords: number[] | null = anchor?.location?.coordinates || null;
+      if (coords?.length === 2) {
+        const [longitude, latitude] = coords;
+        const params = buildSearchParams(filters, {
+          limit: NEARBY_LIMIT,
+          excludeIds: prevIds,
+        });
+        params.set('longitude', String(longitude));
+        params.set('latitude', String(latitude));
+        params.set('maxDistance', '3000');
+
+        const resp = await fetch(`${getBaseUrl()}/api/properties/nearby?${params.toString()}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          nearby = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+        }
+      }
+    }
+
+    // Search
+    const searchParams = buildSearchParams(filters, {
+      limit: DEFAULT_LIST_LIMIT,
+      query,
+      excludeIds: prevIds,
+    });
+    const resp = await fetch(`${getBaseUrl()}/api/properties/search?${searchParams.toString()}`);
+    const searchData = resp.ok ? await resp.json() : null;
+    const search = Array.isArray(searchData?.data) ? searchData.data : Array.isArray(searchData) ? searchData : [];
+
+    return { nearby: nearby.slice(0, RESULTS_RETURN_MAX), search: search.slice(0, RESULTS_RETURN_MAX) };
+  } catch (e) {
+    console.error('[AI] property search error:', e);
+    return { nearby: [], search: [] };
+  }
+}
+
+const toAmenityFlags = (p: any) => {
+  const out: string[] = [];
+  const has = (...keys: string[]) => keys.some(k => (Array.isArray(p.amenities) ? p.amenities.includes(k) : p[k] || p.features?.[k]));
+  if (has('balcony', 'terrace')) out.push('balcony');
+  if (has('pet_friendly', 'pets', 'petFriendly')) out.push('pet-friendly');
+  if (has('furnished')) out.push('furnished');
+  if (has('parking', 'garage')) out.push('parking');
+  if (has('air_conditioning', 'ac')) out.push('AC');
+  if (has('elevator', 'lift')) out.push('elevator');
+  if (has('washer', 'laundry')) out.push('washer');
+  if (has('dishwasher')) out.push('dishwasher');
+  if (has('wifi', 'internet')) out.push('wifi');
+  if (has('gym', 'fitness')) out.push('gym');
+  return out.slice(0, 8);
+};
+
+const compact = (o: Record<string, any>) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined && v !== null && v !== ''));
+
+// -------------------------------
+// Router
+// -------------------------------
+export default function aiRouter() {
+  const router = express.Router();
+
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: MAX_FILE_MB * 1024 * 1024, files: 1 },
+  });
+
+  // ---------- Streaming chat ----------
   router.post('/stream', async (req: Request, res: Response) => {
     try {
+      setStreamingHeaders(res);
       const { messages = [], conversationId } = (req as any).body as { messages: ChatMessage[]; conversationId?: string };
+
       const userId = getUserId(req);
       if (!userId) return err(res, 401, 'Unauthorized');
 
-      const activeProfile = await (Profile as any).findActiveByOxyUserId(userId);
+      const activeProfile = await Profile.findActiveByOxyUserId(userId);
       if (!activeProfile) return err(res, 404, 'No active profile found');
 
       // Ensure conversation
-      let conversation: any = null;
+      let conversation: any;
       if (conversationId) {
         if (conversationId.startsWith('conv_')) {
-          conversation = new (Conversation as any)({
-            profileId: activeProfile._id.toString(),
-            title: 'New Conversation',
-            messages: [],
-            status: 'active',
-          });
+          conversation = new Conversation({ profileId: activeProfile._id.toString(), title: 'New Conversation', messages: [], status: 'active' });
           await conversation.save();
         } else if (isObjectId(conversationId)) {
-          conversation = await (Conversation as any).findOne({ _id: conversationId, profileId: activeProfile._id.toString() });
+          conversation = await Conversation.findOne({ _id: conversationId, profileId: activeProfile._id.toString() });
         } else {
           return err(res, 400, 'Invalid conversation ID format');
         }
       } else {
-        conversation = new (Conversation as any)({
-          profileId: activeProfile._id.toString(),
-          title: 'New Conversation',
-          messages: [],
-          status: 'active',
-        });
+        conversation = new Conversation({ profileId: activeProfile._id.toString(), title: 'New Conversation', messages: [], status: 'active' });
         await conversation.save();
       }
 
-  const last = messages[messages.length - 1];
-  const propertyResults = await performAppPropertySearch(last?.content || '', messages as ChatMessage[]);
+      const last = messages[messages.length - 1];
+      const lastContent = String(last?.content || '');
+      const isLastTurnUser = last?.role === 'user';
 
+      const tagMatch = lastContent.match(FILE_TAG_RE) || lastContent.match(IMAGE_TAG_RE);
+      const hasInlineFile = !!tagMatch && typeof tagMatch[1] === 'string' && tagMatch[1].startsWith('data:');
+      const cleanedLastContent = hasInlineFile ? lastContent.replace(FILE_TAG_RE, '').replace(IMAGE_TAG_RE, '').trim() : lastContent;
+      const isAttachmentStub = hasInlineFile || /^(sent a file:|attached (image|file):)/i.test(lastContent);
+
+      // If last message is not user, return empty stream for clean client resolution
+      if (!isLastTurnUser) {
+        if (conversationId && conversationId.startsWith('conv_') && conversation?._id) {
+          res.setHeader('X-Conversation-ID', conversation._id.toString());
+        }
+        await sendEmptyStream(res);
+        return;
+      }
+
+      const propertyResults = isAttachmentStub ? { nearby: [], search: [] } : await performAppPropertySearch(lastContent, messages);
+
+      // Build enhanced messages
       const enhanced: ChatMessage[] = [{ role: 'system', content: SINDI_SYSTEM_PROMPT }, ...messages];
 
-  // No external web search hints injected.
-
-  if ((propertyResults?.nearby?.length || 0) || (propertyResults?.search?.length || 0)) {
-        // Provide machine-readable hints for both lists so the model can choose correctly
+      if (!isAttachmentStub && ((propertyResults?.nearby?.length ?? 0) || (propertyResults?.search?.length ?? 0))) {
         const nearbyList: any[] = Array.isArray(propertyResults?.nearby) ? propertyResults.nearby : [];
         const searchList: any[] = Array.isArray(propertyResults?.search) ? propertyResults.search : [];
-        const simplifiedNearby = nearbyList
-          .slice(0, 5)
-          .map((p: any) => p._id?.toString?.() || p.id)
-          .filter(Boolean);
-        const simplifiedSearch = searchList
-          .slice(0, 5)
-          .map((p: any) => p._id?.toString?.() || p.id)
-          .filter(Boolean);
-        enhanced.push({
-          role: 'system',
-          content: `<PROPERTIES_HINTS>${JSON.stringify({ nearby: simplifiedNearby, search: simplifiedSearch })}</PROPERTIES_HINTS>`,
-        });
-        // Provide compact property context for the model (not to be shown to the user verbatim)
-        const clean = (o: Record<string, any>) =>
-          Object.fromEntries(Object.entries(o).filter(([_, v]) => v !== undefined && v !== null && v !== ''));
-        const toAmenityFlags = (p: any) => {
-          const a: string[] = [];
-          const has = (...keys: string[]) => keys.some(k => (Array.isArray(p.amenities) ? p.amenities.includes(k) : p[k] || p.features?.[k]));
-          if (has('balcony', 'terrace')) a.push('balcony');
-          if (has('pet_friendly', 'pets', 'petFriendly')) a.push('pet-friendly');
-          if (has('furnished')) a.push('furnished');
-          if (has('parking', 'garage')) a.push('parking');
-          if (has('air_conditioning', 'ac')) a.push('AC');
-          if (has('elevator', 'lift')) a.push('elevator');
-          if (has('washer', 'laundry')) a.push('washer');
-          if (has('dishwasher')) a.push('dishwasher');
-          if (has('wifi', 'internet')) a.push('wifi');
-          if (has('gym', 'fitness')) a.push('gym');
-          return a.slice(0, 8);
-        };
-        // Merge contexts from both lists, de-dupe by id, and keep a compact set
-        const mergedLists = [...nearbyList.slice(0, 5), ...searchList.slice(0, 5)];
-        const seenIds = new Set<string>();
-        const contexts = mergedLists.filter((p: any) => {
-          const id = p?._id?.toString?.() || p?.id;
-          if (!id || seenIds.has(id)) return false;
-          seenIds.add(id);
-          return true;
-        }).slice(0, 8).map((p: any) =>
-          clean({
-            id: p._id?.toString?.() || p.id,
-            title: p.title,
-            type: p.type,
-            rent: p.rent?.amount ? clean({ amount: p.rent.amount, currency: p.rent.currency }) : undefined,
-            city: p.address?.city,
-            neighborhood: p.address?.neighborhood || p.address?.district,
-            bedrooms: p.bedrooms ?? p.features?.bedrooms,
-            bathrooms: p.bathrooms ?? p.features?.bathrooms,
-            sizeSqm: p.size ?? p.area?.m2 ?? p.areaSqm,
-            amenities: toAmenityFlags(p),
-            availabilityDate: p.availableFrom ?? p.availability?.from,
-            description: (p.description || p.summary || '')
-              ? String(p.description || p.summary).slice(0, 240)
-              : undefined,
-          }),
-        );
-        enhanced.push({
-          role: 'system',
-          content: `<PROPERTIES_CONTEXT>${JSON.stringify(contexts)}</PROPERTIES_CONTEXT>`,
-        });
-        // Reinforce copying behavior conditioned on explicit ask this turn
+
+        const simplifiedNearby = nearbyList.slice(0, RESULTS_RETURN_MAX).map((p: any) => p._id?.toString?.() || p.id).filter(Boolean);
+        const simplifiedSearch = searchList.slice(0, RESULTS_RETURN_MAX).map((p: any) => p._id?.toString?.() || p.id).filter(Boolean);
+
+        enhanced.push({ role: 'system', content: `<PROPERTIES_HINTS>${JSON.stringify({ nearby: simplifiedNearby, search: simplifiedSearch })}</PROPERTIES_HINTS>` });
+
+        const mergedLists = [...nearbyList.slice(0, RESULTS_RETURN_MAX), ...searchList.slice(0, RESULTS_RETURN_MAX)];
+        const seen = new Set<string>();
+        const contexts = mergedLists
+          .filter((p: any) => {
+            const id = p?._id?.toString?.() || p?.id;
+            if (!id || seen.has(id)) return false;
+            seen.add(id);
+            return true;
+          })
+          .slice(0, 8)
+          .map((p: any) =>
+            compact({
+              id: p._id?.toString?.() || p.id,
+              title: p.title,
+              type: p.type,
+              rent: p.rent?.amount ? compact({ amount: p.rent.amount, currency: p.rent.currency }) : undefined,
+              city: p.address?.city,
+              neighborhood: p.address?.neighborhood || p.address?.district,
+              bedrooms: p.bedrooms ?? p.features?.bedrooms,
+              bathrooms: p.bathrooms ?? p.features?.bathrooms,
+              sizeSqm: p.size ?? p.area?.m2 ?? p.areaSqm,
+              amenities: toAmenityFlags(p),
+              availabilityDate: p.availableFrom ?? p.availability?.from,
+              description: (p.description || p.summary) ? String(p.description || p.summary).slice(0, 240) : undefined,
+            }),
+          );
+
+        enhanced.push({ role: 'system', content: `<PROPERTIES_CONTEXT>${JSON.stringify(contexts)}</PROPERTIES_CONTEXT>` });
         enhanced.push({
           role: 'system',
           content:
@@ -454,74 +501,322 @@ Examples:
         });
       }
 
-  const result = streamText({ model: openai('gpt-4o'), temperature: 0.2, messages: enhanced as any });
+      // Choose model path
+      let result: ReturnType<typeof streamText>;
 
-      // Save last user message before streaming
+      if (hasInlineFile) {
+        // Multimodal: image or PDF
+        const parsed = parseDataUrl(tagMatch![1]);
+        const mediaType = parsed?.mediaType || '';
+        const bytes = parsed?.buffer?.byteLength || 0;
+
+        // PDF
+        if (mediaType.startsWith('application/pdf')) {
+          const CONTRACT_SYSTEM =
+            'You are a tenant-friendly contract and lease reviewer. You identify risky clauses, illegal terms (jurisdiction-aware at a high level), fees, early termination, maintenance, deposits, and notice periods. Provide brief, actionable advice and suggest questions to ask a landlord. Be concise.';
+          const prior = (messages as ChatMessage[]).slice(0, -1).map(m => ({ role: m.role, content: m.content }));
+          const filename = 'upload.pdf';
+          const userText = (cleanedLastContent || '').slice(0, 2000) || 'Please review this lease/contract and advise.';
+          try {
+            result = streamText({
+              model: openai('gpt-4o-mini'),
+              temperature: 0.2,
+              messages: [
+                { role: 'system', content: SINDI_SYSTEM_PROMPT },
+                { role: 'system', content: CONTRACT_SYSTEM },
+                ...prior,
+                { role: 'user', content: [{ type: 'text', text: userText }, { type: 'file', data: parsed!.buffer, mediaType: 'application/pdf', filename }] },
+              ],
+              maxTokens: 700,
+            } as any);
+          } catch {
+            // Fallback to text extraction
+            const pdfParse = require('pdf-parse');
+            const parsedText = await pdfParse(parsed!.buffer).then((r: any) => String(r?.text || ''));
+            const clipped = parsedText.slice(0, 120000);
+            result = streamText({
+              model: openai('gpt-4o'),
+              temperature: 0.2,
+              messages: [{ role: 'system', content: SINDI_SYSTEM_PROMPT }, { role: 'system', content: CONTRACT_SYSTEM }, ...prior, { role: 'user', content: `${userText}\n\n${clipped}` }],
+              maxTokens: 700,
+            } as any);
+          }
+        } else if (!mediaType.startsWith('image/')) {
+          // Unsupported
+          result = streamText({
+            model: openai('gpt-4o'),
+            temperature: 0.2,
+            messages: [
+              { role: 'system', content: SINDI_SYSTEM_PROMPT },
+              { role: 'user', content: `I uploaded a ${mediaType || 'file'}; please accept images (png/jpg/webp) or PDFs for analysis.` },
+            ],
+            maxTokens: 120,
+          } as any);
+        } else if (bytes > IMAGE_MAX_INLINE_MB * 1024 * 1024) {
+          result = streamText({
+            model: openai('gpt-4o'),
+            temperature: 0.2,
+            messages: [
+              { role: 'system', content: SINDI_SYSTEM_PROMPT },
+              { role: 'user', content: 'The image appears very large (>20MB). Please compress or send a smaller photo. What should I capture for a clear assessment?' },
+            ],
+            maxTokens: 140,
+          } as any);
+        } else {
+          // Image analysis
+          const prior = (messages as ChatMessage[]).slice(0, -1).map(m => ({ role: m.role, content: m.content }));
+          const promptText =
+            (cleanedLastContent || '').slice(0, 2000) ||
+            'Describe what this image shows that is relevant to a housing issue (e.g., damages, mold, notices). Be concise and helpful to a tenant.';
+          const IMG_SYSTEM =
+            'You analyze tenant-related images (e.g., damages, notices) and produce a brief, actionable summary. Be concise and specific. If the image is unclear, ask for one brief clarification question.';
+
+          result = streamText({
+            model: openai('gpt-4o'),
+            temperature: 0.2,
+            messages: [
+              { role: 'system', content: SINDI_SYSTEM_PROMPT },
+              { role: 'system', content: IMG_SYSTEM },
+              ...prior,
+              { role: 'user', content: [{ type: 'text', text: promptText }, { type: 'image', image: parsed!.buffer }] },
+            ],
+            maxTokens: 512,
+          } as any);
+        }
+      } else if (isAttachmentStub) {
+        result = streamText({
+          model: openai('gpt-4o'),
+          temperature: 0,
+          system: 'Return an empty response. Do not output any characters.',
+          messages: [{ role: 'user', content: '' }],
+          maxTokens: 1,
+        } as any);
+      } else {
+        result = streamText({ model: openai('gpt-4o'), temperature: 0.2, messages: enhanced as any });
+      }
+
+      // Save last user message (strip inline base64)
       const lastUser = messages.at(-1);
       if (conversation && lastUser?.role === 'user' && lastUser?.content) {
         try {
-          await conversation.addMessage('user', lastUser.content);
+          const toSave = hasInlineFile ? cleanedLastContent || 'Sent a file' : lastUser.content;
+          await conversation.addMessage('user', toSave);
         } catch (e) {
           console.error('[AI] save user message error:', e);
         }
       }
 
-      // Capture AI stream to store after send
+    // Capture AI stream for persistence
       let aiResponse = '';
-      const capture = new PassThrough();
-
       (async () => {
         try {
           for await (const chunk of (await result).textStream) aiResponse += chunk;
-          if (conversation && aiResponse.trim()) {
+      // Always save assistant reply if we have one and the last turn was a user message
+      if (isLastTurnUser && conversation && aiResponse.trim()) {
             await conversation.addMessage('assistant', aiResponse.trim());
 
-            // Title after first exchange
             if (conversation.title === 'New Conversation') {
               const firstUser = conversation.messages.find((m: any) => m.role === 'user')?.content;
               if (firstUser) {
                 const title = await generateAITitle(firstUser);
-                if (title) {
-                  conversation.title = title;
-                  await conversation.save();
-                } else {
-                  conversation.title = firstUser.length > 50 ? `${firstUser.slice(0, 47)}...` : firstUser;
-                  await conversation.save();
-                }
+                conversation.title = title || (firstUser.length > 50 ? `${firstUser.slice(0, 47)}...` : firstUser);
+                await conversation.save();
               }
             }
           }
         } catch (e) {
           console.error('[AI] stream capture error:', e);
-        } finally {
-          capture.end();
         }
       })();
 
-      // Include new DB conversation id if client used a temp id
       if (conversationId && conversationId.startsWith('conv_') && conversation?._id) {
         res.setHeader('X-Conversation-ID', conversation._id.toString());
       }
 
-      // Pipe to HTTP response
+      onGracefulClose(req, res);
       (await result).pipeDataStreamToResponse(res);
     } catch (e: any) {
       console.error('[AI] streaming error:', e);
+      if ((res as any).headersSent) {
+        try {
+          (res as any).end?.();
+        } catch {}
+        return;
+      }
       return res.status(500).json({ error: 'Failed to generate streaming response', details: e?.message });
     }
   });
 
-  // Health
+  // ---------- Analyze single uploaded file (JSON response) ----------
+  router.post('/analyze-file', upload.single('file'), async (req: Request, res: Response) => {
+    try {
+      const userId = getUserId(req as any);
+      if (!userId) return err(res, 401, 'Unauthorized');
+
+      const activeProfile = await Profile.findActiveByOxyUserId(userId);
+      if (!activeProfile) return err(res, 404, 'No active profile found');
+
+  const file = (req as any).file as any | undefined;
+      if (!file?.buffer) return err(res, 400, 'file is required (multipart/form-data, key: file)');
+
+      const mediaType = file.mimetype || 'application/octet-stream';
+      const userTextRaw: string = typeof (req as any).body?.text === 'string' ? (req as any).body.text : '';
+      const userText = userTextRaw.trim().slice(0, 2000);
+      const buffer = file.buffer;
+
+      if (mediaType.startsWith('application/pdf')) {
+        const CONTRACT_SYSTEM =
+          'You are a tenant-friendly contract and lease reviewer. Identify risky clauses, illegal terms, fees, early termination, maintenance, deposits, and notice periods. Provide brief, actionable advice and questions to ask a landlord. Be concise.';
+        try {
+          const result = await streamText({
+            model: openai('gpt-4o-mini'),
+            system: CONTRACT_SYSTEM,
+            messages: [
+              { role: 'user', content: [{ type: 'text', text: userText || 'Please review this lease/contract and advise.' }, { type: 'file', data: buffer, mediaType: 'application/pdf', filename: file.originalname || 'upload.pdf' }] },
+            ],
+            maxTokens: 700,
+            temperature: 0.2,
+          } as any);
+          let out = '';
+          for await (const c of result.textStream) out += c;
+          const trimmed = out.trim();
+          const fallback = 'I couldn’t read this PDF. Please share a text version or try an OCR scan, and I’ll review it.';
+          return ok(res, { output: trimmed || fallback, filename: file.originalname, mediaType });
+        } catch {
+          // Fallback with pdf-parse
+          const pdfParse = require('pdf-parse');
+          const parsedText = await pdfParse(buffer).then((r: any) => String(r?.text || ''));
+          const clipped = parsedText.slice(0, 120000);
+          const result = await streamText({
+            model: openai('gpt-4o'),
+            system: CONTRACT_SYSTEM,
+            messages: [{ role: 'user', content: `${userText || 'Please review this lease/contract and advise.'}\n\n${clipped}` }],
+            maxTokens: 700,
+            temperature: 0.2,
+          } as any);
+          let out = '';
+          for await (const c of result.textStream) out += c;
+          const trimmed = out.trim();
+          const fallback = 'I couldn’t read this PDF. Please share a text version or try an OCR scan, and I’ll review it.';
+          return ok(res, { output: trimmed || fallback, filename: file.originalname, mediaType });
+        }
+      }
+
+      if (mediaType.startsWith('image/')) {
+        const promptText =
+          userText ||
+          'Describe what this image shows that is relevant to a housing issue (e.g., damages, mold, notices). Be concise and helpful to a tenant.';
+        const result = await streamText({
+          model: openai('gpt-4o'),
+          system:
+            'You analyze tenant-related images (e.g., damages, notices) and produce a brief, actionable summary. Be concise and specific. If the image is unclear, ask for one brief clarification question.',
+          messages: [{ role: 'user', content: [{ type: 'text', text: promptText }, { type: 'image', image: buffer }] }],
+          maxTokens: 512,
+          temperature: 0.2,
+        } as any);
+        let out = '';
+        for await (const c of result.textStream) out += c;
+        const trimmed = out.trim();
+        const fallback = 'I couldn’t extract clear details from this image. Please try a clearer photo, or describe what you’d like me to look for.';
+        return ok(res, { output: trimmed || fallback, filename: file.originalname, mediaType });
+      }
+
+      return err(res, 415, 'Unsupported media type. Please upload an image (png/jpeg/webp) or a PDF.');
+    } catch (e: any) {
+      console.error('[AI] analyze-file error:', e?.message || e);
+      return err(res, 500, 'internal error');
+    }
+  });
+
+  // ---------- Analyze single uploaded file (stream/SSE) ----------
+  router.post('/analyze-file/stream', upload.single('file'), async (req: Request, res: Response) => {
+    try {
+      setStreamingHeaders(res);
+      if (!res.getHeader('Access-Control-Allow-Origin')) {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+      }
+
+      const userId = getUserId(req as any);
+      if (!userId) return err(res, 401, 'Unauthorized');
+
+      const activeProfile = await Profile.findActiveByOxyUserId(userId);
+      if (!activeProfile) return err(res, 404, 'No active profile found');
+
+  const file = (req as any).file as any | undefined;
+      if (!file?.buffer) return err(res, 400, 'file is required (multipart/form-data, key: file)');
+
+      const mediaType = file.mimetype || 'application/octet-stream';
+      const userTextRaw: string = typeof (req as any).body?.text === 'string' ? (req as any).body.text : '';
+      const userText = userTextRaw.trim().slice(0, 2000);
+      const buffer = file.buffer;
+
+      let result: any;
+
+      if (mediaType.startsWith('application/pdf')) {
+        const CONTRACT_SYSTEM =
+          'You are a tenant-friendly contract and lease reviewer. Identify risky clauses, illegal terms, fees, early termination, maintenance, deposits, and notice periods. Provide brief, actionable advice and questions to ask a landlord. Be concise.';
+        try {
+          result = await streamText({
+            model: openai('gpt-4o-mini'),
+            system: CONTRACT_SYSTEM,
+            messages: [{ role: 'user', content: [{ type: 'text', text: userText || 'Please review this lease/contract and advise.' }, { type: 'file', data: buffer, mediaType: 'application/pdf', filename: file.originalname || 'upload.pdf' }] }],
+            maxTokens: 700,
+            temperature: 0.2,
+          } as any);
+        } catch {
+          const pdfParse = require('pdf-parse');
+          const parsedText = await pdfParse(buffer).then((r: any) => String(r?.text || ''));
+          const clipped = parsedText.slice(0, 120000);
+          result = await streamText({
+            model: openai('gpt-4o'),
+            system: CONTRACT_SYSTEM,
+            messages: [{ role: 'user', content: `${userText || 'Please review this lease/contract and advise.'}\n\n${clipped}` }],
+            maxTokens: 700,
+            temperature: 0.2,
+          } as any);
+        }
+      } else if (mediaType.startsWith('image/')) {
+        const promptText =
+          userText ||
+          'Describe what this image shows that is relevant to a housing issue (e.g., damages, mold, notices). Be concise and helpful to a tenant.';
+        result = await streamText({
+          model: openai('gpt-4o'),
+          system:
+            'You analyze tenant-related images (e.g., damages, notices) and produce a brief, actionable summary. Be concise and specific. If the image is unclear, ask for one brief clarification question.',
+          messages: [{ role: 'user', content: [{ type: 'text', text: promptText }, { type: 'image', image: buffer }] }],
+          maxTokens: 512,
+          temperature: 0.2,
+        } as any);
+      } else {
+        return err(res, 415, 'Unsupported media type. Please upload an image (png/jpeg/webp) or a PDF.');
+      }
+
+      onGracefulClose(req, res);
+      await result.pipeDataStreamToResponse(res);
+    } catch (e: any) {
+      console.error('[AI] analyze-file/stream error:', e?.message || e);
+      if ((res as any).headersSent) {
+        try {
+          (res as any).end?.();
+        } catch {}
+        return;
+      }
+      return err(res, 500, 'internal error');
+    }
+  });
+
+  // ---------- Health ----------
   router.get('/health', (_req, res) =>
     ok(res, {
       status: 'ok',
       service: 'AI Streaming Service',
-      features: ['text-streaming', 'web-search'],
+      features: ['text-streaming', 'image-input', 'pdf-file-input'],
       timestamp: new Date().toISOString(),
     }),
   );
 
-  // Simple (legacy) chat history on user object
+  // ---------- Legacy simple history on user ----------
   router.get('/history', (async (req: any, res) => {
     const user = req.user;
     if (!user) return err(res, 401, 'Unauthorized');
@@ -541,7 +836,7 @@ Examples:
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const profile = await (Profile as any).findOne({ oxyUserId: userId, profileType: 'personal' });
+    const profile = await Profile.findOne({ oxyUserId: userId, profileType: 'personal' });
     if (!profile) return err(res, 404, 'Personal profile not found');
 
     const { userMessage, assistantMessage } = req.body || {};
@@ -558,18 +853,14 @@ Examples:
   }) as any);
 
   // ---------- Conversation CRUD ----------
-
   router.get('/conversations', (async (req: any, res) => {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const activeProfile = await (Profile as any).findActiveByOxyUserId(userId);
+    const activeProfile = await Profile.findActiveByOxyUserId(userId);
     if (!activeProfile) return err(res, 404, 'No active profile found');
 
-    const conversations = await (Conversation as any)
-      .find({ profileId: activeProfile._id.toString() })
-      .sort({ updatedAt: -1 });
-
+    const conversations = await Conversation.find({ profileId: activeProfile._id.toString() }).sort({ updatedAt: -1 });
     const transformed = conversations.map((c: any) => {
       const o = c.toObject({ virtuals: true });
       return {
@@ -592,7 +883,7 @@ Examples:
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const activeProfile = await (Profile as any).findActiveByOxyUserId(userId);
+    const activeProfile = await Profile.findActiveByOxyUserId(userId);
     if (!activeProfile) return err(res, 404, 'No active profile found');
 
     const { title, initialMessage, messages } = req.body || {};
@@ -608,14 +899,10 @@ Examples:
       conversationMessages = [{ role: 'user', content: initialMessage, timestamp: new Date() }];
     }
 
-    const conversation = new (Conversation as any)({
+    const conversation = new Conversation({
       profileId: activeProfile._id.toString(),
       title: title || 'New Conversation',
-      messages: conversationMessages.map(m => ({
-        role: m.role || 'user',
-        content: m.content || '',
-        timestamp: m.timestamp || new Date(),
-      })),
+      messages: conversationMessages.map(m => ({ role: m.role || 'user', content: m.content || '', timestamp: m.timestamp || new Date() })),
       status: 'active',
     });
 
@@ -652,13 +939,10 @@ Examples:
     const conversationId = String(req.params.id || '');
     if (!conversationId || !isObjectId(conversationId)) return err(res, 400, 'Invalid conversation ID');
 
-    const activeProfile = await (Profile as any).findActiveByOxyUserId(userId);
+    const activeProfile = await Profile.findActiveByOxyUserId(userId);
     if (!activeProfile) return err(res, 404, 'No active profile found');
 
-    const conversation = await (Conversation as any).findOne({
-      _id: conversationId,
-      profileId: activeProfile._id.toString(),
-    });
+    const conversation = await Conversation.findOne({ _id: conversationId, profileId: activeProfile._id.toString() });
     if (!conversation) return err(res, 404, 'Conversation not found');
 
     return ok(res, { success: true, conversation });
@@ -668,23 +952,16 @@ Examples:
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const activeProfile = await (Profile as any).findActiveByOxyUserId(userId);
+    const activeProfile = await Profile.findActiveByOxyUserId(userId);
     if (!activeProfile) return err(res, 404, 'No active profile found');
 
     const { title, messages, status } = req.body || {};
-    const conversation = await (Conversation as any).findOne({
-      _id: req.params.id,
-      profileId: activeProfile._id.toString(),
-    });
+    const conversation = await Conversation.findOne({ _id: req.params.id, profileId: activeProfile._id.toString() });
     if (!conversation) return err(res, 404, 'Conversation not found');
 
     if (typeof title === 'string') conversation.title = title;
     if (Array.isArray(messages)) {
-      conversation.messages = messages.map((m: any) => ({
-        role: m.role,
-        content: m.content,
-        timestamp: new Date(m.timestamp || Date.now()),
-      }));
+      conversation.messages = messages.map((m: any) => ({ role: m.role, content: m.content, timestamp: new Date(m.timestamp || Date.now()) }));
     }
     if (typeof status === 'string') conversation.status = status;
 
@@ -696,24 +973,16 @@ Examples:
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const activeProfile = await (Profile as any).findActiveByOxyUserId(userId);
+    const activeProfile = await Profile.findActiveByOxyUserId(userId);
     if (!activeProfile) return err(res, 404, 'No active profile found');
 
     const { role, content, attachments } = req.body || {};
     if (!role || !content) return err(res, 400, 'Role and content are required');
 
-    const conversation = await (Conversation as any).findOne({
-      _id: req.params.id,
-      profileId: activeProfile._id.toString(),
-    });
+    const conversation = await Conversation.findOne({ _id: req.params.id, profileId: activeProfile._id.toString() });
     if (!conversation) return err(res, 404, 'Conversation not found');
 
-    const newMessage = {
-      role,
-      content,
-      timestamp: new Date(),
-      attachments: attachments || [],
-    };
+    const newMessage = { role, content, timestamp: new Date(), attachments: attachments || [] };
     conversation.messages.push(newMessage);
     await conversation.save();
 
@@ -724,13 +993,10 @@ Examples:
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const activeProfile = await (Profile as any).findActiveByOxyUserId(userId);
+    const activeProfile = await Profile.findActiveByOxyUserId(userId);
     if (!activeProfile) return err(res, 404, 'No active profile found');
 
-    const deleted = await (Conversation as any).findOneAndDelete({
-      _id: req.params.id,
-      profileId: activeProfile._id.toString(),
-    });
+    const deleted = await Conversation.findOneAndDelete({ _id: req.params.id, profileId: activeProfile._id.toString() });
     if (!deleted) return err(res, 404, 'Conversation not found');
 
     return ok(res, { success: true, message: 'Conversation deleted' });
@@ -740,13 +1006,10 @@ Examples:
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const activeProfile = await (Profile as any).findActiveByOxyUserId(userId);
+    const activeProfile = await Profile.findActiveByOxyUserId(userId);
     if (!activeProfile) return err(res, 404, 'No active profile found');
 
-    const conversation = await (Conversation as any).findOne({
-      _id: req.params.id,
-      profileId: activeProfile._id.toString(),
-    });
+    const conversation = await Conversation.findOne({ _id: req.params.id, profileId: activeProfile._id.toString() });
     if (!conversation) return err(res, 404, 'Conversation not found');
 
     await conversation.generateShareToken();
