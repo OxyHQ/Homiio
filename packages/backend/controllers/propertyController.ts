@@ -236,8 +236,10 @@ class PropertyController {
         bathrooms,
         amenities,
         available,
+ hasPhotos,
   verified,
   eco,
+  excludeIds,
         sortBy = "createdAt",
         sortOrder = "desc",
         profileId,
@@ -262,6 +264,11 @@ class PropertyController {
       if (amenities) {
         const amenityList = amenities.split(",");
         filters.amenities = { $in: amenityList };
+      }
+
+      // Optional photos filter
+      if (hasPhotos === 'true') {
+        filters['images.0'] = { $exists: true };
       }
 
       // Optional verified/eco filters
@@ -291,6 +298,20 @@ class PropertyController {
       const skip = (pageNumber - 1) * limitNumber;
 
       // Query database (base list)
+      // Apply excludeIds on base filters
+      if (excludeIds) {
+        try {
+          const mongoose = require('mongoose');
+          const list = String(excludeIds)
+            .split(',')
+            .map((s: string) => s.trim())
+            .filter(Boolean)
+            .filter((id: string) => mongoose.Types.ObjectId.isValid(id))
+            .map((id: string) => new mongoose.Types.ObjectId(id));
+          if (list.length) filters._id = { $nin: list };
+        } catch {}
+      }
+
       const [properties, total] = await Promise.all([
         Property.find(filters)
           .sort(sortOptions)
@@ -835,6 +856,7 @@ class PropertyController {
         bathrooms,
         amenities,
         available,
+ hasPhotos,
   verified,
   eco,
   excludeIds,
@@ -884,6 +906,11 @@ class PropertyController {
       if (amenities) {
         const amenityList = String(amenities).split(',').map(a => a.trim());
         andConditions.push({ amenities: { $in: amenityList } });
+      }
+
+      // Filter by photos
+      if (hasPhotos === 'true') {
+        andConditions.push({ 'images.0': { $exists: true } });
       }
 
       // Filter by verified/eco-friendly
@@ -961,13 +988,9 @@ class PropertyController {
       // Utility to run a query with optional text sort
       const runQuery = async (filter: any, useTextSort: boolean) => {
         const q = Property.find(filter).skip(skip).limit(parseInt(limit));
-        if (useTextSort) {
+  if (useTextSort) {
           q.sort({ score: { $meta: 'textScore' } }).select({ score: { $meta: 'textScore' } });
-        } else if (hasGeo) {
-          // Mongoose doesn't support $meta: 'geoNear' sort here without an aggregate geoNear stage
-          // Fallback to createdAt desc to keep stable ordering when geo filter is applied
-          q.sort({ createdAt: -1 });
-        } else {
+  } else {
           q.sort({ createdAt: -1 });
         }
         const [items, count] = await Promise.all([
@@ -1041,6 +1064,7 @@ class PropertyController {
         bathrooms,
         amenities,
         available,
+ hasPhotos,
   verified,
   eco,
   excludeIds,
@@ -1112,6 +1136,7 @@ class PropertyController {
         const amenityList = amenities.split(',').map(a => a.trim());
         searchQuery.amenities = { $in: amenityList };
       }
+  if (hasPhotos === 'true') searchQuery['images.0'] = { $exists: true };
   if (verified === 'true') searchQuery.isVerified = true;
   if (eco === 'true') searchQuery.isEcoFriendly = true;
 
@@ -1159,6 +1184,7 @@ class PropertyController {
         bathrooms,
         amenities,
         available,
+ hasPhotos,
   verified,
   eco,
   excludeIds,
@@ -1226,6 +1252,7 @@ class PropertyController {
         const amenityList = amenities.split(',').map(a => a.trim());
         searchQuery.amenities = { $in: amenityList };
       }
+  if (hasPhotos === 'true') searchQuery['images.0'] = { $exists: true };
   if (verified === 'true') searchQuery.isVerified = true;
   if (eco === 'true') searchQuery.isEcoFriendly = true;
 
@@ -1427,6 +1454,34 @@ class PropertyController {
       res.json(
         successResponse(stats, "Property statistics retrieved successfully"),
       );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Batch: Get multiple properties by IDs
+   * GET /api/properties/by-ids?ids=a,b,c
+   */
+  async getPropertiesByIds(req, res, next) {
+    try {
+      const { ids } = req.query;
+      if (!ids) {
+        return res.status(400).json({ success: false, message: 'ids is required' });
+      }
+      const mongoose = require('mongoose');
+      const list = String(ids)
+        .split(',')
+        .map((s: string) => s.trim())
+        .filter(Boolean)
+        .filter((id: string) => mongoose.Types.ObjectId.isValid(id))
+        .map((id: string) => new mongoose.Types.ObjectId(id));
+      if (!list.length) {
+        return res.json(paginationResponse([], 1, 0, 0, 'No valid IDs provided'));
+      }
+      const docs = await Property.find({ _id: { $in: list }, status: 'active' })
+        .lean();
+      return res.json(successResponse(docs, 'Properties fetched by IDs'));
     } catch (error) {
       next(error);
     }

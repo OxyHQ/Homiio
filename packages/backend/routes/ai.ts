@@ -196,6 +196,19 @@ export default function aiRouter() {
     // misc
     if (/(available now|immediate|urgent)/.test(q)) f.availableNow = true;
     if (/(cheap|affordable|budget|económico|economico)/.test(q)) f.budgetFriendly = true;
+    // photos: support multilingual cues: en/es/ca
+    // examples: 'with photos', 'only with photos', 'que tengan foto', 'con fotos', 'solo con fotos', 'amb fotos'
+    const photosPatterns = [
+      /\bwith\s+(?:photos|images|pictures)\b/,
+      /\bonly\s+with\s+(?:photos|images|pictures)\b/,
+      /\bphotos?\b/,
+      /\bcon\s+fotos?\b/,
+      /\bsolo\s+con\s+fotos?\b/,
+      /\bque\s+tengan?\s+foto?s?\b/,
+      /\bamb\s+fotos?\b/,
+      /\bamb\s+imatges?\b/,
+    ];
+    if (photosPatterns.some(rx => rx.test(q))) (f as any).hasPhotos = true;
 
     return f;
   }
@@ -232,16 +245,12 @@ export default function aiRouter() {
   async function performAppPropertySearch(query: string, priorMessages: ChatMessage[]) {
     try {
       const filters = parsePropertyFilters(query);
-      const q = normalize(query);
-      const wantsNearby = /(nearby|near|closest|close|around|within|walking distance|cerca|cercanos|mas cerca|más cerca|a prop|prop de|junto|al lado)/i.test(q);
-      const wantsOthers = /(other|others|more|otro|otros|otra|otras|diferentes|distintos)/i.test(q);
-
-      // Try to use previous selection as an anchor for nearby search
+      // Get previously shown IDs for DB-level exclusion
       const prevIds = extractLastPropertyIdsFromMessages(priorMessages);
-      let properties: any[] = [];
 
-    if ((wantsNearby || wantsOthers) && prevIds.length) {
-        // Use the first prior id as the anchor for location
+      // Always compute NEARBY list when possible (anchor on previous shown property)
+      let nearby: any[] = [];
+      if (prevIds.length) {
         const anchor = await getPropertyById(prevIds[0]);
         const coords: number[] | null = anchor?.location?.coordinates || null;
         if (coords && coords.length === 2) {
@@ -253,24 +262,25 @@ export default function aiRouter() {
             limit: '12',
             available: 'true',
           });
-      if (prevIds.length) params.set('excludeIds', prevIds.join(','));
+          if (prevIds.length) params.set('excludeIds', prevIds.join(','));
           if (filters.type) params.set('type', filters.type);
           if (filters.minRent) params.set('minRent', String(filters.minRent));
           if (filters.maxRent) params.set('maxRent', String(filters.maxRent));
           if (filters.bedrooms) params.set('bedrooms', String(filters.bedrooms));
           if (filters.bathrooms) params.set('bathrooms', String(filters.bathrooms));
           if (filters.amenities?.length) params.set('amenities', filters.amenities.join(','));
-
+          if ((filters as any).hasPhotos) params.set('hasPhotos', 'true');
           const resp = await fetch(`${getBaseUrl()}/api/properties/nearby?${params.toString()}`);
           if (resp.ok) {
             const data = await resp.json();
-            properties = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+            nearby = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
           }
         }
       }
 
-      // Fallback to text/location search if nearby not applicable or failed
-      if (!properties.length) {
+      // Always compute SEARCH list
+      let search: any[] = [];
+      {
         const params = new URLSearchParams({
           query,
           limit: '10',
@@ -284,33 +294,25 @@ export default function aiRouter() {
         if (filters.bedrooms) params.set('bedrooms', String(filters.bedrooms));
         if (filters.bathrooms) params.set('bathrooms', String(filters.bathrooms));
         if (filters.amenities?.length) params.set('amenities', filters.amenities.join(','));
-
+  if ((filters as any).hasPhotos) params.set('hasPhotos', 'true');
         const resp = await fetch(`${getBaseUrl()}/api/properties/search?${params.toString()}`);
         if (resp.ok) {
           const data = await resp.json();
-          properties = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+          search = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
         }
       }
 
-      // Budget friendly ordering if requested
-      if (filters.budgetFriendly && properties.length) {
-        properties = properties.sort((a, b) => (a.rent?.amount || 0) - (b.rent?.amount || 0));
-      }
+      // Budget friendly ordering if requested (apply to each list)
+      const sortBudget = (arr: any[]) =>
+        filters.budgetFriendly && arr?.length ? arr.slice().sort((a, b) => (a.rent?.amount || 0) - (b.rent?.amount || 0)) : arr;
 
-      // De-duplicate and exclude previously shown IDs
-      const prevSet = new Set(prevIds.map(String));
-      const seen = new Set<string>();
-      const unique = properties.filter((p: any) => {
-        const id = String(p._id?.toString?.() || p.id || '');
-        if (!id || prevSet.has(id) || seen.has(id)) return false;
-        seen.add(id);
-        return true;
-      });
-
-      return unique.slice(0, 5);
+      return {
+        nearby: sortBudget(nearby).slice(0, 5),
+        search: sortBudget(search).slice(0, 5),
+      };
     } catch (e) {
       console.error('[AI] property search error:', e);
-      return [];
+      return { nearby: [], search: [] };
     }
   }
 
@@ -327,9 +329,10 @@ Only if the user explicitly asks in their current message to search/show/find/br
 
 Rules for the properties block:
 - Include at most 5 items.
-- If the user's current message DOES explicitly ask to search/show/find/browse listings or homes AND a <PROPERTIES_HINT_JSON> array is present in the context, you MUST copy its array of IDs EXACTLY into <PROPERTIES_JSON> (no re-ordering, no changes, no additions). Never fabricate or guess property IDs.
+- If the user's current message DOES explicitly ask to search/show/find/browse listings or homes AND a <PROPERTIES_HINTS> object is present in the context, you MUST copy the array of IDs EXACTLY from the appropriate list into <PROPERTIES_JSON> (no re-ordering, no changes, no additions). Never fabricate or guess property IDs.
+- Choose the list based on the user's request: if they ask for "nearby", "closest", "around", "others like these" etc., use the IDs from the "nearby" list; otherwise prefer the "search" list. You understand all languages—decide from meaning, not keywords.
 - If the user's current message does NOT explicitly ask to search/show/find/browse listings or homes, DO NOT include a <PROPERTIES_JSON> block under any circumstance, even if a <PROPERTIES_HINT_JSON> is present.
-- If NO <PROPERTIES_HINT_JSON> is present, OMIT the <PROPERTIES_JSON> block entirely.
+- If NO <PROPERTIES_HINTS> is present, OMIT the <PROPERTIES_JSON> block entirely.
 - Place the block at the very end of your reply on a new line.
 
 Strict output discipline:
@@ -348,7 +351,7 @@ Examples:
   User: "Can you find budget apartments near Raval?"
   Assistant: "Here are some budget-friendly options near Raval and a few quick tips..."
 
-  <PROPERTIES_JSON>[COPY THE EXACT IDs FROM <PROPERTIES_HINT_JSON>]</PROPERTIES_JSON>
+  <PROPERTIES_JSON>[COPY THE EXACT IDs FROM the appropriate list in <PROPERTIES_HINTS>]</PROPERTIES_JSON>
 
 - Good (follow-up ask): If the user says "Please search for me" and a hint is present this turn, end with the IDs block. No plain-text lists.
 
@@ -415,15 +418,21 @@ Examples:
         });
       }
 
-  if (propertyResults?.length) {
-        // Provide a machine-readable hint the model can use to build the PROPERTIES_JSON block
-        const simplified = propertyResults
+  if ((propertyResults?.nearby?.length || 0) || (propertyResults?.search?.length || 0)) {
+        // Provide machine-readable hints for both lists so the model can choose correctly
+        const nearbyList: any[] = Array.isArray(propertyResults?.nearby) ? propertyResults.nearby : [];
+        const searchList: any[] = Array.isArray(propertyResults?.search) ? propertyResults.search : [];
+        const simplifiedNearby = nearbyList
+          .slice(0, 5)
+          .map((p: any) => p._id?.toString?.() || p.id)
+          .filter(Boolean);
+        const simplifiedSearch = searchList
           .slice(0, 5)
           .map((p: any) => p._id?.toString?.() || p.id)
           .filter(Boolean);
         enhanced.push({
           role: 'system',
-          content: `<PROPERTIES_HINT_JSON>${JSON.stringify(simplified)}</PROPERTIES_HINT_JSON>`,
+          content: `<PROPERTIES_HINTS>${JSON.stringify({ nearby: simplifiedNearby, search: simplifiedSearch })}</PROPERTIES_HINTS>`,
         });
         // Provide compact property context for the model (not to be shown to the user verbatim)
         const clean = (o: Record<string, any>) =>
@@ -443,7 +452,15 @@ Examples:
           if (has('gym', 'fitness')) a.push('gym');
           return a.slice(0, 8);
         };
-        const contexts = propertyResults.slice(0, 5).map((p: any) =>
+        // Merge contexts from both lists, de-dupe by id, and keep a compact set
+        const mergedLists = [...nearbyList.slice(0, 5), ...searchList.slice(0, 5)];
+        const seenIds = new Set<string>();
+        const contexts = mergedLists.filter((p: any) => {
+          const id = p?._id?.toString?.() || p?.id;
+          if (!id || seenIds.has(id)) return false;
+          seenIds.add(id);
+          return true;
+        }).slice(0, 8).map((p: any) =>
           clean({
             id: p._id?.toString?.() || p.id,
             title: p.title,
@@ -469,9 +486,7 @@ Examples:
         enhanced.push({
           role: 'system',
           content:
-            'If and only if the user explicitly asked to search/show/find/browse listings in their current message, end your reply with this exact block (no changes, no extra text) by copying these IDs verbatim: ' +
-            `<PROPERTIES_JSON>${JSON.stringify(simplified)}</PROPERTIES_JSON>` +
-            ' Otherwise, do not include any <PROPERTIES_JSON> block.',
+            'If and only if the user explicitly asked to search/show/find/browse listings in their current message, end your reply with a <PROPERTIES_JSON> block by copying the IDs verbatim from the appropriate list in <PROPERTIES_HINTS> (choose "nearby" for requests about nearby/closest/others-like-these; otherwise choose "search"). Otherwise, do not include any <PROPERTIES_JSON> block.',
         });
       }
 
