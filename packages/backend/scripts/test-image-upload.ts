@@ -3,7 +3,7 @@ import path from 'path';
 import imageUploadService from '../services/imageUploadService';
 
 // Mock file for testing
-const createMockFile = (): Express.Multer.File => {
+const createMockFile = (): any => {
   // Create a simple test image buffer (1x1 pixel PNG)
   const pngBuffer = Buffer.from([
     0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
