@@ -837,6 +837,7 @@ class PropertyController {
         available,
   verified,
   eco,
+  excludeIds,
         // Location parameters
         lat,
         lng,
@@ -903,6 +904,20 @@ class PropertyController {
       
       // Only show active properties
       andConditions.push({ status: 'active' });
+
+      // Exclude specific property IDs if provided
+      if (excludeIds) {
+        try {
+          const mongoose = require('mongoose');
+          const list = String(excludeIds)
+            .split(',')
+            .map((s: string) => s.trim())
+            .filter(Boolean)
+            .filter((id: string) => mongoose.Types.ObjectId.isValid(id))
+            .map((id: string) => new mongoose.Types.ObjectId(id));
+          if (list.length) andConditions.push({ _id: { $nin: list } });
+        } catch {}
+      }
 
       // Track whether geo filter is applied (for sorting hint)
       let hasGeo = false;
@@ -1028,6 +1043,7 @@ class PropertyController {
         available,
   verified,
   eco,
+  excludeIds,
         page = 1, 
         limit = 10 
       } = req.query;
@@ -1068,6 +1084,20 @@ class PropertyController {
         'availability.isAvailable': available !== undefined ? available === 'true' : true,
   status: 'active'
       };
+
+      // Exclude specific property IDs if provided
+      if (excludeIds) {
+        try {
+          const mongoose = require('mongoose');
+          const list = String(excludeIds)
+            .split(',')
+            .map((s: string) => s.trim())
+            .filter(Boolean)
+            .filter((id: string) => mongoose.Types.ObjectId.isValid(id))
+            .map((id: string) => new mongoose.Types.ObjectId(id));
+          if (list.length) searchQuery._id = { $nin: list };
+        } catch {}
+      }
 
       // Add additional filters
       if (type) searchQuery.type = type;
@@ -1131,6 +1161,7 @@ class PropertyController {
         available,
   verified,
   eco,
+  excludeIds,
         page = 1, 
         limit = 10 
       } = req.query;
@@ -1167,6 +1198,20 @@ class PropertyController {
         'availability.isAvailable': available !== undefined ? available === 'true' : true,
   status: 'active'
       };
+
+      // Exclude specific property IDs if provided
+      if (excludeIds) {
+        try {
+          const mongoose = require('mongoose');
+          const list = String(excludeIds)
+            .split(',')
+            .map((s: string) => s.trim())
+            .filter(Boolean)
+            .filter((id: string) => mongoose.Types.ObjectId.isValid(id))
+            .map((id: string) => new mongoose.Types.ObjectId(id));
+          if (list.length) searchQuery._id = { $nin: list };
+        } catch {}
+      }
 
       // Add additional filters
       if (type) searchQuery.type = type;

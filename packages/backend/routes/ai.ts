@@ -6,8 +6,11 @@ import express, { Request, Response } from 'express';
 import { PassThrough } from 'stream';
 import { streamText } from 'ai';
 import { openai } from '@ai-sdk/openai';
-import Profile from '../models/schemas/ProfileSchema';
-import Conversation from '../models/schemas/ConversationSchema';
+// CJS model exports
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const Profile = require('../models/schemas/ProfileSchema');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const Conversation = require('../models/schemas/ConversationSchema');
 import mongoose from 'mongoose';
 
 type ChatMessage = { role: 'system' | 'user' | 'assistant' | 'tool'; content: string; timestamp?: Date };
@@ -46,8 +49,8 @@ export default function aiRouter() {
         system:
           "Generate a concise, descriptive title (≤50 chars) for a tenant-rights chat based on the first user message. Return ONLY the title, no quotes.",
         messages: [{ role: 'user', content: userMessage }],
-        temperature: 0.3,
-        maxOutputTokens: 24,
+  temperature: 0.3,
+  maxTokens: 24,
       });
 
       let title = '';
@@ -133,9 +136,14 @@ export default function aiRouter() {
       f.maxRent = parseInt(range[2], 10);
     }
 
-    // location
-    for (const kw of ['in', 'near', 'around', 'at', 'close to', 'within']) {
-      const m = q.match(new RegExp(`${kw}\\s+([a-zA-Z\\s]+?)(?:\\s|$|,|\\?|!|\\d)`, 'i'));
+    // location (EN/ES/CAT)
+    const locPhrases = [
+      'in', 'near', 'around', 'at', 'close to', 'within',
+      'en', 'cerca de', 'cerca del', 'alrededor de', 'junto a', 'por', 'al lado de', 'cerca de la', 'cerca de los',
+      'a prop de', 'a prop del', 'prop de', 'prop del', 'al costat de', 'a la vora de',
+    ];
+    for (const kw of locPhrases) {
+      const m = q.match(new RegExp(`${kw}\\s+([\\p{L}\\s]+?)(?:\\s|$|,|\\?|!|\\d)`, 'iu'));
       if (m) {
         f.city = m[1].trim();
         break;
@@ -192,33 +200,114 @@ export default function aiRouter() {
     return f;
   }
 
-  async function performAppPropertySearch(query: string) {
+  // Explicit user intent detector for property search
+  // (Intentionally removed) No function-based intent detection; the model will decide based on prompt instructions.
+
+  function extractLastPropertyIdsFromMessages(msgs: ChatMessage[]): string[] {
+    const rev = [...msgs].reverse();
+    for (const m of rev) {
+      if (m.role !== 'assistant' || !m.content) continue;
+      const match = m.content.match(/<PROPERTIES_JSON>([\s\S]*?)<\/PROPERTIES_JSON>/i);
+      if (match) {
+        try {
+          const arr = JSON.parse(match[1].trim());
+          if (Array.isArray(arr)) return arr.map(String).filter(Boolean);
+        } catch {}
+      }
+    }
+    return [];
+  }
+
+  async function getPropertyById(id: string) {
+    try {
+      const resp = await fetch(`${getBaseUrl()}/api/properties/${id}`);
+      if (!resp.ok) return null;
+      const data = await resp.json();
+      return data?.data || data || null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function performAppPropertySearch(query: string, priorMessages: ChatMessage[]) {
     try {
       const filters = parsePropertyFilters(query);
-      const params = new URLSearchParams({
-        query,
-        limit: '10',
-        available: 'true',
-      });
-      if (filters.minRent) params.set('minRent', String(filters.minRent));
-      if (filters.maxRent) params.set('maxRent', String(filters.maxRent));
-      if (filters.city) params.set('city', filters.city);
-      if (filters.type) params.set('type', filters.type);
-      if (filters.bedrooms) params.set('bedrooms', String(filters.bedrooms));
-      if (filters.bathrooms) params.set('bathrooms', String(filters.bathrooms));
-      if (filters.amenities?.length) params.set('amenities', filters.amenities.join(','));
+      const q = normalize(query);
+      const wantsNearby = /(nearby|near|closest|close|around|within|walking distance|cerca|cercanos|mas cerca|más cerca|a prop|prop de|junto|al lado)/i.test(q);
+      const wantsOthers = /(other|others|more|otro|otros|otra|otras|diferentes|distintos)/i.test(q);
 
-      const resp = await fetch(`${getBaseUrl()}/api/properties/search?${params.toString()}`);
-      if (!resp.ok) return [];
+      // Try to use previous selection as an anchor for nearby search
+      const prevIds = extractLastPropertyIdsFromMessages(priorMessages);
+      let properties: any[] = [];
 
-      const data = await resp.json();
-      let properties: any[] = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+    if ((wantsNearby || wantsOthers) && prevIds.length) {
+        // Use the first prior id as the anchor for location
+        const anchor = await getPropertyById(prevIds[0]);
+        const coords: number[] | null = anchor?.location?.coordinates || null;
+        if (coords && coords.length === 2) {
+          const [longitude, latitude] = coords;
+          const params = new URLSearchParams({
+            longitude: String(longitude),
+            latitude: String(latitude),
+            maxDistance: '3000',
+            limit: '12',
+            available: 'true',
+          });
+      if (prevIds.length) params.set('excludeIds', prevIds.join(','));
+          if (filters.type) params.set('type', filters.type);
+          if (filters.minRent) params.set('minRent', String(filters.minRent));
+          if (filters.maxRent) params.set('maxRent', String(filters.maxRent));
+          if (filters.bedrooms) params.set('bedrooms', String(filters.bedrooms));
+          if (filters.bathrooms) params.set('bathrooms', String(filters.bathrooms));
+          if (filters.amenities?.length) params.set('amenities', filters.amenities.join(','));
 
-      if (filters.budgetFriendly) {
+          const resp = await fetch(`${getBaseUrl()}/api/properties/nearby?${params.toString()}`);
+          if (resp.ok) {
+            const data = await resp.json();
+            properties = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+          }
+        }
+      }
+
+      // Fallback to text/location search if nearby not applicable or failed
+      if (!properties.length) {
+        const params = new URLSearchParams({
+          query,
+          limit: '10',
+          available: 'true',
+        });
+        if (prevIds.length) params.set('excludeIds', prevIds.join(','));
+        if (filters.minRent) params.set('minRent', String(filters.minRent));
+        if (filters.maxRent) params.set('maxRent', String(filters.maxRent));
+        if (filters.city) params.set('city', filters.city);
+        if (filters.type) params.set('type', filters.type);
+        if (filters.bedrooms) params.set('bedrooms', String(filters.bedrooms));
+        if (filters.bathrooms) params.set('bathrooms', String(filters.bathrooms));
+        if (filters.amenities?.length) params.set('amenities', filters.amenities.join(','));
+
+        const resp = await fetch(`${getBaseUrl()}/api/properties/search?${params.toString()}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          properties = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+        }
+      }
+
+      // Budget friendly ordering if requested
+      if (filters.budgetFriendly && properties.length) {
         properties = properties.sort((a, b) => (a.rent?.amount || 0) - (b.rent?.amount || 0));
       }
 
-      return properties.slice(0, 5);
+      // De-duplicate and exclude previously shown IDs
+      const prevSet = new Set(prevIds.map(String));
+      const seen = new Set<string>();
+      const unique = properties.filter((p: any) => {
+        const id = String(p._id?.toString?.() || p.id || '');
+        if (!id || prevSet.has(id) || seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      });
+
+      return unique.slice(0, 5);
     } catch (e) {
       console.error('[AI] property search error:', e);
       return [];
@@ -229,8 +318,42 @@ export default function aiRouter() {
 You are Sindi, an AI tenant-rights assistant for Homiio. Be concise, accurate, and pro-tenant.
 - Prioritize tenant rights, fair housing, and current local law.
 - Search Homiio properties first when asked for places to rent; then add rights tips.
-- Prefer official sources and Sindicat de Llogateres for Catalunya queries.
-- Keep answers short unless asked for detail.`.trim();
+- Prefer official sources and Sindicat de Llogateres for Catalonia queries.
+- Keep answers short unless asked for detail.
+
+Only if the user explicitly asks in their current message to search/show/find/browse listings or homes (for example: "find listings", "show me apartments", "browse rentals", "recommend some places"), include at the end of your reply a single machine-readable block listing ONLY the matching property IDs using this exact format and tag (no extra text inside):
+
+<PROPERTIES_JSON>["propertyId1","propertyId2","propertyId3"]</PROPERTIES_JSON>
+
+Rules for the properties block:
+- Include at most 5 items.
+- If the user's current message DOES explicitly ask to search/show/find/browse listings or homes AND a <PROPERTIES_HINT_JSON> array is present in the context, you MUST copy its array of IDs EXACTLY into <PROPERTIES_JSON> (no re-ordering, no changes, no additions). Never fabricate or guess property IDs.
+- If the user's current message does NOT explicitly ask to search/show/find/browse listings or homes, DO NOT include a <PROPERTIES_JSON> block under any circumstance, even if a <PROPERTIES_HINT_JSON> is present.
+- If NO <PROPERTIES_HINT_JSON> is present, OMIT the <PROPERTIES_JSON> block entirely.
+- Place the block at the very end of your reply on a new line.
+
+Strict output discipline:
+- Never mention or list any property IDs in normal visible text. Property IDs may appear ONLY inside the <PROPERTIES_JSON> block when conditions are met.
+- Never invent placeholders or any made-up IDs. If you have no <PROPERTIES_HINT_JSON>, do not claim you found properties and do not output IDs.
+- If asked to search but no hint is present, say you didn’t find matching properties yet and ask for preferences (budget, area), and OMIT the <PROPERTIES_JSON> block.
+ - You may use details from <PROPERTIES_CONTEXT> (title, location, rent, amenities, etc.) to write a better natural-language answer, but do not reveal or quote the tag itself. Do not print raw IDs or the JSON; only summarize in your own words.
+
+Avoid repetition:
+- Do not include <PROPERTIES_JSON> unless the user explicitly asks to find/show/search listings in the current turn.
+- If the user is asking about rights, leases, or any non-search topic, omit the properties block.
+- When the user asks for "others" or "closest/nearby", prefer properties that were NOT previously shown and select the nearest options first.
+
+Examples:
+- Good (explicit ask):
+  User: "Can you find budget apartments near Raval?"
+  Assistant: "Here are some budget-friendly options near Raval and a few quick tips..."
+
+  <PROPERTIES_JSON>[COPY THE EXACT IDs FROM <PROPERTIES_HINT_JSON>]</PROPERTIES_JSON>
+
+- Good (follow-up ask): If the user says "Please search for me" and a hint is present this turn, end with the IDs block. No plain-text lists.
+
+- Bad: "Here are the IDs: property123, property456" (Not allowed: visible-text IDs or invented IDs).
+`.trim();
 
   // ---------- Routes ----------
 
@@ -277,18 +400,9 @@ You are Sindi, an AI tenant-rights assistant for Homiio. Be concise, accurate, a
         'catalunya', 'catalonia', 'barcelona', 'catalan', 'lloguer', 'sindicat', 'tenant union', 'rent strike',
       ].some(k => text.includes(k));
 
-      const isPropertySearch = [
-        'find property', 'available property', 'search property', 'rental', 'apartment', 'house', 'room', 'flat', 'pisos', 'lloguer',
-        'property near', 'property in', 'available home', 'buscar piso', 'buscar lloguer', 'find home', 'property listings',
-        'property for rent', 'pisos en alquiler', 'casas en alquiler', 'habitación', 'room for rent', 'studio', 'shared flat',
-        'shared house', 'cercar propietat', 'propietat disponible', 'lloguer disponible', 'apartament', 'casa', 'habitació',
-        'pis', 'propietat a prop', 'propietat a', 'llistats de propietats', 'propietat de lloguer', 'pisos de lloguer',
-        'cases de lloguer',
-      ].some(k => text.includes(k));
-
       const [searchResults, propertyResults] = await Promise.all([
         needsCurrentInfo ? performWebSearch(last?.content || '') : Promise.resolve(null),
-        isPropertySearch ? performAppPropertySearch(last?.content || '') : Promise.resolve(null),
+        performAppPropertySearch(last?.content || '', messages as ChatMessage[]),
       ]);
 
       const enhanced: ChatMessage[] = [{ role: 'system', content: SINDI_SYSTEM_PROMPT }, ...messages];
@@ -301,21 +415,67 @@ You are Sindi, an AI tenant-rights assistant for Homiio. Be concise, accurate, a
         });
       }
 
-      if (propertyResults?.length) {
-        const ctx =
-          'PROPERTY RESULTS:\n' +
-          propertyResults
-            .map(
-              (p: any) =>
-                `- ${p.title || p.address?.city || 'Property'} ` +
-                `(${p.type || ''}${p.rent?.amount ? `, ${p.rent.amount} ${p.rent.currency || ''}` : ''})` +
-                `${p.address?.city ? `, ${p.address.city}` : ''}`,
-            )
-            .join('\n');
-        enhanced.push({ role: 'system', content: ctx });
+  if (propertyResults?.length) {
+        // Provide a machine-readable hint the model can use to build the PROPERTIES_JSON block
+        const simplified = propertyResults
+          .slice(0, 5)
+          .map((p: any) => p._id?.toString?.() || p.id)
+          .filter(Boolean);
+        enhanced.push({
+          role: 'system',
+          content: `<PROPERTIES_HINT_JSON>${JSON.stringify(simplified)}</PROPERTIES_HINT_JSON>`,
+        });
+        // Provide compact property context for the model (not to be shown to the user verbatim)
+        const clean = (o: Record<string, any>) =>
+          Object.fromEntries(Object.entries(o).filter(([_, v]) => v !== undefined && v !== null && v !== ''));
+        const toAmenityFlags = (p: any) => {
+          const a: string[] = [];
+          const has = (...keys: string[]) => keys.some(k => (Array.isArray(p.amenities) ? p.amenities.includes(k) : p[k] || p.features?.[k]));
+          if (has('balcony', 'terrace')) a.push('balcony');
+          if (has('pet_friendly', 'pets', 'petFriendly')) a.push('pet-friendly');
+          if (has('furnished')) a.push('furnished');
+          if (has('parking', 'garage')) a.push('parking');
+          if (has('air_conditioning', 'ac')) a.push('AC');
+          if (has('elevator', 'lift')) a.push('elevator');
+          if (has('washer', 'laundry')) a.push('washer');
+          if (has('dishwasher')) a.push('dishwasher');
+          if (has('wifi', 'internet')) a.push('wifi');
+          if (has('gym', 'fitness')) a.push('gym');
+          return a.slice(0, 8);
+        };
+        const contexts = propertyResults.slice(0, 5).map((p: any) =>
+          clean({
+            id: p._id?.toString?.() || p.id,
+            title: p.title,
+            type: p.type,
+            rent: p.rent?.amount ? clean({ amount: p.rent.amount, currency: p.rent.currency }) : undefined,
+            city: p.address?.city,
+            neighborhood: p.address?.neighborhood || p.address?.district,
+            bedrooms: p.bedrooms ?? p.features?.bedrooms,
+            bathrooms: p.bathrooms ?? p.features?.bathrooms,
+            sizeSqm: p.size ?? p.area?.m2 ?? p.areaSqm,
+            amenities: toAmenityFlags(p),
+            availabilityDate: p.availableFrom ?? p.availability?.from,
+            description: (p.description || p.summary || '')
+              ? String(p.description || p.summary).slice(0, 240)
+              : undefined,
+          }),
+        );
+        enhanced.push({
+          role: 'system',
+          content: `<PROPERTIES_CONTEXT>${JSON.stringify(contexts)}</PROPERTIES_CONTEXT>`,
+        });
+        // Reinforce copying behavior conditioned on explicit ask this turn
+        enhanced.push({
+          role: 'system',
+          content:
+            'If and only if the user explicitly asked to search/show/find/browse listings in their current message, end your reply with this exact block (no changes, no extra text) by copying these IDs verbatim: ' +
+            `<PROPERTIES_JSON>${JSON.stringify(simplified)}</PROPERTIES_JSON>` +
+            ' Otherwise, do not include any <PROPERTIES_JSON> block.',
+        });
       }
 
-      const result = streamText({ model: openai('gpt-4o'), messages: enhanced });
+  const result = streamText({ model: openai('gpt-4o'), temperature: 0.2, messages: enhanced as any });
 
       // Save last user message before streaming
       const lastUser = messages.at(-1);

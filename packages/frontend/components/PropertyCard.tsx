@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { View, Image, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 import { colors } from '@/styles/colors';
 import { IconButton } from './IconButton';
@@ -74,29 +74,42 @@ type PropertyCardProps = {
 // const { width: screenWidth } = Dimensions.get('window');
 
 const getVariantStyles = (variant: PropertyCardVariant) => {
-  switch (variant) {
-    case 'compact':
-      return {
-        imageHeight: 100,
-        showFeatures: true,
-        showTypeIcon: false,
-        showRating: false,
-      };
-    case 'featured':
-      return {
-        imageHeight: 140,
-        showFeatures: true,
-        showTypeIcon: true,
-        showRating: true,
-      };
-    default:
-      return {
-        imageHeight: 120,
-        showFeatures: true,
-        showTypeIcon: false,
-        showRating: true,
-      };
-  }
+  const variants = {
+    compact: {
+      imageHeight: 100,
+      showFeatures: true,
+      showTypeIcon: false,
+      showRating: false,
+      titleLines: 2,
+      locationLines: 1,
+    },
+    featured: {
+      imageHeight: 140,
+      showFeatures: true,
+      showTypeIcon: true,
+      showRating: true,
+      titleLines: 2,
+      locationLines: 2,
+    },
+    saved: {
+      imageHeight: 120,
+      showFeatures: true,
+      showTypeIcon: false,
+      showRating: true,
+      titleLines: 2,
+      locationLines: 1,
+    },
+    default: {
+      imageHeight: 120,
+      showFeatures: true,
+      showTypeIcon: false,
+      showRating: true,
+      titleLines: 2,
+      locationLines: 1,
+    },
+  };
+
+  return variants[variant] || variants.default;
 };
 
 export function PropertyCard({
@@ -206,30 +219,14 @@ export function PropertyCard({
 
   // Get variant-specific styles
   const variantStyles = getVariantStyles(variant);
-  const finalTitleLines = useMemo(() => {
-    if (titleLines !== undefined) return titleLines;
 
-    switch (variant) {
-      case 'compact':
-        return 2;
-      case 'featured':
-        return 2;
-      default:
-        return 2; // Allow 2 lines for better readability
-    }
-  }, [titleLines, variant]);
-  const finalLocationLines = useMemo(() => {
-    switch (variant) {
-      case 'compact':
-        return 1;
-      case 'featured':
-        return 2;
-      default:
-        return 1;
-    }
-  }, [variant]);
-  const shouldShowFeatures = showFeatures && variantStyles.showFeatures;
-  const shouldShowRating = showRating && variantStyles.showRating;
+  // Apply variant-specific overrides
+  const finalImageHeight = imageHeight || variantStyles.imageHeight;
+  const finalShowFeatures = showFeatures && variantStyles.showFeatures;
+  const finalShowTypeIcon = showTypeIcon && variantStyles.showTypeIcon;
+  const finalShowRating = showRating && variantStyles.showRating;
+  const finalTitleLines = titleLines !== undefined ? titleLines : variantStyles.titleLines;
+  const finalLocationLines = locationLines !== undefined ? locationLines : variantStyles.locationLines;
 
   const queryClient = useQueryClient();
   const handlePressIn = useCallback(() => {
@@ -246,7 +243,9 @@ export function PropertyCard({
         styles.container,
         orientation === 'horizontal' ? styles.horizontalContainer : null,
         style as ViewStyle,
-        isFeatured ? styles.featuredCard : null,
+        variant === 'featured' ? styles.featuredCard : null,
+        variant === 'compact' ? styles.compactCard : null,
+        variant === 'saved' ? styles.savedCard : null,
         isProcessing ? { opacity: 0.7 } : null,
       ]}
       onPress={onPress}
@@ -260,13 +259,16 @@ export function PropertyCard({
           orientation === 'horizontal' ? styles.horizontalImageContainer : null,
           isFeatured ? styles.featuredImageContainer : null,
           isSelected ? styles.selectedImage : null,
+          orientation === 'horizontal'
+            ? { height: finalImageHeight, width: finalImageHeight }
+            : { width: '100%', aspectRatio: 1 },
         ]}
       >
         <Image source={propertyData.imageSource} style={styles.image} resizeMode="cover" />
 
         {/* Save Button and Rating Container */}
         {/* Rating - moved to top-left */}
-        {shouldShowRating && propertyData.rating && (
+        {finalShowRating && propertyData.rating && (
           <View style={styles.ratingBadge}>
             <ThemedText style={styles.ratingBadgeText}>{propertyData.rating.toFixed(1)}</ThemedText>
             <IconButton
@@ -311,6 +313,18 @@ export function PropertyCard({
           </View>
         )}
 
+        {/* Type Icon */}
+        {finalShowTypeIcon && propertyData.type && (
+          <View style={styles.typeIcon}>
+            <IconButton
+              name={propertyData.type === 'house' ? 'home-outline' : 'business-outline'}
+              color="#fff"
+              backgroundColor="rgba(0, 0, 0, 0.6)"
+              size={16}
+            />
+          </View>
+        )}
+
         {/* Custom Badge Content */}
         {badgeContent && <View style={styles.customBadge}>{badgeContent as React.ReactNode}</View>}
 
@@ -323,7 +337,8 @@ export function PropertyCard({
           styles.content,
           orientation === 'horizontal' ? styles.horizontalContent : null,
           variant === 'compact' ? styles.compactContent : null,
-          isFeatured ? styles.featuredContent : null,
+          variant === 'featured' ? styles.featuredContent : null,
+          variant === 'saved' ? styles.savedContent : null,
         ]}
       >
         {/* Title */}
@@ -355,7 +370,7 @@ export function PropertyCard({
         )}
 
         {/* Features */}
-        {shouldShowFeatures && (
+        {finalShowFeatures && (
           <View style={styles.features}>
             <View style={styles.feature}>
               <ThemedText style={styles.featureText}>
@@ -445,6 +460,7 @@ export function PropertyCard({
 }
 
 const styles = StyleSheet.create({
+  // ===== BASE STYLES (shared across all variants) =====
   container: {
     width: '100%',
     height: 'auto',
@@ -454,57 +470,18 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 12,
   },
-  featuredCard: {
-    // No border or shadow here
-  },
   imageContainer: {
     position: 'relative',
-    width: '100%',
-    aspectRatio: 1,
     backgroundColor: '#f8f8f8',
     borderRadius: 16,
     overflow: 'hidden',
   },
   horizontalImageContainer: {
-    width: 120,
-    height: 120,
-    aspectRatio: 1,
     flexShrink: 0,
   },
-  featuredImageContainer: {},
   image: {
     width: '100%',
     height: '100%',
-    aspectRatio: 1,
-  },
-  saveButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    zIndex: 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 20,
-    padding: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  ecoBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    zIndex: 2,
-    backgroundColor: '#e8f5e9',
-    borderRadius: 14,
-    padding: 3,
-  },
-  verifiedBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 36,
-    zIndex: 2,
   },
   content: {
     flex: 1,
@@ -519,26 +496,12 @@ const styles = StyleSheet.create({
     minHeight: 120,
     paddingLeft: 10,
   },
-  compactContent: {
-    // padding: 8, // Remove padding for flush alignment
-  },
-  featuredContent: {
-    // padding: 12, // Remove padding for flush alignment
-  },
   title: {
     fontSize: 15,
     fontWeight: '600',
     color: '#222222',
     lineHeight: 20,
     marginBottom: 4,
-  },
-  compactTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  featuredTitle: {
-    fontSize: 15,
-    fontWeight: '700',
   },
   horizontalTitle: {
     fontSize: 16,
@@ -557,30 +520,6 @@ const styles = StyleSheet.create({
     color: '#717171',
     marginBottom: 6,
     lineHeight: 18,
-  },
-  compactLocation: {
-    fontSize: 12,
-    marginBottom: 6,
-  },
-  featuredLocation: {
-    fontSize: 13,
-    marginBottom: 6,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  ratingText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#222222',
-    marginLeft: 3,
-  },
-  reviewCount: {
-    fontSize: 12,
-    color: '#717171',
-    marginLeft: 3,
   },
   features: {
     flexDirection: 'row',
@@ -610,28 +549,75 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#222222',
   },
-  compactPrice: {
-    fontSize: 14,
-  },
-  featuredPrice: {
-    fontSize: 15,
-  },
   priceUnit: {
     fontSize: 12,
     fontWeight: '400',
     color: '#717171',
   },
-  footer: {
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+
+  // Badge and overlay styles (shared)
+  saveButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    zIndex: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 20,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  selectedImage: {
-    borderWidth: 2,
-    borderColor: colors.primaryColor,
-    borderRadius: 25,
+  ecoBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    zIndex: 2,
+    backgroundColor: '#e8f5e9',
+    borderRadius: 14,
+    padding: 3,
   },
+  verifiedBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 36,
+    zIndex: 2,
+  },
+  typeIcon: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    zIndex: 2,
+  },
+  ratingBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    zIndex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    justifyContent: 'center',
+  },
+  ratingBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#222222',
+    marginRight: 1,
+    fontFamily: 'Phudu',
+  },
+
+  // Note styles (shared)
   noteContainer: {
     marginTop: 8,
     backgroundColor: '#ffffff',
@@ -664,10 +650,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.primaryLight,
   },
-  compactNoteContainer: {
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-  },
   noteText: {
     fontSize: 13,
     color: '#444444',
@@ -677,9 +659,18 @@ const styles = StyleSheet.create({
     color: '#999999',
     fontStyle: 'italic',
   },
-  compactNoteText: {
-    fontSize: 12,
-    lineHeight: 16,
+
+  // Footer and overlay styles (shared)
+  footer: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  selectedImage: {
+    borderWidth: 2,
+    borderColor: colors.primaryColor,
+    borderRadius: 25,
   },
   customBadge: {
     position: 'absolute',
@@ -695,29 +686,62 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.05)',
   },
-  ratingBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    zIndex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 12,
-    paddingHorizontal: 6,
-    paddingVertical: 0,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-    justifyContent: 'center',
+
+  // ===== COMPACT VARIANT STYLES =====
+  compactCard: {
+    // Compact card styling
   },
-  ratingBadgeText: {
-    fontSize: 12,
+  compactContent: {
+    // Compact content styling
+  },
+  compactTitle: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#222222',
-    marginRight: 1,
-    fontFamily: 'Phudu',
   },
+  compactLocation: {
+    fontSize: 12,
+    marginBottom: 6,
+  },
+  compactPrice: {
+    fontSize: 14,
+  },
+  compactNoteContainer: {
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  compactNoteText: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+
+  // ===== FEATURED VARIANT STYLES =====
+  featuredCard: {
+    // Featured card styling
+  },
+  featuredImageContainer: {},
+  featuredContent: {
+    // Featured content styling
+  },
+  featuredTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  featuredLocation: {
+    fontSize: 13,
+    marginBottom: 6,
+  },
+  featuredPrice: {
+    fontSize: 15,
+  },
+
+  // ===== SAVED VARIANT STYLES =====
+  savedCard: {
+    // Saved card styling
+  },
+  savedContent: {
+    // Saved content styling
+  },
+
+  // ===== DEFAULT VARIANT STYLES =====
+  // (No specific styles needed - uses base styles)
 });

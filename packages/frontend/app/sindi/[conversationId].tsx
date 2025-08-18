@@ -18,6 +18,8 @@ import { colors } from '@/styles/colors';
 
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { PropertyCard } from '@/components/PropertyCard';
+import { propertyService } from '@/services/propertyService';
+import { useQuery } from '@tanstack/react-query';
 import { SindiIcon } from '@/assets/icons';
 import { ThemedView } from '@/components/ThemedView';
 import { Header } from '@/components/Header';
@@ -33,6 +35,41 @@ import {
 import { EmptyState } from '@/components/ui/EmptyState';
 const IconComponent = Ionicons as any;
 
+// Normalize and sanitize property IDs coming from model output
+function normalizePropertyIds(raw: unknown, max = 5): string[] {
+  const tokens: string[] = [];
+  const pushToken = (s: string) => {
+    const trimmed = s.trim();
+    if (!trimmed) return;
+    // Filter out obvious junk; allow ObjectId-like or clean slug-like tokens
+    const isObjectId = /^[a-f0-9]{24}$/i.test(trimmed);
+    const isSlugLike = /^[A-Za-z0-9_-]{6,}$/i.test(trimmed) && !trimmed.includes('/') && !trimmed.includes(' ');
+    if (isObjectId || isSlugLike) tokens.push(trimmed);
+  };
+
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
+      if (typeof item === 'string') {
+        // Split accidental concatenations like 'a/b/c' or 'a, b, c'
+        String(item)
+          .split(/[\s,\/]+/)
+          .forEach(pushToken);
+      } else if (typeof item === 'number') {
+        pushToken(String(item));
+      }
+    }
+  } else if (typeof raw === 'string') {
+    String(raw)
+      .split(/[\s,\/]+/)
+      .forEach(pushToken);
+  }
+
+  // Dedupe and cap
+  const deduped: string[] = [];
+  for (const id of tokens) if (!deduped.includes(id)) deduped.push(id);
+  return deduped.slice(0, max);
+}
+
 export default function ConversationDetail() {
   const { oxyServices, activeSessionId } = useOxy();
   const router = useRouter();
@@ -42,6 +79,8 @@ export default function ConversationDetail() {
     message?: string;
   }>();
   const [attachedFile, setAttachedFile] = React.useState<any>(null);
+  const lastSyncedHash = React.useRef<string>('');
+  const lastMsgKeyRef = React.useRef<string>('');
 
   // Zustand store
   const {
@@ -101,7 +140,7 @@ export default function ConversationDetail() {
     return [];
   }, [currentConversation?.messages]);
 
-  const { messages, error, handleInputChange, input, handleSubmit, isLoading, setMessages } =
+  const { messages, error, handleInputChange, input, handleSubmit, isLoading } =
     useChat({
       fetch: authenticatedFetch as unknown as typeof globalThis.fetch,
       api: `${API_URL}/api/ai/stream`,
@@ -132,7 +171,7 @@ export default function ConversationDetail() {
       }
 
       // Only try to load from database if it's a valid database ID
-      loadConversation(conversationId, authenticatedFetch)
+      loadConversation(conversationId, authenticatedFetch as unknown as typeof globalThis.fetch)
         .catch((error) => {
           console.error('Failed to load conversation:', error);
         });
@@ -141,7 +180,7 @@ export default function ConversationDetail() {
 
 
 
-  // Update conversation when messages change (debounced to prevent infinite loops)
+  // Update conversation when messages change (debounced, hash-gated; wait for stream to finish)
   useEffect(() => {
     if (
       currentConversation &&
@@ -149,12 +188,31 @@ export default function ConversationDetail() {
       conversationId &&
       conversationId !== 'undefined'
     ) {
-      const conversationMessages: ConversationMessage[] = messages.map((msg) => ({
+      // Avoid syncing mid-stream to prevent rapid re-renders and loops
+      if (isLoading) {
+        return;
+      }
+      const conversationMessages: ConversationMessage[] = messages.map((msg, index) => ({
         id: msg.id,
         role: msg.role as 'user' | 'assistant' | 'system',
         content: msg.content,
-        timestamp: new Date(),
+        // Preserve existing timestamps when possible to avoid churn
+        timestamp:
+          (currentConversation?.messages?.[index] as any)?.timestamp
+            ? new Date((currentConversation as any).messages[index].timestamp)
+            : new Date(),
       }));
+
+      // Hash only role+content so streaming updates are captured, but identical content doesn't loop
+      const newHash = JSON.stringify(
+        conversationMessages.map((m) => [m.role, m.content])
+      );
+
+      if (lastSyncedHash.current === newHash) {
+        // No meaningful change since last sync
+        scrollToEnd();
+        return;
+      }
 
       // Only update if messages actually changed
       const currentMessages = currentConversation.messages;
@@ -170,6 +228,7 @@ export default function ConversationDetail() {
       if (messagesChanged) {
         console.log('Messages changed, updating conversation:', conversationId);
         updateConversationMessages(conversationId, conversationMessages);
+        lastSyncedHash.current = newHash;
 
         // Debounce the save operation
         const timeoutId = setTimeout(() => {
@@ -188,7 +247,7 @@ export default function ConversationDetail() {
           };
 
           console.log('Saving conversation with messages:', updatedConversation.messages.length);
-          saveConversation(updatedConversation, authenticatedFetch)
+          saveConversation(updatedConversation, authenticatedFetch as unknown as typeof globalThis.fetch)
             .then((savedConversation) => {
               console.log('Conversation saved successfully:', savedConversation?.id);
               // If the conversation ID changed (from client-generated to database ID), update URL
@@ -216,7 +275,24 @@ export default function ConversationDetail() {
     authenticatedFetch,
     router,
     scrollToEnd,
+    isLoading,
   ]); // Watch for actual message changes
+
+  // Auto-scroll when last message changes to avoid using onContentSizeChange (prevents loops on web)
+  useEffect(() => {
+    if (!messages.length) return;
+    const last = messages[messages.length - 1];
+    const key = `${last.id}|${messages.length}`;
+    if (lastMsgKeyRef.current !== key) {
+      lastMsgKeyRef.current = key;
+      // Defer to next frame to avoid layout thrash
+      if (typeof requestAnimationFrame !== 'undefined') {
+        requestAnimationFrame(() => scrollToEnd());
+      } else {
+        setTimeout(() => scrollToEnd(), 0);
+      }
+    }
+  }, [messages, scrollToEnd]);
 
   // Handle initial message from URL parameter
   useEffect(() => {
@@ -388,7 +464,7 @@ export default function ConversationDetail() {
                   // Generate share token using store method
                   const shareToken = await generateShareToken(
                     currentConversation.id,
-                    authenticatedFetch,
+                    authenticatedFetch as unknown as typeof globalThis.fetch,
                   );
 
                   if (shareToken) {
@@ -434,7 +510,6 @@ export default function ConversationDetail() {
         style={[styles.messagesContainer, webStyles.messagesContainer]}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.messagesContent, webStyles.messagesContent]}
-        onContentSizeChange={scrollToEnd}
       >
         {messages.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -493,45 +568,90 @@ export default function ConversationDetail() {
                   m.role === 'user' ? styles.userBubble : styles.assistantBubble,
                 ]}
               >
-                {
-                  // If this is a property search result system message, parse and render cards
-                  m.role === 'system' && m.content.startsWith('PROPERTY SEARCH RESULTS:') ? (
-                    (() => {
-                      // Extract property lines
-                      const lines = m.content.split('\n').filter((line) => line.startsWith('- '));
-                      const properties = lines
-                        .map((line) => {
-                          // Try to parse title, type, rent, city from the line
-                          const match = line.match(/^- (.*?) \((.*?), (.*?)\)(, (.*?))?$/);
-                          if (match) {
-                            return {
-                              title: match[1],
-                              type: match[2],
-                              rent: { amount: match[3] },
-                              address: { city: match[5] },
-                              _id: match[1] + '-' + (match[5] || ''), // Fallback unique id
-                              id: match[1] + '-' + (match[5] || ''),
-                            };
-                          }
-                          return undefined;
-                        })
-                        .filter((p): p is any => !!p);
-                      return (
-                        <View key={m.id || m.content} style={styles.propertyCardsContainer}>
-                          {properties.map((property, idx) => (
-                            <PropertyCard
-                              key={property._id || property.id || idx}
-                              property={property}
-                              variant={'featured'}
-                              onPress={() =>
-                                router.push(`/properties/${property._id || property.id}`)
-                              }
-                            />
-                          ))}
-                        </View>
-                      );
-                    })()
-                  ) : (
+                {(() => {
+                  // Prefer machine-readable block in assistant replies
+                  if (m.role === 'assistant' && typeof m.content === 'string') {
+                    const startTag = '<PROPERTIES_JSON>';
+                    const endTag = '</PROPERTIES_JSON>';
+                    const startIdx = m.content.indexOf(startTag);
+                    const endIdx = m.content.indexOf(endTag);
+                    let visible = m.content;
+                    let idList: string[] | null = null;
+                    const isLatestAssistant =
+                      m.role === 'assistant' && messages[messages.length - 1]?.id === m.id;
+                    const canHydrateCards = !(isLatestAssistant && isLoading);
+                    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+                      const jsonStr = m.content
+                        .substring(startIdx + startTag.length, endIdx)
+                        .trim();
+                      visible = (m.content.substring(0, startIdx) + m.content.substring(endIdx + endTag.length)).trim();
+                      try {
+                        const parsed = JSON.parse(jsonStr);
+                        const normalized = normalizePropertyIds(parsed);
+                        if (normalized.length > 0) idList = normalized;
+                      } catch (e) {
+                        console.warn('Failed to parse PROPERTIES_JSON:', e);
+                      }
+                    }
+                    return (
+                      <>
+                        {!!visible && (
+                          <View style={{ flexShrink: 1, flexWrap: 'wrap', width: '100%' }}>
+                            <Text
+                              style={[
+                                styles.markdownParagraph,
+                                styles.assistantText,
+                              ]}
+                            >
+                              {visible}
+                            </Text>
+                          </View>
+                        )}
+                        {idList && idList.length > 0 && canHydrateCards && (
+                          <PropertiesFromIds ids={idList} />
+                        )}
+                      </>
+                    );
+                  }
+
+                  // Legacy system-formatted results support (if ever present)
+                  if (m.role === 'system' && m.content.startsWith('PROPERTY SEARCH RESULTS:')) {
+                    const lines = m.content.split('\n').filter((line) => line.startsWith('- '));
+                    const properties = lines
+                      .map((line) => {
+                        const match = line.match(/^- (.*?) \((.*?)(?:,\s*([^\)]+))?\)(?:,\s*(.*))?$/);
+                        if (match) {
+                          const title = match[1];
+                          const type = match[2];
+                          const price = parseFloat(match[3] || '0');
+                          const city = match[4] || '';
+                          const id = `${title}-${city}`;
+                          return { id, title, type, price, currency: 'USD', city };
+                        }
+                        return undefined;
+                      })
+                      .filter((p): p is any => !!p);
+                    return (
+                      <View key={m.id || m.content} style={styles.propertyCardsContainer}>
+                        {properties.map((property, idx) => (
+                          <PropertyCard
+                            key={property.id || idx}
+                            id={property.id}
+                            title={property.title}
+                            price={property.price}
+                            currency={property.currency}
+                            type={(property.type as any) || 'apartment'}
+                            orientation='horizontal'
+                            variant={'compact'}
+                            onPress={() => router.push(`/properties/${property.id}`)}
+                          />
+                        ))}
+                      </View>
+                    );
+                  }
+
+                  // Default: render plain content
+                  return (
                     <View style={{ flexShrink: 1, flexWrap: 'wrap', width: '100%' }}>
                       <Text
                         style={[
@@ -542,8 +662,8 @@ export default function ConversationDetail() {
                         {m.content}
                       </Text>
                     </View>
-                  )
-                }
+                  );
+                })()}
               </View>
               <Text
                 style={[
@@ -585,7 +705,22 @@ export default function ConversationDetail() {
                   } as any)
                 }
                 onSubmitEditing={handleSubmitWithFile}
+                onKeyPress={(e: any) => {
+                  const key = e?.nativeEvent?.key || e?.key;
+                  const shift = e?.nativeEvent?.shiftKey || e?.shiftKey;
+                  if (key === 'Enter' && !shift) {
+                    if (Platform.OS === 'web') {
+                      e.preventDefault?.();
+                      e.stopPropagation?.();
+                    }
+                    if (!isLoading && input.trim()) {
+                      handleSubmitWithFile();
+                    }
+                  }
+                }}
                 multiline
+                blurOnSubmit={false}
+                returnKeyType={Platform.OS === 'ios' ? 'send' : 'done'}
                 maxLength={1000}
               />
               <TouchableOpacity
@@ -606,6 +741,43 @@ export default function ConversationDetail() {
     </SafeAreaView>
   );
 }
+
+// Stable, top-level component to fetch and render property cards from IDs
+const PropertiesFromIds = React.memo(function PropertiesFromIds({ ids }: { ids: string[] }) {
+  const router = useRouter();
+  const { data } = useQuery({
+    queryKey: ['chat-properties', ...ids],
+    enabled: ids.length > 0,
+    queryFn: async () => {
+      const results: any[] = [];
+      for (const id of ids) {
+        try {
+          const p = await propertyService.getPropertyById(id);
+          results.push(p);
+        } catch {
+          // ignore missing/bad ids
+        }
+      }
+      return results;
+    },
+  });
+
+  if (!data || data.length === 0) return null;
+
+  return (
+    <View style={styles.propertyCardsContainer}>
+      {data.map((property: any) => (
+        <PropertyCard
+          key={property._id || property.id}
+          property={property}
+          orientation={'horizontal'}
+          variant={'compact'}
+          onPress={() => router.push(`/properties/${property._id || property.id}`)}
+        />
+      ))}
+    </View>
+  );
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -705,7 +877,6 @@ const styles = StyleSheet.create({
     marginRight: 40,
   },
   messageBubble: {
-    maxWidth: '75%',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 18,
