@@ -61,12 +61,13 @@ type PropertyCardProps = {
 const getVariantStyles = (variant: PropertyCardVariant) => {
   const variants = {
     compact: {
-      imageHeight: 70,
+      imageHeight: 60,
       showFeatures: true,
       showTypeIcon: false,
       showRating: false,
       titleLines: 2,
       locationLines: 1,
+      showPrice: false,
     },
     featured: {
       imageHeight: 140,
@@ -75,6 +76,7 @@ const getVariantStyles = (variant: PropertyCardVariant) => {
       showRating: true,
       titleLines: 2,
       locationLines: 2,
+      showPrice: true,
     },
     saved: {
       imageHeight: 120,
@@ -83,6 +85,7 @@ const getVariantStyles = (variant: PropertyCardVariant) => {
       showRating: true,
       titleLines: 2,
       locationLines: 1,
+      showPrice: true,
     },
     default: {
       imageHeight: 120,
@@ -91,6 +94,7 @@ const getVariantStyles = (variant: PropertyCardVariant) => {
       showRating: true,
       titleLines: 2,
       locationLines: 1,
+      showPrice: true,
     },
   };
 
@@ -167,6 +171,7 @@ export function PropertyCard({
   const finalShowFeatures = showFeatures && variantStyles.showFeatures;
   const finalShowTypeIcon = showTypeIcon && variantStyles.showTypeIcon;
   const finalShowRating = showRating && variantStyles.showRating;
+  const finalShowPrice = showPrice && (variantStyles.showPrice !== false);
   const finalTitleLines = titleLines !== undefined ? titleLines : variantStyles.titleLines;
   const finalLocationLines = locationLines !== undefined ? locationLines : variantStyles.locationLines;
 
@@ -345,7 +350,7 @@ export function PropertyCard({
         )}
 
         {/* Price */}
-        {showPrice && propertyData.price && (
+        {finalShowPrice && propertyData.price && (
           <View style={styles.priceContainer}>
             <ThemedText
               style={[
@@ -433,10 +438,7 @@ const styles = StyleSheet.create({
   },
   horizontalContent: {
     flex: 1,
-    marginTop: 0,
     justifyContent: 'space-between',
-    minHeight: 120,
-    paddingLeft: 10,
   },
   title: {
     fontSize: 15,
@@ -445,9 +447,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   horizontalTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    lineHeight: 22,
   },
   location: {
     fontSize: 12,
@@ -617,20 +616,14 @@ const styles = StyleSheet.create({
 
   // ===== COMPACT VARIANT STYLES =====
   compactCard: {
-    gap: 8,
   },
   compactContent: {
-    gap: 8,
   },
   compactTitle: {
-    fontSize: 14,
-    fontWeight: '600',
   },
   compactLocation: {
-    fontSize: 12,
   },
   compactPrice: {
-    fontSize: 14,
   },
   compactNoteContainer: {
     paddingVertical: 6,

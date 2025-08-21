@@ -412,6 +412,7 @@ const PropertiesFromIds = React.memo(function PropertiesFromIds({ ids }: { ids: 
           orientation={'horizontal'}
           variant={'compact'}
           onPress={() => router.push(`/properties/${property._id || property.id}`)}
+          showFavoriteButton={false}
         />
       ))}
     </View>
@@ -495,32 +496,47 @@ function ChatContent({
           </Text>,
         );
       } else if (segment) {
-        // Handle markdown links: [text](https://...)
-        const linkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
-        let lastIndex = 0;
-        let match: RegExpExecArray | null;
-        while ((match = linkRegex.exec(segment)) !== null) {
-          const [full, label, url] = match;
-          const before = segment.substring(lastIndex, match.index);
-          if (before) nodes.push(
-            <Text key={`${keyPrefix}-txt-${i}-${lastIndex}`} style={baseStyle}>{before}</Text>,
-          );
-          nodes.push(
-            <Text
-              key={`${keyPrefix}-lnk-${i}-${match.index}`}
-              style={[baseStyle, styles.link]}
-              onPress={() => Linking.openURL(url)}
-              suppressHighlighting
-            >
-              {label}
-            </Text>,
-          );
-          lastIndex = match.index + full.length;
-        }
-        const rest = segment.substring(lastIndex);
-        if (rest) nodes.push(
-          <Text key={`${keyPrefix}-rest-${i}-${lastIndex}`} style={baseStyle}>{rest}</Text>,
-        );
+        // Handle inline bold: **text**
+        const boldSplit = segment.split(/(\*\*[^*]+\*\*)/g);
+        const boldNodes: React.ReactNode[] = [];
+        boldSplit.forEach((boldSegment, j) => {
+          const boldMatch = boldSegment.match(/^\*\*([^*]+)\*\*$/);
+          if (boldMatch) {
+            boldNodes.push(
+              <Text key={`${keyPrefix}-bold-${i}-${j}`} style={[baseStyle, styles.markdownBold]}>
+                {boldMatch[1]}
+              </Text>,
+            );
+          } else if (boldSegment) {
+            // Handle markdown links: [text](https://...)
+            const linkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+            let lastIndex = 0;
+            let match: RegExpExecArray | null;
+            while ((match = linkRegex.exec(boldSegment)) !== null) {
+              const [full, label, url] = match;
+              const before = boldSegment.substring(lastIndex, match.index);
+              if (before) boldNodes.push(
+                <Text key={`${keyPrefix}-txt-${i}-${j}-${lastIndex}`} style={baseStyle}>{before}</Text>,
+              );
+              boldNodes.push(
+                <Text
+                  key={`${keyPrefix}-lnk-${i}-${j}-${match.index}`}
+                  style={[baseStyle, styles.link]}
+                  onPress={() => Linking.openURL(url)}
+                  suppressHighlighting
+                >
+                  {label}
+                </Text>,
+              );
+              lastIndex = match.index + full.length;
+            }
+            const rest = boldSegment.substring(lastIndex);
+            if (rest) boldNodes.push(
+              <Text key={`${keyPrefix}-rest-${i}-${j}-${lastIndex}`} style={baseStyle}>{rest}</Text>,
+            );
+          }
+        });
+        nodes.push(...boldNodes);
       }
     });
     return nodes;
@@ -600,6 +616,17 @@ function ChatContent({
         out.push(
           <Text key={key} style={[styles.markdownH3, role === 'user' ? styles.userText : styles.assistantText]}>
             {text}
+          </Text>,
+        );
+        continue;
+      }
+
+      // Bold
+      if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
+        const text = trimmed.substring(2, trimmed.length - 2);
+        out.push(
+          <Text key={key} style={[styles.markdownBold, role === 'user' ? styles.userText : styles.assistantText]}>
+            {renderInlineSpans(text, [styles.markdownBold, role === 'user' ? styles.userText : styles.assistantText], `${key}-bold`) as any}
           </Text>,
         );
         continue;
@@ -1279,6 +1306,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     shadowColor: 'transparent',
     elevation: 0,
+    gap: 12,
   },
   userBubble: {
     backgroundColor: colors.primaryColor,
@@ -1377,6 +1405,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 2,
   },
+  markdownBold: {
+    fontWeight: '700',
+  },
   markdownH1: {
     fontSize: 20,
     fontWeight: '700',
@@ -1443,10 +1474,8 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   propertyCardsContainer: {
-    marginVertical: 12,
     gap: 12,
   },
-
   filePreviewContainer: {
     flexDirection: 'row',
     alignItems: 'center',
