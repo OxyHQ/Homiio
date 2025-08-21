@@ -28,6 +28,62 @@ export default function () {
   router.delete("/me/saved-properties/:propertyId", asyncHandler(profileController.unsaveProperty));
   router.patch("/me/saved-properties/:propertyId/notes", asyncHandler(profileController.updateSavedPropertyNotes));
   
+  // Billing/Entitlements
+  router.get('/me/entitlements', asyncHandler(async (req, res) => {
+    // Prevent caching so clients always get fresh entitlements
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    const oxyUserId = req.user?.id || req.user?._id;
+    if (!oxyUserId) return res.status(401).json({ success: false, error: { message: 'Authentication required' }});
+    
+    // Find billing record for this user
+    const { Billing } = require('../models');
+    const billing = await Billing.findOne({ oxyUserId }).lean();
+    
+    // Return default entitlements if no billing record exists
+    const entitlements = billing || { 
+      plusActive: false, 
+      fileCredits: 0,
+      founderSupporter: false,
+      processedSessions: []
+    };
+    
+    return res.json({ success: true, entitlements });
+  }));
+  
+  router.post('/me/entitlements/consume-file-credit', asyncHandler(async (req, res) => {
+    const oxyUserId = req.user?.id || req.user?._id;
+    if (!oxyUserId) return res.status(401).json({ success: false, error: { message: 'Authentication required' }});
+    const { Billing } = require('../models');
+    
+    // Find or create billing record for this user
+    let billing = await Billing.findOne({ oxyUserId });
+    if (!billing) {
+      billing = new Billing({
+        oxyUserId,
+        plusActive: false,
+        fileCredits: 0,
+        processedSessions: []
+      });
+      await billing.save();
+    }
+    
+    const hasPlus = !!billing.plusActive;
+    if (hasPlus) return res.json({ success: true, remaining: 'unlimited', consumed: false });
+    
+    if ((billing.fileCredits || 0) <= 0) {
+      return res.status(402).json({ success: false, error: { message: 'No file credits', code: 'NO_CREDITS' }});
+    }
+    
+    const result = await billing.consumeFileCredit();
+    return res.json({ 
+      success: true, 
+      remaining: result.remaining, 
+      consumed: result.consumed 
+    });
+  }));
+  
   // Saved property folders
   router.get("/me/saved-property-folders", asyncHandler(profileController.getSavedPropertyFolders));
   router.post("/me/saved-property-folders", asyncHandler(profileController.createSavedPropertyFolder));

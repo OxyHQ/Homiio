@@ -1,15 +1,13 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback , useContext } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, Platform } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams , useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useProperties } from '@/hooks';
 import { PropertyCard } from '@/components/PropertyCard';
 import { ThemedText } from '@/components/ThemedText';
 import { colors } from '@/styles/colors';
-import { useRouter } from 'expo-router';
 import { phuduFontWeights } from '@/styles/fonts';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
-import { useContext } from 'react';
 import { FiltersBar } from '@/components/FiltersBar';
 import { FiltersBottomSheet, FilterSection, FilterValue } from '@/components/FiltersBar/FiltersBottomSheet';
 

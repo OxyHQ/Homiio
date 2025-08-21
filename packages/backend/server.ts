@@ -13,6 +13,7 @@ import { notFound, errorHandler } from './middlewares/errorHandler';
 import database from './database/connection';
 import publicRoutes from './routes/public';
 import { OxyServices } from '@oxyhq/services/core';
+import { stripeWebhook, confirmCheckoutSession } from './controllers/billingController';
 
 const oxy = new OxyServices({ baseURL: 'https://localhost:3001' });
 
@@ -122,6 +123,18 @@ const ensureDatabaseConnection = async (req: any, res: any, next: any) => {
 
 // Middleware
 app.use(cors(corsOptions));
+
+// Stripe webhook must be mounted BEFORE any body parser that consumes the body
+app.post('/api/billing/webhook', bodyParser.raw({ type: '*/*' }), (req, res, next) => {
+  // Expose raw buffer to the webhook handler for signature verification
+  (req as any).rawBody = (req as any).body;
+  return stripeWebhook(req as any, res as any);
+});
+
+// Public confirm endpoint to finalize entitlements after redirect (does not require auth)
+app.post('/api/billing/confirm', bodyParser.json({ limit: '1mb' }), (req, res) => {
+  return confirmCheckoutSession(req as any, res as any);
+});
 
 // Apply body parser only for non-multipart requests
 app.use((req, res, next) => {

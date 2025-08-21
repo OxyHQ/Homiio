@@ -126,12 +126,12 @@ export default function RootLayout() {
 
   // --- Font Loading ---
   const [loaded] = useFonts({
-    'Cereal-Light': require('@/assets/fonts/Cereal/Cereal_W_Lt.otf'),
-    'Cereal-Book': require('@/assets/fonts/Cereal/Cereal_W_Bk.otf'),
-    'Cereal-Black': require('@/assets/fonts/Cereal/Cereal_W_Blk.otf'),
-    'Cereal-Medium': require('@/assets/fonts/Cereal/Cereal_W_Md.otf'),
-    'Cereal-ExtraBold': require('@/assets/fonts/Cereal/Cereal_W_XBd.otf'),
-    'Cereal-Bold': require('@/assets/fonts/Cereal/Cereal_W_Bd.otf'),
+    'Roboto-Light': require('@/assets/fonts/Roboto/Roboto-Light.ttf'),
+    'Roboto-Regular': require('@/assets/fonts/Roboto/Roboto-Regular.ttf'),
+    'Roboto-Black': require('@/assets/fonts/Roboto/Roboto-Black.ttf'),
+    'Roboto-Medium': require('@/assets/fonts/Roboto/Roboto-Medium.ttf'),
+    'Roboto-ExtraBold': require('@/assets/fonts/Roboto/Roboto-ExtraBold.ttf'),
+    'Roboto-Bold': require('@/assets/fonts/Roboto/Roboto-Bold.ttf'),
     // ... keep Inter and Phudu fonts for fallback or legacy
     'Inter-Black': require('@/assets/fonts/inter/Inter-Black.otf'),
     'Inter-Bold': require('@/assets/fonts/inter/Inter-Bold.otf'),

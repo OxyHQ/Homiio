@@ -62,7 +62,7 @@ export default function RoommatePreferencesPage() {
       }
     })();
     // Only on mount/auth change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [oxyServices, activeSessionId]);
 
   const preferencesQuery = useQuery({

@@ -753,6 +753,49 @@ export const healthApi = {
 };
 
 /**
+ * Geocoding API functions
+ */
+export const geocodingApi = {
+  // Reverse geocode coordinates to get address
+  async reverseGeocode(longitude: number, latitude: number): Promise<ApiResponse<{
+    street?: string;
+    houseNumber?: string;
+    neighborhood?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    postalCode?: string;
+    fullAddress?: string;
+  }>> {
+    const response = await api.get<ApiResponse>('/api/geocoding/reverse', {
+      params: { longitude, latitude },
+    });
+    return response.data;
+  },
+
+  // Forward geocode address to get coordinates
+  async forwardGeocode(address: string): Promise<ApiResponse<{
+    street?: string;
+    houseNumber?: string;
+    neighborhood?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    postalCode?: string;
+    fullAddress?: string;
+    coordinates?: {
+      longitude: number;
+      latitude: number;
+    };
+  }>> {
+    const response = await api.get<ApiResponse>('/api/geocoding/forward', {
+      params: { address },
+    });
+    return response.data;
+  },
+};
+
+/**
  * Sindi chat history API functions
  */
 export const sindiApi = {
@@ -814,4 +857,5 @@ export default {
   config: API_CONFIG,
   user: userApi,
   sindi: sindiApi,
+  geocoding: geocodingApi,
 };

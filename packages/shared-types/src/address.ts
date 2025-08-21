@@ -10,6 +10,7 @@ export interface Address {
   state: string;
   zipCode: string;
   country: string;
+  neighborhood?: string;
   coordinates?: Coordinates;
   showAddressNumber?: boolean;
 }

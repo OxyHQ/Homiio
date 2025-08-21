@@ -36,29 +36,29 @@ const styles = StyleSheet.create({
   default: {
     fontSize: 16,
     lineHeight: 24,
-    fontFamily: 'Cereal-Book',
+    fontFamily: 'Roboto-Regular',
   },
   defaultSemiBold: {
     fontSize: 16,
     lineHeight: 24,
-    fontFamily: 'Cereal-Bold',
+    fontFamily: 'Roboto-Medium',
     fontWeight: '600',
   },
   title: {
     fontSize: 32,
-    fontFamily: 'Cereal-Bold',
+    fontFamily: 'Roboto-Bold',
     fontWeight: 'bold',
     lineHeight: 32,
   },
   subtitle: {
     fontSize: 20,
-    fontFamily: 'Cereal-Bold',
+    fontFamily: 'Roboto-Medium',
     fontWeight: 'bold',
   },
   link: {
     lineHeight: 30,
     fontSize: 16,
-    fontFamily: 'Cereal-Book',
+    fontFamily: 'Roboto-Regular',
     color: '#0a7ea4',
   },
 });

@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Modal } from 'react-native';
 import {
+  Modal,
   View,
   StyleSheet,
   ScrollView,
@@ -26,9 +26,93 @@ import {
 import { useCreateProperty, useUpdateProperty, useProperty } from '@/hooks/usePropertyQueries';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SearchablePickerBottomSheet } from '@/components/SearchablePickerBottomSheet';
+import { validateEthicalPricing, getPricingGuidance } from '@/utils/ethicalPricing';
 
 import * as Location from 'expo-location';
 const IconComponent = Ionicons as any;
+
+// Ethical Pricing Recommendation Component
+interface EthicalPricingRecommendationProps {
+  proposedRent: number;
+  propertyData: any;
+}
+
+function EthicalPricingRecommendation({ proposedRent, propertyData }: EthicalPricingRecommendationProps) {
+  const { t } = useTranslation();
+
+  // Convert form data to property characteristics format
+  const propertyCharacteristics = {
+    type: propertyData.basicInfo.propertyType as any,
+    bedrooms: propertyData.basicInfo.bedrooms || 0,
+    bathrooms: propertyData.basicInfo.bathrooms || 0,
+    squareFootage: propertyData.basicInfo.squareFootage || 0,
+    amenities: propertyData.amenities.selectedAmenities || [],
+    location: {
+      city: propertyData.location.city || '',
+      state: propertyData.location.state || '',
+    },
+    floor: propertyData.location.floor,
+    hasElevator: propertyData.amenities.selectedAmenities?.includes('elevator'),
+    parkingSpaces: propertyData.amenities.selectedAmenities?.includes('parking') ? 1 : 0,
+    yearBuilt: propertyData.basicInfo.yearBuilt,
+    furnishedStatus: propertyData.amenities.selectedAmenities?.includes('furnished') ? 'furnished' : 'unfurnished' as 'furnished' | 'unfurnished' | 'partially_furnished',
+    utilitiesIncluded: propertyData.amenities.selectedAmenities?.includes('utilities_included'),
+    petFriendly: propertyData.rules?.petsAllowed,
+    hasBalcony: propertyData.amenities.selectedAmenities?.includes('balcony'),
+    hasGarden: propertyData.amenities.selectedAmenities?.includes('garden'),
+    proximityToTransport: propertyData.location.proximityToTransport,
+    proximityToSchools: propertyData.location.proximityToSchools,
+    proximityToShopping: propertyData.location.proximityToShopping,
+  };
+
+  const recommendation = validateEthicalPricing(proposedRent, propertyCharacteristics as any);
+  const guidance = getPricingGuidance(propertyCharacteristics as any);
+
+  return (
+    <View style={styles.ethicalPricingContainer}>
+      <View style={[
+        styles.ethicalPricingCard,
+        !recommendation.isWithinEthicalRange && styles.ethicalPricingWarning
+      ]}>
+        <View style={styles.ethicalPricingHeader}>
+          <IconComponent
+            name={recommendation.isWithinEthicalRange ? 'checkmark-circle' : 'warning'}
+            size={16}
+            color={recommendation.isWithinEthicalRange ? '#4CAF50' : '#FFA500'}
+          />
+          <ThemedText style={styles.ethicalPricingTitle}>
+            {recommendation.isWithinEthicalRange ? 'Ethical Pricing' : 'Pricing Review Needed'}
+          </ThemedText>
+        </View>
+
+        <ThemedText style={styles.ethicalPricingText}>
+          Suggested: ${recommendation.suggestedRent}/month
+        </ThemedText>
+        <ThemedText style={styles.ethicalPricingText}>
+          Max Ethical: ${recommendation.maxRent}/month
+        </ThemedText>
+
+        {!recommendation.isWithinEthicalRange && (
+          <View style={styles.ethicalPricingWarning}>
+            <ThemedText style={styles.ethicalPricingWarningText}>
+              Your price exceeds the ethical maximum. Consider lowering it to make housing more accessible.
+            </ThemedText>
+          </View>
+        )}
+
+        {recommendation.warnings.length > 0 && (
+          <View style={styles.ethicalPricingWarnings}>
+            {recommendation.warnings.map((warning, index) => (
+              <ThemedText key={index} style={styles.ethicalPricingWarningText}>
+                • {warning}
+              </ThemedText>
+            ))}
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
 
 // Define the property types
 const PROPERTY_TYPES = [
@@ -252,6 +336,7 @@ export default function CreatePropertyScreen() {
         showAddressNumber: false,
         floor: property.floor,
         showFloor: !!property.floor,
+        neighborhood: property.address?.neighborhood || '',
         city: property.address?.city || '',
         state: property.address?.state || '',
         zipCode: property.address?.zipCode || '',
@@ -359,6 +444,8 @@ export default function CreatePropertyScreen() {
 
   // Memoize the address selection callback to prevent unnecessary re-renders
   const handleAddressSelect = React.useCallback((address: any, coordinates: [number, number]) => {
+    console.log('handleAddressSelect received address data:', address);
+
     // Update form with coordinates
     updateFormField('location', 'latitude', coordinates[1]);
     updateFormField('location', 'longitude', coordinates[0]);
@@ -369,6 +456,12 @@ export default function CreatePropertyScreen() {
     }
     if (address.houseNumber) {
       updateFormField('location', 'addressNumber', address.houseNumber);
+    }
+    if (address.neighborhood) {
+      console.log('Setting neighborhood:', address.neighborhood);
+      updateFormField('location', 'neighborhood', address.neighborhood);
+    } else {
+      console.log('No neighborhood found in address data');
     }
     if (address.city) {
       updateFormField('location', 'city', address.city);
@@ -391,6 +484,8 @@ export default function CreatePropertyScreen() {
 
   // Memoize the fullscreen address selection callback
   const handleFullscreenAddressSelect = React.useCallback((address: any, coordinates: [number, number]) => {
+    console.log('handleFullscreenAddressSelect received address data:', address);
+
     // Update form with coordinates
     updateFormField('location', 'latitude', coordinates[1]);
     updateFormField('location', 'longitude', coordinates[0]);
@@ -401,6 +496,12 @@ export default function CreatePropertyScreen() {
     }
     if (address.houseNumber) {
       updateFormField('location', 'addressNumber', address.houseNumber);
+    }
+    if (address.neighborhood) {
+      console.log('Setting neighborhood (fullscreen):', address.neighborhood);
+      updateFormField('location', 'neighborhood', address.neighborhood);
+    } else {
+      console.log('No neighborhood found in address data (fullscreen)');
     }
     if (address.city) {
       updateFormField('location', 'city', address.city);
@@ -436,6 +537,7 @@ export default function CreatePropertyScreen() {
           state: formData.location.state,
           zipCode: formData.location.zipCode,
           country: formData.location.country || 'US',
+          neighborhood: formData.location.neighborhood,
           showAddressNumber: formData.location.showAddressNumber ?? true,
         },
         type: formData.basicInfo.propertyType as
@@ -800,6 +902,7 @@ export default function CreatePropertyScreen() {
       address: address,
       addressLine2: formData.location.addressLine2 || '',
       addressNumber: formData.location.addressNumber || '',
+      neighborhood: formData.location.neighborhood || '',
       city: formData.location.city || '',
       state: formData.location.state || '',
       zipCode: formData.location.zipCode || '',
@@ -1220,6 +1323,16 @@ export default function CreatePropertyScreen() {
               </View>
             ) : null}
 
+            <View style={styles.formGroup}>
+              <ThemedText style={styles.label}>Neighborhood (optional)</ThemedText>
+              <TextInput
+                style={styles.input}
+                value={formData.location.neighborhood || ''}
+                onChangeText={(text) => updateFormField('location', 'neighborhood', text)}
+                placeholder="e.g., Gràcia, Sant Andreu, Eixample"
+              />
+            </View>
+
             <View style={styles.formRow}>
               <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
                 <ThemedText style={styles.label}>City/District</ThemedText>
@@ -1325,6 +1438,14 @@ export default function CreatePropertyScreen() {
                 />
                 {validationErrors.monthlyRent && (
                   <ThemedText style={styles.errorText}>{validationErrors.monthlyRent}</ThemedText>
+                )}
+
+                {/* Ethical Pricing Recommendation */}
+                {formData.pricing.monthlyRent > 0 && (
+                  <EthicalPricingRecommendation
+                    proposedRent={formData.pricing.monthlyRent}
+                    propertyData={formData}
+                  />
                 )}
               </View>
 
@@ -2168,6 +2289,45 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 16,
+  },
+  // Ethical Pricing Styles
+  ethicalPricingContainer: {
+    marginTop: 12,
+  },
+  ethicalPricingCard: {
+    backgroundColor: colors.COLOR_BLACK_LIGHT_9,
+    borderWidth: 1,
+    borderColor: colors.COLOR_BLACK_LIGHT_6,
+    borderRadius: 8,
+    padding: 12,
+  },
+  ethicalPricingWarning: {
+    borderColor: '#FFA500',
+    backgroundColor: '#FFF8E1',
+  },
+  ethicalPricingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  ethicalPricingTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+    color: colors.COLOR_BLACK_LIGHT_1,
+  },
+  ethicalPricingText: {
+    fontSize: 12,
+    color: colors.COLOR_BLACK_LIGHT_2,
+    marginBottom: 4,
+  },
+  ethicalPricingWarningText: {
+    fontSize: 12,
+    color: '#FF6B35',
+    marginTop: 8,
+  },
+  ethicalPricingWarnings: {
+    marginTop: 8,
   },
   navigationButton: {
     flexDirection: 'row',

@@ -5,5 +5,6 @@
 
 import energyService from './energyService';
 import telegramService from './telegramService';
+import geocodingService from './geocodingService';
 
-export { energyService, telegramService };
+export { energyService, telegramService, geocodingService };

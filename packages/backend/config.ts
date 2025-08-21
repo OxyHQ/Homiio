@@ -59,6 +59,17 @@ export interface Config {
     level: string;
     file: string;
   };
+  stripe?: {
+    secretKey?: string;
+    pricePlus?: string;
+    priceFile?: string;
+    webhookSecret?: string;
+    successUrl?: string;
+    cancelUrl?: string;
+  };
+  mapbox?: {
+    token?: string;
+  };
 }
 
 const config: Config = {
@@ -156,6 +167,32 @@ const config: Config = {
     level: process.env.LOG_LEVEL || 'info',
     file: process.env.LOG_FILE || (process.env.VERCEL ? '/tmp/app.log' : './logs/app.log'),
   },
+  
+  // Stripe Configuration (optional)
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY,
+    pricePlus: process.env.STRIPE_PRICE_PLUS,
+    priceFile: process.env.STRIPE_PRICE_FILE,
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+    // Automatic URLs based on NODE_ENV:
+    // - In development: always use FRONTEND_URL (or localhost) to avoid redirecting to production
+    // - In production: allow STRIPE_* overrides, else default to homiio.com
+    ...((): { successUrl: string; cancelUrl: string } => {
+      const isProd = process.env.NODE_ENV === 'production';
+      const defaultFrontend = process.env.FRONTEND_URL || (isProd ? 'https://homiio.com' : 'http://localhost:8081');
+      const successDefault = `${defaultFrontend}/payments/success?session_id={CHECKOUT_SESSION_ID}`;
+      const cancelDefault = `${defaultFrontend}/payments/cancelled`;
+      return {
+        successUrl: isProd ? (process.env.STRIPE_SUCCESS_URL || successDefault) : successDefault,
+        cancelUrl: isProd ? (process.env.STRIPE_CANCEL_URL || cancelDefault) : cancelDefault,
+      };
+    })(),
+  },
+  
+  // Mapbox Configuration
+  mapbox: {
+    token: process.env.MAPBOX_TOKEN,
+  }
 };
 
 export default config;

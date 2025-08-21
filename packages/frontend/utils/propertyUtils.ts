@@ -1,19 +1,24 @@
-import { generatePropertyTitle } from './propertyTitleGenerator';
+import { generatePropertyTitle, TitleFormat } from './propertyTitleGenerator';
 import { Property, PropertyImage } from '@homiio/shared-types';
 import propertyPlaceholder from '@/assets/images/property_placeholder.jpg';
 
 /**
  * Get the title for a property, generating it dynamically if needed
  * @param property - Property object
+ * @param format - Title format ('default', 'short', or 'large')
  * @returns The property title
  */
-export function getPropertyTitle(property: Property): string {
+export function getPropertyTitle(property: Property, format: TitleFormat = 'default'): string {
   return generatePropertyTitle({
     type: property.type,
-    address: property.address,
+    address: {
+      ...property.address,
+      // Use neighborhood field from address if available
+      neighborhood: property.address.neighborhood,
+    },
     bedrooms: property.bedrooms,
     bathrooms: property.bathrooms,
-  });
+  }, format);
 }
 
 /**
@@ -21,8 +26,17 @@ export function getPropertyTitle(property: Property): string {
  * @param property - Property object
  * @returns The property title for display
  */
-export function getPropertyDisplayTitle(property: Property): string {
-  return getPropertyTitle(property);
+export function getDisplayPropertyTitle(property: Property): string {
+  return getPropertyTitle(property, 'short');
+}
+
+/**
+ * Get a detailed property title for property detail pages
+ * @param property - Property object
+ * @returns The detailed property title
+ */
+export function getDetailedPropertyTitle(property: Property): string {
+  return getPropertyTitle(property, 'large');
 }
 
 /**

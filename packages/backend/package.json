@@ -12,8 +12,12 @@
     "build": "tsc",
     "migrate": "ts-node --transpile-only scripts/migrate.ts",
     "migrate:dev": "NODE_ENV=development ts-node --transpile-only scripts/migrate.ts",
+    "migrate:billing": "node scripts/migrate-billing-field.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "test:images": "ts-node --transpile-only scripts/test-image-upload.ts",
+    "test:webhook": "node scripts/test-stripe-webhook.js",
+    "test:subscription-save": "node scripts/test-subscription-save.js",
+    "check:subscriptions": "node scripts/check-subscription-db.js",
     "clean": "rm -rf dist",
     "lint": "eslint . --ext .ts"
   },
@@ -40,6 +44,7 @@
     "qrcode-terminal": "^0.11.0",
     "sharp": "^0.34.3",
     "uuid": "^7.0.3",
+    "stripe": "^16.11.0",
     "validator": "^13.11.0",
     "whatsapp-web.js": "^1.31.0"
   },

@@ -3,12 +3,14 @@ import { Platform, View, ViewStyle } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
 import { useMapState } from '@/context/MapStateContext';
+import { geocodingApi } from '@/utils/api';
 
 type LonLat = [number, number];
 
 export interface AddressData {
     street?: string;
     houseNumber?: string;
+    neighborhood?: string;
     city?: string;
     state?: string;
     country?: string;
@@ -22,6 +24,7 @@ type MapEvent =
     | { type: 'markerClick'; id: string; lngLat: LonLat }
     | { type: 'clusterClick'; leaves: any[] }
     | { type: 'addressLookup'; address: AddressData; coordinates: LonLat }
+    | { type: 'requestAddressLookup'; coordinates: LonLat }
     | {
         type: 'region';
         center: LonLat;
@@ -83,37 +86,20 @@ const DEFAULT_ZOOM = 12;
 const DEFAULT_STYLE = 'mapbox://styles/mapbox/streets-v12';
 const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN || '';
 
-// Address lookup function using Mapbox Geocoding API
+// Address lookup function using backend API
 const lookupAddressFromCoordinates = async (coordinates: LonLat): Promise<AddressData | null> => {
     try {
         const [lng, lat] = coordinates;
-        const response = await fetch(
-            `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${MAPBOX_TOKEN}&types=address,poi&limit=1`
-        );
+        const result = await geocodingApi.reverseGeocode(lng, lat);
 
-        if (!response.ok) {
-            throw new Error('Failed to fetch address');
-        }
-
-        const data = await response.json();
-        const feature = data.features?.[0];
-
-        if (!feature) {
+        if (!result.success || !result.data) {
+            console.error('Geocoding API error:', result.message);
             return null;
         }
 
-        const context = feature.context || [];
-        const addressComponents = {
-            street: feature.text || '',
-            houseNumber: feature.address || '',
-            city: context.find((c: any) => c.id.startsWith('place'))?.text || '',
-            state: context.find((c: any) => c.id.startsWith('region'))?.text || '',
-            country: context.find((c: any) => c.id.startsWith('country'))?.text || '',
-            postalCode: context.find((c: any) => c.id.startsWith('postcode'))?.text || '',
-            fullAddress: feature.place_name || '',
-        };
+        console.log('Backend geocoding result:', result.data);
 
-        return addressComponents;
+        return result.data;
     } catch (error) {
         console.error('Address lookup failed:', error);
         return null;
@@ -218,27 +204,8 @@ const buildHTML = (
         .setLngLat(coordinates)
         .addTo(map);
       
-      fetch(\`https://api.mapbox.com/geocoding/v5/mapbox.places/\${coordinates[0]},\${coordinates[1]}.json?access_token=${MAPBOX_TOKEN}&types=address,poi&limit=1\`)
-        .then(response => response.json())
-        .then(data => {
-          const feature = data.features?.[0];
-          if (feature) {
-            const context = feature.context || [];
-            const address = {
-              street: feature.text || '',
-              houseNumber: feature.address || '',
-              city: context.find(c => c.id.startsWith('place'))?.text || '',
-              state: context.find(c => c.id.startsWith('region'))?.text || '',
-              country: context.find(c => c.id.startsWith('country'))?.text || '',
-              postalCode: context.find(c => c.id.startsWith('postcode'))?.text || '',
-              fullAddress: feature.place_name || '',
-            };
-            post({ type: 'addressLookup', address: address, coordinates: coordinates });
-          }
-        })
-        .catch(error => {
-          console.error('Address lookup failed:', error);
-        });
+      // Request address lookup from the React Native side
+      post({ type: 'requestAddressLookup', coordinates: coordinates });
     }
   });
 
@@ -531,6 +498,16 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
             if (msg.type === 'clusterClick') onClusterPress?.(msg);
             if (msg.type === 'addressLookup' && onAddressSelect) {
                 onAddressSelect(msg.address, msg.coordinates);
+            }
+            if (msg.type === 'requestAddressLookup' && onAddressSelect) {
+                // Handle address lookup request using the TypeScript function
+                lookupAddressFromCoordinates(msg.coordinates).then(address => {
+                    if (address) {
+                        onAddressSelect(address, msg.coordinates);
+                    }
+                }).catch(error => {
+                    console.error('Address lookup failed:', error);
+                });
             }
             if (msg.type === 'region') {
                 if (screenId) {

@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { View, Image, StyleSheet, TouchableOpacity, ViewStyle, Platform } from 'react-native';
 import { colors } from '@/styles/colors';
 import { IconButton } from './IconButton';
-import { Property, PropertyType, PriceUnit } from '@homiio/shared-types';
+import { Property, PriceUnit } from '@homiio/shared-types';
 import { getPropertyTitle, getPropertyImageSource } from '@/utils/propertyUtils';
 
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
@@ -18,22 +18,8 @@ export type PropertyCardVariant = 'default' | 'compact' | 'featured' | 'saved';
 export type PropertyCardOrientation = 'vertical' | 'horizontal';
 
 type PropertyCardProps = {
-  // Core data - can pass either individual props or a Property object
-  property?: Property;
-  id?: string;
-  title?: string;
-  location?: string;
-  price?: number;
-  currency?: string;
-  priceUnit?: PriceUnit;
-  type?: PropertyType;
-  imageSource?: any;
-  bedrooms?: number;
-  bathrooms?: number;
-  size?: number;
-  sizeUnit?: string;
-  rating?: number;
-  reviewCount?: number;
+  // Core data - now primarily uses property object
+  property: Property;
 
   // Display options
   variant?: PropertyCardVariant;
@@ -47,7 +33,6 @@ type PropertyCardProps = {
   showRating?: boolean;
 
   // State
-  isVerified?: boolean;
   isSelected?: boolean;
   isProcessing?: boolean;
 
@@ -76,7 +61,7 @@ type PropertyCardProps = {
 const getVariantStyles = (variant: PropertyCardVariant) => {
   const variants = {
     compact: {
-      imageHeight: 100,
+      imageHeight: 70,
       showFeatures: true,
       showTypeIcon: false,
       showRating: false,
@@ -115,20 +100,6 @@ const getVariantStyles = (variant: PropertyCardVariant) => {
 export function PropertyCard({
   // Core data
   property,
-  id,
-  title,
-  location,
-  price,
-  currency = '$',
-  priceUnit = PriceUnit.MONTH,
-  type,
-  imageSource,
-  bedrooms,
-  bathrooms,
-  size,
-  sizeUnit = 'm²',
-  rating,
-  reviewCount,
 
   // Display options
   variant = 'default',
@@ -142,7 +113,6 @@ export function PropertyCard({
   showRating = true,
 
   // State
-  isVerified = false,
   isSelected = false,
   isProcessing = false,
 
@@ -166,56 +136,28 @@ export function PropertyCard({
   // Use saved properties context to check if property is saved
   const { isPropertySaved, isInitialized } = useSavedPropertiesContext();
 
-  // Use property object if provided, otherwise use individual props
-  const propertyData = property
-    ? {
-      id: property._id || property.id,
-      title: getPropertyTitle(property),
-      location: `${property.address?.city || ''}, ${property.address?.state || ''}`,
-      price: property.rent.amount,
-      currency: property.rent.currency,
-      type:
-        property.type === 'room'
-          ? 'apartment'
-          : property.type === 'studio'
-            ? 'apartment'
-            : property.type === 'house'
-              ? 'house'
-              : ('apartment' as PropertyType),
-      imageSource: getPropertyImageSource(property),
-      bedrooms: property.bedrooms || 0,
-      bathrooms: property.bathrooms || 0,
-      size: property.squareFootage || 0,
-      isVerified: false,
-      rating: 4.5, // Default rating since Property interface doesn't have this
-      reviewCount: 12, // Default review count since Property interface doesn't have this
-    }
-    : {
-      id,
-      title,
-      location,
-      price,
-      currency,
-      type,
-      imageSource,
-      bedrooms,
-      bathrooms,
-      size,
-      isVerified,
-      rating,
-      reviewCount,
-    };
+  // Extract data from property object
+  const propertyData = {
+    id: property._id || property.id,
+    title: getPropertyTitle(property),
+    location: `${property.address?.city || ''}, ${property.address?.state || ''}`,
+    price: property.rent.amount,
+    currency: property.rent.currency,
+    priceUnit: property.priceUnit || PriceUnit.MONTH,
+    type: property.type === 'room' ? 'apartment' : property.type === 'studio' ? 'apartment' : property.type,
+    imageSource: getPropertyImageSource(property),
+    bedrooms: property.bedrooms || 0,
+    bathrooms: property.bathrooms || 0,
+    size: property.squareFootage || 0,
+    sizeUnit: 'm²',
+    isVerified: property.isVerified || false,
+    rating: 4.5, // Default rating since Property interface doesn't have this
+    reviewCount: 12, // Default review count since Property interface doesn't have this
+  };
 
-  const isEco = Boolean(
-    property && typeof property === 'object' && 'ecoCertified' in property && property.ecoCertified,
-  );
-  const isFeatured =
-    variant === 'featured' ||
-    Boolean(
-      property && typeof property === 'object' && 'isFeatured' in property && property.isFeatured,
-    );
-  const isPropertySavedState =
-    propertyData.id && isInitialized ? isPropertySaved(propertyData.id) : false;
+  const isEco = Boolean(property.isEcoFriendly);
+  const isFeatured = variant === 'featured';
+  const isPropertySavedState = propertyData.id && isInitialized ? isPropertySaved(propertyData.id) : false;
 
   // Get variant-specific styles
   const variantStyles = getVariantStyles(variant);
@@ -230,12 +172,12 @@ export function PropertyCard({
 
   const queryClient = useQueryClient();
   const handlePressIn = useCallback(() => {
-    const idToPrefetch = property?._id || property?.id || id;
+    const idToPrefetch = property._id || property.id;
     if (idToPrefetch) {
       prefetchProperty(queryClient, idToPrefetch as string);
       prefetchPropertyStats(queryClient, idToPrefetch as string);
     }
-  }, [queryClient, property?._id, property?.id, id]);
+  }, [queryClient, property._id, property.id]);
 
   return (
     <TouchableOpacity
@@ -302,7 +244,7 @@ export function PropertyCard({
         )}
 
         {/* Verified Badge */}
-        {showVerifiedBadge && (isVerified || propertyData.isVerified) && (
+        {showVerifiedBadge && propertyData.isVerified && (
           <View style={styles.verifiedBadge}>
             <IconButton
               name="shield-checkmark"
@@ -388,7 +330,7 @@ export function PropertyCard({
                 <ThemedText style={styles.featureSeparator}>•</ThemedText>
                 <View style={styles.feature}>
                   <ThemedText style={styles.featureText}>
-                    {`${propertyData.size} ${sizeUnit}`}
+                    {`${propertyData.size} ${propertyData.sizeUnit}`}
                   </ThemedText>
                 </View>
               </>
@@ -417,7 +359,7 @@ export function PropertyCard({
                 originalCurrency={propertyData.currency}
                 showConversion={false}
               />
-              <ThemedText style={styles.priceUnit}> / {priceUnit}</ThemedText>
+              <ThemedText style={styles.priceUnit}> / {propertyData.priceUnit}</ThemedText>
             </ThemedText>
           </View>
         )}
@@ -464,11 +406,12 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     height: 'auto',
+    gap: 8,
   },
   horizontalContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: 8,
   },
   imageContainer: {
     position: 'relative',
@@ -486,8 +429,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     justifyContent: 'space-between',
-    marginTop: 8,
-    paddingHorizontal: 8,
+    gap: 2,
   },
   horizontalContent: {
     flex: 1,
@@ -501,31 +443,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#222222',
     lineHeight: 20,
-    marginBottom: 4,
   },
   horizontalTitle: {
     fontSize: 16,
     fontWeight: '600',
     lineHeight: 22,
-    marginBottom: 4,
   },
   location: {
     fontSize: 12,
     color: '#717171',
-    marginBottom: 6,
     lineHeight: 18,
   },
   horizontalLocation: {
     fontSize: 14,
     color: '#717171',
-    marginBottom: 6,
     lineHeight: 18,
   },
   features: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    marginBottom: 8,
     gap: 4,
   },
   feature: {
@@ -564,9 +501,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 20,
     padding: 8,
-    ...(Platform.OS === 'web'
-      ? { boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }
-      : { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }),
   },
   ecoBadge: {
     position: 'absolute',
@@ -683,10 +617,10 @@ const styles = StyleSheet.create({
 
   // ===== COMPACT VARIANT STYLES =====
   compactCard: {
-    // Compact card styling
+    gap: 8,
   },
   compactContent: {
-    // Compact content styling
+    gap: 8,
   },
   compactTitle: {
     fontSize: 14,
@@ -694,7 +628,6 @@ const styles = StyleSheet.create({
   },
   compactLocation: {
     fontSize: 12,
-    marginBottom: 6,
   },
   compactPrice: {
     fontSize: 14,
@@ -710,11 +643,9 @@ const styles = StyleSheet.create({
 
   // ===== FEATURED VARIANT STYLES =====
   featuredCard: {
-    // Featured card styling
   },
   featuredImageContainer: {},
   featuredContent: {
-    // Featured content styling
   },
   featuredTitle: {
     fontSize: 15,
@@ -722,7 +653,6 @@ const styles = StyleSheet.create({
   },
   featuredLocation: {
     fontSize: 13,
-    marginBottom: 6,
   },
   featuredPrice: {
     fontSize: 15,

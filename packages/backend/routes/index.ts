@@ -19,6 +19,7 @@ const tips = require('./tips').default;
 const test = require('./test').default;
 const images = require('./images');
 const { asyncHandler } = require('../middlewares');
+const billing = require('./billing').default;
 
 export default function() {
   const propertyRoutes = properties();
@@ -35,6 +36,7 @@ export default function() {
   const tipsRoutes = tips();
   const testRoutes = test();
   const imageRoutes = images;
+  const billingRoutes = billing();
 
   const router = express.Router();
 
@@ -53,6 +55,7 @@ export default function() {
   router.use('/tips', tipsRoutes);
   router.use('/test', testRoutes);
   router.use('/images', imageRoutes);
+  router.use('/billing', billingRoutes);
 
   // Admin-only city routes (authenticated)
   router.post('/cities', asyncHandler(require('../controllers/cityController').default.createCity));

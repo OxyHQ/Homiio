@@ -8,7 +8,7 @@ import {
   Image,
   Animated,
   ScrollView,
-} from 'react-native';
+ useWindowDimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
@@ -34,7 +34,6 @@ import { HomeCarouselSection } from '@/components/HomeCarouselSection';
 import { ThemedText } from '@/components/ThemedText';
 import { useMediaQuery } from 'react-responsive';
 import { useLayoutScroll } from '@/context/LayoutScrollContext';
-import { useWindowDimensions } from 'react-native';
 
 // Type assertion for Ionicons compatibility with React 19
 const IconComponent = Ionicons as any;

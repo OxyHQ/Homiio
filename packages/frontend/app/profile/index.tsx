@@ -569,8 +569,25 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <ThemedText style={styles.sectionTitle}>Actions</ThemedText>
 
+          {/* Subscriptions */}
           <TouchableOpacity
             style={[styles.settingItem, styles.firstSettingItem]}
+            onPress={() => router.push('/profile/subscriptions')}
+          >
+            <View style={styles.settingInfo}>
+              <IconComponent name="star-outline" size={20} color="#666" style={styles.settingIcon} />
+              <View>
+                <ThemedText style={styles.settingLabel}>Subscriptions</ThemedText>
+                <ThemedText style={styles.settingDescription}>
+                  Manage Homiio Plus or buy one-time file analysis
+                </ThemedText>
+              </View>
+            </View>
+            <IconComponent name="chevron-forward" size={16} color="#ccc" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.settingItem]}
             onPress={() => router.push('/profile/edit')}
           >
             <View style={styles.settingInfo}>

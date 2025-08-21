@@ -35,7 +35,7 @@ export interface PropertyCharacteristics {
   hasElevator?: boolean;
   parkingSpaces?: number;
   yearBuilt?: number;
-  isFurnished?: boolean;
+  furnishedStatus?: 'furnished' | 'unfurnished' | 'partially_furnished';
   utilitiesIncluded?: boolean;
   petFriendly?: boolean;
   hasBalcony?: boolean;
@@ -332,7 +332,7 @@ export function calculateEthicalRent(property: PropertyCharacteristics): Pricing
     amenityBreakdown.push(`elevator: +$${ADDITIONAL_AMENITY_VALUES.elevator}`);
   }
 
-  if (property.isFurnished) {
+  if (property.furnishedStatus === 'furnished') {
     amenityValue += ADDITIONAL_AMENITY_VALUES.furnished;
     amenityBreakdown.push(`furnished: +$${ADDITIONAL_AMENITY_VALUES.furnished}`);
   }

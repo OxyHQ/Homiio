@@ -9,6 +9,7 @@ const telegramController = require('../controllers/telegramController');
 const cityController = require('../controllers/cityController').default;
 const tipsController = require('../controllers/tipsController');
 const analyticsController = require('../controllers/analyticsController');
+const geocodingController = require('../controllers/geocodingController').default;
 const { asyncHandler } = require('../middlewares');
 const performanceMonitor = require('../middlewares/performance').default;
 const Conversation = require('../models/schemas/ConversationSchema');
@@ -27,6 +28,10 @@ export default function () {
   router.get('/properties/radius', asyncHandler(propertyController.findPropertiesInRadius));
   router.get('/properties/:propertyId', asyncHandler(propertyController.getPropertyById));
   router.get('/properties/:propertyId/stats', asyncHandler(propertyController.getPropertyStats));
+
+  // Public geocoding routes
+  router.get('/geocoding/reverse', asyncHandler(geocodingController.reverseGeocode));
+  router.get('/geocoding/forward', asyncHandler(geocodingController.forwardGeocode));
 
   // Public city routes
   router.get('/cities', asyncHandler(cityController.getCities));

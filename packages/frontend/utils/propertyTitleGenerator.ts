@@ -14,10 +14,13 @@ export interface PropertyData {
     state?: string;
     zipCode?: string;
     country?: string;
+    neighborhood?: string;
   };
   bedrooms?: number;
   bathrooms?: number;
 }
+
+export type TitleFormat = 'default' | 'short' | 'large';
 
 /**
  * Helper function to remove property numbers for privacy
@@ -49,16 +52,98 @@ function safeTranslate(key: string, fallback: string): string {
 }
 
 /**
- * Generate a property title based on property data with dynamic localization
- * Format: "{PropertyType} for rent in {Street}, {City}, {State}"
+ * Generate a short property title (e.g., "Room in Sant Andreu")
  * @param propertyData - Property data object
- * @returns Generated title with privacy protection
+ * @returns Short generated title
  */
-export function generatePropertyTitle(propertyData: PropertyData): string {
+export function generateShortPropertyTitle(propertyData: PropertyData): string {
   const { type = PropertyType.APARTMENT, address = {} } = propertyData;
 
-  // Get current language from i18next
-  const currentLanguage = i18next.language || 'en';
+  // Get translated property type with fallbacks
+  const propertyType = safeTranslate(
+    `properties.titles.types.${type}`,
+    safeTranslate('properties.titles.types.apartment', 'Apartment'),
+  );
+
+  // Build location string - prefer neighborhood-like information
+  let location = '';
+  
+  // First check if neighborhood is explicitly provided
+  if (address.neighborhood) {
+    location = address.neighborhood;
+  } else if (address.street) {
+    // Try to extract neighborhood from street name
+    const streetWithoutNumber = removePropertyNumber(address.street);
+    const streetParts = streetWithoutNumber.split(',').map(part => part.trim());
+    
+    // Look for neighborhood indicators in street name
+    // Common neighborhood patterns: "Carrer de [Neighborhood]", "Calle [Neighborhood]", etc.
+    const neighborhoodPatterns = [
+      /carrer\s+(?:de\s+)?([^,\s]+)/i,
+      /calle\s+(?:de\s+)?([^,\s]+)/i,
+      /street\s+(?:of\s+)?([^,\s]+)/i,
+      /avenue\s+(?:of\s+)?([^,\s]+)/i,
+      /plaza\s+(?:de\s+)?([^,\s]+)/i,
+      /passeig\s+(?:de\s+)?([^,\s]+)/i,
+      /rambla\s+(?:de\s+)?([^,\s]+)/i,
+    ];
+    
+    for (const pattern of neighborhoodPatterns) {
+      const match = streetWithoutNumber.match(pattern);
+      if (match && match[1]) {
+        location = match[1];
+        break;
+      }
+    }
+    
+    // If no neighborhood pattern found, use the first meaningful part of the street
+    if (!location && streetParts.length > 0) {
+      const firstPart = streetParts[0];
+      // Skip common street prefixes
+      const skipPrefixes = ['carrer', 'calle', 'street', 'avenue', 'plaza', 'passeig', 'rambla'];
+      const lowerFirstPart = firstPart.toLowerCase();
+      
+      if (!skipPrefixes.some(prefix => lowerFirstPart.startsWith(prefix))) {
+        location = firstPart;
+      } else if (streetParts.length > 1) {
+        // Use the second part if first is a prefix
+        location = streetParts[1];
+      } else {
+        // Fallback to the whole street name without number
+        location = streetWithoutNumber;
+      }
+    }
+  }
+  
+  // If no neighborhood found from street, fall back to city
+  if (!location && address.city) {
+    location = address.city;
+  } else if (!location && address.state) {
+    location = address.state;
+  } else if (!location) {
+    location = safeTranslate('properties.titles.locationNotSpecified', 'Location not specified');
+  }
+
+  // Generate the final title: "PropertyType in Location"
+  const title = `${propertyType} in ${location}`;
+
+  // Ensure title doesn't exceed maximum length (100 characters for short format)
+  if (title.length > 100) {
+    const maxLocationLength = 100 - propertyType.length - 4; // 4 for " in "
+    const truncatedLocation = location.substring(0, maxLocationLength).trim();
+    return `${propertyType} in ${truncatedLocation}`;
+  }
+
+  return title;
+}
+
+/**
+ * Generate a large property title (e.g., "Apartment for rent in Carrer D'alí Bei, Barcelona, Barcelona")
+ * @param propertyData - Property data object
+ * @returns Large generated title with full details
+ */
+export function generateLargePropertyTitle(propertyData: PropertyData): string {
+  const { type = PropertyType.APARTMENT, address = {} } = propertyData;
 
   // Get translated property type with fallbacks
   const propertyType = safeTranslate(
@@ -69,11 +154,12 @@ export function generatePropertyTitle(propertyData: PropertyData): string {
   // Get "for rent in" text in current language with fallback
   const forRentText = safeTranslate('properties.titles.forRent', 'for rent in');
 
-  // Build location string (without property numbers for privacy)
+  // Build location string with full details (including street numbers for large format)
   let location = '';
   if (address.street && address.city) {
-    const streetWithoutNumber = removePropertyNumber(address.street);
-    location = `${streetWithoutNumber}, ${address.city}`;
+    // Keep street numbers for large format
+    const street = address.street.trim();
+    location = `${street}, ${address.city}`;
     if (address.state) {
       location += `, ${address.state}`;
     }
@@ -91,7 +177,7 @@ export function generatePropertyTitle(propertyData: PropertyData): string {
   // Generate the final title: "PropertyType for rent in Location"
   const title = `${propertyType} ${forRentText} ${location}`;
 
-  // Ensure title doesn't exceed maximum length (200 characters)
+  // Ensure title doesn't exceed maximum length (200 characters for large format)
   if (title.length > 200) {
     // Truncate location if title is too long
     const maxLocationLength = 200 - propertyType.length - forRentText.length - 2; // 2 for spaces
@@ -103,16 +189,40 @@ export function generatePropertyTitle(propertyData: PropertyData): string {
 }
 
 /**
+ * Generate a property title based on property data with dynamic localization
+ * Format depends on the format parameter:
+ * - 'short': "Room in Sant Andreu"
+ * - 'large': "Apartment for rent in Carrer D'alí Bei, Barcelona, Barcelona"
+ * - 'default': Uses short format
+ * @param propertyData - Property data object
+ * @param format - Title format ('default', 'short', or 'large')
+ * @returns Generated title
+ */
+export function generatePropertyTitle(propertyData: PropertyData, format: TitleFormat = 'default'): string {
+  switch (format) {
+    case 'short':
+      return generateShortPropertyTitle(propertyData);
+    case 'large':
+      return generateLargePropertyTitle(propertyData);
+    case 'default':
+    default:
+      return generateShortPropertyTitle(propertyData);
+  }
+}
+
+/**
  * Generate a property title with additional details (bedroom/bathroom info)
  * @param propertyData - Property data object
  * @param includeDetails - Whether to include bedroom/bathroom details
+ * @param format - Title format ('default', 'short', or 'large')
  * @returns Generated title with optional details
  */
 export function generateDetailedPropertyTitle(
   propertyData: PropertyData,
   includeDetails = false,
+  format: TitleFormat = 'default',
 ): string {
-  const baseTitle = generatePropertyTitle(propertyData);
+  const baseTitle = generatePropertyTitle(propertyData, format);
 
   if (!includeDetails) {
     return baseTitle;
@@ -151,9 +261,10 @@ export function generateDetailedPropertyTitle(
 /**
  * Preview a property title based on current form data
  * @param propertyData - Property data object
+ * @param format - Title format ('default', 'short', or 'large')
  * @returns Preview title or null if insufficient data
  */
-export function previewPropertyTitle(propertyData: PropertyData): string | null {
+export function previewPropertyTitle(propertyData: PropertyData, format: TitleFormat = 'default'): string | null {
   const { type, address } = propertyData;
 
   // Need at least type and some address info
@@ -168,7 +279,7 @@ export function previewPropertyTitle(propertyData: PropertyData): string | null 
     return null;
   }
 
-  return generatePropertyTitle(propertyData);
+  return generatePropertyTitle(propertyData, format);
 }
 
 /**

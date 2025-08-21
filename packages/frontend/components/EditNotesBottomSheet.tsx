@@ -6,7 +6,6 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
-import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { ThemedText } from './ThemedText';

@@ -263,16 +263,28 @@ export function PropertyPreviewWidget() {
         {/* Property Card Preview */}
         <View style={styles.propertyCardContainer}>
           <PropertyCard
-            title={propertyTitle}
-            location={`${formData.location?.city || ''}, ${formData.location?.state || ''}`}
-            price={formData.pricing?.monthlyRent || 0}
-            currency={formData.pricing?.currency || '$'}
-            type={formData.basicInfo?.propertyType as any}
-            bedrooms={formData.basicInfo?.bedrooms || 0}
-            bathrooms={formData.basicInfo?.bathrooms || 0}
-            size={formData.basicInfo?.squareFootage || 0}
+            property={{
+              _id: formData._id ?? 'preview-id',
+              address: formData.location?.address ?? '',
+              type: formData.basicInfo?.propertyType ?? '',
+              rent: formData.pricing?.rent ?? 0,
+              bedrooms: formData.basicInfo?.bedrooms ?? 0,
+              bathrooms: formData.basicInfo?.bathrooms ?? 0,
+              squareFootage: formData.basicInfo?.squareFootage ?? 0,
+              yearBuilt: formData.basicInfo?.yearBuilt,
+              images: formData.media?.images ?? [],
+              description: formData.basicInfo?.description ?? '',
+              amenities: formData.amenities ?? [],
+              location: formData.location ?? {},
+              colivingFeatures: formData.colivingFeatures ?? {},
+              // Add any other required fields with sensible defaults
+            }}
             sizeUnit="sqft"
-            imageSource={formData.media?.images && formData.media.images.length > 0 ? formData.media.images[0].urls.medium : undefined}
+            imageSource={
+              formData.media?.images && formData.media.images.length > 0
+                ? formData.media.images[0].urls.medium
+                : undefined
+            }
             variant="default"
             showFavoriteButton={false}
             showVerifiedBadge={false}

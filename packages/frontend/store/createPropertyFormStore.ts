@@ -20,6 +20,7 @@ interface CreatePropertyFormState {
       showAddressNumber?: boolean;
       floor?: number;
       showFloor?: boolean;
+      neighborhood?: string;
       city: string;
       state: string;
       zipCode: string;
@@ -127,6 +128,7 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()((set
       showAddressNumber: undefined,
       floor: undefined,
       showFloor: undefined,
+      neighborhood: undefined,
       city: '',
       state: '',
       zipCode: '',
@@ -226,6 +228,7 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()((set
           showAddressNumber: undefined,
           floor: undefined,
           showFloor: undefined,
+          neighborhood: undefined,
           city: '',
           state: '',
           zipCode: '',

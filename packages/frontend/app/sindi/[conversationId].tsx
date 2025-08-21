@@ -34,7 +34,65 @@ import {
   type Conversation,
 } from '@/store/conversationStore';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { BottomSheetContext } from '@/context/BottomSheetContext';
+import { getData, storeData } from '@/utils/storage';
+import { api } from '@/utils/api';
+
 const IconComponent = Ionicons as any;
+
+const FILE_UPSELL_KEY = 'sindi:fileUpsellShown';
+
+interface Entitlements {
+  plusActive: boolean;
+  plusSince?: string;
+  plusStripeSubscriptionId?: string;
+  fileCredits: number;
+  lastPaymentAt?: string;
+}
+
+// Simple bottom sheet content for premium upsell
+const FilePremiumInfoSheet: React.FC<{ onClose: () => void; onUpgrade: () => void }> = ({ onClose, onUpgrade }) => {
+  return (
+    <View style={{ padding: 20 }}>
+      <View style={{ alignItems: 'center', marginBottom: 12 }}>
+        <IconComponent name="lock-closed-outline" size={36} color={colors.primaryColor} />
+      </View>
+      <Text style={{ fontSize: 18, fontWeight: '700', textAlign: 'center', color: '#111b21' }}>
+        File analysis is a premium feature
+      </Text>
+      <Text style={{ fontSize: 14, marginTop: 8, textAlign: 'center', color: '#344053' }}>
+        Upload rental contracts and legal documents for instant analysis. Get help understanding your rights and identifying potential issues.
+      </Text>
+      <View style={{ marginTop: 14, backgroundColor: '#f7f8f9', borderWidth: 1, borderColor: '#e9edef', borderRadius: 12, padding: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+          <IconComponent name="checkmark-circle" size={18} color={colors.primaryColor} />
+          <Text style={{ marginLeft: 8, fontSize: 14, color: '#111b21' }}>Pay per contract: 5 € per review</Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <IconComponent name="star-outline" size={18} color={colors.primaryColor} />
+          <Text style={{ marginLeft: 8, fontSize: 14, color: '#111b21' }}>Homiio+ Subscription: 9.99 €/month</Text>
+        </View>
+        <Text style={{ marginLeft: 26, fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+          Includes up to 10 contracts per month free
+        </Text>
+      </View>
+      <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+        <TouchableOpacity
+          onPress={onClose}
+          style={{ flex: 1, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: '#e9edef', alignItems: 'center', backgroundColor: '#fff' }}
+        >
+          <Text style={{ color: '#111b21', fontWeight: '600' }}>Maybe later</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={onUpgrade}
+          style={{ flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center', backgroundColor: colors.primaryColor }}
+        >
+          <Text style={{ color: '#fff', fontWeight: '700' }}>Upgrade to Homiio+</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
 
 // Normalize and sanitize property IDs coming from model output
 function normalizePropertyIds(raw: unknown, max = 5): string[] {
@@ -378,6 +436,8 @@ function ChatContent({
 }) {
   const router = useRouter();
   const { t } = useTranslation();
+  const bottomSheet = React.useContext(BottomSheetContext);
+  const { oxyServices, activeSessionId } = useOxy();
   const [attachedFile, setAttachedFile] = React.useState<any>(null);
   const [isUploading, setIsUploading] = React.useState(false);
   const [isStreamingFile] = React.useState(false);
@@ -385,6 +445,31 @@ function ChatContent({
   const lastSyncedHash = React.useRef<string>('');
   const lastMsgKeyRef = React.useRef<string>('');
   const scrollViewRef = React.useRef<ScrollView>(null);
+
+  // Get user entitlements for subscription checks
+  const {
+    data: entitlements,
+    isLoading: entitlementsLoading,
+  } = useQuery({
+    queryKey: ['entitlements'],
+    queryFn: async () => {
+      const { data } = await api.get<{ success: boolean; entitlements: Entitlements }>(
+        '/api/profiles/me/entitlements',
+        { oxyServices, activeSessionId: activeSessionId || undefined }
+      );
+      if (!data?.success) {
+        throw new Error('Failed to load entitlements');
+      }
+      return data.entitlements || null;
+    },
+    enabled: !!oxyServices && !!activeSessionId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 10, // 10 minutes
+  });
+
+  const plusActive = entitlements?.plusActive || false;
+  const fileCredits = entitlements?.fileCredits || 0;
+
   const scrollToEnd = React.useCallback(() => {
     try {
       scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -449,7 +534,7 @@ function ChatContent({
 
     let inCodeBlock = false;
     let codeBuffer: string[] = [];
-  // keep simple code fence support without language highlighting
+    // keep simple code fence support without language highlighting
 
     const flushCode = (key: string) => {
       if (codeBuffer.length === 0) return;
@@ -469,7 +554,7 @@ function ChatContent({
       const line = raw.replace(/\s+$/, '');
       const key = `ln-${i}`;
 
-  const fence = line.match(/^```\s*(\w+)?\s*$/);
+      const fence = line.match(/^```\s*(\w+)?\s*$/);
       if (fence) {
         if (!inCodeBlock) {
           inCodeBlock = true;
@@ -684,6 +769,40 @@ function ChatContent({
 
   const handleAttachFile = async () => {
     try {
+      // Check subscription status for file uploads
+      if (!plusActive && fileCredits <= 0) {
+        // Show subscription upsell
+        bottomSheet?.openBottomSheet(
+          <FilePremiumInfoSheet
+            onClose={() => bottomSheet?.closeBottomSheet()}
+            onUpgrade={() => {
+              bottomSheet?.closeBottomSheet();
+              router.push('/profile/subscriptions');
+            }}
+          />,
+        );
+        return;
+      }
+
+      // Show one-time premium info bottom sheet on first attempt for non-subscribers
+      if (!plusActive) {
+        const alreadyShown = await getData<boolean>(FILE_UPSELL_KEY);
+        if (!alreadyShown) {
+          await storeData(FILE_UPSELL_KEY, true);
+          bottomSheet?.openBottomSheet(
+            <FilePremiumInfoSheet
+              onClose={() => bottomSheet?.closeBottomSheet()}
+              onUpgrade={() => {
+                bottomSheet?.closeBottomSheet();
+                router.push('/profile/subscriptions');
+              }}
+            />,
+          );
+          // Do not open the picker on this first tap; user can try again after reading
+          return;
+        }
+      }
+
       const result = await DocumentPicker.getDocumentAsync({
         type: '*/*',
         copyToCacheDirectory: true,
@@ -959,9 +1078,9 @@ function ChatContent({
                       {renderMarkdown(
                         m.role === 'user'
                           ? ((m.content || '')
-                              .replace(/<IMAGE_DATA_URL>[\s\S]*?<\/IMAGE_DATA_URL>/i, '')
-                              .replace(/<FILE_DATA_URL>[\s\S]*?<\/FILE_DATA_URL>/i, '')
-                              .trim() || m.content)
+                            .replace(/<IMAGE_DATA_URL>[\s\S]*?<\/IMAGE_DATA_URL>/i, '')
+                            .replace(/<FILE_DATA_URL>[\s\S]*?<\/FILE_DATA_URL>/i, '')
+                            .trim() || m.content)
                           : m.content,
                         m.role as 'user' | 'assistant',
                       )}

@@ -24,7 +24,18 @@ import { SindiHero } from '@/components/SindiHero';
 import React, { useEffect, useCallback, useState, useMemo } from 'react';
 import { useConversationStore } from '@/store/conversationStore';
 import { EmptyState } from '@/components/ui/EmptyState'; // keep for IconComponent type assertion
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/utils/api';
+
 const IconComponent = Ionicons as any;
+
+interface Entitlements {
+  plusActive: boolean;
+  plusSince?: string;
+  plusStripeSubscriptionId?: string;
+  fileCredits: number;
+  lastPaymentAt?: string;
+}
 
 export default function Sindi() {
   const { oxyServices, activeSessionId } = useOxy();
@@ -34,6 +45,31 @@ export default function Sindi() {
 
   // Zustand store
   const { conversations, loading, loadConversations, createConversation } = useConversationStore();
+
+  // Get user entitlements
+  const {
+    data: entitlements,
+    isLoading: entitlementsLoading,
+    error: entitlementsError,
+  } = useQuery({
+    queryKey: ['entitlements'],
+    queryFn: async () => {
+      const { data } = await api.get<{ success: boolean; entitlements: Entitlements }>(
+        '/api/profiles/me/entitlements',
+        { oxyServices, activeSessionId: activeSessionId || undefined }
+      );
+      if (!data?.success) {
+        throw new Error('Failed to load entitlements');
+      }
+      return data.entitlements || null;
+    },
+    enabled: !!oxyServices && !!activeSessionId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 10, // 10 minutes
+  });
+
+  const plusActive = entitlements?.plusActive || false;
+  const fileCredits = entitlements?.fileCredits || 0;
 
   // Create a custom fetch function that includes authentication
   const authenticatedFetch = useCallback(
@@ -335,6 +371,45 @@ export default function Sindi() {
               </View>
             </LinearGradient>
           </TouchableOpacity>
+
+          {/* Subscription Status */}
+          {!entitlementsLoading && (
+            <View style={styles.subscriptionStatusContainer}>
+              <View style={[styles.subscriptionCard, plusActive && styles.subscriptionCardActive]}>
+                <View style={styles.subscriptionHeader}>
+                  <IconComponent
+                    name={plusActive ? "star" : "information-circle"}
+                    size={20}
+                    color={plusActive ? colors.primaryColor : '#6b7280'}
+                  />
+                  <Text style={styles.subscriptionTitle}>
+                    {plusActive ? 'Homiio+ Active' : 'Free Plan'}
+                  </Text>
+                </View>
+                <Text style={styles.subscriptionDescription}>
+                  {plusActive
+                    ? 'Unlimited file uploads and priority support included'
+                    : 'Upgrade to Homiio+ for unlimited file uploads and priority support'
+                  }
+                </Text>
+                {!plusActive && (
+                  <TouchableOpacity
+                    style={styles.upgradeButton}
+                    onPress={() => router.push('/profile/subscriptions')}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.upgradeButtonText}>Upgrade to Homiio+</Text>
+                  </TouchableOpacity>
+                )}
+                {plusActive && (
+                  <View style={styles.subscriptionBadge}>
+                    <IconComponent name="checkmark-circle" size={14} color={colors.primaryColor} />
+                    <Text style={styles.subscriptionBadgeText}>Active</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
 
           {/* Conversation History */}
           <View style={styles.conversationHistoryContainer}>
@@ -1211,5 +1286,68 @@ const styles = StyleSheet.create({
   conversationMessageCount: {
     fontSize: 12,
     color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  subscriptionStatusContainer: {
+    marginHorizontal: 16,
+    marginBottom: 24,
+  },
+  subscriptionCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: MINIMAL_BORDER,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  subscriptionCardActive: {
+    borderColor: colors.primaryColor,
+    borderWidth: 2,
+  },
+  subscriptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  subscriptionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.COLOR_BLACK,
+    marginLeft: 8,
+  },
+  subscriptionDescription: {
+    fontSize: 13,
+    color: colors.COLOR_BLACK_LIGHT_3,
+    marginBottom: 12,
+  },
+  upgradeButton: {
+    backgroundColor: colors.primaryColor,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    alignSelf: 'flex-start',
+  },
+  upgradeButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  subscriptionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(107, 114, 128, 0.1)',
+    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    alignSelf: 'flex-start',
+  },
+  subscriptionBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primaryColor,
+    marginLeft: 4,
   },
 });

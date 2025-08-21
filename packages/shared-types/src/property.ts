@@ -22,6 +22,10 @@ export interface PropertyRent {
   paymentFrequency: PaymentFrequency;
   deposit: number;
   utilities: UtilitiesIncluded;
+  hasIncomeBasedPricing?: boolean;
+  hasSlidingScale?: boolean;
+  hasUtilitiesIncluded?: boolean;
+  hasReducedDeposit?: boolean;
 }
 
 export interface PropertyEnergyStats {
@@ -107,7 +111,7 @@ export interface PropertyCharacteristics {
 export interface Property {
   _id: string; // MongoDB ObjectId
   id?: string; // Optional fallback
-  profileId?: string; // Add profileId for landlord info
+  profileId: string; // Required profileId for landlord info
   address: Address;
   type: PropertyType;
   housingType?: HousingType;
@@ -121,7 +125,7 @@ export interface Property {
   amenities?: string[];
   images?: string[] | PropertyImage[];
   status: PropertyStatus;
-  ownerId: string;
+  ownerId?: string; // Made optional since we use profileId
   roomCount?: number;
   location?: GeoJSONPoint;
   energyStats?: PropertyEnergyStats;
@@ -130,9 +134,12 @@ export interface Property {
   hasElevator?: boolean;
   parkingSpaces?: number;
   yearBuilt?: number;
-  isFurnished?: boolean;
+  furnishedStatus?: 'furnished' | 'unfurnished' | 'partially_furnished';
   utilitiesIncluded?: boolean;
   petFriendly?: boolean;
+  petPolicy?: 'allowed' | 'not_allowed' | 'case_by_case';
+  petFee?: number;
+  parkingType?: 'none' | 'street' | 'assigned' | 'garage';
   hasBalcony?: boolean;
   hasGarden?: boolean;
   proximityToTransport?: boolean;
@@ -141,17 +148,34 @@ export interface Property {
   rules?: PropertyRules;
   documents?: PropertyDocument[];
   coverImageIndex?: number;
-  // Flags
-  isVerified?: boolean;
-  isEcoFriendly?: boolean;
+  // Availability
   availableFrom?: string;
   leaseTerm?: string;
   maxGuests?: number;
   smokingAllowed?: boolean;
   partiesAllowed?: boolean;
   guestsAllowed?: boolean;
+  // Flags
+  isVerified?: boolean;
+  isEcoFriendly?: boolean;
   createdAt: string;
   updatedAt: string;
+  // Accommodation-specific details
+  accommodationDetails?: {
+    sleepingArrangement?: 'couch' | 'air_mattress' | 'floor' | 'tent' | 'hammock';
+    roommatePreferences?: string[];
+    colivingFeatures?: string[];
+    hostelRoomType?: 'dormitory' | 'private_room' | 'mixed_dorm' | 'female_dorm' | 'male_dorm';
+    campsiteType?: 'tent_site' | 'rv_site' | 'cabin' | 'glamping' | 'backcountry';
+    maxStay?: number;
+    minAge?: number;
+    maxAge?: number;
+    languages?: string[];
+    culturalExchange?: boolean;
+    mealsIncluded?: boolean;
+    wifiPassword?: string;
+    houseRules?: string[];
+  };
 }
 
 export interface CreatePropertyData {
@@ -171,14 +195,24 @@ export interface CreatePropertyData {
   hasElevator?: boolean;
   parkingSpaces?: number;
   yearBuilt?: number;
-  isFurnished?: boolean;
+  furnishedStatus?: 'furnished' | 'unfurnished' | 'partially_furnished';
   utilitiesIncluded?: boolean;
   petFriendly?: boolean;
+  petPolicy?: 'allowed' | 'not_allowed' | 'case_by_case';
+  petFee?: number;
+  parkingType?: 'none' | 'street' | 'assigned' | 'garage';
   hasBalcony?: boolean;
   hasGarden?: boolean;
   proximityToTransport?: boolean;
   proximityToSchools?: boolean;
   proximityToShopping?: boolean;
+  // Availability
+  availableFrom?: string;
+  leaseTerm?: string;
+  maxGuests?: number;
+  smokingAllowed?: boolean;
+  partiesAllowed?: boolean;
+  guestsAllowed?: boolean;
   // Accommodation-specific details
   accommodationDetails?: {
     sleepingArrangement?: 'couch' | 'air_mattress' | 'floor' | 'tent' | 'hammock';

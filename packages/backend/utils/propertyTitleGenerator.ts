@@ -6,9 +6,34 @@
 /**
  * Generate a property title based on property data
  * @param {Object} propertyData - Property data object
+ * @param {string} format - Title format ('default', 'short', or 'large')
  * @returns {string} Generated title
  */
-function generatePropertyTitle(propertyData) {
+function generatePropertyTitle(propertyData, format = 'default') {
+  const {
+    type = 'apartment',
+    address = {},
+    bedrooms = 0,
+    bathrooms = 0
+  } = propertyData;
+
+  switch (format) {
+    case 'short':
+      return generateShortPropertyTitle(propertyData);
+    case 'large':
+      return generateLargePropertyTitle(propertyData);
+    case 'default':
+    default:
+      return generateShortPropertyTitle(propertyData);
+  }
+}
+
+/**
+ * Generate a short property title (e.g., "Room in Sant Andreu")
+ * @param {Object} propertyData - Property data object
+ * @returns {string} Short generated title
+ */
+function generateShortPropertyTitle(propertyData) {
   const {
     type = 'apartment',
     address = {},
@@ -20,7 +45,6 @@ function generatePropertyTitle(propertyData) {
   const street = address.street || '';
   const city = address.city || '';
   const state = address.state || '';
-  const zipCode = address.zipCode || '';
 
   // Clean and format street address
   let streetAddress = street.trim();
@@ -33,6 +57,123 @@ function generatePropertyTitle(propertyData) {
   if (streetNumber) {
     streetAddress = streetAddress.replace(/\d+/, '').trim();
   }
+
+  // Determine property type label
+  let typeLabel = '';
+  switch (type.toLowerCase()) {
+    case 'room':
+      typeLabel = 'Room';
+      break;
+    case 'studio':
+      typeLabel = 'Studio';
+      break;
+    case 'apartment':
+      typeLabel = bedrooms > 1 ? 'Apartment' : 'Studio';
+      break;
+    case 'house':
+      typeLabel = bedrooms > 1 ? 'House' : 'Cottage';
+      break;
+    case 'duplex':
+      typeLabel = 'Duplex';
+      break;
+    case 'penthouse':
+      typeLabel = 'Penthouse';
+      break;
+    default:
+      typeLabel = 'Property';
+  }
+
+  // Build location string - prefer neighborhood-like information
+  let location = '';
+  
+  // First check if neighborhood is explicitly provided
+  if (address.neighborhood) {
+    location = address.neighborhood;
+  } else if (streetAddress) {
+    // Try to extract neighborhood from street name
+    const streetParts = streetAddress.split(',').map(part => part.trim());
+    
+    // Look for neighborhood indicators in street name
+    // Common neighborhood patterns: "Carrer de [Neighborhood]", "Calle [Neighborhood]", etc.
+    const neighborhoodPatterns = [
+      /carrer\s+(?:de\s+)?([^,\s]+)/i,
+      /calle\s+(?:de\s+)?([^,\s]+)/i,
+      /street\s+(?:of\s+)?([^,\s]+)/i,
+      /avenue\s+(?:of\s+)?([^,\s]+)/i,
+      /plaza\s+(?:de\s+)?([^,\s]+)/i,
+      /passeig\s+(?:de\s+)?([^,\s]+)/i,
+      /rambla\s+(?:de\s+)?([^,\s]+)/i,
+    ];
+    
+    for (const pattern of neighborhoodPatterns) {
+      const match = streetAddress.match(pattern);
+      if (match && match[1]) {
+        location = match[1];
+        break;
+      }
+    }
+    
+    // If no neighborhood pattern found, use the first meaningful part of the street
+    if (!location && streetParts.length > 0) {
+      const firstPart = streetParts[0];
+      // Skip common street prefixes
+      const skipPrefixes = ['carrer', 'calle', 'street', 'avenue', 'plaza', 'passeig', 'rambla'];
+      const lowerFirstPart = firstPart.toLowerCase();
+      
+      if (!skipPrefixes.some(prefix => lowerFirstPart.startsWith(prefix))) {
+        location = firstPart;
+      } else if (streetParts.length > 1) {
+        // Use the second part if first is a prefix
+        location = streetParts[1];
+      } else {
+        // Fallback to the whole street name without number
+        location = streetAddress;
+      }
+    }
+  }
+  
+  // If no neighborhood found from street, fall back to city
+  if (!location && city) {
+    location = city;
+  } else if (!location && state) {
+    location = state;
+  } else if (!location) {
+    location = 'Location TBD';
+  }
+
+  // Generate the final title: "PropertyType in Location"
+  const title = `${typeLabel} in ${location}`;
+
+  // Ensure title doesn't exceed maximum length (100 characters for short format)
+  if (title.length > 100) {
+    const maxLocationLength = 100 - typeLabel.length - 4; // 4 for " in "
+    const truncatedLocation = location.substring(0, maxLocationLength);
+    return `${typeLabel} in ${truncatedLocation}`;
+  }
+
+  return title;
+}
+
+/**
+ * Generate a large property title (e.g., "Apartment for rent in Carrer D'alí Bei, Barcelona, Barcelona")
+ * @param {Object} propertyData - Property data object
+ * @returns {string} Large generated title with full details
+ */
+function generateLargePropertyTitle(propertyData) {
+  const {
+    type = 'apartment',
+    address = {},
+    bedrooms = 0,
+    bathrooms = 0
+  } = propertyData;
+
+  // Extract address components
+  const street = address.street || '';
+  const city = address.city || '';
+  const state = address.state || '';
+
+  // Clean and format street address
+  let streetAddress = street.trim();
 
   // Determine property type label
   let typeLabel = '';
@@ -59,37 +200,29 @@ function generatePropertyTitle(propertyData) {
       typeLabel = 'Property for rent';
   }
 
-  // Build location string
+  // Build location string with full details (including street numbers for large format)
   let location = '';
   
-  // If we have a street name, use it
-  if (streetAddress) {
-    location = streetAddress;
-    if (streetNumber) {
-      location += `, ${streetNumber}`;
+  // For large format, we can include neighborhood in the full address
+  if (streetAddress && city) {
+    // Keep street numbers for large format
+    location = `${streetAddress}, ${city}`;
+    if (state) {
+      location += `, ${state}`;
     }
   } else if (city) {
-    // Fallback to city if no street
     location = city;
+    if (state) {
+      location += `, ${state}`;
+    }
   } else {
-    // Final fallback
-    location = 'Location TBD';
+    location = state || 'Location TBD';
   }
 
-  // Add city if different from street location
-  if (city && city.toLowerCase() !== location.toLowerCase()) {
-    location += `, ${city}`;
-  }
-
-  // Add state if available and different from city
-  if (state && state.toLowerCase() !== city.toLowerCase()) {
-    location += `, ${state}`;
-  }
-
-  // Generate the final title
+  // Generate the final title: "PropertyType for rent in Location"
   const title = `${typeLabel} in ${location}`;
 
-  // Ensure title doesn't exceed maximum length (200 characters)
+  // Ensure title doesn't exceed maximum length (200 characters for large format)
   if (title.length > 200) {
     // Truncate location if title is too long
     const maxLocationLength = 200 - typeLabel.length - 4; // 4 for " in "
@@ -104,10 +237,11 @@ function generatePropertyTitle(propertyData) {
  * Generate a property title with additional details
  * @param {Object} propertyData - Property data object
  * @param {boolean} includeDetails - Whether to include bedroom/bathroom details
+ * @param {string} format - Title format ('default', 'short', or 'large')
  * @returns {string} Generated title
  */
-function generateDetailedPropertyTitle(propertyData, includeDetails = false) {
-  const baseTitle = generatePropertyTitle(propertyData);
+function generateDetailedPropertyTitle(propertyData, includeDetails = false, format = 'default') {
+  const baseTitle = generatePropertyTitle(propertyData, format);
   
   if (!includeDetails) {
     return baseTitle;
@@ -116,7 +250,7 @@ function generateDetailedPropertyTitle(propertyData, includeDetails = false) {
   const { bedrooms = 0, bathrooms = 0 } = propertyData;
   
   // Add bedroom/bathroom details for multi-bedroom properties
-  if (bedrooms > 1) {
+  if (bedrooms > 0 || bathrooms > 0) {
     const details = [];
     if (bedrooms > 0) {
       details.push(`${bedrooms} bed${bedrooms > 1 ? 's' : ''}`);
@@ -135,5 +269,7 @@ function generateDetailedPropertyTitle(propertyData, includeDetails = false) {
 
 module.exports = {
   generatePropertyTitle,
-  generateDetailedPropertyTitle
+  generateDetailedPropertyTitle,
+  generateShortPropertyTitle,
+  generateLargePropertyTitle
 }; 

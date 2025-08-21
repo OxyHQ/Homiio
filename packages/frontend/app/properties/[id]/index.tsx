@@ -1079,7 +1079,7 @@ export default function PropertyDetailPage() {
             </View>
 
             {/* Property Features */}
-            {(apiProperty?.isFurnished !== undefined ||
+            {(apiProperty?.furnishedStatus !== undefined ||
               apiProperty?.hasBalcony !== undefined ||
               apiProperty?.hasGarden !== undefined ||
               apiProperty?.hasElevator !== undefined) && (
@@ -1087,18 +1087,21 @@ export default function PropertyDetailPage() {
                   <ThemedText style={styles.sectionTitle}>{t('Property Features')}</ThemedText>
                   <View style={styles.featuresCard}>
                     <View style={styles.featuresGrid}>
-                      {apiProperty?.isFurnished !== undefined && (
+                      {apiProperty?.furnishedStatus !== undefined && (
                         <View style={styles.featureItem}>
                           <IconComponent
-                            name={apiProperty.isFurnished ? 'checkmark-circle' : 'close-circle'}
+                            name={apiProperty.furnishedStatus === 'furnished' ? 'checkmark-circle' : 'close-circle'}
                             size={20}
                             color={
-                              apiProperty.isFurnished
+                              apiProperty.furnishedStatus === 'furnished'
                                 ? colors.primaryColor
                                 : colors.COLOR_BLACK_LIGHT_4
                             }
                           />
-                          <ThemedText style={styles.featureText}>{t('Furnished')}</ThemedText>
+                          <ThemedText style={styles.featureText}>
+                            {apiProperty.furnishedStatus === 'furnished' ? t('Furnished') : 
+                             apiProperty.furnishedStatus === 'partially_furnished' ? t('Partially Furnished') : t('Unfurnished')}
+                          </ThemedText>
                         </View>
                       )}
                       {apiProperty?.hasBalcony !== undefined && (

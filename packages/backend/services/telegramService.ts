@@ -8,6 +8,7 @@ import i18n from 'i18n';
 import path from 'path';
 import config from '../config';
 import { logger } from '../middlewares/logging';
+const { generateLargePropertyTitle } = require('../utils/propertyTitleGenerator');
 
 // Configure i18n
 i18n.configure({
@@ -190,36 +191,15 @@ class TelegramService {
     // Get translations for the language
     const t = this.getI18nForLanguage(language);
 
-    // Create dynamic title: "{PropertyType} for rent in {Street}, {City}, {State}"
-    const propertyType = t.__(`telegram.propertyTypes.${type}`) || type;
-    const forRentText = t.__('telegram.forRent');
+    // Generate large format title using the title generator
+    const largeTitle = generateLargePropertyTitle({
+      type,
+      address,
+      bedrooms,
+      bathrooms
+    });
     
-    // Helper function to remove property numbers for privacy
-    const removePropertyNumber = (street) => {
-      if (!street) return '';
-      // Remove numbers, commas and extra spaces from street for privacy
-      // Examples: "Calle de Vicente Blasco Ibáñez, 6" -> "Calle de Vicente Blasco Ibáñez"
-      return street.replace(/,?\s*\d+.*$/, '').trim();
-    };
-    
-    // Build location string (without property numbers for privacy)
-    let location = '';
-    if (address.street && address.city) {
-      const streetWithoutNumber = removePropertyNumber(address.street);
-      location = `${streetWithoutNumber}, ${address.city}`;
-      if (address.state) {
-        location += `, ${address.state}`;
-      }
-    } else if (address.city) {
-      location = address.city;
-      if (address.state) {
-        location += `, ${address.state}`;
-      }
-    } else {
-      location = address.state || t.__('telegram.locationNotSpecified');
-    }
-    
-    const dynamicTitle = `🏠 **${this.escapeMarkdown(propertyType)} ${this.escapeMarkdown(forRentText)} ${this.escapeMarkdown(location)}**`;
+    const dynamicTitle = `🏠 **${this.escapeMarkdown(largeTitle)}**`;
     
     // Format rent
     const paymentFreq = t.__(`telegram.paymentFrequency.${rent.paymentFrequency}`) || rent.paymentFrequency;
@@ -243,6 +223,15 @@ class TelegramService {
         : description;
       descriptionSection = `\n📝 **${t.__('telegram.description')}:**\n${this.escapeMarkdown(truncatedDescription)}\n`;
     }
+
+    // Get property type for hashtags and details
+    const propertyType = t.__(`telegram.propertyTypes.${type}`) || type;
+    
+    // Helper function to remove property numbers for privacy (used in details)
+    const removePropertyNumber = (street) => {
+      if (!street) return '';
+      return street.replace(/,?\s*\d+.*$/, '').trim();
+    };
 
     const message = `${dynamicTitle}
 

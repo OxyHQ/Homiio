@@ -54,6 +54,11 @@ const addressSchema = new mongoose.Schema({
     default: 'USA',
     maxlength: [50, 'Country name cannot exceed 50 characters']
   },
+  neighborhood: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Neighborhood name cannot exceed 100 characters']
+  },
   showAddressNumber: {
     type: Boolean,
     default: true
