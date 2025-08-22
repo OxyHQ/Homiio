@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
@@ -7,6 +7,7 @@ import { BaseWidget } from './BaseWidget';
 import { useNeighborhood } from '@/hooks/useNeighborhood';
 import { useOxy } from '@oxyhq/services';
 import LoadingSpinner from '../LoadingSpinner';
+import Button from '../Button';
 
 // Type assertion for Ionicons compatibility with React 19
 const IconComponent = Ionicons as any;
@@ -175,9 +176,9 @@ export function NeighborhoodRatingWidget({
           ))}
         </View>
 
-        <TouchableOpacity style={styles.moreButton}>
-          <Text style={styles.moreButtonText}>{t('View Neighborhood Guide')}</Text>
-        </TouchableOpacity>
+        <Button style={styles.moreButton}>
+          {t('View Neighborhood Guide')}
+        </Button>
       </View>
     </BaseWidget>
   );

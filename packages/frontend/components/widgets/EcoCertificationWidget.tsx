@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { BaseWidget } from './BaseWidget';
 import { ThemedText } from '../ThemedText';
+import Button from '../Button';
 
 export function EcoCertificationWidget() {
   const { t } = useTranslation();
@@ -20,11 +21,12 @@ export function EcoCertificationWidget() {
             'Find sustainable properties that meet eco-friendly standards',
           )}
         </Text>
-        <TouchableOpacity style={styles.learnMoreButton}>
-          <ThemedText style={styles.learnMoreText}>
-            {t('home.horizon.learnMore', 'Learn More')}
-          </ThemedText>
-        </TouchableOpacity>
+        <Button
+          style={styles.learnMoreButton}
+          textColor="green"
+        >
+          {t('home.horizon.learnMore', 'Learn More')}
+        </Button>
       </View>
     </BaseWidget>
   );
@@ -41,14 +43,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   learnMoreButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 15,
     backgroundColor: '#e7f4e4',
-    borderRadius: 20,
-  },
-  learnMoreText: {
-    color: 'green',
-    fontWeight: 'bold',
-    fontFamily: 'Phudu',
   },
 });

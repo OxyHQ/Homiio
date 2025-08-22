@@ -9,6 +9,8 @@ interface ButtonProps {
   children: React.ReactNode;
   disabled?: boolean;
   style?: ViewStyle;
+  backgroundColor?: string;
+  textColor?: string;
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -17,15 +19,26 @@ const Button: React.FC<ButtonProps> = ({
   children,
   disabled = false,
   style,
+  backgroundColor,
+  textColor,
 }) => {
   return (
     <TouchableOpacity
       onPress={onPress}
       onLongPress={onLongPress}
       disabled={disabled}
-      style={[styles.button, style]}
+      style={[
+        styles.button,
+        backgroundColor && { backgroundColor },
+        style,
+      ]}
     >
-      <Text style={styles.buttonText}>{children}</Text>
+      <Text style={[
+        styles.buttonText,
+        textColor && { color: textColor },
+      ]}>
+        {children}
+      </Text>
     </TouchableOpacity>
   );
 };
@@ -44,6 +57,7 @@ const styles = StyleSheet.create({
     color: colors.primaryLight,
     fontSize: 16,
     fontFamily: phuduFontWeights.bold,
+    fontWeight: 'bold',
   },
 });
 

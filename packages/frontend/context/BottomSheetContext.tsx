@@ -12,7 +12,7 @@ import { I18nextProvider } from 'react-i18next';
 import i18n from 'i18next';
 
 interface BottomSheetContextProps {
-  openBottomSheet: (content: ReactNode) => void;
+  openBottomSheet: (content: ReactNode, options?: { hideHandle?: boolean }) => void;
   closeBottomSheet: () => void;
   isOpen: boolean;
   bottomSheetRef: React.RefObject<BottomSheetModal | null>;
@@ -40,6 +40,7 @@ export const BottomSheetProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [content, setContent] = useState<ReactNode>(null);
   const [isOpen, setIsOpen] = useState(false);
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const [hideHandle, setHideHandle] = useState(false);
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
@@ -53,12 +54,13 @@ export const BottomSheetProvider: React.FC<{ children: ReactNode }> = ({ childre
     [],
   );
 
-  const openBottomSheet = useCallback((newContent: ReactNode) => {
+  const openBottomSheet = useCallback((newContent: ReactNode, options?: { hideHandle?: boolean }) => {
     setContent(newContent);
+    setHideHandle(!!options?.hideHandle);
     setIsOpen(true);
     setTimeout(() => {
       bottomSheetModalRef.current?.present();
-    }, 100);
+    }, 60);
   }, []);
 
   const closeBottomSheet = useCallback(() => {
@@ -68,6 +70,7 @@ export const BottomSheetProvider: React.FC<{ children: ReactNode }> = ({ childre
   const handleDismiss = useCallback(() => {
     setContent(null);
     setIsOpen(false);
+    setHideHandle(false);
   }, []);
 
   return (
@@ -85,15 +88,25 @@ export const BottomSheetProvider: React.FC<{ children: ReactNode }> = ({ childre
         enableDynamicSizing
         enablePanDownToClose={true}
         enableDismissOnClose={true}
-        android_keyboardInputMode="adjustResize"
-        keyboardBehavior="extend"
         onDismiss={handleDismiss}
         style={styles.contentContainer}
-        handleIndicatorStyle={{ backgroundColor: '#000', width: 40 }}
+        handleComponent={hideHandle ? () => null : undefined}
+        handleIndicatorStyle={hideHandle ? undefined : { backgroundColor: '#000', width: 40 }}
         backdropComponent={renderBackdrop}
+        index={0}
+        keyboardBehavior="interactive"
+        keyboardBlurBehavior="restore"
+        android_keyboardInputMode="adjustResize"
+        enableOverDrag={false}
         enableContentPanningGesture={true}
         enableHandlePanningGesture={true}
-        index={0}
+        overDragResistanceFactor={2.5}
+        enableBlurKeyboardOnGesture={true}
+        backgroundStyle={{
+          borderBottomLeftRadius: 0,
+          borderBottomRightRadius: 0,
+        }}
+        detached
       >
         <BottomSheetView style={styles.contentView}>
           <BottomSheetContentWrapper>{content}</BottomSheetContentWrapper>

@@ -1,9 +1,10 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { BaseWidget } from './BaseWidget';
 import { ThemedText } from '../ThemedText';
+import Button from '../Button';
 
 export function HorizonInitiativeWidget() {
   const { t } = useTranslation();
@@ -19,17 +20,16 @@ export function HorizonInitiativeWidget() {
           'Horizon is a global initiative offering fair housing, healthcare, and travel support. Integrated with Homiio, it ensures affordable living within a connected, sustainable network.',
         )}
       </ThemedText>
-      <TouchableOpacity
+      <Button
         style={styles.joinButton}
+        textColor="#002646"
         onPress={() => {
           const url = 'https://oxy.so/horizon';
           window.open(url, '_blank');
         }}
       >
-        <ThemedText style={styles.joinButtonText}>
-          {t('home.horizon.learnMore', 'Learn More')}
-        </ThemedText>
-      </TouchableOpacity>
+        {t('home.horizon.learnMore', 'Learn More')}
+      </Button>
     </BaseWidget>
   );
 }
@@ -41,13 +41,5 @@ const styles = StyleSheet.create({
   },
   joinButton: {
     backgroundColor: '#c2e3ff',
-    paddingVertical: 10,
-    borderRadius: 25,
-    alignItems: 'center',
-  },
-  joinButtonText: {
-    color: '#002646',
-    fontWeight: 'bold',
-    fontFamily: 'Phudu',
   },
 });

@@ -31,6 +31,8 @@ type PropertyCardProps = {
   showPrice?: boolean;
   showLocation?: boolean;
   showRating?: boolean;
+  showFavoriteCount?: boolean;
+  favoriteCountDisplayMode?: 'badge' | 'inline';
 
   // State
   isSelected?: boolean;
@@ -115,6 +117,8 @@ export function PropertyCard({
   showPrice = true,
   showLocation = true,
   showRating = true,
+  showFavoriteCount = false,
+  favoriteCountDisplayMode = 'badge',
 
   // State
   isSelected = false,
@@ -232,12 +236,14 @@ export function PropertyCard({
         {showFavoriteButton && (
           <SaveButton
             isSaved={isPropertySavedState}
-            size={24}
+            size={variant === 'compact' ? 5 : 24}
             variant="heart"
             color="#222"
             activeColor="#EF4444"
             style={styles.saveButton}
             property={property}
+            showCount={showFavoriteCount}
+            countDisplayMode={favoriteCountDisplayMode}
           />
         )}
 

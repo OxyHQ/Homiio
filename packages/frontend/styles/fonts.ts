@@ -6,6 +6,13 @@ export const phuduFontWeights = {
   bold: 'Phudu-Bold',
 } as const;
 
+export const robotoFontWeights = {
+  regular: 'Roboto-Regular',
+  medium: 'Roboto-Medium',
+  semiBold: 'Roboto-SemiBold',
+  bold: 'Roboto-Bold',
+} as const;
+
 export const getFontWeight = (weight: keyof typeof phuduFontWeights) => {
   return phuduFontWeights[weight];
 };

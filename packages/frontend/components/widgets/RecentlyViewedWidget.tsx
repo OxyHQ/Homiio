@@ -9,7 +9,6 @@ import { useOxy } from '@oxyhq/services';
 import { BaseWidget } from './BaseWidget';
 import { PropertyCard } from '@/components/PropertyCard';
 import { colors } from '@/styles/colors';
-import type { Property } from '@/services/propertyService';
 
 // Type assertion for Ionicons compatibility with React 19
 const IconComponent = Ionicons as any;
@@ -68,7 +67,7 @@ export function RecentlyViewedWidget() {
 
 
 
-  const navigateToProperty = (property: Property) => {
+  const navigateToProperty = (property: any) => {
     router.push(`/properties/${property._id || property.id}`);
   };
 
@@ -142,7 +141,7 @@ export function RecentlyViewedWidget() {
               <View key={property._id || property.id} style={styles.propertyCard}>
                 <PropertyCard
                   property={property}
-                  variant="compact"
+                  variant="featured"
                   onPress={() => navigateToProperty(property)}
                   showFeatures={false}
                   showTypeIcon={false}

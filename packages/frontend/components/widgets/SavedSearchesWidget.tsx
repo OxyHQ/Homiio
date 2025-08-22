@@ -3,11 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   FlatList,
   Modal,
   Switch,
   TextInput,
+  TouchableOpacity,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
@@ -18,6 +18,7 @@ import { useSavedSearches } from '@/hooks/useSavedSearches';
 import { webAlert } from '@/utils/api';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SavedSearchActionsBottomSheet } from '@/components/SavedSearchActionsBottomSheet';
+import Button from '../Button';
 
 // Define SavedSearch type locally since we're no longer using Redux
 interface SavedSearch {
@@ -175,9 +176,9 @@ export function SavedSearchesWidget() {
       >
         <View style={styles.container}>
           <Text style={styles.emptyText}>{t('Sign in to save searches')}</Text>
-          <TouchableOpacity style={styles.createButton} onPress={() => router.push('/search')}>
-            <Text style={styles.createButtonText}>{t('Go to Search')}</Text>
-          </TouchableOpacity>
+          <Button onPress={() => router.push('/search')}>
+            {t('Go to Search')}
+          </Button>
         </View>
       </BaseWidget>
     );
@@ -191,9 +192,9 @@ export function SavedSearchesWidget() {
       >
         <View style={styles.container}>
           <Text style={styles.emptyText}>{t('No saved searches yet')}</Text>
-          <TouchableOpacity style={styles.createButton} onPress={() => router.push('/search')}>
-            <Text style={styles.createButtonText}>{t('Create New Search')}</Text>
-          </TouchableOpacity>
+          <Button onPress={() => router.push('/search')}>
+            {t('Create New Search')}
+          </Button>
         </View>
       </BaseWidget>
     );
@@ -214,16 +215,14 @@ export function SavedSearchesWidget() {
           />
 
           {searches.length > 3 && (
-            <TouchableOpacity style={styles.viewAllButton} onPress={() => router.push('/saved')}>
-              <Text style={styles.viewAllButtonText}>
-                {`${t('View All')} (${searches.length - 3} ${t('more')})`}
-              </Text>
-            </TouchableOpacity>
+            <Button onPress={() => router.push('/saved?tab=searches')}>
+              {`${t('View All')} (${searches.length - 3} ${t('more')})`}
+            </Button>
           )}
 
-          <TouchableOpacity style={styles.createButton} onPress={() => router.push('/search')}>
-            <Text style={styles.createButtonText}>{t('Create New Search')}</Text>
-          </TouchableOpacity>
+          <Button onPress={() => router.push('/search')}>
+            {t('Create New Search')}
+          </Button>
         </View>
       </BaseWidget>
 
@@ -357,20 +356,19 @@ export function SavedSearchesWidget() {
 
             {/* Actions */}
             <View style={styles.actionButtons}>
-              <TouchableOpacity style={styles.cancelButton} onPress={handleEditClose}>
-                <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
-              </TouchableOpacity>
+              <Button
+                onPress={handleEditClose}
+                textColor={colors.COLOR_BLACK_LIGHT_4}
+              >
+                {t('common.cancel')}
+              </Button>
 
-              <TouchableOpacity
-                style={[
-                  styles.saveButton,
-                  (!editName.trim() || !editQuery.trim()) && styles.saveButtonDisabled,
-                ]}
+              <Button
                 onPress={handleEditSave}
                 disabled={!editName.trim() || !editQuery.trim()}
               >
-                <Text style={styles.saveButtonText}>{t('common.save')}</Text>
-              </TouchableOpacity>
+                {t('common.save')}
+              </Button>
             </View>
           </View>
         </View>
@@ -381,7 +379,7 @@ export function SavedSearchesWidget() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 5,
+    gap: 12,
   },
   searchItem: {
     flexDirection: 'row',
@@ -425,37 +423,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginVertical: 12,
     lineHeight: 20,
-  },
-  viewAllButton: {
-    backgroundColor: colors.primaryColor + '10',
-    borderWidth: 1,
-    borderColor: colors.primaryColor + '30',
-    borderRadius: 25,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  viewAllButtonText: {
-    color: colors.primaryColor,
-    fontWeight: '500',
-    fontSize: 13,
-  },
-  createButton: {
-    backgroundColor: colors.primaryLight,
-    borderWidth: 1,
-    borderColor: colors.primaryColor,
-    borderRadius: 25,
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    alignItems: 'center',
-    marginTop: 15,
-  },
-  createButtonText: {
-    color: colors.primaryColor,
-    fontWeight: '600',
-    fontSize: 14,
   },
   // Modal Styles
   modalOverlay: {
@@ -569,37 +536,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_5,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.COLOR_BLACK_LIGHT_4,
-    fontFamily: 'Phudu',
-  },
-  saveButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 25,
-    backgroundColor: colors.primaryColor,
-    alignItems: 'center',
-  },
-  saveButtonDisabled: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_5,
-  },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: 'white',
-    fontFamily: 'Phudu',
   },
 });

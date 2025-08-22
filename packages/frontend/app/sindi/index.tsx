@@ -12,20 +12,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOxy } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
-
 import { useRouter } from 'expo-router';
-// Landing screen does not render PropertyCard directly
 import { ThemedView } from '@/components/ThemedView';
 import { Header } from '@/components/Header';
 import { useTranslation } from 'react-i18next';
-import { LinearGradient } from 'expo-linear-gradient';
-import { SindiHero } from '@/components/SindiHero';
-// Removed file attachment functionality for minimal hero page
-import React, { useEffect, useCallback, useState, useMemo } from 'react';
+import React, { useEffect, useCallback, useState, useMemo, memo, useContext } from 'react';
 import { useConversationStore } from '@/store/conversationStore';
-import { EmptyState } from '@/components/ui/EmptyState'; // keep for IconComponent type assertion
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/utils/api';
+import { BottomSheetContext } from '@/context/BottomSheetContext';
+import { SindiExplanationBottomSheet } from '@/components/SindiExplanationBottomSheet';
 
 const IconComponent = Ionicons as any;
 
@@ -37,41 +34,169 @@ interface Entitlements {
   lastPaymentAt?: string;
 }
 
+// Memoized components for better performance
+
+const ConversationItem = memo(({
+  conversation,
+  isLast,
+  onPress
+}: {
+  conversation: any;
+  isLast: boolean;
+  onPress: () => void;
+}) => {
+  const last = conversation.messages[conversation.messages.length - 1];
+  const formatTimestamp = useCallback((d: Date) => {
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) {
+      return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    }
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }, []);
+
+  return (
+    <TouchableOpacity
+      style={[styles.conversationItem, isLast && styles.conversationItemLast]}
+      onPress={onPress}
+      activeOpacity={0.6}
+    >
+      <View style={styles.conversationCard}>
+        <View style={styles.conversationIcon}>
+          <IconComponent name="chatbubble-ellipses" size={18} color={'white'} />
+        </View>
+        <View style={{ flex: 1, position: 'relative', paddingRight: 4 }}>
+          <Text style={styles.conversationTitle} numberOfLines={1}>
+            {conversation.title}
+          </Text>
+          <Text style={styles.conversationPreview} numberOfLines={1}>
+            {last ? last.content : 'No messages yet'}
+          </Text>
+          <Text style={styles.conversationDate}>
+            {formatTimestamp(new Date(conversation.updatedAt))}
+          </Text>
+          <View style={styles.conversationMeta}>
+            <View style={styles.conversationStats}>
+              <IconComponent name="chatbubbles" size={11} color={colors.primaryColor} />
+              <Text style={styles.conversationStatsText}>
+                {conversation.messages.length}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+});
+ConversationItem.displayName = 'ConversationItem';
+
+const SubscriptionCard = memo(({
+  entitlements,
+  entitlementsLoading,
+  onUpgrade
+}: {
+  entitlements: Entitlements | null;
+  entitlementsLoading: boolean;
+  onUpgrade: () => void;
+}) => {
+  if (entitlementsLoading) return null;
+
+  const plusActive = entitlements?.plusActive || false;
+
+  return (
+    <View style={styles.subscriptionStatusContainer}>
+      <View style={[styles.subscriptionCard, plusActive && styles.subscriptionCardActive]}>
+        <View style={styles.subscriptionHeader}>
+          <IconComponent
+            name={plusActive ? "star" : "information-circle"}
+            size={20}
+            color={plusActive ? colors.primaryColor : '#6b7280'}
+          />
+          <Text style={styles.subscriptionTitle}>
+            {plusActive ? 'Homiio+ Active' : 'Free Plan'}
+          </Text>
+        </View>
+        <Text style={styles.subscriptionDescription}>
+          {plusActive
+            ? 'Unlimited file uploads and priority support included'
+            : 'Upgrade to Homiio+ for unlimited file uploads and priority support'
+          }
+        </Text>
+        {!plusActive && (
+          <TouchableOpacity style={styles.upgradeButton} onPress={onUpgrade} activeOpacity={0.8}>
+            <Text style={styles.upgradeButtonText}>Upgrade to Homiio+</Text>
+          </TouchableOpacity>
+        )}
+        {plusActive && (
+          <View style={styles.subscriptionBadge}>
+            <IconComponent name="checkmark-circle" size={14} color={colors.primaryColor} />
+            <Text style={styles.subscriptionBadgeText}>Active</Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+});
+SubscriptionCard.displayName = 'SubscriptionCard';
+
+const SearchBar = memo(({
+  searchQuery,
+  onSearchChange,
+  onClear
+}: {
+  searchQuery: string;
+  onSearchChange: (text: string) => void;
+  onClear: () => void;
+}) => (
+  <View style={styles.searchBarWrapper}>
+    <Ionicons name="search" size={16} color={colors.COLOR_BLACK_LIGHT_5} />
+    <TextInput
+      style={styles.searchInputChats}
+      placeholder="Search conversations"
+      placeholderTextColor={colors.COLOR_BLACK_LIGHT_5}
+      value={searchQuery}
+      onChangeText={onSearchChange}
+    />
+    {searchQuery.length > 0 && (
+      <TouchableOpacity onPress={onClear} style={styles.clearSearchBtn}>
+        <Ionicons name="close" size={14} color={colors.COLOR_BLACK_LIGHT_5} />
+      </TouchableOpacity>
+    )}
+  </View>
+));
+SearchBar.displayName = 'SearchBar';
+
+const NewConversationButton = memo(({ onPress }: { onPress: () => void }) => (
+  <TouchableOpacity style={styles.newConversationButton} onPress={onPress} activeOpacity={0.8}>
+    <View style={styles.newConversationContent}>
+      <View style={styles.newConversationIconContainer}>
+        <IconComponent name="add-circle" size={24} color={colors.primaryColor} />
+      </View>
+      <View style={styles.newConversationTextContainer}>
+        <Text style={styles.newConversationText}>Start New Conversation</Text>
+        <Text style={styles.newConversationSubtext}>
+          Get instant help with housing questions
+        </Text>
+      </View>
+      <View style={styles.newConversationArrow}>
+        <IconComponent name="chevron-forward" size={16} color={APPLE_TEXT_TERTIARY} />
+      </View>
+    </View>
+  </TouchableOpacity>
+));
+NewConversationButton.displayName = 'NewConversationButton';
+
 export default function Sindi() {
   const { oxyServices, activeSessionId } = useOxy();
   const router = useRouter();
   const { t } = useTranslation();
-  // No local file state needed on landing hero
-
-  // Zustand store
   const { conversations, loading, loadConversations, createConversation } = useConversationStore();
+  const [searchQuery, setSearchQuery] = useState('');
+  const bottomSheetContext = useContext(BottomSheetContext);
 
-  // Get user entitlements
-  const {
-    data: entitlements,
-    isLoading: entitlementsLoading,
-    error: entitlementsError,
-  } = useQuery({
-    queryKey: ['entitlements'],
-    queryFn: async () => {
-      const { data } = await api.get<{ success: boolean; entitlements: Entitlements }>(
-        '/api/profiles/me/entitlements',
-        { oxyServices, activeSessionId: activeSessionId || undefined }
-      );
-      if (!data?.success) {
-        throw new Error('Failed to load entitlements');
-      }
-      return data.entitlements || null;
-    },
-    enabled: !!oxyServices && !!activeSessionId,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 10, // 10 minutes
-  });
+  // Memoized authentication status
+  const isAuthenticated = useMemo(() => !!oxyServices && !!activeSessionId, [oxyServices, activeSessionId]);
 
-  const plusActive = entitlements?.plusActive || false;
-  const fileCredits = entitlements?.fileCredits || 0;
-
-  // Create a custom fetch function that includes authentication
+  // Memoized authenticated fetch function
   const authenticatedFetch = useCallback(
     async (url: string, options: RequestInit = {}) => {
       const headers: Record<string, string> = {
@@ -79,7 +204,6 @@ export default function Sindi() {
         ...((options.headers as Record<string, string>) || {}),
       };
 
-      // Add authentication token if available
       if (oxyServices && activeSessionId) {
         try {
           const tokenData = await oxyServices.getTokenBySession(activeSessionId);
@@ -91,7 +215,6 @@ export default function Sindi() {
         }
       }
 
-      // Create fetch options without null body
       const { body, ...otherOptions } = options;
       const fetchOptions = {
         ...otherOptions,
@@ -104,16 +227,33 @@ export default function Sindi() {
     [oxyServices, activeSessionId],
   );
 
-  // Alias with Response-compatible typing to satisfy functions expecting the standard fetch signature
   const conversationFetch = authenticatedFetch as unknown as (
     url: string,
     options?: RequestInit,
   ) => Promise<Response>;
 
-  // Auth status
-  const isAuthenticated = !!oxyServices && !!activeSessionId;
+  // Entitlements query
+  const {
+    data: entitlements,
+    isLoading: entitlementsLoading,
+  } = useQuery({
+    queryKey: ['entitlements'],
+    queryFn: async () => {
+      const { data } = await api.get<{ success: boolean; entitlements: Entitlements }>(
+        '/api/profiles/me/entitlements',
+        { oxyServices, activeSessionId: activeSessionId || undefined }
+      );
+      if (!data?.success) {
+        throw new Error('Failed to load entitlements');
+      }
+      return data.entitlements || null;
+    },
+    enabled: isAuthenticated,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 10,
+  });
 
-  // Create new conversation
+  // Memoized conversation creation handler
   const createNewConversation = useCallback(async () => {
     if (!isAuthenticated) return;
 
@@ -124,114 +264,32 @@ export default function Sindi() {
         conversationFetch,
       );
       router.push(`/sindi/${newConversation.id}`);
-      // Refresh conversations list
       loadConversations(conversationFetch);
     } catch (error) {
       console.error('Failed to create conversation:', error);
-      // Fallback to client-side ID generation
       const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       router.push(`/sindi/${conversationId}`);
     }
   }, [isAuthenticated, conversationFetch, router, createConversation, loadConversations]);
 
-  // Load conversations on mount
-  useEffect(() => {
-    if (isAuthenticated) {
+  // Memoized conversation action handler
+  const handleConversationAction = useCallback(async (title: string, prompt: string) => {
+    if (!isAuthenticated) return;
+
+    try {
+      const newConversation = await createConversation(title, prompt, conversationFetch);
+      router.push(`/sindi/${newConversation.id}?message=${encodeURIComponent(prompt)}`);
       loadConversations(conversationFetch);
+    } catch (error) {
+      console.error('Failed to create conversation:', error);
+      const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      router.push(`/sindi/${conversationId}?message=${encodeURIComponent(prompt)}`);
     }
-  }, [isAuthenticated, loadConversations, conversationFetch]);
+  }, [isAuthenticated, conversationFetch, router, createConversation, loadConversations]);
 
-  // Quick actions & examples (original arrays restored)
-  const quickActions = [
-    {
-      title: t('sindi.actions.rentGouging.title'),
-      icon: 'trending-up',
-      prompt: t('sindi.actions.rentGouging.prompt'),
-    },
-    {
-      title: t('sindi.actions.evictionDefense.title'),
-      icon: 'warning',
-      prompt: t('sindi.actions.evictionDefense.prompt'),
-    },
-    {
-      title: t('sindi.actions.securityDeposit.title'),
-      icon: 'card',
-      prompt: t('sindi.actions.securityDeposit.prompt'),
-    },
-    {
-      title: t('sindi.actions.unsafeLiving.title'),
-      icon: 'construct',
-      prompt: t('sindi.actions.unsafeLiving.prompt'),
-    },
-    {
-      title: t('sindi.actions.discrimination.title'),
-      icon: 'shield-checkmark',
-      prompt: t('sindi.actions.discrimination.prompt'),
-    },
-    {
-      title: t('sindi.actions.retaliation.title'),
-      icon: 'alert-circle',
-      prompt: t('sindi.actions.retaliation.prompt'),
-    },
-    {
-      title: t('sindi.actions.leaseReview.title'),
-      icon: 'document-text',
-      prompt: t('sindi.actions.leaseReview.prompt'),
-    },
-    {
-      title: t('sindi.actions.tenantOrganizing.title'),
-      icon: 'people',
-      prompt: t('sindi.actions.tenantOrganizing.prompt'),
-    },
-    {
-      title: t('sindi.actions.currentLaws.title'),
-      icon: 'globe',
-      prompt: t('sindi.actions.currentLaws.prompt'),
-    },
-    {
-      title: t('sindi.actions.catalunya.title'),
-      icon: 'location',
-      prompt: t('sindi.actions.catalunya.prompt'),
-    },
-  ];
 
-  const propertySearchExamples = [
-    {
-      title: t('sindi.housing.examples.cheap.title'),
-      icon: 'cash',
-      prompt: t('sindi.housing.examples.cheap.prompt'),
-    },
-    {
-      title: t('sindi.housing.examples.petFriendly.title'),
-      icon: 'paw',
-      prompt: t('sindi.housing.examples.petFriendly.prompt'),
-    },
-    {
-      title: t('sindi.housing.examples.furnished.title'),
-      icon: 'bed',
-      prompt: t('sindi.housing.examples.furnished.prompt'),
-    },
-    {
-      title: t('sindi.housing.examples.family.title'),
-      icon: 'home',
-      prompt: t('sindi.housing.examples.family.prompt'),
-    },
-    {
-      title: t('sindi.housing.examples.luxury.title'),
-      icon: 'diamond',
-      prompt: t('sindi.housing.examples.luxury.prompt'),
-    },
-    {
-      title: t('sindi.housing.examples.shared.title'),
-      icon: 'people',
-      prompt: t('sindi.housing.examples.shared.prompt'),
-    },
-  ];
 
-  // UI state
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Filter conversations by search
+  // Memoized filtered conversations
   const filteredConversations = useMemo(() => {
     if (!searchQuery.trim()) return conversations;
     const q = searchQuery.toLowerCase();
@@ -242,13 +300,14 @@ export default function Sindi() {
     );
   }, [conversations, searchQuery]);
 
-  // Group conversations by date label (Today / Yesterday / Month Day)
+  // Memoized grouped conversations
   const groupedConversations = useMemo(() => {
     const groups: Record<string, typeof filteredConversations> = {};
     const today = new Date();
     const isSameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
+
     filteredConversations.forEach((conv) => {
       const d = new Date(conv.updatedAt);
       let label: string;
@@ -257,14 +316,11 @@ export default function Sindi() {
       else label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
       (groups[label] = groups[label] || []).push(conv);
     });
-    // Preserve chronological descending order of labels
+
     const orderedLabels = Object.keys(groups).sort((a, b) => {
-      // Custom ordering for Today / Yesterday; others by date desc
       const special = (l: string) => (l === 'Today' ? 2 : l === 'Yesterday' ? 1 : 0);
-      const sa = special(a),
-        sb = special(b);
-      if (sa !== sb) return sb - sa; // Today first
-      // Parse other labels
+      const sa = special(a), sb = special(b);
+      if (sa !== sb) return sb - sa;
       if (sa === 0 && sb === 0) {
         const da = new Date(a + ' ' + new Date().getFullYear());
         const db = new Date(b + ' ' + new Date().getFullYear());
@@ -272,19 +328,19 @@ export default function Sindi() {
       }
       return 0;
     });
+
     return orderedLabels.map((label) => ({ label, items: groups[label] }));
   }, [filteredConversations]);
 
-  const formatTimestamp = (d: Date) => {
-    const now = new Date();
-    if (d.toDateString() === now.toDateString()) {
-      return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  // Load conversations on mount
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadConversations(conversationFetch);
     }
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  };
+  }, [isAuthenticated, loadConversations, conversationFetch]);
 
-  // Web-specific styles for sticky positioning
-  const webStyles =
+  // Web-specific styles
+  const webStyles = useMemo(() =>
     Platform.OS === 'web'
       ? {
         container: { height: '100vh', display: 'flex', flexDirection: 'column' } as any,
@@ -293,7 +349,8 @@ export default function Sindi() {
         stickyInput: { position: 'sticky', bottom: 0 } as any,
         messagesContent: { paddingBottom: 100 },
       }
-      : {};
+      : {}, []
+  );
 
   if (!isAuthenticated) {
     return (
@@ -314,7 +371,6 @@ export default function Sindi() {
 
   return (
     <SafeAreaView style={[styles.container, webStyles.container]}>
-      {/* Header */}
       <Header
         options={{
           title: t('sindi.title'),
@@ -323,112 +379,69 @@ export default function Sindi() {
         }}
       />
 
-      {/* Messages */}
       <ScrollView
         style={[styles.messagesContainer, webStyles.messagesContainer]}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.messagesContent, webStyles.messagesContent]}
       >
         <View style={styles.welcomeContainer}>
-          <SindiHero
-            title={t('sindi.welcome.title')}
-            subtitle={t('sindi.welcome.subtitle')}
-            onNewConversation={createNewConversation}
-            onSearchHomes={() => router.push('/search')}
-            rotatingSuggestions={[
-              t('sindi.actions.rentGouging.prompt'),
-              t('sindi.actions.evictionDefense.prompt'),
-              t('sindi.actions.securityDeposit.prompt'),
-              t('sindi.actions.leaseReview.prompt'),
-              t('sindi.housing.examples.cheap.prompt'),
-            ]}
-            rotateInterval={5000}
+          {/* What is Sindi Section */}
+          <View style={styles.sindiExplanationContainer}>
+            <View style={styles.sindiIconContainer}>
+              <IconComponent name="chatbubble-ellipses" size={32} color={colors.primaryColor} />
+            </View>
+            <Text style={styles.sindiTitle}>Meet Sindi</Text>
+            <Text style={styles.sindiDescription}>
+              Your AI-powered housing rights assistant. Get instant help with tenant issues, understand your rights, and navigate housing challenges with confidence.
+            </Text>
+            <View style={styles.sindiFeatures}>
+              <View style={styles.sindiFeature}>
+                <IconComponent name="shield-checkmark" size={16} color={colors.primaryColor} />
+                <Text style={styles.sindiFeatureText}>Know your rights</Text>
+              </View>
+              <View style={styles.sindiFeature}>
+                <IconComponent name="document-text" size={16} color={colors.primaryColor} />
+                <Text style={styles.sindiFeatureText}>Legal guidance</Text>
+              </View>
+              <View style={styles.sindiFeature}>
+                <IconComponent name="people" size={16} color={colors.primaryColor} />
+                <Text style={styles.sindiFeatureText}>Community support</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.learnMoreButton}
+              onPress={() => {
+                if (bottomSheetContext) {
+                  bottomSheetContext.openBottomSheet(
+                    <SindiExplanationBottomSheet onClose={() => bottomSheetContext.closeBottomSheet()} />,
+                    { hideHandle: true }
+                  );
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.learnMoreButtonText}>Learn How It Works</Text>
+              <IconComponent name="chevron-forward" size={16} color={colors.primaryColor} />
+            </TouchableOpacity>
+          </View>
+
+          <NewConversationButton onPress={createNewConversation} />
+
+          <SubscriptionCard
+            entitlements={entitlements || null}
+            entitlementsLoading={entitlementsLoading}
+            onUpgrade={() => router.push('/profile/subscriptions')}
           />
 
-          {/* New Conversation Button */}
-          <TouchableOpacity
-            style={styles.newConversationButton}
-            onPress={createNewConversation}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={[colors.primaryColor, colors.secondaryLight]}
-              style={styles.newConversationGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <View style={styles.newConversationIconContainer}>
-                <IconComponent name="add-circle" size={28} color="white" />
-              </View>
-              <View style={styles.newConversationTextContainer}>
-                <Text style={styles.newConversationText}>Start New Conversation</Text>
-                <Text style={styles.newConversationSubtext}>
-                  Get instant help with housing questions
-                </Text>
-              </View>
-              <View style={styles.newConversationArrow}>
-                <IconComponent name="arrow-forward" size={20} color="rgba(255, 255, 255, 0.8)" />
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* Subscription Status */}
-          {!entitlementsLoading && (
-            <View style={styles.subscriptionStatusContainer}>
-              <View style={[styles.subscriptionCard, plusActive && styles.subscriptionCardActive]}>
-                <View style={styles.subscriptionHeader}>
-                  <IconComponent
-                    name={plusActive ? "star" : "information-circle"}
-                    size={20}
-                    color={plusActive ? colors.primaryColor : '#6b7280'}
-                  />
-                  <Text style={styles.subscriptionTitle}>
-                    {plusActive ? 'Homiio+ Active' : 'Free Plan'}
-                  </Text>
-                </View>
-                <Text style={styles.subscriptionDescription}>
-                  {plusActive
-                    ? 'Unlimited file uploads and priority support included'
-                    : 'Upgrade to Homiio+ for unlimited file uploads and priority support'
-                  }
-                </Text>
-                {!plusActive && (
-                  <TouchableOpacity
-                    style={styles.upgradeButton}
-                    onPress={() => router.push('/profile/subscriptions')}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.upgradeButtonText}>Upgrade to Homiio+</Text>
-                  </TouchableOpacity>
-                )}
-                {plusActive && (
-                  <View style={styles.subscriptionBadge}>
-                    <IconComponent name="checkmark-circle" size={14} color={colors.primaryColor} />
-                    <Text style={styles.subscriptionBadgeText}>Active</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-          )}
-
-          {/* Conversation History */}
           <View style={styles.conversationHistoryContainer}>
             <Text style={styles.conversationHistoryTitle}>Chats</Text>
-            <View style={styles.searchBarWrapper}>
-              <Ionicons name="search" size={16} color={colors.COLOR_BLACK_LIGHT_5} />
-              <TextInput
-                style={styles.searchInputChats}
-                placeholder="Search conversations"
-                placeholderTextColor={colors.COLOR_BLACK_LIGHT_5}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearSearchBtn}>
-                  <Ionicons name="close" size={14} color={colors.COLOR_BLACK_LIGHT_5} />
-                </TouchableOpacity>
-              )}
-            </View>
+            <SearchBar
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              onClear={() => setSearchQuery('')}
+            />
+
             {loading ? (
               <View style={{ paddingHorizontal: 16 }}>
                 {[...Array(4)].map((_, i) => (
@@ -451,156 +464,55 @@ export default function Sindi() {
                 {groupedConversations.map((group) => (
                   <View key={group.label}>
                     <Text style={styles.groupHeader}>{group.label}</Text>
-                    {group.items.map((conversation, idx) => {
-                      const last = conversation.messages[conversation.messages.length - 1];
-                      return (
-                        <TouchableOpacity
-                          key={conversation.id}
-                          style={[
-                            styles.conversationItem,
-                            idx === group.items.length - 1 && styles.conversationItemLast,
-                          ]}
-                          onPress={() => router.push(`/sindi/${conversation.id}`)}
-                          activeOpacity={0.6}
-                        >
-                          <View style={styles.conversationCard}>
-                            <View style={styles.conversationIcon}>
-                              <IconComponent name="chatbubble-ellipses" size={18} color={'white'} />
-                            </View>
-                            <View style={{ flex: 1, position: 'relative', paddingRight: 4 }}>
-                              <Text style={styles.conversationTitle} numberOfLines={1}>
-                                {conversation.title}
-                              </Text>
-                              <Text style={styles.conversationPreview} numberOfLines={1}>
-                                {last ? last.content : 'No messages yet'}
-                              </Text>
-                              <Text style={styles.conversationDate}>
-                                {formatTimestamp(new Date(conversation.updatedAt))}
-                              </Text>
-                              <View style={styles.conversationMeta}>
-                                <View style={styles.conversationStats}>
-                                  <IconComponent
-                                    name="chatbubbles"
-                                    size={11}
-                                    color={colors.primaryColor}
-                                  />
-                                  <Text style={styles.conversationStatsText}>
-                                    {conversation.messages.length}
-                                  </Text>
-                                </View>
-                              </View>
-                            </View>
-                          </View>
-                        </TouchableOpacity>
-                      );
-                    })}
+                    {group.items.map((conversation, idx) => (
+                      <ConversationItem
+                        key={conversation.id}
+                        conversation={conversation}
+                        isLast={idx === group.items.length - 1}
+                        onPress={() => router.push(`/sindi/${conversation.id}`)}
+                      />
+                    ))}
                   </View>
                 ))}
               </View>
             )}
           </View>
 
-          <View style={styles.quickActionsContainer}>
-            <Text style={styles.quickActionsTitle}>{t('sindi.actions.title')}</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.quickActionsScroller}
-            >
-              {quickActions.map((action, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.quickActionChip}
-                  onPress={async () => {
-                    if (!isAuthenticated) return;
-                    try {
-                      const newConversation = await createConversation(
-                        action.title,
-                        action.prompt,
-                        conversationFetch,
-                      );
-                      router.push(
-                        `/sindi/${newConversation.id}?message=${encodeURIComponent(action.prompt)}`,
-                      );
-                      loadConversations(conversationFetch);
-                    } catch (error) {
-                      console.error('Failed to create conversation:', error);
-                      const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                      router.push(
-                        `/sindi/${conversationId}?message=${encodeURIComponent(action.prompt)}`,
-                      );
-                    }
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <IconComponent name={action.icon as any} size={14} color={colors.primaryColor} />
-                  <Text style={styles.quickActionChipText}>{action.title}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
+          {/* Common Questions */}
+          <View style={styles.commonQuestionsContainer}>
+            <Text style={styles.commonQuestionsTitle}>Common Questions</Text>
+            <Text style={styles.commonQuestionsSubtitle}>
+              Tap any question to start a conversation with Sindi
+            </Text>
+            <View style={styles.questionsList}>
+              <TouchableOpacity
+                style={styles.questionItem}
+                onPress={() => handleConversationAction('Rent Increase Help', 'My landlord is raising my rent. What are my rights?')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.questionText}>My landlord is raising my rent. What are my rights?</Text>
+                <IconComponent name="chevron-forward" size={16} color={APPLE_TEXT_TERTIARY} />
+              </TouchableOpacity>
 
-          <View style={styles.propertySearchContainer}>
-            <Text style={styles.propertySearchTitle}>{t('sindi.housing.title')}</Text>
-            <Text style={styles.propertySearchSubtitle}>{t('sindi.housing.subtitle')}</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.propertySearchScroller}
-            >
-              {propertySearchExamples.map((example, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.propertySearchChip}
-                  onPress={async () => {
-                    if (!isAuthenticated) return;
-                    try {
-                      const newConversation = await createConversation(
-                        example.title,
-                        example.prompt,
-                        conversationFetch,
-                      );
-                      router.push(
-                        `/sindi/${newConversation.id}?message=${encodeURIComponent(example.prompt)}`,
-                      );
-                      loadConversations(conversationFetch);
-                    } catch (error) {
-                      console.error('Failed to create conversation:', error);
-                      const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                      router.push(
-                        `/sindi/${conversationId}?message=${encodeURIComponent(example.prompt)}`,
-                      );
-                    }
-                  }}
-                >
-                  <IconComponent name={example.icon as any} size={14} color={colors.primaryColor} />
-                  <Text style={styles.propertySearchChipText}>{example.title}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <Text style={styles.propertySearchNote}>{t('sindi.housing.naturalLanguage')}</Text>
-          </View>
+              <TouchableOpacity
+                style={styles.questionItem}
+                onPress={() => handleConversationAction('Eviction Defense', 'I received an eviction notice. What should I do?')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.questionText}>I received an eviction notice. What should I do?</Text>
+                <IconComponent name="chevron-forward" size={16} color={APPLE_TEXT_TERTIARY} />
+              </TouchableOpacity>
 
-          <LinearGradient
-            colors={[colors.primaryColor, colors.secondaryLight]}
-            style={styles.featuresContainer}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <Text style={styles.featuresTitle}>{t('sindi.features.title')}</Text>
-            <View style={styles.featureList}>
-              <Text style={styles.featureItem}>{t('sindi.features.rentIncreases')}</Text>
-              <Text style={styles.featureItem}>{t('sindi.features.evictions')}</Text>
-              <Text style={styles.featureItem}>{t('sindi.features.deposits')}</Text>
-              <Text style={styles.featureItem}>{t('sindi.features.conditions')}</Text>
-              <Text style={styles.featureItem}>{t('sindi.features.discrimination')}</Text>
-              <Text style={styles.featureItem}>{t('sindi.features.retaliation')}</Text>
-              <Text style={styles.featureItem}>{t('sindi.features.leases')}</Text>
-              <Text style={styles.featureItem}>{t('sindi.features.organizing')}</Text>
-              <Text style={styles.featureItem}>{t('sindi.features.updates')}</Text>
-              <Text style={styles.featureItem}>{t('sindi.features.organizations')}</Text>
+              <TouchableOpacity
+                style={styles.questionItem}
+                onPress={() => handleConversationAction('Security Deposit', 'Can I get my security deposit back?')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.questionText}>Can I get my security deposit back?</Text>
+                <IconComponent name="chevron-forward" size={16} color={APPLE_TEXT_TERTIARY} />
+              </TouchableOpacity>
             </View>
-          </LinearGradient>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -608,24 +520,102 @@ export default function Sindi() {
 }
 
 // Minimal UI tuning constants
-const MINIMAL_BORDER = '#d0d5dd';
+const MINIMAL_BORDER = '#e5e7eb';
+const APPLE_BACKGROUND = '#f8fafc';
+const APPLE_CARD_BACKGROUND = '#ffffff';
+const APPLE_TEXT_PRIMARY = '#1f2937';
+const APPLE_TEXT_SECONDARY = '#6b7280';
+const APPLE_TEXT_TERTIARY = '#9ca3af';
 
 const styles = StyleSheet.create({
   // New hero styles aligned with main screen
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: APPLE_BACKGROUND,
   },
   messagesContainer: {
     flex: 1,
     marginBottom: 120, // Account for sticky input
   },
   messagesContent: {
-    paddingHorizontal: 12,
-    paddingVertical: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 20,
   },
   welcomeContainer: {
-    paddingVertical: 16,
+    paddingVertical: 8,
+  },
+  sindiExplanationContainer: {
+    backgroundColor: APPLE_CARD_BACKGROUND,
+    borderRadius: 16,
+    padding: 24,
+    marginHorizontal: 16,
+    marginBottom: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: MINIMAL_BORDER,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  sindiIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: `${colors.primaryColor}15`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sindiTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: APPLE_TEXT_PRIMARY,
+    marginBottom: 12,
+    fontFamily: 'Phudu',
+    letterSpacing: -0.5,
+  },
+  sindiDescription: {
+    fontSize: 16,
+    color: APPLE_TEXT_SECONDARY,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 20,
+  },
+  sindiFeatures: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+  },
+  sindiFeature: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  sindiFeatureText: {
+    fontSize: 12,
+    color: APPLE_TEXT_SECONDARY,
+    marginTop: 6,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  learnMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: `${colors.primaryColor}15`,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: `${colors.primaryColor}30`,
+  },
+  learnMoreButtonText: {
+    color: colors.primaryColor,
+    fontSize: 15,
+    fontWeight: '600',
+    marginRight: 8,
   },
   welcomeHeader: {
     alignItems: 'center',
@@ -698,132 +688,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
   },
-  quickActionsContainer: {
-    marginBottom: 24,
-  },
-  quickActionsTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.COLOR_BLACK,
-    marginBottom: 16,
-    fontFamily: 'Phudu',
-    paddingHorizontal: 16,
-  },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    paddingHorizontal: 16,
-  },
-  quickActionButton: {
-    flex: 1,
-    minWidth: '45%',
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: MINIMAL_BORDER,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  quickActionGradient: {
-    padding: 14,
-    alignItems: 'center',
-    minHeight: 70,
-    justifyContent: 'center',
-  },
-  quickActionText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: 'white',
-    marginTop: 8,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  propertySearchContainer: {
-    marginBottom: 24,
-  },
-  propertySearchTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.COLOR_BLACK,
-    marginBottom: 16,
-    fontFamily: 'Phudu',
-    paddingHorizontal: 16,
-  },
-  propertySearchSubtitle: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    textAlign: 'center',
-    lineHeight: 24,
-    paddingHorizontal: 16,
-    marginBottom: 14,
-  },
-  propertySearchGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    paddingHorizontal: 16,
-  },
-  propertySearchButton: {
-    flex: 1,
-    minWidth: '45%',
-    borderRadius: 26,
-    borderWidth: 1,
-    borderColor: MINIMAL_BORDER,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  propertySearchGradient: {
-    padding: 14,
-    alignItems: 'center',
-    minHeight: 64,
-    justifyContent: 'center',
-  },
-  propertySearchText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: 'white',
-    marginTop: 6,
-    textAlign: 'center',
-    lineHeight: 16,
-  },
-  propertySearchNote: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    textAlign: 'center',
-    marginTop: 8,
-    paddingHorizontal: 16,
-  },
-  featuresContainer: {
-    padding: 16,
-    borderRadius: 32,
-    borderWidth: 1,
-    borderColor: MINIMAL_BORDER,
-    marginHorizontal: 16,
-    marginBottom: 20,
-  },
-  featuresTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 16,
-    fontFamily: 'Phudu',
-  },
-  featureList: {
-    gap: 8,
-  },
-  featureItem: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-    lineHeight: 20,
-  },
+
   messageContainer: {
     marginVertical: 8,
   },
@@ -1081,17 +946,23 @@ const styles = StyleSheet.create({
   },
   newConversationButton: {
     marginHorizontal: 16,
-    marginBottom: 20,
-    borderRadius: 34,
+    marginBottom: 24,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: MINIMAL_BORDER,
     overflow: 'hidden',
+    backgroundColor: APPLE_CARD_BACKGROUND,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  newConversationGradient: {
+  newConversationContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 14,
+    padding: 16,
   },
   newConversationIconContainer: {
     marginRight: 12,
@@ -1100,113 +971,78 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   newConversationText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
-    color: 'white',
+    color: APPLE_TEXT_PRIMARY,
     marginBottom: 2,
   },
   newConversationSubtext: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 13,
+    color: APPLE_TEXT_SECONDARY,
     fontWeight: '400',
   },
   newConversationArrow: {
     marginLeft: 12,
   },
   conversationHistoryContainer: {
-    marginBottom: 24,
+    marginBottom: 32,
   },
   searchBarWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: APPLE_CARD_BACKGROUND,
     borderWidth: 1,
     borderColor: MINIMAL_BORDER,
-    marginHorizontal: 12,
-    marginBottom: 12,
-    borderRadius: 24,
-    paddingHorizontal: 12,
-    height: 40,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 44,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   searchInputChats: {
     flex: 1,
-    fontSize: 14,
-    marginLeft: 6,
-    color: colors.COLOR_BLACK_LIGHT_2,
+    fontSize: 16,
+    marginLeft: 8,
+    color: APPLE_TEXT_PRIMARY,
   },
   clearSearchBtn: {
     padding: 4,
     borderRadius: 12,
   },
   skeletonRow: {
-    height: 54,
-    borderRadius: 16,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-    marginBottom: 6,
+    height: 64,
+    borderRadius: 12,
+    backgroundColor: '#f3f4f6',
+    marginBottom: 8,
     overflow: 'hidden',
   },
   groupHeader: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_5,
-    marginTop: 12,
-    marginBottom: 4,
+    color: APPLE_TEXT_TERTIARY,
+    marginTop: 16,
+    marginBottom: 8,
     paddingHorizontal: 16,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   conversationItemLast: {
-    marginBottom: 12,
-  },
-  quickActionsScroller: {
-    paddingHorizontal: 12,
-    gap: 8,
-  },
-  quickActionChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: MINIMAL_BORDER,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 30,
-    marginRight: 8,
-    gap: 6,
-  },
-  quickActionChipText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.primaryColor,
-  },
-  propertySearchScroller: {
-    paddingHorizontal: 12,
-    gap: 8,
-  },
-  propertySearchChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: MINIMAL_BORDER,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 28,
-    marginRight: 8,
-    gap: 6,
-  },
-  propertySearchChipText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.primaryColor,
-  },
-  conversationHistoryTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.COLOR_BLACK,
     marginBottom: 16,
+  },
+
+  conversationHistoryTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: APPLE_TEXT_PRIMARY,
+    marginBottom: 20,
     fontFamily: 'Phudu',
     paddingHorizontal: 16,
+    letterSpacing: -0.5,
   },
   loadingContainer: {
     padding: 20,
@@ -1214,7 +1050,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: colors.COLOR_BLACK_LIGHT_3,
+    color: APPLE_TEXT_SECONDARY,
   },
 
   conversationsList: {
@@ -1222,46 +1058,51 @@ const styles = StyleSheet.create({
   },
   conversationItem: {
     marginBottom: 4,
-    borderRadius: 18,
-    backgroundColor: 'white',
+    borderRadius: 12,
+    backgroundColor: APPLE_CARD_BACKGROUND,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   conversationCard: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
   },
   conversationHeader: {},
   conversationTitleContainer: { flex: 1 },
   conversationIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: colors.primaryColor,
     justifyContent: 'center',
     alignItems: 'center',
   },
   conversationTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
-    color: colors.COLOR_BLACK,
-    marginBottom: 2,
+    color: APPLE_TEXT_PRIMARY,
+    marginBottom: 4,
   },
   conversationDate: {
     position: 'absolute',
     top: 0,
     right: 0,
-    fontSize: 10,
-    color: colors.COLOR_BLACK_LIGHT_4,
+    fontSize: 12,
+    color: APPLE_TEXT_TERTIARY,
     fontWeight: '500',
   },
   conversationPreview: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    lineHeight: 16,
-    paddingRight: 50,
+    fontSize: 14,
+    color: APPLE_TEXT_SECONDARY,
+    lineHeight: 18,
+    paddingRight: 60,
   },
   conversationMeta: {
     position: 'absolute',
@@ -1276,8 +1117,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   conversationStatsText: {
-    fontSize: 10,
-    color: colors.COLOR_BLACK_LIGHT_5,
+    fontSize: 11,
+    color: APPLE_TEXT_TERTIARY,
     fontWeight: '500',
   },
   conversationArrow: {
@@ -1285,23 +1126,23 @@ const styles = StyleSheet.create({
   },
   conversationMessageCount: {
     fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_3,
+    color: APPLE_TEXT_SECONDARY,
   },
   subscriptionStatusContainer: {
     marginHorizontal: 16,
-    marginBottom: 24,
+    marginBottom: 32,
   },
   subscriptionCard: {
-    backgroundColor: 'white',
+    backgroundColor: APPLE_CARD_BACKGROUND,
     borderRadius: 16,
-    padding: 16,
+    padding: 20,
     borderWidth: 1,
     borderColor: MINIMAL_BORDER,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowRadius: 8,
+    elevation: 2,
   },
   subscriptionCardActive: {
     borderColor: colors.primaryColor,
@@ -1310,29 +1151,30 @@ const styles = StyleSheet.create({
   subscriptionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   subscriptionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.COLOR_BLACK,
+    fontSize: 17,
+    fontWeight: '600',
+    color: APPLE_TEXT_PRIMARY,
     marginLeft: 8,
   },
   subscriptionDescription: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    marginBottom: 12,
+    fontSize: 14,
+    color: APPLE_TEXT_SECONDARY,
+    marginBottom: 16,
+    lineHeight: 20,
   },
   upgradeButton: {
     backgroundColor: colors.primaryColor,
     borderRadius: 12,
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 20,
     alignSelf: 'flex-start',
   },
   upgradeButtonText: {
     color: 'white',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   subscriptionBadge: {
@@ -1340,14 +1182,57 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(107, 114, 128, 0.1)',
     borderRadius: 12,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
     alignSelf: 'flex-start',
   },
   subscriptionBadgeText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.primaryColor,
     marginLeft: 4,
+  },
+  commonQuestionsContainer: {
+    marginHorizontal: 16,
+    marginBottom: 32,
+  },
+  commonQuestionsTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: APPLE_TEXT_PRIMARY,
+    marginBottom: 8,
+    fontFamily: 'Phudu',
+    letterSpacing: -0.5,
+  },
+  commonQuestionsSubtitle: {
+    fontSize: 15,
+    color: APPLE_TEXT_SECONDARY,
+    marginBottom: 20,
+    lineHeight: 22,
+  },
+  questionsList: {
+    gap: 12,
+  },
+  questionItem: {
+    backgroundColor: APPLE_CARD_BACKGROUND,
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: MINIMAL_BORDER,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  questionText: {
+    fontSize: 15,
+    color: APPLE_TEXT_PRIMARY,
+    flex: 1,
+    marginRight: 12,
+    lineHeight: 20,
   },
 });

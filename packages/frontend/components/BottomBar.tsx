@@ -90,16 +90,6 @@ export const BottomBar = () => {
         )}
       </Pressable>
       <Pressable
-        onPress={() => handlePress('/saved')}
-        style={[styles.tab, activeRoute === '/saved' && styles.active]}
-      >
-        {activeRoute === '/saved' ? (
-          <BookmarkActive size={28} color={colors.primaryColor} />
-        ) : (
-          <Bookmark size={28} color={colors.COLOR_BLACK} />
-        )}
-      </Pressable>
-      <Pressable
         onPress={() => handlePress('/sindi')}
         style={[styles.tab, activeRoute === '/sindi' && styles.active]}
       >
@@ -107,6 +97,16 @@ export const BottomBar = () => {
           <SindiIconActive size={28} color={colors.primaryColor} />
         ) : (
           <SindiIcon size={28} color={colors.COLOR_BLACK} />
+        )}
+      </Pressable>
+      <Pressable
+        onPress={() => handlePress('/saved')}
+        style={[styles.tab, activeRoute === '/saved' && styles.active]}
+      >
+        {activeRoute === '/saved' ? (
+          <BookmarkActive size={28} color={colors.primaryColor} />
+        ) : (
+          <Bookmark size={28} color={colors.COLOR_BLACK} />
         )}
       </Pressable>
       {/* Only show contracts tab if user has rental properties */}

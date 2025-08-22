@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Switch } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Switch } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
 import { toast } from 'sonner';
+import Button from '../Button';
 
 // Type assertion for Ionicons compatibility
 const IconComponent = Ionicons as any;
@@ -75,9 +76,9 @@ export function PropertyAlertWidget() {
       >
         <View style={styles.container}>
           <Text style={styles.subtitle}>{t('Sign in to create property alerts')}</Text>
-          <TouchableOpacity style={styles.createButton} onPress={() => router.push('/search')}>
-            <Text style={styles.createButtonText}>{t('Go to Search')}</Text>
-          </TouchableOpacity>
+          <Button style={styles.createButton} onPress={() => router.push('/search')}>
+            {t('Go to Search')}
+          </Button>
         </View>
       </BaseWidget>
     );
@@ -149,15 +150,13 @@ export function PropertyAlertWidget() {
           </View>
         </View>
 
-        <TouchableOpacity
+        <Button
           style={[styles.createButton, isSaving && styles.createButtonDisabled]}
           onPress={handleCreateAlert}
           disabled={isSaving}
         >
-          <Text style={styles.createButtonText}>
-            {isSaving ? t('Creating...') : t('Create Alert')}
-          </Text>
-        </TouchableOpacity>
+          {isSaving ? t('Creating...') : t('Create Alert')}
+        </Button>
       </View>
     </BaseWidget>
   );

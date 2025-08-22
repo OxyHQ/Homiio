@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import LoadingSpinner from '../LoadingSpinner';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +8,7 @@ import { BaseWidget } from './BaseWidget';
 import { useProperties } from '@/hooks';
 import { PropertyCard } from '../PropertyCard';
 import { ThemedText } from '../ThemedText';
+import Button from '../Button';
 
 export function FeaturedPropertiesWidget() {
   const { t } = useTranslation();
@@ -101,17 +102,17 @@ function FeaturedProperties({ properties }: { properties: any[] }) {
           showPrice={true}
           showLocation={true}
           showRating={false}
+          showFavoriteCount={true}
+          favoriteCountDisplayMode="inline"
           style={styles.propertyCard}
           onPress={() => router.push(`/properties/${property._id || property.id}`)}
         />
       ))}
-      <TouchableOpacity
+      <Button
         onPress={() => router.push('/properties')}
-        style={styles.showMoreButton}
-        activeOpacity={0.7}
       >
-        <ThemedText style={styles.showMoreText}>{t('home.viewAll')}</ThemedText>
-      </TouchableOpacity>
+        {t('home.viewAll')}
+      </Button>
     </>
   );
 }
@@ -147,16 +148,5 @@ const styles = StyleSheet.create({
   },
   propertyCard: {
     marginBottom: 12,
-  },
-  showMoreButton: {
-    padding: 12,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 35,
-    alignItems: 'center',
-    marginTop: 5,
-  },
-  showMoreText: {
-    color: colors.primaryColor,
-    fontWeight: '600',
   },
 });
