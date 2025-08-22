@@ -11,6 +11,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOxy } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
+import { SindiIcon } from '@/assets/icons';
+import Button from '@/components/button';
 import { colors } from '@/styles/colors';
 import { useRouter } from 'expo-router';
 import { ThemedView } from '@/components/ThemedView';
@@ -19,20 +21,12 @@ import { useTranslation } from 'react-i18next';
 import React, { useEffect, useCallback, useState, useMemo, memo, useContext } from 'react';
 import { useConversationStore } from '@/store/conversationStore';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { useQuery } from '@tanstack/react-query';
-import { api } from '@/utils/api';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SindiExplanationBottomSheet } from '@/components/SindiExplanationBottomSheet';
 
 const IconComponent = Ionicons as any;
 
-interface Entitlements {
-  plusActive: boolean;
-  plusSince?: string;
-  plusStripeSubscriptionId?: string;
-  fileCredits: number;
-  lastPaymentAt?: string;
-}
+// (Removed) Entitlements interface (unused)
 
 // Memoized components for better performance
 
@@ -61,82 +55,26 @@ const ConversationItem = memo(({
       activeOpacity={0.6}
     >
       <View style={styles.conversationCard}>
-        <View style={styles.conversationIcon}>
-          <IconComponent name="chatbubble-ellipses" size={18} color={'white'} />
-        </View>
-        <View style={{ flex: 1, position: 'relative', paddingRight: 4 }}>
-          <Text style={styles.conversationTitle} numberOfLines={1}>
-            {conversation.title}
-          </Text>
+        {/* Icon removed for a cleaner conversation list */}
+        <View style={{ flex: 1, paddingRight: 4 }}>
+          <View style={styles.conversationHeader}>
+            <Text style={styles.conversationTitle} numberOfLines={1}>
+              {conversation.title}
+            </Text>
+            <Text style={styles.conversationDate}>
+              {formatTimestamp(new Date(conversation.updatedAt))}
+            </Text>
+          </View>
           <Text style={styles.conversationPreview} numberOfLines={1}>
             {last ? last.content : 'No messages yet'}
           </Text>
-          <Text style={styles.conversationDate}>
-            {formatTimestamp(new Date(conversation.updatedAt))}
-          </Text>
-          <View style={styles.conversationMeta}>
-            <View style={styles.conversationStats}>
-              <IconComponent name="chatbubbles" size={11} color={colors.primaryColor} />
-              <Text style={styles.conversationStatsText}>
-                {conversation.messages.length}
-              </Text>
-            </View>
-          </View>
+          {/* Meta removed for WhatsApp-style simplification */}
         </View>
       </View>
     </TouchableOpacity>
   );
 });
 ConversationItem.displayName = 'ConversationItem';
-
-const SubscriptionCard = memo(({
-  entitlements,
-  entitlementsLoading,
-  onUpgrade
-}: {
-  entitlements: Entitlements | null;
-  entitlementsLoading: boolean;
-  onUpgrade: () => void;
-}) => {
-  if (entitlementsLoading) return null;
-
-  const plusActive = entitlements?.plusActive || false;
-
-  return (
-    <View style={styles.subscriptionStatusContainer}>
-      <View style={[styles.subscriptionCard, plusActive && styles.subscriptionCardActive]}>
-        <View style={styles.subscriptionHeader}>
-          <IconComponent
-            name={plusActive ? "star" : "information-circle"}
-            size={20}
-            color={plusActive ? colors.primaryColor : '#6b7280'}
-          />
-          <Text style={styles.subscriptionTitle}>
-            {plusActive ? 'Homiio+ Active' : 'Free Plan'}
-          </Text>
-        </View>
-        <Text style={styles.subscriptionDescription}>
-          {plusActive
-            ? 'Unlimited file uploads and priority support included'
-            : 'Upgrade to Homiio+ for unlimited file uploads and priority support'
-          }
-        </Text>
-        {!plusActive && (
-          <TouchableOpacity style={styles.upgradeButton} onPress={onUpgrade} activeOpacity={0.8}>
-            <Text style={styles.upgradeButtonText}>Upgrade to Homiio+</Text>
-          </TouchableOpacity>
-        )}
-        {plusActive && (
-          <View style={styles.subscriptionBadge}>
-            <IconComponent name="checkmark-circle" size={14} color={colors.primaryColor} />
-            <Text style={styles.subscriptionBadgeText}>Active</Text>
-          </View>
-        )}
-      </View>
-    </View>
-  );
-});
-SubscriptionCard.displayName = 'SubscriptionCard';
 
 const SearchBar = memo(({
   searchQuery,
@@ -166,22 +104,36 @@ const SearchBar = memo(({
 SearchBar.displayName = 'SearchBar';
 
 const NewConversationButton = memo(({ onPress }: { onPress: () => void }) => (
-  <TouchableOpacity style={styles.newConversationButton} onPress={onPress} activeOpacity={0.8}>
-    <View style={styles.newConversationContent}>
-      <View style={styles.newConversationIconContainer}>
-        <IconComponent name="add-circle" size={24} color={colors.primaryColor} />
-      </View>
-      <View style={styles.newConversationTextContainer}>
-        <Text style={styles.newConversationText}>Start New Conversation</Text>
-        <Text style={styles.newConversationSubtext}>
-          Get instant help with housing questions
-        </Text>
-      </View>
-      <View style={styles.newConversationArrow}>
-        <IconComponent name="chevron-forward" size={16} color={APPLE_TEXT_TERTIARY} />
-      </View>
+  <Button
+    onPress={onPress}
+    accessibilityLabel="Start new conversation"
+    style={{
+      marginHorizontal: 16,
+      marginBottom: 24,
+      borderRadius: 35,
+      backgroundColor: '#ffffff',
+      borderWidth: 1,
+      borderColor: '#e5e7eb',
+      paddingVertical: 16,
+      paddingHorizontal: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      gap: 8
+    }}
+  >
+    <IconComponent name="add-circle" size={24} color={colors.primaryColor} />
+    <View style={{ flex: 1, gap: 2 }}>
+      <Text style={{ fontSize: 16, fontWeight: '600', color: '#1f2937' }}>Start New Conversation</Text>
+      <Text style={{ fontSize: 13, color: '#6b7280', fontWeight: '400' }}>
+        Get instant help with housing questions
+      </Text>
     </View>
-  </TouchableOpacity>
+    <IconComponent name="chevron-forward" size={16} color={colors.primaryDark_1} />
+  </Button>
 ));
 NewConversationButton.displayName = 'NewConversationButton';
 
@@ -232,26 +184,7 @@ export default function Sindi() {
     options?: RequestInit,
   ) => Promise<Response>;
 
-  // Entitlements query
-  const {
-    data: entitlements,
-    isLoading: entitlementsLoading,
-  } = useQuery({
-    queryKey: ['entitlements'],
-    queryFn: async () => {
-      const { data } = await api.get<{ success: boolean; entitlements: Entitlements }>(
-        '/api/profiles/me/entitlements',
-        { oxyServices, activeSessionId: activeSessionId || undefined }
-      );
-      if (!data?.success) {
-        throw new Error('Failed to load entitlements');
-      }
-      return data.entitlements || null;
-    },
-    enabled: isAuthenticated,
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 10,
-  });
+  // Entitlements-related logic removed (previously unused)
 
   // Memoized conversation creation handler
   const createNewConversation = useCallback(async () => {
@@ -272,20 +205,7 @@ export default function Sindi() {
     }
   }, [isAuthenticated, conversationFetch, router, createConversation, loadConversations]);
 
-  // Memoized conversation action handler
-  const handleConversationAction = useCallback(async (title: string, prompt: string) => {
-    if (!isAuthenticated) return;
-
-    try {
-      const newConversation = await createConversation(title, prompt, conversationFetch);
-      router.push(`/sindi/${newConversation.id}?message=${encodeURIComponent(prompt)}`);
-      loadConversations(conversationFetch);
-    } catch (error) {
-      console.error('Failed to create conversation:', error);
-      const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      router.push(`/sindi/${conversationId}?message=${encodeURIComponent(prompt)}`);
-    }
-  }, [isAuthenticated, conversationFetch, router, createConversation, loadConversations]);
+  // Conversation action handler removed (legacy common questions feature)
 
 
 
@@ -300,37 +220,11 @@ export default function Sindi() {
     );
   }, [conversations, searchQuery]);
 
-  // Memoized grouped conversations
-  const groupedConversations = useMemo(() => {
-    const groups: Record<string, typeof filteredConversations> = {};
-    const today = new Date();
-    const isSameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
-    const yesterday = new Date();
-    yesterday.setDate(today.getDate() - 1);
-
-    filteredConversations.forEach((conv) => {
-      const d = new Date(conv.updatedAt);
-      let label: string;
-      if (isSameDay(d, today)) label = 'Today';
-      else if (isSameDay(d, yesterday)) label = 'Yesterday';
-      else label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-      (groups[label] = groups[label] || []).push(conv);
-    });
-
-    const orderedLabels = Object.keys(groups).sort((a, b) => {
-      const special = (l: string) => (l === 'Today' ? 2 : l === 'Yesterday' ? 1 : 0);
-      const sa = special(a), sb = special(b);
-      if (sa !== sb) return sb - sa;
-      if (sa === 0 && sb === 0) {
-        const da = new Date(a + ' ' + new Date().getFullYear());
-        const db = new Date(b + ' ' + new Date().getFullYear());
-        return db.getTime() - da.getTime();
-      }
-      return 0;
-    });
-
-    return orderedLabels.map((label) => ({ label, items: groups[label] }));
-  }, [filteredConversations]);
+  // Flat, newest-first conversation list (WhatsApp style)
+  const sortedConversations = useMemo(
+    () => [...filteredConversations].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
+    [filteredConversations]
+  );
 
   // Load conversations on mount
   useEffect(() => {
@@ -388,12 +282,28 @@ export default function Sindi() {
           {/* What is Sindi Section */}
           <View style={styles.sindiExplanationContainer}>
             <View style={styles.sindiIconContainer}>
-              <IconComponent name="chatbubble-ellipses" size={32} color={colors.primaryColor} />
+              <SindiIcon size={48} color={colors.primaryColor} />
             </View>
             <Text style={styles.sindiTitle}>Meet Sindi</Text>
             <Text style={styles.sindiDescription}>
               Your AI-powered housing rights assistant. Get instant help with tenant issues, understand your rights, and navigate housing challenges with confidence.
             </Text>
+            <Button
+              onPress={() => {
+                if (bottomSheetContext) {
+                  bottomSheetContext.openBottomSheet(
+                    <SindiExplanationBottomSheet onClose={() => bottomSheetContext.closeBottomSheet()} />,
+                    { hideHandle: true }
+                  );
+                }
+              }}
+              accessibilityLabel="Learn how Sindi works"
+            >
+              Learn How It Works
+            </Button>
+          </View>
+
+          <View style={styles.sindiFeaturesDetached}>
             <View style={styles.sindiFeatures}>
               <View style={styles.sindiFeature}>
                 <IconComponent name="shield-checkmark" size={16} color={colors.primaryColor} />
@@ -408,31 +318,9 @@ export default function Sindi() {
                 <Text style={styles.sindiFeatureText}>Community support</Text>
               </View>
             </View>
-
-            <TouchableOpacity
-              style={styles.learnMoreButton}
-              onPress={() => {
-                if (bottomSheetContext) {
-                  bottomSheetContext.openBottomSheet(
-                    <SindiExplanationBottomSheet onClose={() => bottomSheetContext.closeBottomSheet()} />,
-                    { hideHandle: true }
-                  );
-                }
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.learnMoreButtonText}>Learn How It Works</Text>
-              <IconComponent name="chevron-forward" size={16} color={colors.primaryColor} />
-            </TouchableOpacity>
           </View>
 
           <NewConversationButton onPress={createNewConversation} />
-
-          <SubscriptionCard
-            entitlements={entitlements || null}
-            entitlementsLoading={entitlementsLoading}
-            onUpgrade={() => router.push('/profile/subscriptions')}
-          />
 
           <View style={styles.conversationHistoryContainer}>
             <Text style={styles.conversationHistoryTitle}>Chats</Text>
@@ -461,132 +349,74 @@ export default function Sindi() {
               />
             ) : (
               <View style={styles.conversationsList}>
-                {groupedConversations.map((group) => (
-                  <View key={group.label}>
-                    <Text style={styles.groupHeader}>{group.label}</Text>
-                    {group.items.map((conversation, idx) => (
-                      <ConversationItem
-                        key={conversation.id}
-                        conversation={conversation}
-                        isLast={idx === group.items.length - 1}
-                        onPress={() => router.push(`/sindi/${conversation.id}`)}
-                      />
-                    ))}
-                  </View>
+                {sortedConversations.map((conversation, idx) => (
+                  <ConversationItem
+                    key={conversation.id}
+                    conversation={conversation}
+                    isLast={idx === sortedConversations.length - 1}
+                    onPress={() => router.push(`/sindi/${conversation.id}`)}
+                  />
                 ))}
               </View>
             )}
           </View>
 
-          {/* Common Questions */}
-          <View style={styles.commonQuestionsContainer}>
-            <Text style={styles.commonQuestionsTitle}>Common Questions</Text>
-            <Text style={styles.commonQuestionsSubtitle}>
-              Tap any question to start a conversation with Sindi
-            </Text>
-            <View style={styles.questionsList}>
-              <TouchableOpacity
-                style={styles.questionItem}
-                onPress={() => handleConversationAction('Rent Increase Help', 'My landlord is raising my rent. What are my rights?')}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.questionText}>My landlord is raising my rent. What are my rights?</Text>
-                <IconComponent name="chevron-forward" size={16} color={APPLE_TEXT_TERTIARY} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.questionItem}
-                onPress={() => handleConversationAction('Eviction Defense', 'I received an eviction notice. What should I do?')}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.questionText}>I received an eviction notice. What should I do?</Text>
-                <IconComponent name="chevron-forward" size={16} color={APPLE_TEXT_TERTIARY} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.questionItem}
-                onPress={() => handleConversationAction('Security Deposit', 'Can I get my security deposit back?')}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.questionText}>Can I get my security deposit back?</Text>
-                <IconComponent name="chevron-forward" size={16} color={APPLE_TEXT_TERTIARY} />
-              </TouchableOpacity>
-            </View>
-          </View>
+          {/* Common Questions section intentionally removed */}
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-// Minimal UI tuning constants
-const MINIMAL_BORDER = '#e5e7eb';
-const APPLE_BACKGROUND = '#f8fafc';
-const APPLE_CARD_BACKGROUND = '#ffffff';
-const APPLE_TEXT_PRIMARY = '#1f2937';
-const APPLE_TEXT_SECONDARY = '#6b7280';
-const APPLE_TEXT_TERTIARY = '#9ca3af';
-
 const styles = StyleSheet.create({
   // New hero styles aligned with main screen
   container: {
     flex: 1,
-    backgroundColor: APPLE_BACKGROUND,
   },
   messagesContainer: {
     flex: 1,
-    marginBottom: 120, // Account for sticky input
   },
   messagesContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 20,
   },
   welcomeContainer: {
     paddingVertical: 8,
   },
   sindiExplanationContainer: {
-    backgroundColor: APPLE_CARD_BACKGROUND,
     borderRadius: 16,
-    padding: 24,
-    marginHorizontal: 16,
-    marginBottom: 24,
+    padding: 16,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: MINIMAL_BORDER,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    gap: 10,
   },
   sindiIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: `${colors.primaryColor}15`,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: `${colors.primaryColor}12`,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
   },
   sindiTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: APPLE_TEXT_PRIMARY,
-    marginBottom: 12,
+    color: colors.primaryDark,
     fontFamily: 'Phudu',
     letterSpacing: -0.5,
   },
   sindiDescription: {
     fontSize: 16,
-    color: APPLE_TEXT_SECONDARY,
+    color: colors.primaryDark_1,
     textAlign: 'center',
     lineHeight: 24,
-    marginBottom: 20,
   },
   sindiFeatures: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     width: '100%',
+  },
+  sindiFeaturesDetached: {
+    marginTop: 12,
+    marginBottom: 12,
+    paddingHorizontal: 16,
   },
   sindiFeature: {
     alignItems: 'center',
@@ -594,141 +424,12 @@ const styles = StyleSheet.create({
   },
   sindiFeatureText: {
     fontSize: 12,
-    color: APPLE_TEXT_SECONDARY,
-    marginTop: 6,
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  learnMoreButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 20,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: `${colors.primaryColor}15`,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: `${colors.primaryColor}30`,
-  },
-  learnMoreButtonText: {
-    color: colors.primaryColor,
-    fontSize: 15,
-    fontWeight: '600',
-    marginRight: 8,
-  },
-  welcomeHeader: {
-    alignItems: 'center',
-    marginBottom: 24,
-    padding: 20,
-    borderRadius: 36,
-    borderWidth: 1,
-    borderColor: MINIMAL_BORDER,
-    marginHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  welcomeIconContainer: {
-    position: 'relative',
-    marginBottom: 20,
-  },
-  welcomeIconBackground: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  welcomeIconGlow: {
-    position: 'absolute',
-    top: -8,
-    left: -8,
-    right: -8,
-    bottom: -8,
-    borderRadius: 52,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    zIndex: -1,
-  },
-  welcomeTitle: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 10,
-    fontFamily: 'Phudu',
-    textAlign: 'center',
-  },
-  welcomeSubtitle: {
-    fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
-    lineHeight: 24,
-    paddingHorizontal: 16,
-    marginBottom: 20,
-  },
-  welcomeFeatures: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    paddingHorizontal: 20,
-  },
-  welcomeFeature: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  welcomeFeatureText: {
-    fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: colors.primaryDark_1,
     marginTop: 6,
     textAlign: 'center',
     fontWeight: '500',
   },
 
-  messageContainer: {
-    marginVertical: 8,
-  },
-  userMessage: {
-    alignItems: 'flex-end',
-  },
-  assistantMessage: {
-    alignItems: 'flex-start',
-  },
-  messageBubble: {
-    maxWidth: '80%',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 26,
-    overflow: 'hidden',
-  },
-  userBubble: {
-    backgroundColor: colors.primaryColor,
-  },
-  assistantBubble: {
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-  },
-  messageText: {
-    fontSize: 16,
-    lineHeight: 22,
-  },
-  userText: {
-    color: 'white',
-  },
-  assistantText: {
-    color: '#2c3e50',
-  },
-  messageTime: {
-    fontSize: 12,
-    color: '#95a5a6',
-    marginTop: 4,
-    marginHorizontal: 8,
-  },
   stickyInput: {
     position: 'absolute',
     bottom: 0,
@@ -737,14 +438,14 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     backgroundColor: 'white',
     borderTopWidth: 1,
-    borderTopColor: MINIMAL_BORDER,
+    borderTopColor: colors.primaryDark_1,
   },
   inputGradient: {
     margin: 12,
     marginBottom: 4,
     borderRadius: 30,
     borderWidth: 1,
-    borderColor: MINIMAL_BORDER,
+    borderColor: colors.primaryDark_1,
   },
   inputContainer: {
     paddingHorizontal: 12,
@@ -792,7 +493,7 @@ const styles = StyleSheet.create({
     margin: 16,
     borderRadius: 30,
     borderWidth: 1,
-    borderColor: MINIMAL_BORDER,
+    borderColor: colors.primaryDark_1,
   },
   errorContent: {
     alignItems: 'center',
@@ -810,189 +511,15 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
   },
-  markdownH3: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  markdownH2: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  markdownH1: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  markdownParagraph: {
-    fontSize: 16,
-    lineHeight: 22,
-    marginBottom: 4,
-  },
-  markdownBold: {
-    fontWeight: 'bold',
-  },
-  markdownItalic: {
-    fontStyle: 'italic',
-  },
-  markdownListItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 4,
-    flexWrap: 'wrap',
-    flex: 1,
-  },
-  markdownBullet: {
-    fontSize: 16,
-    marginRight: 8,
-    marginTop: 2,
-  },
-  markdownNumber: {
-    fontSize: 16,
-    marginRight: 8,
-    marginTop: 2,
-  },
-  markdownCodeBlock: {
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    padding: 8,
-    borderRadius: 4,
-    marginVertical: 4,
-  },
-  markdownCode: {
-    fontSize: 14,
-    fontFamily: Platform.OS === 'web' ? 'monospace' : 'monospace',
-  },
-  markdownInlineCode: {
-    fontSize: 14,
-    fontFamily: Platform.OS === 'web' ? 'monospace' : 'monospace',
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    paddingHorizontal: 4,
-    borderRadius: 2,
-  },
-  propertyCardsContainer: {
-    marginVertical: 12,
-    gap: 12,
-  },
-  propertyCardChat: {
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
-    marginBottom: 6,
-  },
-  propertyCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  propertyCardTitle: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: '#2c3e50',
-  },
-  propertyCardType: {
-    fontSize: 12,
-    color: '#7f8c8d',
-    marginLeft: 8,
-  },
-  propertyCardRent: {
-    fontSize: 14,
-    color: '#4CAF50',
-    marginBottom: 2,
-  },
-  propertyCardCity: {
-    fontSize: 13,
-    color: '#7f8c8d',
-    marginBottom: 8,
-  },
-  propertyCardButton: {
-    backgroundColor: colors.primaryColor,
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    alignSelf: 'flex-start',
-  },
-  propertyCardButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
 
-  filePreviewContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 8,
-    padding: 6,
-    marginBottom: 6,
-  },
-  filePreviewText: {
-    color: 'white',
-    fontSize: 13,
-    marginRight: 8,
-  },
-  removeFileButton: {
-    padding: 2,
-  },
-  attachButton: {
-    marginRight: 8,
-    padding: 4,
-  },
-  newConversationButton: {
-    marginHorizontal: 16,
-    marginBottom: 24,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: MINIMAL_BORDER,
-    overflow: 'hidden',
-    backgroundColor: APPLE_CARD_BACKGROUND,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  newConversationContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-  },
-  newConversationIconContainer: {
-    marginRight: 12,
-  },
-  newConversationTextContainer: {
-    flex: 1,
-  },
-  newConversationText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: APPLE_TEXT_PRIMARY,
-    marginBottom: 2,
-  },
-  newConversationSubtext: {
-    fontSize: 13,
-    color: APPLE_TEXT_SECONDARY,
-    fontWeight: '400',
-  },
-  newConversationArrow: {
-    marginLeft: 12,
-  },
   conversationHistoryContainer: {
     marginBottom: 32,
   },
   searchBarWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: APPLE_CARD_BACKGROUND,
     borderWidth: 1,
-    borderColor: MINIMAL_BORDER,
+    borderColor: colors.primaryDark_1,
     marginHorizontal: 16,
     marginBottom: 16,
     borderRadius: 12,
@@ -1008,7 +535,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     marginLeft: 8,
-    color: APPLE_TEXT_PRIMARY,
+    color: colors.COLOR_BLACK_LIGHT_5,
   },
   clearSearchBtn: {
     padding: 4,
@@ -1021,24 +548,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     overflow: 'hidden',
   },
-  groupHeader: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: APPLE_TEXT_TERTIARY,
-    marginTop: 16,
-    marginBottom: 8,
-    paddingHorizontal: 16,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
+  // groupHeader removed
   conversationItemLast: {
-    marginBottom: 16,
+    borderBottomWidth: 0,
   },
 
   conversationHistoryTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: APPLE_TEXT_PRIMARY,
+    color: colors.primaryDark,
     marginBottom: 20,
     fontFamily: 'Phudu',
     paddingHorizontal: 16,
@@ -1050,189 +568,57 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: APPLE_TEXT_SECONDARY,
+    color: colors.primaryDark_1,
   },
 
   conversationsList: {
-    paddingHorizontal: 8,
+    backgroundColor: '#f0f2f5',
   },
   conversationItem: {
-    marginBottom: 4,
-    borderRadius: 12,
-    backgroundColor: APPLE_CARD_BACKGROUND,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ececec',
   },
   conversationCard: {
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
   },
-  conversationHeader: {},
   conversationTitleContainer: { flex: 1 },
-  conversationIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.primaryColor,
-    justifyContent: 'center',
+  conversationHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
   conversationTitle: {
-    fontSize: 15,
+    flex: 1,
+    fontSize: 16,
     fontWeight: '600',
-    color: APPLE_TEXT_PRIMARY,
-    marginBottom: 4,
+    color: '#111b21',
+    marginBottom: 2,
+    paddingRight: 8,
   },
   conversationDate: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
     fontSize: 12,
-    color: APPLE_TEXT_TERTIARY,
-    fontWeight: '500',
+    color: '#667781',
+    fontWeight: '400',
+    marginLeft: 8,
   },
   conversationPreview: {
-    fontSize: 14,
-    color: APPLE_TEXT_SECONDARY,
+    fontSize: 13,
+    color: '#667781',
     lineHeight: 18,
-    paddingRight: 60,
+    marginTop: 2,
   },
-  conversationMeta: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  conversationStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  conversationStatsText: {
-    fontSize: 11,
-    color: APPLE_TEXT_TERTIARY,
-    fontWeight: '500',
-  },
+  conversationMeta: {},
+  conversationStats: {},
+  conversationStatsText: {},
   conversationArrow: {
     display: 'none',
   },
   conversationMessageCount: {
     fontSize: 12,
-    color: APPLE_TEXT_SECONDARY,
-  },
-  subscriptionStatusContainer: {
-    marginHorizontal: 16,
-    marginBottom: 32,
-  },
-  subscriptionCard: {
-    backgroundColor: APPLE_CARD_BACKGROUND,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: MINIMAL_BORDER,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  subscriptionCardActive: {
-    borderColor: colors.primaryColor,
-    borderWidth: 2,
-  },
-  subscriptionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  subscriptionTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: APPLE_TEXT_PRIMARY,
-    marginLeft: 8,
-  },
-  subscriptionDescription: {
-    fontSize: 14,
-    color: APPLE_TEXT_SECONDARY,
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  upgradeButton: {
-    backgroundColor: colors.primaryColor,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    alignSelf: 'flex-start',
-  },
-  upgradeButtonText: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  subscriptionBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(107, 114, 128, 0.1)',
-    borderRadius: 12,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    alignSelf: 'flex-start',
-  },
-  subscriptionBadgeText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.primaryColor,
-    marginLeft: 4,
-  },
-  commonQuestionsContainer: {
-    marginHorizontal: 16,
-    marginBottom: 32,
-  },
-  commonQuestionsTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: APPLE_TEXT_PRIMARY,
-    marginBottom: 8,
-    fontFamily: 'Phudu',
-    letterSpacing: -0.5,
-  },
-  commonQuestionsSubtitle: {
-    fontSize: 15,
-    color: APPLE_TEXT_SECONDARY,
-    marginBottom: 20,
-    lineHeight: 22,
-  },
-  questionsList: {
-    gap: 12,
-  },
-  questionItem: {
-    backgroundColor: APPLE_CARD_BACKGROUND,
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: MINIMAL_BORDER,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  questionText: {
-    fontSize: 15,
-    color: APPLE_TEXT_PRIMARY,
-    flex: 1,
-    marginRight: 12,
-    lineHeight: 20,
+    color: colors.primaryDark_1,
   },
 });

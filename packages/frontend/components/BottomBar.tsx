@@ -12,7 +12,7 @@ import {
 } from '@/assets/icons';
 import { colors } from '@/styles/colors';
 import { useRouter, usePathname } from 'expo-router';
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import Avatar from './Avatar';
 import { useOxy } from '@oxyhq/services';
 import { useHasRentalProperties } from '@/hooks/useLeaseQueries';
@@ -21,18 +21,26 @@ import { SindiIconActive } from '@/assets/icons/sindi-icon';
 
 export const BottomBar = () => {
   const router = useRouter();
-  const [activeRoute, setActiveRoute] = React.useState('/');
-  const pathname = usePathname();
-  const { showBottomSheet, hideBottomSheet } = useOxy();
-  const { hasRentalProperties, isLoading } = useHasRentalProperties();
+  const pathname = usePathname() || '/';
+  const { showBottomSheet } = useOxy();
+  const { hasRentalProperties } = useHasRentalProperties();
   const insets = useSafeAreaInsets();
 
-  const handlePress = (
-    route: '/' | '/search' | '/saved' | '/sindi' | '/contracts' | '/profile',
-  ) => {
-    setActiveRoute(route);
-    router.push(route);
-  };
+  // Normalize current pathname to one of our tab routes
+  const activeRoute = useMemo<
+    '/' | '/search' | '/saved' | '/sindi' | '/contracts'
+  >(() => {
+    if (pathname === '/' || pathname === '') return '/';
+    if (pathname.startsWith('/search') || pathname.startsWith('/properties')) return '/search';
+    if (pathname.startsWith('/saved')) return '/saved';
+    if (pathname.startsWith('/sindi')) return '/sindi';
+    if (pathname.startsWith('/contracts')) return '/contracts';
+    return '/';
+  }, [pathname]);
+
+  const handlePress = useCallback((route: typeof activeRoute) => {
+    if (route !== activeRoute) router.push(route);
+  }, [router, activeRoute]);
 
   const styles = StyleSheet.create({
     bottomBar: {
@@ -81,9 +89,9 @@ export const BottomBar = () => {
       </Pressable>
       <Pressable
         onPress={() => handlePress('/search')}
-        style={[styles.tab, activeRoute === '/properties' && styles.active]}
+        style={[styles.tab, activeRoute === '/search' && styles.active]}
       >
-        {activeRoute === '/properties' ? (
+        {activeRoute === '/search' ? (
           <SearchActive size={28} color={colors.primaryColor} />
         ) : (
           <Search size={28} color={colors.COLOR_BLACK} />

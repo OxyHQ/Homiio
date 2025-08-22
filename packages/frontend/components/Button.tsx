@@ -11,6 +11,7 @@ interface ButtonProps {
   style?: ViewStyle;
   backgroundColor?: string;
   textColor?: string;
+  accessibilityLabel?: string;
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -21,24 +22,23 @@ const Button: React.FC<ButtonProps> = ({
   style,
   backgroundColor,
   textColor,
+  accessibilityLabel,
 }) => {
+  const isSimpleText = typeof children === 'string' || typeof children === 'number';
   return (
     <TouchableOpacity
       onPress={onPress}
       onLongPress={onLongPress}
       disabled={disabled}
-      style={[
-        styles.button,
-        backgroundColor && { backgroundColor },
-        style,
-      ]}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      style={[styles.button, backgroundColor && { backgroundColor }, disabled && styles.disabled, style]}
     >
-      <Text style={[
-        styles.buttonText,
-        textColor && { color: textColor },
-      ]}>
-        {children}
-      </Text>
+      {isSimpleText ? (
+        <Text style={[styles.buttonText, textColor && { color: textColor }]}>{children}</Text>
+      ) : (
+        children
+      )}
     </TouchableOpacity>
   );
 };
@@ -58,6 +58,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: phuduFontWeights.bold,
     fontWeight: 'bold',
+  },
+  disabled: {
+    opacity: 0.6,
   },
 });
 

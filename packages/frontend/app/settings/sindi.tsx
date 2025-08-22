@@ -1,14 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Switch,
-  Alert,
-  ActivityIndicator,
-  ScrollView,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Switch, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SindiIcon } from '@/assets/icons';
 import { colors } from '@/styles/colors';
@@ -17,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons as IoniconsRaw } from '@expo/vector-icons';
 import { useOxy } from '@oxyhq/services';
 import { sindiApi } from '@/utils/api';
+import Button from '@/components/Button';
 
 const Ionicons = IoniconsRaw as any;
 
@@ -37,7 +29,7 @@ export default function SindiSettingsScreen() {
     try {
       const res = await sindiApi.getSindiChatHistory(oxyServices, activeSessionId);
       setHistory(res.history || []);
-    } catch (err: any) {
+    } catch {
       setError(t('sindi.settings.historyError', 'Failed to load chat history.'));
     } finally {
       setLoading(false);
@@ -68,7 +60,7 @@ export default function SindiSettingsScreen() {
                 t('common.success', 'Success'),
                 t('sindi.settings.cleared', 'Chat history cleared.'),
               );
-            } catch (err: any) {
+            } catch {
               Alert.alert(t('sindi.settings.historyError', 'Failed to clear chat history.'));
             } finally {
               setClearing(false);
@@ -159,33 +151,46 @@ export default function SindiSettingsScreen() {
           )}
         </View>
         {/* Clear Chat History */}
-        <TouchableOpacity
-          style={styles.actionButton}
+        <Button
           onPress={handleClearHistory}
           disabled={clearing || loading}
+          style={styles.actionButton}
+          backgroundColor="#fff"
+          textColor={colors.sindiColor}
+          accessibilityLabel={t('sindi.settings.clearHistory', 'Clear Sindi Chat History')}
         >
-          <Ionicons
-            name="trash-outline"
-            size={18}
-            color={colors.sindiColor}
-            style={{ marginRight: 8 }}
-          />
-          <Text style={styles.actionText}>
-            {t('sindi.settings.clearHistory', 'Clear Sindi Chat History')}
-          </Text>
-        </TouchableOpacity>
+          <View style={styles.actionButtonContent}>
+            <Ionicons
+              name="trash-outline"
+              size={18}
+              color={colors.sindiColor}
+              style={{ marginRight: 8 }}
+            />
+            <Text style={styles.actionText}>
+              {t('sindi.settings.clearHistory', 'Clear Sindi Chat History')}
+            </Text>
+          </View>
+        </Button>
         {/* Reset to Defaults */}
-        <TouchableOpacity style={styles.actionButton} onPress={handleResetDefaults}>
-          <Ionicons
-            name="refresh-outline"
-            size={18}
-            color={colors.sindiColor}
-            style={{ marginRight: 8 }}
-          />
-          <Text style={styles.actionText}>
-            {t('sindi.settings.reset', 'Reset Sindi to Defaults')}
-          </Text>
-        </TouchableOpacity>
+        <Button
+          onPress={handleResetDefaults}
+          style={styles.actionButton}
+          backgroundColor="#fff"
+          textColor={colors.sindiColor}
+          accessibilityLabel={t('sindi.settings.reset', 'Reset Sindi to Defaults')}
+        >
+          <View style={styles.actionButtonContent}>
+            <Ionicons
+              name="refresh-outline"
+              size={18}
+              color={colors.sindiColor}
+              style={{ marginRight: 8 }}
+            />
+            <Text style={styles.actionText}>
+              {t('sindi.settings.reset', 'Reset Sindi to Defaults')}
+            </Text>
+          </View>
+        </Button>
       </View>
     </SafeAreaView>
   );
@@ -275,6 +280,10 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     borderWidth: 1,
     borderColor: '#e3f0ff',
+  },
+  actionButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   actionText: {
     color: colors.sindiColor,
