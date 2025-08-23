@@ -12,7 +12,6 @@ export interface Address {
   country: string;
   neighborhood?: string;
   coordinates?: GeoJSONPoint;
-  showAddressNumber?: boolean;
 }
 
 export interface AddressDocument extends Address {
