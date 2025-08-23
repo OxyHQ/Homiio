@@ -451,7 +451,7 @@ const propertySchema = new mongoose.Schema({
     transform: function(doc, ret) {
       ret.id = ret._id;
       
-      // Alias populated addressId to address for backwards compatibility
+      // Alias populated addressId to address
       if (ret.addressId && typeof ret.addressId === 'object' && ret.addressId._id) {
         ret.address = ret.addressId;
       }
@@ -480,8 +480,7 @@ propertySchema.index({
 
 // Virtual for full address (requires population)
 propertySchema.virtual('fullAddress').get(function() {
-  // Use populated addressId (backwards compatible with address field)
-  const address = this.addressId || this.address;
+  const address = this.address || this.addressId;
   if (address && address.street) {
     return `${address.street}, ${address.city}, ${address.state} ${address.zipCode}`;
   }
@@ -490,8 +489,7 @@ propertySchema.virtual('fullAddress').get(function() {
 
 // Virtual for location string (requires population)
 propertySchema.virtual('location').get(function() {
-  // Use populated addressId (backwards compatible with address field)
-  const address = this.addressId || this.address;
+  const address = this.address || this.addressId;
   if (address && address.city) {
     const parts = [];
     if (address.city) parts.push(address.city);
@@ -734,8 +732,7 @@ propertySchema.methods.setLocation = async function(longitude, latitude) {
 
 propertySchema.methods.getCoordinates = function() {
   // This method requires the address to be populated
-  // Use addressId (populated) or fallback to address for backwards compatibility
-  const address = this.addressId || this.address;
+  const address = this.address || this.addressId;
   if (address && address.coordinates && address.coordinates.coordinates && address.coordinates.coordinates.length === 2) {
     return {
       longitude: address.coordinates.coordinates[0],

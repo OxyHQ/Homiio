@@ -197,8 +197,8 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
         const R = 6371000;
         const toRadians = (deg: number) => deg * Math.PI / 180;
         const computeDistance = (prop: any): number => {
-          const coords = prop?.addressId?.coordinates?.coordinates;
-            if (!Array.isArray(coords) || coords.length !== 2) return Number.POSITIVE_INFINITY;
+          const coords = prop?.address?.coordinates?.coordinates;
+          if (!Array.isArray(coords) || coords.length !== 2) return Number.POSITIVE_INFINITY;
           const [propLng, propLat] = coords;
           const dLat = toRadians(latitude - propLat);
           const dLng = toRadians(longitude - propLng);
@@ -246,8 +246,8 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
                 const priceRange = rent < 1000 ? 'low' : rent < 2000 ? 'medium' : 'high';
                 preferenceWeights.priceRanges[priceRange] = (preferenceWeights.priceRanges[priceRange] || 0) + 1;
               }
-              if (property.addressId?.city) {
-                preferenceWeights.locations[property.addressId.city] = (preferenceWeights.locations[property.addressId.city] || 0) + 1;
+              if (property.address?.city) {
+                preferenceWeights.locations[property.address.city] = (preferenceWeights.locations[property.address.city] || 0) + 1;
               }
               if (property.amenities) {
                 property.amenities.forEach((amenity: string) => {
