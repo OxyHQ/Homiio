@@ -238,6 +238,16 @@ export default function PropertyDetailPage() {
   }, [id, oxyServices, activeSessionId]);
 
   const handleContact = () => {
+    if (apiProperty?.isExternal) {
+      // For external properties, open the source website
+      if (!apiProperty.sourceUrl) {
+        toast.error(t('error.source.noUrl', 'Source website URL not available'));
+        return;
+      }
+      router.push(`/browser?url=${encodeURIComponent(apiProperty.sourceUrl)}`);
+      return;
+    }
+
     if (!oxyServices || !activeSessionId) {
       toast.error(t('error.auth.required', 'Please sign in to contact the owner'));
       return;
@@ -468,7 +478,7 @@ export default function PropertyDetailPage() {
             onApplyPublic={handlePublicHousingApply}
             t={t as any}
           />
-          <SindiAnalysis />
+          <SindiAnalysis property={apiProperty as any} />
           <FraudWarning text={t('Never pay or transfer funds outside the Homio platform') || 'Never pay or transfer funds outside the Homio platform'} />
         </View>
       </View>

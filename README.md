@@ -120,7 +120,6 @@ For detailed deployment instructions, see [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOY
 ### Backend (`packages/backend`)
 - Node.js/Express API server
 - TypeScript backend with MongoDB
-- Authentication and device management
 
 ### Shared Types (`packages/shared-types`)
 - Common TypeScript interfaces and types

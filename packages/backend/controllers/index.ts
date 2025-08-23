@@ -6,7 +6,6 @@
 const propertyController = require('./propertyController');
 const roomController = require('./roomController');
 const analyticsController = require('./analyticsController');
-const deviceController = require('./deviceController');
 const notificationController = require('./notificationController');
 const leaseController = require('./leaseController');
 const profileController = require('./profileController');
@@ -20,7 +19,6 @@ module.exports = {
   propertyController,
   roomController,
   analyticsController,
-  deviceController,
   notificationController,
   leaseController,
   profileController,

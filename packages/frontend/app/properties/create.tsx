@@ -19,6 +19,7 @@ import { AmenitiesSelector } from '@/components/AmenitiesSelector';
 import Map from '@/components/Map';
 import { PropertyPreviewWidget } from '@/components/widgets/PropertyPreviewWidget';
 import { ImageUpload } from '@/components/ImageUpload';
+import Button from '@/components/button';
 import {
   useCreatePropertyFormStore,
   useCreatePropertyFormSelectors,
@@ -26,7 +27,7 @@ import {
 import { useCreateProperty, useUpdateProperty, useProperty } from '@/hooks/usePropertyQueries';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SearchablePickerBottomSheet } from '@/components/SearchablePickerBottomSheet';
-import { validateEthicalPricing, getPricingGuidance } from '@/utils/ethicalPricing';
+import { validateEthicalPricing } from '@/utils/ethicalPricing';
 
 import * as Location from 'expo-location';
 const IconComponent = Ionicons as any;
@@ -66,7 +67,6 @@ function EthicalPricingRecommendation({ proposedRent, propertyData }: EthicalPri
   };
 
   const recommendation = validateEthicalPricing(proposedRent, propertyCharacteristics as any);
-  const guidance = getPricingGuidance(propertyCharacteristics as any);
 
   return (
     <View style={styles.ethicalPricingContainer}>
@@ -81,21 +81,21 @@ function EthicalPricingRecommendation({ proposedRent, propertyData }: EthicalPri
             color={recommendation.isWithinEthicalRange ? '#4CAF50' : '#FFA500'}
           />
           <ThemedText style={styles.ethicalPricingTitle}>
-            {recommendation.isWithinEthicalRange ? 'Ethical Pricing' : 'Pricing Review Needed'}
+            {recommendation.isWithinEthicalRange ? t('property.ethicalPricing') : t('property.pricingReviewNeeded')}
           </ThemedText>
         </View>
 
         <ThemedText style={styles.ethicalPricingText}>
-          Suggested: ${recommendation.suggestedRent}/month
+          {t('property.suggestedRent', { amount: recommendation.suggestedRent })}
         </ThemedText>
         <ThemedText style={styles.ethicalPricingText}>
-          Max Ethical: ${recommendation.maxRent}/month
+          {t('property.maxEthicalRent', { amount: recommendation.maxRent })}
         </ThemedText>
 
         {!recommendation.isWithinEthicalRange && (
           <View style={styles.ethicalPricingWarning}>
             <ThemedText style={styles.ethicalPricingWarningText}>
-              Your price exceeds the ethical maximum. Consider lowering it to make housing more accessible.
+              {t('property.ethicalPricingWarning')}
             </ThemedText>
           </View>
         )}
@@ -104,7 +104,7 @@ function EthicalPricingRecommendation({ proposedRent, propertyData }: EthicalPri
           <View style={styles.ethicalPricingWarnings}>
             {recommendation.warnings.map((warning, index) => (
               <ThemedText key={index} style={styles.ethicalPricingWarningText}>
-                • {warning}
+                {t('property.warningBullet', { warning })}
               </ThemedText>
             ))}
           </View>
@@ -280,8 +280,9 @@ export default function CreatePropertyScreen() {
   const { id } = useLocalSearchParams();
   const isEditMode = !!id;
 
-  const { create, loading, error } = useCreateProperty();
-  const { update, loading: updateLoading, error: updateError } = useUpdateProperty();
+  const { create, error: createError } = useCreateProperty();
+  const { update, error: updateError } = useUpdateProperty();
+
   const {
     property,
     loading: propertyLoading,
@@ -298,10 +299,9 @@ export default function CreatePropertyScreen() {
     setLoading,
     setError,
     setCurrentStep,
-    resetForm,
   } = useCreatePropertyFormStore();
 
-  const { formData, currentStep, isDirty, isLoading } = useCreatePropertyFormSelectors();
+  const { formData, currentStep, isLoading } = useCreatePropertyFormSelectors();
 
   // Dynamic steps state
   const [steps, setSteps] = useState<string[]>(STEP_FLOWS['apartment']);
@@ -341,8 +341,8 @@ export default function CreatePropertyScreen() {
         state: property.address?.state || '',
         zipCode: property.address?.zipCode || '',
         country: property.address?.country || 'Spain',
-        latitude: property.location?.coordinates?.[1] || 40.7128,
-        longitude: property.location?.coordinates?.[0] || -74.006,
+        latitude: (property.address?.coordinates as any)?.coordinates?.[1] || (property.address?.coordinates as any)?.lat || 40.7128,
+        longitude: (property.address?.coordinates as any)?.coordinates?.[0] || (property.address?.coordinates as any)?.lng || -74.006,
         availableFrom: '',
         leaseTerm: '',
       });
@@ -802,117 +802,7 @@ export default function CreatePropertyScreen() {
     });
   };
 
-  // Handle location selection from map
-  const handleLocationSelect = async (lat: number, lng: number, address: string) => {
-    console.log('Location selected:', { lat, lng, address });
 
-    // Normalize coordinates to valid ranges
-    const normalizedLat = Math.max(-90, Math.min(90, lat));
-    const normalizedLng = ((lng + 180) % 360) - 180; // Normalize longitude to -180 to 180
-
-    console.log('Normalized coordinates:', { normalizedLat, normalizedLng });
-
-    // Check if address is a JSON string with detailed data from Nominatim API
-    if (address.startsWith('{') && address.endsWith('}')) {
-      try {
-        const detailedData = JSON.parse(address);
-        console.log('Parsed detailed data from API:', detailedData);
-
-        // Get the current privacy settings
-        const showAddressNumber = formData.location.showAddressNumber ?? true;
-        const showFloor = formData.location.showFloor ?? true;
-
-        // Always keep address as street name only, handle number and floor separately
-        const streetName = detailedData.street || '';
-        const addressNumber = detailedData.house_number || '';
-        const floor = detailedData.floor || undefined;
-
-        // Use the structured address data directly from the API
-        setFormData('location', {
-          address: streetName,
-          addressLine2: formData.location.addressLine2 || '',
-          addressNumber: addressNumber,
-          floor: floor,
-          city: detailedData.city || '',
-          state: detailedData.state || '',
-          zipCode: detailedData.postcode || '',
-          country: detailedData.country || 'Spain',
-          latitude: normalizedLat,
-          longitude: normalizedLng,
-          showAddressNumber: showAddressNumber,
-          showFloor: showFloor,
-        });
-        console.log('Updated form with API data (showAddressNumber:', showAddressNumber, ')');
-        return;
-      } catch (error) {
-        console.error('Failed to parse detailed address data:', error);
-        // Fall back to reverse geocoding
-      }
-    }
-
-    // If we don't have detailed data, perform reverse geocoding to get it
-    try {
-      console.log('Performing reverse geocoding to get detailed address data...');
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${normalizedLat}&lon=${normalizedLng}&addressdetails=1`,
-      );
-      const data = await response.json();
-
-      console.log('Reverse geocoding result:', data);
-
-      if (data.address) {
-        // Get the current privacy settings
-        const showAddressNumber = formData.location.showAddressNumber ?? true;
-        const showFloor = formData.location.showFloor ?? true;
-
-        // Always keep address as street name only, handle number and floor separately
-        const streetName = data.address.road || '';
-        const addressNumber = data.address.house_number || '';
-        const floor = data.address.floor || undefined;
-
-        // Use the structured address data from reverse geocoding
-        setFormData('location', {
-          address: streetName,
-          addressLine2: formData.location.addressLine2 || '',
-          addressNumber: addressNumber,
-          floor: floor,
-          city: data.address.city || data.address.town || data.address.village || '',
-          state: data.address.state || data.address.province || '',
-          zipCode: data.address.postcode || '',
-          country: data.address.country || 'Spain',
-          latitude: normalizedLat,
-          longitude: normalizedLng,
-          showAddressNumber: showAddressNumber,
-          showFloor: showFloor,
-        });
-        console.log(
-          'Updated form with reverse geocoded data (showAddressNumber:',
-          showAddressNumber,
-          ')',
-        );
-        return;
-      }
-    } catch (error) {
-      console.error('Reverse geocoding failed:', error);
-    }
-
-    // Last resort: use the simple address string
-    console.log('Using simple address string as fallback:', address);
-    setFormData('location', {
-      address: address,
-      addressLine2: formData.location.addressLine2 || '',
-      addressNumber: formData.location.addressNumber || '',
-      neighborhood: formData.location.neighborhood || '',
-      city: formData.location.city || '',
-      state: formData.location.state || '',
-      zipCode: formData.location.zipCode || '',
-      country: formData.location.country || 'Spain',
-      latitude: normalizedLat,
-      longitude: normalizedLng,
-      showAddressNumber: formData.location.showAddressNumber ?? true,
-    });
-    console.log('Updated form with fallback data');
-  };
 
   // Handle amenity selection
   const handleAmenityToggle = (amenityId: string) => {
@@ -1825,23 +1715,22 @@ export default function CreatePropertyScreen() {
                 accurate and complete.
               </ThemedText>
 
-              <TouchableOpacity
-                style={styles.submitButton}
+              <Button
                 onPress={handleSubmit}
                 disabled={isLoading || (isEditMode && propertyLoading)}
               >
                 {isLoading ? (
-                  <ThemedText style={styles.submitButtonText}>
-                    {isEditMode ? 'Updating...' : 'Creating...'}
-                  </ThemedText>
+                  isEditMode ? t('property.updating') : t('property.creating')
                 ) : (
-                  <ThemedText style={styles.submitButtonText}>
-                    {isEditMode ? 'Update Property' : 'Create Property'}
-                  </ThemedText>
+                  isEditMode ? t('property.update') : t('property.create')
                 )}
-              </TouchableOpacity>
+              </Button>
 
-              {error && <ThemedText style={styles.errorText}>{error}</ThemedText>}
+              {(createError || updateError) && (
+                <ThemedText style={styles.errorText}>
+                  {t('property.error', { error: isEditMode ? updateError : createError })}
+                </ThemedText>
+              )}
             </View>
           </View>
         );
@@ -1875,9 +1764,11 @@ export default function CreatePropertyScreen() {
       <View style={styles.container}>
         <Header options={{ title: 'Edit Property', showBackButton: true }} />
         <View style={styles.errorContainer}>
-          <ThemedText style={styles.errorText}>{propertyError || 'Property not found'}</ThemedText>
+          <ThemedText style={styles.errorText}>
+            {t('property.loadError', { error: propertyError || t('property.notFound') })}
+          </ThemedText>
           <TouchableOpacity style={styles.errorButton} onPress={() => router.back()}>
-            <ThemedText style={styles.errorButtonText}>Go Back</ThemedText>
+            <ThemedText style={styles.errorButtonText}>{t('common.goBack')}</ThemedText>
           </TouchableOpacity>
         </View>
       </View>
@@ -1933,20 +1824,15 @@ export default function CreatePropertyScreen() {
         {/* Navigation buttons */}
         <View style={styles.navigationContainer}>
           {currentStep > 0 && (
-            <TouchableOpacity style={styles.navigationButton} onPress={prevStep}>
-              <IconComponent name="arrow-back" size={20} color={colors.primaryColor} />
-              <ThemedText style={styles.navigationButtonText}>Previous</ThemedText>
-            </TouchableOpacity>
+            <Button onPress={prevStep}>
+              {t('common.previous')}
+            </Button>
           )}
 
           {currentStep < steps.length - 1 && (
-            <TouchableOpacity
-              style={[styles.navigationButton, styles.navigationButtonNext]}
-              onPress={handleNextStep}
-            >
-              <ThemedText style={styles.navigationButtonTextNext}>Next</ThemedText>
-              <IconComponent name="arrow-forward" size={20} color="white" />
-            </TouchableOpacity>
+            <Button onPress={handleNextStep}>
+              {t('common.next')}
+            </Button>
           )}
         </View>
       </ScrollView>
@@ -2270,21 +2156,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 16,
   },
-  submitButton: {
-    backgroundColor: colors.primaryColor,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    marginBottom: 16,
-  },
-  submitButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+
   navigationContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -2329,29 +2201,7 @@ const styles = StyleSheet.create({
   ethicalPricingWarnings: {
     marginTop: 8,
   },
-  navigationButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: colors.primaryColor,
-  },
-  navigationButtonNext: {
-    backgroundColor: colors.primaryColor,
-    marginLeft: 'auto',
-  },
-  navigationButtonText: {
-    marginLeft: 8,
-    color: colors.primaryColor,
-    fontWeight: 'bold',
-  },
-  navigationButtonTextNext: {
-    marginRight: 8,
-    color: 'white',
-    fontWeight: 'bold',
-  },
+
 
   formContainer: {
     // This style is used to contain the form content and debug info

@@ -2,7 +2,7 @@
  * Address-related types shared across Homiio frontend and backend
  */
 
-import { Coordinates } from './common';
+import { GeoJSONPoint } from './common';
 
 export interface Address {
   street: string;
@@ -11,11 +11,11 @@ export interface Address {
   zipCode: string;
   country: string;
   neighborhood?: string;
-  coordinates?: Coordinates;
+  coordinates?: GeoJSONPoint;
   showAddressNumber?: boolean;
 }
 
-export interface AddressDetail extends Address {
+export interface AddressDetail extends Omit<Address, 'neighborhood'> {
   formattedAddress: string;
   neighborhood?: {
     name: string;

@@ -3,8 +3,13 @@ import { View, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { SindiIcon } from '@/assets/icons';
 import { colors } from '@/styles/colors';
+import { Property } from '@homiio/shared-types';
 
-export const SindiAnalysis: React.FC = () => (
+interface SindiAnalysisProps {
+    property: Property;
+}
+
+export const SindiAnalysis: React.FC<SindiAnalysisProps> = ({ property }) => property.isVerified ? (
     <View style={styles.sindiContainer}>
         <View style={styles.sindiHeader}>
             <View style={styles.sindiIconContainer}>
@@ -18,7 +23,7 @@ export const SindiAnalysis: React.FC = () => (
             </View>
         </View>
     </View>
-);
+) : null;
 
 const styles = StyleSheet.create({
     sindiContainer: {

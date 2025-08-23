@@ -12,7 +12,7 @@ export const LocationDetails: React.FC<Props> = ({ property }) => {
     const region = property?.address?.state;
     const country = property?.address?.country;
     const address = property?.address?.street;
-    const coordinates: any = property?.location?.coordinates;
+    const coordinates: any = property?.address?.coordinates?.coordinates;
     if (!city && !region && !country && !address) return null;
     return (
         <View style={styles.container}>

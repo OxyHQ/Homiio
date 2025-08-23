@@ -24,6 +24,7 @@ class ViewingController {
       const property = await Property.findById(propertyId).lean();
       if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
       if (property.status !== 'active') return next(new AppError('Property is not active', 400, 'PROPERTY_INACTIVE'));
+      if (property.isExternal) return next(new AppError('Cannot book viewings for external properties', 400, 'EXTERNAL_PROPERTY'));
 
       // Get active profile for requester
       const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);

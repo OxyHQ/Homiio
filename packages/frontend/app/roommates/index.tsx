@@ -18,9 +18,11 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { RoommateMatch } from '@/components/RoommateMatch';
 import { RoommateRequestComponent } from '@/components/RoommateRequest';
 import { RoommateRelationshipComponent } from '@/components/RoommateRelationship';
+import { RoomList } from '@/components/RoomList';
 import { useRoommate } from '@/hooks/useRoommate';
 import { useOxy } from '@oxyhq/services';
 import { roommateService } from '@/services/roommateService';
+import { type RoomFilters as RoomFiltersType } from '@/services/roomService';
 import { useProfileStore } from '@/store/profileStore';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -30,7 +32,7 @@ const IconComponent = Ionicons as any;
 export default function RoommatesPage() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'discover' | 'requests' | 'relationships'>('discover');
+  const [activeTab, setActiveTab] = useState<'discover' | 'requests' | 'relationships' | 'rooms'>('discover');
   const {
     profiles,
     requests,
@@ -324,6 +326,66 @@ export default function RoommatesPage() {
     );
   };
 
+  // Get roommate preferences
+  const preferencesQuery = useQuery({
+    queryKey: ['roommates', 'preferences'],
+    queryFn: async () => roommateService.getMyRoommatePreferences(oxyServices!, activeSessionId!),
+    enabled: Boolean(oxyServices && activeSessionId),
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
+  });
+
+  // Initialize room filters with roommate preferences
+  const [roomFilters, setRoomFilters] = useState<RoomFiltersType>({
+    sortBy: 'matchScore',
+    sortOrder: 'desc',
+  });
+
+  // Update room filters when preferences change
+  useEffect(() => {
+    if (preferencesQuery.data) {
+      const prefs = preferencesQuery.data;
+      setRoomFilters(prev => ({
+        ...prev,
+        minRent: prefs.budget?.min,
+        maxRent: prefs.budget?.max,
+        pets: prefs.lifestyle?.pets,
+        smoking: prefs.lifestyle?.smoking,
+        genderPreference: prefs.genderPreference,
+        minAge: prefs.ageRange?.min,
+        maxAge: prefs.ageRange?.max,
+      }));
+    }
+  }, [preferencesQuery.data]);
+
+  const handleRoomFiltersChange = (newFilters: RoomFiltersType) => {
+    setRoomFilters(newFilters);
+  };
+
+  const renderRoomsTab = () => {
+    if (!isPersonalProfile || !hasPersonalProfile) {
+      return (
+        <EmptyState
+          icon="person-outline"
+          title="Personal Profile Required"
+          description="Room search is only available for personal profiles. Please switch to your personal profile to use this feature."
+          actionText="Switch to Personal Profile"
+          actionIcon="person-circle"
+          onAction={() => router.push('/profile')}
+        />
+      );
+    }
+
+    return (
+      <View style={styles.roomsContainer}>
+        <RoomList
+          filters={roomFilters}
+          onFilterChange={handleRoomFiltersChange}
+        />
+      </View>
+    );
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'discover':
@@ -332,6 +394,8 @@ export default function RoommatesPage() {
         return renderRequestsTab();
       case 'relationships':
         return renderRelationshipsTab();
+      case 'rooms':
+        return renderRoomsTab();
       default:
         return renderDiscoverTab();
     }
@@ -389,6 +453,20 @@ export default function RoommatesPage() {
           />
           <Text style={[styles.tabText, activeTab === 'relationships' && styles.activeTabText]}>
             Relationships
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'rooms' && styles.activeTab]}
+          onPress={() => setActiveTab('rooms')}
+        >
+          <IconComponent
+            name="bed-outline"
+            size={20}
+            color={activeTab === 'rooms' ? colors.primaryColor : colors.primaryDark_1}
+          />
+          <Text style={[styles.tabText, activeTab === 'rooms' && styles.activeTabText]}>
+            Rooms
           </Text>
         </TouchableOpacity>
       </View>
@@ -454,5 +532,9 @@ const styles = StyleSheet.create({
   },
   profilesList: {
     flex: 1,
+  },
+  roomsContainer: {
+    flex: 1,
+    marginHorizontal: -16, // Offset parent padding
   },
 });

@@ -341,7 +341,7 @@ async function performAppPropertySearch(query: string, priorMessages: ChatMessag
     let nearby: any[] = [];
     if (prevIds.length) {
       const anchor = await getPropertyById(prevIds[0]);
-      const coords: number[] | null = anchor?.location?.coordinates || null;
+      const coords: number[] | null = anchor?.address?.coordinates?.coordinates || null;
       if (coords?.length === 2) {
         const [longitude, latitude] = coords;
         const params = buildSearchParams(filters, {

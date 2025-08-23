@@ -64,15 +64,25 @@ const addressSchema = new mongoose.Schema({
     default: true
   },
   coordinates: {
-    lat: {
-      type: Number,
-      min: [-90, 'Latitude must be between -90 and 90'],
-      max: [90, 'Latitude must be between -90 and 90']
+    type: {
+      type: String,
+      enum: ['Point'],
+      required: true,
+      default: 'Point'
     },
-    lng: {
-      type: Number,
-      min: [-180, 'Longitude must be between -180 and 180'],
-      max: [180, 'Longitude must be between -180 and 180']
+    coordinates: {
+      type: [Number],
+      required: true,
+      validate: {
+        validator: function(coords) {
+          if (!Array.isArray(coords) || coords.length !== 2) {
+            return false;
+          }
+          const [lng, lat] = coords;
+          return lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90;
+        },
+        message: 'Coordinates must be an array [longitude, latitude] with valid ranges'
+      }
     }
   }
 }, { _id: false });
@@ -87,7 +97,7 @@ const rentSchema = new mongoose.Schema({
     type: String,
     required: true,
     enum: ['USD', 'EUR', 'GBP', 'CAD', 'FAIR'],
-    default: 'USD'
+    default: 'EUR'
   },
   paymentFrequency: {
     type: String,
@@ -167,22 +177,40 @@ const availabilitySchema = new mongoose.Schema({
   }
 }, { _id: false });
 
-const energyMonitoringSchema = new mongoose.Schema({
-  enabled: {
-    type: Boolean,
-    default: false
-  },
-  sensors: [{
-    type: String,
-    trim: true
-  }]
-}, { _id: false });
-
 const propertySchema = new mongoose.Schema({
   profileId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Profile',
-    required: [true, 'Profile ID is required']
+    required: function(this: any) { return !this.isExternal; },
+    // When external, this can be null/undefined
+  },
+  // External sourcing metadata
+  source: {
+    type: String,
+    default: 'internal',
+    index: true
+  },
+  sourceId: {
+    type: String,
+    index: true,
+    sparse: true,
+    maxlength: [200, 'Source ID cannot exceed 200 characters']
+  },
+  sourceUrl: {
+    type: String,
+    validate: {
+      validator: validator.isURL,
+      message: 'Invalid source URL'
+    }
+  },
+  isExternal: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  expiresAt: {
+    type: Date,
+    index: { expireAfterSeconds: 0 }, // TTL index; document auto-removed after this date
   },
   description: {
     type: String,
@@ -270,13 +298,13 @@ const propertySchema = new mongoose.Schema({
   },
   furnishedStatus: {
     type: String,
-    enum: ['furnished', 'unfurnished', 'partially_furnished'],
-    default: 'unfurnished'
+    enum: ['furnished', 'unfurnished', 'partially_furnished', 'not_specified'],
+    default: 'not_specified'
   },
   petPolicy: {
     type: String,
-    enum: ['allowed', 'not_allowed', 'case_by_case'],
-    default: 'not_allowed'
+    enum: ['allowed', 'not_allowed', 'case_by_case', 'not_specified'],
+    default: 'not_specified'
   },
   petFee: {
     type: Number,
@@ -376,26 +404,7 @@ const propertySchema = new mongoose.Schema({
       default: 'other'
     }
   }],
-  location: {
-    type: {
-      type: String,
-      enum: ['Point'],
-      required: true,
-      default: 'Point'
-    },
-    coordinates: {
-      type: [Number],
-      required: true,
-      validate: {
-        validator: function(coords) {
-          return coords.length === 2 && 
-                 coords[0] >= -180 && coords[0] <= 180 && // longitude
-                 coords[1] >= -90 && coords[1] <= 90;     // latitude
-        },
-        message: 'Coordinates must be an array [longitude, latitude] with valid ranges'
-      }
-    }
-  },
+
   // Accommodation-specific details
   accommodationDetails: {
     sleepingArrangement: {
@@ -464,30 +473,22 @@ const propertySchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
-  deviceId: {
-    type: String,
-    trim: true
-  },
-  energyMonitoring: {
-    type: energyMonitoringSchema,
-    default: {}
-  },
-  rooms: [{
+  // Parent property reference (for rooms)
+  parentPropertyId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Room'
-  }],
+    ref: 'Property',
+    // Only required for rooms that are part of a larger property
+    required: function(this: any) { return this.type === PropertyType.ROOM; }
+  },
   status: {
     type: String,
-    enum: ['active', 'inactive', 'archived'],
+    enum: ['active', 'inactive', 'archived', 'draft', 'expired'],
     default: 'active'
-  },
-  views: {
-    type: Number,
-    default: 0
   },
   // Verification and sustainability flags
   isVerified: {
     type: Boolean,
+    
     default: false
   },
   isEcoFriendly: {
@@ -526,8 +527,10 @@ propertySchema.index({ 'rent.amount': 1 });
 propertySchema.index({ bedrooms: 1, bathrooms: 1 });
 propertySchema.index({ amenities: 1 });
 propertySchema.index({ createdAt: -1 });
+// Prevent duplicate external listings by (source, sourceId)
+propertySchema.index({ source: 1, sourceId: 1 }, { unique: true, partialFilterExpression: { sourceId: { $type: 'string' } } });
 // GeoJSON 2dsphere index for geospatial queries
-propertySchema.index({ location: '2dsphere' });
+propertySchema.index({ 'address.coordinates': '2dsphere' });
 // Text index for search functionality across multiple fields
 propertySchema.index({
   title: 'text',
@@ -542,6 +545,15 @@ propertySchema.virtual('fullAddress').get(function() {
   return `${this.address.street}, ${this.address.city}, ${this.address.state} ${this.address.zipCode}`;
 });
 
+// Virtual for location string
+propertySchema.virtual('location').get(function() {
+  const parts = [];
+  if (this.address.city) parts.push(this.address.city);
+  if (this.address.state) parts.push(this.address.state);
+  if (this.address.country && this.address.country !== 'USA') parts.push(this.address.country);
+  return parts.join(', ');
+});
+
 // Virtual for primary image
 propertySchema.virtual('primaryImage').get(function() {
   const primary = this.images.find(img => img.isPrimary);
@@ -550,6 +562,19 @@ propertySchema.virtual('primaryImage').get(function() {
 
 // Pre-save middleware
 propertySchema.pre('save', function(next) {
+  // Auto-set/refresh expiresAt for external listings (default 30 days or env override)
+  if (this.isExternal) {
+    const days = parseInt(process.env.EXTERNAL_PROPERTY_TTL_DAYS || '30', 10);
+    const ms = days * 24 * 60 * 60 * 1000;
+    if (!this.expiresAt || (this.isModified() && this.expiresAt.getTime() < Date.now() + ms)) {
+      this.expiresAt = new Date(Date.now() + ms);
+    }
+    // Ensure profileId is removed for external listings
+    if (this.profileId) {
+      this.profileId = undefined;
+    }
+  }
+
   // Ensure only one primary image
   if (this.isModified('images')) {
     let hasPrimary = false;
@@ -640,7 +665,7 @@ propertySchema.statics.search = function(searchParams) {
 // Geospatial query methods
 propertySchema.statics.findNearby = function(longitude, latitude, maxDistance = 10000) {
   return this.find({
-    location: {
+    'address.coordinates': {
       $near: {
         $geometry: {
           type: 'Point',
@@ -656,7 +681,7 @@ propertySchema.statics.findNearby = function(longitude, latitude, maxDistance = 
 
 propertySchema.statics.findWithinRadius = function(longitude, latitude, radiusInMeters) {
   return this.find({
-    location: {
+    'address.coordinates': {
       $geoWithin: {
         $centerSphere: [[longitude, latitude], radiusInMeters / 6371000] // Convert to radians
       }
@@ -668,7 +693,7 @@ propertySchema.statics.findWithinRadius = function(longitude, latitude, radiusIn
 
 propertySchema.statics.findInPolygon = function(coordinates) {
   return this.find({
-    location: {
+    'address.coordinates': {
       $geoWithin: {
         $geometry: {
           type: 'Polygon',
@@ -696,7 +721,7 @@ propertySchema.methods.updateRating = function(newRating) {
 
 // GeoJSON helper methods
 propertySchema.methods.setLocation = function(longitude, latitude) {
-  this.location = {
+  this.address.coordinates = {
     type: 'Point',
     coordinates: [longitude, latitude]
   };
@@ -704,10 +729,10 @@ propertySchema.methods.setLocation = function(longitude, latitude) {
 };
 
 propertySchema.methods.getCoordinates = function() {
-  if (this.location && this.location.coordinates && this.location.coordinates.length === 2) {
+  if (this.address.coordinates && this.address.coordinates.coordinates && this.address.coordinates.coordinates.length === 2) {
     return {
-      longitude: this.location.coordinates[0],
-      latitude: this.location.coordinates[1]
+      longitude: this.address.coordinates.coordinates[0],
+      latitude: this.address.coordinates.coordinates[1]
     };
   }
   return null;

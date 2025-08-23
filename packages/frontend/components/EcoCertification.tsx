@@ -44,7 +44,6 @@ export function EcoCertification({
   features = [],
   compact = false,
 }: EcoCertificationProps) {
-  // Removed energy rating usage
   const getRatingColor = (rating: EcoRating) => {
     switch (rating) {
       case 'A+':

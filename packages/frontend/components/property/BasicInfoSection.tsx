@@ -35,6 +35,19 @@ export const BasicInfoSection: React.FC<Props> = ({ property, hasActiveViewing, 
                 <ThemedText style={styles.priceLabel}>{getRentLabel(priceUnit)}</ThemedText>
                 <CurrencyFormatter amount={rentAmount} originalCurrency={rentCurrency} showConversion />
             </View>
+            
+            {/* External Source Badge */}
+            {property?.isExternal && property?.source && property.source !== 'internal' && (
+                <View style={styles.sourceBadgeContainer}>
+                    <View style={styles.sourceBadge}>
+                        <Ionicons name="globe-outline" size={16} color={colors.primaryColor} />
+                        <ThemedText style={styles.sourceBadgeText}>
+                            {t('Sourced from') || 'Sourced from'} {property.source.charAt(0).toUpperCase() + property.source.slice(1)}
+                        </ThemedText>
+                    </View>
+                </View>
+            )}
+            
             {!!description && description.trim() !== '' && (
                 <View style={styles.descriptionContainer}>
                     <ThemedText style={styles.sectionTitle}>{t('About this property') || 'About this property'}</ThemedText>
@@ -66,6 +79,24 @@ const styles = StyleSheet.create({
     container: { marginBottom: 20 },
     priceContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
     priceLabel: { fontSize: 16, color: colors.COLOR_BLACK_LIGHT_3 },
+    sourceBadgeContainer: { marginBottom: 16 },
+    sourceBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f8f9fa',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#e9ecef',
+        alignSelf: 'flex-start',
+    },
+    sourceBadgeText: {
+        fontSize: 14,
+        color: colors.COLOR_BLACK_LIGHT_3,
+        marginLeft: 6,
+        fontWeight: '500',
+    },
     sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15 },
     descriptionContainer: { marginBottom: 20 },
     descriptionCard: { padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#e9ecef', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 1 },

@@ -27,7 +27,6 @@ export interface NotificationSettings {
     types: {
       payment_reminders: boolean;
       maintenance_requests: boolean;
-      energy_alerts: boolean;
       system_updates: boolean;
       marketing: boolean;
     };
@@ -37,7 +36,6 @@ export interface NotificationSettings {
     types: {
       payment_reminders: boolean;
       maintenance_requests: boolean;
-      energy_alerts: boolean;
       system_updates: boolean;
       marketing: boolean;
     };
@@ -47,7 +45,6 @@ export interface NotificationSettings {
     types: {
       payment_reminders: boolean;
       maintenance_requests: boolean;
-      energy_alerts: boolean;
       system_updates: boolean;
       marketing: boolean;
     };

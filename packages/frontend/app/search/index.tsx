@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo, useContext } from 'react';
 import {
   View, StyleSheet, Dimensions, TextInput, TouchableOpacity,
-  Platform, ActivityIndicator, ScrollView, FlatList,
+  Platform, ActivityIndicator, ScrollView, FlatList, Text,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -321,27 +321,65 @@ export default function SearchScreen() {
 
   // Memoize markers to prevent unnecessary re-renders
   const mapMarkers = useMemo(() => {
-    console.log('mapMarkers memo - properties length:', properties?.length);
+    console.log('=== MAP MARKERS MEMO START ===');
+    console.log('Properties received:', properties?.length);
+
     if (!properties || properties.length === 0) {
       console.log('No properties, returning empty markers');
       return [];
     }
 
-    const validProperties = properties.filter(p => p?.location?.coordinates?.length === 2);
-    console.log('Valid properties with coordinates:', validProperties.length);
+    // Log first few properties to see their structure
+    console.log('First 3 properties structure:');
+    properties.slice(0, 3).forEach((p, i) => {
+      console.log(`Property ${i + 1}:`, {
+        id: p._id,
+        hasNewCoords: !!p.address?.coordinates,
+        hasOldCoords: !!p.location,
+        newCoords: p.address?.coordinates?.coordinates,
+        oldCoords: p.location?.coordinates
+      });
+    });
+
+    const validProperties = properties.filter(p => {
+      // Check both new structure (address.coordinates) and old structure (location)
+      const hasNewCoordinates = p?.address?.coordinates?.coordinates?.length === 2;
+      const hasOldCoordinates = p?.location?.coordinates?.length === 2;
+      return hasNewCoordinates || hasOldCoordinates;
+    });
+    console.log('Total properties:', properties.length, 'Valid properties with coordinates:', validProperties.length);
 
     if (validProperties.length === 0 && properties.length > 0) {
-      console.log('No valid properties found. Sample property location:', properties[0]?.location);
-      console.log('Sample property coordinates:', properties[0]?.location?.coordinates);
+      console.log('Properties found but none have coordinates. Sample property:', {
+        id: properties[0]?._id,
+        address: properties[0]?.address,
+        location: properties[0]?.location,
+        hasNewCoordinates: !!properties[0]?.address?.coordinates,
+        hasOldCoordinates: !!properties[0]?.location
+      });
     }
 
-    const markers = validProperties.map(p => ({
-      id: p._id,
-      coordinates: p.location!.coordinates as [number, number],
-      priceLabel: `€${p.rent?.amount?.toLocaleString() || 0}`,
-    }));
+    const markers = validProperties.map(p => {
+      // Use new structure if available, otherwise fall back to old structure
+      const coordinates = p.address?.coordinates?.coordinates || p.location?.coordinates;
+
+      // Ensure coordinates are valid numbers
+      if (!coordinates || coordinates.length !== 2 ||
+        typeof coordinates[0] !== 'number' || typeof coordinates[1] !== 'number') {
+        console.warn('Invalid coordinates for property:', p._id, coordinates);
+        return null;
+      }
+
+      return {
+        id: p._id,
+        coordinates: coordinates as [number, number],
+        priceLabel: `€${p.rent?.amount?.toLocaleString() || 0}`,
+      };
+    }).filter((marker): marker is { id: string; coordinates: [number, number]; priceLabel: string } => marker !== null); // Remove any null markers
 
     console.log('Generated markers:', markers.length, markers.slice(0, 2));
+    console.log('Sample marker structure:', markers[0]);
+    console.log('=== MAP MARKERS MEMO END ===');
     return markers;
   }, [properties]);
 
@@ -422,10 +460,18 @@ export default function SearchScreen() {
 
       console.log('API response:', response);
       console.log('API response properties:', response.properties.length, 'properties');
+      console.log('Sample property from API:', {
+        id: response.properties[0]?._id,
+        hasNewCoords: !!response.properties[0]?.address?.coordinates,
+        hasOldCoords: !!response.properties[0]?.location,
+        newCoords: response.properties[0]?.address?.coordinates?.coordinates,
+        oldCoords: response.properties[0]?.location?.coordinates
+      });
       if (response.properties.length > 0) {
         console.log('First property sample:', response.properties[0]);
-        console.log('First property location:', response.properties[0].location);
-        console.log('First property coordinates:', response.properties[0].location?.coordinates);
+        console.log('First property address:', response.properties[0].address);
+        console.log('First property new coordinates:', response.properties[0].address?.coordinates?.coordinates);
+        console.log('First property old coordinates:', response.properties[0].location?.coordinates);
       }
 
       // Only update properties if they've actually changed
@@ -441,10 +487,17 @@ export default function SearchScreen() {
         // Deep comparison to check if properties have actually changed
         const hasChanged = newProperties.some((newProp, index) => {
           const prevProp = prevProperties[index];
-          return !prevProp ||
-            prevProp._id !== newProp._id ||
-            prevProp.rent?.amount !== newProp.rent?.amount ||
-            JSON.stringify(prevProp.location?.coordinates) !== JSON.stringify(newProp.location?.coordinates);
+          if (!prevProp || prevProp._id !== newProp._id || prevProp.rent?.amount !== newProp.rent?.amount) {
+            return true;
+          }
+
+          // Compare coordinates from both structures
+          const prevNewCoords = JSON.stringify(prevProp.address?.coordinates?.coordinates);
+          const newNewCoords = JSON.stringify(newProp.address?.coordinates?.coordinates);
+          const prevOldCoords = JSON.stringify(prevProp.location?.coordinates);
+          const newOldCoords = JSON.stringify(newProp.location?.coordinates);
+
+          return prevNewCoords !== newNewCoords || prevOldCoords !== newOldCoords;
         });
 
         if (hasChanged) {
@@ -888,6 +941,15 @@ export default function SearchScreen() {
             onRegionChange={handleRegionChange}
             onMarkerPress={handleMarkerPress}
           />
+          {/* Debug info */}
+          <View style={{ position: 'absolute', top: 100, right: 10, backgroundColor: 'rgba(0,0,0,0.7)', padding: 10, borderRadius: 5 }}>
+            <Text style={{ color: 'white', fontSize: 12 }}>
+              Properties: {properties.length}
+            </Text>
+            <Text style={{ color: 'white', fontSize: 12 }}>
+              Markers: {mapMarkers.length}
+            </Text>
+          </View>
 
           {/* Search Header with Save Button */}
           <View style={styles.searchHeaderContainer}>

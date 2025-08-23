@@ -10,7 +10,7 @@ interface Props { property: any }
 export const LocationSection: React.FC<Props> = ({ property }) => {
     const { t } = useTranslation();
     const address = property?.address;
-    const coords: any = property?.location?.coordinates;
+    const coords: any = property?.address?.coordinates?.coordinates;
     const hasAddress = address && (address.street || address.city || address.state || address.country);
     const hasMap = Array.isArray(coords) && coords.length === 2;
     const proximity = property?.proximity || {};

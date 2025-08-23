@@ -42,7 +42,6 @@ Homiio users can:
 - 🔄 Match rental options based on user preferences.
 - 💵 Handle deposits through an integrated deposit management system.
 - 🏅 Get eco-certification for sustainable properties.
-- 📊 Monitor real-time energy consumption via a **Raspberry Pi device** connected to Homiio’s APIs.
 - 👥 Join community forums for discussions and support.
 - 🏘️ Find compatible roommates via a co-living search feature.
 - 🌍 Access **Horizon**, Oxy's ecosystem for ethical communities, with additional benefits.

@@ -80,6 +80,7 @@ export default function BookViewingPage() {
         if (code === 'TIME_CONFLICT') return t('viewings.error.timeConflict');
         if (code === 'TIME_IN_PAST') return t('viewings.error.timeInPast');
         if (code === 'AUTHENTICATION_REQUIRED') return t('viewings.error.authRequired');
+        if (code === 'EXTERNAL_PROPERTY') return t('viewings.error.externalProperty', 'Cannot book viewings for external properties');
         if (msg) return msg;
         if (err.message) return err.message;
       } else if (err && typeof err === 'object') {

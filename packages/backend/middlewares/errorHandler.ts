@@ -77,12 +77,6 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
     error = new AppError(message, 502, 'FAIRCOIN_ERROR');
   }
 
-  // Raspberry Pi device errors
-  if (err.code === 'DEVICE_ERROR') {
-    const message = err.message || 'Device communication error';
-    error = new AppError(message, 503, 'DEVICE_ERROR');
-  }
-
   // Horizon API errors
   if (err.code === 'HORIZON_ERROR') {
     const message = err.message || 'Horizon integration error';

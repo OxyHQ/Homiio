@@ -278,6 +278,15 @@ export function PropertyCard({
           </View>
         )}
 
+        {/* External Source Badge */}
+        {property.isExternal && property.source && property.source !== 'internal' && variant !== 'compact' && (
+          <View style={styles.sourceBadge}>
+            <ThemedText style={styles.sourceBadgeText}>
+              {property.source.charAt(0).toUpperCase() + property.source.slice(1)}
+            </ThemedText>
+          </View>
+        )}
+
         {/* Custom Badge Content */}
         {badgeContent && <View style={styles.customBadge}>{badgeContent as React.ReactNode}</View>}
 
@@ -527,6 +536,22 @@ const styles = StyleSheet.create({
     bottom: 8,
     left: 8,
     zIndex: 2,
+  },
+  sourceBadge: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    zIndex: 2,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  sourceBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#ffffff',
+    textTransform: 'capitalize',
   },
   ratingBadge: {
     position: 'absolute',

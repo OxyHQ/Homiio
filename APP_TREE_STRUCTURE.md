@@ -111,7 +111,6 @@ Homiio/
 │   │   │   ├── notifications.ts     # Notification routes
 │   │   │   ├── leases.ts            # Lease management routes
 │   │   │   ├── cities.ts            # City/location routes
-│   │   │   ├── devices.ts           # Device management routes
 │   │   │   └── roommates.ts         # Roommate matching routes
 │   │   ├── controllers/             # Route controllers
 │   │   │   ├── index.ts             # Controllers index
@@ -126,7 +125,6 @@ Homiio/
 │   │   │   ├── tipsController.ts    # Tips/advice logic
 │   │   │   ├── roomController.ts    # Room management logic
 │   │   │   ├── cityController.ts    # City/location logic
-│   │   │   ├── deviceController.ts  # Device management logic
 │   │   │   ├── leaseController.ts   # Lease management logic
 │   │   │   └── notificationController.ts # Notification logic
 │   │   ├── models/                  # Database models
@@ -139,7 +137,6 @@ Homiio/
 │   │   │       ├── LeaseSchema.ts   # Lease schema
 │   │   │       ├── RoomSchema.ts    # Room schema
 │   │   │       ├── CitySchema.ts    # City schema
-│   │   │       ├── EnergyDataSchema.ts # Energy data schema
 │   │   │       ├── SavedSchema.ts   # Saved items schema
 │   │   │       ├── SavedPropertyFolderSchema.ts
 │   │   │       ├── SavedSearchSchema.ts

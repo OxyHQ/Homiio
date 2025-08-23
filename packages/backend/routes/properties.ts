@@ -17,10 +17,6 @@ router.delete("/:propertyId", asyncHandler(propertyController.deleteProperty));
 // Property tracking (requires authentication)
 router.post("/:propertyId/track-view", asyncHandler(profileController.trackPropertyView));
 
-// Property energy monitoring (requires authentication)
-router.get("/:propertyId/energy", asyncHandler(propertyController.getPropertyEnergyData));
-router.post("/:propertyId/energy/configure", asyncHandler(propertyController.configureEnergyMonitoring));
-
 // User properties (requires authentication)
 router.get("/me/list", asyncHandler(propertyController.getMyProperties));
 

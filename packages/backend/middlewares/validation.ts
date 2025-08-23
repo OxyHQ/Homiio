@@ -86,46 +86,6 @@ const validatePayment = [
 ];
 
 /**
- * Energy data validation rules
- */
-const validateEnergyData = [
-  body('deviceId').notEmpty().withMessage('Device ID is required'),
-  body('propertyId').notEmpty().withMessage('Property ID is required'),
-  body('readings.voltage').isFloat({ min: 0 }).withMessage('Voltage must be positive'),
-  body('readings.current').isFloat({ min: 0 }).withMessage('Current must be positive'),
-  body('readings.power').isFloat({ min: 0 }).withMessage('Power must be positive'),
-  body('readings.energy').optional().isFloat({ min: 0 }).withMessage('Energy must be positive'),
-  body('timestamp').optional().isISO8601().withMessage('Timestamp must be valid ISO8601 date'),
-  handleValidationErrors
-];
-
-/**
- * Device validation rules
- */
-const validateDevice = [
-  body('propertyId').notEmpty().withMessage('Property ID is required'),
-  body('name').notEmpty().withMessage('Device name is required'),
-  body('serialNumber').notEmpty().withMessage('Serial number is required'),
-  body('macAddress').matches(/^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/).withMessage('Invalid MAC address format'),
-  body('type').optional().isIn(['raspberry-pi', 'smart-meter', 'sensor']).withMessage('Invalid device type'),
-  body('configuration.samplingRate').optional().isInt({ min: 1 }).withMessage('Sampling rate must be positive'),
-  handleValidationErrors
-];
-
-/**
- * User validation rules
- */
-const validateUser = [
-  body('email').isEmail().withMessage('Valid email is required'),
-  body('username').isLength({ min: 3, max: 30 }).withMessage('Username must be 3-30 characters'),
-  body('profile.firstName').notEmpty().withMessage('First name is required'),
-  body('profile.lastName').notEmpty().withMessage('Last name is required'),
-  body('profile.phoneNumber').optional().isMobilePhone('any').withMessage('Invalid phone number'),
-  body('role').isIn(['tenant', 'landlord', 'property_manager', 'admin']).withMessage('Invalid role'),
-  handleValidationErrors
-];
-
-/**
  * Pagination validation
  */
 const validatePagination = [
@@ -187,9 +147,6 @@ export {
   validateProperty,
   validateLease,
   validatePayment,
-  validateEnergyData,
-  validateDevice,
-  validateUser,
   validatePagination,
   validateId,
   validateDateRange,

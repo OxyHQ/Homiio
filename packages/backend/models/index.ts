@@ -7,7 +7,6 @@
 const PropertyModel = require('./schemas/PropertySchema');
 const RoomModel = require('./schemas/RoomSchema');
 const LeaseModel = require('./schemas/LeaseSchema');
-const EnergyDataModel = require('./schemas/EnergyDataSchema');
 const RecentlyViewedModel = require('./schemas/RecentlyViewedSchema');
 const ViewingRequestModel = require('./schemas/ViewingRequestSchema');
 const SavedPropertyFolderModel = require('./schemas/SavedPropertyFolderSchema');
@@ -23,7 +22,6 @@ module.exports = {
   Property: PropertyModel,
   Room: RoomModel,
   Lease: LeaseModel,
-  EnergyData: EnergyDataModel,
   RecentlyViewed: RecentlyViewedModel,
   ViewingRequest: ViewingRequestModel,
   SavedPropertyFolder: SavedPropertyFolderModel,

@@ -188,6 +188,7 @@ const buildHTML = (
     map.on('mouseenter', 'unclustered-point-bg', () => { map.getCanvas().style.cursor = 'pointer'; });
     map.on('mouseleave', 'unclustered-point-bg', () => { map.getCanvas().style.cursor = ''; });
 
+    console.log('WebView: Map loaded and ready');
     post({ type:'ready' });
   });
 
@@ -226,8 +227,19 @@ const buildHTML = (
   const handle=(raw)=>{ try{
     const m = JSON.parse(raw.data || raw);
     if(!m || typeof m !== 'object') return;
+    console.log('WebView received message:', m);
     if(m.type==='setView'){ map.easeTo({ center: m.center, zoom: m.zoom, duration: m.duration || 500 }); }
-    if(m.type==='setData'){ const s = map.getSource(srcId); if (s) s.setData(toGeoJSON(m.features || [])); }
+    if(m.type==='setData'){ 
+      console.log('WebView setting data with features:', m.features);
+      const s = map.getSource(srcId); 
+      if (s) {
+        const geoJSON = toGeoJSON(m.features || []);
+        console.log('WebView setting GeoJSON:', geoJSON);
+        s.setData(geoJSON);
+      } else {
+        console.error('WebView: Source not found:', srcId);
+      }
+    }
     if(m.type==='highlightMarker'){
         if (highlightedFeatureId) {
             map.setFeatureState({ source: srcId, id: highlightedFeatureId }, { highlighted: false });
@@ -375,7 +387,9 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
 
     // Handle marker updates efficiently
     useEffect(() => {
-        console.log('Map marker update effect - childReady:', childReady, 'mapInitialized:', mapInitialized.current, 'markers length:', markers.length);
+        console.log('=== MAP MARKER UPDATE EFFECT ===');
+        console.log('childReady:', childReady, 'mapInitialized:', mapInitialized.current, 'markers length:', markers.length);
+        console.log('Sample markers:', markers.slice(0, 2));
         if (childReady && mapInitialized.current && screenId) {
             // Only update markers if they've actually changed
             const currentState = getMapState(screenId);
@@ -393,11 +407,13 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
 
             if (markersChanged) {
                 console.log('Sending markers to map (with screenId):', markers.length);
+                console.log('Markers being sent:', markers);
                 post({ type: 'setData', features: markers });
             }
         } else if (childReady && mapInitialized.current) {
             // If no screenId, always update markers
             console.log('Sending markers to map (no screenId):', markers.length);
+            console.log('Markers being sent:', markers);
             post({ type: 'setData', features: markers });
         }
     }, [markers, childReady, post, screenId, getMapState]);
@@ -468,12 +484,14 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     // Memoize message handler
     const handleMessage = useCallback((event: any) => {
         try {
-            console.log('Map message received:', event?.data || event?.nativeEvent?.data);
-            const msg = JSON.parse(event?.data || event?.nativeEvent?.data || '{}') as MapEvent;
+            const rawData = event?.data || event?.nativeEvent?.data;
+            console.log('Map message received:', rawData);
+            const msg = JSON.parse(rawData || '{}') as MapEvent;
             console.log('Parsed map message:', msg);
 
             if (msg.type === 'ready') {
                 console.log('Map ready event received!');
+                console.log('Setting childReady to true and mapInitialized to true');
                 setChildReady(true);
                 mapInitialized.current = true;
                 flushPending();
@@ -487,7 +505,10 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
 
                 // Restore saved markers
                 if (savedState?.markers && savedState.markers.length > 0) {
+                    console.log('Restoring saved markers:', savedState.markers.length);
                     post({ type: 'setData', features: savedState.markers });
+                } else {
+                    console.log('No saved markers to restore');
                 }
 
                 return;

@@ -36,7 +36,6 @@ import { Property, Profile, City, PropertyType, PropertyStatus } from '@homiio/s
 - `CreatePropertyData` - Data for creating a new property
 - `PropertyFilters` - Property search filters
 - `PropertyRent` - Property rent information
-- `PropertyEnergyStats` - Property energy statistics
 - `SavedProperty` - Property with saved information
 - `MapProperty` - Property for map display
 

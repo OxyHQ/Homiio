@@ -54,58 +54,6 @@ class NotificationController {
           'Notifications retrieved successfully'
         ));
       } catch (horizonError) {
-        // Fallback to mock notifications if Horizon service fails
-        logger.warn('Horizon service unavailable, using mock notifications', { error: horizonError.message });
-        
-        const mockNotifications = [
-          {
-            id: 'notif_1',
-            type: 'payment_reminder',
-            title: 'Rent Payment Due',
-            message: 'Your rent payment of $1,200 is due in 3 days',
-            app: 'homio',
-            priority: 'high',
-            read: false,
-            createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-            data: {
-              propertyId: 'prop_1',
-              amount: 1200,
-              dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
-            }
-          },
-          {
-            id: 'notif_2',
-            type: 'maintenance_request',
-            title: 'New Maintenance Request',
-            message: 'A tenant has submitted a maintenance request for Room 2B',
-            app: 'homio',
-            priority: 'medium',
-            read: false,
-            createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-            data: {
-              propertyId: 'prop_1',
-              roomId: 'room_2',
-              requestType: 'plumbing'
-            }
-          },
-          {
-            id: 'notif_3',
-            type: 'energy_alert',
-            title: 'High Energy Usage Detected',
-            message: 'Energy consumption in Living Room is 20% above normal',
-            app: 'homio',
-            priority: 'low',
-            read: true,
-            createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-            data: {
-              deviceId: 'device_1',
-              consumption: 5.2,
-              threshold: 4.0
-            }
-          }
-        ];
-
-        res.json(successResponse(mockNotifications, 'Notifications retrieved successfully'));
       }
     } catch (error) {
       next(error);
@@ -231,7 +179,6 @@ class NotificationController {
           types: {
             payment_reminders: true,
             maintenance_requests: true,
-            energy_alerts: false,
             system_updates: true,
             marketing: false
           }
@@ -241,7 +188,6 @@ class NotificationController {
           types: {
             payment_reminders: true,
             maintenance_requests: true,
-            energy_alerts: true,
             system_updates: false,
             marketing: false
           }
@@ -251,7 +197,6 @@ class NotificationController {
           types: {
             payment_reminders: false,
             maintenance_requests: false,
-            energy_alerts: false,
             system_updates: false,
             marketing: false
           }

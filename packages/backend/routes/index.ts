@@ -6,7 +6,6 @@
 import express from 'express';
 const properties = require('./properties').default;
 const rooms = require('./rooms');
-const devices = require('./devices').default;
 const leases = require('./leases');
 const notifications = require('./notifications');
 const analytics = require('./analytics');
@@ -20,11 +19,11 @@ const test = require('./test').default;
 const images = require('./images');
 const { asyncHandler } = require('../middlewares');
 const billing = require('./billing').default;
+const scraper = require('./scraper').default;
 
 export default function() {
   const propertyRoutes = properties();
   const roomRoutes = rooms();
-  const deviceRoutes = devices();
   const leaseRoutes = leases();
   const notificationRoutes = notifications();
   const analyticsRoutes = analytics();
@@ -37,6 +36,7 @@ export default function() {
   const testRoutes = test();
   const imageRoutes = images;
   const billingRoutes = billing();
+  const scraperRoutes = scraper();
 
   const router = express.Router();
 
@@ -44,7 +44,6 @@ export default function() {
   router.use('/properties', propertyRoutes);
   router.use('/viewings', viewingRoutes);
   router.use('/rooms', roomRoutes);
-  router.use('/devices', deviceRoutes);
   router.use('/leases', leaseRoutes);
   router.use('/notifications', notificationRoutes);
   router.use('/analytics', analyticsRoutes);
@@ -56,6 +55,7 @@ export default function() {
   router.use('/test', testRoutes);
   router.use('/images', imageRoutes);
   router.use('/billing', billingRoutes);
+  router.use('/scraper', scraperRoutes);
 
   // Admin-only city routes (authenticated)
   router.post('/cities', asyncHandler(require('../controllers/cityController').default.createCity));

@@ -1,12 +1,8 @@
 import { useCallback, useState, useEffect } from 'react';
 import { useOxy } from '@oxyhq/services';
 import { usePropertyStore, usePropertySelectors } from '@/store/propertyStore';
-import {
-  Property,
-  CreatePropertyData,
-  PropertyFilters,
-  propertyService,
-} from '@/services/propertyService';
+import { Property, PropertyFilters, propertyService } from '@/services/propertyService';
+import { CreatePropertyData } from '@homiio/shared-types';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -78,7 +74,7 @@ export const useProperty = (id: string) => {
   } = useQuery({
     queryKey: ['property', id],
     queryFn: async () =>
-      propertyService.getProperty(id, oxyServices, activeSessionId || ''),
+      propertyService.getPropertyById(id, oxyServices, activeSessionId || ''),
     enabled: Boolean(id),
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,
@@ -130,15 +126,13 @@ export const usePropertyStats = (id: string) => {
   };
 };
 
-// Removed energy stats hook per request (perf and not needed)
-
 export const useSearchProperties = (query?: string, filters?: PropertyFilters) => {
   const { setSearchResults, setError, setPagination } = usePropertyStore();
   const enabled = Boolean(query && query.length > 0);
 
   const result = useQuery({
     queryKey: ['propertiesSearch', { query, filters: filters ?? null }],
-    queryFn: async () => propertyService.searchProperties(query as string, filters),
+    queryFn: async () => propertyService.searchProperties(query || '', filters),
     enabled,
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,

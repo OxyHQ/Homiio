@@ -48,7 +48,7 @@ export class ApiError extends Error {
   }
 }
 
-function extractErrorMessage(data: any, status: number): string {
+const extractErrorMessage = (data: any, status: number): string => {
   if (!data) return `HTTP ${status}`;
   if (typeof data.message === 'string' && data.message.trim()) return data.message;
   if (typeof data.error === 'string' && data.error.trim()) return data.error;

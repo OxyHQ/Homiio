@@ -1,12 +1,11 @@
 # Homio Backend API
 
-A comprehensive housing and rental solutions API built with Express.js, designed to manage properties, rooms, tenants, and energy monitoring.
+A comprehensive housing and rental solutions API built with Express.js, designed to manage properties, rooms, tenants, and more.
 
 ## Features
 
 - **Property Management**: Create, read, update, and delete properties
 - **Room Management**: Manage individual rooms within properties
-- **Energy Monitoring**: Track energy consumption via Raspberry Pi devices
 - **User Authentication**: Integration with Oxy ecosystem
 - **Search & Filtering**: Advanced property and room search capabilities
 - **API Documentation**: RESTful API with comprehensive endpoints
@@ -33,8 +32,6 @@ packages/backend/
 │   ├── User.ts
 │   ├── Lease.ts
 │   ├── Payment.ts
-│   ├── Device.ts
-│   ├── EnergyData.ts
 │   └── index.ts
 ├── routes/              # API routes
 │   ├── properties.ts
@@ -47,7 +44,6 @@ packages/backend/
 │   ├── logging.ts
 │   └── index.ts
 ├── services/           # Business logic
-│   ├── energyService.ts
 │   └── index.ts
 ├── utils/              # Utility functions
 │   ├── helpers.ts
@@ -67,7 +63,6 @@ packages/backend/
 - `PUT /api/properties/:id` - Update property (authenticated, owner only)
 - `DELETE /api/properties/:id` - Delete property (authenticated, owner only)
 - `GET /api/properties/my/properties` - Get current user's properties
-- `GET /api/properties/:id/energy` - Get property energy data
 
 ### Rooms
 
@@ -132,7 +127,6 @@ JWT_SECRET=your_jwt_secret
 - Basic property information (title, description, address)
 - Rent details and availability
 - Amenities and rules
-- Energy monitoring configuration
 - Image and document management
 
 ### Room
@@ -159,18 +153,6 @@ JWT_SECRET=your_jwt_secret
 - Multiple payment methods
 - Fee calculations
 - Receipt management
-
-### EnergyData
-- Real-time energy consumption data
-- Historical trends and analytics
-- Alert management
-- Device integration
-
-### Device
-- Raspberry Pi device management
-- Configuration and monitoring
-- Health status tracking
-- Sensor data collection
 
 ## Authentication
 

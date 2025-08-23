@@ -134,39 +134,6 @@ const roomSchema = new mongoose.Schema({
       type: String // User IDs of current occupants
     }]
   },
-  // Energy monitoring
-  deviceId: {
-    type: String,
-    trim: true
-  },
-  sensors: [{
-    type: {
-      type: String,
-      enum: ['temperature', 'humidity', 'light', 'motion', 'energy', 'air_quality'],
-      required: true
-    },
-    sensorId: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    location: {
-      type: String,
-      trim: true
-    },
-    isActive: {
-      type: Boolean,
-      default: true
-    },
-    lastReading: {
-      value: mongoose.Schema.Types.Mixed,
-      timestamp: {
-        type: Date,
-        default: Date.now
-      },
-      unit: String
-    }
-  }],
   // Lease information
   currentLease: {
     type: mongoose.Schema.Types.ObjectId,
@@ -217,7 +184,6 @@ const roomSchema = new mongoose.Schema({
 roomSchema.index({ propertyId: 1, type: 1 });
 roomSchema.index({ status: 1, 'availability.isAvailable': 1 });
 roomSchema.index({ 'occupancy.occupantIds': 1 });
-roomSchema.index({ deviceId: 1 });
 
 // Virtual for calculated square footage from dimensions
 roomSchema.virtual('calculatedSquareFootage').get(function() {

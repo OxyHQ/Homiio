@@ -26,6 +26,7 @@ export const PropertyActionBar: React.FC<Props> = ({
     const { t } = useTranslation();
     if (!property) return null;
     const isPublic = property?.housingType === 'public';
+    const isExternal = property?.isExternal;
     return (
         <SafeAreaView edges={['bottom']} style={styles.bottomBar}>
             <View style={styles.bottomBarInner}>
@@ -34,6 +35,15 @@ export const PropertyActionBar: React.FC<Props> = ({
                         icon="globe"
                         text={t('Apply on State Website')}
                         onPress={onApplyPublic}
+                        variant="primary"
+                        size="large"
+                        style={{ flex: 1 }}
+                    />
+                ) : isExternal ? (
+                    <ActionButton
+                        icon="open-outline"
+                        text={t('View on Source Website')}
+                        onPress={onContact}
                         variant="primary"
                         size="large"
                         style={{ flex: 1 }}

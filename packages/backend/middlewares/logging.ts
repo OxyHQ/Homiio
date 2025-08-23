@@ -267,24 +267,6 @@ const businessLogger = {
       status: status
     });
   },
-
-  energyDataReceived: (deviceId, propertyId, dataCount) => {
-    logger.debug('Energy data received', {
-      event: 'DEVICE_ENERGY_DATA_RECEIVED',
-      deviceId: deviceId,
-      propertyId: propertyId,
-      dataCount: dataCount
-    });
-  },
-
-  deviceStatusChanged: (deviceId, oldStatus, newStatus) => {
-    logger.info('Device status changed', {
-      event: 'DEVICE_STATUS_CHANGED',
-      deviceId: deviceId,
-      oldStatus: oldStatus,
-      newStatus: newStatus
-    });
-  }
 };
 
 export {

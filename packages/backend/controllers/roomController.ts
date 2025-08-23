@@ -4,7 +4,6 @@
  */
 
 const { Room, Property } = require('../models');
-const { energyService } = require('../services');
 const { logger, businessLogger } = require('../middlewares/logging');
 const { AppError, successResponse, paginationResponse } = require('../middlewares/errorHandler');
 
@@ -20,35 +19,54 @@ class RoomController {
         propertyId: propertyId
       };
 
-      const room = new Room(roomData);
-      const validation = room.validate();
-      
-      if (!validation.isValid) {
-        throw new AppError('Validation failed', 400, 'VALIDATION_ERROR');
+      // Verify property ownership
+      const property = await Property.findById(propertyId);
+      if (!property) {
+        throw new AppError('Property not found', 404, 'NOT_FOUND');
+      }
+      if (property.profileId.toString() !== req.userId) {
+        throw new AppError('Access denied to this property', 403, 'FORBIDDEN');
       }
 
-      // In a real implementation, verify property ownership and save to database
-      // const property = await PropertyModel.findById(propertyId);
-      // if (property.ownerId !== req.userId) {
-      //   throw new AppError('Access denied to this property', 403, 'FORBIDDEN');
-      // }
-      // const savedRoom = await RoomModel.create(room);
+      // Create and validate room
+      const room = new Room(roomData);
       
-      room.id = `room_${Date.now()}`;
-      room.calculateSquareFootage();
+      // Calculate square footage if dimensions are provided
+      if (room.dimensions?.length && room.dimensions?.width) {
+        room.squareFootage = room.calculatedSquareFootage;
+      }
+
+      // Save room to database
+      const savedRoom = await room.save();
+
+      // Add room reference to property
+      property.rooms.push(savedRoom._id);
+      await property.save();
 
       logger.info('Room created', {
-        roomId: room.id,
+        roomId: savedRoom._id,
         propertyId: propertyId,
-        ownerId: req.userId
+        profileId: req.userId
+      });
+
+      businessLogger.info('Room created', {
+        roomId: savedRoom._id,
+        propertyId: propertyId,
+        profileId: req.userId,
+        type: room.type,
+        rent: room.rent?.amount
       });
 
       res.status(201).json(successResponse(
-        room.toJSON(),
+        savedRoom.toJSON(),
         'Room created successfully'
       ));
     } catch (error) {
-      next(error);
+      if (error.name === 'ValidationError') {
+        next(new AppError('Validation failed', 400, 'VALIDATION_ERROR', error.errors));
+      } else {
+        next(error);
+      }
     }
   }
 
@@ -70,45 +88,48 @@ class RoomController {
         sortOrder = 'desc'
       } = req.query;
 
+      // Verify property exists
+      const property = await Property.findById(propertyId);
+      if (!property) {
+        throw new AppError('Property not found', 404, 'NOT_FOUND');
+      }
+
       // Build filters
       const filters: any = { propertyId };
       if (type) filters.type = type;
-      if (available !== undefined) filters.available = available === 'true';
-      if (minRent) filters.minRent = parseFloat(minRent);
-      if (maxRent) filters.maxRent = parseFloat(maxRent);
-      if (furnished !== undefined) filters.furnished = furnished === 'true';
+      if (available !== undefined) filters['availability.isAvailable'] = available === 'true';
+      if (minRent) filters['rent.amount'] = { $gte: parseFloat(minRent) };
+      if (maxRent) {
+        filters['rent.amount'] = { 
+          ...filters['rent.amount'],
+          $lte: parseFloat(maxRent)
+        };
+      }
 
-      // In a real implementation, query database with filters
-      // const { rooms, total } = await RoomModel.findWithFilters(filters, { page, limit, sortBy, sortOrder });
+      // Build sort options
+      const sortOptions: any = {};
+      sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+      // Query database with pagination
+      const skip = (parseInt(page) - 1) * parseInt(limit);
       
-      // Mock data for demonstration
-      const mockRooms = [
-        new Room({
-          id: 'room_1',
-          propertyId: propertyId,
-          name: 'Master Bedroom',
-          type: 'bedroom',
-          dimensions: { length: 14, width: 12, height: 9 },
-          rent: { amount: 1200, currency: 'USD' },
-          furniture: { furnished: true, items: ['bed', 'desk', 'dresser'] },
-          amenities: ['private_bathroom', 'balcony', 'walk_in_closet'],
-          status: 'available'
-        }),
-        new Room({
-          id: 'room_2',
-          propertyId: propertyId,
-          name: 'Second Bedroom',
-          type: 'bedroom',
-          dimensions: { length: 12, width: 10, height: 9 },
-          rent: { amount: 900, currency: 'USD' },
-          furniture: { furnished: false },
-          amenities: ['shared_bathroom', 'closet'],
-          status: 'occupied'
-        })
-      ];
+      // Execute queries in parallel
+      const [rooms, total] = await Promise.all([
+        Room.find(filters)
+          .sort(sortOptions)
+          .skip(skip)
+          .limit(parseInt(limit))
+          .lean(),
+        Room.countDocuments(filters)
+      ]);
 
-      const rooms = mockRooms.map(r => r.toJSON());
-      const total = mockRooms.length;
+      logger.info('Property rooms retrieved', {
+        propertyId,
+        filters,
+        total,
+        page,
+        limit
+      });
 
       res.json(paginationResponse(
         rooms,
@@ -129,51 +150,41 @@ class RoomController {
     try {
       const { propertyId, roomId } = req.params;
 
-      // In a real implementation, fetch from database
-      // const room = await RoomModel.findById(roomId);
-      
-      const mockRoom = new Room({
-        id: roomId,
-        propertyId: propertyId,
-        name: 'Master Bedroom',
-        description: 'Spacious master bedroom with private bathroom and balcony',
-        type: 'bedroom',
-        floor: 2,
-        dimensions: { length: 14, width: 12, height: 9 },
-        features: ['window', 'balcony', 'ceiling_fan', 'hardwood_floors'],
-        furniture: {
-          furnished: true,
-          items: ['queen_bed', 'nightstands', 'dresser', 'desk', 'chair']
-        },
-        rent: { amount: 1200, currency: 'USD', deposit: 1200, utilities: 'excluded' },
-        availability: {
-          isAvailable: true,
-          availableFrom: new Date(),
-          minimumStay: 6,
-          maximumStay: 12
-        },
-        roommates: {
-          maxOccupancy: 1,
-          currentOccupancy: 0,
-          genderPreference: 'any',
-          ageRange: { min: 21, max: 35 },
-          lifestyle: { smoking: false, pets: true, quiet: true }
-        },
-        amenities: ['private_bathroom', 'balcony', 'walk_in_closet'],
-        images: ['room1.jpg', 'room2.jpg'],
-        status: 'available'
+      // Verify property exists
+      const property = await Property.findById(propertyId);
+      if (!property) {
+        throw new AppError('Property not found', 404, 'NOT_FOUND');
+      }
+
+      // Fetch room with property verification
+      const room = await Room.findOne({
+        _id: roomId,
+        propertyId: propertyId
+      }).populate({
+        path: 'currentLease',
+        select: 'startDate endDate rent deposit'
       });
 
-      if (!mockRoom) {
+      if (!room) {
         throw new AppError('Room not found', 404, 'NOT_FOUND');
       }
 
+      logger.info('Room retrieved', {
+        roomId,
+        propertyId,
+        status: room.status
+      });
+
       res.json(successResponse(
-        mockRoom.toJSON(),
+        room.toJSON(),
         'Room retrieved successfully'
       ));
     } catch (error) {
-      next(error);
+      if (error.name === 'CastError') {
+        next(new AppError('Invalid room ID', 400, 'VALIDATION_ERROR'));
+      } else {
+        next(error);
+      }
     }
   }
 
@@ -185,32 +196,64 @@ class RoomController {
       const { propertyId, roomId } = req.params;
       const updateData = req.body;
 
-      // In a real implementation, check ownership and update in database
-      // const property = await PropertyModel.findById(propertyId);
-      // if (property.ownerId !== req.userId) {
-      //   throw new AppError('Access denied', 403, 'FORBIDDEN');
-      // }
-
-      const updatedRoom = new Room({
-        id: roomId,
-        propertyId: propertyId,
-        ...updateData,
-        updatedAt: new Date()
-      });
-
-      const validation = updatedRoom.validate();
-      if (!validation.isValid) {
-        throw new AppError('Validation failed', 400, 'VALIDATION_ERROR');
+      // Verify property ownership
+      const property = await Property.findById(propertyId);
+      if (!property) {
+        throw new AppError('Property not found', 404, 'NOT_FOUND');
+      }
+      if (property.profileId.toString() !== req.userId) {
+        throw new AppError('Access denied to this property', 403, 'FORBIDDEN');
       }
 
-      updatedRoom.calculateSquareFootage();
+      // Find existing room
+      const room = await Room.findOne({
+        _id: roomId,
+        propertyId: propertyId
+      });
+
+      if (!room) {
+        throw new AppError('Room not found', 404, 'NOT_FOUND');
+      }
+
+      // Update room fields
+      Object.assign(room, updateData);
+
+      // Calculate square footage if dimensions are updated
+      if (updateData.dimensions?.length && updateData.dimensions?.width) {
+        room.squareFootage = room.calculatedSquareFootage;
+      }
+
+      // Save updated room
+      const updatedRoom = await room.save();
+
+      logger.info('Room updated', {
+        roomId,
+        propertyId,
+        profileId: req.userId,
+        updatedFields: Object.keys(updateData)
+      });
+
+      businessLogger.info('Room updated', {
+        roomId,
+        propertyId,
+        profileId: req.userId,
+        type: room.type,
+        rent: room.rent?.amount,
+        status: room.status
+      });
 
       res.json(successResponse(
         updatedRoom.toJSON(),
         'Room updated successfully'
       ));
     } catch (error) {
-      next(error);
+      if (error.name === 'ValidationError') {
+        next(new AppError('Validation failed', 400, 'VALIDATION_ERROR', error.errors));
+      } else if (error.name === 'CastError') {
+        next(new AppError('Invalid room ID', 400, 'VALIDATION_ERROR'));
+      } else {
+        next(error);
+      }
     }
   }
 
@@ -221,19 +264,63 @@ class RoomController {
     try {
       const { propertyId, roomId } = req.params;
 
-      // In a real implementation, check ownership and soft delete
-      // const property = await PropertyModel.findById(propertyId);
-      // if (property.ownerId !== req.userId) {
-      //   throw new AppError('Access denied', 403, 'FORBIDDEN');
-      // }
-      // await RoomModel.softDelete(roomId);
+      // Verify property ownership
+      const property = await Property.findById(propertyId);
+      if (!property) {
+        throw new AppError('Property not found', 404, 'NOT_FOUND');
+      }
+      if (property.profileId.toString() !== req.userId) {
+        throw new AppError('Access denied to this property', 403, 'FORBIDDEN');
+      }
+
+      // Find room and verify it exists
+      const room = await Room.findOne({
+        _id: roomId,
+        propertyId: propertyId
+      });
+
+      if (!room) {
+        throw new AppError('Room not found', 404, 'NOT_FOUND');
+      }
+
+      // Check if room has active lease
+      if (room.currentLease) {
+        throw new AppError('Cannot delete room with active lease', 400, 'VALIDATION_ERROR');
+      }
+
+      // Remove room reference from property
+      property.rooms = property.rooms.filter(id => id.toString() !== roomId);
+      await property.save();
+
+      // Soft delete by marking status as unavailable
+      room.status = 'unavailable';
+      room.availability.isAvailable = false;
+      await room.save();
+
+      logger.info('Room deleted', {
+        roomId,
+        propertyId,
+        profileId: req.userId
+      });
+
+      businessLogger.info('Room deleted', {
+        roomId,
+        propertyId,
+        profileId: req.userId,
+        type: room.type,
+        rent: room.rent?.amount
+      });
 
       res.json(successResponse(
         null,
         'Room deleted successfully'
       ));
     } catch (error) {
-      next(error);
+      if (error.name === 'CastError') {
+        next(new AppError('Invalid room ID', 400, 'VALIDATION_ERROR'));
+      } else {
+        next(error);
+      }
     }
   }
 
@@ -256,71 +343,102 @@ class RoomController {
         pets,
         smoking,
         page = 1,
-        limit = 10
+        limit = 10,
+        sortBy = 'rent.amount',
+        sortOrder = 'asc'
       } = req.query;
 
-      // Build search filters
-      const filters: any = {};
-      if (city) filters.city = city;
-      if (state) filters.state = state;
-      if (minRent) filters.minRent = parseFloat(minRent);
-      if (maxRent) filters.maxRent = parseFloat(maxRent);
-      if (type) filters.type = type;
-      if (furnished !== undefined) filters.furnished = furnished === 'true';
-      if (amenities) filters.amenities = amenities.split(',');
-      if (genderPreference) filters.genderPreference = genderPreference;
-      if (pets !== undefined) filters.pets = pets === 'true';
-      if (smoking !== undefined) filters.smoking = smoking === 'true';
+      // Build property filters for location
+      const propertyFilters: any = {
+        status: 'active'
+      };
+      if (city) propertyFilters['address.city'] = new RegExp(city, 'i');
+      if (state) propertyFilters['address.state'] = new RegExp(state, 'i');
 
-      // In a real implementation, perform complex search across properties and rooms
-      const mockSearchResults = [
-        {
-          room: new Room({
-            id: 'room_1',
-            propertyId: 'prop_1',
-            name: 'Cozy Downtown Room',
-            type: 'bedroom',
-            rent: { amount: 850, currency: 'USD' },
-            furniture: { furnished: true },
-            amenities: ['shared_bathroom', 'wifi', 'parking'],
-            status: 'available'
-          }).toJSON(),
+      // Find matching properties first
+      const properties = await Property.find(propertyFilters)
+        .select('_id address type rooms')
+        .lean();
+
+      const propertyIds = properties.map(p => p._id);
+
+      // Build room filters
+      const roomFilters: any = {
+        propertyId: { $in: propertyIds },
+        status: 'available',
+        'availability.isAvailable': true
+      };
+
+      if (type) roomFilters.type = type;
+      if (minRent || maxRent) {
+        roomFilters['rent.amount'] = {};
+        if (minRent) roomFilters['rent.amount'].$gte = parseFloat(minRent);
+        if (maxRent) roomFilters['rent.amount'].$lte = parseFloat(maxRent);
+      }
+      if (amenities) {
+        const amenityList = amenities.split(',').map(a => a.trim());
+        roomFilters.amenities = { $all: amenityList };
+      }
+
+      // Build sort options
+      const sortOptions: any = {};
+      sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+      // Query database with pagination
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+
+      // Execute queries in parallel
+      const [rooms, total] = await Promise.all([
+        Room.find(roomFilters)
+          .sort(sortOptions)
+          .skip(skip)
+          .limit(parseInt(limit))
+          .lean(),
+        Room.countDocuments(roomFilters)
+      ]);
+
+      // Combine room and property data
+      const propertyMap = properties.reduce((map, property) => {
+        map[property._id.toString()] = property;
+        return map;
+      }, {});
+
+      const searchResults = rooms.map(room => {
+        const property = propertyMap[room.propertyId.toString()];
+        const matchScore = this.calculateMatchScore(room, property, {
+          pets,
+          smoking,
+          genderPreference,
+          minAge,
+          maxAge
+        });
+
+        return {
+          room,
           property: {
-            id: 'prop_1',
-            title: 'Downtown Shared House',
-            address: { city: city || 'San Francisco', state: state || 'CA' },
-            type: 'house'
+            id: property._id,
+            address: property.address,
+            type: property.type
           },
-          matchScore: 85 // Calculated based on preferences
-        },
-        {
-          room: new Room({
-            id: 'room_2',
-            propertyId: 'prop_2',
-            name: 'Modern Apartment Room',
-            type: 'bedroom',
-            rent: { amount: 950, currency: 'USD' },
-            furniture: { furnished: false },
-            amenities: ['private_bathroom', 'balcony', 'gym'],
-            status: 'available'
-          }).toJSON(),
-          property: {
-            id: 'prop_2',
-            title: 'Modern City Apartment',
-            address: { city: city || 'San Francisco', state: state || 'CA' },
-            type: 'apartment'
-          },
-          matchScore: 78
-        }
-      ];
+          matchScore
+        };
+      });
 
-      // Sort by match score
-      mockSearchResults.sort((a, b) => b.matchScore - a.matchScore);
+      // Sort by match score if preferences were provided
+      if (pets !== undefined || smoking !== undefined || genderPreference) {
+        searchResults.sort((a, b) => b.matchScore - a.matchScore);
+      }
 
-      const total = mockSearchResults.length;
+      logger.info('Room search completed', {
+        filters: roomFilters,
+        total,
+        page,
+        limit,
+        resultCount: searchResults.length
+      });
 
       res.json(paginationResponse(
-        mockSearchResults,
+        searchResults,
         parseInt(page),
         parseInt(limit),
         total,
@@ -332,28 +450,45 @@ class RoomController {
   }
 
   /**
-   * Get room energy data
+   * Calculate match score based on preferences
+   * @private
    */
-  async getRoomEnergyData(req, res, next) {
-    try {
-      const { propertyId, roomId } = req.params;
-      const { period = 'day' } = req.query;
+  private calculateMatchScore(room, property, preferences) {
+    let score = 100;
+    const {
+      pets,
+      smoking,
+      genderPreference,
+      minAge,
+      maxAge
+    } = preferences;
 
-      // In a real implementation, check if room has energy monitoring
-      // const room = await RoomModel.findById(roomId);
-      // if (!room.energyMonitoring.enabled) {
-      //   throw new AppError('Energy monitoring not enabled for this room', 400);
-      // }
-
-      const energyData = await energyService.getEnergyStats(roomId, period);
-
-      res.json(successResponse(
-        energyData,
-        'Room energy data retrieved successfully'
-      ));
-    } catch (error) {
-      next(error);
+    // Adjust score based on preferences
+    if (pets !== undefined) {
+      const petsAllowed = property.petPolicy === 'allowed';
+      if (pets === 'true' && !petsAllowed) score -= 20;
     }
+
+    if (smoking !== undefined) {
+      if (smoking === 'true' && !property.smokingAllowed) score -= 20;
+    }
+
+    if (genderPreference && room.occupancy?.genderPreference) {
+      if (genderPreference !== room.occupancy.genderPreference && 
+          room.occupancy.genderPreference !== 'any') {
+        score -= 30;
+      }
+    }
+
+    if (minAge || maxAge) {
+      const roomMinAge = room.occupancy?.ageRange?.min || 0;
+      const roomMaxAge = room.occupancy?.ageRange?.max || 100;
+      
+      if (minAge && parseInt(minAge) < roomMinAge) score -= 15;
+      if (maxAge && parseInt(maxAge) > roomMaxAge) score -= 15;
+    }
+
+    return Math.max(0, score);
   }
 
   /**
@@ -364,31 +499,88 @@ class RoomController {
       const { propertyId, roomId } = req.params;
       const { isAvailable, availableFrom, tenantId } = req.body;
 
-      // In a real implementation, update room availability
-      const updatedRoom = {
-        id: roomId,
-        propertyId: propertyId,
-        availability: {
-          isAvailable: isAvailable,
-          availableFrom: availableFrom ? new Date(availableFrom) : new Date()
-        },
-        currentTenant: tenantId || null,
-        status: isAvailable ? 'available' : 'occupied',
-        updatedAt: new Date()
+      // Verify property ownership
+      const property = await Property.findById(propertyId);
+      if (!property) {
+        throw new AppError('Property not found', 404, 'NOT_FOUND');
+      }
+      if (property.profileId.toString() !== req.userId) {
+        throw new AppError('Access denied to this property', 403, 'FORBIDDEN');
+      }
+
+      // Find room and verify it exists
+      const room = await Room.findOne({
+        _id: roomId,
+        propertyId: propertyId
+      });
+
+      if (!room) {
+        throw new AppError('Room not found', 404, 'NOT_FOUND');
+      }
+
+      // Update room availability
+      room.availability = {
+        ...room.availability,
+        isAvailable: isAvailable,
+        availableFrom: availableFrom ? new Date(availableFrom) : new Date()
       };
 
+      // Update status and occupancy based on availability
+      if (isAvailable) {
+        room.status = 'available';
+        if (tenantId) {
+          // Remove tenant if making room available
+          room.occupancy.occupantIds = room.occupancy.occupantIds.filter(id => id !== tenantId);
+          room.occupancy.currentOccupants = room.occupancy.occupantIds.length;
+        }
+      } else {
+        room.status = 'occupied';
+        if (tenantId && !room.occupancy.occupantIds.includes(tenantId)) {
+          // Add tenant if making room unavailable
+          if (room.occupancy.currentOccupants < room.occupancy.maxOccupants) {
+            room.occupancy.occupantIds.push(tenantId);
+            room.occupancy.currentOccupants = room.occupancy.occupantIds.length;
+          } else {
+            throw new AppError('Room is at maximum occupancy', 400, 'VALIDATION_ERROR');
+          }
+        }
+      }
+
+      // Save changes
+      const updatedRoom = await room.save();
+
       logger.info('Room availability updated', {
-        roomId: roomId,
-        isAvailable: isAvailable,
-        tenantId: tenantId
+        roomId,
+        propertyId,
+        profileId: req.userId,
+        isAvailable,
+        tenantId,
+        status: updatedRoom.status
+      });
+
+      businessLogger.info('Room availability updated', {
+        roomId,
+        propertyId,
+        profileId: req.userId,
+        isAvailable,
+        tenantId,
+        status: updatedRoom.status,
+        type: room.type,
+        rent: room.rent?.amount
       });
 
       res.json(successResponse(
-        updatedRoom,
+        updatedRoom.toJSON(),
         'Room availability updated successfully'
       ));
     } catch (error) {
-      next(error);
+      if (error.name === 'ValidationError') {
+        next(new AppError('Validation failed', 400, 'VALIDATION_ERROR', error.errors));
+      } else if (error.name === 'CastError') {
+        next(new AppError('Invalid room ID', 400, 'VALIDATION_ERROR'));
+      } else {
+        next(error);
+      }
     }
   }
 
@@ -400,19 +592,79 @@ class RoomController {
       const { propertyId, roomId } = req.params;
       const { tenantId } = req.body;
 
-      const room = {
-        id: roomId,
+      // Verify property ownership
+      const property = await Property.findById(propertyId);
+      if (!property) {
+        throw new AppError('Property not found', 404, 'NOT_FOUND');
+      }
+      if (property.profileId.toString() !== req.userId) {
+        throw new AppError('Access denied to this property', 403, 'FORBIDDEN');
+      }
+
+      // Find room and verify it exists
+      const room = await Room.findOne({
+        _id: roomId,
+        propertyId: propertyId
+      });
+
+      if (!room) {
+        throw new AppError('Room not found', 404, 'NOT_FOUND');
+      }
+
+      // Check if room is available
+      if (!room.availability.isAvailable) {
+        throw new AppError('Room is not available', 400, 'VALIDATION_ERROR');
+      }
+
+      // Check occupancy limits
+      if (room.occupancy.currentOccupants >= room.occupancy.maxOccupants) {
+        throw new AppError('Room is at maximum occupancy', 400, 'VALIDATION_ERROR');
+      }
+
+      // Check if tenant is already assigned
+      if (room.occupancy.occupantIds.includes(tenantId)) {
+        throw new AppError('Tenant is already assigned to this room', 400, 'VALIDATION_ERROR');
+      }
+
+      // Add tenant and update room status
+      room.occupancy.occupantIds.push(tenantId);
+      room.occupancy.currentOccupants = room.occupancy.occupantIds.length;
+      room.status = 'occupied';
+      room.availability.isAvailable = false;
+
+      // Save changes
+      const updatedRoom = await room.save();
+
+      logger.info('Tenant assigned to room', {
+        roomId,
         propertyId,
+        profileId: req.userId,
         tenantId,
-        status: 'occupied'
-      };
+        status: updatedRoom.status
+      });
+
+      businessLogger.info('Tenant assigned to room', {
+        roomId,
+        propertyId,
+        profileId: req.userId,
+        tenantId,
+        status: updatedRoom.status,
+        type: room.type,
+        rent: room.rent?.amount
+      });
 
       res.json(successResponse(
-        room,
+        updatedRoom.toJSON(),
         'Tenant assigned successfully'
       ));
     } catch (error) {
-      next(error);
+      if (error.name === 'ValidationError') {
+        next(new AppError('Validation failed', 400, 'VALIDATION_ERROR', error.errors));
+      } else if (error.name === 'CastError') {
+        next(new AppError('Invalid room or tenant ID', 400, 'VALIDATION_ERROR'));
+      } else {
+        next(error);
+      }
     }
   }
 
@@ -422,20 +674,75 @@ class RoomController {
   async unassignTenant(req, res, next) {
     try {
       const { propertyId, roomId } = req.params;
+      const { tenantId } = req.body;
 
-      const room = {
-        id: roomId,
+      // Verify property ownership
+      const property = await Property.findById(propertyId);
+      if (!property) {
+        throw new AppError('Property not found', 404, 'NOT_FOUND');
+      }
+      if (property.profileId.toString() !== req.userId) {
+        throw new AppError('Access denied to this property', 403, 'FORBIDDEN');
+      }
+
+      // Find room and verify it exists
+      const room = await Room.findOne({
+        _id: roomId,
+        propertyId: propertyId
+      });
+
+      if (!room) {
+        throw new AppError('Room not found', 404, 'NOT_FOUND');
+      }
+
+      // Check if tenant is assigned to the room
+      if (!room.occupancy.occupantIds.includes(tenantId)) {
+        throw new AppError('Tenant is not assigned to this room', 400, 'VALIDATION_ERROR');
+      }
+
+      // Remove tenant and update room status
+      room.occupancy.occupantIds = room.occupancy.occupantIds.filter(id => id !== tenantId);
+      room.occupancy.currentOccupants = room.occupancy.occupantIds.length;
+
+      // If no more occupants, mark room as available
+      if (room.occupancy.currentOccupants === 0) {
+        room.status = 'available';
+        room.availability.isAvailable = true;
+      }
+
+      // Save changes
+      const updatedRoom = await room.save();
+
+      logger.info('Tenant unassigned from room', {
+        roomId,
         propertyId,
-        tenantId: null,
-        status: 'available'
-      };
+        profileId: req.userId,
+        tenantId,
+        status: updatedRoom.status
+      });
+
+      businessLogger.info('Tenant unassigned from room', {
+        roomId,
+        propertyId,
+        profileId: req.userId,
+        tenantId,
+        status: updatedRoom.status,
+        type: room.type,
+        rent: room.rent?.amount
+      });
 
       res.json(successResponse(
-        room,
+        updatedRoom.toJSON(),
         'Tenant unassigned successfully'
       ));
     } catch (error) {
-      next(error);
+      if (error.name === 'ValidationError') {
+        next(new AppError('Validation failed', 400, 'VALIDATION_ERROR', error.errors));
+      } else if (error.name === 'CastError') {
+        next(new AppError('Invalid room or tenant ID', 400, 'VALIDATION_ERROR'));
+      } else {
+        next(error);
+      }
     }
   }
 
@@ -446,52 +753,208 @@ class RoomController {
     try {
       const { propertyId, roomId } = req.params;
 
-      // In a real implementation, compute stats
+      // Verify property ownership
+      const property = await Property.findById(propertyId);
+      if (!property) {
+        throw new AppError('Property not found', 404, 'NOT_FOUND');
+      }
+      if (property.profileId.toString() !== req.userId) {
+        throw new AppError('Access denied to this property', 403, 'FORBIDDEN');
+      }
+
+      // Find room and verify it exists
+      const room = await Room.findOne({
+        _id: roomId,
+        propertyId: propertyId
+      }).populate('leaseHistory');
+
+      if (!room) {
+        throw new AppError('Room not found', 404, 'NOT_FOUND');
+      }
+
+      // Calculate occupancy rate over the last year
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+      const leases = room.leaseHistory || [];
+      const totalDays = 365;
+      const occupiedDays = leases.reduce((total, lease) => {
+        const startDate = new Date(Math.max(new Date(lease.startDate).getTime(), oneYearAgo.getTime()));
+        const endDate = lease.endDate ? new Date(lease.endDate) : new Date();
+        const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        return total + days;
+      }, 0);
+
+      const occupancyRate = Math.round((occupiedDays / totalDays) * 100);
+
+      // Calculate average stay duration from lease history
+      const stayDurations = leases.map(lease => {
+        const startDate = new Date(lease.startDate);
+        const endDate = lease.endDate ? new Date(lease.endDate) : new Date();
+        return Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)); // in months
+      });
+
+      const averageStayDuration = stayDurations.length > 0
+        ? Math.round(stayDurations.reduce((a, b) => a + b, 0) / stayDurations.length)
+        : 0;
+
+      // Calculate monthly revenue (current rent)
+      const monthlyRevenue = room.rent?.amount || 0;
+
+      // Get maintenance requests count
+      const maintenanceRequests = room.maintenanceSchedule?.filter(m => 
+        m.scheduledDate >= oneYearAgo
+      ).length || 0;
+
+      // Get energy consumption if available
+      const energySensor = room.sensors?.find(s => s.type === 'energy');
+      const energyConsumption = energySensor?.lastReading?.value || 0;
+
       const stats = {
-        occupancyRate: 80,
-        averageStayDuration: 6,
-        monthlyRevenue: 1200,
-        maintenanceRequests: 1,
-        energyConsumption: 50
+        occupancyRate,
+        averageStayDuration,
+        monthlyRevenue,
+        maintenanceRequests,
+        energyConsumption,
+        currentOccupants: room.occupancy.currentOccupants,
+        maxOccupants: room.occupancy.maxOccupants,
+        status: room.status,
+        squareFootage: room.squareFootage || room.calculatedSquareFootage,
+        amenitiesCount: room.amenities?.length || 0,
+        lastMaintenanceDate: room.maintenanceSchedule?.length > 0
+          ? room.maintenanceSchedule[room.maintenanceSchedule.length - 1].scheduledDate
+          : null
       };
+
+      logger.info('Room stats retrieved', {
+        roomId,
+        propertyId,
+        profileId: req.userId,
+        occupancyRate,
+        status: room.status
+      });
 
       res.json(successResponse(
         stats,
         'Room statistics retrieved successfully'
       ));
     } catch (error) {
-      next(error);
+      if (error.name === 'CastError') {
+        next(new AppError('Invalid room ID', 400, 'VALIDATION_ERROR'));
+      } else {
+        next(error);
+      }
     }
   }
 
   /**
-   * Get room statistics
+   * Get room statistics for a property
    */
   async getRoomStatistics(req, res, next) {
     try {
       const { propertyId } = req.params;
 
-      // In a real implementation, calculate statistics from database
+      // Verify property ownership
+      const property = await Property.findById(propertyId);
+      if (!property) {
+        throw new AppError('Property not found', 404, 'NOT_FOUND');
+      }
+      if (property.profileId.toString() !== req.userId) {
+        throw new AppError('Access denied to this property', 403, 'FORBIDDEN');
+      }
+
+      // Get all rooms for the property
+      const rooms = await Room.find({ propertyId });
+
+      // Calculate statistics
+      const total = rooms.length;
+      const byStatus = {
+        available: rooms.filter(r => r.status === 'available').length,
+        occupied: rooms.filter(r => r.status === 'occupied').length,
+        maintenance: rooms.filter(r => r.status === 'maintenance').length,
+        renovating: rooms.filter(r => r.status === 'renovating').length,
+        unavailable: rooms.filter(r => r.status === 'unavailable').length
+      };
+
+      // Calculate average rent
+      const totalRent = rooms.reduce((sum, room) => sum + (room.rent?.amount || 0), 0);
+      const averageRent = total > 0 ? Math.round(totalRent / total) : 0;
+
+      // Calculate occupancy rate
+      const occupiedRooms = rooms.reduce((count, room) => 
+        count + (room.occupancy?.currentOccupants || 0), 0);
+      const totalCapacity = rooms.reduce((count, room) => 
+        count + (room.occupancy?.maxOccupants || 0), 0);
+      const occupancyRate = totalCapacity > 0 
+        ? Math.round((occupiedRooms / totalCapacity) * 100)
+        : 0;
+
+      // Calculate average size
+      const totalSize = rooms.reduce((sum, room) => 
+        sum + (room.squareFootage || room.calculatedSquareFootage || 0), 0);
+      const averageSize = total > 0 ? Math.round(totalSize / total) : 0;
+
+      // Group by type
+      const byType = rooms.reduce((acc, room) => {
+        acc[room.type] = (acc[room.type] || 0) + 1;
+        return acc;
+      }, {});
+
+      // Calculate revenue metrics
+      const potentialMonthlyRevenue = totalRent;
+      const actualMonthlyRevenue = rooms
+        .filter(r => r.status === 'occupied')
+        .reduce((sum, room) => sum + (room.rent?.amount || 0), 0);
+      
+      const revenueEfficiency = potentialMonthlyRevenue > 0
+        ? Math.round((actualMonthlyRevenue / potentialMonthlyRevenue) * 100)
+        : 0;
+
       const stats = {
-        total: 4,
-        available: 2,
-        occupied: 1,
-        maintenance: 1,
-        averageRent: 975,
-        occupancyRate: 75,
-        averageSize: 156, // sq ft
-        byType: {
-          bedroom: 3,
-          bathroom: 2,
-          living_room: 1,
-          kitchen: 1
+        total,
+        byStatus,
+        averageRent,
+        occupancyRate,
+        averageSize,
+        byType,
+        revenue: {
+          potential: potentialMonthlyRevenue,
+          actual: actualMonthlyRevenue,
+          efficiency: revenueEfficiency
         },
-        byStatus: {
-          available: 2,
-          occupied: 1,
-          maintenance: 1
+        amenities: {
+          total: rooms.reduce((sum, room) => sum + (room.amenities?.length || 0), 0),
+          average: total > 0 ? Math.round(rooms.reduce((sum, room) => 
+            sum + (room.amenities?.length || 0), 0) / total) : 0
+        },
+        maintenance: {
+          pending: rooms.reduce((sum, room) => 
+            sum + (room.maintenanceSchedule?.filter(m => 
+              m.status === 'scheduled').length || 0), 0),
+          completed: rooms.reduce((sum, room) => 
+            sum + (room.maintenanceSchedule?.filter(m => 
+              m.status === 'completed').length || 0), 0)
         }
       };
+
+      logger.info('Property room statistics retrieved', {
+        propertyId,
+        profileId: req.userId,
+        total,
+        occupancyRate,
+        revenueEfficiency
+      });
+
+      businessLogger.info('Property room statistics', {
+        propertyId,
+        profileId: req.userId,
+        total,
+        occupancyRate,
+        revenueEfficiency,
+        averageRent,
+        potentialRevenue: potentialMonthlyRevenue,
+        actualRevenue: actualMonthlyRevenue
+      });
 
       res.json(successResponse(
         stats,

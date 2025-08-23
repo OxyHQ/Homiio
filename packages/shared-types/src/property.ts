@@ -28,27 +28,6 @@ export interface PropertyRent {
   hasReducedDeposit?: boolean;
 }
 
-export interface PropertyEnergyStats {
-  current: {
-    voltage: number;
-    current: number;
-    power: number;
-    powerFactor: number;
-    frequency: number;
-  };
-  consumption: {
-    daily: number;
-    weekly: number;
-    monthly: number;
-    cost: {
-      daily: number;
-      weekly: number;
-      monthly: number;
-      currency: string;
-    };
-  };
-}
-
 export interface PropertyImage {
   url: string;
   caption?: string;
@@ -111,7 +90,13 @@ export interface PropertyCharacteristics {
 export interface Property {
   _id: string; // MongoDB ObjectId
   id?: string; // Optional fallback
-  profileId: string; // Required profileId for landlord info
+  profileId?: string; // Optional for external properties
+  // External sourcing metadata
+  source?: string; // Source name (e.g., 'fotocasa', 'internal')
+  sourceId?: string; // External source ID
+  sourceUrl?: string; // URL to the property on the source website
+  isExternal?: boolean; // Whether this property comes from external source
+  expiresAt?: string; // TTL for external properties
   address: Address;
   type: PropertyType;
   housingType?: HousingType;
@@ -128,7 +113,6 @@ export interface Property {
   ownerId?: string; // Made optional since we use profileId
   roomCount?: number;
   location?: GeoJSONPoint;
-  energyStats?: PropertyEnergyStats;
   // Additional property details
   floor?: number;
   hasElevator?: boolean;
@@ -307,7 +291,6 @@ export interface PropertyDetail {
   availableFrom: string;
   minStay: string;
   rating: number;
-  energyRating: string;
   images: string[];
 }
 

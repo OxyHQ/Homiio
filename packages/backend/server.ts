@@ -14,6 +14,7 @@ import database from './database/connection';
 import publicRoutes from './routes/public';
 import { OxyServices } from '@oxyhq/services/core';
 import { stripeWebhook, confirmCheckoutSession } from './controllers/billingController';
+import { initCronJobs } from './services/cron';
 
 const oxy = new OxyServices({ baseURL: 'https://localhost:3001' });
 
@@ -177,7 +178,6 @@ app.get('/', (req, res) => {
     features: [
       'Property management',
       'Room management', 
-      'Energy monitoring',
       'Oxy ecosystem integration'
     ]
   });
@@ -192,7 +192,7 @@ app.get('/health', async (req, res) => {
     timestamp: new Date().toISOString(),
     version,
     environment: config.environment,
-    features: ['property-management', 'room-management', 'energy-monitoring'],
+    features: ['property-management', 'room-management'],
     database: {
       status: dbHealth.status,
       message: dbHealth.message
@@ -238,7 +238,7 @@ async function startServer() {
     const server = app.listen(port, () => {
       console.log(`🚀 Homio Backend running on port ${port}`);
       console.log(`Environment: ${config.environment}`);
-      console.log('Features: Property & Room Management, Energy Monitoring, AI Streaming');
+      console.log('Features: Property & Room Management, AI Streaming');
       console.log('Available endpoints:');
       console.log('  GET  /health - Health check (public)');
       console.log('  GET  /api/health - API health check');
@@ -253,6 +253,10 @@ async function startServer() {
       console.log('  POST /api/ai/stream - AI text streaming (authenticated)');
       console.log('  POST /api/ai/chat - AI chat completion (authenticated)');
       console.log('  GET  /api/ai/health - AI service health check');
+      // Initialize cron jobs (only in non-serverless persistent environments)
+      if (!process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
+        initCronJobs();
+      }
     });
 
     // Handle EADDRINUSE gracefully
