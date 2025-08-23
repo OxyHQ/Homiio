@@ -143,12 +143,6 @@ const propertySchema = new mongoose.Schema({
     type: Date,
     index: { expireAfterSeconds: 0 }, // TTL index; document auto-removed after this date
   },
-  title: {
-    type: String,
-    required: [true, 'Property title is required'],
-    trim: true,
-    maxlength: [200, 'Title cannot exceed 200 characters']
-  },
   description: {
     type: String,
     trim: true,
