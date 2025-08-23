@@ -91,8 +91,8 @@ async function auditDatabase() {
       console.log(`   - Has embedded address: ${property.address ? 'YES' : 'NO'}`);
       console.log(`   - Has addressId: ${property.addressId ? 'YES' : 'NO'}`);
       console.log(`   - AddressId populated: ${property.addressId?._id ? 'YES' : 'NO'}`);
-      if (property.addressId?.city) {
-        console.log(`   - Address city: ${property.addressId.city}`);
+      if (property.address?.city) {
+        console.log(`   - Address city: ${property.address.city}`);
       }
     });
     
