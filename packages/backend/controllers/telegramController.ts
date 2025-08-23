@@ -128,17 +128,33 @@ class TelegramController {
 
       if (propertyIds && propertyIds.length > 0) {
         // Send notifications for specific properties
-        properties = await Property.find({ _id: { $in: propertyIds } });
+        properties = await Property.find({ _id: { $in: propertyIds } }).populate('addressId');
       } else if (filters) {
         // Send notifications based on filters
         const query: any = {};
         
-        if (filters.city) query['address.city'] = new RegExp(filters.city, 'i');
+        // Handle city filter with Address lookup
+        if (filters.city) {
+          const { Address } = require('../models');
+          const addressQuery = { city: new RegExp(filters.city, 'i') };
+          const matchingAddresses = await Address.find(addressQuery).select('_id');
+          const addressIds = matchingAddresses.map(addr => addr._id);
+          
+          if (addressIds.length === 0) {
+            return res.json(successResponse(
+              { total: 0, successful: 0, failed: 0 },
+              'No properties found in specified city'
+            ));
+          }
+          
+          query.addressId = { $in: addressIds };
+        }
+        
         if (filters.type) query.type = filters.type;
         if (filters.createdAfter) query.createdAt = { $gte: new Date(filters.createdAfter) };
         if (filters.status) query.status = filters.status;
 
-        properties = await Property.find(query).limit(50); // Limit to prevent abuse
+        properties = await Property.find(query).populate('addressId').limit(50); // Limit to prevent abuse
       } else {
         return next(new AppError('Either propertyIds or filters must be provided', 400, 'MISSING_PARAMETERS'));
       }

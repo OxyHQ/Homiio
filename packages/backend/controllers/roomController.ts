@@ -348,16 +348,36 @@ class RoomController {
         sortOrder = 'asc'
       } = req.query;
 
+      const pageNumber = parseInt(page);
+      const limitNumber = parseInt(limit);
+
       // Build property filters for location
       const propertyFilters: any = {
         status: 'active'
       };
-      if (city) propertyFilters['address.city'] = new RegExp(city, 'i');
-      if (state) propertyFilters['address.state'] = new RegExp(state, 'i');
+      
+      // Handle city and state filters with Address lookup
+      if (city || state) {
+        const { Address } = require('../models');
+        const addressQuery: any = {};
+        if (city) addressQuery.city = new RegExp(city, 'i');
+        if (state) addressQuery.state = new RegExp(state, 'i');
+        
+        const matchingAddresses = await Address.find(addressQuery).select('_id');
+        const addressIds = matchingAddresses.map(addr => addr._id);
+        
+        if (addressIds.length === 0) {
+          // No matching addresses found, return empty result
+          return res.json(paginationResponse([], pageNumber, limitNumber, 0, 'No rooms found'));
+        }
+        
+        propertyFilters.addressId = { $in: addressIds };
+      }
 
       // Find matching properties first
       const properties = await Property.find(propertyFilters)
-        .select('_id address type rooms')
+        .populate('addressId')
+        .select('_id addressId type rooms')
         .lean();
 
       const propertyIds = properties.map(p => p._id);

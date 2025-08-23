@@ -219,11 +219,38 @@ class CityController {
       }
 
       const skip = (page - 1) * limit;
+      
+      // Find addresses that match the city criteria
+      const { Address } = require('../models');
+      const addressQuery = {
+        city: { $regex: city.name, $options: 'i' },
+        state: { $regex: city.state, $options: 'i' },
+        country: { $regex: city.country, $options: 'i' }
+      };
+      
+      const matchingAddresses = await Address.find(addressQuery).select('_id');
+      const addressIds = matchingAddresses.map(addr => addr._id);
+      
+      if (addressIds.length === 0) {
+        // No matching addresses found, return empty result
+        return res.json({
+          success: true,
+          message: 'Properties retrieved successfully',
+          data: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            totalPages: 0,
+            hasNext: false,
+            hasPrev: false
+          }
+        });
+      }
+      
       const query: any = {
-        'address.city': { $regex: city.name, $options: 'i' },
-        'address.state': { $regex: city.state, $options: 'i' },
-        'address.country': { $regex: city.country, $options: 'i' },
-        isActive: true
+        addressId: { $in: addressIds },
+        status: 'active'
       };
 
       // Add filters
@@ -268,6 +295,7 @@ class CityController {
         .sort(sortObj)
         .skip(skip)
         .limit(Number(limit))
+        .populate('addressId')
         .populate('owner', 'name email avatar')
         .select('-__v');
 

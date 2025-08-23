@@ -70,7 +70,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       
       if (addressIds.length === 0) {
         // No matching addresses found, return empty result
-        return paginationResponse(res, [], 0, pageNumber, limitNumber);
+        return res.json(paginationResponse([], pageNumber, limitNumber, 0));
       }
       
       filters.addressId = { $in: addressIds };
