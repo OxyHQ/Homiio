@@ -1197,6 +1197,7 @@ class ProfileController {
       const skip = (parseInt(page) - 1) * parseInt(limit);
       const [properties, total] = await Promise.all([
         Property.find({ profileId: activeProfile._id, status: { $ne: 'archived' } })
+          .populate('addressId')
           .skip(skip)
           .limit(parseInt(limit))
           .sort({ createdAt: -1 })
@@ -1259,7 +1260,13 @@ class ProfileController {
       const recentViews = await RecentlyViewed.find({ profileId: activeProfile._id })
         .sort({ viewedAt: -1 })
         .limit(parseInt(limit))
-        .populate('propertyId')
+        .populate({
+          path: 'propertyId',
+          populate: {
+            path: 'addressId',
+            model: 'Address'
+          }
+        })
         .lean();
 
       console.log(`[getRecentProperties] Found ${recentViews.length} recently viewed records`);
@@ -1352,7 +1359,7 @@ class ProfileController {
         .lean();
 
       const propertyIds = savedRows.map((row: any) => row.targetId);
-      const properties = await Property.find({ _id: { $in: propertyIds } }).lean();
+      const properties = await Property.find({ _id: { $in: propertyIds } }).populate('addressId').lean();
 
       // Map propertyId to doc for quick lookup
       const propById: Record<string, any> = {};
@@ -2040,7 +2047,13 @@ class ProfileController {
       // Get recently viewed records WITH population
       const populatedRecentViews = await RecentlyViewed.find({ profileId: activeProfile._id })
         .sort({ viewedAt: -1 })
-        .populate('propertyId')
+        .populate({
+          path: 'propertyId',
+          populate: {
+            path: 'addressId',
+            model: 'Address'
+          }
+        })
         .lean();
 
       // Check if properties exist
