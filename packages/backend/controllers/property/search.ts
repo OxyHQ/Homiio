@@ -9,8 +9,24 @@ export async function searchProperties(req, res, next) {
     const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const andConditions = [];
     if (type) andConditions.push({ type });
-    if (city) andConditions.push({ 'address.city': new RegExp(String(city), 'i') });
-    if (state) andConditions.push({ 'address.state': new RegExp(String(state), 'i') });
+    
+    // Handle city and state filters with Address lookup
+    if (city || state) {
+      const { Address } = require('../../models');
+      const addressQuery: any = {};
+      if (city) addressQuery.city = new RegExp(String(city), 'i');
+      if (state) addressQuery.state = new RegExp(String(state), 'i');
+      
+      const matchingAddresses = await Address.find(addressQuery).select('_id');
+      const addressIds = matchingAddresses.map((addr: any) => addr._id);
+      
+      if (addressIds.length === 0) {
+        // No matching addresses found, return empty result
+        return res.json(paginationResponse([], parseInt(page), parseInt(limit), 0, 'No properties found for the specified location'));
+      }
+      
+      andConditions.push({ addressId: { $in: addressIds } });
+    }
     if (minRent || maxRent) {
       const rentFilter = {} as any; if (minRent) rentFilter.$gte = parseInt(String(minRent)); if (maxRent) rentFilter.$lte = parseInt(String(maxRent)); andConditions.push({ 'rent.amount': rentFilter });
     }
@@ -38,13 +54,49 @@ export async function searchProperties(req, res, next) {
     const effAvailable = available!==undefined ? available==='true': undefined; if (effAvailable!==undefined) andConditions.push({ 'availability.isAvailable': effAvailable }); else andConditions.push({ 'availability.isAvailable': true });
     andConditions.push({ status: 'active' });
     if (excludeIds) { try { const mongoose = require('mongoose'); const list = String(excludeIds).split(',').map((s)=>s.trim()).filter(Boolean).filter((id)=>mongoose.Types.ObjectId.isValid(id)).map((id)=> new mongoose.Types.ObjectId(id)); if (list.length) andConditions.push({ _id: { $nin: list } }); } catch {} }
-    if (lat && lng && radius) { const latitude=parseFloat(lat); const longitude=parseFloat(lng); const radiusInMeters=parseFloat(radius); if (latitude<-90||latitude>90||longitude<-180||longitude>180) return res.status(400).json({ success:false, message:'Invalid coordinates provided', error:'INVALID_COORDINATES'}); andConditions.push({ 'address.coordinates': { $near: { $geometry: { type:'Point', coordinates:[longitude, latitude]}, $maxDistance: radiusInMeters }}}); }
+    // Handle geospatial search with Address lookup
+    if (lat && lng && radius) { 
+      const latitude=parseFloat(lat); 
+      const longitude=parseFloat(lng); 
+      const radiusInMeters=parseFloat(radius); 
+      if (latitude<-90||latitude>90||longitude<-180||longitude>180) return res.status(400).json({ success:false, message:'Invalid coordinates provided', error:'INVALID_COORDINATES'}); 
+      
+      // Find addresses within the radius first
+      const { Address } = require('../../models');
+      const nearbyAddresses = await Address.find({
+        coordinates: { 
+          $near: { 
+            $geometry: { type:'Point', coordinates:[longitude, latitude]}, 
+            $maxDistance: radiusInMeters 
+          }
+        }
+      }).select('_id');
+      
+      const addressIds = nearbyAddresses.map(addr => addr._id);
+      if (addressIds.length === 0) {
+        return res.json(paginationResponse([], parseInt(page), parseInt(limit), 0, 'No properties found within the specified radius'));
+      }
+      
+      andConditions.push({ addressId: { $in: addressIds } });
+    }
     // For now, don't filter by coordinates when bounds are provided
     // This will return all properties so we can see if there are any properties at all
     // We can add geospatial filtering back once we confirm properties exist
     const skip = (parseInt(page)-1)*parseInt(limit);
     const baseFilter = andConditions.length? { $and: andConditions }: {};
-    const runQuery = async (filter, useTextSort) => { const q = Property.find(filter).skip(skip).limit(parseInt(limit)); const effBudget = (String(budgetFriendly).toLowerCase()==='true'); if (useTextSort) { if (effBudget) q.sort({ score:{ $meta:'textScore'}, 'rent.amount':1 }).select({ score:{ $meta:'textScore'} }); else q.sort({ score:{ $meta:'textScore'} }).select({ score:{ $meta:'textScore'} }); } else { if (effBudget) q.sort({ 'rent.amount':1 }); else q.sort({ createdAt:-1 }); } const [items,count]= await Promise.all([q.lean(), Property.countDocuments(filter)]); return { items, count }; };
+    const runQuery = async (filter, useTextSort) => { 
+      const q = Property.find(filter).populate('addressId').skip(skip).limit(parseInt(limit)); 
+      const effBudget = (String(budgetFriendly).toLowerCase()==='true'); 
+      if (useTextSort) { 
+        if (effBudget) q.sort({ score:{ $meta:'textScore'}, 'rent.amount':1 }).select({ score:{ $meta:'textScore'} }); 
+        else q.sort({ score:{ $meta:'textScore'} }).select({ score:{ $meta:'textScore'} }); 
+      } else { 
+        if (effBudget) q.sort({ 'rent.amount':1 }); 
+        else q.sort({ createdAt:-1 }); 
+      } 
+      const [items,count]= await Promise.all([q.lean(), Property.countDocuments(filter)]); 
+      return { items, count }; 
+    };
     let resultItems=[]; let resultTotal=0;
     if (query) { 
       const textFilter = { ...baseFilter, $text: { $search: String(query) } }; 
@@ -55,7 +107,31 @@ export async function searchProperties(req, res, next) {
       } else { 
         const safe=escapeRegExp(String(query)); 
         const regex=new RegExp(safe,'i'); 
-        const regexFilter = { ...baseFilter, $or:[ { title:regex }, { description:regex }, { 'address.city':regex }, { 'address.state':regex }, { 'address.street':regex }, { amenities: regex } ]}; 
+        
+        // For address field searches, we need to find matching addresses first
+        const { Address } = require('../../models');
+        const addressMatches = await Address.find({
+          $or: [
+            { city: regex },
+            { state: regex }, 
+            { street: regex }
+          ]
+        }).select('_id');
+        
+        const addressIds = addressMatches.map(addr => addr._id);
+        
+        // Build regex filter with address ID lookup when needed
+        let regexOrConditions = [
+          { title: regex }, 
+          { description: regex }, 
+          { amenities: regex }
+        ];
+        
+        if (addressIds.length > 0) {
+          regexOrConditions.push({ addressId: { $in: addressIds } });
+        }
+        
+        const regexFilter = { ...baseFilter, $or: regexOrConditions }; 
         const regexRes = await runQuery(regexFilter,false); 
         resultItems=regexRes.items; 
         resultTotal=regexRes.count; 
@@ -68,11 +144,13 @@ export async function searchProperties(req, res, next) {
       // If no results and we have bounds, try without geospatial filter
       if (resultItems.length === 0 && bounds) {
         const fallbackFilter = { ...baseFilter };
-        // Remove the geospatial condition
+        // Remove any geospatial conditions from addressId lookups
         if (fallbackFilter.$and) {
-          fallbackFilter.$and = fallbackFilter.$and.filter(condition => 
-            !condition['address.coordinates'] || !condition['address.coordinates'].$geoWithin
-          );
+          fallbackFilter.$and = fallbackFilter.$and.filter(condition => {
+            // Keep all conditions except those that might be geospatial address lookups
+            // Since we've already converted to addressId lookups, this is less of a concern
+            return true; 
+          });
         }
         const fallbackRes = await runQuery(fallbackFilter, false);
         resultItems = fallbackRes.items;

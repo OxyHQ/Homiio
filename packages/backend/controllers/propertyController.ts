@@ -7,7 +7,6 @@ class PropertyController { }
 // Attach handlers to preserve existing interface (instance methods)
 [
   'createProperty',
-  'createPropertyDev',
   'getProperties',
   'getPropertyById',
   'getMyProperties',

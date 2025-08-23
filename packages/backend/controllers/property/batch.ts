@@ -8,7 +8,7 @@ export async function getPropertiesByIds(req, res, next) {
     const mongoose = require('mongoose');
     const list = String(ids).split(',').map((s)=>s.trim()).filter(Boolean).filter((id)=>mongoose.Types.ObjectId.isValid(id)).map((id)=> new mongoose.Types.ObjectId(id));
     if (!list.length) return res.json(paginationResponse([],1,0,0,'No valid IDs provided'));
-    const docs = await Property.find({ _id: { $in: list }, status:'active' }).lean();
+    const docs = await Property.find({ _id: { $in: list }, status:'active' }).populate('addressId').lean();
     return res.json(successResponse(docs,'Properties fetched by IDs'));
   } catch (error) { next(error); }
 }
@@ -21,7 +21,7 @@ export async function getPropertiesByOwner(req, res, next) {
     if (exclude && mongoose.Types.ObjectId.isValid(exclude)) query._id = { $ne: new mongoose.Types.ObjectId(exclude) };
     const skip = (parseInt(page)-1)*parseInt(limit);
     const [properties,total] = await Promise.all([
-      Property.find(query).sort({ createdAt:-1 }).skip(skip).limit(parseInt(limit)).lean(),
+      Property.find(query).populate('addressId').sort({ createdAt:-1 }).skip(skip).limit(parseInt(limit)).lean(),
       Property.countDocuments(query)
     ]);
     res.json(paginationResponse(properties, parseInt(page), parseInt(limit), total, "Owner's properties retrieved successfully"));
