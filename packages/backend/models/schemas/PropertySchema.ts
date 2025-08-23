@@ -6,6 +6,7 @@
 
 const mongoose = require('mongoose');
 const validator = require('validator');
+const { transformAddressFields } = require('../utils/helpers');
 const { 
   PropertyType, 
   PropertyStatus, 
@@ -455,18 +456,8 @@ const propertySchema = new mongoose.Schema({
     transform: function(doc, ret) {
       ret.id = ret._id;
       
-      // Alias populated addressId to address and handle showAddressNumber
-      if (ret.addressId && typeof ret.addressId === 'object' && ret.addressId._id) {
-        ret.address = { ...ret.addressId };
-        
-        // Remove showAddressNumber from address object (it should be at property level)
-        if (ret.address.showAddressNumber !== undefined) {
-          delete ret.address.showAddressNumber;
-        }
-        
-        // Remove addressId from response - only return the aliased address
-        delete ret.addressId;
-      }
+      // Apply address field transformation
+      transformAddressFields(ret);
       
       return ret;
     }
@@ -474,18 +465,8 @@ const propertySchema = new mongoose.Schema({
   toObject: { 
     virtuals: true,
     transform: function(doc, ret) {
-      // Apply same transformation for toObject (used by lean queries)
-      if (ret.addressId && typeof ret.addressId === 'object' && ret.addressId._id) {
-        ret.address = { ...ret.addressId };
-        
-        // Remove showAddressNumber from address object (it should be at property level)
-        if (ret.address.showAddressNumber !== undefined) {
-          delete ret.address.showAddressNumber;
-        }
-        
-        // Remove addressId from response - only return the aliased address
-        delete ret.addressId;
-      }
+      // Apply address field transformation (used by lean queries)
+      transformAddressFields(ret);
       
       return ret;
     }
@@ -540,24 +521,10 @@ propertySchema.virtual('primaryImage').get(function() {
 propertySchema.post(['find', 'findOne', 'findOneAndUpdate'], function(docs) {
   if (!docs) return;
   
-  const transformDoc = (doc) => {
-    if (doc && doc.addressId && typeof doc.addressId === 'object' && doc.addressId._id) {
-      doc.address = { ...doc.addressId };
-      
-      // Remove showAddressNumber from address object (it should be at property level)
-      if (doc.address.showAddressNumber !== undefined) {
-        delete doc.address.showAddressNumber;
-      }
-      
-      // Remove addressId from response - only return the aliased address
-      delete doc.addressId;
-    }
-  };
-  
   if (Array.isArray(docs)) {
-    docs.forEach(transformDoc);
+    docs.forEach(transformAddressFields);
   } else {
-    transformDoc(docs);
+    transformAddressFields(docs);
   }
 });
 

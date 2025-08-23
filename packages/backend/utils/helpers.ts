@@ -117,6 +117,25 @@ const sleep = (ms) => {
   return new Promise(resolve => setTimeout(resolve, ms));
 };
 
+/**
+ * Transform address fields for Property documents
+ * Converts populated addressId to address and removes showAddressNumber from address object
+ */
+const transformAddressFields = (obj) => {
+  if (obj && obj.addressId && typeof obj.addressId === 'object' && obj.addressId._id) {
+    obj.address = { ...obj.addressId };
+    
+    // Remove showAddressNumber from address object (it should be at property level)
+    if (obj.address.showAddressNumber !== undefined) {
+      delete obj.address.showAddressNumber;
+    }
+    
+    // Remove addressId from response - only return the aliased address
+    delete obj.addressId;
+  }
+  return obj;
+};
+
 
 
 module.exports = {
@@ -131,5 +150,6 @@ module.exports = {
   isEmpty,
   formatDate,
   randomString,
-  sleep
+  sleep,
+  transformAddressFields
 };
