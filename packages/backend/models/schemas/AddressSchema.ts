@@ -49,10 +49,6 @@ const addressSchema = new mongoose.Schema({
     trim: true,
     maxlength: [100, 'Neighborhood name cannot exceed 100 characters']
   },
-  showAddressNumber: {
-    type: Boolean,
-    default: true
-  },
   coordinates: {
     type: {
       type: String,
@@ -109,7 +105,7 @@ addressSchema.virtual('location').get(function() {
 
 // Static method to find or create address
 addressSchema.statics.findOrCreate = async function(addressData) {
-  const { street, city, state, zipCode, country = 'USA', neighborhood, coordinates, showAddressNumber = true } = addressData;
+  const { street, city, state, zipCode, country = 'USA', neighborhood, coordinates } = addressData;
   
   // First try to find existing address
   let address = await this.findOne({
@@ -132,8 +128,7 @@ addressSchema.statics.findOrCreate = async function(addressData) {
     zipCode: zipCode.trim(),
     country: country.trim(),
     neighborhood,
-    coordinates,
-    showAddressNumber
+    coordinates
   });
 
   return await address.save();
