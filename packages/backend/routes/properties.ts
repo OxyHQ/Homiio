@@ -7,10 +7,9 @@ const { asyncHandler } = require('../middlewares/errorHandler');
 
 // Property creation (requires authentication)
 router.post("/", validation.validateProperty, asyncHandler(propertyController.createProperty));
-router.post("/dev", validation.validateProperty, asyncHandler(propertyController.createPropertyDev));
 
 // Property management (requires authentication)
-router.post("/test-telegram", validation.validateProperty, asyncHandler(propertyController.createPropertyDev));
+router.post("/test-telegram", validation.validateProperty, asyncHandler(propertyController.createProperty));
 router.put("/:propertyId", validation.validateProperty, asyncHandler(propertyController.updateProperty));
 router.delete("/:propertyId", asyncHandler(propertyController.deleteProperty));
 
