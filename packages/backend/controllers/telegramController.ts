@@ -247,6 +247,7 @@ class TelegramController {
         createdAt: { $gte: sinceDate },
         status: 'active'
       })
+      .populate('addressId')
       .limit(parseInt(limit))
       .sort({ createdAt: -1 });
 
