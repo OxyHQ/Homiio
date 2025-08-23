@@ -142,6 +142,12 @@ const propertySchema = new mongoose.Schema({
     type: Date,
     index: { expireAfterSeconds: 0 }, // TTL index; document auto-removed after this date
   },
+  title: {
+    type: String,
+    required: [true, 'Property title is required'],
+    trim: true,
+    maxlength: [200, 'Title cannot exceed 200 characters']
+  },
   description: {
     type: String,
     trim: true,
@@ -444,6 +450,12 @@ const propertySchema = new mongoose.Schema({
     virtuals: true,
     transform: function(doc, ret) {
       ret.id = ret._id;
+      
+      // Alias populated addressId to address for backwards compatibility
+      if (ret.addressId && typeof ret.addressId === 'object' && ret.addressId._id) {
+        ret.address = ret.addressId;
+      }
+      
       return ret;
     }
   },
@@ -468,19 +480,23 @@ propertySchema.index({
 
 // Virtual for full address (requires population)
 propertySchema.virtual('fullAddress').get(function() {
-  if (this.address) {
-    return `${this.address.street}, ${this.address.city}, ${this.address.state} ${this.address.zipCode}`;
+  // Use populated addressId (backwards compatible with address field)
+  const address = this.addressId || this.address;
+  if (address && address.street) {
+    return `${address.street}, ${address.city}, ${address.state} ${address.zipCode}`;
   }
   return null;
 });
 
 // Virtual for location string (requires population)
 propertySchema.virtual('location').get(function() {
-  if (this.address) {
+  // Use populated addressId (backwards compatible with address field)
+  const address = this.addressId || this.address;
+  if (address && address.city) {
     const parts = [];
-    if (this.address.city) parts.push(this.address.city);
-    if (this.address.state) parts.push(this.address.state);
-    if (this.address.country && this.address.country !== 'USA') parts.push(this.address.country);
+    if (address.city) parts.push(address.city);
+    if (address.state) parts.push(address.state);
+    if (address.country && address.country !== 'USA') parts.push(address.country);
     return parts.join(', ');
   }
   return null;
@@ -718,10 +734,12 @@ propertySchema.methods.setLocation = async function(longitude, latitude) {
 
 propertySchema.methods.getCoordinates = function() {
   // This method requires the address to be populated
-  if (this.address && this.address.coordinates && this.address.coordinates.coordinates && this.address.coordinates.coordinates.length === 2) {
+  // Use addressId (populated) or fallback to address for backwards compatibility
+  const address = this.addressId || this.address;
+  if (address && address.coordinates && address.coordinates.coordinates && address.coordinates.coordinates.length === 2) {
     return {
-      longitude: this.address.coordinates.coordinates[0],
-      latitude: this.address.coordinates.coordinates[1]
+      longitude: address.coordinates.coordinates[0],
+      latitude: address.coordinates.coordinates[1]
     };
   }
   return null;
