@@ -997,7 +997,21 @@
     "error": "Error",
     "notFound": "Property not found",
     "bed": "Bed",
-    "bath": "Bath"
+    "bath": "Bath",
+    "pricingReviewNeeded": "Pricing Review Needed",
+    "bedrooms": "Number of Bedrooms",
+    "bathrooms": "Number of Bathrooms",
+    "customNumber": {
+      "title": "Enter Custom Number",
+      "placeholder": "Enter number",
+      "confirm": "Confirm",
+      "cancel": "Cancel"
+    },
+    "suggestedRent": "Suggested: ${{amount}}/month",
+    "maxEthicalRent": "Max Ethical: ${{amount}}/month",
+    "ethicalPricingWarning": "Your price exceeds the ethical maximum. Consider lowering it to make housing more accessible.",
+    "warningBullet": "• {{warning}}",
+    "ethicalPricing": "Ethical Pricing"
   },
   "viewings": {
     "title": "Viewings",

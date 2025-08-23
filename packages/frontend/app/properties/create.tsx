@@ -20,6 +20,8 @@ import Map from '@/components/Map';
 import { PropertyPreviewWidget } from '@/components/widgets/PropertyPreviewWidget';
 import { ImageUpload } from '@/components/ImageUpload';
 import Button from '@/components/button';
+import { StepsContainer } from '@/components/StepsContainer';
+import { NumberSelector } from '@/components/NumberSelector';
 import {
   useCreatePropertyFormStore,
   useCreatePropertyFormSelectors,
@@ -780,6 +782,24 @@ export default function CreatePropertyScreen() {
     }
   };
 
+  // Validate address number
+  const validateAddressNumber = (number: string): string | null => {
+    if (!number) return null; // Optional field
+    if (!/^\d+[a-zA-Z]?$/.test(number)) {
+      return 'Please enter a valid address number (e.g., 123 or 123A)';
+    }
+    return null;
+  };
+
+  // Validate floor number
+  const validateFloor = (floor: number | undefined): string | null => {
+    if (floor === undefined) return null; // Optional field
+    if (floor < -5 || floor > 100) {
+      return 'Please enter a valid floor number (-5 to 100)';
+    }
+    return null;
+  };
+
   // Handle showAddressNumber toggle
   const handleShowAddressNumberToggle = (show: boolean) => {
     const currentLocation = formData.location;
@@ -800,6 +820,27 @@ export default function CreatePropertyScreen() {
       ...currentLocation,
       showFloor: show,
     });
+  };
+
+  // Handle address number change with validation
+  const handleAddressNumberChange = (text: string) => {
+    const error = validateAddressNumber(text);
+    setValidationErrors(prev => ({
+      ...prev,
+      addressNumber: error || ''
+    }));
+    updateFormField('location', 'addressNumber', text);
+  };
+
+  // Handle floor change with validation
+  const handleFloorChange = (text: string) => {
+    const floor = text ? parseInt(text) : undefined;
+    const error = validateFloor(floor);
+    setValidationErrors(prev => ({
+      ...prev,
+      floor: error || ''
+    }));
+    updateFormField('location', 'floor', floor);
   };
 
 
@@ -904,8 +945,8 @@ export default function CreatePropertyScreen() {
     switch (stepName) {
       case 'Basic Info':
         return (
-          <View style={styles.formSection}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
+          <View>
+            <ThemedText type="subtitle">
               Basic Information
             </ThemedText>
 
@@ -945,15 +986,10 @@ export default function CreatePropertyScreen() {
             {fieldsToShow.includes('bedrooms') && (
               <View style={styles.formRow}>
                 <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
-                  <ThemedText style={styles.label}>Bedrooms</ThemedText>
-                  <TextInput
-                    style={[styles.input, validationErrors.bedrooms && styles.inputError]}
-                    value={formData.basicInfo.bedrooms?.toString() || ''}
-                    onChangeText={(text) =>
-                      updateFormField('basicInfo', 'bedrooms', parseInt(text) || 0)
-                    }
-                    keyboardType="numeric"
-                    placeholder="0"
+                  <ThemedText style={styles.label}>{t('property.bedrooms')}</ThemedText>
+                  <NumberSelector
+                    value={formData.basicInfo.bedrooms || 0}
+                    onChange={(value) => updateFormField('basicInfo', 'bedrooms', value)}
                   />
                   {validationErrors.bedrooms && (
                     <ThemedText style={styles.errorText}>{validationErrors.bedrooms}</ThemedText>
@@ -963,15 +999,10 @@ export default function CreatePropertyScreen() {
                 {/* Conditionally render Bathrooms */}
                 {fieldsToShow.includes('bathrooms') && (
                   <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
-                    <ThemedText style={styles.label}>Bathrooms</ThemedText>
-                    <TextInput
-                      style={[styles.input, validationErrors.bathrooms && styles.inputError]}
-                      value={formData.basicInfo.bathrooms?.toString() || ''}
-                      onChangeText={(text) =>
-                        updateFormField('basicInfo', 'bathrooms', parseFloat(text) || 0)
-                      }
-                      keyboardType="numeric"
-                      placeholder="0"
+                    <ThemedText style={styles.label}>{t('property.bathrooms')}</ThemedText>
+                    <NumberSelector
+                      value={formData.basicInfo.bathrooms || 0}
+                      onChange={(value) => updateFormField('basicInfo', 'bathrooms', value)}
                     />
                     {validationErrors.bathrooms && (
                       <ThemedText style={styles.errorText}>{validationErrors.bathrooms}</ThemedText>
@@ -1038,8 +1069,8 @@ export default function CreatePropertyScreen() {
 
       case 'Location':
         return (
-          <View style={styles.formSection}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
+          <View>
+            <ThemedText type="subtitle">
               Location
             </ThemedText>
 
@@ -1136,82 +1167,125 @@ export default function CreatePropertyScreen() {
 
             <View style={styles.formRow}>
               <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
-                <ThemedText style={styles.label}>Address Number</ThemedText>
-                <View style={styles.addressNumberContainer}>
-                  <TextInput
-                    style={[styles.input, { flex: 1, marginRight: 8 }]}
-                    value={formData.location.addressNumber || ''}
-                    onChangeText={(text) => updateFormField('location', 'addressNumber', text)}
-                    placeholder="Number"
-                    keyboardType="numeric"
+                <View style={styles.labelContainer}>
+                  <ThemedText style={styles.label}>Address Number</ThemedText>
+                  <IconComponent
+                    name="information-circle-outline"
+                    size={16}
+                    color={colors.COLOR_BLACK_LIGHT_4}
                   />
-                  <TouchableOpacity
-                    style={[
-                      styles.toggleButton,
-                      formData.location.showAddressNumber && styles.toggleButtonActive,
-                    ]}
-                    onPress={() =>
-                      handleShowAddressNumberToggle(!formData.location.showAddressNumber)
-                    }
-                  >
-                    <ThemedText
+                </View>
+                <View style={styles.addressDetailWrapper}>
+                  <View style={styles.addressDetailContainer}>
+                    <TextInput
                       style={[
-                        styles.toggleButtonText,
-                        formData.location.showAddressNumber && styles.toggleButtonTextActive,
+                        styles.detailInput,
+                        validationErrors.addressNumber && styles.inputError
                       ]}
+                      value={formData.location.addressNumber || ''}
+                      onChangeText={handleAddressNumberChange}
+                      placeholder="Enter number"
+                      keyboardType="numeric"
+                    />
+                    <TouchableOpacity
+                      style={[
+                        styles.privacyToggle,
+                        formData.location.showAddressNumber && styles.privacyToggleActive,
+                      ]}
+                      onPress={() =>
+                        handleShowAddressNumberToggle(!formData.location.showAddressNumber)
+                      }
                     >
-                      {formData.location.showAddressNumber ? 'Hide' : 'Show'}
-                    </ThemedText>
-                  </TouchableOpacity>
+                      <IconComponent
+                        name={formData.location.showAddressNumber ? "eye-outline" : "eye-off-outline"}
+                        size={20}
+                        color={formData.location.showAddressNumber ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                      />
+                      <ThemedText
+                        style={[
+                          styles.privacyToggleText,
+                          formData.location.showAddressNumber && styles.privacyToggleTextActive,
+                        ]}
+                      >
+                        {formData.location.showAddressNumber ? 'Public' : 'Private'}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.messageContainer}>
+                    {validationErrors.addressNumber && (
+                      <ThemedText style={styles.fieldError}>
+                        {validationErrors.addressNumber}
+                      </ThemedText>
+                    )}
+                    {formData.location.addressNumber && !formData.location.showAddressNumber && (
+                      <ThemedText style={styles.privacyMessage}>
+                        ℹ️ Will be shown as approximate for privacy
+                      </ThemedText>
+                    )}
+                  </View>
                 </View>
               </View>
 
               <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
-                <ThemedText style={styles.label}>Floor</ThemedText>
-                <View style={styles.addressNumberContainer}>
-                  <TextInput
-                    style={[styles.input, { flex: 1, marginRight: 8 }]}
-                    value={formData.location.floor?.toString() || ''}
-                    onChangeText={(text) =>
-                      updateFormField('location', 'floor', parseInt(text) || undefined)
-                    }
-                    placeholder="Floor"
-                    keyboardType="numeric"
+                <View style={styles.labelContainer}>
+                  <ThemedText style={styles.label}>Floor</ThemedText>
+                  <IconComponent
+                    name="information-circle-outline"
+                    size={16}
+                    color={colors.COLOR_BLACK_LIGHT_4}
                   />
-                  <TouchableOpacity
-                    style={[
-                      styles.toggleButton,
-                      formData.location.showFloor && styles.toggleButtonActive,
-                    ]}
-                    onPress={() => handleShowFloorToggle(!formData.location.showFloor)}
-                  >
-                    <ThemedText
+                </View>
+                <View style={styles.addressDetailWrapper}>
+                  <View style={styles.addressDetailContainer}>
+                    <TextInput
                       style={[
-                        styles.toggleButtonText,
-                        formData.location.showFloor && styles.toggleButtonTextActive,
+                        styles.detailInput,
+                        validationErrors.floor && styles.inputError
                       ]}
+                      value={formData.location.floor?.toString() || ''}
+                      onChangeText={handleFloorChange}
+                      placeholder="Enter floor"
+                      keyboardType="numeric"
+                    />
+                    <TouchableOpacity
+                      style={[
+                        styles.privacyToggle,
+                        formData.location.showFloor && styles.privacyToggleActive,
+                      ]}
+                      onPress={() => handleShowFloorToggle(!formData.location.showFloor)}
                     >
-                      {formData.location.showFloor ? 'Hide' : 'Show'}
-                    </ThemedText>
-                  </TouchableOpacity>
+                      <IconComponent
+                        name={formData.location.showFloor ? "eye-outline" : "eye-off-outline"}
+                        size={20}
+                        color={formData.location.showFloor ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+                      />
+                      <ThemedText
+                        style={[
+                          styles.privacyToggleText,
+                          formData.location.showFloor && styles.privacyToggleTextActive,
+                        ]}
+                      >
+                        {formData.location.showFloor ? 'Public' : 'Private'}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.messageContainer}>
+                    {validationErrors.floor && (
+                      <ThemedText style={styles.fieldError}>
+                        {validationErrors.floor}
+                      </ThemedText>
+                    )}
+                    {formData.location.floor && !formData.location.showFloor && (
+                      <ThemedText style={styles.privacyMessage}>
+                        ℹ️ Will be shown as approximate for privacy
+                      </ThemedText>
+                    )}
+                  </View>
                 </View>
               </View>
             </View>
 
-            {/* Privacy message - show when either number or floor is hidden */}
-            {(formData.location.addressNumber && !formData.location.showAddressNumber) ||
-              (formData.location.floor && !formData.location.showFloor) ? (
-              <View style={styles.formGroup}>
-                <ThemedText
-                  style={[
-                    styles.errorText,
-                    { fontSize: 12, color: colors.COLOR_BLACK_LIGHT_4, marginTop: 4 },
-                  ]}
-                >
-                  ℹ️ Approximate address shown for privacy
-                </ThemedText>
-              </View>
-            ) : null}
+
 
             <View style={styles.formGroup}>
               <ThemedText style={styles.label}>Neighborhood (optional)</ThemedText>
@@ -1309,8 +1383,8 @@ export default function CreatePropertyScreen() {
 
       case 'Pricing':
         return (
-          <View style={styles.formSection}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
+          <View>
+            <ThemedText type="subtitle">
               Pricing
             </ThemedText>
 
@@ -1410,8 +1484,8 @@ export default function CreatePropertyScreen() {
 
       case 'Amenities':
         return (
-          <View style={styles.formSection}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
+          <View>
+            <ThemedText type="subtitle">
               Amenities & Rules
             </ThemedText>
 
@@ -1423,10 +1497,10 @@ export default function CreatePropertyScreen() {
             />
 
             {/* Rules Section */}
-            <View style={styles.formSection}>
+            <View>
               <ThemedText
                 type="subtitle"
-                style={[styles.sectionTitle, { marginTop: 24, marginBottom: 16 }]}
+                style={{ marginTop: 24, marginBottom: 16 }}
               >
                 House Rules
               </ThemedText>
@@ -1556,8 +1630,8 @@ export default function CreatePropertyScreen() {
 
       case 'Coliving Features':
         return (
-          <View style={styles.formSection}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
+          <View>
+            <ThemedText type="subtitle">
               Coliving Features
             </ThemedText>
 
@@ -1686,8 +1760,8 @@ export default function CreatePropertyScreen() {
 
       case 'Media':
         return (
-          <View style={styles.formSection}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
+          <View>
+            <ThemedText type="subtitle">
               Media
             </ThemedText>
 
@@ -1703,8 +1777,8 @@ export default function CreatePropertyScreen() {
 
       case 'Preview':
         return (
-          <View style={styles.formSection}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
+          <View>
+            <ThemedText type="subtitle">
               Preview
             </ThemedText>
             <PropertyPreviewWidget />
@@ -1737,7 +1811,7 @@ export default function CreatePropertyScreen() {
 
       default:
         return (
-          <View style={styles.formSection}>
+          <View>
             <ThemedText>Unknown step: {stepName}</ThemedText>
           </View>
         );
@@ -1787,34 +1861,7 @@ export default function CreatePropertyScreen() {
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Step indicators */}
-        <View style={styles.stepsContainer}>
-          {steps.map((stepName, index) => (
-            <View key={index} style={styles.stepItem}>
-              <View
-                style={[
-                  styles.stepIndicator,
-                  index === currentStep && styles.stepIndicatorActive,
-                  index < currentStep && styles.stepIndicatorCompleted,
-                ]}
-              >
-                {index < currentStep ? (
-                  <IconComponent name="checkmark" size={16} color="white" />
-                ) : (
-                  <ThemedText
-                    style={[styles.stepNumber, index === currentStep && styles.stepNumberActive]}
-                  >
-                    {index + 1}
-                  </ThemedText>
-                )}
-              </View>
-              <ThemedText
-                style={[styles.stepLabel, index === currentStep && styles.stepLabelActive]}
-              >
-                {stepName}
-              </ThemedText>
-            </View>
-          ))}
-        </View>
+        <StepsContainer steps={steps} currentStep={currentStep} />
 
         {/* Form content */}
         <View style={styles.formContainer}>
@@ -1884,67 +1931,14 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 100,
   },
-  stepsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-    flexWrap: 'wrap',
-  },
-  stepItem: {
-    alignItems: 'center',
-    width: '14%', // 7 steps
-  },
-  stepIndicator: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  stepIndicatorActive: {
-    backgroundColor: colors.primaryColor,
-  },
-  stepIndicatorCompleted: {
-    backgroundColor: colors.primaryColor,
-  },
-  stepNumber: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: colors.COLOR_BLACK_LIGHT_4,
-  },
-  stepNumberActive: {
-    color: 'white',
-  },
-  stepLabel: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    textAlign: 'center',
-  },
-  stepLabelActive: {
-    color: colors.primaryColor,
-    fontWeight: 'bold',
-  },
-  formSection: {
-    backgroundColor: colors.primaryLight,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-  },
-  sectionTitle: {
-    marginBottom: 16,
-    color: colors.primaryDark,
-  },
+
+
+
   formGroup: {
     marginBottom: 16,
+  },
+  numberSelectorContainer: {
+    marginTop: 8,
   },
   formRow: {
     flexDirection: 'row',
@@ -2105,15 +2099,71 @@ const styles = StyleSheet.create({
     color: colors.primaryColor,
     fontWeight: 'bold',
   },
-  addressNumberContainer: {
+  labelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+  },
+  addressDetailWrapper: {
+    flex: 1,
+  },
+  addressDetailContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minHeight: 48,
+  },
+  messageContainer: {
+    marginTop: 4,
+  },
+  detailInput: {
+    flex: 1,
     backgroundColor: colors.COLOR_BLACK_LIGHT_9,
     borderWidth: 1,
     borderColor: colors.COLOR_BLACK_LIGHT_6,
     borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: colors.primaryDark,
+    height: 48,
+  },
+  privacyToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.COLOR_BLACK_LIGHT_9,
     paddingHorizontal: 12,
     paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.COLOR_BLACK_LIGHT_6,
+    gap: 6,
+  },
+  privacyToggleActive: {
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primaryColor,
+  },
+  privacyToggleText: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  privacyToggleTextActive: {
+    color: colors.primaryColor,
+    fontWeight: '600',
+  },
+  inputWrapper: {
+    flex: 1,
+  },
+  fieldError: {
+    color: '#FF3B30',
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 4,
+  },
+  privacyMessage: {
+    fontSize: 12,
+    color: colors.COLOR_BLACK_LIGHT_4,
+    marginTop: 4,
+    marginLeft: 4,
   },
   mediaUploadContainer: {
     alignItems: 'center',
