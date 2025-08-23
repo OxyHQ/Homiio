@@ -24,20 +24,49 @@ export async function createProperty(req, res, next) {
       }
       req.body.profileId = activeProfile._id;
     }
+
     const propertyData = { ...req.body, profileId: req.body.profileId };
-    if (req.body.location?.coordinates) {
-      propertyData.address = propertyData.address || {};
-      // Ensure coordinates are numbers
-      const coords = req.body.location.coordinates.map(coord => Number(coord));
-      propertyData.address.coordinates = {
-        type: req.body.location.type,
-        coordinates: coords
-      };
-      delete propertyData.location;
+    
+    // Handle address creation or reference
+    let addressId;
+    if (req.body.address) {
+      const { Address } = require('../../models');
+      
+      // Extract address data from request
+      let addressData = { ...req.body.address };
+      
+      // Handle coordinates from location field if provided
+      if (req.body.location?.coordinates) {
+        // Ensure coordinates are numbers
+        const coords = req.body.location.coordinates.map(coord => Number(coord));
+        addressData.coordinates = {
+          type: req.body.location.type || 'Point',
+          coordinates: coords
+        };
+      }
+      
+      // Find or create address
+      const address = await Address.findOrCreate(addressData);
+      addressId = address._id;
+    } else if (req.body.addressId) {
+      // Address ID directly provided
+      addressId = req.body.addressId;
+    } else {
+      return next(new AppError('Address information is required', 400, 'MISSING_ADDRESS'));
     }
+
+    // Remove address data from property and set addressId
+    delete propertyData.address;
+    delete propertyData.location;
+    propertyData.addressId = addressId;
+
     logger.info('Creating property with data', { propertyData });
     const property = new Property(propertyData);
     const savedProperty = await property.save();
+    
+    // Populate address for response
+    await savedProperty.populate('addressId');
+    
     businessLogger.propertyCreated(savedProperty._id, savedProperty.profileId);
     telegramService.sendPropertyNotification(savedProperty).catch(error => {
       logger.error('Failed to send Telegram notification for new property', { propertyId: savedProperty._id, error: error.message });

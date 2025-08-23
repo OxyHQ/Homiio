@@ -4,7 +4,7 @@ const { AppError, successResponse, paginationResponse } = require('../../middlew
 export async function getPropertyById(req, res, next) {
   try {
     const { propertyId } = req.params;
-    const property = await Property.findById(propertyId).lean();
+    const property = await Property.findById(propertyId).populate('addressId').lean();
     if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
     await Property.findByIdAndUpdate(propertyId, { $inc: { views: 1 } });
     if (req.userId && (req.user?.id || req.user?._id)) {
@@ -41,6 +41,7 @@ export async function getMyProperties(req, res, next) {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [properties, total] = await Promise.all([
       Property.find({ profileId: activeProfile._id, status: { $ne: 'archived' } })
+        .populate('addressId')
         .skip(skip)
         .limit(parseInt(limit))
         .sort({ createdAt: -1 })

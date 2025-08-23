@@ -50,11 +50,31 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       radius
     } = req.query as any;
 
+    const pageNumber = parseInt(String(page));
+    const limitNumber = parseInt(String(limit));
+
     const filters: any = {};
     if (profileId) filters.profileId = profileId;
     if (type) filters.type = type;
-    if (city) filters['address.city'] = new RegExp(city, 'i');
-    if (state) filters['address.state'] = new RegExp(String(state), 'i');
+    
+    // Handle city and state filters with Address lookup
+    let addressIds: string[] = [];
+    if (city || state) {
+      const { Address } = require('../../models');
+      const addressQuery: any = {};
+      if (city) addressQuery.city = new RegExp(city, 'i');
+      if (state) addressQuery.state = new RegExp(String(state), 'i');
+      
+      const matchingAddresses = await Address.find(addressQuery).select('_id');
+      addressIds = matchingAddresses.map((addr: any) => addr._id);
+      
+      if (addressIds.length === 0) {
+        // No matching addresses found, return empty result
+        return paginationResponse(res, [], 0, pageNumber, limitNumber);
+      }
+      
+      filters.addressId = { $in: addressIds };
+    }
 
     if (minBedrooms || maxBedrooms) {
       const br: any = {};
@@ -139,12 +159,11 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
 
     const sortOptions: any = {};
     sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
-    const pageNumber = parseInt(String(page));
-    const limitNumber = parseInt(String(limit));
     const skip = (pageNumber - 1) * limitNumber;
 
     const [properties, total] = await Promise.all([
       Property.find(filters)
+        .populate('addressId')
         .sort(sortOptions)
         .skip(skip)
         .limit(limitNumber)
@@ -178,7 +197,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
         const R = 6371000;
         const toRadians = (deg: number) => deg * Math.PI / 180;
         const computeDistance = (prop: any): number => {
-          const coords = prop?.address?.coordinates?.coordinates;
+          const coords = prop?.addressId?.coordinates?.coordinates;
             if (!Array.isArray(coords) || coords.length !== 2) return Number.POSITIVE_INFINITY;
           const [propLng, propLat] = coords;
           const dLat = toRadians(latitude - propLat);
@@ -227,8 +246,8 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
                 const priceRange = rent < 1000 ? 'low' : rent < 2000 ? 'medium' : 'high';
                 preferenceWeights.priceRanges[priceRange] = (preferenceWeights.priceRanges[priceRange] || 0) + 1;
               }
-              if (property.address?.city) {
-                preferenceWeights.locations[property.address.city] = (preferenceWeights.locations[property.address.city] || 0) + 1;
+              if (property.addressId?.city) {
+                preferenceWeights.locations[property.addressId.city] = (preferenceWeights.locations[property.addressId.city] || 0) + 1;
               }
               if (property.amenities) {
                 property.amenities.forEach((amenity: string) => {
@@ -245,7 +264,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
               const priceRange = rent < 1000 ? 'low' : rent < 2000 ? 'medium' : 'high';
               personalizedScore += (preferenceWeights.priceRanges[priceRange] || 0) * 12;
             }
-            if (property.address?.city) personalizedScore += (preferenceWeights.locations[property.address.city] || 0) * 20;
+            if (property.addressId?.city) personalizedScore += (preferenceWeights.locations[property.addressId.city] || 0) * 20;
             if (property.amenities) {
               property.amenities.forEach((amenity: string) => {
                 personalizedScore += (preferenceWeights.amenities[amenity] || 0) * 5;
