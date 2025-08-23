@@ -6,7 +6,7 @@
 
 const mongoose = require('mongoose');
 const validator = require('validator');
-const { transformAddressFields } = require('../utils/helpers');
+const { transformAddressFields } = require('../../utils/helpers');
 const { 
   PropertyType, 
   PropertyStatus, 
