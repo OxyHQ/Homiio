@@ -8,6 +8,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import { Header } from '@/components/Header';
 import { useOxy } from '@oxyhq/services';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -190,9 +191,7 @@ export default function ProfileScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
-          <ThemedText style={styles.headerTitle}>Profile Management</ThemedText>
-        </View>
+        <Header options={{ title: 'Profile Management' }} />
         <View style={styles.loadingContainer}>
           <LoadingSpinner size={32} text="Loading profiles..." />
         </View>
@@ -203,9 +202,7 @@ export default function ProfileScreen() {
   if (error) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
-          <ThemedText style={styles.headerTitle}>Profile Management</ThemedText>
-        </View>
+        <Header options={{ title: 'Profile Management' }} />
         <View style={styles.errorContainer}>
           <IconComponent name="alert-circle" size={48} color="#ff4757" />
           <ThemedText style={styles.errorTitle}>Failed to load profiles</ThemedText>
@@ -226,11 +223,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <ThemedText style={styles.headerTitle}>Profile Management</ThemedText>
-      </View>
-
+      <Header options={{ title: 'Profile Management' }} />
       <ScrollView style={styles.content}>
         {/* No Profile Section - Show when no primary profile exists */}
         {!activeProfile && !isLoading && (
@@ -651,19 +644,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f2f2f2',
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000',
-  },
+
   content: {
     flex: 1,
     padding: 16,
