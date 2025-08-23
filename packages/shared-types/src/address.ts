@@ -15,6 +15,15 @@ export interface Address {
   showAddressNumber?: boolean;
 }
 
+export interface AddressDocument extends Address {
+  _id: string;
+  id: string;
+  fullAddress: string;
+  location: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface AddressDetail extends Omit<Address, 'neighborhood'> {
   formattedAddress: string;
   neighborhood?: {

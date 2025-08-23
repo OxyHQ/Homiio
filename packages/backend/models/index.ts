@@ -5,6 +5,7 @@
 
 // Mongoose schemas (database models)
 const PropertyModel = require('./schemas/PropertySchema');
+const AddressModel = require('./schemas/AddressSchema');
 const RoomModel = require('./schemas/RoomSchema');
 const LeaseModel = require('./schemas/LeaseSchema');
 const RecentlyViewedModel = require('./schemas/RecentlyViewedSchema');
@@ -20,6 +21,7 @@ const BillingModel = require('./schemas/BillingSchema');
 module.exports = {
   // Mongoose models
   Property: PropertyModel,
+  Address: AddressModel,
   Room: RoomModel,
   Lease: LeaseModel,
   RecentlyViewed: RecentlyViewedModel,
