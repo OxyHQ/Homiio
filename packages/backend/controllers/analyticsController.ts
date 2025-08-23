@@ -64,6 +64,16 @@ class AnalyticsController {
 
       // Top cities by property count with avg rent
       const topCities = await Property.aggregate([
+        { $match: { addressId: { $exists: true, $ne: null } } },
+        {
+          $lookup: {
+            from: 'addresses',
+            localField: 'addressId',
+            foreignField: '_id',
+            as: 'address'
+          }
+        },
+        { $unwind: '$address' },
         { $match: { 'address.city': { $exists: true, $ne: null } } },
         {
           $group: {

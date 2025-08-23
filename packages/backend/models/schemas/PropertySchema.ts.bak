@@ -17,6 +17,76 @@ const {
   LeaseDuration
 } = require('@homiio/shared-types');
 
+const addressSchema = new mongoose.Schema({
+  street: {
+    type: String,
+    required: [true, 'Street address is required'],
+    trim: true,
+    maxlength: [200, 'Street address cannot exceed 200 characters']
+  },
+  city: {
+    type: String,
+    required: [true, 'City is required'],
+    trim: true,
+    maxlength: [100, 'City name cannot exceed 100 characters']
+  },
+  state: {
+    type: String,
+    required: [true, 'State is required'],
+    trim: true,
+    maxlength: [50, 'State name cannot exceed 50 characters']
+  },
+  zipCode: {
+    type: String,
+    required: [true, 'ZIP code is required'],
+    trim: true,
+    validate: {
+      validator: function(v) {
+        return /^\d{5}(-\d{4})?$/.test(v);
+      },
+      message: 'ZIP code must be in format 12345 or 12345-6789'
+    }
+  },
+  country: {
+    type: String,
+    required: [true, 'Country is required'],
+    trim: true,
+    default: 'USA',
+    maxlength: [50, 'Country name cannot exceed 50 characters']
+  },
+  neighborhood: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Neighborhood name cannot exceed 100 characters']
+  },
+  showAddressNumber: {
+    type: Boolean,
+    default: true
+  },
+  coordinates: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      required: true,
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number],
+      required: true,
+      validate: {
+        validator: function(coords) {
+          if (!Array.isArray(coords) || coords.length !== 2) {
+            return false;
+          }
+          const [lng, lat] = coords;
+          return lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90;
+        },
+        message: 'Coordinates must be an array [longitude, latitude] with valid ranges'
+      }
+    }
+  }
+}, { _id: false });
+
 const rentSchema = new mongoose.Schema({
   amount: {
     type: Number,
@@ -147,9 +217,8 @@ const propertySchema = new mongoose.Schema({
     trim: true,
     maxlength: [2000, 'Description cannot exceed 2000 characters']
   },
-  addressId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Address',
+  address: {
+    type: addressSchema,
     required: true
   },
   type: {
@@ -452,7 +521,7 @@ const propertySchema = new mongoose.Schema({
 
 // Indexes for better query performance
 propertySchema.index({ profileId: 1, status: 1 });
-propertySchema.index({ addressId: 1 });
+propertySchema.index({ 'address.city': 1, 'address.state': 1 });
 propertySchema.index({ type: 1, 'availability.isAvailable': 1 });
 propertySchema.index({ 'rent.amount': 1 });
 propertySchema.index({ bedrooms: 1, bathrooms: 1 });
@@ -460,30 +529,29 @@ propertySchema.index({ amenities: 1 });
 propertySchema.index({ createdAt: -1 });
 // Prevent duplicate external listings by (source, sourceId)
 propertySchema.index({ source: 1, sourceId: 1 }, { unique: true, partialFilterExpression: { sourceId: { $type: 'string' } } });
+// GeoJSON 2dsphere index for geospatial queries
+propertySchema.index({ 'address.coordinates': '2dsphere' });
 // Text index for search functionality across multiple fields
 propertySchema.index({
   title: 'text',
-  description: 'text'
+  description: 'text',
+  'address.city': 'text',
+  'address.state': 'text',
+  'address.street': 'text'
 });
 
-// Virtual for full address (requires population)
+// Virtual for full address
 propertySchema.virtual('fullAddress').get(function() {
-  if (this.address) {
-    return `${this.address.street}, ${this.address.city}, ${this.address.state} ${this.address.zipCode}`;
-  }
-  return null;
+  return `${this.address.street}, ${this.address.city}, ${this.address.state} ${this.address.zipCode}`;
 });
 
-// Virtual for location string (requires population)
+// Virtual for location string
 propertySchema.virtual('location').get(function() {
-  if (this.address) {
-    const parts = [];
-    if (this.address.city) parts.push(this.address.city);
-    if (this.address.state) parts.push(this.address.state);
-    if (this.address.country && this.address.country !== 'USA') parts.push(this.address.country);
-    return parts.join(', ');
-  }
-  return null;
+  const parts = [];
+  if (this.address.city) parts.push(this.address.city);
+  if (this.address.state) parts.push(this.address.state);
+  if (this.address.country && this.address.country !== 'USA') parts.push(this.address.country);
+  return parts.join(', ');
 });
 
 // Virtual for primary image
@@ -541,7 +609,7 @@ propertySchema.statics.findAvailable = function(filters = {}) {
   return this.find(query);
 };
 
-propertySchema.statics.search = async function(searchParams) {
+propertySchema.statics.search = function(searchParams) {
   const {
     city,
     state,
@@ -559,6 +627,14 @@ propertySchema.statics.search = async function(searchParams) {
   if (available) {
     query['availability.isAvailable'] = true;
     query.status = 'active';
+  }
+
+  if (city) {
+    query['address.city'] = new RegExp(city, 'i');
+  }
+
+  if (state) {
+    query['address.state'] = new RegExp(state, 'i');
   }
 
   if (type) {
@@ -583,38 +659,13 @@ propertySchema.statics.search = async function(searchParams) {
     query.amenities = { $in: amenities };
   }
 
-  // If city or state filters are provided, we need to find matching addresses first
-  if (city || state) {
-    const Address = require('./AddressSchema');
-    const addressQuery: any = {};
-    
-    if (city) {
-      addressQuery.city = new RegExp(city, 'i');
-    }
-    
-    if (state) {
-      addressQuery.state = new RegExp(state, 'i');
-    }
-    
-    const matchingAddresses = await Address.find(addressQuery).select('_id');
-    const addressIds = matchingAddresses.map(addr => addr._id);
-    
-    if (addressIds.length === 0) {
-      return []; // No matching addresses found
-    }
-    
-    query.addressId = { $in: addressIds };
-  }
-
-  return this.find(query).populate('addressId');
+  return this.find(query);
 };
 
 // Geospatial query methods
-propertySchema.statics.findNearby = async function(longitude, latitude, maxDistance = 10000) {
-  // First find addresses within the specified distance
-  const Address = require('./AddressSchema');
-  const nearbyAddresses = await Address.find({
-    coordinates: {
+propertySchema.statics.findNearby = function(longitude, latitude, maxDistance = 10000) {
+  return this.find({
+    'address.coordinates': {
       $near: {
         $geometry: {
           type: 'Point',
@@ -622,71 +673,37 @@ propertySchema.statics.findNearby = async function(longitude, latitude, maxDista
         },
         $maxDistance: maxDistance
       }
-    }
-  }).select('_id');
-
-  const addressIds = nearbyAddresses.map(addr => addr._id);
-  
-  if (addressIds.length === 0) {
-    return [];
-  }
-
-  return this.find({
-    addressId: { $in: addressIds },
+    },
     'availability.isAvailable': true,
     status: 'active'
-  }).populate('addressId');
+  });
 };
 
-propertySchema.statics.findWithinRadius = async function(longitude, latitude, radiusInMeters) {
-  // First find addresses within the specified radius
-  const Address = require('./AddressSchema');
-  const nearbyAddresses = await Address.find({
-    coordinates: {
+propertySchema.statics.findWithinRadius = function(longitude, latitude, radiusInMeters) {
+  return this.find({
+    'address.coordinates': {
       $geoWithin: {
         $centerSphere: [[longitude, latitude], radiusInMeters / 6371000] // Convert to radians
       }
-    }
-  }).select('_id');
-
-  const addressIds = nearbyAddresses.map(addr => addr._id);
-  
-  if (addressIds.length === 0) {
-    return [];
-  }
-
-  return this.find({
-    addressId: { $in: addressIds },
+    },
     'availability.isAvailable': true,
     status: 'active'
-  }).populate('addressId');
+  });
 };
 
-propertySchema.statics.findInPolygon = async function(coordinates) {
-  // First find addresses within the specified polygon
-  const Address = require('./AddressSchema');
-  const addressesInPolygon = await Address.find({
-    coordinates: {
+propertySchema.statics.findInPolygon = function(coordinates) {
+  return this.find({
+    'address.coordinates': {
       $geoWithin: {
         $geometry: {
           type: 'Polygon',
           coordinates: [coordinates]
         }
       }
-    }
-  }).select('_id');
-
-  const addressIds = addressesInPolygon.map(addr => addr._id);
-  
-  if (addressIds.length === 0) {
-    return [];
-  }
-
-  return this.find({
-    addressId: { $in: addressIds },
+    },
     'availability.isAvailable': true,
     status: 'active'
-  }).populate('addressId');
+  });
 };
 
 // Instance methods
@@ -703,22 +720,16 @@ propertySchema.methods.updateRating = function(newRating) {
 };
 
 // GeoJSON helper methods
-propertySchema.methods.setLocation = async function(longitude, latitude) {
-  // This method now needs to update the referenced address
-  if (this.addressId) {
-    const Address = require('./AddressSchema');
-    const address = await Address.findById(this.addressId);
-    if (address) {
-      address.setLocation(longitude, latitude);
-      await address.save();
-    }
-  }
+propertySchema.methods.setLocation = function(longitude, latitude) {
+  this.address.coordinates = {
+    type: 'Point',
+    coordinates: [longitude, latitude]
+  };
   return this;
 };
 
 propertySchema.methods.getCoordinates = function() {
-  // This method requires the address to be populated
-  if (this.address && this.address.coordinates && this.address.coordinates.coordinates && this.address.coordinates.coordinates.length === 2) {
+  if (this.address.coordinates && this.address.coordinates.coordinates && this.address.coordinates.coordinates.length === 2) {
     return {
       longitude: this.address.coordinates.coordinates[0],
       latitude: this.address.coordinates.coordinates[1]
