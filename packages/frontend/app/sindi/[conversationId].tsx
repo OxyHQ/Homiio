@@ -420,13 +420,14 @@ const PropertiesFromIds = React.memo(function PropertiesFromIds({ ids }: { ids: 
 });
 
 // Chat pane that mounts after conversation load and initializes useChat with initial history
-function ChatContent({
+export function ChatContent({
   conversationId,
   currentConversation,
   isAuthenticated,
   authenticatedFetch,
   initialMessages,
   messageFromUrl,
+  style,
 }: {
   conversationId?: string;
   currentConversation?: Conversation | null;
@@ -434,6 +435,7 @@ function ChatContent({
   authenticatedFetch: typeof globalThis.fetch;
   initialMessages: { id: string; role: 'user' | 'assistant' | 'system'; content: string }[];
   messageFromUrl?: string;
+  style?: any;
 }) {
   const router = useRouter();
   const { t } = useTranslation();
@@ -446,11 +448,11 @@ function ChatContent({
   const lastSyncedHash = React.useRef<string>('');
   const lastMsgKeyRef = React.useRef<string>('');
   const scrollViewRef = React.useRef<ScrollView>(null);
+  const messageSentRef = React.useRef<string>(''); // Track which messageFromUrl was sent
 
   // Get user entitlements for subscription checks
   const {
     data: entitlements,
-    isLoading: entitlementsLoading,
   } = useQuery({
     queryKey: ['entitlements'],
     queryFn: async () => {
@@ -787,12 +789,28 @@ function ChatContent({
     }
   }, [isStreamingFile, streamingAssistantText, scrollToEnd]);
 
-  // Seed input from URL param
+  // Automatically send message from URL parameter (e.g., from property bottom sheet)
   useEffect(() => {
-    if (messageFromUrl && currentConversation) {
-      handleInputChange({ target: { value: decodeURIComponent(messageFromUrl) } } as any);
+    console.log('messageFromUrl useEffect triggered:', {
+      messageFromUrl,
+      hasConversation: !!currentConversation,
+      alreadySent: messageSentRef.current,
+      hasAppend: !!append
+    });
+
+    if (messageFromUrl && currentConversation && messageFromUrl !== messageSentRef.current && append) {
+      console.log('Sending initial message from URL:', messageFromUrl);
+      messageSentRef.current = messageFromUrl; // Mark this message as sent to prevent duplicates
+
+      const decodedMessage = decodeURIComponent(messageFromUrl);
+      console.log('Actually calling append with:', decodedMessage);
+      append({
+        id: `${Date.now()}-initial-message`,
+        role: 'user',
+        content: decodedMessage,
+      });
     }
-  }, [messageFromUrl, currentConversation, handleInputChange]);
+  }, [messageFromUrl, currentConversation, append]);
 
   const handleAttachFile = async () => {
     try {
@@ -971,7 +989,7 @@ function ChatContent({
       {/* Messages */}
       <ScrollView
         ref={scrollViewRef}
-        style={[styles.messagesContainer, webStyles.messagesContainer]}
+        style={[styles.messagesContainer, webStyles.messagesContainer, style]}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.messagesContent, webStyles.messagesContent]}
       >
@@ -1033,7 +1051,8 @@ function ChatContent({
                 ]}
               >
                 {(() => {
-                  if (m.role === 'assistant' && typeof m.content === 'string') {
+                  // Support PROPERTIES_JSON parsing for both assistant AND user messages
+                  if ((m.role === 'assistant' || m.role === 'user') && typeof m.content === 'string') {
                     const startTag = '<PROPERTIES_JSON>';
                     const endTag = '</PROPERTIES_JSON>';
                     const startIdx = m.content.indexOf(startTag);
@@ -1053,11 +1072,26 @@ function ChatContent({
                         console.warn('Failed to parse PROPERTIES_JSON:', e);
                       }
                     }
+
+                    // For user messages: Only show text content in bubble, property cards will be shown outside
+                    if (m.role === 'user') {
+                      return (
+                        <>
+                          {!!visible && (
+                            <View style={{ flexShrink: 1, flexWrap: 'wrap', width: '100%' }}>
+                              {renderMarkdown(visible, m.role)}
+                            </View>
+                          )}
+                        </>
+                      );
+                    }
+
+                    // For assistant messages: Show both text and property cards inside bubble (existing behavior)
                     return (
                       <>
                         {!!visible && (
                           <View style={{ flexShrink: 1, flexWrap: 'wrap', width: '100%' }}>
-                            {renderMarkdown(visible, 'assistant')}
+                            {renderMarkdown(visible, m.role)}
                           </View>
                         )}
                         {idList && idList.length > 0 && canHydrateCards && <PropertiesFromIds ids={idList} />}
@@ -1083,19 +1117,43 @@ function ChatContent({
                       .filter((p): p is any => !!p);
                     return (
                       <View key={m.id || m.content} style={styles.propertyCardsContainer}>
-                        {properties.map((property, idx) => (
-                          <PropertyCard
-                            key={property.id || idx}
-                            id={property.id}
-                            title={property.title}
-                            price={property.price}
-                            currency={property.currency}
-                            type={(property.type as any) || 'apartment'}
-                            orientation='horizontal'
-                            variant={'compact'}
-                            onPress={() => router.push(`/properties/${property.id}`)}
-                          />
-                        ))}
+                        {properties.map((property, idx) => {
+                          // Convert parsed property data to Property interface format
+                          const propertyData: any = {
+                            _id: property.id || `temp-${idx}`,
+                            id: property.id || `temp-${idx}`,
+                            type: property.type || 'apartment',
+                            rent: {
+                              amount: property.price || 0,
+                              currency: property.currency || 'USD',
+                              paymentFrequency: 'monthly' as const,
+                              deposit: 0,
+                              utilities: 'not_included' as const
+                            },
+                            address: {
+                              street: '',
+                              city: property.city || '',
+                              state: '',
+                              zipCode: '',
+                              country: ''
+                            },
+                            status: 'active' as const,
+                            createdAt: new Date().toISOString(),
+                            updatedAt: new Date().toISOString(),
+                            bedrooms: 1,
+                            bathrooms: 1
+                          };
+
+                          return (
+                            <PropertyCard
+                              key={property.id || idx}
+                              property={propertyData}
+                              orientation='horizontal'
+                              variant={'compact'}
+                              onPress={() => router.push(`/properties/${property.id}`)}
+                            />
+                          );
+                        })}
                       </View>
                     );
                   }
@@ -1115,6 +1173,35 @@ function ChatContent({
                   );
                 })()}
               </View>
+              
+              {/* Property cards for user messages - show outside the bubble with enhanced styling */}
+              {(() => {
+                if (m.role === 'user' && typeof m.content === 'string') {
+                  const startTag = '<PROPERTIES_JSON>';
+                  const endTag = '</PROPERTIES_JSON>';
+                  const startIdx = m.content.indexOf(startTag);
+                  const endIdx = m.content.indexOf(endTag);
+                  
+                  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+                    const jsonStr = m.content.substring(startIdx + startTag.length, endIdx).trim();
+                    try {
+                      const parsed = JSON.parse(jsonStr);
+                      const normalized = normalizePropertyIds(parsed);
+                      if (normalized.length > 0) {
+                        return (
+                          <View style={styles.userPropertyCardsContainer}>
+                            <PropertiesFromIds ids={normalized} />
+                          </View>
+                        );
+                      }
+                    } catch (e) {
+                      console.warn('Failed to parse PROPERTIES_JSON for user message:', e);
+                    }
+                  }
+                }
+                return null;
+              })()}
+              
               <Text style={[styles.messageTime, m.role === 'user' ? styles.messageTimeUser : styles.messageTimeAssistant]}>
                 {m.role === 'user' ? t('sindi.chat.you') : t('sindi.name')} • {new Date().toLocaleTimeString()}
               </Text>
@@ -1475,6 +1562,22 @@ const styles = StyleSheet.create({
   },
   propertyCardsContainer: {
     gap: 12,
+  },
+  userPropertyCardsContainer: {
+    marginTop: 8,
+    marginBottom: 4,
+    marginRight: 40, // Align with user message left margin
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   filePreviewContainer: {
     flexDirection: 'row',

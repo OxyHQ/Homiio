@@ -25,6 +25,7 @@ import { PropertyType, PropertyImage, Property } from '@homiio/shared-types';
 import { HeaderSection } from '../../../components/property/HeaderSection';
 import { PhotoGallery } from '../../../components/property/PhotoGallery';
 import { LandlordSection } from '../../../components/property/LandlordSection';
+import { SindiSection } from '../../../components/property/SindiSection';
 import { SindiAnalysis } from '../../../components/property/SindiAnalysis';
 import { FraudWarning } from '../../../components/property/FraudWarning';
 import { BasicInfoSection } from '../../../components/property/BasicInfoSection';
@@ -478,6 +479,7 @@ export default function PropertyDetailPage() {
             onApplyPublic={handlePublicHousingApply}
             t={t as any}
           />
+          <SindiSection property={apiProperty as any} />
           <SindiAnalysis property={apiProperty as any} />
           <FraudWarning text={t('Never pay or transfer funds outside the Homio platform') || 'Never pay or transfer funds outside the Homio platform'} />
         </View>
