@@ -1044,6 +1044,34 @@ export function ChatContent({
                 m.role === 'user' ? styles.userMessage : styles.assistantMessage,
               ]}
             >
+              {/* Property cards for user messages - show BEFORE the bubble with enhanced styling */}
+              {(() => {
+                if (m.role === 'user' && typeof m.content === 'string') {
+                  const startTag = '<PROPERTIES_JSON>';
+                  const endTag = '</PROPERTIES_JSON>';
+                  const startIdx = m.content.indexOf(startTag);
+                  const endIdx = m.content.indexOf(endTag);
+
+                  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+                    const jsonStr = m.content.substring(startIdx + startTag.length, endIdx).trim();
+                    try {
+                      const parsed = JSON.parse(jsonStr);
+                      const normalized = normalizePropertyIds(parsed);
+                      if (normalized.length > 0) {
+                        return (
+                          <View style={styles.userPropertyCardsContainer}>
+                            <PropertiesFromIds ids={normalized} />
+                          </View>
+                        );
+                      }
+                    } catch (e) {
+                      console.warn('Failed to parse PROPERTIES_JSON for user message:', e);
+                    }
+                  }
+                }
+                return null;
+              })()}
+
               <View
                 style={[
                   styles.messageBubble,
@@ -1073,7 +1101,7 @@ export function ChatContent({
                       }
                     }
 
-                    // For user messages: Only show text content in bubble, property cards will be shown outside
+                    // For user messages: Only show text content in bubble, property cards are shown above
                     if (m.role === 'user') {
                       return (
                         <>
@@ -1173,35 +1201,7 @@ export function ChatContent({
                   );
                 })()}
               </View>
-              
-              {/* Property cards for user messages - show outside the bubble with enhanced styling */}
-              {(() => {
-                if (m.role === 'user' && typeof m.content === 'string') {
-                  const startTag = '<PROPERTIES_JSON>';
-                  const endTag = '</PROPERTIES_JSON>';
-                  const startIdx = m.content.indexOf(startTag);
-                  const endIdx = m.content.indexOf(endTag);
-                  
-                  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-                    const jsonStr = m.content.substring(startIdx + startTag.length, endIdx).trim();
-                    try {
-                      const parsed = JSON.parse(jsonStr);
-                      const normalized = normalizePropertyIds(parsed);
-                      if (normalized.length > 0) {
-                        return (
-                          <View style={styles.userPropertyCardsContainer}>
-                            <PropertiesFromIds ids={normalized} />
-                          </View>
-                        );
-                      }
-                    } catch (e) {
-                      console.warn('Failed to parse PROPERTIES_JSON for user message:', e);
-                    }
-                  }
-                }
-                return null;
-              })()}
-              
+
               <Text style={[styles.messageTime, m.role === 'user' ? styles.messageTimeUser : styles.messageTimeAssistant]}>
                 {m.role === 'user' ? t('sindi.chat.you') : t('sindi.name')} • {new Date().toLocaleTimeString()}
               </Text>
@@ -1564,13 +1564,12 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   userPropertyCardsContainer: {
-    marginTop: 8,
-    marginBottom: 4,
-    marginRight: 40, // Align with user message left margin
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
+    marginTop: 4,
+    marginBottom: 8, // More space before the bubble
+    padding: 8,
+    paddingBottom: 4,
+    backgroundColor: '#fff',
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#e9ecef',
     shadowColor: '#000',
