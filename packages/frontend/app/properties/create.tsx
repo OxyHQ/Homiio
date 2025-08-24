@@ -332,17 +332,17 @@ export default function CreatePropertyScreen() {
       });
 
       setFormData('location', {
-        address: property.address?.street || undefined,
+        address: property.address?.street || '',
         addressLine2: '',
         addressNumber: '',
         showAddressNumber: false,
         floor: property.floor,
         showFloor: !!property.floor,
-        neighborhood: property.address?.neighborhood || undefined,
-        city: property.address?.city || undefined,
-        state: property.address?.state || undefined,
-        zipCode: property.address?.zipCode || undefined,
-        country: property.address?.country || undefined,
+        neighborhood: property.address?.neighborhood || '',
+        city: property.address?.city || '',
+        state: property.address?.state || '',
+        zipCode: property.address?.zipCode || '',
+        country: property.address?.country || '',
         latitude: property.address?.coordinates?.type === 'Point' ? property.address.coordinates.coordinates[1] : undefined,
         longitude: property.address?.coordinates?.type === 'Point' ? property.address.coordinates.coordinates[0] : undefined,
         availableFrom: '',
@@ -746,17 +746,22 @@ export default function CreatePropertyScreen() {
         }
       }
     } else if (stepName === 'Location') {
-      if (fieldsToShow.includes('address') && !formData.location.address)
-        errors.address = 'Address is required';
-      if (fieldsToShow.includes('city') && !formData.location.city)
+      // Required address fields validation
+      if (!formData.location.address?.trim())
+        errors.address = 'Street address is required';
+      if (!formData.location.city?.trim())
         errors.city = 'City is required';
-      if (fieldsToShow.includes('state') && !formData.location.state)
+      if (!formData.location.state?.trim())
         errors.state = 'State is required';
-      if (fieldsToShow.includes('zipCode') && !formData.location.zipCode)
+      if (!formData.location.zipCode?.trim())
         errors.zipCode = 'ZIP code is required';
-      if (fieldsToShow.includes('latitude') && !formData.location.latitude)
-        errors.coordinates = 'Please select a location on the map';
-      if (fieldsToShow.includes('longitude') && !formData.location.longitude)
+      else if (!/^\d{5}(-\d{4})?$/.test(formData.location.zipCode.trim()))
+        errors.zipCode = 'ZIP code must be in format 12345 or 12345-6789';
+      if (!formData.location.country?.trim())
+        errors.country = 'Country is required';
+
+      // Coordinates validation
+      if (!formData.location.latitude || !formData.location.longitude)
         errors.coordinates = 'Please select a location on the map';
     } else if (stepName === 'Pricing') {
       if (fieldsToShow.includes('monthlyRent') && !formData.pricing.monthlyRent)

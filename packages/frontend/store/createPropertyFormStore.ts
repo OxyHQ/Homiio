@@ -132,9 +132,9 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()((set
       city: '',
       state: '',
       zipCode: '',
-      country: 'Spain',
-                latitude: 41.38723, // Default to Barcelona
-          longitude: 2.16538, // Default to Barcelona
+      country: undefined,
+      latitude: undefined,
+      longitude: undefined,
       availableFrom: undefined,
       leaseTerm: undefined,
       walkScore: undefined,

@@ -11,13 +11,12 @@ export const LocationSection: React.FC<Props> = ({ property }) => {
     const { t } = useTranslation();
     const address = property?.address;
     // Get coordinates from GeoJSON Point format
-    // Get coordinates from GeoJSON Point format
     const coordinates = property?.address?.coordinates?.type === 'Point'
         ? property.address.coordinates.coordinates
-        : null;
+        : undefined;
     const hasAddress = address && (address.street || address.city || address.state || address.country);
     const hasMap = Array.isArray(coordinates) && coordinates.length === 2 &&
-        coordinates[0] >= -180 && coordinates[0] <= 180 && // Valid longitude
+        coordinates[0] >= -180 && coordinates[0] <= 180 && // Valid  longitude
         coordinates[1] >= -90 && coordinates[1] <= 90;     // Valid latitude
     const proximity = property?.proximity || {};
     const amenities: string[] = [];
@@ -41,7 +40,7 @@ export const LocationSection: React.FC<Props> = ({ property }) => {
                 <View style={styles.mapWrapper}>
                     <Map
                         style={{ height: 200 }}
-                        initialCoordinates={coordinates}
+                        initialCoordinates={coordinates as [number, number]}
                         initialZoom={property?.address?.coordinates?.type === 'Point' ? 15 : 12}
                         screenId={`property-location-${property?._id || property?.id || 'unknown'}`}
                     />
