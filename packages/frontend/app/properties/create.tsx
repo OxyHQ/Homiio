@@ -332,26 +332,26 @@ export default function CreatePropertyScreen() {
       });
 
       setFormData('location', {
-        address: property.address?.street || '',
+        address: property.address?.street || undefined,
         addressLine2: '',
         addressNumber: '',
         showAddressNumber: false,
         floor: property.floor,
         showFloor: !!property.floor,
-        neighborhood: property.address?.neighborhood || '',
-        city: property.address?.city || '',
-        state: property.address?.state || '',
-        zipCode: property.address?.zipCode || '',
-        country: property.address?.country || 'Spain',
-        latitude: (property.address?.coordinates as any)?.coordinates?.[1] || (property.address?.coordinates as any)?.lat || 40.7128,
-        longitude: (property.address?.coordinates as any)?.coordinates?.[0] || (property.address?.coordinates as any)?.lng || -74.006,
+        neighborhood: property.address?.neighborhood || undefined,
+        city: property.address?.city || undefined,
+        state: property.address?.state || undefined,
+        zipCode: property.address?.zipCode || undefined,
+        country: property.address?.country || undefined,
+        latitude: property.address?.coordinates?.type === 'Point' ? property.address.coordinates.coordinates[1] : undefined,
+        longitude: property.address?.coordinates?.type === 'Point' ? property.address.coordinates.coordinates[0] : undefined,
         availableFrom: '',
         leaseTerm: '',
       });
 
       setFormData('pricing', {
         monthlyRent: property.rent?.amount || 0,
-        currency: property.rent?.currency || 'USD',
+        currency: property.rent?.currency || 'EUR',
         securityDeposit: 0,
         applicationFee: 0,
         lateFee: 0,
@@ -541,6 +541,12 @@ export default function CreatePropertyScreen() {
           country: formData.location.country || 'US',
           neighborhood: formData.location.neighborhood,
           showAddressNumber: formData.location.showAddressNumber ?? true,
+          coordinates: formData.location.latitude && formData.location.longitude
+            ? {
+              type: 'Point',
+              coordinates: [formData.location.longitude, formData.location.latitude]
+            }
+            : undefined
         },
         type: formData.basicInfo.propertyType as
           | 'apartment'
@@ -584,13 +590,7 @@ export default function CreatePropertyScreen() {
           caption: img.caption || '',
           isPrimary: img.isPrimary || false
         })) || [],
-        location:
-          formData.location.latitude && formData.location.longitude
-            ? {
-              type: 'Point',
-              coordinates: [formData.location.longitude, formData.location.latitude], // [longitude, latitude]
-            }
-            : undefined,
+
       };
       if (formData.basicInfo.propertyType === 'coliving') {
         propertyData.colivingFeatures = formData.colivingFeatures;
