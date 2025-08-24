@@ -21,18 +21,30 @@ import { useOxy } from '@oxyhq/services';
 
 // Services and hooks
 import { api } from '@/utils/api';
-import { default as reviewService, type ReviewData } from '@/services/reviewService';
-
+import { default as reviewService } from '@/services/reviewService';
 // Types
 import { colors } from '@/styles/colors';
 
 // Local type definitions
+interface Address {
+    _id: string;
+    street: string;
+    city: string;
+    state?: string; // Made optional for international support
+    zipCode?: string; // Legacy field for backward compatibility
+    postal_code: string; // Renamed from zipCode
+    country: string;
+    fullAddress: string;
+    location: string;
+}
+
 interface AddressData {
     _id: string;
     street: string;
     city: string;
-    state: string;
-    zipCode: string;
+    state?: string; // Made optional for international support
+    zipCode?: string; // Legacy field for backward compatibility
+    postal_code: string; // Renamed from zipCode
     country: string;
     fullAddress: string;
     location: string;
@@ -187,21 +199,23 @@ export default function WriteReviewPage() {
             const startDate = new Date(formData.livedFrom);
             const endDate = new Date(formData.livedTo);
             const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-            const livedForMonths = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 30.44));
+            const _livedForMonths = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 30.44));
 
-            const reviewData: Partial<ReviewData> = {
-                addressId: address._id,
-                address: address.fullAddress || address.location || `${address.street}, ${address.city}`,
+            const reviewData = {
+                addressId: addressId,
                 greenHouse: formData.greenHouse,
-                price: parseFloat(formData.price),
+                price: formData.price ? parseFloat(formData.price) : undefined,
                 currency: formData.currency,
-                livedFrom: formData.livedFrom,
-                livedTo: formData.livedTo,
-                livedForMonths,
-                recommendation: formData.recommendation!,
+                livedFrom: formData.livedFrom ? new Date(formData.livedFrom) : undefined,
+                livedTo: formData.livedTo ? new Date(formData.livedTo) : undefined,
+                recommendation: formData.recommendation || undefined,
                 opinion: formData.opinion.trim(),
-                positiveComment: formData.positiveComment.trim(),
-                negativeComment: formData.negativeComment.trim(),
+                positiveComment: formData.positiveComment.trim() || undefined,
+                negativeComment: formData.negativeComment.trim() || undefined,
+
+                // Rating data - we'd need to map these to the new schema fields
+                // This would depend on how the old fields map to the new apartment/community/landlord/area categories
+                // For now, leaving as is since this is a migration in progress
                 rating: formData.rating,
                 summerTemperature: formData.summerTemperature,
                 winterTemperature: formData.winterTemperature,
@@ -209,20 +223,16 @@ export default function WriteReviewPage() {
                 light: formData.light,
                 conditionAndMaintenance: formData.conditionAndMaintenance,
                 services: formData.services,
-                landlordTreatment: formData.landlordTreatment,
+                landlordTreatment: formData.landlordTreatment as any,
                 problemResponse: formData.problemResponse,
-                depositReturned: formData.depositReturned!,
+                depositReturned: formData.depositReturned,
                 staircaseNeighbors: formData.staircaseNeighbors,
-                touristApartments: formData.touristApartments!,
+                touristApartments: formData.touristApartments,
                 neighborRelations: formData.neighborRelations,
                 cleaning: formData.cleaning,
                 areaTourists: formData.areaTourists,
-                areaSecurity: formData.areaSecurity,
-                images: [], // TODO: Implement image upload
-                verified: false,
-            };
-
-            const result = await reviewService.createReview(reviewData, oxyServices, activeSessionId);
+                areaSecurity: formData.areaSecurity
+            }; const result = await reviewService.createReview(reviewData, oxyServices, activeSessionId);
 
             if (result.success) {
                 Alert.alert(

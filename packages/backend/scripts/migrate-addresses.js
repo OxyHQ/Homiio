@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 
 /**
- * Migrate Address Data
+ * Migrate Address Data to New International Schema
  * 
- * This script extracts address data from existing properties into a separate address collection
- * and updates properties to reference the new address documents.
+ * This script migrates existing address documents to the new international schema format
+ * with postal_code, countryCode, and new canonical fields.
  */
 
 require('dotenv').config();
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 
 // Connect to database
 async function connectDB() {
@@ -21,11 +22,10 @@ async function connectDB() {
   }
 }
 
-// Migrate address data
+// Migrate address data to new international schema
 async function migrateAddresses() {
   try {
     // Import models after connection
-    const Property = require('../models/schemas/PropertySchema');
     const Address = require('../models/schemas/AddressSchema');
     
     console.log('\n🔧 Migrating address data...\n');

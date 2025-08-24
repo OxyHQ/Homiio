@@ -29,4 +29,6 @@ router.delete('/:reviewId', deleteReview);
 // Profile-specific reviews
 router.get('/profile/:profileId', getUserReviews);
 
-export default router;
+export default function() {
+  return router;
+};

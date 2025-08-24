@@ -5,7 +5,8 @@
 
 import { Request, Response } from 'express';
 import { Types } from 'mongoose';
-const { Review, Address } = require('../models');
+import { ProfileType } from '@homiio/shared-types';
+const { Review, Address, Profile } = require('../models');
 
 /**
  * Response helpers
@@ -47,15 +48,13 @@ export const getReviewsByAddress = async (req: Request, res: Response) => {
     const sortDirection = sortOrder === 'desc' ? -1 : 1;
     const sortOptions: any = { [sortBy as string]: sortDirection };
 
-    const reviews = await Review.find({ addressId })
-      .populate('profileId', 'profileType personalProfile agencyProfile')
-      .sort(sortOptions)
-      .skip(skip)
-      .limit(limitNumber)
-      .lean();
+        const reviews = await Review.find({ addressId })
+      .sort({ createdAt: -1 })
+      .populate('addressId', 'street city state postal_code country countryCode fullAddress')
+      .populate('profileId', 'personalProfile.firstName personalProfile.lastName profileType')
 
     const totalReviews = await Review.countDocuments({ addressId });
-    const stats = await Review.getAverageRating(addressId);
+    const stats = await Review.getAverageRatingForAddress(addressId);
 
     return ok(res, {
       reviews,
@@ -66,9 +65,9 @@ export const getReviewsByAddress = async (req: Request, res: Response) => {
         limit: limitNumber
       },
       stats: {
-        averageRating: Number(stats.averageRating.toFixed(1)),
-        totalReviews: stats.totalReviews,
-        recommendationPercentage: Number(stats.recommendationPercentage.toFixed(1))
+        avgRating: stats.avgRating || 0,
+        count: stats.count || 0,
+        recommendationRate: (stats.recommendationRate || 0) * 100
       }
     });
 
@@ -90,14 +89,28 @@ export const getAddressReviewStats = async (req: Request, res: Response) => {
       return badRequest(res, { message: 'Invalid address ID' });
     }
 
-    const stats = await Review.getAverageRating(addressId);
+    const stats = await Review.getAverageRatingForAddress(addressId);
     
     // Get rating distribution
     const ratingDistribution = await Review.aggregate([
       { $match: { addressId: new Types.ObjectId(addressId) } },
       {
+        $addFields: {
+          overallRating: {
+            $avg: [
+              '$apartmentSize', '$apartmentKitchen', '$apartmentBathroom',
+              '$apartmentBedroom', '$apartmentStorage', '$apartmentFurnishing',
+              '$apartmentInternet', '$apartmentCellReception',
+              '$communityMaintenance', '$communityCleanliness', '$communityManagement',
+              '$communityAmenities', '$communityParking', '$communitySafety',
+              '$landlordCommunication', '$landlordFairness', '$landlordMaintenance'
+            ]
+          }
+        }
+      },
+      {
         $group: {
-          _id: '$rating',
+          _id: { $ceil: '$overallRating' },
           count: { $sum: 1 }
         }
       },
@@ -110,65 +123,29 @@ export const getAddressReviewStats = async (req: Request, res: Response) => {
       {
         $group: {
           _id: null,
-          avgCondition: { $avg: { $switch: {
-            branches: [
-              { case: { $eq: ['$conditionAndMaintenance', 'poor'] }, then: 1 },
-              { case: { $eq: ['$conditionAndMaintenance', 'fair'] }, then: 2 },
-              { case: { $eq: ['$conditionAndMaintenance', 'good'] }, then: 3 },
-              { case: { $eq: ['$conditionAndMaintenance', 'very_good'] }, then: 4 },
-              { case: { $eq: ['$conditionAndMaintenance', 'excellent'] }, then: 5 }
-            ],
-            default: 3
-          }}},
-          avgLandlord: { $avg: { $switch: {
-            branches: [
-              { case: { $eq: ['$landlordTreatment', 'very_poor'] }, then: 1 },
-              { case: { $eq: ['$landlordTreatment', 'poor'] }, then: 2 },
-              { case: { $eq: ['$landlordTreatment', 'fair'] }, then: 3 },
-              { case: { $eq: ['$landlordTreatment', 'good'] }, then: 4 },
-              { case: { $eq: ['$landlordTreatment', 'excellent'] }, then: 5 }
-            ],
-            default: 3
-          }}},
-          avgNeighbors: { $avg: { $switch: {
-            branches: [
-              { case: { $eq: ['$neighborRelations', 'very_poor'] }, then: 1 },
-              { case: { $eq: ['$neighborRelations', 'poor'] }, then: 2 },
-              { case: { $eq: ['$neighborRelations', 'fair'] }, then: 3 },
-              { case: { $eq: ['$neighborRelations', 'good'] }, then: 4 },
-              { case: { $eq: ['$neighborRelations', 'excellent'] }, then: 5 }
-            ],
-            default: 3
-          }}},
-          avgSecurity: { $avg: { $switch: {
-            branches: [
-              { case: { $eq: ['$areaSecurity', 'very_unsafe'] }, then: 1 },
-              { case: { $eq: ['$areaSecurity', 'unsafe'] }, then: 2 },
-              { case: { $eq: ['$areaSecurity', 'neutral'] }, then: 3 },
-              { case: { $eq: ['$areaSecurity', 'safe'] }, then: 4 },
-              { case: { $eq: ['$areaSecurity', 'very_safe'] }, then: 5 }
-            ],
-            default: 3
-          }}}
+          avgApartment: { $avg: { $avg: ['$apartmentSize', '$apartmentKitchen', '$apartmentBathroom', '$apartmentBedroom', '$apartmentStorage', '$apartmentFurnishing'] }},
+          avgCommunity: { $avg: { $avg: ['$communityMaintenance', '$communityCleanliness', '$communityManagement', '$communityAmenities', '$communityParking', '$communitySafety'] }},
+          avgLandlord: { $avg: { $avg: ['$landlordCommunication', '$landlordFairness', '$landlordMaintenance'] }},
+          avgArea: { $avg: { $avg: ['$areaTransport', '$areaShopping', '$areaEducation'] }}
         }
       }
     ]);
 
     return ok(res, {
       ...stats,
-      averageRating: Number(stats.averageRating.toFixed(1)),
-      recommendationPercentage: Number(stats.recommendationPercentage.toFixed(1)),
+      avgRating: stats.avgRating || 0,
+      recommendationRate: (stats.recommendationRate || 0) * 100,
       ratingDistribution,
       categoryAverages: categoryAverages.length > 0 ? {
-        condition: Number(categoryAverages[0].avgCondition.toFixed(1)),
-        landlord: Number(categoryAverages[0].avgLandlord.toFixed(1)),
-        neighbors: Number(categoryAverages[0].avgNeighbors.toFixed(1)),
-        security: Number(categoryAverages[0].avgSecurity.toFixed(1))
+        apartment: Number((categoryAverages[0].avgApartment || 0).toFixed(1)),
+        community: Number((categoryAverages[0].avgCommunity || 0).toFixed(1)),
+        landlord: Number((categoryAverages[0].avgLandlord || 0).toFixed(1)),
+        area: Number((categoryAverages[0].avgArea || 0).toFixed(1))
       } : {
-        condition: 0,
+        apartment: 0,
+        community: 0,
         landlord: 0,
-        neighbors: 0,
-        security: 0
+        area: 0
       }
     });
 
@@ -193,36 +170,44 @@ export const createReview = async (req: Request, res: Response) => {
     }
 
     // Get the active profile for this user
-    const { Profile } = require('../models');
-    const { ProfileType } = require('@homiio/shared-types');
     const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
     if (!activeProfile) {
       return badRequest(res, { message: 'No active profile found' });
     }
 
-    // Only personal profiles can create reviews
+    // Validate that only personal profiles can create reviews
     if (activeProfile.profileType !== ProfileType.PERSONAL) {
       return badRequest(res, { 
-        message: 'Only personal profiles can create reviews. Agencies, businesses, and other profile types cannot create reviews.' 
+        message: 'Only personal profiles can create reviews. Agencies and businesses cannot create reviews.' 
       });
     }
 
-    // Validate address exists
+    // Validate required fields
+    if (!reviewData.addressId) {
+      return badRequest(res, { message: 'Address ID is required' });
+    }
+
+    if (!reviewData.opinion || reviewData.opinion.trim().length < 10) {
+      return badRequest(res, { message: 'Opinion must be at least 10 characters long' });
+    }
+
+    // Validate addressId
     if (!Types.ObjectId.isValid(reviewData.addressId)) {
       return badRequest(res, { message: 'Invalid address ID' });
     }
 
+    // Check if address exists
     const address = await Address.findById(reviewData.addressId);
     if (!address) {
       return notFound(res, { message: 'Address not found' });
     }
 
-    // Check if user already reviewed this address
+    // Check if user already has a review for this address
     const existingReview = await Review.findOne({ 
-      addressId: reviewData.addressId, 
-      profileId: activeProfile._id
+      profileId: activeProfile._id, 
+      addressId: reviewData.addressId 
     });
-
+    
     if (existingReview) {
       return badRequest(res, { message: 'You have already reviewed this address' });
     }
@@ -235,10 +220,15 @@ export const createReview = async (req: Request, res: Response) => {
     });
 
     await review.save();
-    await review.populate('profileId', 'profileType personalProfile agencyProfile');
 
-    logger.info(`New review created for address ${reviewData.addressId} by user ${activeProfile._id}`);
-    return created(res, { review });
+    // Populate the saved review for response
+    const populatedReview = await Review.findById(review._id)
+      .populate('profileId', 'profileType personalProfile isAnonymous')
+      .populate('addressId', 'street city state zipCode country fullAddress')
+      .lean();
+
+    logger.info('Review created successfully', { reviewId: review._id, addressId: reviewData.addressId });
+    return created(res, { review: populatedReview });
 
   } catch (error) {
     logger.error('Error creating review:', error);

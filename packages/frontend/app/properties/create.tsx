@@ -162,7 +162,7 @@ const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
       'address',
       'city',
       'state',
-      'zipCode',
+      'postal_code',
       'country',
       'latitude',
       'longitude',
@@ -196,7 +196,7 @@ const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
       'address',
       'city',
       'state',
-      'zipCode',
+      'postal_code',
       'country',
       'latitude',
       'longitude',
@@ -225,7 +225,7 @@ const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
       'yearBuilt',
       'description',
     ],
-    Location: ['address', 'city', 'state', 'zipCode', 'country', 'latitude', 'longitude'],
+    Location: ['address', 'city', 'state', 'postal_code', 'country', 'latitude', 'longitude'],
     Pricing: ['monthlyRent', 'currency', 'securityDeposit'],
     Amenities: ['amenities'],
     Media: ['images'],
@@ -241,7 +241,7 @@ const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
       'yearBuilt',
       'description',
     ],
-    Location: ['address', 'city', 'state', 'zipCode', 'country', 'latitude', 'longitude'],
+    Location: ['address', 'city', 'state', 'postal_code', 'country', 'latitude', 'longitude'],
     Pricing: ['monthlyRent', 'currency', 'securityDeposit'],
     Amenities: ['amenities'],
     Media: ['images'],
@@ -250,7 +250,7 @@ const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
   coliving: {
     // Coliving: no bedrooms, optional bathrooms, coliving features
     'Basic Info': ['propertyType', 'bathrooms', 'squareFootage', 'yearBuilt', 'description'],
-    Location: ['address', 'city', 'state', 'zipCode', 'country', 'latitude', 'longitude'],
+    Location: ['address', 'city', 'state', 'postal_code', 'country', 'latitude', 'longitude'],
     Pricing: ['monthlyRent', 'currency', 'securityDeposit'],
     Amenities: ['amenities'],
     'Coliving Features': ['sharedSpaces', 'communityEvents'],
@@ -267,7 +267,7 @@ const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
       'yearBuilt',
       'description',
     ],
-    Location: ['address', 'city', 'state', 'zipCode', 'country', 'latitude', 'longitude'],
+    Location: ['address', 'city', 'state', 'postal_code', 'country', 'latitude', 'longitude'],
     Pricing: ['monthlyRent', 'currency', 'securityDeposit'],
     Media: ['images'],
     Preview: [],
@@ -341,7 +341,7 @@ export default function CreatePropertyScreen() {
         neighborhood: property.address?.neighborhood || '',
         city: property.address?.city || '',
         state: property.address?.state || '',
-        zipCode: property.address?.zipCode || '',
+        postal_code: property.address?.postal_code || '',
         country: property.address?.country || '',
         latitude: property.address?.coordinates?.type === 'Point' ? property.address.coordinates.coordinates[1] : undefined,
         longitude: property.address?.coordinates?.type === 'Point' ? property.address.coordinates.coordinates[0] : undefined,
@@ -475,7 +475,7 @@ export default function CreatePropertyScreen() {
       updateFormField('location', 'country', address.country);
     }
     if (address.postalCode) {
-      updateFormField('location', 'zipCode', address.postalCode);
+      updateFormField('location', 'postal_code', address.postalCode);
     }
 
     // Move map to selected location
@@ -515,7 +515,7 @@ export default function CreatePropertyScreen() {
       updateFormField('location', 'country', address.country);
     }
     if (address.postalCode) {
-      updateFormField('location', 'zipCode', address.postalCode);
+      updateFormField('location', 'postal_code', address.postalCode);
     }
 
     // Move main map to selected location
@@ -537,7 +537,7 @@ export default function CreatePropertyScreen() {
           street: formData.location.address,
           city: formData.location.city,
           state: formData.location.state,
-          zipCode: formData.location.zipCode,
+          postal_code: formData.location.postal_code,
           country: formData.location.country || 'US',
           neighborhood: formData.location.neighborhood,
           showAddressNumber: formData.location.showAddressNumber ?? true,
@@ -753,10 +753,10 @@ export default function CreatePropertyScreen() {
         errors.city = 'City is required';
       if (!formData.location.state?.trim())
         errors.state = 'State is required';
-      if (!formData.location.zipCode?.trim())
-        errors.zipCode = 'ZIP code is required';
-      else if (!/^\d{5}(-\d{4})?$/.test(formData.location.zipCode.trim()))
-        errors.zipCode = 'ZIP code must be in format 12345 or 12345-6789';
+      if (!formData.location.postal_code?.trim())
+        errors.postal_code = 'Postal code is required';
+      else if (!/^\d{5}(-\d{4})?$/.test(formData.location.postal_code.trim()))
+        errors.postal_code = 'Postal code must be in format 12345 or 12345-6789';
       if (!formData.location.country?.trim())
         errors.country = 'Country is required';
 
@@ -1351,14 +1351,14 @@ export default function CreatePropertyScreen() {
             <View style={styles.formGroup}>
               <ThemedText style={styles.label}>ZIP/Postal Code</ThemedText>
               <TextInput
-                style={[styles.input, validationErrors.zipCode && styles.inputError]}
-                value={formData.location.zipCode}
-                onChangeText={(text) => updateFormField('location', 'zipCode', text)}
+                style={[styles.input, validationErrors.postal_code && styles.inputError]}
+                value={formData.location.postal_code}
+                onChangeText={(text) => updateFormField('location', 'postal_code', text)}
                 placeholder="ZIP or postal code"
                 keyboardType="numeric"
               />
-              {validationErrors.zipCode && (
-                <ThemedText style={styles.errorText}>{validationErrors.zipCode}</ThemedText>
+              {validationErrors.postal_code && (
+                <ThemedText style={styles.errorText}>{validationErrors.postal_code}</ThemedText>
               )}
             </View>
 

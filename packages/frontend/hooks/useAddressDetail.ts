@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Platform } from 'react-native';
+import { useState, useCallback } from 'react';
 import { useLocationStore } from '@/store/locationStore';
 import { useNeighborhoodStore } from '@/store/neighborhoodStore';
 
@@ -11,11 +10,26 @@ export interface AddressCoordinates {
 export interface AddressDetail {
   street: string;
   city: string;
-  state: string;
-  zipCode: string;
+  state?: string; // Made optional for international support
+  postal_code: string; // Renamed from zipCode
   country: string;
+  countryCode?: string; // Added country code
   coordinates?: AddressCoordinates;
   formattedAddress: string;
+  
+  // Extended fields for international addresses
+  number?: string;
+  building_name?: string;
+  block?: string;
+  entrance?: string;
+  floor?: string;
+  unit?: string;
+  subunit?: string;
+  district?: string;
+  
+  // Legacy field for backward compatibility
+  zipCode?: string;
+  
   neighborhood?: {
     name: string;
     walkScore?: number;
@@ -24,7 +38,7 @@ export interface AddressDetail {
     crimeRate?: number;
     averageRent?: number;
   };
-  nearbyAmenities?: Array<{
+  nearbyAmenities?: {
     name: string;
     type:
       | 'restaurant'
@@ -39,7 +53,7 @@ export interface AddressDetail {
     rating?: number;
     address?: string;
     phone?: string;
-  }>;
+  }[];
 }
 
 export interface UseAddressDetailReturn {
@@ -53,9 +67,10 @@ export interface UseAddressDetailReturn {
   initializeAddressDetail: (
     street: string,
     city: string,
-    state: string,
-    zipCode: string,
+    state?: string,
+    postal_code?: string,
     country?: string,
+    countryCode?: string,
     coordinates?: AddressCoordinates,
   ) => void;
 }
@@ -65,8 +80,8 @@ export function useAddressDetail(): UseAddressDetailReturn {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { currentLocation } = useLocationStore();
-  const { setCurrentNeighborhood, setNearbyNeighborhoods } = useNeighborhoodStore();
+  const { currentLocation: _currentLocation } = useLocationStore();
+  const { setCurrentNeighborhood, setNearbyNeighborhoods: _setNearbyNeighborhoods } = useNeighborhoodStore();
 
   // Geocode address to get coordinates
   const geocodeAddress = useCallback(
@@ -283,19 +298,23 @@ export function useAddressDetail(): UseAddressDetailReturn {
     (
       street: string,
       city: string,
-      state: string,
-      zipCode: string,
+      state?: string,
+      postal_code?: string,
       country: string = 'USA',
+      countryCode?: string,
       coordinates?: AddressCoordinates,
     ) => {
       const detail: AddressDetail = {
         street,
         city,
         state,
-        zipCode,
+        postal_code: postal_code || '',
         country,
+        countryCode,
         coordinates,
-        formattedAddress: `${street}, ${city}, ${state} ${zipCode}`,
+        formattedAddress: `${street}, ${city}${state ? ', ' + state : ''}${postal_code ? ' ' + postal_code : ''}`,
+        // Legacy field for backward compatibility
+        zipCode: postal_code,
       };
 
       setAddressDetail(detail);

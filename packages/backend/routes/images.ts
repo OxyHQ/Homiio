@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request } from 'express';
 import multer from 'multer';
 import imageController from '../controllers/imageController';
 import handleUploadError from '../middlewares/uploadMiddleware';
@@ -9,7 +9,7 @@ const router = Router();
 const storage = multer.memoryStorage();
 
 // File filter to only allow images
-const fileFilter = (req: Express.Request, file: any, cb: multer.FileFilterCallback) => {
+const fileFilter = (req: Request, file: any, cb: multer.FileFilterCallback) => {
   console.log('File filter called with:', {
     fieldname: file.fieldname,
     originalname: file.originalname,

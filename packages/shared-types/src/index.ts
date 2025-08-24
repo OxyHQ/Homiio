@@ -21,4 +21,7 @@ export * from './profile';
 export * from './city';
 
 // Lease types
-export * from './lease'; 
+export * from './lease';
+
+// Review types
+export * from './review'; 

@@ -123,8 +123,8 @@ export async function createProperty(req, res, next) {
         }
       }
       
-      // Find or create address
-      const address = await Address.findOrCreate(addressData);
+      // Find or create address using new canonical method
+      const address = await Address.findOrCreateCanonical(addressData);
       addressId = address._id;
     } else if (req.body.addressId) {
       // Address ID directly provided

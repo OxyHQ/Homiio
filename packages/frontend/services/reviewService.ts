@@ -6,44 +6,16 @@
 import { api } from '@/utils/api';
 import { OxyServices } from '@oxyhq/services';
 import { ApiResponse } from '../types/api';
+import { 
+  ReviewDocument, 
+  CreateReviewRequest,
+  UpdateReviewRequest
+} from '@homiio/shared-types';
 
-export interface ReviewData {
-  _id: string;
-  addressId: string;
-  address: string;
-  greenHouse: string;
-  price: number;
-  currency: string;
-  livedFrom: string;
-  livedTo: string;
-  livedForMonths: number;
-  recommendation: boolean;
-  opinion: string;
-  positiveComment?: string;
-  negativeComment?: string;
-  images: string[];
-  rating: number;
-  summerTemperature: string;
-  winterTemperature: string;
-  noise: string;
-  light: string;
-  conditionAndMaintenance: string;
-  services: string[];
-  landlordTreatment: string;
-  problemResponse: string;
-  depositReturned: boolean;
-  staircaseNeighbors: string;
-  touristApartments: boolean;
-  neighborRelations: string;
-  cleaning: string;
-  areaTourists: string;
-  areaSecurity: string;
-  profileId: string;
-  createdAt: string;
-  updatedAt: string;
-  verified: boolean;
-  livedDurationText?: string;
-}
+// Re-export shared types
+export type ReviewData = ReviewDocument;
+export type CreateReview = CreateReviewRequest;
+export type UpdateReview = UpdateReviewRequest;
 
 export interface ReviewStats {
   averageRating: number;

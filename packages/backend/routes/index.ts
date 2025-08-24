@@ -39,7 +39,7 @@ export default function() {
   const imageRoutes = images;
   const billingRoutes = billing();
   const scraperRoutes = scraper();
-  const reviewRoutes = reviews;
+  const reviewRoutes = reviews();
   const addressRoutes = addresses;
 
   const router = express.Router();
