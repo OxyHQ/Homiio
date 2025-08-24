@@ -194,7 +194,7 @@ const buildSearchParams = (
   base: { limit?: number; query?: string; excludeIds?: string[] } = {},
 ) => {
   const params = new URLSearchParams();
-  if (base.query) params.set('query', base.query);
+  if (base.query && base.query.trim()) params.set('query', base.query);
   params.set('limit', String(base.limit ?? DEFAULT_LIST_LIMIT));
   if (base.excludeIds?.length) params.set('excludeIds', base.excludeIds.join(','));
 
@@ -283,8 +283,14 @@ Available keys and their types:
 
 Examples:
 "Find apartments in Barcelona" → {"city": "Barcelona"}
+"What properties are in Granollers?" → {"city": "Granollers"}
+"Que pisos hay en Granollers?" → {"city": "Granollers"}
 "2 bedroom places in Madrid under 1500" → {"city": "Madrid", "bedrooms": 2, "maxRent": 1500}
 "Pet friendly houses in California" → {"state": "California", "type": "house", "petFriendly": true}
+"Properties in Barcelona with parking" → {"city": "Barcelona", "amenities": ["parking"]}
+
+Important: For simple location questions like "What's in [city]?" or "Properties in [city]", 
+just extract the city name. Don't add extra filters unless explicitly mentioned.
 
 Focus on extracting clear location information from the user's query.`;
 
@@ -370,6 +376,20 @@ async function performAppPropertySearch(query: string, priorMessages: ChatMessag
 
     console.log('AI Property Search Debug:', { query, filters, prevIds });
 
+    // Determine if this is a location-based search or text search
+    const isLocationSearch = filters.city || filters.state;
+    const hasTextualSearchTerms = /\b(furnished|pet|parking|balcony|pool|gym|modern|luxury|cheap|budget)\b/i.test(query);
+    
+    // For location searches, don't pass the full query as text search
+    const searchQuery = isLocationSearch && !hasTextualSearchTerms ? undefined : query;
+    
+    console.log('Search strategy:', { 
+      isLocationSearch, 
+      hasTextualSearchTerms, 
+      willUseTextSearch: !!searchQuery,
+      extractedLocation: filters.city || filters.state
+    });
+
     // Nearby (anchor on previous shown property)
     let nearby: any[] = [];
     if (prevIds.length) {
@@ -398,23 +418,11 @@ async function performAppPropertySearch(query: string, priorMessages: ChatMessag
     }
 
     // Search
-    // Don't use the raw query if it's just a basic location question
-    const isSimpleLocationQuery = /^(qu[eé]|what|where|encuentra|find|hay|show|busca|search).*(en|in|at)\s+\w+/i.test(query);
-    const searchQuery = isSimpleLocationQuery ? undefined : query;
-    
     const searchParams = buildSearchParams(filters, {
       limit: DEFAULT_LIST_LIMIT,
-      query: searchQuery,
+      query: searchQuery || '', // Convert undefined to empty string
       excludeIds: prevIds,
     });
-    
-    console.log('Search query decision:', { 
-      originalQuery: query, 
-      isSimpleLocationQuery, 
-      searchQuery,
-      filters
-    });
-    
     console.log('Main search URL:', `${getBaseUrl()}/api/properties/search?${searchParams.toString()}`);
     const resp = await fetch(`${getBaseUrl()}/api/properties/search?${searchParams.toString()}`);
     const searchData = resp.ok ? await resp.json() : null;
