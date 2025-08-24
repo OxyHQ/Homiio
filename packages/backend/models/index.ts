@@ -1,9 +1,9 @@
 /**
  * Models Index
- * Central export for all Homio Mongoose models
+ * Central export for all Homiio Mongoose models
  */
 
-// Mongoose schemas (database models)
+// Mongoose schemas (database models) - using existing schema files
 const PropertyModel = require('./schemas/PropertySchema');
 const AddressModel = require('./schemas/AddressSchema');
 const RoomModel = require('./schemas/RoomSchema');

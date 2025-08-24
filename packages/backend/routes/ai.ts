@@ -102,7 +102,11 @@ Avoid repetition:
 // -------------------------------
 const isObjectId = (id: string) => mongoose.Types.ObjectId.isValid(id);
 const getUserId = (req: any) => req.user?.oxyUserId || req.user?._id || req.user?.id;
-const getBaseUrl = () => process.env.INTERNAL_API_BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
+const getBaseUrl = () => {
+  const baseUrl = process.env.INTERNAL_API_BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
+  console.log('AI API Base URL:', baseUrl);
+  return baseUrl;
+};
 
 const ok = (res: Response, data: any) => res.json(data);
 const err = (res: Response, code: number, message: string) => res.status(code).json({ error: message });
@@ -230,6 +234,12 @@ const buildSearchParams = (
   addIf(params, 'maxYearBuilt', filters.maxYearBuilt);
   addBool(params, 'budgetFriendly', filters.budgetFriendly);
 
+  console.log('buildSearchParams output:', {
+    filters,
+    base,
+    finalParams: params.toString()
+  });
+  
   return params;
 };
 
@@ -260,7 +270,24 @@ async function generateAITitle(userMessage: string) {
 
 async function extractFiltersWithAI(userText: string): Promise<PropertyFilters> {
   const instruction = `You extract structured search filters for rental properties from the user's message.
-Return ONLY a compact JSON object with the allowed keys; omit unknown/empty fields.`;
+Return ONLY a compact JSON object with the allowed keys; omit unknown/empty fields.
+
+Available keys and their types:
+- type (string): property type like "apartment", "house", "room", etc.
+- minRent, maxRent (number): price range
+- city, state (string): location filters - IMPORTANT: extract city and state from location mentions
+- bedrooms, bathrooms (number): exact number
+- minBedrooms, maxBedrooms, minBathrooms, maxBathrooms (number): ranges
+- amenities (array of strings): features like "balcony", "parking", "pet_friendly", etc.
+- petFriendly, utilitiesIncluded, verified, eco, available (boolean): boolean filters
+
+Examples:
+"Find apartments in Barcelona" → {"city": "Barcelona"}
+"2 bedroom places in Madrid under 1500" → {"city": "Madrid", "bedrooms": 2, "maxRent": 1500}
+"Pet friendly houses in California" → {"state": "California", "type": "house", "petFriendly": true}
+
+Focus on extracting clear location information from the user's query.`;
+
   try {
     const result = await streamText({
       model: openai('gpt-4o'),
@@ -279,6 +306,8 @@ Return ONLY a compact JSON object with the allowed keys; omit unknown/empty fiel
 
     const raw = JSON.parse(trimmed.slice(start, end + 1));
     const out: PropertyFilters = {};
+
+    console.log('AI Filter Extraction:', { input: userText, extracted: raw });
 
     const numberish = (v: any) => (v != null && !isNaN(Number(v)) ? Number(v) : undefined);
     const put = (k: keyof PropertyFilters, v: any) => {
@@ -326,8 +355,10 @@ Return ONLY a compact JSON object with the allowed keys; omit unknown/empty fiel
     put('availableFromBefore', typeof raw.availableFromBefore === 'string' ? raw.availableFromBefore : undefined);
     put('availableFromAfter', typeof raw.availableFromAfter === 'string' ? raw.availableFromAfter : undefined);
 
+    console.log('Final extracted filters:', out);
     return out;
-  } catch {
+  } catch (e) {
+    console.error('AI filter extraction error:', e);
     return {};
   }
 }
@@ -336,6 +367,8 @@ async function performAppPropertySearch(query: string, priorMessages: ChatMessag
   try {
     const prevIds = extractLastPropertyIdsFromMessages(priorMessages);
     const filters = await extractFiltersWithAI(query);
+
+    console.log('AI Property Search Debug:', { query, filters, prevIds });
 
     // Nearby (anchor on previous shown property)
     let nearby: any[] = [];
@@ -352,23 +385,48 @@ async function performAppPropertySearch(query: string, priorMessages: ChatMessag
         params.set('latitude', String(latitude));
         params.set('maxDistance', '3000');
 
+        console.log('Nearby search URL:', `${getBaseUrl()}/api/properties/nearby?${params.toString()}`);
         const resp = await fetch(`${getBaseUrl()}/api/properties/nearby?${params.toString()}`);
         if (resp.ok) {
           const data = await resp.json();
           nearby = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+          console.log('Nearby search result:', { count: nearby.length });
+        } else {
+          console.error('Nearby search failed:', resp.status, await resp.text());
         }
       }
     }
 
     // Search
+    // Don't use the raw query if it's just a basic location question
+    const isSimpleLocationQuery = /^(qu[eé]|what|where|encuentra|find|hay|show|busca|search).*(en|in|at)\s+\w+/i.test(query);
+    const searchQuery = isSimpleLocationQuery ? undefined : query;
+    
     const searchParams = buildSearchParams(filters, {
       limit: DEFAULT_LIST_LIMIT,
-      query,
+      query: searchQuery,
       excludeIds: prevIds,
     });
+    
+    console.log('Search query decision:', { 
+      originalQuery: query, 
+      isSimpleLocationQuery, 
+      searchQuery,
+      filters
+    });
+    
+    console.log('Main search URL:', `${getBaseUrl()}/api/properties/search?${searchParams.toString()}`);
     const resp = await fetch(`${getBaseUrl()}/api/properties/search?${searchParams.toString()}`);
     const searchData = resp.ok ? await resp.json() : null;
+    
+    if (!resp.ok) {
+      console.error('Main search failed:', resp.status, await resp.text());
+    } else {
+      console.log('Main search response structure:', Object.keys(searchData || {}));
+    }
+    
     const search = Array.isArray(searchData?.data) ? searchData.data : Array.isArray(searchData) ? searchData : [];
+    console.log('Search result:', { count: search.length });
 
     return { nearby: nearby.slice(0, RESULTS_RETURN_MAX), search: search.slice(0, RESULTS_RETURN_MAX) };
   } catch (e) {
@@ -453,6 +511,13 @@ export default function aiRouter() {
       }
 
       const propertyResults = isAttachmentStub ? { nearby: [], search: [] } : await performAppPropertySearch(lastContent, messages);
+
+      console.log('Property search completed:', { 
+        isAttachmentStub, 
+        lastContent: lastContent.substring(0, 100), 
+        nearbyCount: propertyResults?.nearby?.length || 0,
+        searchCount: propertyResults?.search?.length || 0 
+      });
 
       // Build enhanced messages
       const enhanced: ChatMessage[] = [{ role: 'system', content: SINDI_SYSTEM_PROMPT }, ...messages];

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo, useContext } from 'react';
 import {
   View, StyleSheet, Dimensions, TextInput, TouchableOpacity,
-  Platform, ActivityIndicator, ScrollView, FlatList, Text,
+  Platform, ActivityIndicator, ScrollView, FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -297,7 +297,6 @@ export default function SearchScreen() {
 
   // Simple search query setter
   const setSearchQuerySafely = useCallback((query: string) => {
-    console.log('setSearchQuerySafely called with:', query);
     setSearchQuery(query);
   }, []);
   const { setIsMapMode } = useSearchMode();
@@ -321,25 +320,9 @@ export default function SearchScreen() {
 
   // Memoize markers to prevent unnecessary re-renders
   const mapMarkers = useMemo(() => {
-    console.log('=== MAP MARKERS MEMO START ===');
-    console.log('Properties received:', properties?.length);
-
     if (!properties || properties.length === 0) {
-      console.log('No properties, returning empty markers');
       return [];
     }
-
-    // Log first few properties to see their structure
-    console.log('First 3 properties structure:');
-    properties.slice(0, 3).forEach((p, i) => {
-      console.log(`Property ${i + 1}:`, {
-        id: p._id,
-        hasNewCoords: !!p.address?.coordinates,
-        hasOldCoords: !!p.location,
-        newCoords: p.address?.coordinates?.coordinates,
-        oldCoords: p.location?.coordinates
-      });
-    });
 
     const validProperties = properties.filter(p => {
       // Check both new structure (address.coordinates) and old structure (location)
@@ -347,17 +330,6 @@ export default function SearchScreen() {
       const hasOldCoordinates = p?.location?.coordinates?.length === 2;
       return hasNewCoordinates || hasOldCoordinates;
     });
-    console.log('Total properties:', properties.length, 'Valid properties with coordinates:', validProperties.length);
-
-    if (validProperties.length === 0 && properties.length > 0) {
-      console.log('Properties found but none have coordinates. Sample property:', {
-        id: properties[0]?._id,
-        address: properties[0]?.address,
-        location: properties[0]?.location,
-        hasNewCoordinates: !!properties[0]?.address?.coordinates,
-        hasOldCoordinates: !!properties[0]?.location
-      });
-    }
 
     const markers = validProperties.map(p => {
       // Use new structure if available, otherwise fall back to old structure
@@ -366,7 +338,6 @@ export default function SearchScreen() {
       // Ensure coordinates are valid numbers
       if (!coordinates || coordinates.length !== 2 ||
         typeof coordinates[0] !== 'number' || typeof coordinates[1] !== 'number') {
-        console.warn('Invalid coordinates for property:', p._id, coordinates);
         return null;
       }
 
@@ -377,24 +348,11 @@ export default function SearchScreen() {
       };
     }).filter((marker): marker is { id: string; coordinates: [number, number]; priceLabel: string } => marker !== null); // Remove any null markers
 
-    console.log('Generated markers:', markers.length, markers.slice(0, 2));
-    console.log('Sample marker structure:', markers[0]);
-    console.log('=== MAP MARKERS MEMO END ===');
     return markers;
   }, [properties]);
 
   useEffect(() => {
-    console.log('Search query changed:', searchQuery, 'lastSelectedLocation:', lastSelectedLocationRef.current);
-
     if (!searchQuery.trim()) {
-      console.log('Empty search query, clearing results');
-      setSearchResults([]);
-      setShowResults(false);
-      return;
-    }
-
-    if (!searchQuery.trim()) {
-      console.log('Empty search query, clearing results');
       setSearchResults([]);
       setShowResults(false);
       return;
@@ -402,39 +360,31 @@ export default function SearchScreen() {
 
     // Don't search if the query matches the last selected location
     if (searchQuery === lastSelectedLocationRef.current) {
-      console.log('Query matches last selected location, not searching');
       return;
     }
 
     const searchPlaces = async () => {
-      console.log('Starting search for:', searchQuery);
       setIsSearching(true);
 
       // Check if Mapbox token is available
       const mapboxToken = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
       if (!mapboxToken) {
-        console.error('Mapbox token not found. Please check EXPO_PUBLIC_MAPBOX_TOKEN environment variable.');
         setIsSearching(false);
         return;
       }
 
       try {
         const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchQuery)}.json?access_token=${mapboxToken}`;
-        console.log('Search URL:', url);
         const response = await fetch(url);
         const data = await response.json();
-        console.log('Search response:', data);
         if (data.features) {
-          console.log('Found features:', data.features.length);
           setSearchResults(data.features);
           setShowResults(true);
         } else {
-          console.log('No features found in response');
           setSearchResults([]);
           setShowResults(false);
         }
-      } catch (error) {
-        console.error('Geocoding error:', error);
+      } catch {
         setSearchResults([]);
         setShowResults(false);
       }
@@ -448,31 +398,15 @@ export default function SearchScreen() {
   }, [searchQuery]);
 
   const fetchProperties = useCallback(async (bounds: { west: number; south: number; east: number; north: number }) => {
-    console.log('fetchProperties called with bounds:', bounds);
     setIsLoadingProperties(true);
     setHighlightedPropertyId(null);
     try {
       const response = await propertyService.findPropertiesInBounds(bounds, {
-        minRent: filters.minPrice, maxRent: filters.maxPrice,
-        bedrooms: typeof filters.bedrooms === 'string' ? 5 : filters.bedrooms,
-        bathrooms: typeof filters.bathrooms === 'string' ? 4 : filters.bathrooms,
+        minPrice: filters.minPrice,
+        maxPrice: filters.maxPrice,
+        minBedrooms: typeof filters.bedrooms === 'string' ? 5 : filters.bedrooms,
+        minBathrooms: typeof filters.bathrooms === 'string' ? 4 : filters.bathrooms,
       });
-
-      console.log('API response:', response);
-      console.log('API response properties:', response.properties.length, 'properties');
-      console.log('Sample property from API:', {
-        id: response.properties[0]?._id,
-        hasNewCoords: !!response.properties[0]?.address?.coordinates,
-        hasOldCoords: !!response.properties[0]?.location,
-        newCoords: response.properties[0]?.address?.coordinates?.coordinates,
-        oldCoords: response.properties[0]?.location?.coordinates
-      });
-      if (response.properties.length > 0) {
-        console.log('First property sample:', response.properties[0]);
-        console.log('First property address:', response.properties[0].address);
-        console.log('First property new coordinates:', response.properties[0].address?.coordinates?.coordinates);
-        console.log('First property old coordinates:', response.properties[0].location?.coordinates);
-      }
 
       // Only update properties if they've actually changed
       setProperties(prevProperties => {
@@ -480,7 +414,6 @@ export default function SearchScreen() {
 
         // Check if properties have actually changed
         if (prevProperties.length !== newProperties.length) {
-          console.log('Properties count changed, updating');
           return newProperties;
         }
 
@@ -500,13 +433,9 @@ export default function SearchScreen() {
           return prevNewCoords !== newNewCoords || prevOldCoords !== newOldCoords;
         });
 
-        if (hasChanged) {
-          console.log('Properties content changed, updating');
-        }
         return hasChanged ? newProperties : prevProperties;
       });
-    } catch (error) {
-      console.error('Error fetching properties:', error);
+    } catch {
       setProperties([]);
     } finally {
       setIsLoadingProperties(false);
@@ -518,7 +447,6 @@ export default function SearchScreen() {
   }, [highlightedPropertyId]);
 
   const handleSelectLocation = (result: SearchResult) => {
-    console.log('handleSelectLocation called');
     const [lng, lat] = result.center;
 
     // Clear search results and hide results immediately
@@ -610,7 +538,6 @@ export default function SearchScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        console.log('Location permission denied');
         return;
       }
 
@@ -621,7 +548,6 @@ export default function SearchScreen() {
       });
 
       const coordinates: [number, number] = [location.coords.longitude, location.coords.latitude];
-      console.log('Refreshed location:', coordinates, 'accuracy:', location.coords.accuracy);
 
       // Navigate to the new location
       mapRef.current?.navigateToLocation(coordinates, 14);
@@ -633,17 +559,15 @@ export default function SearchScreen() {
         bounds: undefined,
       });
 
-    } catch (error) {
-      console.warn('Failed to refresh location:', error);
+    } catch {
+      // Handle location error silently
     }
   }, [mapRef, setMapState, screenId]);
 
   // Initial fetch of properties when component mounts
   useEffect(() => {
-    console.log('Initial fetch effect - properties length:', properties.length, 'savedState:', !!savedState);
     // Only fetch if we don't have properties and no saved state
     if (properties.length === 0 && !savedState) {
-      console.log('Fetching initial properties for Barcelona area');
       // Fetch properties for a default area (Barcelona)
       const defaultBounds = {
         west: 2.0,
@@ -667,7 +591,6 @@ export default function SearchScreen() {
   // Handle URL query changes
   useEffect(() => {
     if (urlQuery && urlQuery !== searchQuery) {
-      console.log('URL query changed:', urlQuery);
       setSearchQuery(urlQuery);
       setShowResults(true);
     }
@@ -764,19 +687,17 @@ export default function SearchScreen() {
           placeholder="Search for a city, neighborhood, or address..."
           value={searchQuery}
           onChangeText={(text) => {
-            console.log('Search input changed (header):', text);
             setSearchQuerySafely(text);
           }}
           returnKeyType="search"
           onFocus={() => {
-            console.log('Search input focused (header), searchQuery:', searchQuery, 'searchResults.length:', searchResults.length);
             // Only show results if we have a query and have results
             if (searchQuery.trim() && searchResults.length > 0) {
               setShowResults(true);
             }
           }}
           onBlur={() => {
-            console.log('Search input blurred (header)');
+            // Handle search input blur
           }}
         />
         {isSearching ? <ActivityIndicator size="small" color="#666" style={styles.searchIcon} />
@@ -866,14 +787,6 @@ export default function SearchScreen() {
 
   const _renderSearchBar = (containerStyle: any) => (
     <View style={containerStyle}>
-      {/* Debug info */}
-      {__DEV__ && (
-        <View style={{ padding: 4, backgroundColor: '#f0f0f0', marginBottom: 4 }}>
-          <ThemedText style={{ fontSize: 10 }}>
-            Debug: query=&quot;{searchQuery}&quot;, results={searchResults.length}, show={showResults.toString()}, searching={isSearching.toString()}
-          </ThemedText>
-        </View>
-      )}
       <View style={styles.searchInputContainer}>
         <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
         <TextInput
@@ -882,19 +795,17 @@ export default function SearchScreen() {
           placeholder="Search for a city, neighborhood, or address..."
           value={searchQuery}
           onChangeText={(text) => {
-            console.log('Search input changed (bar):', text);
             setSearchQuerySafely(text);
           }}
           returnKeyType="search"
           onFocus={() => {
-            console.log('Search input focused (bar), searchQuery:', searchQuery, 'searchResults.length:', searchResults.length);
             // Only show results if we have a query and have results
             if (searchQuery.trim() && searchResults.length > 0) {
               setShowResults(true);
             }
           }}
           onBlur={() => {
-            console.log('Search input blurred (bar)');
+            // Handle search input blur
           }}
         />
         {isSearching ? <ActivityIndicator size="small" color="#666" style={styles.searchIcon} />
@@ -941,15 +852,6 @@ export default function SearchScreen() {
             onRegionChange={handleRegionChange}
             onMarkerPress={handleMarkerPress}
           />
-          {/* Debug info */}
-          <View style={{ position: 'absolute', top: 100, right: 10, backgroundColor: 'rgba(0,0,0,0.7)', padding: 10, borderRadius: 5 }}>
-            <Text style={{ color: 'white', fontSize: 12 }}>
-              Properties: {properties.length}
-            </Text>
-            <Text style={{ color: 'white', fontSize: 12 }}>
-              Markers: {mapMarkers.length}
-            </Text>
-          </View>
 
           {/* Search Header with Save Button */}
           <View style={styles.searchHeaderContainer}>
