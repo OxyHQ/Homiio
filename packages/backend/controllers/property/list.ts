@@ -45,6 +45,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       sortBy = 'createdAt',
       sortOrder = 'desc',
       profileId,
+      addressId,
       lat,
       lng,
       radius
@@ -56,6 +57,16 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     const filters: any = {};
     if (profileId) filters.profileId = profileId;
     if (type) filters.type = type;
+    
+    // Handle direct addressId filter
+    if (addressId) {
+      const mongoose = require('mongoose');
+      if (mongoose.Types.ObjectId.isValid(String(addressId))) {
+        filters.addressId = new mongoose.Types.ObjectId(String(addressId));
+      } else {
+        return res.json(paginationResponse([], pageNumber, limitNumber, 0));
+      }
+    }
     
     // Handle city and state filters with Address lookup
     let addressIds: string[] = [];

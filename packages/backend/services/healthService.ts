@@ -54,11 +54,11 @@ export class HealthService {
       const scraperHealth = await this.getScraperHealth();
       
       // In a real implementation, you'd check database connectivity here
-      const databaseHealth: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
+      const databaseHealth = 'healthy' as 'healthy' | 'degraded' | 'unhealthy';
       
       const overallStatus = scraperHealth.status === 'healthy' && databaseHealth === 'healthy' 
         ? 'healthy' 
-        : scraperHealth.status === 'unhealthy' || databaseHealth === 'unhealthy'
+        : (scraperHealth.status === 'unhealthy' || databaseHealth === 'unhealthy')
         ? 'unhealthy'
         : 'degraded';
 

@@ -4,6 +4,7 @@
     "esModuleInterop": true,
     "strict": true,
     "composite": true,
+    "noEmit": false,
     "baseUrl": ".",
     "jsx": "react-jsx",
     "jsxImportSource": "nativewind",

@@ -5,10 +5,20 @@ const { AppError, paginationResponse } = require('../../middlewares/errorHandler
 
 export async function searchProperties(req, res, next) {
   try {
-    const { query, type, minRent, maxRent, city, state, bedrooms, bathrooms, minBedrooms, maxBedrooms, minBathrooms, maxBathrooms, minSquareFootage, maxSquareFootage, minYearBuilt, maxYearBuilt, amenities, available, hasPhotos, verified, eco, housingType, layoutType, furnishedStatus, petFriendly, utilitiesIncluded, parkingType, petPolicy, leaseTerm, priceUnit, proximityToTransport, proximityToSchools, proximityToShopping, availableFromBefore, availableFromAfter, excludeIds, lat, lng, radius, bounds, budgetFriendly, page = 1, limit = 10 } = req.query;
+    const { query, type, minRent, maxRent, city, state, bedrooms, bathrooms, minBedrooms, maxBedrooms, minBathrooms, maxBathrooms, minSquareFootage, maxSquareFootage, minYearBuilt, maxYearBuilt, amenities, available, hasPhotos, verified, eco, housingType, layoutType, furnishedStatus, petFriendly, utilitiesIncluded, parkingType, petPolicy, leaseTerm, priceUnit, proximityToTransport, proximityToSchools, proximityToShopping, availableFromBefore, availableFromAfter, excludeIds, lat, lng, radius, bounds, budgetFriendly, addressId, page = 1, limit = 10 } = req.query;
     const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const andConditions = [];
     if (type) andConditions.push({ type });
+    
+    // Handle direct addressId filter
+    if (addressId) {
+      const mongoose = require('mongoose');
+      if (mongoose.Types.ObjectId.isValid(String(addressId))) {
+        andConditions.push({ addressId: new mongoose.Types.ObjectId(String(addressId)) });
+      } else {
+        return res.json(paginationResponse([], parseInt(page), parseInt(limit), 0, 'Invalid address ID provided'));
+      }
+    }
     
     // Handle city and state filters with Address lookup
     if (city || state) {
@@ -148,7 +158,7 @@ export async function searchProperties(req, res, next) {
         const addressIds = addressMatches.map(addr => addr._id);
         
         // Build regex filter with address ID lookup when needed
-        let regexOrConditions = [
+        let regexOrConditions: any[] = [
           { title: regex }, 
           { description: regex }, 
           { amenities: regex }

@@ -1,12 +1,6 @@
-/**
- * Models Index
- * Central export for all Homiio Mongoose models
- */
-
 // Mongoose schemas (database models) - using existing schema files
 const PropertyModel = require('./schemas/PropertySchema');
 const AddressModel = require('./schemas/AddressSchema');
-const RoomModel = require('./schemas/RoomSchema');
 const LeaseModel = require('./schemas/LeaseSchema');
 const RecentlyViewedModel = require('./schemas/RecentlyViewedSchema');
 const ViewingRequestModel = require('./schemas/ViewingRequestSchema');
@@ -18,11 +12,14 @@ const CityModel = require('./schemas/CitySchema');
 const SavedModel = require('./schemas/SavedSchema');
 const BillingModel = require('./schemas/BillingSchema');
 
+// Import the Review model as Mongoose schema
+const ReviewModel = require('./schemas/ReviewSchema');
+
 module.exports = {
   // Mongoose models
   Property: PropertyModel,
   Address: AddressModel,
-  Room: RoomModel,
+  Review: ReviewModel,
   Lease: LeaseModel,
   RecentlyViewed: RecentlyViewedModel,
   ViewingRequest: ViewingRequestModel,

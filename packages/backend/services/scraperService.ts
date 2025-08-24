@@ -32,6 +32,7 @@ export interface ScraperOptions {
   source: string;
   endpoint: string;
   apiKey?: string;
+  transformerName?: string;
 
   timeout?: number;
   maxRetries?: number;

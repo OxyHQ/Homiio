@@ -20,6 +20,8 @@ const images = require('./images');
 const { asyncHandler } = require('../middlewares');
 const billing = require('./billing').default;
 const scraper = require('./scraper').default;
+const reviews = require('./reviews').default;
+const addresses = require('./addresses').default;
 
 export default function() {
   const propertyRoutes = properties();
@@ -37,6 +39,8 @@ export default function() {
   const imageRoutes = images;
   const billingRoutes = billing();
   const scraperRoutes = scraper();
+  const reviewRoutes = reviews;
+  const addressRoutes = addresses;
 
   const router = express.Router();
 
@@ -56,6 +60,8 @@ export default function() {
   router.use('/images', imageRoutes);
   router.use('/billing', billingRoutes);
   router.use('/scraper', scraperRoutes);
+  router.use('/reviews', reviewRoutes);
+  router.use('/addresses', addressRoutes);
 
   // Admin-only city routes (authenticated)
   router.post('/cities', asyncHandler(require('../controllers/cityController').default.createCity));
