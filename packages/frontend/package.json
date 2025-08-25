@@ -84,7 +84,8 @@
     "react-responsive": "^10.0.1",
     "sonner": "^2.0.6",
     "sonner-native": "^0.21.0",
-    "zustand": "^5.0.6"
+    "zustand": "^5.0.6",
+    "nativewind": "^4.1.23"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
@@ -96,7 +97,6 @@
     "eslint": "^9.25.0",
     "eslint-config-expo": "~9.2.0",
     "eslint-plugin-unused-imports": "^4.1.4",
-    "nativewind": "^4.1.23",
     "postcss": "^8.5.6",
     "postcss-import": "^16.1.1",
     "prettier": "^3.6.2",
