@@ -1,6 +1,6 @@
 // Mongoose schemas (database models) - using existing schema files
 const PropertyModel = require('./schemas/PropertySchema');
-const AddressModel = require('./schemas/AddressSchema');
+const AddressModel = require('./Address').default; // Use new TypeScript Address model
 const LeaseModel = require('./schemas/LeaseSchema');
 const RecentlyViewedModel = require('./schemas/RecentlyViewedSchema');
 const ViewingRequestModel = require('./schemas/ViewingRequestSchema');
@@ -12,8 +12,8 @@ const CityModel = require('./schemas/CitySchema');
 const SavedModel = require('./schemas/SavedSchema');
 const BillingModel = require('./schemas/BillingSchema');
 
-// Import the Review model as Mongoose schema
-const ReviewModel = require('./schemas/ReviewSchema');
+// Import the Review model as TypeScript model
+const ReviewModel = require('./Review').Review;
 
 module.exports = {
   // Mongoose models

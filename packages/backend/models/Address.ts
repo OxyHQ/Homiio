@@ -4,7 +4,6 @@
  */
 
 import { Schema, model, Document, Model } from 'mongoose';
-import crypto from 'crypto';
 
 // Define the Address interface with new international fields
 export interface IAddress extends Document {
@@ -27,6 +26,8 @@ export interface IAddress extends Document {
   district?: string; // District/borough
   neighborhood?: string;
   address_lines: string[]; // Flexible address lines array
+  po_box?: string; // Post office box
+  reference?: string; // Reference landmark or identifier
   
   // Land plot information
   land_plot?: {
@@ -45,14 +46,16 @@ export interface IAddress extends Document {
   };
   
   // Computed fields
-  normalizedKey: string; // SHA-1 hash for uniqueness
   fullAddress: string;
   location: string;
   
   // Methods
   getCoordinates(): { longitude: number; latitude: number } | null;
   setLocation(longitude: number, latitude: number): this;
-  computeNormalizedKey(): string;
+  getAddressLevel(): 'STREET' | 'BUILDING' | 'UNIT';
+  createStreetLevel(): Partial<IAddress>;
+  createBuildingLevel(): Partial<IAddress>;
+  createUnitLevel(): Partial<IAddress>;
 }
 
 const AddressSchema = new Schema({
@@ -158,6 +161,16 @@ const AddressSchema = new Schema({
       message: 'Address lines must be 5 or fewer, each under 200 characters'
     }
   },
+  po_box: {
+    type: String,
+    trim: true,
+    maxlength: [20, 'PO Box cannot exceed 20 characters']
+  },
+  reference: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Reference cannot exceed 200 characters']
+  },
   
   // Land plot information
   land_plot: {
@@ -208,13 +221,6 @@ const AddressSchema = new Schema({
     }
   },
   
-  // Computed fields
-  normalizedKey: {
-    type: String,
-    required: true,
-    unique: true,
-    index: true
-  }
 }, {
   timestamps: true,
   toJSON: { 
@@ -344,63 +350,11 @@ AddressSchema.statics.normalizeAliases = function(input: any) {
   return normalized;
 };
 
-// Compute normalized key for uniqueness
-AddressSchema.methods.computeNormalizedKey = function(this: IAddress): string {
-  const keyFields = [
-    this.street?.toLowerCase().trim(),
-    this.number?.toLowerCase().trim(),
-    this.unit?.toLowerCase().trim(),
-    this.building_name?.toLowerCase().trim(),
-    this.block?.toLowerCase().trim(),
-    this.city?.toLowerCase().trim(),
-    this.state?.toLowerCase().trim(),
-    this.postal_code?.toLowerCase().trim(),
-    this.countryCode?.toUpperCase()
-  ].filter(field => field && field.length > 0);
-  
-  const keyString = keyFields.join('|');
-  return crypto.createHash('sha1').update(keyString).digest('hex');
-};
-
-// Static method to find or create with canonical fields and coordinates
-AddressSchema.statics.findOrCreateCanonical = async function(input: any) {
-  if (!input.coordinates) {
-    throw new Error('Coordinates are required for address creation');
-  }
-  
-  // Normalize aliases first
-  const normalizedInput = this.normalizeAliases(input);
-  
-  // Create a temporary instance to compute the normalized key
-  const tempAddress = new this(normalizedInput);
-  const normalizedKey = tempAddress.computeNormalizedKey();
-  
-  // First try to find existing address by normalized key
-  let address = await this.findOne({ normalizedKey });
-  
-  if (address) {
-    return address;
-  }
-  
-  // Create new address if not found
-  normalizedInput.normalizedKey = normalizedKey;
-  address = new this(normalizedInput);
-  
-  return await address.save();
-};
-
-// Pre-save hook to compute normalized key
-AddressSchema.pre('save', function(this: IAddress, next) {
-  if (this.isModified() || this.isNew) {
-    this.normalizedKey = this.computeNormalizedKey();
-  }
-  next();
-});
-
 // Static method to find or create address (legacy compatibility)
 AddressSchema.statics.findOrCreate = async function(addressData: any) {
-  console.warn('Address.findOrCreate is deprecated. Use findOrCreateCanonical instead.');
-  return this.findOrCreateCanonical(addressData);
+  console.warn('Address.findOrCreate is deprecated. Use direct Address.create() instead.');
+  const address = new this(addressData);
+  return await address.save();
 };
 
 // Instance methods
@@ -420,6 +374,60 @@ AddressSchema.methods.setLocation = function(this: IAddress, longitude: number, 
     coordinates: [longitude, latitude]
   };
   return this;
+};
+
+// Address hierarchy level determination
+AddressSchema.methods.getAddressLevel = function(this: IAddress) {
+  // UNIT level: has floor, unit, or subunit details
+  if (this.floor || this.unit || this.subunit) {
+    return 'UNIT';
+  }
+  
+  // BUILDING level: has number but no unit details
+  if (this.number || this.building_name || this.block || this.entrance) {
+    return 'BUILDING';
+  }
+  
+  // STREET level: street name only
+  return 'STREET';
+};
+
+// Create street-level address (street name only)
+AddressSchema.methods.createStreetLevel = function(this: IAddress) {
+  return {
+    street: this.street,
+    city: this.city,
+    state: this.state,
+    postal_code: this.postal_code,
+    country: this.country,
+    countryCode: this.countryCode,
+    neighborhood: this.neighborhood,
+    district: this.district,
+    coordinates: this.coordinates
+  };
+};
+
+// Create building-level address (street + number + building details)
+AddressSchema.methods.createBuildingLevel = function(this: IAddress) {
+  return {
+    ...this.createStreetLevel(),
+    number: this.number,
+    building_name: this.building_name,
+    block: this.block,
+    entrance: this.entrance,
+    po_box: this.po_box,
+    reference: this.reference
+  };
+};
+
+// Create unit-level address (building + floor + unit details)
+AddressSchema.methods.createUnitLevel = function(this: IAddress) {
+  return {
+    ...this.createBuildingLevel(),
+    floor: this.floor,
+    unit: this.unit,
+    subunit: this.subunit
+  };
 };
 
 // Define model interface with static methods

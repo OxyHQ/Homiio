@@ -24,6 +24,8 @@ export interface Address {
   district?: string;
   neighborhood?: string;
   address_lines?: string[];
+  po_box?: string;
+  reference?: string;
   
   // Land plot information
   land_plot?: {

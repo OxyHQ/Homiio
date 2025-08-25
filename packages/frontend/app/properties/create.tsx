@@ -162,10 +162,12 @@ const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
       'address',
       'unit',
       'number',
-      'building_name', 
+      'building_name',
       'block',
       'entrance',
       'district',
+      'po_box',
+      'reference',
       'city',
       'state',
       'postal_code',
@@ -202,10 +204,12 @@ const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
       'address',
       'unit',
       'number',
-      'building_name', 
+      'building_name',
       'block',
       'entrance',
       'district',
+      'po_box',
+      'reference',
       'city',
       'state',
       'postal_code',
@@ -237,7 +241,7 @@ const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
       'yearBuilt',
       'description',
     ],
-    Location: ['address', 'unit', 'number', 'building_name', 'block', 'entrance', 'district', 'city', 'state', 'postal_code', 'country', 'latitude', 'longitude'],
+    Location: ['address', 'unit', 'number', 'building_name', 'block', 'entrance', 'district', 'po_box', 'reference', 'city', 'state', 'postal_code', 'country', 'latitude', 'longitude'],
     Pricing: ['monthlyRent', 'currency', 'securityDeposit'],
     Amenities: ['amenities'],
     Media: ['images'],
@@ -253,7 +257,7 @@ const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
       'yearBuilt',
       'description',
     ],
-    Location: ['address', 'unit', 'number', 'building_name', 'block', 'entrance', 'district', 'city', 'state', 'postal_code', 'country', 'latitude', 'longitude'],
+    Location: ['address', 'unit', 'number', 'building_name', 'block', 'entrance', 'district', 'po_box', 'reference', 'city', 'state', 'postal_code', 'country', 'latitude', 'longitude'],
     Pricing: ['monthlyRent', 'currency', 'securityDeposit'],
     Amenities: ['amenities'],
     Media: ['images'],
@@ -262,7 +266,7 @@ const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
   coliving: {
     // Coliving: no bedrooms, optional bathrooms, coliving features
     'Basic Info': ['propertyType', 'bathrooms', 'squareFootage', 'yearBuilt', 'description'],
-    Location: ['address', 'unit', 'number', 'building_name', 'block', 'entrance', 'district', 'city', 'state', 'postal_code', 'country', 'latitude', 'longitude'],
+    Location: ['address', 'unit', 'number', 'building_name', 'block', 'entrance', 'district', 'po_box', 'reference', 'city', 'state', 'postal_code', 'country', 'latitude', 'longitude'],
     Pricing: ['monthlyRent', 'currency', 'securityDeposit'],
     Amenities: ['amenities'],
     'Coliving Features': ['sharedSpaces', 'communityEvents'],
@@ -364,6 +368,9 @@ export default function CreatePropertyScreen() {
         unit: property.address?.unit || '',
         subunit: property.address?.subunit || '',
         district: property.address?.district || '',
+        address_lines: property.address?.address_lines || [],
+        po_box: property.address?.po_box || '',
+        reference: property.address?.reference || '',
       });
 
       setFormData('pricing', {
@@ -571,6 +578,9 @@ export default function CreatePropertyScreen() {
           unit: formData.location.unit,
           subunit: formData.location.subunit,
           district: formData.location.district,
+          address_lines: formData.location.address_lines,
+          po_box: formData.location.po_box,
+          reference: formData.location.reference,
         },
         type: formData.basicInfo.propertyType as
           | 'apartment'
@@ -1085,9 +1095,11 @@ export default function CreatePropertyScreen() {
                   },
                 ]}
               >
-                📍 Please fill in the complete address details including exact number and floor. You
-                can toggle privacy settings to control whether this detailed information is shown
-                publicly.
+                📍 Address Details: Fill in the complete address information. Our system uses a hierarchical structure:
+                {'\n'}• STREET level: Street name only
+                {'\n'}• BUILDING level: Street + number + building details
+                {'\n'}• UNIT level: Building + floor + unit/apartment details
+                {'\n'}Reviews and listings are organized by these levels for better organization.
               </ThemedText>
             </View>
 
@@ -1321,6 +1333,28 @@ export default function CreatePropertyScreen() {
                 onChangeText={(text) => updateFormField('location', 'district', text)}
                 placeholder="e.g., Administrative district"
               />
+            </View>
+
+            <View style={styles.formRow}>
+              <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
+                <ThemedText style={styles.label}>PO Box (optional)</ThemedText>
+                <TextInput
+                  style={styles.input}
+                  value={formData.location.po_box || ''}
+                  onChangeText={(text) => updateFormField('location', 'po_box', text)}
+                  placeholder="e.g., PO Box 123"
+                />
+              </View>
+
+              <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
+                <ThemedText style={styles.label}>Reference (optional)</ThemedText>
+                <TextInput
+                  style={styles.input}
+                  value={formData.location.reference || ''}
+                  onChangeText={(text) => updateFormField('location', 'reference', text)}
+                  placeholder="e.g., Near Metro Station"
+                />
+              </View>
             </View>
 
             <View style={styles.formRow}>

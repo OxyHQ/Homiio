@@ -123,7 +123,7 @@ export const createAddress = async (req: Request, res: Response) => {
       addressData.neighborhood,
       addressData.city,
       addressData.state,
-      addressData.zipCode,
+      addressData.postal_code,
       addressData.country
     ].filter(Boolean);
     
@@ -168,14 +168,14 @@ export const updateAddress = async (req: Request, res: Response) => {
 
     // Update full address string if address components changed
     if (updateData.street || updateData.city || updateData.country || 
-        updateData.neighborhood || updateData.state || updateData.zipCode) {
+        updateData.neighborhood || updateData.state || updateData.postal_code) {
       
       const fullAddressParts = [
         updateData.street || address.street,
         updateData.neighborhood || address.neighborhood,
         updateData.city || address.city,
         updateData.state || address.state,
-        updateData.zipCode || address.zipCode,
+        updateData.postal_code || address.postal_code,
         updateData.country || address.country
       ].filter(Boolean);
       

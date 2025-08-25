@@ -38,6 +38,7 @@ import { PropertyStatistics } from '../../../components/property/PropertyStatist
 import { NeighborhoodInfo } from '../../../components/property/NeighborhoodInfo';
 import { AvailabilitySection } from '../../../components/property/AvailabilitySection';
 import { AmenitiesSection } from '../../../components/property/AmenitiesSection';
+import { ReviewsSection } from '../../../components/property/ReviewsSection';
 import { PropertyActionBar } from '../../../components/property/PropertyActionBar';
 
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
@@ -472,6 +473,7 @@ export default function PropertyDetailPage() {
           <NeighborhoodInfo property={apiProperty as any} />
           <AvailabilitySection property={apiProperty as any} />
           <AmenitiesSection property={apiProperty as any} />
+          <ReviewsSection property={apiProperty as any} variant="preview" />
           <LandlordSection
             property={apiProperty as any}
             landlordProfile={landlordProfile as any}

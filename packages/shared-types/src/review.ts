@@ -8,7 +8,7 @@ import { Types } from 'mongoose';
 export enum TemperatureRating {
   VERY_COLD = 'very_cold',
   COLD = 'cold',
-  COMFORTABLE = 'comfortable',
+  MODERATE = 'moderate',
   WARM = 'warm',
   VERY_WARM = 'very_warm'
 }
@@ -17,14 +17,14 @@ export enum NoiseLevel {
   VERY_QUIET = 'very_quiet',
   QUIET = 'quiet',
   MODERATE = 'moderate',
-  LOUD = 'loud',
-  VERY_LOUD = 'very_loud'
+  NOISY = 'noisy',
+  VERY_NOISY = 'very_noisy'
 }
 
 export enum LightLevel {
   VERY_DARK = 'very_dark',
   DARK = 'dark',
-  ADEQUATE = 'adequate',
+  MODERATE = 'moderate',
   BRIGHT = 'bright',
   VERY_BRIGHT = 'very_bright'
 }
@@ -46,11 +46,65 @@ export enum LandlordTreatment {
 }
 
 export enum ResponseRating {
+  NEVER_RESPONDED = 'never_responded',
   VERY_SLOW = 'very_slow',
   SLOW = 'slow',
-  ADEQUATE = 'adequate',
+  REASONABLE = 'reasonable',
   FAST = 'fast',
   VERY_FAST = 'very_fast'
+}
+
+export enum NeighborRating {
+  VERY_UNFRIENDLY = 'very_unfriendly',
+  UNFRIENDLY = 'unfriendly',
+  NEUTRAL = 'neutral',
+  FRIENDLY = 'friendly',
+  VERY_FRIENDLY = 'very_friendly'
+}
+
+export enum NeighborRelations {
+  VERY_POOR = 'very_poor',
+  POOR = 'poor',
+  FAIR = 'fair',
+  GOOD = 'good',
+  EXCELLENT = 'excellent'
+}
+
+export enum CleaningRating {
+  VERY_DIRTY = 'very_dirty',
+  DIRTY = 'dirty',
+  ACCEPTABLE = 'acceptable',
+  CLEAN = 'clean',
+  VERY_CLEAN = 'very_clean'
+}
+
+export enum TouristLevel {
+  NONE = 'none',
+  FEW = 'few',
+  MODERATE = 'moderate',
+  MANY = 'many',
+  OVERWHELMING = 'overwhelming'
+}
+
+export enum SecurityLevel {
+  VERY_UNSAFE = 'very_unsafe',
+  UNSAFE = 'unsafe',
+  NEUTRAL = 'neutral',
+  SAFE = 'safe',
+  VERY_SAFE = 'very_safe'
+}
+
+export enum ServiceType {
+  INTERNET = 'internet',
+  CABLE_TV = 'cable_tv',
+  PARKING = 'parking',
+  LAUNDRY = 'laundry',
+  GYM = 'gym',
+  POOL = 'pool',
+  CONCIERGE = 'concierge',
+  SECURITY = 'security',
+  MAINTENANCE = 'maintenance',
+  CLEANING = 'cleaning'
 }
 
 export enum SafetyRating {
@@ -119,9 +173,17 @@ export enum PetsRating {
 
 // Core review interface
 export interface Review {
-  // Reference fields
+  // Address hierarchy
+  addressId: string | Types.ObjectId; // Reference to the specific address level (building or unit)
+  addressLevel: 'BUILDING' | 'UNIT'; // Level at which review is attached
+  
+  // Hierarchical address references for aggregation
+  streetLevelId: string | Types.ObjectId; // Reference to street-level address
+  buildingLevelId: string | Types.ObjectId; // Reference to building-level address  
+  unitLevelId?: string | Types.ObjectId; // Reference to unit-level address (only for UNIT level reviews)
+  
+  // User reference
   profileId: string | Types.ObjectId;
-  addressId: string | Types.ObjectId;
   
   // Basic information
   greenHouse?: string;
@@ -222,9 +284,10 @@ export interface ReviewData extends Omit<Review, 'profileId' | 'addressId'> {
   addressId?: string;
 }
 
-export interface CreateReviewRequest {
+export interface CreateReviewRequest extends Omit<Review, '_id' | 'createdAt' | 'updatedAt'> {
+  // All review fields are inherited from Review interface
+  // The addressId is required and will be used to determine hierarchical structure
   addressId: string;
-  review: ReviewData;
 }
 
 export interface UpdateReviewRequest {

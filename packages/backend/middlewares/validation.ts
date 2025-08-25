@@ -45,16 +45,19 @@ const validateProperty = [
   body('address.street').notEmpty().withMessage('Street address is required'),
   body('address.city').notEmpty().withMessage('City is required'),
   body('address.state').notEmpty().withMessage('State is required'),
-  body('address.zipCode').notEmpty().withMessage('ZIP code is required'),
+  body('address').custom((value) => {
+    if (!value.postal_code && !value.zipCode) {
+      throw new Error('Postal code is required');
+    }
+    return true;
+  }),
   body('rent.amount').isFloat({ min: 0.01 }).withMessage('Rent amount must be greater than 0'),
   body('rent.currency').optional().isIn(['USD', 'EUR', 'GBP', 'CAD', 'FAIR']).withMessage('Invalid currency'),
   body('bedrooms').optional().isInt({ min: 0 }).withMessage('Bedrooms must be a non-negative integer'),
-  body('bathrooms').optional().isFloat({ min: 0 }).withMessage('Bathrooms must be a non-negative number'),
+  body('bathrooms').optional().isFloat({ min: 0 }).withMessage('Bathrooms must be non-negative'),
   body('squareFootage').optional().isFloat({ min: 0 }).withMessage('Square footage must be non-negative'),
   body('type').isIn(['apartment', 'house', 'room', 'studio', 'couchsurfing', 'roommates', 'coliving', 'hostel', 'guesthouse', 'campsite', 'boat', 'treehouse', 'yurt', 'other']).withMessage('Invalid property type'),
   body('housingType').optional().isIn(['private', 'public']).withMessage('Invalid housing type'),
-  body('layoutType').optional().isIn(['open', 'shared', 'partitioned', 'traditional', 'studio', 'other']).withMessage('Invalid layout type'),
-  handleValidationErrors
 ];
 
 /**

@@ -26,6 +26,9 @@ interface CreatePropertyFormState {
       floor?: number;
       showFloor?: boolean;
       district?: string; // District/area within city
+      address_lines?: string[]; // Flexible address lines array
+      po_box?: string; // Post office box
+      reference?: string; // Reference landmark or identifier
       
       neighborhood?: string;
       city: string;
@@ -140,6 +143,9 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()((set
       floor: undefined,
       showFloor: undefined,
       district: undefined,
+      address_lines: undefined,
+      po_box: undefined,
+      reference: undefined,
       neighborhood: undefined,
       city: '',
       state: '',
@@ -245,6 +251,9 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()((set
           floor: undefined,
           showFloor: undefined,
           district: undefined,
+          address_lines: undefined,
+          po_box: undefined,
+          reference: undefined,
           neighborhood: undefined,
           city: '',
           state: '',

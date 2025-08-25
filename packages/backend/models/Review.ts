@@ -110,9 +110,16 @@ export enum ServiceType {
 
 // Define the Review interface
 export interface IReview extends Document {
+  // Address Hierarchy
+  addressId: Types.ObjectId; // Reference to the specific address level (building or unit)
+  addressLevel: 'BUILDING' | 'UNIT'; // Level at which review is attached
+  
+  // Hierarchical address references for aggregation
+  streetLevelId: Types.ObjectId; // Reference to street-level address
+  buildingLevelId: Types.ObjectId; // Reference to building-level address  
+  unitLevelId?: Types.ObjectId; // Reference to unit-level address (only for UNIT level reviews)
+  
   // Basic Information
-  addressId: Types.ObjectId;
-  address: string;
   greenHouse: string;
   price: number;
   currency: string;
@@ -154,7 +161,7 @@ export interface IReview extends Document {
   areaSecurity: SecurityLevel;
   
   // Metadata
-  userId: Types.ObjectId;
+  profileId: Types.ObjectId; // User profile reference
   createdAt: Date;
   updatedAt: Date;
   verified: boolean;
@@ -162,27 +169,91 @@ export interface IReview extends Document {
 
 // Define static methods interface
 export interface IReviewModel extends Model<IReview> {
-  findByAddress(addressId: string | Types.ObjectId): Promise<IReview[]>;
-  getAverageRating(addressId: string | Types.ObjectId): Promise<{
-    averageRating: number;
-    totalReviews: number;
-    recommendationPercentage: number;
+  // Hierarchical finder methods
+  findByStreetLevel(streetLevelId: string | Types.ObjectId): Promise<IReview[]>;
+  findByBuildingLevel(buildingLevelId: string | Types.ObjectId): Promise<IReview[]>;
+  findByUnitLevel(unitLevelId: string | Types.ObjectId): Promise<IReview[]>;
+  
+  // Aggregation methods for hierarchical views
+  getUnitViewData(unitLevelId: string | Types.ObjectId): Promise<{
+    unitReviews: IReview[];
+    buildingSummary: {
+      averageRating: number;
+      totalReviews: number;
+      recommendationPercentage: number;
+    };
+  }>;
+  
+  getBuildingViewData(buildingLevelId: string | Types.ObjectId): Promise<{
+    buildingReviews: IReview[];
+    unitReviews: IReview[];
+    aggregatedStats: {
+      averageRating: number;
+      totalReviews: number;
+      recommendationPercentage: number;
+    };
+  }>;
+  
+  getStreetViewData(streetLevelId: string | Types.ObjectId): Promise<{
+    aggregatedStats: {
+      averageRating: number;
+      totalReviews: number;
+      recommendationPercentage: number;
+    };
+    buildingCount: number;
   }>;
 }
 
 const ReviewSchema = new Schema({
-  // Basic Information
+  // Address Hierarchy
   addressId: {
     type: Schema.Types.ObjectId,
     ref: 'Address',
     required: [true, 'Address ID is required'],
     index: true
   },
-  address: {
+  addressLevel: {
     type: String,
-    required: [true, 'Address text is required'],
-    trim: true,
-    maxlength: [500, 'Address cannot exceed 500 characters']
+    enum: ['BUILDING', 'UNIT'],
+    required: [true, 'Address level is required'],
+    index: true,
+    validate: {
+      validator: function(this: IReview, level: string) {
+        // Reviews can only be created at BUILDING or UNIT level
+        return ['BUILDING', 'UNIT'].includes(level);
+      },
+      message: 'Reviews can only be created at BUILDING or UNIT level'
+    }
+  },
+  
+  // Hierarchical address references for aggregation
+  streetLevelId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Address',
+    required: [true, 'Street level address is required'],
+    index: true
+  },
+  buildingLevelId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Address',
+    required: [true, 'Building level address is required'],
+    index: true
+  },
+  unitLevelId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Address',
+    index: true,
+    validate: {
+      validator: function(this: IReview, value: Types.ObjectId) {
+        // unitLevelId is required only for UNIT level reviews
+        if (this.addressLevel === 'UNIT') {
+          return value != null;
+        }
+        // For BUILDING level reviews, unitLevelId should be null
+        return value == null;
+      },
+      message: 'Unit level address is required for UNIT level reviews and should be null for BUILDING level reviews'
+    }
   },
   greenHouse: {
     type: String,
@@ -264,91 +335,91 @@ const ReviewSchema = new Schema({
     }
   },
   
-  // Environmental Conditions
+  // Environmental Conditions (optional - can be added later)
   summerTemperature: {
     type: String,
     enum: Object.values(TemperatureRating),
-    required: [true, 'Summer temperature rating is required']
+    required: false
   },
   winterTemperature: {
     type: String,
     enum: Object.values(TemperatureRating),
-    required: [true, 'Winter temperature rating is required']
+    required: false
   },
   noise: {
     type: String,
     enum: Object.values(NoiseLevel),
-    required: [true, 'Noise level rating is required']
+    required: false
   },
   light: {
     type: String,
     enum: Object.values(LightLevel),
-    required: [true, 'Light level rating is required']
+    required: false
   },
   conditionAndMaintenance: {
     type: String,
     enum: Object.values(ConditionRating),
-    required: [true, 'Condition and maintenance rating is required']
+    required: false
   },
   services: [{
     type: String,
     enum: Object.values(ServiceType)
   }],
   
-  // Management
+  // Management (optional - can be added later)
   landlordTreatment: {
     type: String,
     enum: Object.values(LandlordTreatment),
-    required: [true, 'Landlord treatment rating is required']
+    required: false
   },
   problemResponse: {
     type: String,
     enum: Object.values(ResponseRating),
-    required: [true, 'Problem response rating is required']
+    required: false
   },
   depositReturned: {
     type: Boolean,
-    required: [true, 'Deposit return status is required']
+    required: false
   },
   
-  // Neighbors / Community
+  // Neighbors / Community (optional - can be added later)
   staircaseNeighbors: {
     type: String,
     enum: Object.values(NeighborRating),
-    required: [true, 'Staircase/neighbors rating is required']
+    required: false
   },
   touristApartments: {
     type: Boolean,
-    required: [true, 'Tourist apartments status is required']
+    required: false
   },
   neighborRelations: {
     type: String,
     enum: Object.values(NeighborRelations),
-    required: [true, 'Neighbor relations rating is required']
+    required: false
   },
   cleaning: {
     type: String,
     enum: Object.values(CleaningRating),
-    required: [true, 'Cleaning rating is required']
+    required: false
   },
   
-  // Area (300m radius)
+  // Area (300m radius) (optional - can be added later)
   areaTourists: {
     type: String,
     enum: Object.values(TouristLevel),
-    required: [true, 'Area tourists level is required']
+    required: false
   },
   areaSecurity: {
     type: String,
     enum: Object.values(SecurityLevel),
-    required: [true, 'Area security level is required']
+    required: false
   },
   
   // Metadata
-  userId: {
+  profileId: {
     type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: [true, 'User ID is required'],
+    ref: 'Profile', // Changed from 'User' to 'Profile'
+    required: [true, 'Profile ID is required'],
     index: true
   },
   verified: {
@@ -363,10 +434,16 @@ const ReviewSchema = new Schema({
 
 // Indexes for efficient querying
 ReviewSchema.index({ addressId: 1, createdAt: -1 });
-ReviewSchema.index({ userId: 1, createdAt: -1 });
+ReviewSchema.index({ profileId: 1, createdAt: -1 });
 ReviewSchema.index({ rating: -1 });
 ReviewSchema.index({ recommendation: 1 });
 ReviewSchema.index({ verified: 1 });
+
+// Hierarchical indexes for efficient address-level queries
+ReviewSchema.index({ streetLevelId: 1, addressLevel: 1, createdAt: -1 });
+ReviewSchema.index({ buildingLevelId: 1, addressLevel: 1, createdAt: -1 });
+ReviewSchema.index({ unitLevelId: 1, addressLevel: 1, createdAt: -1 });
+ReviewSchema.index({ addressLevel: 1, createdAt: -1 });
 
 // Virtual for calculating lived duration
 ReviewSchema.virtual('livedDurationText').get(function(this: IReview) {
@@ -393,15 +470,39 @@ ReviewSchema.pre('save', function(this: IReview, next) {
 });
 
 // Static methods
-ReviewSchema.statics.findByAddress = function(addressId: string | Types.ObjectId) {
-  return this.find({ addressId })
-    .populate('userId', 'name avatar')
+ReviewSchema.statics.findByStreetLevel = function(streetLevelId: string | Types.ObjectId) {
+  return this.find({ streetLevelId })
+    .populate('profileId', 'name avatar') // Changed from userId to profileId
     .sort({ createdAt: -1 });
 };
 
-ReviewSchema.statics.getAverageRating = function(addressId: string | Types.ObjectId) {
-  return this.aggregate([
-    { $match: { addressId: new Types.ObjectId(addressId.toString()) } },
+ReviewSchema.statics.findByBuildingLevel = function(buildingLevelId: string | Types.ObjectId) {
+  return this.find({ buildingLevelId })
+    .populate('profileId', 'name avatar') // Changed from userId to profileId
+    .sort({ createdAt: -1 });
+};
+
+ReviewSchema.statics.findByUnitLevel = function(unitLevelId: string | Types.ObjectId) {
+  return this.find({ unitLevelId })
+    .populate('profileId', 'name avatar') // Changed from userId to profileId
+    .sort({ createdAt: -1 });
+};
+
+// UNIT view: own reviews + building summary
+ReviewSchema.statics.getUnitViewData = async function(this: IReviewModel, unitLevelId: string | Types.ObjectId) {
+  const unitReviews = await this.findByUnitLevel(unitLevelId);
+  
+  // Get the building level from one of the unit reviews
+  const sampleReview = await this.findOne({ unitLevelId });
+  if (!sampleReview?.buildingLevelId) {
+    return {
+      unitReviews,
+      buildingSummary: { averageRating: 0, totalReviews: 0, recommendationPercentage: 0 }
+    };
+  }
+  
+  const buildingSummary = await this.aggregate([
+    { $match: { buildingLevelId: sampleReview.buildingLevelId, addressLevel: 'BUILDING' } },
     {
       $group: {
         _id: null,
@@ -417,6 +518,68 @@ ReviewSchema.statics.getAverageRating = function(addressId: string | Types.Objec
     totalReviews: 0,
     recommendationPercentage: 0
   });
+  
+  return { unitReviews, buildingSummary };
+};
+
+// BUILDING view: building reviews + all unit reviews
+ReviewSchema.statics.getBuildingViewData = async function(this: IReviewModel, buildingLevelId: string | Types.ObjectId) {
+  const buildingReviews = await this.find({ 
+    buildingLevelId, 
+    addressLevel: 'BUILDING' 
+  }).populate('profileId', 'name avatar').sort({ createdAt: -1 }); // Changed from userId to profileId
+  
+  const unitReviews = await this.find({ 
+    buildingLevelId, 
+    addressLevel: 'UNIT' 
+  }).populate('profileId', 'name avatar').sort({ createdAt: -1 }); // Changed from userId to profileId
+  
+  const aggregatedStats = await this.aggregate([
+    { $match: { buildingLevelId: new Types.ObjectId(buildingLevelId.toString()) } },
+    {
+      $group: {
+        _id: null,
+        averageRating: { $avg: '$rating' },
+        totalReviews: { $sum: 1 },
+        recommendationPercentage: { 
+          $avg: { $cond: [{ $eq: ['$recommendation', true] }, 100, 0] }
+        }
+      }
+    }
+  ]).then(result => result.length > 0 ? result[0] : {
+    averageRating: 0,
+    totalReviews: 0,
+    recommendationPercentage: 0
+  });
+  
+  return { buildingReviews, unitReviews, aggregatedStats };
+};
+
+// STREET view: aggregates all building reviews
+ReviewSchema.statics.getStreetViewData = async function(this: IReviewModel, streetLevelId: string | Types.ObjectId) {
+  const aggregatedStats = await this.aggregate([
+    { $match: { streetLevelId: new Types.ObjectId(streetLevelId.toString()) } },
+    {
+      $group: {
+        _id: null,
+        averageRating: { $avg: '$rating' },
+        totalReviews: { $sum: 1 },
+        recommendationPercentage: { 
+          $avg: { $cond: [{ $eq: ['$recommendation', true] }, 100, 0] }
+        }
+      }
+    }
+  ]).then(result => result.length > 0 ? result[0] : {
+    averageRating: 0,
+    totalReviews: 0,
+    recommendationPercentage: 0
+  });
+  
+  const buildingCount = await this.distinct('buildingLevelId', { 
+    streetLevelId: new Types.ObjectId(streetLevelId.toString()) 
+  }).then(buildings => buildings.length);
+  
+  return { aggregatedStats, buildingCount };
 };
 
 // Create and export the model

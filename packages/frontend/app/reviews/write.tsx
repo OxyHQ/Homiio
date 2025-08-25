@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
     StyleSheet,
@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Header } from '@/components/Header';
 import { ThemedText } from '@/components/ThemedText';
 import { useOxy } from '@oxyhq/services';
+import Map from '@/components/Map';
 
 // Services and hooks
 import { api } from '@/utils/api';
@@ -26,31 +27,23 @@ import { default as reviewService } from '@/services/reviewService';
 import { colors } from '@/styles/colors';
 
 // Local type definitions
-interface Address {
-    _id: string;
-    street: string;
-    city: string;
-    state?: string; // Made optional for international support
-    zipCode?: string; // Legacy field for backward compatibility
-    postal_code: string; // Renamed from zipCode
-    country: string;
-    fullAddress: string;
-    location: string;
-}
-
-interface AddressData {
-    _id: string;
-    street: string;
-    city: string;
-    state?: string; // Made optional for international support
-    zipCode?: string; // Legacy field for backward compatibility
-    postal_code: string; // Renamed from zipCode
-    country: string;
-    fullAddress: string;
-    location: string;
-}
 
 interface ReviewFormData {
+    // Address information
+    street: string;
+    city: string;
+    state: string;
+    postal_code: string;
+    country: string;
+    number?: string;
+    building_name?: string;
+    floor?: string;
+    unit?: string;
+
+    // Coordinates for map
+    latitude?: number;
+    longitude?: number;
+
     // Basic Information
     greenHouse: string;
     price: string;
@@ -86,6 +79,22 @@ interface ReviewFormData {
 }
 
 const initialFormData: ReviewFormData = {
+    // Address information
+    street: '',
+    city: '',
+    state: '',
+    postal_code: '',
+    country: '',
+    number: '',
+    building_name: '',
+    floor: '',
+    unit: '',
+
+    // Coordinates for map
+    latitude: undefined,
+    longitude: undefined,
+
+    // Basic Information
     greenHouse: '',
     price: '',
     currency: 'EUR',
@@ -118,35 +127,82 @@ export default function WriteReviewPage() {
     const router = useRouter();
     const { t: _t } = useTranslation();
     const { oxyServices, activeSessionId } = useOxy();
+    const mapRef = useRef<any>(null);
 
     // State variables
-    const [address, setAddress] = useState<AddressData | null>(null);
     const [formData, setFormData] = useState<ReviewFormData>(initialFormData);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Fetch address data
+    // Fetch address data if addressId is provided
     useEffect(() => {
-        if (!addressId || !oxyServices || !activeSessionId) return;
+        if (addressId && oxyServices && activeSessionId) {
+            setLoading(true);
+            const fetchAddress = async () => {
+                try {
+                    const response = await api.get(`/api/addresses/${addressId}`, {
+                        oxyServices,
+                        activeSessionId
+                    });
+                    const address = response.data?.address || response.data;
 
-        const fetchAddress = async () => {
-            try {
-                const response = await api.get(`/api/addresses/${addressId}`, {
-                    oxyServices,
-                    activeSessionId
-                });
-                setAddress(response.data?.address || response.data);
-            } catch (err) {
-                console.error('Error fetching address:', err);
-                setError('Failed to load address information');
-            } finally {
-                setLoading(false);
-            }
-        };
+                    // Auto-fill form data with address information
+                    setFormData(prev => ({
+                        ...prev,
+                        street: address.street || '',
+                        city: address.city || '',
+                        state: address.state || '',
+                        postal_code: address.postal_code || address.zipCode || '', // Support legacy field
+                        country: address.country || '',
+                        number: address.number || '',
+                        building_name: address.building_name || '',
+                        floor: address.floor || '',
+                        unit: address.unit || '',
+                        latitude: address.coordinates?.coordinates?.[1],
+                        longitude: address.coordinates?.coordinates?.[0],
+                    }));
 
-        fetchAddress();
+                    // Move map to the address location if coordinates exist
+                    if (address.coordinates?.coordinates && mapRef.current) {
+                        const [lng, lat] = address.coordinates.coordinates;
+                        mapRef.current.navigateToLocation([lng, lat], 15);
+                    }
+                } catch (err) {
+                    console.error('Error fetching address:', err);
+                    setError('Failed to load address information');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            fetchAddress();
+        }
     }, [addressId, oxyServices, activeSessionId]);
+
+    // Handle address selection from map
+    const handleAddressSelect = React.useCallback((address: any, coordinates: [number, number]) => {
+        console.log('handleAddressSelect received address data:', address);
+
+        // Update form with coordinates
+        setFormData(prev => ({
+            ...prev,
+            latitude: coordinates[1],
+            longitude: coordinates[0],
+            // Auto-fill address fields
+            ...(address.street && { street: address.street }),
+            ...(address.houseNumber && { number: address.houseNumber }),
+            ...(address.city && { city: address.city }),
+            ...(address.state && { state: address.state }),
+            ...(address.country && { country: address.country }),
+            ...(address.postalCode && { postal_code: address.postalCode }),
+        }));
+
+        // Move map to selected location
+        if (mapRef.current) {
+            mapRef.current.navigateToLocation(coordinates, 15);
+        }
+    }, []);
 
     const updateFormData = (field: keyof ReviewFormData, value: any) => {
         setFormData(prev => ({
@@ -156,6 +212,28 @@ export default function WriteReviewPage() {
     };
 
     const validateForm = (): boolean => {
+        // Address validation
+        if (!formData.street.trim()) {
+            Alert.alert('Validation Error', 'Please provide a street address.');
+            return false;
+        }
+
+        if (!formData.city.trim()) {
+            Alert.alert('Validation Error', 'Please provide a city.');
+            return false;
+        }
+
+        if (!formData.postal_code.trim()) {
+            Alert.alert('Validation Error', 'Please provide a postal code.');
+            return false;
+        }
+
+        if (!formData.country.trim()) {
+            Alert.alert('Validation Error', 'Please provide a country.');
+            return false;
+        }
+
+        // Review validation
         if (!formData.opinion.trim()) {
             Alert.alert('Validation Error', 'Please provide your opinion about this address.');
             return false;
@@ -191,7 +269,7 @@ export default function WriteReviewPage() {
 
     const handleSubmit = async () => {
         if (!validateForm()) return;
-        if (!address || !oxyServices || !activeSessionId) return;
+        if (!oxyServices || !activeSessionId) return;
 
         setSubmitting(true);
         try {
@@ -202,36 +280,54 @@ export default function WriteReviewPage() {
             const _livedForMonths = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 30.44));
 
             const reviewData = {
-                addressId: addressId,
+                // Address data - backend will handle address creation/lookup
+                address: {
+                    street: formData.street.trim(),
+                    city: formData.city.trim(),
+                    state: formData.state.trim() || undefined,
+                    postal_code: formData.postal_code.trim(),
+                    country: formData.country.trim(),
+                    number: formData.number?.trim() || undefined,
+                    building_name: formData.building_name?.trim() || undefined,
+                    floor: formData.floor?.trim() || undefined,
+                    unit: formData.unit?.trim() || undefined,
+                    ...(formData.latitude && formData.longitude && {
+                        latitude: formData.latitude,
+                        longitude: formData.longitude
+                    })
+                },
+
+                // Review data
                 greenHouse: formData.greenHouse,
                 price: formData.price ? parseFloat(formData.price) : undefined,
                 currency: formData.currency,
                 livedFrom: formData.livedFrom ? new Date(formData.livedFrom) : undefined,
                 livedTo: formData.livedTo ? new Date(formData.livedTo) : undefined,
-                recommendation: formData.recommendation || undefined,
+                livedForMonths: _livedForMonths, // Include the calculated duration
+                recommendation: formData.recommendation as boolean, // Ensure it's boolean (validation ensures it's not null)
                 opinion: formData.opinion.trim(),
                 positiveComment: formData.positiveComment.trim() || undefined,
                 negativeComment: formData.negativeComment.trim() || undefined,
 
-                // Rating data - we'd need to map these to the new schema fields
-                // This would depend on how the old fields map to the new apartment/community/landlord/area categories
-                // For now, leaving as is since this is a migration in progress
+                // Core rating - always required
                 rating: formData.rating,
-                summerTemperature: formData.summerTemperature,
-                winterTemperature: formData.winterTemperature,
-                noise: formData.noise,
-                light: formData.light,
-                conditionAndMaintenance: formData.conditionAndMaintenance,
-                services: formData.services,
-                landlordTreatment: formData.landlordTreatment as any,
-                problemResponse: formData.problemResponse,
-                depositReturned: formData.depositReturned,
-                staircaseNeighbors: formData.staircaseNeighbors,
-                touristApartments: formData.touristApartments,
-                neighborRelations: formData.neighborRelations,
-                cleaning: formData.cleaning,
-                areaTourists: formData.areaTourists,
-                areaSecurity: formData.areaSecurity
+
+                // Optional detailed ratings - only include if they have values
+                ...(formData.summerTemperature && { summerTemperature: formData.summerTemperature as any }),
+                ...(formData.winterTemperature && { winterTemperature: formData.winterTemperature as any }),
+                ...(formData.noise && { noise: formData.noise as any }),
+                ...(formData.light && { light: formData.light as any }),
+                ...(formData.conditionAndMaintenance && { conditionAndMaintenance: formData.conditionAndMaintenance as any }),
+                ...(formData.services.length > 0 && { services: formData.services as any }),
+                ...(formData.landlordTreatment && { landlordTreatment: formData.landlordTreatment as any }),
+                ...(formData.problemResponse && { problemResponse: formData.problemResponse as any }),
+                ...(formData.depositReturned !== null && { depositReturned: formData.depositReturned }),
+                ...(formData.staircaseNeighbors && { staircaseNeighbors: formData.staircaseNeighbors as any }),
+                ...(formData.touristApartments !== null && { touristApartments: formData.touristApartments }),
+                ...(formData.neighborRelations && { neighborRelations: formData.neighborRelations as any }),
+                ...(formData.cleaning && { cleaning: formData.cleaning as any }),
+                ...(formData.areaTourists && { areaTourists: formData.areaTourists as any }),
+                ...(formData.areaSecurity && { areaSecurity: formData.areaSecurity as any })
             }; const result = await reviewService.createReview(reviewData, oxyServices, activeSessionId);
 
             if (result.success) {
@@ -338,14 +434,14 @@ export default function WriteReviewPage() {
         );
     }
 
-    if (error || !address) {
+    if (error) {
         return (
             <SafeAreaView style={styles.container}>
                 <Header options={{ title: 'Write Review', showBackButton: true }} />
                 <View style={styles.errorContainer}>
                     <Ionicons name="alert-circle" size={48} color={colors.COLOR_BLACK_LIGHT_4} />
                     <ThemedText style={styles.errorText}>
-                        {error || 'Failed to load address information'}
+                        {error}
                     </ThemedText>
                     <TouchableOpacity style={styles.retryButton} onPress={() => router.back()}>
                         <ThemedText style={styles.retryText}>Go Back</ThemedText>
@@ -360,12 +456,120 @@ export default function WriteReviewPage() {
             <Header options={{ title: 'Write Review', showBackButton: true }} />
 
             <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-                {/* Address Info */}
-                <View style={styles.addressCard}>
-                    <ThemedText style={styles.addressTitle}>Reviewing</ThemedText>
-                    <ThemedText style={styles.addressText}>
-                        {address.fullAddress || address.location || `${address.street}, ${address.city}`}
-                    </ThemedText>
+                {/* Address Information */}
+                <View style={styles.section}>
+                    <ThemedText style={styles.sectionTitle}>Address Information</ThemedText>
+
+                    <View style={styles.fieldContainer}>
+                        <ThemedText style={styles.fieldLabel}>Street Address *</ThemedText>
+                        <TextInput
+                            style={styles.textInput}
+                            placeholder="e.g. 123 Main Street"
+                            value={formData.street}
+                            onChangeText={(text: string) => updateFormData('street', text)}
+                        />
+                    </View>
+
+                    <View style={styles.fieldContainer}>
+                        <ThemedText style={styles.fieldLabel}>Building Number</ThemedText>
+                        <TextInput
+                            style={styles.textInput}
+                            placeholder="e.g. 123A"
+                            value={formData.number || ''}
+                            onChangeText={(text: string) => updateFormData('number', text)}
+                        />
+                    </View>
+
+                    <View style={styles.fieldContainer}>
+                        <ThemedText style={styles.fieldLabel}>Building Name</ThemedText>
+                        <TextInput
+                            style={styles.textInput}
+                            placeholder="e.g. Sunset Apartments"
+                            value={formData.building_name || ''}
+                            onChangeText={(text: string) => updateFormData('building_name', text)}
+                        />
+                    </View>
+
+                    <View style={styles.addressRow}>
+                        <View style={styles.addressRowField}>
+                            <ThemedText style={styles.fieldLabel}>Floor</ThemedText>
+                            <TextInput
+                                style={styles.textInput}
+                                placeholder="e.g. 3"
+                                value={formData.floor || ''}
+                                onChangeText={(text: string) => updateFormData('floor', text)}
+                            />
+                        </View>
+                        <View style={styles.addressRowField}>
+                            <ThemedText style={styles.fieldLabel}>Unit/Apt</ThemedText>
+                            <TextInput
+                                style={styles.textInput}
+                                placeholder="e.g. 3B"
+                                value={formData.unit || ''}
+                                onChangeText={(text: string) => updateFormData('unit', text)}
+                            />
+                        </View>
+                    </View>
+
+                    <View style={styles.addressRow}>
+                        <View style={styles.addressRowField}>
+                            <ThemedText style={styles.fieldLabel}>City *</ThemedText>
+                            <TextInput
+                                style={styles.textInput}
+                                placeholder="e.g. Barcelona"
+                                value={formData.city}
+                                onChangeText={(text: string) => updateFormData('city', text)}
+                            />
+                        </View>
+                        <View style={styles.addressRowField}>
+                            <ThemedText style={styles.fieldLabel}>State/Province</ThemedText>
+                            <TextInput
+                                style={styles.textInput}
+                                placeholder="e.g. Catalonia"
+                                value={formData.state}
+                                onChangeText={(text: string) => updateFormData('state', text)}
+                            />
+                        </View>
+                    </View>
+
+                    <View style={styles.addressRow}>
+                        <View style={styles.addressRowField}>
+                            <ThemedText style={styles.fieldLabel}>Postal Code *</ThemedText>
+                            <TextInput
+                                style={styles.textInput}
+                                placeholder="e.g. 08001"
+                                value={formData.postal_code}
+                                onChangeText={(text: string) => updateFormData('postal_code', text)}
+                            />
+                        </View>
+                        <View style={styles.addressRowField}>
+                            <ThemedText style={styles.fieldLabel}>Country *</ThemedText>
+                            <TextInput
+                                style={styles.textInput}
+                                placeholder="e.g. Spain"
+                                value={formData.country}
+                                onChangeText={(text: string) => updateFormData('country', text)}
+                            />
+                        </View>
+                    </View>
+
+                    {/* Map for location selection */}
+                    <View style={styles.mapContainer}>
+                        <ThemedText style={styles.fieldLabel}>Select Location on Map</ThemedText>
+                        <View style={styles.mapWrapper}>
+                            <Map
+                                ref={mapRef}
+                                style={{ height: 300 }}
+                                enableAddressLookup={true}
+                                showAddressInstructions={true}
+                                onAddressSelect={handleAddressSelect}
+                                screenId="write-review"
+                            />
+                        </View>
+                        <ThemedText style={styles.mapHint}>
+                            Tap on the map to select the exact location and auto-fill address details
+                        </ThemedText>
+                    </View>
                 </View>
 
                 {/* Basic Information */}
@@ -568,6 +772,14 @@ const styles = StyleSheet.create({
     fieldContainer: {
         marginBottom: 16,
     },
+    addressRow: {
+        flexDirection: 'row',
+        gap: 12,
+        marginBottom: 16,
+    },
+    addressRowField: {
+        flex: 1,
+    },
     fieldLabel: {
         fontSize: 14,
         fontWeight: '600',
@@ -691,5 +903,23 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: '600',
+    },
+    mapContainer: {
+        marginBottom: 16,
+    },
+    mapWrapper: {
+        marginTop: 8,
+        marginBottom: 8,
+        borderRadius: 12,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: colors.COLOR_BLACK_LIGHT_6,
+    },
+    mapHint: {
+        fontSize: 12,
+        color: colors.COLOR_BLACK_LIGHT_4,
+        textAlign: 'center',
+        fontStyle: 'italic',
+        marginTop: 8,
     },
 });

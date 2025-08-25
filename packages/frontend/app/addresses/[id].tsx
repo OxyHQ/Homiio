@@ -49,8 +49,12 @@ interface AddressData {
 
 interface ReviewData {
     _id: string;
-    address: AddressData;
-    greenHouse: string;
+    addressId: string;
+    addressLevel: 'BUILDING' | 'UNIT';
+    streetLevelId: string;
+    buildingLevelId: string;
+    unitLevelId?: string;
+    greenHouse?: string;
     price: number;
     currency: string;
     livedFrom: string;
@@ -63,43 +67,45 @@ interface ReviewData {
     images: string[];
     rating: number;
 
-    // Apartment-specific ratings
-    summerTemperature: string;
-    winterTemperature: string;
-    noise: string;
-    light: string;
-    conditionAndMaintenance: string;
-    services: string[];
+    // Apartment-specific ratings (optional)
+    summerTemperature?: string;
+    winterTemperature?: string;
+    noise?: string;
+    light?: string;
+    conditionAndMaintenance?: string;
+    services?: string[];
 
-    // Community-specific ratings
-    landlordTreatment: string;
-    problemResponse: string;
-    depositReturned: boolean;
-    staircaseNeighbors: string;
-    touristApartments: boolean;
-    neighborRelations: string;
-    cleaning: string;
+    // Community-specific ratings (optional)
+    landlordTreatment?: string;
+    problemResponse?: string;
+    depositReturned?: boolean;
+    staircaseNeighbors?: string;
+    touristApartments?: boolean;
+    neighborRelations?: string;
+    cleaning?: string;
 
-    // Area-specific ratings
-    areaTourists: string;
-    areaSecurity: string;
+    // Area-specific ratings (optional)
+    areaTourists?: string;
+    areaSecurity?: string;
 
-    // Ethical review system features
-    profileId: string;                       // Current profile id
+    // Profile and metadata
+    profileId: { id: string } | string;     // Can be populated object or string
     createdAt: string;
     updatedAt: string;
     verified: boolean;
-    isAnonymous: boolean;                    // Default anonymity
-    confidenceScore: number;                 // 0-100 confidence index
-    evidenceAttached: boolean;               // Has encrypted proof
-    flaggedIssues: string[];                 // Tagged issues
-    karmaScore: number;                      // Reviewer's karma
-    replyAllowed: boolean;                   // Right of reply enabled
-    moderationStatus: 'pending' | 'approved' | 'flagged' | 'removed';
+
+    // Ethical review system features (optional, with defaults)
+    isAnonymous?: boolean;                   // Default anonymity
+    confidenceScore?: number;                // 0-100 confidence index
+    evidenceAttached?: boolean;              // Has encrypted proof
+    flaggedIssues?: string[];                // Tagged issues
+    karmaScore?: number;                     // Reviewer's karma
+    replyAllowed?: boolean;                  // Right of reply enabled
+    moderationStatus?: 'pending' | 'approved' | 'flagged' | 'removed';
     takedownReason?: string;                 // Traceable takedown reason
-    helpfulVotes: number;                    // Community moderation
-    unhelpfulVotes: number;                  // Anti-fraud measures
-    reportCount: number;                     // Reported by community
+    helpfulVotes?: number;                   // Community moderation
+    unhelpfulVotes?: number;                 // Anti-fraud measures
+    reportCount?: number;                    // Reported by community
 
     // Display fields
     livedDurationText?: string;
@@ -134,7 +140,7 @@ export default function AddressDetailsPage() {
                 // Reviews that have apartment-specific ratings
                 return reviews.filter(review =>
                     review.summerTemperature || review.winterTemperature || review.noise ||
-                    review.light || review.conditionAndMaintenance || review.services?.length > 0
+                    review.light || review.conditionAndMaintenance || (review.services?.length || 0) > 0
                 );
             case 'community':
                 // Reviews that have community-specific ratings
@@ -203,8 +209,46 @@ export default function AddressDetailsPage() {
                 oxyServices,
                 activeSessionId
             });
-            // Ensure we extract the array from the response properly
-            const reviewsData = response.data?.data || response.data?.reviews || response.data || [];
+
+            // Handle hierarchical review response structure
+            let reviewsData: any[] = [];
+            const responseData = response.data;
+
+            if (responseData?.success) {
+                // Extract reviews based on the hierarchical response structure
+                const buildingReviews = responseData.buildingReviews || [];
+                const unitReviews = responseData.unitReviews || [];
+
+                // Combine all reviews into a single array
+                reviewsData = [...buildingReviews, ...unitReviews];
+
+                // Add default values for missing fields to ensure UI works properly
+                reviewsData = reviewsData.map(review => ({
+                    ...review,
+                    isAnonymous: review.isAnonymous ?? true,
+                    confidenceScore: review.confidenceScore ?? 75,
+                    evidenceAttached: review.evidenceAttached ?? false,
+                    flaggedIssues: review.flaggedIssues ?? [],
+                    karmaScore: review.karmaScore ?? 0,
+                    replyAllowed: review.replyAllowed ?? true,
+                    moderationStatus: review.moderationStatus ?? 'approved',
+                    helpfulVotes: review.helpfulVotes ?? 0,
+                    unhelpfulVotes: review.unhelpfulVotes ?? 0,
+                    reportCount: review.reportCount ?? 0,
+                    evidenceCount: review.evidenceCount ?? 0
+                }));
+
+                console.log('Extracted reviews:', {
+                    level: responseData.level,
+                    buildingReviews: buildingReviews.length,
+                    unitReviews: unitReviews.length,
+                    totalReviews: reviewsData.length
+                });
+            } else {
+                // Fallback for non-hierarchical response format
+                reviewsData = response.data?.data || response.data?.reviews || response.data || [];
+            }
+
             setReviews(Array.isArray(reviewsData) ? reviewsData : []);
         } catch (err) {
             console.error('Error fetching reviews:', err);
@@ -348,11 +392,11 @@ export default function AddressDetailsPage() {
 
                                 {/* Confidence Score */}
                                 <View style={[styles.confidenceBadge, {
-                                    backgroundColor: review.confidenceScore >= 80 ? '#4CAF50' :
-                                        review.confidenceScore >= 60 ? '#FF9800' : '#F44336'
+                                    backgroundColor: (review.confidenceScore || 0) >= 80 ? '#4CAF50' :
+                                        (review.confidenceScore || 0) >= 60 ? '#FF9800' : '#F44336'
                                 }]}>
                                     <ThemedText style={styles.confidenceText}>
-                                        {review.confidenceScore}% confident
+                                        {review.confidenceScore || 0}% confident
                                     </ThemedText>
                                 </View>
 
@@ -367,10 +411,10 @@ export default function AddressDetailsPage() {
                                 )}
 
                                 {/* Karma Score */}
-                                {review.karmaScore > 0 && (
+                                {(review.karmaScore || 0) > 0 && (
                                     <View style={styles.karmaBadge}>
                                         <Ionicons name="trending-up" size={12} color="#9C27B0" />
-                                        <ThemedText style={styles.karmaText}>{review.karmaScore} karma</ThemedText>
+                                        <ThemedText style={styles.karmaText}>{review.karmaScore || 0} karma</ThemedText>
                                     </View>
                                 )}
                             </View>
@@ -425,16 +469,16 @@ export default function AddressDetailsPage() {
                 {/* Community Moderation Section */}
                 <View style={styles.moderationSection}>
                     <TouchableOpacity
-                        style={[styles.helpfulButton, { backgroundColor: review.helpfulVotes > 0 ? '#E8F5E8' : 'transparent' }]}
+                        style={[styles.helpfulButton, { backgroundColor: (review.helpfulVotes || 0) > 0 ? '#E8F5E8' : 'transparent' }]}
                         onPress={() => handleReviewHelpful(review._id)}
                     >
                         <Ionicons
                             name="thumbs-up-outline"
                             size={16}
-                            color={review.helpfulVotes > 0 ? '#4CAF50' : colors.COLOR_BLACK_LIGHT_4}
+                            color={(review.helpfulVotes || 0) > 0 ? '#4CAF50' : colors.COLOR_BLACK_LIGHT_4}
                         />
                         <ThemedText style={[styles.helpfulText, {
-                            color: review.helpfulVotes > 0 ? '#4CAF50' : colors.COLOR_BLACK_LIGHT_4
+                            color: (review.helpfulVotes || 0) > 0 ? '#4CAF50' : colors.COLOR_BLACK_LIGHT_4
                         }]}>
                             Helpful ({review.helpfulVotes || 0})
                         </ThemedText>
