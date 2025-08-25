@@ -141,6 +141,11 @@ export function PropertyCard({
   noteText,
   onPressNote,
 }: PropertyCardProps) {
+  // Early return if property is null/undefined
+  if (!property) {
+    return null;
+  }
+
   // Use saved properties context to check if property is saved
   const { isPropertySaved, isInitialized } = useSavedPropertiesContext();
 
