@@ -21,7 +21,7 @@ export function FeaturedPropertiesWidget() {
     if (!properties || properties.length === 0) {
       loadProperties({
         limit: 5,
-        status: 'available',
+        status: 'published',
       });
     }
   }, [loadProperties, properties]);

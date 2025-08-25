@@ -1,29 +1,6 @@
 import { api } from '@/utils/api';
 import { OxyServices } from '@oxyhq/services';
-import { PropertyType } from '@homiio/shared-types';
-
-export interface PropertyFilters {
-  type?: PropertyType;
-  minPrice?: number;
-  maxPrice?: number;
-  city?: string;
-  state?: string;
-  amenities?: string[];
-  furnished?: boolean;
-  pets?: boolean;
-  smoking?: boolean;
-  minBedrooms?: number;
-  maxBedrooms?: number;
-  minBathrooms?: number;
-  maxBathrooms?: number;
-  page?: number;
-  limit?: number;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-}
-
-import { Property as SharedProperty } from '@homiio/shared-types';
-export type Property = SharedProperty;
+import { PropertyType, PropertyFilters, Property } from '@homiio/shared-types';
 
 export interface PropertySearchResult {
   property: Property;
@@ -51,10 +28,10 @@ class PropertyService {
         activeSessionId,
       });
       return {
-        properties: response.data.results || response.data.properties || [],
-        total: response.data.total || 0,
-        page: response.data.page || 1,
-        totalPages: response.data.totalPages || 1
+        properties: response.data.data || response.data.results || response.data.properties || [],
+        total: response.data.pagination?.total || response.data.total || 0,
+        page: response.data.pagination?.page || response.data.page || 1,
+        totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1
       };
     } catch (error) {
       console.error('Error getting properties:', error);
@@ -85,10 +62,10 @@ class PropertyService {
         activeSessionId,
       });
       return {
-        rooms: response.data.results || response.data.properties || [],
-        total: response.data.total || 0,
-        page: response.data.page || 1,
-        totalPages: response.data.totalPages || 1
+        rooms: response.data.data || response.data.results || response.data.properties || [],
+        total: response.data.pagination?.total || response.data.total || 0,
+        page: response.data.pagination?.page || response.data.page || 1,
+        totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1
       };
     } catch (error) {
       console.error('Error getting property rooms:', error);
@@ -117,10 +94,10 @@ class PropertyService {
         activeSessionId,
       });
       return {
-        rooms: response.data.results || response.data.properties || [],
-        total: response.data.total || 0,
-        page: response.data.page || 1,
-        totalPages: response.data.totalPages || 1
+        rooms: response.data.data || response.data.results || response.data.properties || [],
+        total: response.data.pagination?.total || response.data.total || 0,
+        page: response.data.pagination?.page || response.data.page || 1,
+        totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1
       };
     } catch (error) {
       console.error('Error getting rooms:', error);
@@ -147,10 +124,10 @@ class PropertyService {
         activeSessionId,
       });
       return {
-        properties: response.data.results || response.data.properties || [],
-        total: response.data.total || 0,
-        page: response.data.page || 1,
-        totalPages: response.data.totalPages || 1
+        properties: response.data.data || response.data.results || response.data.properties || [],
+        total: response.data.pagination?.total || response.data.total || 0,
+        page: response.data.pagination?.page || response.data.page || 1,
+        totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1
       };
     } catch (error) {
       console.error('Error searching properties:', error);
@@ -200,10 +177,10 @@ class PropertyService {
         activeSessionId,
       });
       return {
-        properties: response.data.results || response.data.properties || [],
-        total: response.data.total || 0,
-        page: response.data.page || 1,
-        totalPages: response.data.totalPages || 1
+        properties: response.data.data || response.data.results || response.data.properties || [],
+        total: response.data.pagination?.total || response.data.total || 0,
+        page: response.data.pagination?.page || response.data.page || 1,
+        totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1
       };
     } catch (error) {
       console.error('Error getting owner properties:', error);

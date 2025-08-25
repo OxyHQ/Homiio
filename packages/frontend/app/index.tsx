@@ -8,7 +8,8 @@ import {
   Image,
   Animated,
   ScrollView,
- useWindowDimensions } from 'react-native';
+  useWindowDimensions
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
@@ -139,7 +140,7 @@ export default function HomePage() {
   React.useEffect(() => {
     loadProperties({
       limit: 8,
-      status: 'available',
+      status: 'published',
     });
   }, [loadProperties]);
 
@@ -257,7 +258,7 @@ export default function HomePage() {
     try {
       await loadProperties({
         limit: 8,
-        status: 'available',
+        status: 'published',
       });
     } catch (error) {
       console.error('Error refreshing data:', error);
@@ -630,7 +631,7 @@ export default function HomePage() {
               <View style={styles.statChipGradient}>
                 <View style={styles.statChipContent}>
                   <ThemedText style={styles.statChipNumber}>
-                    {properties?.filter((p) => p.status === 'available').length || 0}
+                    {properties?.filter((p) => p.status === 'published').length || 0}
                   </ThemedText>
                   <ThemedText style={styles.statChipLabel}>Available Now</ThemedText>
                 </View>

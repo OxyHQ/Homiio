@@ -60,7 +60,6 @@ export interface IProperty extends Document {
   isVerified?: boolean;
   isEcoFriendly?: boolean;
   views?: number;
-  isDraft?: boolean;
   lastSaved?: Date;
   parentPropertyId?: Types.ObjectId;
   rating?: {
@@ -286,10 +285,6 @@ const PropertySchema = new Schema({
     type: Number,
     default: 0,
     min: [0, 'Views cannot be negative']
-  },
-  isDraft: {
-    type: Boolean,
-    default: true
   },
   lastSaved: {
     type: Date,

@@ -235,10 +235,6 @@ var PropertySchema = new mongoose_1.Schema({
         default: 0,
         min: [0, 'Views cannot be negative']
     },
-    isDraft: {
-        type: Boolean,
-        default: true
-    },
     lastSaved: {
         type: Date,
         default: Date.now

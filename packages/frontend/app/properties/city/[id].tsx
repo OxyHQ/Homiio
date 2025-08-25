@@ -173,7 +173,7 @@ export default function CityPropertiesPage() {
 
     // Apply filters
     if (filters.verified) {
-      result = result.filter(p => p.status === 'available');
+      result = result.filter(p => p.status === 'published');
     }
 
     if (filters.ecoFriendly) {

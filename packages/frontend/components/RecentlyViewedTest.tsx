@@ -47,7 +47,7 @@ export function RecentlyViewedTest() {
       deposit: 500,
       utilities: UtilitiesIncluded.EXCLUDED,
     },
-    status: PropertyStatus.AVAILABLE,
+    status: PropertyStatus.PUBLISHED,
     ownerId: 'test-owner',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

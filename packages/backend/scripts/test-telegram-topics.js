@@ -207,7 +207,7 @@ const sampleProperties = [
       maximumStay: 12,
       availableFrom: new Date('2025-07-28T08:25:49.315Z')
     },
-    status: 'active'
+    status: 'published'
   },
   {
     _id: '68873ead87d5d680768a5a71',
@@ -240,7 +240,7 @@ const sampleProperties = [
       maximumStay: 12,
       availableFrom: new Date('2025-07-28T09:11:09.182Z')
     },
-    status: 'active'
+    status: 'published'
   },
   {
     _id: '6887400287d5d680768a5a8b',

@@ -5,7 +5,7 @@ const { AppError, paginationResponse } = require('../../middlewares/errorHandler
 
 export async function searchProperties(req, res, next) {
   try {
-    const { query, type, minRent, maxRent, city, state, bedrooms, bathrooms, minBedrooms, maxBedrooms, minBathrooms, maxBathrooms, minSquareFootage, maxSquareFootage, minYearBuilt, maxYearBuilt, amenities, available, hasPhotos, verified, eco, housingType, layoutType, furnishedStatus, petFriendly, utilitiesIncluded, parkingType, petPolicy, leaseTerm, priceUnit, proximityToTransport, proximityToSchools, proximityToShopping, availableFromBefore, availableFromAfter, excludeIds, lat, lng, radius, bounds, budgetFriendly, addressId, page = 1, limit = 10 } = req.query;
+    const { query, type, minRent, maxRent, city, state, bedrooms, bathrooms, minBedrooms, maxBedrooms, minBathrooms, maxBathrooms, minSquareFootage, maxSquareFootage, minYearBuilt, maxYearBuilt, amenities, available, status, hasPhotos, verified, eco, housingType, layoutType, furnishedStatus, petFriendly, utilitiesIncluded, parkingType, petPolicy, leaseTerm, priceUnit, proximityToTransport, proximityToSchools, proximityToShopping, availableFromBefore, availableFromAfter, excludeIds, lat, lng, radius, bounds, budgetFriendly, addressId, page = 1, limit = 10 } = req.query;
     const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const andConditions = [];
     if (type) andConditions.push({ type });
@@ -69,8 +69,40 @@ export async function searchProperties(req, res, next) {
     if (proximityToSchools!==undefined) andConditions.push({ proximityToSchools: String(proximityToSchools)==='true' });
     if (proximityToShopping!==undefined) andConditions.push({ proximityToShopping: String(proximityToShopping)==='true' });
     if (availableFromBefore || availableFromAfter) { const af:any={}; if (availableFromAfter){ const d=new Date(String(availableFromAfter)); if(!isNaN(d.getTime())) af.$gte=d;} if (availableFromBefore){ const d=new Date(String(availableFromBefore)); if(!isNaN(d.getTime())) af.$lte=d;} if(Object.keys(af).length) andConditions.push({ availableFrom: af }); }
-    const effAvailable = available!==undefined ? available==='true': undefined; if (effAvailable!==undefined) andConditions.push({ 'availability.isAvailable': effAvailable }); else andConditions.push({ 'availability.isAvailable': true });
-    andConditions.push({ status: 'active' });
+    
+    // Handle status parameter (preferred approach)
+    if (status) {
+      const statusValue = String(status).toLowerCase();
+      if (statusValue === 'available') {
+        andConditions.push({ 'availability.isAvailable': true });
+        andConditions.push({ status: 'published' }); // Published and available for rent
+      } else if (statusValue === 'rented') {
+        andConditions.push({ status: 'rented' });
+      } else if (statusValue === 'reserved') {
+        andConditions.push({ status: 'reserved' });
+      } else if (statusValue === 'sold') {
+        andConditions.push({ status: 'sold' });
+      } else if (statusValue === 'inactive') {
+        andConditions.push({ status: 'inactive' });
+      } else if (statusValue === 'draft') {
+        andConditions.push({ status: 'draft' });
+      } else if (statusValue === 'published') {
+        andConditions.push({ status: 'published' });
+      } else {
+        andConditions.push({ status: statusValue });
+      }
+    } else {
+      // Legacy available parameter support and default behavior
+      const effAvailable = available!==undefined ? available==='true': undefined; 
+      if (effAvailable!==undefined) andConditions.push({ 'availability.isAvailable': effAvailable }); 
+      else andConditions.push({ 'availability.isAvailable': true });
+      andConditions.push({ status: 'published' }); // Use published instead of active
+    }
+    
+    // Exclude draft properties by default unless explicitly requested
+    if (!req.query.includeDrafts && (!status || status !== 'draft')) {
+      andConditions.push({ status: { $ne: 'draft' } });
+    }
     if (excludeIds) { try { const mongoose = require('mongoose'); const list = String(excludeIds).split(',').map((s)=>s.trim()).filter(Boolean).filter((id)=>mongoose.Types.ObjectId.isValid(id)).map((id)=> new mongoose.Types.ObjectId(id)); if (list.length) andConditions.push({ _id: { $nin: list } }); } catch {} }
     // Handle geospatial search with Address lookup
     if (lat && lng && radius) { 

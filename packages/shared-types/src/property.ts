@@ -304,7 +304,6 @@ export interface PropertyDraft {
     currency: string;
   };
   lastSaved: Date;
-  isDraft: boolean;
 }
 
 export type UpdatePropertyData = DeepPartial<Property>; 

@@ -21,10 +21,12 @@ export enum PropertyType {
 }
 
 export enum PropertyStatus {
-  AVAILABLE = 'available',
-  OCCUPIED = 'occupied',
-  MAINTENANCE = 'maintenance',
-  OFFLINE = 'offline'
+  DRAFT = 'draft',
+  PUBLISHED = 'published',
+  RESERVED = 'reserved',
+  RENTED = 'rented',
+  SOLD = 'sold',
+  INACTIVE = 'inactive'
 }
 
 export enum HousingType {

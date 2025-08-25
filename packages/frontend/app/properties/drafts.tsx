@@ -30,12 +30,13 @@ interface PropertyDraft {
     zipCode: string;
   };
   type: string;
+  description: string;
   rent: {
     amount: number;
     currency: string;
   };
+  images: any[];
   lastSaved: Date;
-  isDraft: boolean;
   formData: any;
 }
 

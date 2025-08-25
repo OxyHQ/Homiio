@@ -400,11 +400,6 @@ const propertySchema = new mongoose.Schema({
     type: availabilitySchema,
     default: {}
   },
-  // Draft functionality
-  isDraft: {
-    type: Boolean,
-    default: true
-  },
   lastSaved: {
     type: Date,
     default: Date.now
@@ -418,8 +413,8 @@ const propertySchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['active', 'inactive', 'archived', 'draft', 'expired'],
-    default: 'active'
+    enum: Object.values(PropertyStatus),
+    default: PropertyStatus.DRAFT
   },
   // Verification and sustainability flags
   isVerified: {
@@ -565,7 +560,7 @@ propertySchema.statics.findByProfile = function(profileId, options = {}) {
 propertySchema.statics.findAvailable = function(filters = {}) {
   const query = { 
     'availability.isAvailable': true, 
-    status: 'active',
+    status: 'published',
     ...filters 
   };
   return this.find(query);
@@ -588,7 +583,7 @@ propertySchema.statics.search = async function(searchParams) {
 
   if (available) {
     query['availability.isAvailable'] = true;
-    query.status = 'active';
+    query.status = 'published';
   }
 
   if (type) {
@@ -664,7 +659,7 @@ propertySchema.statics.findNearby = async function(longitude, latitude, maxDista
   return this.find({
     addressId: { $in: addressIds },
     'availability.isAvailable': true,
-    status: 'active'
+    status: 'published'
   }).populate('addressId');
 };
 
@@ -688,7 +683,7 @@ propertySchema.statics.findWithinRadius = async function(longitude, latitude, ra
   return this.find({
     addressId: { $in: addressIds },
     'availability.isAvailable': true,
-    status: 'active'
+    status: 'published'
   }).populate('addressId');
 };
 
@@ -715,7 +710,7 @@ propertySchema.statics.findInPolygon = async function(coordinates) {
   return this.find({
     addressId: { $in: addressIds },
     'availability.isAvailable': true,
-    status: 'active'
+    status: 'published'
   }).populate('addressId');
 };
 

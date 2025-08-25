@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useMemo, useCallback , useContext } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useContext } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, Platform } from 'react-native';
-import { useLocalSearchParams , useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useProperties } from '@/hooks';
 import { PropertyCard } from '@/components/PropertyCard';
@@ -165,7 +165,7 @@ export default function PropertyTypeScreen() {
     useEffect(() => {
         loadProperties({
             limit: 50,
-            status: 'available',
+            status: 'published',
             type: type as string,
         });
     }, [loadProperties, type]);
@@ -175,7 +175,7 @@ export default function PropertyTypeScreen() {
         try {
             await loadProperties({
                 limit: 50,
-                status: 'available',
+                status: 'published',
                 type: type as string,
             });
         } catch (error) {

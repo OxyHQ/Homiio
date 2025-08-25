@@ -54,7 +54,7 @@ export default function InsightsScreen() {
                 // Load top properties (simple: latest active listings)
                 setTopPropsLoading(true);
                 propertyService
-                    .getProperties({ limit: 8, status: 'available', sort: 'createdAt' } as any)
+                    .getProperties({ limit: 8, status: 'published', sort: 'createdAt' } as any)
                     .then((res) => {
                         if (active) setTopProperties(res.properties || []);
                     })

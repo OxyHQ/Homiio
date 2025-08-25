@@ -94,7 +94,7 @@ export default function MyPropertiesScreen() {
           bedrooms={item.bedrooms || 0}
           bathrooms={item.bathrooms || 0}
           size={item.squareFootage || 0}
-          isVerified={item.status === 'available'}
+          isVerified={item.status === 'published'}
           onPress={() => handlePropertyPress(item._id || item.id)}
           style={styles.propertyCard}
         />

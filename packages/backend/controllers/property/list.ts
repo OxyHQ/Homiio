@@ -24,6 +24,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       maxYearBuilt,
       amenities,
       available,
+      status,
       hasPhotos,
       verified,
       eco,
@@ -117,7 +118,31 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     }
     if (available !== undefined) {
       filters['availability.isAvailable'] = available === 'true';
-      filters.status = 'active';
+      filters.status = 'published'; // Use published instead of active for available properties
+    }
+    
+    // Handle status parameter (preferred approach)
+    if (status) {
+      const statusValue = String(status).toLowerCase();
+      if (statusValue === 'available') {
+        filters['availability.isAvailable'] = true;
+        filters.status = 'published'; // Published and available for rent
+      } else if (statusValue === 'rented') {
+        filters.status = 'rented';
+      } else if (statusValue === 'reserved') {
+        filters.status = 'reserved';
+      } else if (statusValue === 'sold') {
+        filters.status = 'sold';
+      } else if (statusValue === 'inactive') {
+        filters.status = 'inactive';
+      } else if (statusValue === 'draft') {
+        filters.status = 'draft';
+      } else if (statusValue === 'published') {
+        filters.status = 'published';
+      } else {
+        // Direct status mapping for other values
+        filters.status = statusValue;
+      }
     }
     if (amenities) {
       const amenityList = String(amenities).split(',');
@@ -166,6 +191,14 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
           .map((id: string) => new mongoose.Types.ObjectId(id));
         if (list.length) filters._id = { $nin: list };
       } catch { }
+    }
+
+    // Exclude draft properties by default unless explicitly requested
+    if (!req.query.includeDrafts && !req.query.status) {
+      filters.status = { $ne: 'draft' };
+    } else if (req.query.status && req.query.status !== 'draft') {
+      // If status is specified and it's not 'draft', ensure it's not a draft
+      filters.status = req.query.status;
     }
 
     const sortOptions: any = {};

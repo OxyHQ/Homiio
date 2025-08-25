@@ -22,6 +22,7 @@ export async function findNearbyProperties(req, res, next) {
       maxYearBuilt, 
       amenities, 
       available, 
+      status,
       hasPhotos, 
       verified, 
       eco, 
@@ -70,9 +71,48 @@ export async function findNearbyProperties(req, res, next) {
     // Apply additional filters
     const filters: any = {};
     
-    if (available !== undefined) {
+    // Handle status parameter (preferred) or legacy available parameter
+    if (status !== undefined) {
+      switch (status) {
+        case 'available':
+          filters['availability.isAvailable'] = true;
+          filters.status = 'published'; // Published and available for rent
+          break;
+        case 'rented':
+          filters.status = 'rented';
+          break;
+        case 'reserved':
+          filters.status = 'reserved';
+          break;
+        case 'sold':
+          filters.status = 'sold';
+          break;
+        case 'inactive':
+          filters.status = 'inactive';
+          break;
+        case 'draft':
+          filters.status = 'draft';
+          break;
+        case 'published':
+          filters.status = 'published';
+          break;
+      }
+    } else if (available !== undefined) {
+      // Legacy support for available parameter
       filters['availability.isAvailable'] = available === 'true';
-      filters.status = 'active';
+      filters.status = 'published'; // Use published instead of active
+    }
+
+    // Exclude draft properties by default unless explicitly requested
+    if (!req.query.includeDrafts && (!status || status !== 'draft')) {
+      if (filters.status) {
+        // Status is already set, but ensure we exclude drafts
+        if (filters.status === 'published' || filters.status === 'inactive' || filters.status === 'rented' || filters.status === 'reserved' || filters.status === 'sold') {
+          // Keep the existing status (it's already not draft)
+        }
+      } else {
+        filters.status = { $ne: 'draft' };
+      }
     }
 
     if (type) filters.type = type;
@@ -200,6 +240,7 @@ export async function findPropertiesInRadius(req, res, next) {
       maxYearBuilt, 
       amenities, 
       available, 
+      status,
       hasPhotos, 
       verified, 
       eco, 
@@ -248,9 +289,48 @@ export async function findPropertiesInRadius(req, res, next) {
     // Apply additional filters
     const filters: any = {};
     
-    if (available !== undefined) {
+    // Handle status parameter (preferred) or legacy available parameter
+    if (status !== undefined) {
+      switch (status) {
+        case 'available':
+          filters['availability.isAvailable'] = true;
+          filters.status = 'published'; // Published and available for rent
+          break;
+        case 'rented':
+          filters.status = 'rented';
+          break;
+        case 'reserved':
+          filters.status = 'reserved';
+          break;
+        case 'sold':
+          filters.status = 'sold';
+          break;
+        case 'inactive':
+          filters.status = 'inactive';
+          break;
+        case 'draft':
+          filters.status = 'draft';
+          break;
+        case 'published':
+          filters.status = 'published';
+          break;
+      }
+    } else if (available !== undefined) {
+      // Legacy support for available parameter
       filters['availability.isAvailable'] = available === 'true';
-      filters.status = 'active';
+      filters.status = 'published'; // Use published instead of active
+    }
+
+    // Exclude draft properties by default unless explicitly requested
+    if (!req.query.includeDrafts && (!status || status !== 'draft')) {
+      if (filters.status) {
+        // Status is already set, but ensure we exclude drafts
+        if (filters.status === 'published' || filters.status === 'inactive' || filters.status === 'rented' || filters.status === 'reserved' || filters.status === 'sold') {
+          // Keep the existing status (it's already not draft)
+        }
+      } else {
+        filters.status = { $ne: 'draft' };
+      }
     }
 
     if (type) filters.type = type;

@@ -624,6 +624,7 @@ export default function CreatePropertyScreen() {
           caption: img.caption || '',
           isPrimary: img.isPrimary || false
         })) || [],
+        status: 'published', // Set as published when user submits the form
 
       };
       if (formData.basicInfo.propertyType === 'coliving') {
