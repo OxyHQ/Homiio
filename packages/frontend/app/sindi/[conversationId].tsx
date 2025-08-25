@@ -392,7 +392,9 @@ const PropertiesFromIds = React.memo(function PropertiesFromIds({ ids }: { ids: 
       for (const id of ids) {
         try {
           const p = await propertyService.getPropertyById(id);
-          results.push(p);
+          if (p) { // Only push non-null properties
+            results.push(p);
+          }
         } catch {
           // ignore missing/bad ids
         }
@@ -403,9 +405,14 @@ const PropertiesFromIds = React.memo(function PropertiesFromIds({ ids }: { ids: 
 
   if (!data || data.length === 0) return null;
 
+  // Filter out any null/undefined properties before rendering
+  const validProperties = data.filter((property: any) => property && (property._id || property.id));
+
+  if (validProperties.length === 0) return null;
+
   return (
     <View style={styles.propertyCardsContainer}>
-      {data.map((property: any) => (
+      {validProperties.map((property: any) => (
         <PropertyCard
           key={property._id || property.id}
           property={property}
