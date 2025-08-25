@@ -144,6 +144,16 @@ export function PropertyCard({
   // Use saved properties context to check if property is saved
   const { isPropertySaved, isInitialized } = useSavedPropertiesContext();
   const queryClient = useQueryClient();
+  
+  // Define the callback function (using property parameter directly)
+  const handlePressIn = useCallback(() => {
+    if (!property) return;
+    const idToPrefetch = property._id || property.id;
+    if (idToPrefetch) {
+      prefetchProperty(queryClient, idToPrefetch as string);
+      prefetchPropertyStats(queryClient, idToPrefetch as string);
+    }
+  }, [queryClient, property]);
 
   // Early return if property is null/undefined
   if (!property) {
@@ -184,15 +194,6 @@ export function PropertyCard({
   const finalShowPrice = showPrice && (variantStyles.showPrice !== false);
   const finalTitleLines = titleLines !== undefined ? titleLines : variantStyles.titleLines;
   const finalLocationLines = locationLines !== undefined ? locationLines : variantStyles.locationLines;
-
-  const queryClient = useQueryClient();
-  const handlePressIn = useCallback(() => {
-    const idToPrefetch = property._id || property.id;
-    if (idToPrefetch) {
-      prefetchProperty(queryClient, idToPrefetch as string);
-      prefetchPropertyStats(queryClient, idToPrefetch as string);
-    }
-  }, [queryClient, property._id, property.id]);
 
   return (
     <TouchableOpacity
