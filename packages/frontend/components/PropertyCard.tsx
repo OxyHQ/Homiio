@@ -144,7 +144,7 @@ export function PropertyCard({
   // Use saved properties context to check if property is saved
   const { isPropertySaved, isInitialized } = useSavedPropertiesContext();
   const queryClient = useQueryClient();
-  
+
   // Define the callback function (using property parameter directly)
   const handlePressIn = useCallback(() => {
     if (!property) return;

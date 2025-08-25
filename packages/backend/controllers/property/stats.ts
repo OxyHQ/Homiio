@@ -8,16 +8,28 @@ export async function getPropertyStats(req, res, next) {
     if (!mongoose.Types.ObjectId.isValid(propertyId)) return next(new AppError('Invalid property ID', 400, 'INVALID_ID'));
     const exists = await Property.exists({ _id: propertyId });
     if (!exists) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
-    const { Saved, Room, Lease } = require('../../models');
+    const { Saved, Lease } = require('../../models');
     let savesCount = await Saved.countDocuments({ targetType: 'property', targetId: new mongoose.Types.ObjectId(propertyId) }).catch(()=>0);
     const now = new Date();
     const objId = new mongoose.Types.ObjectId(propertyId);
+    
+    // Use Property model with type='room' filter instead of separate Room model
     const [ totalRoomsResult, occupiedRoomsResult, availableRoomsResult, leaseAgg, roomRentAgg, propertyDoc ] = await Promise.all([
-      Room.countDocuments({ propertyId: objId }).catch(()=>0),
-      Room.countDocuments({ propertyId: objId, $or:[ { 'occupancy.currentOccupants': { $gt: 0 } }, { status:'occupied' } ]}).catch(()=>0),
-      Room.countDocuments({ propertyId: objId, status:'available', 'availability.isAvailable': true }).catch(()=>0),
-      Lease.aggregate([{ $match:{ propertyId: objId, status:'active', 'leaseTerms.startDate': { $lte: now }, 'leaseTerms.endDate': { $gte: now } }}, { $group:{ _id:null, total:{ $sum:'$rentDetails.monthlyRent' }, avg:{ $avg:'$rentDetails.monthlyRent' }, count:{ $sum:1 }}}]).catch(()=>[]),
-      Room.aggregate([{ $match:{ propertyId: objId, 'rent.amount': { $gt: 0 } }}, { $group:{ _id:null, avg:{ $avg:'$rent.amount' }, count:{ $sum:1 }}}]).catch(()=>[]),
+      Property.countDocuments({ $or: [{ parentPropertyId: objId }, { _id: objId, type: 'room' }] }).catch(()=>0),
+      Property.countDocuments({ 
+        $and: [
+          { $or: [{ parentPropertyId: objId }, { _id: objId, type: 'room' }] },
+          { $or: [{ 'occupancy.currentOccupants': { $gt: 0 } }, { status: 'occupied' }] }
+        ]
+      }).catch(()=>0),
+      Property.countDocuments({ 
+        $and: [
+          { $or: [{ parentPropertyId: objId }, { _id: objId, type: 'room' }] },
+          { status: 'active', 'availability.isAvailable': true }
+        ]
+      }).catch(()=>0),
+      Lease.aggregate([{ $match: { propertyId: objId, status: 'active', 'leaseTerms.startDate': { $lte: now }, 'leaseTerms.endDate': { $gte: now } }}, { $group: { _id: null, total: { $sum: '$rentDetails.monthlyRent' }, avg: { $avg: '$rentDetails.monthlyRent' }, count: { $sum: 1 }}}]).catch(()=>[]),
+      Property.aggregate([{ $match: { $or: [{ parentPropertyId: objId }, { _id: objId, type: 'room' }], 'rent.amount': { $gt: 0 } }}, { $group: { _id: null, avg: { $avg: '$rent.amount' }, count: { $sum: 1 }}}]).catch(()=>[]),
       Property.findById(propertyId).select('rent').lean().catch(()=>null)
     ]);
     const totalRooms = typeof totalRoomsResult === 'number'? totalRoomsResult:0;
