@@ -90,7 +90,7 @@ export default function RootLayout() {
       flexDirection: isScreenNotMobile ? 'row' : 'column',
     },
     mainContent: {
-      maxWidth: 1600,
+      maxWidth: 1800,
       marginHorizontal: isScreenNotMobile ? 'auto' : 0,
       justifyContent: 'space-between',
       flexDirection: isScreenNotMobile ? 'row' : 'column',

@@ -292,100 +292,74 @@ export function SideBar() {
         <View style={styles.inner}>
           <View style={styles.headerSection}>
             <Logo />
-            {!user?.id && (
-              <View style={styles.heroSection}>
-                {isExpanded && (
-                  <Text style={styles.heroTagline}>{t('sidebar.hero.tagline')}</Text>
-                )}
-                {!isAuthenticated && (
-                  <View style={styles.authButtonsContainer}>
-                    <TouchableOpacity
-                      style={styles.signUpButton}
-                      onPress={() => showBottomSheet?.('SignUp')}
-                    >
-                      <Text style={styles.signUpButtonText}>{t('sidebar.actions.signUp')}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.signInButton}
-                      onPress={() => showBottomSheet?.('SignIn')}
-                    >
-                      <Text style={styles.signInButtonText}>{t('sidebar.actions.signIn')}</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            )}
           </View>
+          <View style={styles.navigationSection}>
+            {sideBarData.map(({ title, icon, iconActive, route }) => (
+              <SideBarItem
+                href={route}
+                key={title}
+                icon={pathname === route ? iconActive : icon}
+                text={title}
+                isActive={pathname === route}
+                isExpanded={isExpanded}
+                onHoverExpand={handleHoverIn}
+              />
+            ))}
 
-          {user && user.id && (
-            <View style={styles.navigationSection}>
-              {sideBarData.map(({ title, icon, iconActive, route }) => (
-                <SideBarItem
-                  href={route}
-                  key={title}
-                  icon={pathname === route ? iconActive : icon}
-                  text={title}
-                  isActive={pathname === route}
-                  isExpanded={isExpanded}
-                  onHoverExpand={handleHoverIn}
-                />
-              ))}
-
-              <View style={styles.addPropertyButtonContainer}>
-                <Button
-                  href="/properties/create"
-                  renderText={() => (
-                    <Text style={[
-                      styles.addPropertyButtonText,
-                      {
-                        opacity: isExpanded ? 1 : 0,
-                        width: isExpanded ? 'auto' : 0,
-                        overflow: 'hidden',
-                        whiteSpace: 'nowrap',
-                        ...(Platform.select({
-                          web: {
-                            transition: 'opacity 220ms cubic-bezier(0.2, 0, 0, 1), width 220ms cubic-bezier(0.2, 0, 0, 1)',
-                            willChange: 'opacity, width',
-                          },
-                        }) as any),
-                      }
-                    ]}>
-                      {t('sidebar.actions.addProperty')}
-                    </Text>
-                  )}
-                  renderIcon={() => (
-                    <View style={{
-                      opacity: isExpanded ? 0 : 1,
-                      position: isExpanded ? 'absolute' : 'relative',
-                      left: isExpanded ? '50%' : 'auto',
-                      top: isExpanded ? '50%' : 'auto',
-                      transform: isExpanded ? 'translate(-50%, -50%)' : 'none',
+            <View style={styles.addPropertyButtonContainer}>
+              <Button
+                href="/properties/create"
+                renderText={() => (
+                  <Text style={[
+                    styles.addPropertyButtonText,
+                    {
+                      opacity: isExpanded ? 1 : 0,
+                      width: isExpanded ? 'auto' : 0,
+                      overflow: 'hidden',
+                      whiteSpace: 'nowrap',
                       ...(Platform.select({
                         web: {
-                          transition: 'opacity 220ms cubic-bezier(0.2, 0, 0, 1)',
-                          willChange: 'opacity',
+                          transition: 'opacity 220ms cubic-bezier(0.2, 0, 0, 1), width 220ms cubic-bezier(0.2, 0, 0, 1)',
+                          willChange: 'opacity, width',
                         },
                       }) as any),
-                    }}>
-                      <Compose size={20} color={colors.primaryLight} />
-                    </View>
-                  )}
-                  containerStyle={() => ({
-                    ...styles.addPropertyButton,
-                    height: isExpanded ? 40 : 48,
-                    width: isExpanded ? '100%' : 48,
-                    alignSelf: isExpanded ? 'stretch' : 'center',
+                    }
+                  ]}>
+                    {t('sidebar.actions.addProperty')}
+                  </Text>
+                )}
+                renderIcon={() => (
+                  <View style={{
+                    opacity: isExpanded ? 0 : 1,
+                    position: isExpanded ? 'absolute' : 'relative',
+                    left: isExpanded ? '50%' : 'auto',
+                    top: isExpanded ? '50%' : 'auto',
+                    transform: isExpanded ? 'translate(-50%, -50%)' : 'none',
                     ...(Platform.select({
                       web: {
-                        transition: 'width 220ms cubic-bezier(0.2, 0, 0, 1), height 220ms cubic-bezier(0.2, 0, 0, 1)',
-                        willChange: 'width, height',
+                        transition: 'opacity 220ms cubic-bezier(0.2, 0, 0, 1)',
+                        willChange: 'opacity',
                       },
-                    }) as ViewStyle),
-                  })}
-                />
-              </View>
+                    }) as any),
+                  }}>
+                    <Compose size={20} color={colors.primaryLight} />
+                  </View>
+                )}
+                containerStyle={() => ({
+                  ...styles.addPropertyButton,
+                  height: isExpanded ? 40 : 48,
+                  width: isExpanded ? '100%' : 48,
+                  alignSelf: isExpanded ? 'stretch' : 'center',
+                  ...(Platform.select({
+                    web: {
+                      transition: 'width 220ms cubic-bezier(0.2, 0, 0, 1), height 220ms cubic-bezier(0.2, 0, 0, 1)',
+                      willChange: 'width, height',
+                    },
+                  }) as ViewStyle),
+                })}
+              />
             </View>
-          )}
+          </View>
 
           {/* Recently Saved Section */}
           {user && user.id && (
