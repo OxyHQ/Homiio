@@ -1153,6 +1153,9 @@ export function ChatContent({
                     return (
                       <View key={m.id || m.content} style={styles.propertyCardsContainer}>
                         {properties.map((property, idx) => {
+                          // Additional safety check for null/undefined property
+                          if (!property) return null;
+
                           // Convert parsed property data to Property interface format
                           const propertyData: any = {
                             _id: property.id || `temp-${idx}`,
@@ -1188,7 +1191,7 @@ export function ChatContent({
                               onPress={() => router.push(`/properties/${property.id}`)}
                             />
                           );
-                        })}
+                        }).filter(Boolean)}
                       </View>
                     );
                   }
