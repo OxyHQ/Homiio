@@ -3,7 +3,6 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
   Platform,
   Share,
 } from 'react-native';
@@ -48,6 +47,7 @@ import * as Linking from 'expo-linking';
 import { propertyService } from '@/services/propertyService';
 import ViewingService from '@/services/viewingService';
 import Button from '@/components/Button';
+import { PropertyDetailSkeleton } from '@/components/ui/PropertyDetailSkeleton';
 import type { Profile } from '@/services/profileService';
 import profileService from '@/services/profileService';
 // Removed LinearGradient for Sindi banner simplification
@@ -349,25 +349,7 @@ export default function PropertyDetailPage() {
   };
 
   if (isLoading) {
-    return (
-      <View style={{ flex: 1 }}>
-        <Header
-          options={{
-            showBackButton: true,
-            title: t('Loading...') || 'Loading...',
-            titlePosition: 'center',
-          }}
-        />
-        <SafeAreaView style={styles.contentArea} edges={['top']}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primaryColor} />
-            <ThemedText style={styles.loadingText}>
-              {t('property.loading') || 'Loading property...'}
-            </ThemedText>
-          </View>
-        </SafeAreaView>
-      </View>
-    );
+    return <PropertyDetailSkeleton />;
   }
 
   if (error || !property) {

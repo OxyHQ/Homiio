@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 // import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,6 +17,7 @@ import { Header } from '@/components/Header';
 import { UpdateProfileData, EmploymentStatus, LeaseDuration, PriceUnit, BusinessType, ReferenceRelationship, ReasonForLeaving, ProfileVisibility } from '@/services/profileService';
 import { storeData, getData } from '@/utils/storage';
 import { usePrimaryProfileQuery, useUpdateProfileMutation } from '@/hooks/query/useProfiles';
+import { ProfileSkeleton } from '@/components/ui/ProfileSkeleton';
 
 export default function ProfileEditScreen() {
   const { data: activeProfile, isLoading: profileLoading } = usePrimaryProfileQuery();
@@ -2562,16 +2562,7 @@ export default function ProfileEditScreen() {
   if (shouldShowLoading) {
     return (
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primaryColor} />
-          <Text style={styles.loadingText}>
-            {profileLoading
-              ? 'Loading profile...'
-              : !isFormInitialized
-                ? 'Preparing form...'
-                : 'Loading...'}
-          </Text>
-        </View>
+        <ProfileSkeleton />
       </SafeAreaView>
     );
   }
@@ -2602,7 +2593,16 @@ export default function ProfileEditScreen() {
               disabled={isSaving || !hasUnsavedChanges}
             >
               {isSaving ? (
-                <ActivityIndicator size="small" color={colors.primaryLight} />
+                <View style={{ width: 20, height: 20, justifyContent: 'center', alignItems: 'center' }}>
+                  <View style={{ 
+                    width: 16, 
+                    height: 16, 
+                    borderWidth: 2, 
+                    borderColor: colors.primaryLight, 
+                    borderTopColor: 'transparent',
+                    borderRadius: 8 
+                  }} />
+                </View>
               ) : (
                 <Text style={styles.saveButtonText}>Save</Text>
               )}

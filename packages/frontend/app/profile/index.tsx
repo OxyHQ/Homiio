@@ -4,7 +4,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   Platform,
   Alert,
 } from 'react-native';
@@ -16,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { toast } from 'sonner';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import { ProfileSkeleton } from '@/components/ui/ProfileSkeleton';
 import { useActivateProfileMutation, useDeleteProfileMutation, usePrimaryProfileQuery, useUserProfilesQuery } from '@/hooks/query/useProfiles';
 import type { Profile } from '@/services/profileService';
 import { ThemedText } from '@/components/ThemedText';
@@ -192,9 +191,7 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <Header options={{ title: 'Profile Management' }} />
-        <View style={styles.loadingContainer}>
-          <LoadingSpinner size={32} text="Loading profiles..." />
-        </View>
+        <ProfileSkeleton />
       </SafeAreaView>
     );
   }
@@ -374,7 +371,9 @@ export default function ProfileScreen() {
                       </View>
                     )}
                     {isSwitching && (profile.id || profile._id) === activeProfileId && (
-                      <ActivityIndicator size="small" color={colors.primaryColor} />
+                                            <View style={{ width: 20, height: 20, justifyContent: "center", alignItems: "center" }}>
+                        <View style={{ width: 16, height: 16, borderWidth: 2, borderColor: colors.primaryColor, borderTopColor: "transparent", borderRadius: 8 }} />
+                      </View>
                     )}
                     <IconComponent name="chevron-forward" size={16} color="#ccc" />
                   </View>
@@ -432,7 +431,9 @@ export default function ProfileScreen() {
                       </View>
                     )}
                     {isSwitching && (profile.id || profile._id) === activeProfileId && (
-                      <ActivityIndicator size="small" color={colors.primaryColor} />
+                                            <View style={{ width: 20, height: 20, justifyContent: "center", alignItems: "center" }}>
+                        <View style={{ width: 16, height: 16, borderWidth: 2, borderColor: colors.primaryColor, borderTopColor: "transparent", borderRadius: 8 }} />
+                      </View>
                     )}
                     <IconComponent name="chevron-forward" size={16} color="#ccc" />
                   </View>
@@ -490,7 +491,9 @@ export default function ProfileScreen() {
                       </View>
                     )}
                     {isSwitching && (profile.id || profile._id) === activeProfileId && (
-                      <ActivityIndicator size="small" color={colors.primaryColor} />
+                                            <View style={{ width: 20, height: 20, justifyContent: "center", alignItems: "center" }}>
+                        <View style={{ width: 16, height: 16, borderWidth: 2, borderColor: colors.primaryColor, borderTopColor: "transparent", borderRadius: 8 }} />
+                      </View>
                     )}
                     <IconComponent name="chevron-forward" size={16} color="#ccc" />
                   </View>
@@ -548,7 +551,9 @@ export default function ProfileScreen() {
                       </View>
                     )}
                     {isSwitching && (profile.id || profile._id) === activeProfileId && (
-                      <ActivityIndicator size="small" color={colors.primaryColor} />
+                                            <View style={{ width: 20, height: 20, justifyContent: "center", alignItems: "center" }}>
+                        <View style={{ width: 16, height: 16, borderWidth: 2, borderColor: colors.primaryColor, borderTopColor: "transparent", borderRadius: 8 }} />
+                      </View>
                     )}
                     <IconComponent name="chevron-forward" size={16} color="#ccc" />
                   </View>

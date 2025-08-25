@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { tipsService, TipArticle } from '@/services/tipsService';
 import { Header } from '@/components/Header';
+import { TipsSkeleton } from '@/components/ui/TipsSkeleton';
 
 const IconComponent = Ionicons as any;
 
@@ -63,52 +64,7 @@ export default function TipsScreen() {
         {/* Tips Grid */}
         <View style={styles.tipsGrid}>
           {loading
-            ? // Loading skeleton
-            Array.from({ length: 4 }).map((_, index) => (
-              <View key={index} style={styles.tipCard}>
-                <View style={styles.tipImageContainer}>
-                  <View
-                    style={[styles.tipImage, { backgroundColor: colors.COLOR_BLACK_LIGHT_4 }]}
-                  >
-                    <IconComponent name="hourglass-outline" size={32} color="white" />
-                  </View>
-                </View>
-                <View style={styles.tipContent}>
-                  <View
-                    style={[
-                      styles.tipTitle,
-                      {
-                        backgroundColor: colors.COLOR_BLACK_LIGHT_4,
-                        height: 20,
-                        borderRadius: 4,
-                      },
-                    ]}
-                  />
-                  <View
-                    style={[
-                      styles.tipDescription,
-                      {
-                        backgroundColor: colors.COLOR_BLACK_LIGHT_4,
-                        height: 16,
-                        borderRadius: 4,
-                        marginBottom: 8,
-                      },
-                    ]}
-                  />
-                  <View
-                    style={[
-                      styles.tipDescription,
-                      {
-                        backgroundColor: colors.COLOR_BLACK_LIGHT_4,
-                        height: 16,
-                        borderRadius: 4,
-                        width: '60%',
-                      },
-                    ]}
-                  />
-                </View>
-              </View>
-            ))
+            ? <TipsSkeleton itemCount={4} />
             : tipsData.map((tip) => (
               <TouchableOpacity
                 key={tip.id}

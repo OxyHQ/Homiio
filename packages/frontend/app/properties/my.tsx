@@ -14,12 +14,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { Header } from '@/components/Header';
 import { PropertyCard } from '@/components/PropertyCard';
-import LoadingTopSpinner from '@/components/LoadingTopSpinner';
 import { useUserProperties } from '@/hooks/usePropertyQueries';
 import { useOxy } from '@oxyhq/services';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { PropertyListSkeleton } from '@/components/ui/PropertyListSkeleton';
 
 // Type assertion for Ionicons compatibility with React 19
 const IconComponent = Ionicons as any;
@@ -152,7 +152,7 @@ export default function MyPropertiesScreen() {
           <Header options={{ title: t('properties.my.title') }} />
         </View>
         <View style={{ paddingTop: headerHeight, flex: 1 }}>
-          <LoadingTopSpinner showLoading={true} />
+          <PropertyListSkeleton viewMode="list" />
         </View>
       </View>
     );

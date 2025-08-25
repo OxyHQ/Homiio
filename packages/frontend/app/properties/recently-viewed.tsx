@@ -13,13 +13,13 @@ import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { colors } from '@/styles/colors';
 import { Header } from '@/components/Header';
 import { PropertyList } from '@/components/PropertyList';
-import LoadingTopSpinner from '@/components/LoadingTopSpinner';
 import { SearchBar } from '@/components/SearchBar';
-import { Property } from '@/services/propertyService';
+import { Property } from '@homiio/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { useOxy } from '@oxyhq/services';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { PropertyListSkeleton } from '@/components/ui/PropertyListSkeleton';
 
 const screenWidth = Dimensions.get('window').width;
 const isMobile = screenWidth < 600;
@@ -153,7 +153,7 @@ export default function RecentlyViewedScreen() {
           </Text>
         </View>
         {isLoading && !recentProperties.length ? (
-          <LoadingTopSpinner showLoading={true} />
+          <PropertyListSkeleton viewMode={viewMode} />
         ) : error ? (
           renderErrorState()
         ) : filteredProperties.length === 0 ? (

@@ -6,7 +6,6 @@ import {
     RefreshControl,
     Alert,
     TouchableOpacity,
-    ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +19,7 @@ import { PropertyCard } from '@/components/PropertyCard';
 import { AddressDisplay } from '@/components/AddressDisplay';
 import { NeighborhoodRatingWidget } from '@/components/widgets/NeighborhoodRatingWidget';
 import { useOxy } from '@oxyhq/services';
+import { PropertyListSkeleton } from '@/components/ui/PropertyListSkeleton';
 
 // Services and hooks
 import { api } from '@/utils/api';
@@ -539,10 +539,7 @@ export default function AddressDetailsPage() {
         return (
             <SafeAreaView style={styles.container}>
                 <Header options={{ title: getAddressTitle(), showBackButton: true }} />
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={colors.primaryColor} />
-                    <ThemedText style={styles.loadingText}>Loading address details...</ThemedText>
-                </View>
+                <PropertyListSkeleton viewMode="list" />
             </SafeAreaView>
         );
     }

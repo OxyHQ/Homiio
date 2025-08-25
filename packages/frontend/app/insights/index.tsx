@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, StyleSheet, ActivityIndicator, Dimensions, LayoutChangeEvent } from 'react-native';
+import { View, ScrollView, StyleSheet, Dimensions, LayoutChangeEvent } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';
 import { ThemedText } from '@/components/ThemedText';
@@ -11,6 +11,7 @@ import { propertyService } from '@/services/propertyService';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';
 import { PropertyCard } from '@/components/PropertyCard';
 import { useRouter } from 'expo-router';
+import { InsightsSkeleton } from '@/components/ui/InsightsSkeleton';
 
 // Chart width will adapt to 100% of available content width
 
@@ -78,11 +79,7 @@ export default function InsightsScreen() {
     // Removed time-series charts for a minimalist design
 
     if (loading) {
-        return (
-            <View style={styles.centered}>
-                <ActivityIndicator color={colors.primaryColor} />
-            </View>
-        );
+        return <InsightsSkeleton />;
     }
 
     if (error) {

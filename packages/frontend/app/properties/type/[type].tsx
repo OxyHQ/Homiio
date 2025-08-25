@@ -10,6 +10,7 @@ import { phuduFontWeights } from '@/styles/fonts';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { FiltersBar } from '@/components/FiltersBar';
 import { FiltersBottomSheet, FilterSection, FilterValue } from '@/components/FiltersBar/FiltersBottomSheet';
+import { PropertyListSkeleton } from '@/components/ui/PropertyListSkeleton';
 
 import { Property as BaseProperty } from '@homiio/shared-types';
 
@@ -253,9 +254,7 @@ export default function PropertyTypeScreen() {
             />
 
             {propertiesLoading ? (
-                <View style={styles.loadingContainer}>
-                    <ThemedText style={styles.loadingText}>{t('common.loading')}</ThemedText>
-                </View>
+                <PropertyListSkeleton viewMode="grid" />
             ) : filteredProperties.length === 0 ? (
                 <View style={styles.emptyContainer}>
                     <ThemedText style={styles.emptyText}>

@@ -13,6 +13,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { prefetchProperty, prefetchPropertyStats } from '@/utils/queryPrefetch';
+import { PropertyCardSkeleton } from './ui/PropertyCardSkeleton';
 
 export type PropertyCardVariant = 'default' | 'compact' | 'featured' | 'saved';
 export type PropertyCardOrientation = 'vertical' | 'horizontal';
@@ -37,6 +38,7 @@ type PropertyCardProps = {
   // State
   isSelected?: boolean;
   isProcessing?: boolean;
+  isLoading?: boolean;
 
   // Actions
   onPress?: () => void;
@@ -123,6 +125,7 @@ export function PropertyCard({
   // State
   isSelected = false,
   isProcessing = false,
+  isLoading = false,
 
   // Actions
   onPress,
@@ -154,6 +157,22 @@ export function PropertyCard({
       prefetchPropertyStats(queryClient, idToPrefetch as string);
     }
   }, [queryClient, property]);
+
+  // Show skeleton loading state
+  if (isLoading) {
+    return (
+      <PropertyCardSkeleton
+        variant={variant}
+        orientation={orientation}
+        showFavoriteButton={showFavoriteButton}
+        showRating={showRating}
+        showPrice={showPrice}
+        showFeatures={showFeatures}
+        showLocation={showLocation}
+        imageHeight={imageHeight}
+      />
+    );
+  }
 
   // Early return if property is null/undefined
   if (!property) {

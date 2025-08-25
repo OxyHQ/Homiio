@@ -15,7 +15,6 @@ import {
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import LoadingTopSpinner from '@/components/LoadingTopSpinner';
 import { Header } from '@/components/Header';
 import { PropertyCard } from '@/components/PropertyCard';
 import { ListItem } from '@/components/ListItem';
@@ -23,6 +22,7 @@ import { colors } from '@/styles/colors';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useOxy } from '@oxyhq/services';
+import { PropertyListSkeleton } from '@/components/ui/PropertyListSkeleton';
 import { useSavedNotesMutation } from '@/hooks/useSavedNotes';
 
 import { Ionicons } from '@expo/vector-icons';
@@ -830,7 +830,7 @@ export default function SavedPropertiesScreen() {
 
       {renderHeader()}
 
-      {(savedLoading || foldersLoading) && savedProperties.length === 0 && <LoadingTopSpinner showLoading={true} />}
+      {(savedLoading || foldersLoading) && savedProperties.length === 0 && <PropertyListSkeleton viewMode={viewMode} />}
 
       {error && !savedLoading && !foldersLoading && (
         <EmptyState

@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -17,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { PropertyListSkeleton } from '@/components/ui/PropertyListSkeleton';
 
 const IconComponent = Ionicons as any;
 
@@ -187,7 +187,16 @@ export default function PropertyDraftsScreen() {
             disabled={deletingDraft === draft.id}
           >
             {deletingDraft === draft.id ? (
-              <ActivityIndicator size="small" color={colors.primaryColor} />
+              <View style={{ width: 20, height: 20, justifyContent: 'center', alignItems: 'center' }}>
+                <View style={{ 
+                  width: 16, 
+                  height: 16, 
+                  borderWidth: 2, 
+                  borderColor: colors.primaryColor, 
+                  borderTopColor: 'transparent',
+                  borderRadius: 8 
+                }} />
+              </View>
             ) : (
               <IconComponent name="trash-outline" size={20} color="#ff6b6b" />
             )}
@@ -236,10 +245,7 @@ export default function PropertyDraftsScreen() {
             titlePosition: 'center',
           }}
         />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primaryColor} />
-          <ThemedText style={styles.loadingText}>Loading drafts...</ThemedText>
-        </View>
+        <PropertyListSkeleton viewMode="list" />
       </SafeAreaView>
     );
   }

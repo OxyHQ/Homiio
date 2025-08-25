@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo, useContext } from 'react';
 import {
   View, StyleSheet, Dimensions, TextInput, TouchableOpacity,
-  Platform, ActivityIndicator, ScrollView, FlatList,
+  Platform, ScrollView, FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -19,6 +19,7 @@ import { useSavedSearches } from '@/hooks/useSavedSearches';
 import { useTranslation } from 'react-i18next';
 import * as Location from 'expo-location';
 import { useSearchMode } from '@/context/SearchModeContext';
+import { SearchSkeleton } from '@/components/ui/SearchSkeleton';
 
 // Small helper to apply platform-appropriate shadows (uses boxShadow on web)
 const shadow = (level: 'sm' | 'md' = 'md') => Platform.select({
@@ -700,7 +701,7 @@ export default function SearchScreen() {
             // Handle search input blur
           }}
         />
-        {isSearching ? <ActivityIndicator size="small" color="#666" style={styles.searchIcon} />
+        {isSearching ? <View style={[styles.searchIcon, { width: 20, height: 20, justifyContent: "center", alignItems: "center" }]}><View style={{ width: 16, height: 16, borderWidth: 2, borderColor: "#666", borderTopColor: "transparent", borderRadius: 8 }} /></View>
           : searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuerySafely('')} style={styles.clearButton}>
               <Ionicons name="close-circle" size={20} color="#999" />
@@ -775,7 +776,7 @@ export default function SearchScreen() {
 
   const renderPropertyList = () => (
     <ScrollView style={styles.listContainer}>
-      {isLoadingProperties ? <ActivityIndicator size="large" color="#666" style={{ marginTop: 32 }} />
+      {isLoadingProperties ? <SearchSkeleton showFilters={false} itemCount={6} />
         : !properties || properties.length === 0 ? <ThemedText style={styles.noResults}>No properties found.</ThemedText>
           : properties.map((property) => (
             <PropertyCard key={property._id} property={property}
@@ -808,7 +809,7 @@ export default function SearchScreen() {
             // Handle search input blur
           }}
         />
-        {isSearching ? <ActivityIndicator size="small" color="#666" style={styles.searchIcon} />
+        {isSearching ? <View style={[styles.searchIcon, { width: 20, height: 20, justifyContent: "center", alignItems: "center" }]}><View style={{ width: 16, height: 16, borderWidth: 2, borderColor: "#666", borderTopColor: "transparent", borderRadius: 8 }} /></View>
           : searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuerySafely('')} style={styles.clearButton}>
               <Ionicons name="close-circle" size={20} color="#999" />

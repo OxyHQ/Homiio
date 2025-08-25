@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useOxy } from '@oxyhq/services';
@@ -133,7 +133,16 @@ export default function PaymentSuccessScreen() {
 
                 {confirming && (
                     <View style={styles.statusRow}>
-                        <ActivityIndicator />
+                        <View style={{ width: 20, height: 20, justifyContent: 'center', alignItems: 'center' }}>
+                          <View style={{ 
+                            width: 16, 
+                            height: 16, 
+                            borderWidth: 2, 
+                            borderColor: '#007AFF', 
+                            borderTopColor: 'transparent',
+                            borderRadius: 8 
+                          }} />
+                        </View>
                         <Text style={styles.statusText}>Updating your account…</Text>
                     </View>
                 )}

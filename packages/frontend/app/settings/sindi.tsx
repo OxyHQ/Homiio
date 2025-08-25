@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Switch, Alert, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SindiIcon } from '@/assets/icons';
 import { colors } from '@/styles/colors';
@@ -122,7 +122,16 @@ export default function SindiSettingsScreen() {
             {t('sindi.settings.chatHistory', 'Sindi Chat History')}
           </Text>
           {loading ? (
-            <ActivityIndicator size="small" color={colors.sindiColor} />
+            <View style={{ width: 20, height: 20, justifyContent: 'center', alignItems: 'center' }}>
+              <View style={{ 
+                width: 16, 
+                height: 16, 
+                borderWidth: 2, 
+                borderColor: colors.sindiColor, 
+                borderTopColor: 'transparent',
+                borderRadius: 8 
+              }} />
+            </View>
           ) : error ? (
             <Text style={{ color: 'red', marginBottom: 8 }}>{error}</Text>
           ) : history.length === 0 ? (
