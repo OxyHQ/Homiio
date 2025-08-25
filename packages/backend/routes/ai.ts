@@ -669,7 +669,7 @@ export default function aiRouter() {
       }
 
       // Save last user message (strip inline base64)
-      const lastUser = messages.at(-1);
+      const lastUser = messages[messages.length - 1];
       if (conversation && lastUser?.role === 'user' && lastUser?.content) {
         try {
           const toSave = hasInlineFile ? cleanedLastContent || 'Sent a file' : lastUser.content;
