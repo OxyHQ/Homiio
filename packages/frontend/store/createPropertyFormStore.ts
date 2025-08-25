@@ -15,11 +15,18 @@ interface CreatePropertyFormState {
     };
     location: {
       address: string;
-      addressLine2?: string;
-      addressNumber?: string;
-      showAddressNumber?: boolean;
+      
+      // Canonical address fields
+      number?: string; // Street number (replaces addressNumber)
+      building_name?: string; // Building or complex name
+      block?: string; // Block identifier
+      entrance?: string; // Door/entrance identifier
+      unit?: string; // Apartment/unit number (replaces addressLine2)
+      subunit?: string; // Sub-apartment identifier
       floor?: number;
       showFloor?: boolean;
+      district?: string; // District/area within city
+      
       neighborhood?: string;
       city: string;
       state?: string; // Made optional for international support
@@ -124,11 +131,15 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()((set
     },
     location: {
       address: '',
-      addressLine2: undefined,
-      addressNumber: undefined,
-      showAddressNumber: undefined,
+      number: undefined, // Canonical field instead of addressNumber
+      building_name: undefined,
+      block: undefined,
+      entrance: undefined,
+      unit: undefined, // Canonical field instead of addressLine2
+      subunit: undefined,
       floor: undefined,
       showFloor: undefined,
+      district: undefined,
       neighborhood: undefined,
       city: '',
       state: '',
@@ -225,11 +236,15 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()((set
         },
         location: {
           address: '',
-          addressLine2: undefined,
-          addressNumber: undefined,
-          showAddressNumber: undefined,
+          number: undefined, // Canonical field instead of addressNumber
+          building_name: undefined,
+          block: undefined,
+          entrance: undefined,
+          unit: undefined, // Canonical field instead of addressLine2
+          subunit: undefined,
           floor: undefined,
           showFloor: undefined,
+          district: undefined,
           neighborhood: undefined,
           city: '',
           state: '',

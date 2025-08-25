@@ -160,6 +160,12 @@ const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
     ],
     Location: [
       'address',
+      'unit',
+      'number',
+      'building_name', 
+      'block',
+      'entrance',
+      'district',
       'city',
       'state',
       'postal_code',
@@ -194,6 +200,12 @@ const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
     ],
     Location: [
       'address',
+      'unit',
+      'number',
+      'building_name', 
+      'block',
+      'entrance',
+      'district',
       'city',
       'state',
       'postal_code',
@@ -225,7 +237,7 @@ const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
       'yearBuilt',
       'description',
     ],
-    Location: ['address', 'city', 'state', 'postal_code', 'country', 'latitude', 'longitude'],
+    Location: ['address', 'unit', 'number', 'building_name', 'block', 'entrance', 'district', 'city', 'state', 'postal_code', 'country', 'latitude', 'longitude'],
     Pricing: ['monthlyRent', 'currency', 'securityDeposit'],
     Amenities: ['amenities'],
     Media: ['images'],
@@ -241,7 +253,7 @@ const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
       'yearBuilt',
       'description',
     ],
-    Location: ['address', 'city', 'state', 'postal_code', 'country', 'latitude', 'longitude'],
+    Location: ['address', 'unit', 'number', 'building_name', 'block', 'entrance', 'district', 'city', 'state', 'postal_code', 'country', 'latitude', 'longitude'],
     Pricing: ['monthlyRent', 'currency', 'securityDeposit'],
     Amenities: ['amenities'],
     Media: ['images'],
@@ -250,7 +262,7 @@ const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
   coliving: {
     // Coliving: no bedrooms, optional bathrooms, coliving features
     'Basic Info': ['propertyType', 'bathrooms', 'squareFootage', 'yearBuilt', 'description'],
-    Location: ['address', 'city', 'state', 'postal_code', 'country', 'latitude', 'longitude'],
+    Location: ['address', 'unit', 'number', 'building_name', 'block', 'entrance', 'district', 'city', 'state', 'postal_code', 'country', 'latitude', 'longitude'],
     Pricing: ['monthlyRent', 'currency', 'securityDeposit'],
     Amenities: ['amenities'],
     'Coliving Features': ['sharedSpaces', 'communityEvents'],
@@ -333,9 +345,6 @@ export default function CreatePropertyScreen() {
 
       setFormData('location', {
         address: property.address?.street || '',
-        addressLine2: '',
-        addressNumber: '',
-        showAddressNumber: false,
         floor: property.floor,
         showFloor: !!property.floor,
         neighborhood: property.address?.neighborhood || '',
@@ -347,6 +356,14 @@ export default function CreatePropertyScreen() {
         longitude: property.address?.coordinates?.type === 'Point' ? property.address.coordinates.coordinates[0] : undefined,
         availableFrom: '',
         leaseTerm: '',
+        // Canonical address fields
+        number: property.address?.number || '',
+        building_name: property.address?.building_name || '',
+        block: property.address?.block || '',
+        entrance: property.address?.entrance || '',
+        unit: property.address?.unit || '',
+        subunit: property.address?.subunit || '',
+        district: property.address?.district || '',
       });
 
       setFormData('pricing', {
@@ -540,13 +557,20 @@ export default function CreatePropertyScreen() {
           postal_code: formData.location.postal_code,
           country: formData.location.country || 'US',
           neighborhood: formData.location.neighborhood,
-          showAddressNumber: formData.location.showAddressNumber ?? true,
           coordinates: formData.location.latitude && formData.location.longitude
             ? {
               type: 'Point',
               coordinates: [formData.location.longitude, formData.location.latitude]
             }
-            : undefined
+            : undefined,
+          // Canonical address fields
+          number: formData.location.number,
+          building_name: formData.location.building_name,
+          block: formData.location.block,
+          entrance: formData.location.entrance,
+          unit: formData.location.unit,
+          subunit: formData.location.subunit,
+          district: formData.location.district,
         },
         type: formData.basicInfo.propertyType as
           | 'apartment'
@@ -787,15 +811,6 @@ export default function CreatePropertyScreen() {
     }
   };
 
-  // Validate address number
-  const validateAddressNumber = (number: string): string | null => {
-    if (!number) return null; // Optional field
-    if (!/^\d+[a-zA-Z]?$/.test(number)) {
-      return 'Please enter a valid address number (e.g., 123 or 123A)';
-    }
-    return null;
-  };
-
   // Validate floor number
   const validateFloor = (floor: number | undefined): string | null => {
     if (floor === undefined) return null; // Optional field
@@ -803,17 +818,6 @@ export default function CreatePropertyScreen() {
       return 'Please enter a valid floor number (-5 to 100)';
     }
     return null;
-  };
-
-  // Handle showAddressNumber toggle
-  const handleShowAddressNumberToggle = (show: boolean) => {
-    const currentLocation = formData.location;
-
-    // Update the showAddressNumber setting only
-    setFormData('location', {
-      ...currentLocation,
-      showAddressNumber: show,
-    });
   };
 
   // Handle showFloor toggle
@@ -825,16 +829,6 @@ export default function CreatePropertyScreen() {
       ...currentLocation,
       showFloor: show,
     });
-  };
-
-  // Handle address number change with validation
-  const handleAddressNumberChange = (text: string) => {
-    const error = validateAddressNumber(text);
-    setValidationErrors(prev => ({
-      ...prev,
-      addressNumber: error || ''
-    }));
-    updateFormField('location', 'addressNumber', text);
   };
 
   // Handle floor change with validation
@@ -1161,19 +1155,64 @@ export default function CreatePropertyScreen() {
             </View>
 
             <View style={styles.formGroup}>
-              <ThemedText style={styles.label}>Address line 2 (optional)</ThemedText>
+              <ThemedText style={styles.label}>Unit/Apartment Number (optional)</ThemedText>
               <TextInput
                 style={styles.input}
-                value={formData.location.addressLine2 || ''}
-                onChangeText={(text) => updateFormField('location', 'addressLine2', text)}
+                value={formData.location.unit || ''}
+                onChangeText={(text) => updateFormField('location', 'unit', text)}
                 placeholder="Apartment, suite, etc. (optional)"
               />
+            </View>
+
+            {/* Additional Canonical Address Fields */}
+            <View style={styles.formRow}>
+              <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
+                <ThemedText style={styles.label}>Building Name (optional)</ThemedText>
+                <TextInput
+                  style={styles.input}
+                  value={formData.location.building_name || ''}
+                  onChangeText={(text) => updateFormField('location', 'building_name', text)}
+                  placeholder="e.g., Torre Barcelona"
+                />
+              </View>
+
+              <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
+                <ThemedText style={styles.label}>Block (optional)</ThemedText>
+                <TextInput
+                  style={styles.input}
+                  value={formData.location.block || ''}
+                  onChangeText={(text) => updateFormField('location', 'block', text)}
+                  placeholder="e.g., Block A"
+                />
+              </View>
+            </View>
+
+            <View style={styles.formRow}>
+              <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
+                <ThemedText style={styles.label}>Entrance/Door (optional)</ThemedText>
+                <TextInput
+                  style={styles.input}
+                  value={formData.location.entrance || ''}
+                  onChangeText={(text) => updateFormField('location', 'entrance', text)}
+                  placeholder="e.g., Door 1, Entrance B"
+                />
+              </View>
+
+              <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
+                <ThemedText style={styles.label}>Sub-unit (optional)</ThemedText>
+                <TextInput
+                  style={styles.input}
+                  value={formData.location.subunit || ''}
+                  onChangeText={(text) => updateFormField('location', 'subunit', text)}
+                  placeholder="e.g., Room A"
+                />
+              </View>
             </View>
 
             <View style={styles.formRow}>
               <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
                 <View style={styles.labelContainer}>
-                  <ThemedText style={styles.label}>Address Number</ThemedText>
+                  <ThemedText style={styles.label}>Street Number</ThemedText>
                   <IconComponent
                     name="information-circle-outline"
                     size={16}
@@ -1185,46 +1224,18 @@ export default function CreatePropertyScreen() {
                     <TextInput
                       style={[
                         styles.detailInput,
-                        validationErrors.addressNumber && styles.inputError
+                        validationErrors.number && styles.inputError
                       ]}
-                      value={formData.location.addressNumber || ''}
-                      onChangeText={handleAddressNumberChange}
+                      value={formData.location.number || ''}
+                      onChangeText={(text) => updateFormField('location', 'number', text)}
                       placeholder="Enter number"
                       keyboardType="numeric"
                     />
-                    <TouchableOpacity
-                      style={[
-                        styles.privacyToggle,
-                        formData.location.showAddressNumber && styles.privacyToggleActive,
-                      ]}
-                      onPress={() =>
-                        handleShowAddressNumberToggle(!formData.location.showAddressNumber)
-                      }
-                    >
-                      <IconComponent
-                        name={formData.location.showAddressNumber ? "eye-outline" : "eye-off-outline"}
-                        size={20}
-                        color={formData.location.showAddressNumber ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
-                      />
-                      <ThemedText
-                        style={[
-                          styles.privacyToggleText,
-                          formData.location.showAddressNumber && styles.privacyToggleTextActive,
-                        ]}
-                      >
-                        {formData.location.showAddressNumber ? 'Public' : 'Private'}
-                      </ThemedText>
-                    </TouchableOpacity>
                   </View>
                   <View style={styles.messageContainer}>
-                    {validationErrors.addressNumber && (
+                    {validationErrors.number && (
                       <ThemedText style={styles.fieldError}>
-                        {validationErrors.addressNumber}
-                      </ThemedText>
-                    )}
-                    {formData.location.addressNumber && !formData.location.showAddressNumber && (
-                      <ThemedText style={styles.privacyMessage}>
-                        ℹ️ Will be shown as approximate for privacy
+                        {validationErrors.number}
                       </ThemedText>
                     )}
                   </View>
@@ -1299,6 +1310,16 @@ export default function CreatePropertyScreen() {
                 value={formData.location.neighborhood || ''}
                 onChangeText={(text) => updateFormField('location', 'neighborhood', text)}
                 placeholder="e.g., Gràcia, Sant Andreu, Eixample"
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <ThemedText style={styles.label}>District (optional)</ThemedText>
+              <TextInput
+                style={styles.input}
+                value={formData.location.district || ''}
+                onChangeText={(text) => updateFormField('location', 'district', text)}
+                placeholder="e.g., Administrative district"
               />
             </View>
 
