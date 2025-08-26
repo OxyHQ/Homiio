@@ -5,10 +5,6 @@
 
 const Profile = require('../models').Profile;
 const { ProfileType } = require('@homiio/shared-types');
-// Remove oxyServices and fetchOxyUserData related code
-// const oxyServices = require('../services/oxyServices');
-
-// Remove fetchOxyUserData helper function
 
 // Get all roommate profiles with enriched Oxy user data
 const getRoommateProfiles = async (req, res) => {
