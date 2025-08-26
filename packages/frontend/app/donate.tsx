@@ -44,48 +44,48 @@ export default function DonatePage() {
     const donationTiers: DonationTier[] = [
         {
             id: 'one-time-5',
-            title: t('One-time donation'),
-            description: t('Help with a small contribution'),
+            title: t('donations.page.tiers.supporter.title'),
+            description: t('donations.page.tiers.supporter.subtitle'),
             amount: 5,
             currency: '€',
             type: 'one-time',
             icon: 'heart',
             benefits: [
-                t('Support platform development'),
-                t('Help improve user experience'),
-                t('Contribute to the ethical housing movement'),
+                t('donations.page.impact.areas.development.title'),
+                t('donations.page.impact.areas.safety.title'),
+                t('donations.page.impact.areas.community.title'),
             ],
         },
         {
             id: 'monthly-10',
-            title: t('Monthly supporter'),
-            description: t('Become a regular supporter'),
+            title: t('donations.page.tiers.monthly.title'),
+            description: t('donations.page.tiers.monthly.subtitle'),
             amount: 10,
             currency: '€',
             type: 'monthly',
             icon: 'heart',
             popular: true,
             benefits: [
-                t('All one-time benefits'),
-                t('Priority feature requests'),
-                t('Early access to new features'),
-                t('Monthly impact reports'),
+                t('donations.page.impact.areas.development.title'),
+                t('donations.page.impact.areas.safety.title'),
+                t('donations.page.impact.areas.legal.title'),
+                t('donations.page.impact.areas.innovation.title'),
             ],
         },
         {
             id: 'founder-25',
-            title: t('Founder supporter'),
-            description: t('Join our founding supporters'),
+            title: t('donations.page.tiers.founder.title'),
+            description: t('donations.page.tiers.founder.subtitle'),
             amount: 25,
             currency: '€',
             type: 'founder',
             icon: 'star',
             benefits: [
-                t('All monthly benefits'),
-                t('Founder badge on profile'),
-                t('Direct feedback channel'),
-                t('Influence on platform direction'),
-                t('Special recognition in app'),
+                t('donations.page.impact.areas.development.title'),
+                t('donations.page.impact.areas.safety.title'),
+                t('donations.page.impact.areas.legal.title'),
+                t('donations.page.impact.areas.innovation.title'),
+                t('donations.page.impact.areas.community.title'),
             ],
         },
     ];
@@ -93,28 +93,28 @@ export default function DonatePage() {
     const impactAreas = [
         {
             icon: 'construct',
-            title: t('Platform Development'),
-            description: t('Continuous improvement of our housing platform'),
+            title: t('donations.page.impact.areas.development.title'),
+            description: t('donations.page.impact.areas.development.description'),
         },
         {
             icon: 'shield-checkmark',
-            title: t('Trust & Safety'),
-            description: t('Enhanced verification and fraud prevention'),
+            title: t('donations.page.impact.areas.safety.title'),
+            description: t('donations.page.impact.areas.safety.description'),
         },
         {
             icon: 'document-text',
-            title: t('Legal Integration'),
-            description: t('Sindi legal support and transparent contracts'),
+            title: t('donations.page.impact.areas.legal.title'),
+            description: t('donations.page.impact.areas.legal.description'),
         },
         {
             icon: 'bulb',
-            title: t('Innovation'),
-            description: t('FairCoin payments and energy monitoring'),
+            title: t('donations.page.impact.areas.innovation.title'),
+            description: t('donations.page.impact.areas.innovation.description'),
         },
         {
             icon: 'people',
-            title: t('Community Building'),
-            description: t('Growing the ethical housing movement'),
+            title: t('donations.page.impact.areas.community.title'),
+            description: t('donations.page.impact.areas.community.description'),
         },
     ];
 
@@ -203,9 +203,9 @@ export default function DonatePage() {
 
             <ActionButton
                 icon="heart"
-                text={tier.type === 'one-time' ? t('Donate Now') :
-                    tier.type === 'monthly' ? t('Start Supporting') :
-                        t('Become a Founder')}
+                text={tier.type === 'one-time' ? t('donations.page.tiers.supporter.button') :
+                    tier.type === 'monthly' ? t('donations.page.tiers.monthly.button') :
+                        t('donations.page.tiers.founder.button')}
                 onPress={() => handleDonation(tier)}
                 disabled={loading}
                 variant={tier.popular ? 'primary' : 'secondary'}
@@ -217,7 +217,7 @@ export default function DonatePage() {
         <SafeAreaView style={styles.container}>
             <Header
                 options={{
-                    title: t('Donate to Homiio'),
+                    title: t('donations.page.title'),
                     showBackButton: true,
                 }}
             />
@@ -230,17 +230,17 @@ export default function DonatePage() {
                 >
                     <IconComponent name="heart" size={48} color="#FFFFFF" />
                     <ThemedText style={styles.heroTitle}>
-                        {t('Support the future of ethical housing')}
+                        {t('donations.page.subtitle')}
                     </ThemedText>
                     <ThemedText style={styles.heroDescription}>
-                        {t('Your contribution helps us build a transparent, fair, and ethical housing platform that benefits everyone in the rental ecosystem.')}
+                        {t('donations.page.description')}
                     </ThemedText>
                 </LinearGradient>
 
                 {/* Donation Tiers */}
                 <View style={styles.tiersSection}>
                     <ThemedText style={styles.sectionTitle}>
-                        {t('Choose Your Contribution')}
+                        {t('donations.page.chooseContribution')}
                     </ThemedText>
 
                     {donationTiers.map(renderDonationTier)}
@@ -249,7 +249,7 @@ export default function DonatePage() {
                 {/* Impact Section */}
                 <View style={styles.impactSection}>
                     <ThemedText style={styles.sectionTitle}>
-                        {t('What Your Support Enables')}
+                        {t('donations.page.impact.title')}
                     </ThemedText>
 
                     {impactAreas.map((area, index) => (
@@ -268,20 +268,14 @@ export default function DonatePage() {
                 {/* Why Support Section */}
                 <View style={styles.whySection}>
                     <ThemedText style={styles.sectionTitle}>
-                        {t('Why Support Homiio?')}
+                        {t('donations.page.mission.title')}
                     </ThemedText>
                     <ThemedText style={styles.whyDescription}>
-                        {t('We\'re building more than just a rental platform—we\'re creating a complete ecosystem for ethical housing. Your support helps us:')}
+                        {t('donations.page.mission.description')}
                     </ThemedText>
 
                     <View style={styles.whyList}>
-                        {[
-                            t('Fight against rental abuse and hidden fees'),
-                            t('Create transparent processes for tenants and landlords'),
-                            t('Integrate innovative payment methods like FairCoin'),
-                            t('Provide legal support through our Sindi integration'),
-                            t('Build sustainable, community-driven solutions'),
-                        ].map((item, index) => (
+                        {(t('donations.page.mission.goals', { returnObjects: true }) as string[]).map((item: string, index: number) => (
                             <View key={index} style={styles.whyItem}>
                                 <IconComponent name="arrow-forward" size={16} color={colors.primaryColor} />
                                 <ThemedText style={styles.whyItemText}>{item}</ThemedText>

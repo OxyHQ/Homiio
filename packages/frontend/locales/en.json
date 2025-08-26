@@ -1,61 +1,50 @@
 {
-  "Home": "Home",
-  "Search": "Search",
-  "Notifications": "Notifications",
-  "Messages": "Messages",
-  "New Post": "New Post",
-  "What's happening?": "What's happening?",
-  "Post": "Post",
-  "Save": "Save",
-  "Settings": "Settings",
-  "Language": "Language",
-  "Primary Color": "Primary Color",
-  "Apply Settings": "Apply Settings",
-  "Welcome to Homiio! 👋": "Welcome to Homiio! 👋",
-  "Thanks for trying out our app. Start exploring now!": "Thanks for trying out our app. Start exploring now!",
-  "This screen doesn't exist.": "This screen doesn't exist.",
-  "Go to home screen!": "Go to home screen!",
-  "Hey, how are you?": "Hey, how are you?",
-  "Let's catch up soon!": "Let's catch up soon!",
-  "liked your Post": "liked your Post",
-  "reposted your Post": "reposted your Post",
-  "This is a sample post": "This is a sample post",
-  "Another example post": "Another example post",
-  "Customize your view": "Customize your view",
-  "These settings affect all the Mention accounts on this device.": "These settings affect all the Mention accounts on this device.",
-  "Account": "Account",
-  "Manage your account settings": "Manage your account settings",
-  "Notification preferences": "Notification preferences",
-  "Privacy and security settings": "Privacy and security settings",
-  "Appearance": "Appearance",
-  "Theme, font size, colors": "Theme, font size, colors",
-  "Help & Support": "Help & Support",
-  "Get help and support": "Get help and support",
-  "About": "About",
-  "About this app": "About this app",
-  "Battery": "Battery",
-  "Loading...": "Loading...",
-  "Trends for you": "Trends for you",
-  "Show more": "Show more",
-  "posts": "posts",
-  "File Manager": "File Manager",
-  "Filter files by name": "Filter files by name",
-  "Filter files by date (MM/DD/YYYY)": "Filter files by date (MM/DD/YYYY)",
-  "Filter files by type (e.g., image, video)": "Filter files by type (e.g., image, video)",
-  "Who to follow": "Who to follow",
-  "Search...": "Search...",
-  "No results found for": "No results found for",
-  "Follow": "Follow",
-  "Following": "Following",
-  "Explore": "Explore",
-  "Chat": "Chat",
-  "Bookmarks": "Bookmarks",
-  "Feeds": "Feeds",
-  "Lists": "Lists",
-  "Videos": "Videos",
-  "Sign Up": "Sign Up",
-  "Sign In": "Sign In",
-  "Join the conversation": "Join the conversation",
+  "navigation": {
+    "home": "Home",
+    "search": "Search",
+    "notifications": "Notifications",
+    "messages": "Messages",
+    "settings": "Settings",
+    "explore": "Explore",
+    "chat": "Chat",
+    "bookmarks": "Bookmarks",
+    "feeds": "Feeds",
+    "lists": "Lists",
+    "videos": "Videos"
+  },
+  "actions": {
+    "save": "Save",
+    "post": "Post",
+    "follow": "Follow",
+    "following": "Following",
+    "signUp": "Sign Up",
+    "signIn": "Sign In",
+    "showMore": "Show more",
+    "applySettings": "Apply Settings"
+  },
+  "content": {
+    "newPost": "New Post",
+    "whatsHappening": "What's happening?",
+    "posts": "posts",
+    "samplePost": "This is a sample post",
+    "anotherPost": "Another example post",
+    "likedPost": "liked your Post",
+    "repostedPost": "reposted your Post",
+    "joinConversation": "Join the conversation"
+  },
+  "app": {
+    "welcome": {
+      "title": "Welcome to Homiio! 👋",
+      "subtitle": "Thanks for trying out our app. Start exploring now!"
+    },
+    "errors": {
+      "screenNotExist": "This screen doesn't exist.",
+      "goHome": "Go to home screen!",
+      "noResults": "No results found for"
+    },
+    "loading": "Loading...",
+    "battery": "Battery"
+  },
   "error.socket.not_connected": "Not connected to chat server",
   "error.message.send_timeout": "Message send timeout. Please try again.",
   "error.message.edit_timeout": "Edit timeout. Please try again.",
@@ -1056,47 +1045,70 @@
       "confirmMessage": "Are you sure you want to cancel this viewing request?"
     }
   },
-  "Support Homiio": "Support Homiio",
-  "Help us build the future of ethical housing. Your support makes a difference.": "Help us build the future of ethical housing. Your support makes a difference.",
-  "Supporting transparent rentals": "Supporting transparent rentals",
-  "Building trust & safety features": "Building trust & safety features",
-  "Growing the Oxy ecosystem": "Growing the Oxy ecosystem",
-  "Support Our Mission": "Support Our Mission",
-  "Donate to Homiio": "Donate to Homiio",
-  "Support the future of ethical housing": "Support the future of ethical housing",
-  "Your contribution helps us build a transparent, fair, and ethical housing platform that benefits everyone in the rental ecosystem.": "Your contribution helps us build a transparent, fair, and ethical housing platform that benefits everyone in the rental ecosystem.",
-  "Choose Your Contribution": "Choose Your Contribution",
-  "One-time donation": "One-time donation",
-  "Monthly supporter": "Monthly supporter",
-  "Founder supporter": "Founder supporter",
-  "Help with a small contribution": "Help with a small contribution",
-  "Become a regular supporter": "Become a regular supporter",
-  "Join our founding supporters": "Join our founding supporters",
-  "Donate Now": "Donate Now",
-  "Start Supporting": "Start Supporting",
-  "Become a Founder": "Become a Founder",
-  "What Your Support Enables": "What Your Support Enables",
-  "Platform Development": "Platform Development",
-  "Continuous improvement of our housing platform": "Continuous improvement of our housing platform",
-  "Trust & Safety": "Trust & Safety",
-  "Enhanced verification and fraud prevention": "Enhanced verification and fraud prevention",
-  "Legal Integration": "Legal Integration",
-  "Sindi legal support and transparent contracts": "Sindi legal support and transparent contracts",
-  "Innovation": "Innovation",
-  "FairCoin payments and energy monitoring": "FairCoin payments and energy monitoring",
-  "Community Building": "Community Building",
-  "Growing the ethical housing movement": "Growing the ethical housing movement",
-  "Why Support Homiio?": "Why Support Homiio?",
-  "We're building more than just a rental platform—we're creating a complete ecosystem for ethical housing. Your support helps us:": "We're building more than just a rental platform—we're creating a complete ecosystem for ethical housing. Your support helps us:",
-  "Fight against rental abuse and hidden fees": "Fight against rental abuse and hidden fees",
-  "Create transparent processes for tenants and landlords": "Create transparent processes for tenants and landlords",
-  "Integrate innovative payment methods like FairCoin": "Integrate innovative payment methods like FairCoin",
-  "Provide legal support through our Sindi integration": "Provide legal support through our Sindi integration",
-  "Build sustainable, community-driven solutions": "Build sustainable, community-driven solutions",
-  "The Oxy Ecosystem": "The Oxy Ecosystem",
-  "Homiio is part of the larger Oxy ecosystem, which includes:": "Homiio is part of the larger Oxy ecosystem, which includes:",
-  "Mention - Social platform": "Mention - Social platform",
-  "Sindi - Legal support": "Sindi - Legal support",
-  "Horizon - Innovation lab": "Horizon - Innovation lab",
-  "Your support helps all these interconnected projects grow together.": "Your support helps all these interconnected projects grow together."
+  "donations": {
+    "widget": {
+      "title": "Support Our Mission",
+      "description": "Help us build the future of ethical housing. Your support makes a difference.",
+      "button": "Donate to Homiio"
+    },
+    "page": {
+      "title": "Donate to Homiio",
+      "subtitle": "Support the future of ethical housing",
+      "description": "Your contribution helps us build a transparent, fair, and ethical housing platform that benefits everyone in the rental ecosystem.",
+      "chooseContribution": "Choose Your Contribution",
+      "tiers": {
+        "supporter": {
+          "title": "One-time donation",
+          "subtitle": "Help with a small contribution",
+          "button": "Donate Now"
+        },
+        "monthly": {
+          "title": "Monthly supporter",
+          "subtitle": "Become a regular supporter",
+          "button": "Start Supporting"
+        },
+        "founder": {
+          "title": "Founder supporter",
+          "subtitle": "Join our founding supporters", 
+          "button": "Become a Founder"
+        }
+      },
+      "impact": {
+        "title": "What Your Support Enables",
+        "areas": {
+          "development": {
+            "title": "Platform Development",
+            "description": "Continuous improvement of our housing platform"
+          },
+          "safety": {
+            "title": "Trust & Safety",
+            "description": "Enhanced verification and fraud prevention"
+          },
+          "legal": {
+            "title": "Legal Integration",
+            "description": "Sindi legal support and transparent contracts"
+          },
+          "innovation": {
+            "title": "Innovation", 
+            "description": "FairCoin payments and energy monitoring"
+          },
+          "community": {
+            "title": "Community Building",
+            "description": "Growing the ethical housing movement"
+          }
+        }
+      },
+      "mission": {
+        "title": "Why Support Homiio?",
+        "description": "We're building more than just a rental platform—we're creating a complete ecosystem for ethical housing. Your support helps us:",
+        "goals": [
+          "Fight against rental abuse and hidden fees",
+          "Create transparent processes for tenants and landlords", 
+          "Integrate innovative payment methods like FairCoin",
+          "Provide legal support through our Sindi integration",
+          "Build sustainable, community-driven solutions"
+        ]
+      }
+    }
+  }
 }

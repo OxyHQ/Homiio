@@ -21,40 +21,40 @@ export function DonationWidget() {
 
     return (
         <BaseWidget
-            title={t('Support Homiio')}
+            title={t('donations.widget.title')}
             icon={<IconComponent name="heart" size={20} color={colors.primaryColor} />}
         >
             <View style={styles.content}>
                 <ThemedText style={styles.description}>
-                    {t('Help us build the future of ethical housing. Your support makes a difference.')}
+                    {t('donations.widget.description')}
                 </ThemedText>
 
                 <View style={styles.impactSection}>
                     <View style={styles.impactItem}>
                         <IconComponent name="home" size={16} color={colors.primaryColor} />
                         <ThemedText style={styles.impactText}>
-                            {t('Supporting transparent rentals')}
+                            {t('donations.page.impact.areas.development.title')}
                         </ThemedText>
                     </View>
 
                     <View style={styles.impactItem}>
                         <IconComponent name="shield-checkmark" size={16} color={colors.primaryColor} />
                         <ThemedText style={styles.impactText}>
-                            {t('Building trust & safety features')}
+                            {t('donations.page.impact.areas.safety.title')}
                         </ThemedText>
                     </View>
 
                     <View style={styles.impactItem}>
                         <IconComponent name="people" size={16} color={colors.primaryColor} />
                         <ThemedText style={styles.impactText}>
-                            {t('Growing the Oxy ecosystem')}
+                            {t('donations.page.impact.areas.community.title')}
                         </ThemedText>
                     </View>
                 </View>
 
                 <ActionButton
                     icon="heart"
-                    text={t('Support Our Mission')}
+                    text={t('donations.widget.button')}
                     onPress={handleDonatePress}
                     variant="primary"
                     style={styles.donateButton}
