@@ -472,6 +472,105 @@ export default function aiRouter() {
     limits: { fileSize: MAX_FILE_MB * 1024 * 1024, files: 1 },
   });
 
+  // ---------- Generate Smart Suggestions ----------
+  router.post('/suggestions', async (req: Request, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) return err(res, 401, 'Unauthorized');
+
+      const activeProfile = await Profile.findActiveByOxyUserId(userId);
+      if (!activeProfile) return err(res, 404, 'No active profile found');
+
+      const { propertyId, propertyContext, userHistory, conversationContext } = (req as any).body || {};
+      
+      // Build context for AI suggestion generation
+      let contextPrompt = 'Generate 5-6 relevant, actionable chat suggestions for a rental property chat assistant. ';
+      
+      if (propertyContext) {
+        const { type, city, bedrooms, bathrooms, rent, amenities } = propertyContext;
+        contextPrompt += `Property context: ${type || 'Property'} in ${city || 'the area'}`;
+        if (bedrooms) contextPrompt += `, ${bedrooms} bedrooms`;
+        if (bathrooms) contextPrompt += `, ${bathrooms} bathrooms`;
+        if (rent?.amount) contextPrompt += `, rent ${rent.amount} ${rent.currency || ''}`;
+        if (amenities?.length) contextPrompt += `, amenities: ${amenities.slice(0, 3).join(', ')}`;
+        contextPrompt += '. ';
+      }
+
+      if (conversationContext) {
+        contextPrompt += `Recent conversation topics: ${conversationContext.slice(0, 200)}. `;
+      }
+
+      contextPrompt += `
+Return suggestions as a JSON array of objects with only "text" field. 
+Focus on practical questions tenants ask about properties: budget, legal rights, neighborhood, lease terms, inspections, negotiations, and area information.
+Make suggestions conversational and specific. Examples:
+{"text": "How much should I budget monthly?"}
+{"text": "What should I inspect before signing?"}
+{"text": "Tell me about this neighborhood"}
+{"text": "Review these lease terms"}
+
+Return only the JSON array, no other text.`;
+
+      const result = await streamText({
+        model: openai('gpt-4o'),
+        temperature: 0.7,
+        system: 'You are a helpful AI that generates relevant chat suggestions for rental property conversations. Return valid JSON only.',
+        messages: [{ role: 'user', content: contextPrompt }],
+        maxTokens: 500,
+      } as any);
+
+      let generatedText = '';
+      for await (const chunk of result.textStream) {
+        generatedText += chunk;
+      }
+
+      // Parse AI response
+      let suggestions;
+      try {
+        // Clean the response and extract JSON
+        const cleaned = generatedText.trim().replace(/```json|```/g, '');
+        suggestions = JSON.parse(cleaned);
+        
+        // Validate format
+        if (!Array.isArray(suggestions)) {
+          throw new Error('Response is not an array');
+        }
+        
+        // Ensure all suggestions have required fields
+        suggestions = suggestions.filter(s => s.text && typeof s.text === 'string');
+        
+        // Limit to 8 suggestions max
+        suggestions = suggestions.slice(0, 8);
+        
+      } catch (parseError) {
+        console.error('Failed to parse AI suggestions:', parseError, 'Raw response:', generatedText);
+        
+        // Fallback to default suggestions
+        suggestions = [
+          { text: 'How much should I budget?' },
+          { text: 'Review my lease terms' },
+          { text: 'What are my rights?' },
+          { text: 'Tell me about this area' },
+          { text: 'Are there hidden costs?' },
+          { text: 'What should I inspect?' },
+          { text: 'How to negotiate rent?' },
+          { text: 'Red flags to watch for?' },
+        ];
+      }
+
+      return ok(res, {
+        success: true,
+        suggestions,
+        generated: suggestions.length > 0,
+        propertyContext: !!propertyContext,
+      });
+
+    } catch (error: any) {
+      console.error('[AI] Suggestions generation error:', error);
+      return err(res, 500, 'Failed to generate suggestions');
+    }
+  });
+
   // ---------- Streaming chat ----------
   router.post('/stream', async (req: Request, res: Response) => {
     try {

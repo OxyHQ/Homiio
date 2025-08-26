@@ -50,7 +50,8 @@ const corsOptions = {
       'http://localhost:19006', // Expo web dev
       'http://127.0.0.1:3000',
       'http://127.0.0.1:8081',
-      'http://127.0.0.1:19006'
+      'http://127.0.0.1:19006',
+      'http://192.168.86.44:8081'
     ];
     
     // In development, allow localhost and private LAN IPs (192.168.x.x, 10.x.x.x, 172.16-31.x.x)

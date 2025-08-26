@@ -19,13 +19,15 @@ interface SindiChatBottomSheetProps {
     property: Property;
     /** Callback function called when the bottom sheet should be closed */
     onClose: () => void;
+    /** Optional initial message to send instead of the default property message */
+    initialMessage?: string;
 }
 
 /**
  * Bottom sheet component that embeds Sindi AI chat for property-specific conversations.
  * Creates a new conversation with the property context and automatically sends an initial message.
  */
-export function SindiChatBottomSheet({ property }: SindiChatBottomSheetProps) {
+export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBottomSheetProps) {
     const { oxyServices, activeSessionId } = useOxy();
     const { createConversation } = useConversationStore();
     const [conversationId, setConversationId] = useState<string | undefined>();
@@ -105,22 +107,32 @@ export function SindiChatBottomSheet({ property }: SindiChatBottomSheetProps) {
                     setConversationId(newConversation.id);
                     setCurrentConversation(newConversation);
 
-                    // Build property message with safe property access
-                    const bedrooms = property.bedrooms || 'unspecified';
-                    const bathrooms = property.bathrooms || 'unspecified';
-                    const location = property.address?.city || 'the area';
-                    const rent = property.rent?.amount || 'unspecified';
-                    const currency = property.rent?.currency || '';
-                    const priceUnit = property.priceUnit || 'month';
-                    const propertyId = property._id || property.id;
+                    let messageToSend: string;
 
-                    const propertyMessage = `I'm interested in this property: ${type} with ${bedrooms} bedrooms and ${bathrooms} bathrooms in ${location}. The rent is ${rent} ${currency}/${priceUnit}. Can you help me understand more about this property and my rental rights?
+                    if (initialMessage) {
+                        // Use the provided initial message (e.g., from suggestion chips)
+                        const propertyId = property._id || property.id;
+                        messageToSend = `${initialMessage}
 
 <PROPERTIES_JSON>["${propertyId}"]</PROPERTIES_JSON>`;
+                    } else {
+                        // Build default property message with safe property access
+                        const bedrooms = property.bedrooms || 'unspecified';
+                        const bathrooms = property.bathrooms || 'unspecified';
+                        const location = property.address?.city || 'the area';
+                        const rent = property.rent?.amount || 'unspecified';
+                        const currency = property.rent?.currency || '';
+                        const priceUnit = property.priceUnit || 'month';
+                        const propertyId = property._id || property.id;
+
+                        messageToSend = `I'm interested in this property: ${type} with ${bedrooms} bedrooms and ${bathrooms} bathrooms in ${location}. The rent is ${rent} ${currency}/${priceUnit}. Can you help me understand more about this property and my rental rights?
+
+<PROPERTIES_JSON>["${propertyId}"]</PROPERTIES_JSON>`;
+                    }
 
                     // Set the message immediately - no timeout needed
-                    console.log('Setting initial message:', propertyMessage);
-                    setInitialMessageToSend(propertyMessage);
+                    console.log('Setting initial message:', messageToSend);
+                    setInitialMessageToSend(messageToSend);
                 } else {
                     console.error('Failed to create conversation: Invalid response');
                     isInitialized.current = false;

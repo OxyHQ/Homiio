@@ -99,6 +99,11 @@ export enum BusinessType {
   OTHER = 'other'
 }
 
+// AI Assistant Types
+export interface SindiSuggestion {
+  text: string;
+}
+
 export enum ReferenceRelationship {
   LANDLORD = 'landlord',
   EMPLOYER = 'employer',
