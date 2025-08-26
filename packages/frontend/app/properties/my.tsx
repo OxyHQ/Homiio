@@ -19,7 +19,7 @@ import { useOxy } from '@oxyhq/services';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { PropertyListSkeleton } from '@/components/ui/PropertyListSkeleton';
+import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
 
 // Type assertion for Ionicons compatibility with React 19
 const IconComponent = Ionicons as any;

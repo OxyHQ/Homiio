@@ -13,7 +13,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { prefetchProperty, prefetchPropertyStats } from '@/utils/queryPrefetch';
-import { PropertyCardSkeleton } from './ui/PropertyCardSkeleton';
+import { PropertyCardSkeleton } from './ui/skeletons/PropertyCardSkeleton';
 
 export type PropertyCardVariant = 'default' | 'compact' | 'featured' | 'saved';
 export type PropertyCardOrientation = 'vertical' | 'horizontal';

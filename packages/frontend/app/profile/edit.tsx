@@ -17,7 +17,7 @@ import { Header } from '@/components/Header';
 import { UpdateProfileData, EmploymentStatus, LeaseDuration, PriceUnit, BusinessType, ReferenceRelationship, ReasonForLeaving, ProfileVisibility } from '@/services/profileService';
 import { storeData, getData } from '@/utils/storage';
 import { usePrimaryProfileQuery, useUpdateProfileMutation } from '@/hooks/query/useProfiles';
-import { ProfileSkeleton } from '@/components/ui/ProfileSkeleton';
+import { ProfileSkeleton } from '@/components/ui/skeletons/ProfileSkeleton';
 
 export default function ProfileEditScreen() {
   const { data: activeProfile, isLoading: profileLoading } = usePrimaryProfileQuery();

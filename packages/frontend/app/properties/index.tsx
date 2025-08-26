@@ -21,7 +21,7 @@ import { useSavedProperties } from '@/hooks/useSavedProperties';
 import { useOxy } from '@oxyhq/services';
 import { useFavorites } from '@/hooks/useFavorites';
 import { ThemedText } from '@/components/ThemedText';
-import { PropertyListSkeleton } from '@/components/ui/PropertyListSkeleton';
+import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
 
 const screenWidth = Dimensions.get('window').width;
 const isMobile = screenWidth < 600;

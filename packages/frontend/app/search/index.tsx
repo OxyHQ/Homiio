@@ -19,7 +19,7 @@ import { useSavedSearches } from '@/hooks/useSavedSearches';
 import { useTranslation } from 'react-i18next';
 import * as Location from 'expo-location';
 import { useSearchMode } from '@/context/SearchModeContext';
-import { SearchSkeleton } from '@/components/ui/SearchSkeleton';
+import { SearchSkeleton } from '@/components/ui/skeletons/SearchSkeleton';
 
 // Small helper to apply platform-appropriate shadows (uses boxShadow on web)
 const shadow = (level: 'sm' | 'md' = 'md') => Platform.select({

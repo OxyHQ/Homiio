@@ -47,7 +47,7 @@ import * as Linking from 'expo-linking';
 import { propertyService } from '@/services/propertyService';
 import ViewingService from '@/services/viewingService';
 import Button from '@/components/Button';
-import { PropertyDetailSkeleton } from '@/components/ui/PropertyDetailSkeleton';
+import { PropertyDetailSkeleton } from '@/components/ui/skeletons/PropertyDetailSkeleton';
 import type { Profile } from '@/services/profileService';
 import profileService from '@/services/profileService';
 // Removed LinearGradient for Sindi banner simplification

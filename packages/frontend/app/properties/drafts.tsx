@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { PropertyListSkeleton } from '@/components/ui/PropertyListSkeleton';
+import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
 
 const IconComponent = Ionicons as any;
 

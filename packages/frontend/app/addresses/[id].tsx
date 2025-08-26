@@ -19,7 +19,7 @@ import { PropertyCard } from '@/components/PropertyCard';
 import { AddressDisplay } from '@/components/AddressDisplay';
 import { NeighborhoodRatingWidget } from '@/components/widgets/NeighborhoodRatingWidget';
 import { useOxy } from '@oxyhq/services';
-import { PropertyListSkeleton } from '@/components/ui/PropertyListSkeleton';
+import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
 
 // Services and hooks
 import { api } from '@/utils/api';

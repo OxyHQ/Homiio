@@ -10,7 +10,7 @@ import { phuduFontWeights } from '@/styles/fonts';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { FiltersBar } from '@/components/FiltersBar';
 import { FiltersBottomSheet, FilterSection, FilterValue } from '@/components/FiltersBar/FiltersBottomSheet';
-import { PropertyListSkeleton } from '@/components/ui/PropertyListSkeleton';
+import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
 
 import { Property as BaseProperty } from '@homiio/shared-types';
 

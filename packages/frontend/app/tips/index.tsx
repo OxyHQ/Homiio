@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { tipsService, TipArticle } from '@/services/tipsService';
 import { Header } from '@/components/Header';
-import { TipsSkeleton } from '@/components/ui/TipsSkeleton';
+import { TipsSkeleton } from '@/components/ui/skeletons/TipsSkeleton';
 
 const IconComponent = Ionicons as any;
 

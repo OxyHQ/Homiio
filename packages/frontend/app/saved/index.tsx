@@ -22,7 +22,7 @@ import { colors } from '@/styles/colors';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useOxy } from '@oxyhq/services';
-import { PropertyListSkeleton } from '@/components/ui/PropertyListSkeleton';
+import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
 import { useSavedNotesMutation } from '@/hooks/useSavedNotes';
 
 import { Ionicons } from '@expo/vector-icons';

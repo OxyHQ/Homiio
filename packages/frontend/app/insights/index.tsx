@@ -11,7 +11,7 @@ import { propertyService } from '@/services/propertyService';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';
 import { PropertyCard } from '@/components/PropertyCard';
 import { useRouter } from 'expo-router';
-import { InsightsSkeleton } from '@/components/ui/InsightsSkeleton';
+import { InsightsSkeleton } from '@/components/ui/skeletons/InsightsSkeleton';
 
 // Chart width will adapt to 100% of available content width
 

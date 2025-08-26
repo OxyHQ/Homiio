@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Skeleton, SkeletonText } from './Skeleton';
-import { PropertyCardVariant, PropertyCardOrientation } from '../PropertyCard';
+import { PropertyCardVariant, PropertyCardOrientation } from '../../PropertyCard';
 
 export interface PropertyCardSkeletonProps {
   variant?: PropertyCardVariant;

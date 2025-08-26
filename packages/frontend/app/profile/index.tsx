@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { toast } from 'sonner';
-import { ProfileSkeleton } from '@/components/ui/ProfileSkeleton';
+import { ProfileSkeleton } from '@/components/ui/skeletons/ProfileSkeleton';
 import { useActivateProfileMutation, useDeleteProfileMutation, usePrimaryProfileQuery, useUserProfilesQuery } from '@/hooks/query/useProfiles';
 import type { Profile } from '@/services/profileService';
 import { ThemedText } from '@/components/ThemedText';

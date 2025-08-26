@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { useOxy } from '@oxyhq/services';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { PropertyListSkeleton } from '@/components/ui/PropertyListSkeleton';
+import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
 
 const screenWidth = Dimensions.get('window').width;
 const isMobile = screenWidth < 600;
