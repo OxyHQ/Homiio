@@ -14,7 +14,7 @@ import { colors } from '@/styles/colors';
 
 import { Header } from '@/components/Header';
 import { PropertyCard } from '@/components/PropertyCard';
-import { Property } from '@/services/propertyService';
+import { Property } from '@homiio/shared-types';
 import { cityService, City } from '@/services/cityService';
 import { LinearGradient } from 'expo-linear-gradient';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -178,7 +178,7 @@ export default function CityPropertiesPage() {
 
     if (filters.ecoFriendly) {
       result = result.filter(p =>
-        p.amenities?.some(a =>
+        p.amenities?.some((a: string) =>
           a.toLowerCase().includes('eco') ||
           a.toLowerCase().includes('green') ||
           a.toLowerCase().includes('solar')

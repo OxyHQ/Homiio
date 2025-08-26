@@ -37,8 +37,9 @@ export function RecentlyViewedTest() {
       street: 'Test Street 123',
       city: 'Test City',
       state: 'Test State',
-      zipCode: '12345',
+      postal_code: '12345',
       country: 'Test Country',
+      countryCode: 'TC',
     },
     rent: {
       amount: 1000,

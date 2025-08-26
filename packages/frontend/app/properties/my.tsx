@@ -15,9 +15,7 @@ import { colors } from '@/styles/colors';
 import { Header } from '@/components/Header';
 import { PropertyCard } from '@/components/PropertyCard';
 import { useUserProperties } from '@/hooks/usePropertyQueries';
-import { useOxy } from '@oxyhq/services';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
-import { getPropertyImageSource } from '@/utils/propertyUtils';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
 
@@ -27,7 +25,6 @@ const IconComponent = Ionicons as any;
 export default function MyPropertiesScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { user } = useOxy();
   const { data, isLoading, error, refetch } = useUserProperties();
   const [refreshing, setRefreshing] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(0);
@@ -69,11 +66,7 @@ export default function MyPropertiesScreen() {
   };
 
   const renderProperty = ({ item }: { item: any }) => {
-    const currency = item.rent?.currency || '⊜';
-    const price = item.rent?.amount || 0;
-    const location = `${item.address?.city || ''}, ${item.address?.country || ''}`;
-
-    // Generate title dynamically from property data
+    // Generate title dynamically from property data for the delete function
     const title = generatePropertyTitle({
       type: item.type,
       address: item.address,
@@ -84,17 +77,7 @@ export default function MyPropertiesScreen() {
     return (
       <View style={styles.propertyContainer}>
         <PropertyCard
-          id={item._id || item.id}
-          title={title}
-          location={location}
-          price={price}
-          currency={currency}
-          type={item.type || 'apartment'}
-          imageSource={getPropertyImageSource(item.images)}
-          bedrooms={item.bedrooms || 0}
-          bathrooms={item.bathrooms || 0}
-          size={item.squareFootage || 0}
-          isVerified={item.status === 'published'}
+          property={item}
           onPress={() => handlePropertyPress(item._id || item.id)}
           style={styles.propertyCard}
         />
