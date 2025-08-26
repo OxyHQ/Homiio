@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { Property } from '@homiio/shared-types';
 
-// Types for saved items (unified from favoritesStore)
+// Types for saved items
 export type SavedItemType = 'property' | 'room' | 'roommate';
 
 export interface SavedItem {
@@ -16,7 +16,7 @@ interface SavedPropertiesState {
   // Data
   properties: Property[];
   folders: any[];
-  savedItems: SavedItem[]; // Unified saved items (replaces favorites)
+  savedItems: SavedItem[]; // Unified saved items
   savingPropertyIds: string[];
 
   // Loading states
@@ -39,7 +39,7 @@ interface SavedPropertiesState {
   removeSavingPropertyId: (propertyId: string) => void;
   clearError: () => void;
   
-  // Unified saved items actions (from favoritesStore)
+  // Saved items actions
   addSavedItem: (id: string, type: SavedItemType, data: any) => void;
   removeSavedItem: (id: string) => void;
   clearSavedItems: () => void;
@@ -103,7 +103,7 @@ export const useSavedPropertiesStore = create<SavedPropertiesState>()((set, get)
     })),
   clearError: () => set({ error: null }),
 
-  // Unified saved items actions (from favoritesStore)
+  // Saved items actions
   addSavedItem: (id, type, data) =>
     set((state) => {
       if (!id) {

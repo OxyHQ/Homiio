@@ -95,15 +95,15 @@ function FeaturedProperties({ properties }: { properties: any[] }) {
           property={property}
           variant="compact"
           orientation="horizontal"
-          showFavoriteButton={true}
+          showSaveButton={true}
           showVerifiedBadge={true}
           showTypeIcon={false}
           showFeatures={true}
           showPrice={true}
           showLocation={true}
           showRating={false}
-          showFavoriteCount={true}
-          favoriteCountDisplayMode="inline"
+          showSaveCount={true}
+          saveCountDisplayMode="inline"
           style={styles.propertyCard}
           onPress={() => router.push(`/properties/${property._id || property.id}`)}
         />

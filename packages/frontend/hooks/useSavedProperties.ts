@@ -9,7 +9,6 @@ import type { Property } from '@homiio/shared-types';
 
 interface UseSavedPropertiesReturn {
   savedPropertyIds: string[];
-  savedProperties: Property[]; // For backward compatibility
   isLoading: boolean;
   isSaving: boolean;
   error: string | null;
@@ -38,14 +37,6 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
 
   // Memoize saved property IDs for performance
   const savedPropertyIds = useMemo(() => savedItems.map((item) => item.id), [savedItems]);
-
-  // Extract saved properties for backward compatibility
-  const savedProperties = useMemo(() => {
-    return savedItems
-      .filter((item) => item.type === 'property')
-      .map((item) => item.data)
-      .filter(Boolean) as Property[];
-  }, [savedItems]);
 
   // Memoize isSaved function to prevent unnecessary re-renders
   const isSaved = useCallback(
@@ -325,7 +316,6 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
 
   return {
     savedPropertyIds,
-    savedProperties,
     isLoading,
     isSaving: savingPropertyIds.length > 0,
     error,

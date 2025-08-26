@@ -25,15 +25,15 @@ type PropertyCardProps = {
   // Display options
   variant?: PropertyCardVariant;
   orientation?: PropertyCardOrientation;
-  showFavoriteButton?: boolean;
+  showSaveButton?: boolean;
   showVerifiedBadge?: boolean;
   showTypeIcon?: boolean;
   showFeatures?: boolean;
   showPrice?: boolean;
   showLocation?: boolean;
   showRating?: boolean;
-  showFavoriteCount?: boolean;
-  favoriteCountDisplayMode?: 'badge' | 'inline';
+  showSaveCount?: boolean;
+  saveCountDisplayMode?: 'badge' | 'inline';
 
   // State
   isSelected?: boolean;
@@ -112,15 +112,15 @@ export function PropertyCard({
   // Display options
   variant = 'default',
   orientation = 'vertical',
-  showFavoriteButton = true,
+  showSaveButton = true,
   showVerifiedBadge = true,
   showTypeIcon = true,
   showFeatures = true,
   showPrice = true,
   showLocation = true,
   showRating = true,
-  showFavoriteCount = false,
-  favoriteCountDisplayMode = 'badge',
+  showSaveCount = false,
+  saveCountDisplayMode = 'badge',
 
   // State
   isSelected = false,
@@ -164,7 +164,7 @@ export function PropertyCard({
       <PropertyCardSkeleton
         variant={variant}
         orientation={orientation}
-        showFavoriteButton={showFavoriteButton}
+        showSaveButton={showSaveButton}
         showRating={showRating}
         showPrice={showPrice}
         showFeatures={showFeatures}
@@ -259,7 +259,7 @@ export function PropertyCard({
         )}
 
         {/* Save Button - moved to top-right */}
-        {showFavoriteButton && (
+        {showSaveButton && (
           <SaveButton
             isSaved={isPropertySavedState}
             size={variant === 'compact' ? 5 : 24}
@@ -268,8 +268,8 @@ export function PropertyCard({
             activeColor="#EF4444"
             style={styles.saveButton}
             property={property}
-            showCount={showFavoriteCount}
-            countDisplayMode={favoriteCountDisplayMode}
+            showCount={showSaveCount}
+            countDisplayMode={saveCountDisplayMode}
           />
         )}
 
