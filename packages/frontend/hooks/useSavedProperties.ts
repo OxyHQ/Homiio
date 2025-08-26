@@ -2,9 +2,9 @@ import { useCallback, useMemo } from 'react';
 import { useSavedPropertiesStore, useSavedPropertiesSelectors } from '@/store/savedPropertiesStore';
 import { useActiveProfile } from '@/hooks/useProfileQueries';
 import { useOxy } from '@oxyhq/services';
-import { FavoritesErrorHandler, FavoritesError } from '@/utils/favoritesErrorHandler';
-import { FavoritesRetry } from '@/utils/favoritesRetry';
-import { FavoritesPerformance } from '@/utils/favoritesPerformance';
+import { SavedPropertiesErrorHandler, SavedPropertiesError } from '@/utils/savedPropertiesErrorHandler';
+import { SavedPropertiesRetry } from '@/utils/savedPropertiesRetry';
+import { SavedPropertiesPerformance } from '@/utils/savedPropertiesPerformance';
 import type { Property } from '@homiio/shared-types';
 
 interface UseSavedPropertiesReturn {
@@ -69,11 +69,11 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
   }, [clearStoreError]);
 
   const handleApiError = useCallback(
-    (error: any, context: string): FavoritesError => {
-      const savedPropertiesError = FavoritesErrorHandler.createError(error, context);
-      FavoritesErrorHandler.logError(savedPropertiesError, context);
+    (error: any, context: string): SavedPropertiesError => {
+      const savedPropertiesError = SavedPropertiesErrorHandler.createError(error, context);
+      SavedPropertiesErrorHandler.logError(savedPropertiesError, context);
 
-      if (FavoritesErrorHandler.shouldShowUserMessage(savedPropertiesError)) {
+      if (SavedPropertiesErrorHandler.shouldShowUserMessage(savedPropertiesError)) {
         setError(savedPropertiesError.userMessage);
       }
 
@@ -84,7 +84,7 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
 
   const toggleSaved = useCallback(
     async (propertyId: string, propertyData?: Partial<Property>) => {
-      const endTimer = FavoritesPerformance.startTimer('toggleSaved', propertyId);
+      const endTimer = SavedPropertiesPerformance.startTimer('toggleSaved', propertyId);
 
       if (!propertyId) {
         console.warn('useSavedProperties: Cannot toggle saved - missing property ID');
@@ -118,7 +118,7 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
           removeSavedItem(propertyId);
 
           // API call with retry
-          const result = await FavoritesRetry.execute(async () => {
+          const result = await SavedPropertiesRetry.execute(async () => {
             const { userApi } = await import('@/utils/api');
             return userApi.unsaveProperty(propertyId, oxyServices, activeSessionId);
           });
@@ -133,7 +133,7 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
           }
 
           // API call with retry
-          const result = await FavoritesRetry.execute(async () => {
+          const result = await SavedPropertiesRetry.execute(async () => {
             const { userApi } = await import('@/utils/api');
             return userApi.saveProperty(propertyId, undefined, oxyServices, activeSessionId);
           });
@@ -183,7 +183,7 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
 
   const saveProperty = useCallback(
     async (propertyId: string, propertyData?: Partial<Property>) => {
-      const endTimer = FavoritesPerformance.startTimer('saveProperty', propertyId);
+      const endTimer = SavedPropertiesPerformance.startTimer('saveProperty', propertyId);
 
       if (!propertyId) {
         console.warn('useSavedProperties: Cannot save property - missing property ID');
@@ -218,7 +218,7 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
         }
 
         // API call with retry
-        const result = await FavoritesRetry.execute(async () => {
+        const result = await SavedPropertiesRetry.execute(async () => {
           const { userApi } = await import('@/utils/api');
           return userApi.saveProperty(propertyId, undefined, oxyServices, activeSessionId);
         });
@@ -254,7 +254,7 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
 
   const unsaveProperty = useCallback(
     async (propertyId: string, propertyData?: Partial<Property>) => {
-      const endTimer = FavoritesPerformance.startTimer('unsaveProperty', propertyId);
+      const endTimer = SavedPropertiesPerformance.startTimer('unsaveProperty', propertyId);
 
       if (!propertyId) {
         console.warn('useSavedProperties: Cannot unsave property - missing property ID');
@@ -287,7 +287,7 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
         removeSavedItem(propertyId);
 
         // API call with retry
-        const result = await FavoritesRetry.execute(async () => {
+        const result = await SavedPropertiesRetry.execute(async () => {
           const { userApi } = await import('@/utils/api');
           return userApi.unsaveProperty(propertyId, oxyServices, activeSessionId);
         });
