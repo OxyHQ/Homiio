@@ -1,11 +1,22 @@
 import { create } from 'zustand';
 import { Property } from '@homiio/shared-types';
 
+// Types for saved items (unified from favoritesStore)
+export type SavedItemType = 'property' | 'room' | 'roommate';
+
+export interface SavedItem {
+  id: string;
+  type: SavedItemType;
+  data: any;
+  addedAt: string;
+}
+
 // Saved Properties State Interface
 interface SavedPropertiesState {
   // Data
   properties: Property[];
   folders: any[];
+  savedItems: SavedItem[]; // Unified saved items (replaces favorites)
   savingPropertyIds: string[];
 
   // Loading states
@@ -27,12 +38,20 @@ interface SavedPropertiesState {
   addSavingPropertyId: (propertyId: string) => void;
   removeSavingPropertyId: (propertyId: string) => void;
   clearError: () => void;
+  
+  // Unified saved items actions (from favoritesStore)
+  addSavedItem: (id: string, type: SavedItemType, data: any) => void;
+  removeSavedItem: (id: string) => void;
+  clearSavedItems: () => void;
+  getSavedItemsByType: (type: SavedItemType) => any[];
+  isSaved: (id: string) => boolean;
 }
 
 export const useSavedPropertiesStore = create<SavedPropertiesState>()((set, get) => ({
   // Initial state
   properties: [],
   folders: [],
+  savedItems: [],
   savingPropertyIds: [],
   isLoading: false,
   error: null,
@@ -83,19 +102,68 @@ export const useSavedPropertiesStore = create<SavedPropertiesState>()((set, get)
       savingPropertyIds: state.savingPropertyIds.filter((id) => id !== propertyId),
     })),
   clearError: () => set({ error: null }),
+
+  // Unified saved items actions (from favoritesStore)
+  addSavedItem: (id, type, data) =>
+    set((state) => {
+      if (!id) {
+        console.warn('savedPropertiesStore: Cannot add saved item - missing ID');
+        return state;
+      }
+
+      const existingIndex = state.savedItems.findIndex((item) => item.id === id);
+      if (existingIndex >= 0) {
+        return state; // Already exists
+      }
+
+      return {
+        savedItems: [{ id, type, data, addedAt: new Date().toISOString() }, ...state.savedItems],
+      };
+    }),
+
+  removeSavedItem: (id) =>
+    set((state) => {
+      if (!id) {
+        console.warn('savedPropertiesStore: Cannot remove saved item - missing ID');
+        return state;
+      }
+
+      return {
+        savedItems: state.savedItems.filter((item) => item.id !== id),
+      };
+    }),
+
+  clearSavedItems: () => set({ savedItems: [] }),
+
+  getSavedItemsByType: (type) => {
+    const state = get();
+    return state.savedItems.filter((item) => item.type === type).map((item) => item.data);
+  },
+
+  isSaved: (id) => {
+    if (!id) return false;
+    const state = get();
+    return state.savedItems.some((item) => item.id === id);
+  },
 }));
 
 // Selector hooks for easier access
 export const useSavedPropertiesSelectors = () => {
   const properties = useSavedPropertiesStore((state) => state.properties);
+  const savedItems = useSavedPropertiesStore((state) => state.savedItems);
   const savingPropertyIds = useSavedPropertiesStore((state) => state.savingPropertyIds);
   const isLoading = useSavedPropertiesStore((state) => state.isLoading);
   const error = useSavedPropertiesStore((state) => state.error);
+  const getSavedItemsByType = useSavedPropertiesStore((state) => state.getSavedItemsByType);
+  const isSaved = useSavedPropertiesStore((state) => state.isSaved);
 
   return {
     properties,
+    savedItems,
     savingPropertyIds,
     isLoading,
     error,
+    getSavedItemsByType,
+    isSaved,
   };
 };

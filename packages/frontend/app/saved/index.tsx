@@ -20,7 +20,7 @@ import { PropertyCard } from '@/components/PropertyCard';
 import { ListItem } from '@/components/ListItem';
 import { colors } from '@/styles/colors';
 import { getPropertyTitle } from '@/utils/propertyUtils';
-import { useFavorites } from '@/hooks/useFavorites';
+import { useSavedProperties } from '@/hooks/useSavedProperties';
 import { useOxy } from '@oxyhq/services';
 import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
 import { useSavedNotesMutation } from '@/hooks/useSavedNotes';
@@ -80,8 +80,8 @@ export default function SavedPropertiesScreen() {
   const bottomSheetContext = useContext(BottomSheetContext);
   const { mutateAsync: updateNotesMutate } = useSavedNotesMutation();
 
-  // Use the new Zustand-based favorites system
-  const { toggleFavorite, clearError: clearFavoritesError } = useFavorites();
+  // Use the unified saved properties system
+  const { toggleSaved, clearError: clearSavedPropertiesError } = useSavedProperties();
 
   // Use React Query directly for instant updates
   const { data: savedPropertiesData, isLoading: savedLoading } = useQuery({
@@ -280,11 +280,11 @@ export default function SavedPropertiesScreen() {
     if (!oxyServices || !activeSessionId) return;
 
     setError(null);
-    clearFavoritesError();
+    clearSavedPropertiesError();
     await queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
     await queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
     await refreshSavedProfiles();
-  }, [oxyServices, activeSessionId, queryClient, clearFavoritesError, refreshSavedProfiles]);
+  }, [oxyServices, activeSessionId, queryClient, clearSavedPropertiesError, refreshSavedProfiles]);
 
   // Using only bulk unsave for now; individual unsave action handled elsewhere
 
@@ -361,7 +361,7 @@ export default function SavedPropertiesScreen() {
             try {
               // Unsave all selected properties
               const unsavePromises = Array.from(selectedProperties).map((propertyId) =>
-                toggleFavorite(propertyId),
+                toggleSaved(propertyId),
               );
               await Promise.all(unsavePromises);
 
@@ -377,7 +377,7 @@ export default function SavedPropertiesScreen() {
         },
       ],
     );
-  }, [selectedProperties, oxyServices, activeSessionId, toggleFavorite, queryClient]);
+  }, [selectedProperties, oxyServices, activeSessionId, toggleSaved, queryClient]);
 
   // Render functions
   const renderPropertyItem = useCallback(

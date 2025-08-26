@@ -10,9 +10,6 @@ export { useProperties, useProperty, usePropertyStats, useSearchProperties } fro
 // Profile hooks
 export { useProfileRedux, useActiveProfile } from './useProfileQueries';
 
-// Favorites hooks
-export { useFavorites } from './useFavorites';
-
 // Utility hooks
 export { useDebounce } from './useDebounce';
 
