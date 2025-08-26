@@ -2,20 +2,18 @@ import React, { useState, useRef } from 'react';
 import {
     View,
     Modal,
-    FlatList,
+    ScrollView,
     Image,
     TouchableOpacity,
-    Dimensions,
     StyleSheet,
     SafeAreaView,
     Text,
     StatusBar,
+    useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 import type { PropertyImage } from '@homiio/shared-types';
-
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 interface ImageGalleryModalProps {
     visible: boolean;
@@ -31,13 +29,17 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
     onClose,
 }) => {
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
-    const flatListRef = useRef<FlatList>(null);
+    const scrollViewRef = useRef<ScrollView>(null);
+    const { width: screenWidth } = useWindowDimensions();
 
     const goToNext = () => {
         if (currentIndex < images.length - 1) {
             const nextIndex = currentIndex + 1;
             setCurrentIndex(nextIndex);
-            flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+            scrollViewRef.current?.scrollTo({ 
+                x: nextIndex * screenWidth, 
+                animated: true 
+            });
         }
     };
 
@@ -45,25 +47,26 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
         if (currentIndex > 0) {
             const prevIndex = currentIndex - 1;
             setCurrentIndex(prevIndex);
-            flatListRef.current?.scrollToIndex({ index: prevIndex, animated: true });
+            scrollViewRef.current?.scrollTo({ 
+                x: prevIndex * screenWidth, 
+                animated: true 
+            });
         }
     };
 
     const onScroll = (event: any) => {
         const offsetX = event.nativeEvent.contentOffset.x;
         const index = Math.round(offsetX / screenWidth);
-        setCurrentIndex(index);
+        if (index !== currentIndex) {
+            setCurrentIndex(index);
+        }
     };
 
-    const renderImage = ({ item }: { item: string | PropertyImage; index: number }) => (
-        <View style={styles.imageContainer}>
-            <Image
-                source={getPropertyImageSource(item)}
-                style={styles.image}
-                resizeMode="contain"
-            />
-        </View>
-    );
+    const onMomentumScrollEnd = (event: any) => {
+        const offsetX = event.nativeEvent.contentOffset.x;
+        const index = Math.round(offsetX / screenWidth);
+        setCurrentIndex(index);
+    };
 
     return (
         <Modal
@@ -86,22 +89,26 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
 
                 {/* Image Gallery */}
                 <View style={styles.galleryContainer}>
-                    <FlatList
-                        ref={flatListRef}
-                        data={images}
-                        renderItem={renderImage}
+                    <ScrollView
+                        ref={scrollViewRef}
                         horizontal
                         pagingEnabled
                         showsHorizontalScrollIndicator={false}
                         onScroll={onScroll}
+                        onMomentumScrollEnd={onMomentumScrollEnd}
                         scrollEventThrottle={16}
-                        initialScrollIndex={initialIndex}
-                        getItemLayout={(data, index) => ({
-                            length: screenWidth,
-                            offset: screenWidth * index,
-                            index,
-                        })}
-                    />
+                        contentContainerStyle={styles.scrollContent}
+                    >
+                        {images.map((item, index) => (
+                            <View key={index} style={[styles.imageContainer, { width: screenWidth }]}>
+                                <Image
+                                    source={getPropertyImageSource(item)}
+                                    style={styles.image}
+                                    resizeMode="contain"
+                                />
+                            </View>
+                        ))}
+                    </ScrollView>
 
                     {/* Navigation Arrows */}
                     {currentIndex > 0 && (
@@ -123,20 +130,24 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
 
                 {/* Thumbnail Strip */}
                 <View style={styles.thumbnailContainer}>
-                    <FlatList
-                        data={images}
+                    <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.thumbnailList}
-                        renderItem={({ item, index }) => (
+                    >
+                        {images.map((item, index) => (
                             <TouchableOpacity
+                                key={index}
                                 style={[
                                     styles.thumbnail,
                                     index === currentIndex && styles.activeThumbnail,
                                 ]}
                                 onPress={() => {
                                     setCurrentIndex(index);
-                                    flatListRef.current?.scrollToIndex({ index, animated: true });
+                                    scrollViewRef.current?.scrollTo({ 
+                                        x: index * screenWidth, 
+                                        animated: true 
+                                    });
                                 }}
                             >
                                 <Image
@@ -145,8 +156,8 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
                                     resizeMode="cover"
                                 />
                             </TouchableOpacity>
-                        )}
-                    />
+                        ))}
+                    </ScrollView>
                 </View>
             </SafeAreaView>
         </Modal>
@@ -178,14 +189,16 @@ const styles = StyleSheet.create({
         flex: 1,
         position: 'relative',
     },
+    scrollContent: {
+        flexDirection: 'row',
+    },
     imageContainer: {
-        width: screenWidth,
-        height: screenHeight - 200, // Account for header and thumbnail strip
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
     },
     image: {
-        width: screenWidth,
+        width: '100%',
         height: '100%',
     },
     leftArrow: {
