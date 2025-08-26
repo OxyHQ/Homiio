@@ -21,12 +21,12 @@ export const BasicInfoSection: React.FC<Props> = ({ property, hasActiveViewing, 
     const description = property?.description;
     const getRentLabel = (unit: typeof priceUnit) => {
         switch (unit) {
-            case 'day': return t('Daily Rent') || 'Daily Rent';
-            case 'night': return t('Nightly Rent') || 'Nightly Rent';
-            case 'week': return t('Weekly Rent') || 'Weekly Rent';
-            case 'month': return t('Monthly Rent') || 'Monthly Rent';
-            case 'year': return t('Yearly Rent') || 'Yearly Rent';
-            default: return t('Rent') || 'Rent';
+            case 'day': return t('Daily Rent');
+            case 'night': return t('Nightly Rent');
+            case 'week': return t('Weekly Rent');
+            case 'month': return t('Monthly Rent');
+            case 'year': return t('Yearly Rent');
+            default: return t('Rent');
         }
     };
     return (
@@ -35,22 +35,22 @@ export const BasicInfoSection: React.FC<Props> = ({ property, hasActiveViewing, 
                 <ThemedText style={styles.priceLabel}>{getRentLabel(priceUnit)}</ThemedText>
                 <CurrencyFormatter amount={rentAmount} originalCurrency={rentCurrency} showConversion />
             </View>
-            
+
             {/* External Source Badge */}
             {property?.isExternal && property?.source && property.source !== 'internal' && (
                 <View style={styles.sourceBadgeContainer}>
                     <View style={styles.sourceBadge}>
                         <Ionicons name="globe-outline" size={16} color={colors.primaryColor} />
                         <ThemedText style={styles.sourceBadgeText}>
-                            {t('Sourced from') || 'Sourced from'} {property.source.charAt(0).toUpperCase() + property.source.slice(1)}
+                            {t('Sourced from')} {property.source.charAt(0).toUpperCase() + property.source.slice(1)}
                         </ThemedText>
                     </View>
                 </View>
             )}
-            
+
             {!!description && description.trim() !== '' && (
                 <View style={styles.descriptionContainer}>
-                    <ThemedText style={styles.sectionTitle}>{t('About this property') || 'About this property'}</ThemedText>
+                    <ThemedText style={styles.sectionTitle}>{t('About this property')}</ThemedText>
                     <View style={styles.descriptionCard}>
                         <ThemedText style={styles.descriptionText}>{description}</ThemedText>
                     </View>
@@ -61,11 +61,11 @@ export const BasicInfoSection: React.FC<Props> = ({ property, hasActiveViewing, 
                     <View style={styles.viewingBannerContent}>
                         <Ionicons name="calendar" size={20} color={colors.primaryColor} />
                         <ThemedText style={styles.viewingBannerText}>
-                            {t('viewings.banner.hasViewing', 'You have a viewing request for this property')}
+                            {t('viewings.banner.hasViewing')}
                         </ThemedText>
                         <TouchableOpacity style={styles.viewingBannerButton} onPress={onViewingsPress}>
                             <ThemedText style={styles.viewingBannerButtonText}>
-                                {t('viewings.banner.viewDetails', 'View Details')}
+                                {t('viewings.banner.viewDetails')}
                             </ThemedText>
                         </TouchableOpacity>
                     </View>
