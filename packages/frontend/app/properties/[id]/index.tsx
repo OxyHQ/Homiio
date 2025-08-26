@@ -33,7 +33,7 @@ import { PropertyFeatures } from '../../../components/property/PropertyFeatures'
 import { PricingDetails } from '../../../components/property/PricingDetails';
 import { HouseRules } from '../../../components/property/HouseRules';
 import { LocationSection } from '../../../components/property/LocationSection';
-import { PropertyStatistics } from '../../../components/property/PropertyStatistics';
+import { PropertyOverview } from '../../../components/property/PropertyOverview';
 import { NeighborhoodInfo } from '../../../components/property/NeighborhoodInfo';
 import { AvailabilitySection } from '../../../components/property/AvailabilitySection';
 import { AmenitiesSection } from '../../../components/property/AmenitiesSection';
@@ -450,7 +450,7 @@ export default function PropertyDetailPage() {
           <PricingDetails property={apiProperty as any} />
           <HouseRules property={apiProperty as any} />
           <LocationSection property={apiProperty as any} />
-          <PropertyStatistics property={apiProperty as any} />
+          <PropertyOverview property={apiProperty as any} />
           <NeighborhoodInfo property={apiProperty as any} />
           <AvailabilitySection property={apiProperty as any} />
           <AmenitiesSection property={apiProperty as any} />

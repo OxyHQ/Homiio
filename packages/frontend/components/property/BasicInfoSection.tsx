@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
+import { SectionCard } from '@/components/ui/SectionCard';
 import { CurrencyFormatter } from '@/components/CurrencyFormatter';
 import { colors } from '@/styles/colors';
 import { Ionicons } from '@expo/vector-icons';
@@ -49,12 +50,12 @@ export const BasicInfoSection: React.FC<Props> = ({ property, hasActiveViewing, 
             )}
 
             {!!description && description.trim() !== '' && (
-                <View style={styles.descriptionContainer}>
-                    <ThemedText style={styles.sectionTitle}>{t('About this property')}</ThemedText>
-                    <View style={styles.descriptionCard}>
-                        <ThemedText style={styles.descriptionText}>{description}</ThemedText>
-                    </View>
-                </View>
+                <SectionCard
+                    title={t('About this property')}
+                    containerStyle={styles.descriptionContainer}
+                >
+                    <ThemedText style={styles.descriptionText}>{description}</ThemedText>
+                </SectionCard>
             )}
             {hasActiveViewing && (
                 <View style={styles.viewingBanner}>
@@ -99,7 +100,6 @@ const styles = StyleSheet.create({
     },
     sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15 },
     descriptionContainer: { marginBottom: 20 },
-    descriptionCard: { padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#e9ecef', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 1 },
     descriptionText: { fontSize: 15, lineHeight: 22, color: colors.COLOR_BLACK, textAlign: 'justify' },
     viewingBanner: { width: '100%', backgroundColor: '#EBF5FF', paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, marginBottom: 16, borderWidth: 1, borderColor: '#BFDBFE' },
     viewingBannerContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },

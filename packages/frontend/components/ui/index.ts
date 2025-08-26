@@ -4,6 +4,7 @@ export { ActionButton, type ActionButtonVariant } from './ActionButton';
 export { FilterChip } from './FilterChip';
 export { EmptyState } from './EmptyState';
 export { ProgressBar } from './ProgressBar';
+export { SectionCard } from './SectionCard';
 
 // Existing UI Components
 export { default as ExpandableMenu } from './ExpandableMenu';

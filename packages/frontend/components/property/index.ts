@@ -9,7 +9,7 @@ export { PropertyFeatures } from './PropertyFeatures';
 export { PricingDetails } from './PricingDetails';
 export { HouseRules } from './HouseRules';
 export { LocationSection } from './LocationSection';
-export { PropertyStatistics } from './PropertyStatistics';
+export { PropertyOverview } from './PropertyOverview';
 export { NeighborhoodInfo } from './NeighborhoodInfo';
 export { PropertyActionBar } from './PropertyActionBar';
 export { AvailabilitySection } from './AvailabilitySection';

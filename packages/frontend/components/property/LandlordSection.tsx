@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
+import { SectionCard } from '@/components/ui/SectionCard';
 import ProfileAvatar from '@/components/ProfileAvatar';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
@@ -52,93 +53,82 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
             : 'No rating yet';
     };
     return (
-        <>
-            <ThemedText style={styles.sectionTitle}>
-                {isPublicHousing ? t('Housing Authority') : t('Landlord')}
-            </ThemedText>
-            <View style={styles.landlordCard}>
-                {isPublicHousing ? (
-                    <>
-                        <View style={styles.landlordHeader}>
-                            <View style={[styles.landlordAvatar, styles.governmentAvatar]}>
-                                <Ionicons name="library" size={28} color="white" />
-                            </View>
-                            <View style={styles.landlordInfo}>
-                                <View style={styles.landlordNameRow}>
-                                    <ThemedText style={styles.landlordName}>
-                                        {publicHousingState ? `${publicHousingState} Housing Authority` : 'Public Housing Authority'}
-                                    </ThemedText>
-                                    <View style={[styles.verifiedBadge, styles.governmentBadge]}>
-                                        <ThemedText style={styles.verifiedText}>GOV</ThemedText>
-                                    </View>
-                                </View>
-                                <ThemedText style={styles.landlordRating}>Government-managed affordable housing</ThemedText>
-                            </View>
+        <SectionCard
+            title={isPublicHousing ? t('Housing Authority') : t('Landlord')}
+            padding={20}
+            borderRadius={16}
+        >
+            {isPublicHousing ? (
+                <>
+                    <View style={styles.landlordHeader}>
+                        <View style={[styles.landlordAvatar, styles.governmentAvatar]}>
+                            <Ionicons name="library" size={28} color="white" />
                         </View>
-                        <ActionButton
-                            icon="globe"
-                            text={t('Apply on State Website') || 'Apply on State Website'}
-                            onPress={onApplyPublic}
-                            variant="primary"
-                            size="medium"
-                            style={{ flex: 1 }}
-                        />
-                    </>
-                ) : (
-                    <>
-                        <TouchableOpacity
-                            style={styles.landlordHeader}
-                            onPress={() => router.push(`/profile/${(landlordProfile as any)?._id || (landlordProfile as any)?.id}`)}
-                        >
-                            <ProfileAvatar profile={landlordProfile} size={56} style={styles.landlordAvatar} />
-                            <View style={styles.landlordInfo}>
-                                <View style={styles.landlordNameRow}>
-                                    <ThemedText style={styles.landlordName}>{getLandlordDisplayName(landlordProfile)}</ThemedText>
-                                    {landlordProfile?.isActive && (
-                                        <View style={styles.verifiedBadge}>
-                                            <ThemedText style={styles.verifiedText}>✓</ThemedText>
-                                        </View>
-                                    )}
+                        <View style={styles.landlordInfo}>
+                            <View style={styles.landlordNameRow}>
+                                <ThemedText style={styles.landlordName}>
+                                    {publicHousingState ? `${publicHousingState} Housing Authority` : 'Public Housing Authority'}
+                                </ThemedText>
+                                <View style={[styles.verifiedBadge, styles.governmentBadge]}>
+                                    <ThemedText style={styles.verifiedText}>GOV</ThemedText>
                                 </View>
-                                <ThemedText style={styles.landlordRating}>{getLandlordTrustScore(landlordProfile)}</ThemedText>
                             </View>
-                            <Ionicons name="chevron-forward" size={20} color={colors.COLOR_BLACK_LIGHT_3} />
-                        </TouchableOpacity>
-                        {landlordProfile && ownerProperties.length > 0 && (
-                            <HomeCarouselSection
-                                title={t('More properties by this owner') || 'More properties by this owner'}
-                                items={ownerProperties}
-                                loading={false}
-                                renderItem={(prop) => (
-                                    <PropertyCard
-                                        property={prop as any}
-                                        variant="compact"
-                                        onPress={() => router.push(`/properties/${(prop as any)._id || (prop as any).id}`)}
-                                        showFavoriteButton={false}
-                                        showVerifiedBadge={false}
-                                        showRating={false}
-                                    />
+                            <ThemedText style={styles.landlordRating}>Government-managed affordable housing</ThemedText>
+                        </View>
+                    </View>
+                    <ActionButton
+                        icon="globe"
+                        text={t('Apply on State Website') || 'Apply on State Website'}
+                        onPress={onApplyPublic}
+                        variant="primary"
+                        size="medium"
+                        style={{ flex: 1 }}
+                    />
+                </>
+            ) : (
+                <>
+                    <TouchableOpacity
+                        style={styles.landlordHeader}
+                        onPress={() => router.push(`/profile/${(landlordProfile as any)?._id || (landlordProfile as any)?.id}`)}
+                    >
+                        <ProfileAvatar profile={landlordProfile} size={56} style={styles.landlordAvatar} />
+                        <View style={styles.landlordInfo}>
+                            <View style={styles.landlordNameRow}>
+                                <ThemedText style={styles.landlordName}>{getLandlordDisplayName(landlordProfile)}</ThemedText>
+                                {landlordProfile?.isActive && (
+                                    <View style={styles.verifiedBadge}>
+                                        <ThemedText style={styles.verifiedText}>✓</ThemedText>
+                                    </View>
                                 )}
-                            />
-                        )}
-                    </>
-                )}
-            </View>
-        </>
+                            </View>
+                            <ThemedText style={styles.landlordRating}>{getLandlordTrustScore(landlordProfile)}</ThemedText>
+                        </View>
+                        <Ionicons name="chevron-forward" size={20} color={colors.COLOR_BLACK_LIGHT_3} />
+                    </TouchableOpacity>
+                    {landlordProfile && ownerProperties.length > 0 && (
+                        <HomeCarouselSection
+                            title={t('More properties by this owner') || 'More properties by this owner'}
+                            items={ownerProperties}
+                            loading={false}
+                            renderItem={(prop) => (
+                                <PropertyCard
+                                    property={prop as any}
+                                    variant="compact"
+                                    onPress={() => router.push(`/properties/${(prop as any)._id || (prop as any).id}`)}
+                                    showSaveButton={false}
+                                    showVerifiedBadge={false}
+                                    showRating={false}
+                                />
+                            )}
+                        />
+                    )}
+                </>
+            )}
+        </SectionCard>
     );
 };
 
 const styles = StyleSheet.create({
-    sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15 },
-    landlordCard: {
-        borderRadius: 16,
-        marginBottom: 20,
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        borderWidth: 1,
-        borderColor: colors.COLOR_BLACK_LIGHT_6,
-        padding: 20,
-        paddingTop: 16,
-    },
     landlordHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
     landlordAvatar: { marginRight: 16 },
     governmentAvatar: { backgroundColor: '#1E40AF' },
