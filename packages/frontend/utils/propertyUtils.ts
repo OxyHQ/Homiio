@@ -42,14 +42,24 @@ export function getDetailedPropertyTitle(property: Property): string {
 /**
  * Get the image source for a property, falling back to placeholder if no image is available
  * This function can be used directly in Image source prop
- * @param property - Property object or images array (string[] or PropertyImage[])
+ * @param property - Property object, images array (string[] or PropertyImage[]), or single image (string or PropertyImage)
  * @returns The property image source (string URL or imported image)
  */
 export function getPropertyImageSource(
-  property: Property | string[] | PropertyImage[] | undefined,
+  property: Property | string[] | PropertyImage[] | string | PropertyImage | undefined,
 ): any {
   if (!property) {
     return propertyPlaceholder;
+  }
+
+  // If property is a single string URL
+  if (typeof property === 'string') {
+    return { uri: property };
+  }
+
+  // If property is a single PropertyImage object
+  if (typeof property === 'object' && property !== null && !Array.isArray(property) && 'url' in property) {
+    return { uri: (property as PropertyImage).url };
   }
 
   // If property is an array of images
@@ -72,7 +82,7 @@ export function getPropertyImageSource(
   }
 
   // If property is a Property object
-  if (property.images && property.images.length > 0) {
+  if (typeof property === 'object' && property !== null && 'images' in property && property.images && property.images.length > 0) {
     const firstImage = property.images[0];
     // Handle PropertyImage objects
     if (typeof firstImage === 'object' && firstImage !== null && 'url' in firstImage) {

@@ -441,7 +441,6 @@ export default function PropertyDetailPage() {
         />
         <PhotoGallery
           images={property.images as any}
-          onOpen={() => { /* TODO: implement modal gallery */ }}
           t={t as any}
         />
         <View style={styles.infoContainer}>

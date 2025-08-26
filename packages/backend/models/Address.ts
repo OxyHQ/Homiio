@@ -45,6 +45,9 @@ export interface IAddress extends Document {
     coordinates: [number, number]; // [longitude, latitude]
   };
   
+  // Computed/index fields
+  normalizedKey?: string; // For uniqueness and deduplication
+  
   // Computed fields
   fullAddress: string;
   location: string;
@@ -56,6 +59,7 @@ export interface IAddress extends Document {
   createStreetLevel(): Partial<IAddress>;
   createBuildingLevel(): Partial<IAddress>;
   createUnitLevel(): Partial<IAddress>;
+  computeNormalizedKey(): string;
 }
 
 const AddressSchema = new Schema({
@@ -221,6 +225,14 @@ const AddressSchema = new Schema({
     }
   },
   
+  // Computed/index fields
+  normalizedKey: {
+    type: String,
+    index: true,
+    unique: true,
+    sparse: true // Allow null values but ensure uniqueness when present
+  },
+  
 }, {
   timestamps: true,
   toJSON: { 
@@ -284,6 +296,14 @@ AddressSchema.virtual('location').get(function(this: IAddress) {
   if (this.state) parts.push(this.state);
   if (this.country) parts.push(this.country);
   return parts.join(', ');
+});
+
+// Pre-save hook to compute normalized key
+AddressSchema.pre('save', function(next) {
+  if (this.isModified() || this.isNew) {
+    this.normalizedKey = this.computeNormalizedKey();
+  }
+  next();
 });
 
 // Static method to normalize field aliases
@@ -350,11 +370,56 @@ AddressSchema.statics.normalizeAliases = function(input: any) {
   return normalized;
 };
 
-// Static method to find or create address (legacy compatibility)
-AddressSchema.statics.findOrCreate = async function(addressData: any) {
-  console.warn('Address.findOrCreate is deprecated. Use direct Address.create() instead.');
-  const address = new this(addressData);
+// Compute normalized key for uniqueness
+AddressSchema.methods.computeNormalizedKey = function(this: IAddress) {
+  const crypto = require('crypto');
+  const keyFields = [
+    this.street?.toLowerCase().trim(),
+    this.number?.toLowerCase().trim(),
+    this.unit?.toLowerCase().trim(),
+    this.building_name?.toLowerCase().trim(),
+    this.block?.toLowerCase().trim(),
+    this.city?.toLowerCase().trim(),
+    this.state?.toLowerCase().trim(),
+    this.postal_code?.toLowerCase().trim(),
+    this.countryCode?.toUpperCase()
+  ].filter(field => field && field.length > 0);
+  
+  const keyString = keyFields.join('|');
+  return crypto.createHash('sha1').update(keyString).digest('hex');
+};
+
+// Static method to find or create with canonical fields and coordinates
+AddressSchema.statics.findOrCreateCanonical = async function(this: IAddressModel, input: any) {
+  if (!input.coordinates) {
+    throw new Error('Coordinates are required for address creation');
+  }
+  
+  // Normalize aliases first
+  const normalizedInput = this.normalizeAliases(input);
+  
+  // Create a temporary instance to compute the normalized key
+  const tempAddress = new this(normalizedInput);
+  const normalizedKey = tempAddress.computeNormalizedKey();
+  
+  // First try to find existing address by normalized key
+  let address = await this.findOne({ normalizedKey });
+  
+  if (address) {
+    return address;
+  }
+  
+  // Create new address if not found
+  normalizedInput.normalizedKey = normalizedKey;
+  address = new this(normalizedInput);
+  
   return await address.save();
+};
+
+// Static method to find or create address (legacy compatibility)
+AddressSchema.statics.findOrCreate = async function(this: IAddressModel, addressData: any) {
+  console.warn('Address.findOrCreate is deprecated. Use findOrCreateCanonical instead.');
+  return this.findOrCreateCanonical(addressData);
 };
 
 // Instance methods
