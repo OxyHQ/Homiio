@@ -4,6 +4,7 @@ export * from './FeaturedPropertiesWidget';
 export * from './EcoCertificationWidget';
 export * from './HorizonInitiativeWidget';
 export * from './SavedPropertiesWidget';
+export * from './DonationWidget';
 export * from './WidgetManager';
 
 // Placeholder exports for widgets we'll implement

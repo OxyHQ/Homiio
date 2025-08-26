@@ -10,6 +10,7 @@ import { NeighborhoodRatingWidget } from './NeighborhoodRatingWidget';
 import { RecentlyViewedWidget } from './RecentlyViewedWidget';
 import { QuickFiltersWidget } from './QuickFiltersWidget';
 import { PropertyPreviewWidget } from './PropertyPreviewWidget';
+import { DonationWidget } from './DonationWidget';
 
 // Feature flag: controls whether the Neighborhood widget is rendered
 const NEIGHBORHOOD_WIDGET_ENABLED =
@@ -57,6 +58,7 @@ export const WidgetManager = React.memo(function WidgetManager({
         <TrustScoreWidget key="trust-score" />,
         <RecentlyViewedWidget key="recently-viewed" />,
         <FeaturedPropertiesWidget key="featured-properties" />,
+        <DonationWidget key="donation" />,
         <HorizonInitiativeWidget key="horizon" />,
         <EcoCertificationWidget key="eco-cert" />,
       ],
@@ -91,7 +93,10 @@ export const WidgetManager = React.memo(function WidgetManager({
           state={state}
         />,
       ],
-      profile: [<TrustScoreWidget key="trust-score" />],
+      profile: [
+        <TrustScoreWidget key="trust-score" />,
+        <DonationWidget key="donation" />,
+      ],
       contracts: [],
       payments: [],
       messages: [],
