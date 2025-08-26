@@ -6,11 +6,11 @@ import { ThemedText } from '@/components/ThemedText';
 import { HeartIcon, HeartIconActive } from '@/assets/icons/heart-icon';
 import { colors } from '@/styles/colors';
 
-interface FavoritesWidgetProps {
+interface SavedPropertiesWidgetProps {
   style?: any;
 }
 
-export const FavoritesWidget: React.FC<FavoritesWidgetProps> = ({ style }) => {
+export const SavedPropertiesWidget: React.FC<SavedPropertiesWidgetProps> = ({ style }) => {
   const { savedPropertyIds } = useSavedProperties();
   const savedCount = savedPropertyIds.length;
 
@@ -44,6 +44,9 @@ export const FavoritesWidget: React.FC<FavoritesWidgetProps> = ({ style }) => {
     </TouchableOpacity>
   );
 };
+
+// Backward compatibility export
+export const FavoritesWidget = SavedPropertiesWidget;
 
 const styles = StyleSheet.create({
   container: {

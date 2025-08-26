@@ -3,7 +3,7 @@ export * from './TrustScoreWidget';
 export * from './FeaturedPropertiesWidget';
 export * from './EcoCertificationWidget';
 export * from './HorizonInitiativeWidget';
-export * from './FavoritesWidget';
+export * from './SavedPropertiesWidget';
 export * from './WidgetManager';
 
 // Placeholder exports for widgets we'll implement
