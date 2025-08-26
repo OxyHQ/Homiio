@@ -1,111 +1,329 @@
-import { useCallback } from 'react';
-import { useSavedPropertiesStore } from '@/store/savedPropertiesStore';
-import { Property } from '@homiio/shared-types';
+import { useCallback, useMemo } from 'react';
+import { useSavedPropertiesStore, useSavedPropertiesSelectors } from '@/store/savedPropertiesStore';
+import { useActiveProfile } from '@/hooks/useProfileQueries';
 import { useOxy } from '@oxyhq/services';
-import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
+import { SavedPropertiesErrorHandler, SavedPropertiesError } from '@/utils/savedPropertiesErrorHandler';
+import { SavedPropertiesRetry } from '@/utils/savedPropertiesRetry';
+import { SavedPropertiesPerformance } from '@/utils/savedPropertiesPerformance';
+import type { Property } from '@homiio/shared-types';
 
-export const useSavedProperties = () => {
-  const { properties, isLoading, error } = useSavedPropertiesStore();
-  const { setProperties, setLoading, setError, addProperty, removeProperty } =
-    useSavedPropertiesStore();
+interface UseSavedPropertiesReturn {
+  savedPropertyIds: string[];
+  isLoading: boolean;
+  isSaving: boolean;
+  error: string | null;
+  toggleSaved: (propertyId: string, propertyData?: Partial<Property>) => Promise<void>;
+  isSaved: (propertyId: string) => boolean;
+  isPropertySaving: (propertyId: string) => boolean;
+  saveProperty: (propertyId: string, propertyData?: Partial<Property>) => Promise<void>;
+  unsaveProperty: (propertyId: string, propertyData?: Partial<Property>) => Promise<void>;
+  clearError: () => void;
+}
+
+export const useSavedProperties = (): UseSavedPropertiesReturn => {
+  const { savedItems, isLoading, error } = useSavedPropertiesSelectors();
+  const {
+    addSavedItem,
+    removeSavedItem,
+    setLoading,
+    setError,
+    clearError: clearStoreError,
+    savingPropertyIds,
+    addSavingPropertyId,
+    removeSavingPropertyId,
+  } = useSavedPropertiesStore();
+  const { data: activeProfile } = useActiveProfile();
   const { oxyServices, activeSessionId } = useOxy();
-  const queryClient = useQueryClient();
 
-  const loadSavedProperties = useCallback(async () => {
-    if (!oxyServices || !activeSessionId) return;
+  // Memoize saved property IDs for performance
+  const savedPropertyIds = useMemo(() => savedItems.map((item) => item.id), [savedItems]);
 
-    try {
-      setLoading(true);
-      setError(null);
+  // Memoize isSaved function to prevent unnecessary re-renders
+  const isSaved = useCallback(
+    (propertyId: string): boolean => {
+      if (!propertyId) return false;
+      return savedPropertyIds.includes(propertyId);
+    },
+    [savedPropertyIds],
+  );
 
-      const savedPropertyService = await import('@/services/savedPropertyService');
-      const response = await queryClient.fetchQuery({
-        queryKey: ['savedProperties'],
-        queryFn: async () =>
-          savedPropertyService.default.getSavedProperties(oxyServices, activeSessionId),
-        staleTime: 1000 * 30,
-        gcTime: 1000 * 60 * 10,
-      });
+  const isPropertySaving = useCallback(
+    (propertyId: string): boolean => {
+      if (!propertyId) return false;
+      return savingPropertyIds.includes(propertyId);
+    },
+    [savingPropertyIds],
+  );
 
-      setProperties(response.properties || []);
-    } catch (error: any) {
-      setError(error.message || 'Failed to load saved properties');
-      toast.error('Failed to load saved properties');
-    } finally {
-      setLoading(false);
-    }
-  }, [setProperties, setLoading, setError, oxyServices, activeSessionId, queryClient]);
+  const clearError = useCallback(() => {
+    clearStoreError();
+  }, [clearStoreError]);
 
-  const saveProperty = useCallback(
-    async (property: Property) => {
-      if (!oxyServices || !activeSessionId) return;
+  const handleApiError = useCallback(
+    (error: any, context: string): SavedPropertiesError => {
+      const savedPropertiesError = SavedPropertiesErrorHandler.createError(error, context);
+      SavedPropertiesErrorHandler.logError(savedPropertiesError, context);
+
+      if (SavedPropertiesErrorHandler.shouldShowUserMessage(savedPropertiesError)) {
+        setError(savedPropertiesError.userMessage);
+      }
+
+      return savedPropertiesError;
+    },
+    [setError],
+  );
+
+  const toggleSaved = useCallback(
+    async (propertyId: string, propertyData?: Partial<Property>) => {
+      const endTimer = SavedPropertiesPerformance.startTimer('toggleSaved', propertyId);
+
+      if (!propertyId) {
+        console.warn('useSavedProperties: Cannot toggle saved - missing property ID');
+        endTimer(false, 'Missing property ID');
+        return;
+      }
+
+      if (!oxyServices || !activeSessionId) {
+        setError('Please sign in to manage saved properties');
+        endTimer(false, 'Not authenticated');
+        return;
+      }
+
+      // Prevent duplicate requests
+      if (isPropertySaving(propertyId)) {
+        endTimer(false, 'Duplicate request');
+        return;
+      }
 
       try {
-        setLoading(true);
-        setError(null);
+        // Get current state to avoid stale closure
+        const currentSavedItems = useSavedPropertiesStore.getState().savedItems;
+        const currentSavedIds = currentSavedItems.map((item) => item.id);
+        const currentlySaved = currentSavedIds.includes(propertyId);
 
-        const savedPropertyService = await import('@/services/savedPropertyService');
-        await savedPropertyService.default.saveProperty(
-          property._id,
-          undefined,
-          oxyServices,
-          activeSessionId,
-        );
+        // Add to saving list
+        addSavingPropertyId(propertyId);
 
-        addProperty(property);
-        toast.success('Property saved successfully');
-        await queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
+        if (currentlySaved) {
+          // Optimistic update: remove from saved items
+          removeSavedItem(propertyId);
+
+          // API call with retry
+          const result = await SavedPropertiesRetry.execute(async () => {
+            const { userApi } = await import('@/utils/api');
+            return userApi.unsaveProperty(propertyId, oxyServices, activeSessionId);
+          });
+
+          if (!result.success) {
+            throw new Error(result.error?.message || 'Failed to remove from saved properties');
+          }
+        } else {
+          // Optimistic update: add to saved items
+          if (propertyData) {
+            addSavedItem(propertyId, 'property', propertyData);
+          }
+
+          // API call with retry
+          const result = await SavedPropertiesRetry.execute(async () => {
+            const { userApi } = await import('@/utils/api');
+            return userApi.saveProperty(propertyId, undefined, oxyServices, activeSessionId);
+          });
+
+          if (!result.success) {
+            throw new Error(result.error?.message || 'Failed to add to saved properties');
+          }
+        }
+
+        endTimer(true);
       } catch (error: any) {
-        setError(error.message || 'Failed to save property');
-        toast.error('Failed to save property');
+        // Revert optimistic update on error
+        const currentSavedItems = useSavedPropertiesStore.getState().savedItems;
+        const currentSavedIds = currentSavedItems.map((item) => item.id);
+        const currentlySaved = currentSavedIds.includes(propertyId);
+
+        if (currentlySaved && !isSaved(propertyId)) {
+          // We were trying to add but it failed, so remove it
+          removeSavedItem(propertyId);
+        } else if (!currentlySaved && isSaved(propertyId)) {
+          // We were trying to remove but it failed, so add it back
+          if (propertyData) {
+            addSavedItem(propertyId, 'property', propertyData);
+          }
+        }
+
+        const savedPropertiesError = handleApiError(error, 'toggleSaved');
+        endTimer(false, savedPropertiesError.message);
       } finally {
-        setLoading(false);
+        // Remove from saving list
+        removeSavingPropertyId(propertyId);
       }
     },
-    [addProperty, setLoading, setError, oxyServices, activeSessionId, queryClient],
+    [
+      oxyServices,
+      activeSessionId,
+      addSavedItem,
+      removeSavedItem,
+      addSavingPropertyId,
+      removeSavingPropertyId,
+      setError,
+      isPropertySaving,
+      isSaved,
+      handleApiError,
+    ],
+  );
+
+  const saveProperty = useCallback(
+    async (propertyId: string, propertyData?: Partial<Property>) => {
+      const endTimer = SavedPropertiesPerformance.startTimer('saveProperty', propertyId);
+
+      if (!propertyId) {
+        console.warn('useSavedProperties: Cannot save property - missing property ID');
+        endTimer(false, 'Missing property ID');
+        return;
+      }
+
+      if (isSaved(propertyId)) {
+        endTimer(false, 'Already saved');
+        return; // Already saved
+      }
+
+      if (!oxyServices || !activeSessionId) {
+        setError('Please sign in to manage saved properties');
+        endTimer(false, 'Not authenticated');
+        return;
+      }
+
+      // Prevent duplicate requests
+      if (isPropertySaving(propertyId)) {
+        endTimer(false, 'Duplicate request');
+        return;
+      }
+
+      try {
+        // Add to saving list
+        addSavingPropertyId(propertyId);
+
+        // Optimistic update
+        if (propertyData) {
+          addSavedItem(propertyId, 'property', propertyData);
+        }
+
+        // API call with retry
+        const result = await SavedPropertiesRetry.execute(async () => {
+          const { userApi } = await import('@/utils/api');
+          return userApi.saveProperty(propertyId, undefined, oxyServices, activeSessionId);
+        });
+
+        if (!result.success) {
+          throw new Error(result.error?.message || 'Failed to save property');
+        }
+
+        endTimer(true);
+      } catch (error: any) {
+        // Revert optimistic update on error
+        removeSavedItem(propertyId);
+        const savedPropertiesError = handleApiError(error, 'saveProperty');
+        endTimer(false, savedPropertiesError.message);
+      } finally {
+        removeSavingPropertyId(propertyId);
+      }
+    },
+    [
+      savedPropertyIds,
+      oxyServices,
+      activeSessionId,
+      addSavedItem,
+      removeSavedItem,
+      addSavingPropertyId,
+      removeSavingPropertyId,
+      setError,
+      isSaved,
+      isPropertySaving,
+      handleApiError,
+    ],
   );
 
   const unsaveProperty = useCallback(
-    async (propertyId: string) => {
-      if (!oxyServices || !activeSessionId) return;
+    async (propertyId: string, propertyData?: Partial<Property>) => {
+      const endTimer = SavedPropertiesPerformance.startTimer('unsaveProperty', propertyId);
+
+      if (!propertyId) {
+        console.warn('useSavedProperties: Cannot unsave property - missing property ID');
+        endTimer(false, 'Missing property ID');
+        return;
+      }
+
+      if (!isSaved(propertyId)) {
+        endTimer(false, 'Not saved');
+        return; // Not saved
+      }
+
+      if (!oxyServices || !activeSessionId) {
+        setError('Please sign in to manage saved properties');
+        endTimer(false, 'Not authenticated');
+        return;
+      }
+
+      // Prevent duplicate requests
+      if (isPropertySaving(propertyId)) {
+        endTimer(false, 'Duplicate request');
+        return;
+      }
 
       try {
-        setLoading(true);
-        setError(null);
+        // Add to saving list
+        addSavingPropertyId(propertyId);
 
-        const savedPropertyService = await import('@/services/savedPropertyService');
-        await savedPropertyService.default.unsaveProperty(propertyId, oxyServices, activeSessionId);
+        // Optimistic update
+        removeSavedItem(propertyId);
 
-        removeProperty(propertyId);
-        toast.success('Property removed from saved list');
-        await queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
+        // API call with retry
+        const result = await SavedPropertiesRetry.execute(async () => {
+          const { userApi } = await import('@/utils/api');
+          return userApi.unsaveProperty(propertyId, oxyServices, activeSessionId);
+        });
+
+        if (!result.success) {
+          throw new Error(result.error?.message || 'Failed to unsave property');
+        }
+
+        endTimer(true);
       } catch (error: any) {
-        setError(error.message || 'Failed to remove property');
-        toast.error('Failed to remove property');
+        // Revert optimistic update on error
+        if (propertyData) {
+          addSavedItem(propertyId, 'property', propertyData);
+        }
+        const savedPropertiesError = handleApiError(error, 'unsaveProperty');
+        endTimer(false, savedPropertiesError.message);
       } finally {
-        setLoading(false);
+        removeSavingPropertyId(propertyId);
       }
     },
-    [removeProperty, setLoading, setError, oxyServices, activeSessionId, queryClient],
-  );
-
-  const isPropertySaved = useCallback(
-    (propertyId: string) => {
-      return properties.some(
-        (property) => property._id === propertyId || property.id === propertyId,
-      );
-    },
-    [properties],
+    [
+      savedPropertyIds,
+      oxyServices,
+      activeSessionId,
+      addSavedItem,
+      removeSavedItem,
+      addSavingPropertyId,
+      removeSavingPropertyId,
+      setError,
+      isSaved,
+      isPropertySaving,
+      handleApiError,
+    ],
   );
 
   return {
-    savedProperties: properties,
+    savedPropertyIds,
     isLoading,
+    isSaving: savingPropertyIds.length > 0,
     error,
-    loadSavedProperties,
+    toggleSaved,
+    isSaved,
+    isPropertySaving,
     saveProperty,
     unsaveProperty,
-    isPropertySaved,
+    clearError,
   };
 };

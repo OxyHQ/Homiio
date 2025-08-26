@@ -1,18 +1,18 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
-import { useFavorites } from '@/hooks/useFavorites';
+import { useSavedProperties } from '@/hooks/useSavedProperties';
 import { ThemedText } from '@/components/ThemedText';
 import { HeartIcon, HeartIconActive } from '@/assets/icons/heart-icon';
 import { colors } from '@/styles/colors';
 
-interface FavoritesWidgetProps {
+interface SavedPropertiesWidgetProps {
   style?: any;
 }
 
-export const FavoritesWidget: React.FC<FavoritesWidgetProps> = ({ style }) => {
-  const { favoriteIds } = useFavorites();
-  const favoriteCount = favoriteIds.length;
+export const SavedPropertiesWidget: React.FC<SavedPropertiesWidgetProps> = ({ style }) => {
+  const { savedPropertyIds } = useSavedProperties();
+  const savedCount = savedPropertyIds.length;
 
   const handlePress = () => {
     router.push('/saved');
@@ -21,29 +21,32 @@ export const FavoritesWidget: React.FC<FavoritesWidgetProps> = ({ style }) => {
   return (
     <TouchableOpacity style={[styles.container, style]} onPress={handlePress} activeOpacity={0.8}>
       <View style={styles.iconContainer}>
-        {favoriteCount > 0 ? (
+        {savedCount > 0 ? (
           <HeartIconActive size={24} color={colors.primaryColor} />
         ) : (
           <HeartIcon size={24} color={colors.primaryDark_2} />
         )}
-        {favoriteCount > 0 && (
+        {savedCount > 0 && (
           <View style={styles.badge}>
             <ThemedText style={styles.badgeText}>
-              {favoriteCount > 99 ? '99+' : favoriteCount}
+              {savedCount > 99 ? '99+' : savedCount}
             </ThemedText>
           </View>
         )}
       </View>
       <ThemedText style={styles.label}>
-        {favoriteCount === 0
-          ? 'No Favorites'
-          : favoriteCount === 1
-            ? '1 Favorite'
-            : `${favoriteCount} Favorites`}
+        {savedCount === 0
+          ? 'No Saved Properties'
+          : savedCount === 1
+            ? '1 Saved Property'
+            : `${savedCount} Saved Properties`}
       </ThemedText>
     </TouchableOpacity>
   );
 };
+
+// Backward compatibility export
+export const FavoritesWidget = SavedPropertiesWidget;
 
 const styles = StyleSheet.create({
   container: {

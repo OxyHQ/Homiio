@@ -52,7 +52,7 @@ const IconComponent = Ionicons as any;
 
 interface SaveButtonProps {
   isSaved?: boolean; // Made optional since we'll determine this from React Query
-  onPress?: () => void; // Optional for backward compatibility
+  onPress?: () => void;
   onLongPress?: () => void;
   size?: number;
   style?: ViewStyle;

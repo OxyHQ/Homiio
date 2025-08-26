@@ -781,7 +781,7 @@ export default function SearchScreen() {
           : properties.map((property) => (
             <PropertyCard key={property._id} property={property}
               onPress={() => handlePropertyPress(property)}
-              showFavoriteButton showVerifiedBadge showFavoriteCount={true} favoriteCountDisplayMode="inline" style={{ marginBottom: 16 }} />
+              showSaveButton showVerifiedBadge showSaveCount={true} saveCountDisplayMode="inline" style={{ marginBottom: 16 }} />
           ))}
     </ScrollView>
   );

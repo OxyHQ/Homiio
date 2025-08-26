@@ -19,7 +19,6 @@ import { Property } from '@homiio/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { useSavedProperties } from '@/hooks/useSavedProperties';
 import { useOxy } from '@oxyhq/services';
-import { useFavorites } from '@/hooks/useFavorites';
 import { ThemedText } from '@/components/ThemedText';
 import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
 
@@ -42,13 +41,12 @@ export default function PropertiesScreen() {
   const [headerHeight, setHeaderHeight] = useState(0);
 
   const { properties: allProperties, loading, loadProperties } = useProperties();
-  const { savedProperties } = useSavedProperties();
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { isSaved, toggleSaved } = useSavedProperties();
 
-  // Combine properties with favorite status
-  const propertiesWithFavorite = allProperties.map((property) => ({
+  // Combine properties with saved status
+  const propertiesWithSavedStatus = allProperties.map((property) => ({
     ...property,
-    isFavorite: isFavorite(property._id || property.id || ''),
+    isSaved: isSaved(property._id || property.id || ''),
   }));
 
   useEffect(() => {
@@ -168,7 +166,7 @@ export default function PropertiesScreen() {
         <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
           <PropertyList
             key={viewMode}
-            properties={propertiesWithFavorite}
+            properties={propertiesWithSavedStatus}
             onPropertyPress={handlePropertyPress}
           />
         </Animated.View>

@@ -6,7 +6,7 @@ import { PropertyCardVariant, PropertyCardOrientation } from '../../PropertyCard
 export interface PropertyCardSkeletonProps {
   variant?: PropertyCardVariant;
   orientation?: PropertyCardOrientation;
-  showFavoriteButton?: boolean;
+  showSaveButton?: boolean;
   showRating?: boolean;
   showPrice?: boolean;
   showFeatures?: boolean;
@@ -17,7 +17,7 @@ export interface PropertyCardSkeletonProps {
 export function PropertyCardSkeleton({
   variant = 'default',
   orientation = 'vertical',
-  showFavoriteButton = true,
+  showSaveButton = true,
   showRating = true,
   showPrice = true,
   showFeatures = true,
@@ -91,7 +91,7 @@ export function PropertyCardSkeleton({
         />
 
         {/* Save Button Skeleton */}
-        {showFavoriteButton && (
+        {showSaveButton && (
           <Skeleton style={styles.saveButtonSkeleton} />
         )}
 

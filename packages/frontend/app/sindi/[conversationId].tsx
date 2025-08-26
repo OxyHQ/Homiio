@@ -419,7 +419,7 @@ const PropertiesFromIds = React.memo(function PropertiesFromIds({ ids }: { ids: 
           orientation={'horizontal'}
           variant={'compact'}
           onPress={() => router.push(`/properties/${property._id || property.id}`)}
-          showFavoriteButton={false}
+          showSaveButton={false}
         />
       ))}
     </View>
