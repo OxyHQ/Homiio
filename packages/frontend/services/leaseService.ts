@@ -1,6 +1,5 @@
 import { api } from '@/utils/api';
 import { OxyServices } from '@oxyhq/services';
-import { API_URL } from '@/config';
 import {
   Lease,
   CreateLeaseData,
@@ -241,8 +240,6 @@ class LeaseService {
     file: File,
     type: string,
     description?: string,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
   ): Promise<LeaseDocument> {
     const formData = new FormData();
     formData.append('file', file);
@@ -251,68 +248,23 @@ class LeaseService {
       formData.append('description', description);
     }
 
-    const headers: Record<string, string> = {};
-
-    // Handle authentication if OxyServices is provided
-    if (oxyServices && activeSessionId) {
-      try {
-        const tokenData = await oxyServices.getTokenBySession(activeSessionId);
-
-        if (!tokenData) {
-          throw new Error('No authentication token found');
-        }
-
-        headers['Authorization'] = `Bearer ${tokenData.accessToken}`;
-      } catch (error) {
-        console.error('Failed to get token:', error);
-        throw new Error('Authentication failed');
-      }
-    }
-
-    const response = await fetch(`${API_URL}${this.baseUrl}/${leaseId}/documents`, {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || data.error || `HTTP ${response.status}`);
-    }
-
-    return data.data;
+    const response = await api.post(`${this.baseUrl}/${leaseId}/documents`, formData);
+    return response.data.data;
   }
 
   // Utility methods
-  async getActiveLeases(oxyServices?: OxyServices, activeSessionId?: string): Promise<Lease[]> {
-    const response = await api.get(`${this.baseUrl}/active`, {
-      oxyServices,
-      activeSessionId,
-    });
+  async getActiveLeases(): Promise<Lease[]> {
+    const response = await api.get(`${this.baseUrl}/active`);
     return response.data.data;
   }
 
-  async getPendingSignatureLeases(
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ): Promise<Lease[]> {
-    const response = await api.get(`${this.baseUrl}/pending-signature`, {
-      oxyServices,
-      activeSessionId,
-    });
+  async getPendingSignatureLeases(): Promise<Lease[]> {
+    const response = await api.get(`${this.baseUrl}/pending-signature`);
     return response.data.data;
   }
 
-  async getUpcomingPayments(
-    leaseId: string,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ): Promise<Payment[]> {
-    const response = await api.get(`${this.baseUrl}/${leaseId}/upcoming-payments`, {
-      oxyServices,
-      activeSessionId,
-    });
+  async getUpcomingPayments(leaseId: string): Promise<Payment[]> {
+    const response = await api.get(`${this.baseUrl}/${leaseId}/upcoming-payments`);
     return response.data.data;
   }
 }

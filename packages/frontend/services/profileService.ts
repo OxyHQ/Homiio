@@ -1,5 +1,4 @@
 import { api, ApiError } from '@/utils/api';
-import { OxyServices } from '@oxyhq/services';
 import {
   Profile,
   PersonalProfile,
@@ -51,16 +50,10 @@ class ProfileService {
   /**
    * Get or create user's primary profile
    */
-  async getOrCreatePrimaryProfile(
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ): Promise<Profile | null> {
+  async getOrCreatePrimaryProfile(): Promise<Profile | null> {
     try {
       console.log('ProfileService: Fetching primary profile from /api/profiles/me');
-      const response = await api.get(`${this.baseUrl}/me`, {
-        oxyServices,
-        activeSessionId,
-      });
+      const response = await api.get(`${this.baseUrl}/me`);
       const profile = response.data.data; // Can be null if not created
       console.log(
         'ProfileService: Successfully retrieved primary profile:',
@@ -74,10 +67,6 @@ class ProfileService {
         const createResponse = await api.post(
           `${this.baseUrl}`,
           { isPersonalProfile: true },
-          {
-            oxyServices,
-            activeSessionId,
-          },
         );
         console.log('ProfileService: Successfully created personal profile');
         return createResponse.data.data;
@@ -90,12 +79,9 @@ class ProfileService {
   /**
    * Get all profiles for the current user
    */
-  async getUserProfiles(oxyServices?: OxyServices, activeSessionId?: string): Promise<Profile[]> {
+  async getUserProfiles(): Promise<Profile[]> {
     try {
-      const response = await api.get(`${this.baseUrl}/me/all`, {
-        oxyServices,
-        activeSessionId,
-      });
+      const response = await api.get(`${this.baseUrl}/me/all`);
       const profiles = response.data.data;
       return profiles;
     } catch (error) {
@@ -107,16 +93,9 @@ class ProfileService {
   /**
    * Get profile by type
    */
-  async getProfileByType(
-    profileType: ProfileType,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ): Promise<Profile> {
+  async getProfileByType(profileType: ProfileType): Promise<Profile> {
     try {
-      const response = await api.get(`${this.baseUrl}/me/${profileType}`, {
-        oxyServices,
-        activeSessionId,
-      });
+      const response = await api.get(`${this.baseUrl}/me/${profileType}`);
       const profile = response.data.data;
       return profile;
     } catch (error) {
@@ -128,16 +107,9 @@ class ProfileService {
   /**
    * Create a new profile
    */
-  async createProfile(
-    profileData: CreateProfileData,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ): Promise<Profile> {
+  async createProfile(profileData: CreateProfileData): Promise<Profile> {
     try {
-      const response = await api.post(`${this.baseUrl}`, profileData, {
-        oxyServices,
-        activeSessionId,
-      });
+      const response = await api.post(`${this.baseUrl}`, profileData);
       return response.data.data;
     } catch (error) {
       console.error('Error creating profile:', error);
@@ -148,18 +120,11 @@ class ProfileService {
   /**
    * Update primary profile (no profile ID needed)
    */
-  async updatePrimaryProfile(
-    updateData: UpdateProfileData,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ): Promise<Profile> {
+  async updatePrimaryProfile(updateData: UpdateProfileData): Promise<Profile> {
     try {
       console.log('ProfileService: Updating primary profile with data:', updateData);
 
-      const response = await api.put(`${this.baseUrl}/me`, updateData, {
-        oxyServices,
-        activeSessionId,
-      });
+      const response = await api.put(`${this.baseUrl}/me`, updateData);
       const updatedProfile = response.data.data;
 
       console.log('ProfileService: Received updated profile from server:', updatedProfile);
@@ -174,23 +139,11 @@ class ProfileService {
   /**
    * Update primary profile trust score
    */
-  async updatePrimaryTrustScore(
-    factor: string,
-    value: number,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ): Promise<Profile> {
-    const response = await api.patch(
-      `${this.baseUrl}/me/trust-score`,
-      {
-        factor,
-        value,
-      },
-      {
-        oxyServices,
-        activeSessionId,
-      },
-    );
+  async updatePrimaryTrustScore(factor: string, value: number): Promise<Profile> {
+    const response = await api.patch(`${this.baseUrl}/me/trust-score`, {
+      factor,
+      value,
+    });
 
     return response.data.data;
   }
@@ -198,14 +151,8 @@ class ProfileService {
   /**
    * Recalculate primary profile trust score
    */
-  async recalculatePrimaryTrustScore(
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ): Promise<{ profile: Profile; trustScore: any }> {
-    const response = await api.post(`${this.baseUrl}/me/trust-score/recalculate`, undefined, {
-      oxyServices,
-      activeSessionId,
-    });
+  async recalculatePrimaryTrustScore(): Promise<{ profile: Profile; trustScore: any }> {
+    const response = await api.post(`${this.baseUrl}/me/trust-score/recalculate`);
 
     return response.data.data;
   }
@@ -213,20 +160,12 @@ class ProfileService {
   /**
    * Update profile
    */
-  async updateProfile(
-    profileId: string,
-    updateData: UpdateProfileData,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ): Promise<Profile> {
+  async updateProfile(profileId: string, updateData: UpdateProfileData): Promise<Profile> {
     try {
       console.log('ProfileService.updateProfile called with:', { profileId, updateData });
       console.log('Making API call to:', `${this.baseUrl}/${profileId}`);
 
-      const response = await api.put(`${this.baseUrl}/${profileId}`, updateData, {
-        oxyServices,
-        activeSessionId,
-      });
+      const response = await api.put(`${this.baseUrl}/${profileId}`, updateData);
       console.log('ProfileService.updateProfile API response:', response);
 
       const updatedProfile = response.data.data;
@@ -242,16 +181,9 @@ class ProfileService {
   /**
    * Delete profile
    */
-  async deleteProfile(
-    profileId: string,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ): Promise<void> {
+  async deleteProfile(profileId: string): Promise<void> {
     try {
-      await api.delete(`${this.baseUrl}/${profileId}`, {
-        oxyServices,
-        activeSessionId,
-      });
+      await api.delete(`${this.baseUrl}/${profileId}`);
     } catch (error) {
       console.error('Error deleting profile:', error);
       throw error;
@@ -261,15 +193,9 @@ class ProfileService {
   /**
    * Get agency memberships for the current user
    */
-  async getAgencyMemberships(
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ): Promise<Profile[]> {
+  async getAgencyMemberships(): Promise<Profile[]> {
     try {
-      const response = await api.get(`${this.baseUrl}/me/agency-memberships`, {
-        oxyServices,
-        activeSessionId,
-      });
+      const response = await api.get(`${this.baseUrl}/me/agency-memberships`);
       const memberships = response.data.data;
       return memberships;
     } catch (error) {
@@ -281,25 +207,12 @@ class ProfileService {
   /**
    * Add member to agency profile
    */
-  async addAgencyMember(
-    profileId: string,
-    memberOxyUserId: string,
-    role: AgencyRole,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ): Promise<Profile> {
+  async addAgencyMember(profileId: string, memberOxyUserId: string, role: AgencyRole): Promise<Profile> {
     try {
-      const response = await api.post(
-        `${this.baseUrl}/${profileId}/members`,
-        {
-          memberOxyUserId,
-          role,
-        },
-        {
-          oxyServices,
-          activeSessionId,
-        },
-      );
+      const response = await api.post(`${this.baseUrl}/${profileId}/members`, {
+        memberOxyUserId,
+        role,
+      });
       return response.data.data;
     } catch (error) {
       console.error('Error adding agency member:', error);
@@ -310,17 +223,9 @@ class ProfileService {
   /**
    * Remove member from agency profile
    */
-  async removeAgencyMember(
-    profileId: string,
-    memberOxyUserId: string,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ): Promise<Profile> {
+  async removeAgencyMember(profileId: string, memberOxyUserId: string): Promise<Profile> {
     try {
-      const response = await api.delete(`${this.baseUrl}/${profileId}/members/${memberOxyUserId}`, {
-        oxyServices,
-        activeSessionId,
-      });
+      const response = await api.delete(`${this.baseUrl}/${profileId}/members/${memberOxyUserId}`);
       return response.data.data;
     } catch (error) {
       console.error('Error removing agency member:', error);
@@ -331,25 +236,12 @@ class ProfileService {
   /**
    * Update trust score
    */
-  async updateTrustScore(
-    profileId: string,
-    factor: string,
-    value: number,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ): Promise<Profile> {
+  async updateTrustScore(profileId: string, factor: string, value: number): Promise<Profile> {
     try {
-      const response = await api.patch(
-        `${this.baseUrl}/${profileId}/trust-score`,
-        {
-          factor,
-          value,
-        },
-        {
-          oxyServices,
-          activeSessionId,
-        },
-      );
+      const response = await api.patch(`${this.baseUrl}/${profileId}/trust-score`, {
+        factor,
+        value,
+      });
       return response.data.data;
     } catch (error) {
       console.error('Error updating trust score:', error);
@@ -360,19 +252,12 @@ class ProfileService {
   /**
    * Activate profile
    */
-  async activateProfile(
-    profileId: string,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ): Promise<Profile> {
+  async activateProfile(profileId: string): Promise<Profile> {
     try {
       console.log('ProfileService.activateProfile called with:', { profileId });
       console.log('Making API call to:', `${this.baseUrl}/${profileId}/activate`);
 
-      const response = await api.post(`${this.baseUrl}/${profileId}/activate`, undefined, {
-        oxyServices,
-        activeSessionId,
-      });
+      const response = await api.post(`${this.baseUrl}/${profileId}/activate`);
       console.log('ProfileService.activateProfile API response:', response);
 
       const activatedProfile = response.data.data;
@@ -388,16 +273,9 @@ class ProfileService {
   /**
    * Get profile by ID
    */
-  async getProfileById(
-    profileId: string,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ): Promise<Profile> {
+  async getProfileById(profileId: string): Promise<Profile> {
     try {
-      const response = await api.get(`${this.baseUrl}/${profileId}`, {
-        oxyServices,
-        activeSessionId,
-      });
+      const response = await api.get(`${this.baseUrl}/${profileId}`);
       return response.data.data;
     } catch (error) {
       console.error('Error getting profile by ID:', error);

@@ -1,4 +1,4 @@
-import { OxyServices } from '@oxyhq/services';
+import { api } from '@/utils/api';
 import type { SavedProperty as SharedSavedProperty } from '@homiio/shared-types';
 
 export type SavedProperty = SharedSavedProperty & {
@@ -14,60 +14,50 @@ export interface SavedPropertiesResponse {
 }
 
 class SavedPropertyService {
-  async getSavedProperties(
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<SavedPropertiesResponse> {
-    const { userApi } = await import('@/utils/api');
-    const response = await userApi.getSavedProperties(oxyServices, activeSessionId);
-
+  async getSavedProperties(): Promise<SavedPropertiesResponse> {
+    const response = await api.get('/api/profiles/me/saved-properties');
+    
+    // The API returns { success: true, data: [...], message: "..." }
+    // where data is directly the array of properties
+    const properties = Array.isArray(response.data) ? response.data : [];
+    
     return {
-      properties: response.data?.properties || response.data || [],
-      total: response.data?.pagination?.total || 0,
-      page: response.data?.pagination?.page || 1,
-      totalPages: response.data?.pagination?.totalPages || 1,
+      properties,
+      total: properties.length,
+      page: 1,
+      totalPages: 1,
     };
   }
 
   async saveProperty(
     propertyId: string,
-    notes: string | undefined,
-    oxyServices: OxyServices,
-    activeSessionId: string,
+    notes?: string,
     folderId?: string | null,
-  ): Promise<void> {
-    const { userApi } = await import('@/utils/api');
-    await userApi.saveProperty(propertyId, notes, oxyServices, activeSessionId, folderId);
+  ): Promise<any> {
+    const response = await api.post('/api/profiles/me/save-property', {
+      propertyId,
+      notes,
+      folderId,
+    });
+    return response.data;
   }
 
-  async unsaveProperty(
-    propertyId: string,
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<void> {
-    const { userApi } = await import('@/utils/api');
-    await userApi.unsaveProperty(propertyId, oxyServices, activeSessionId);
+  async unsaveProperty(propertyId: string): Promise<any> {
+    const response = await api.delete(`/api/profiles/me/saved-properties/${propertyId}`);
+    return response.data;
   }
 
-  async updateNotes(
-    propertyId: string,
-    notes: string,
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<void> {
-    const { userApi } = await import('@/utils/api');
-    await userApi.updateSavedPropertyNotes(propertyId, notes, oxyServices, activeSessionId);
+  async updateNotes(propertyId: string, notes: string): Promise<void> {
+    await api.patch(`/api/profiles/me/saved-properties/${propertyId}/notes`, {
+      notes,
+    });
   }
 
-  async bulkUnsave(
-    propertyIds: string[],
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<void> {
+  async bulkUnsave(propertyIds: string[]): Promise<void> {
     // For bulk operations, we'll need to implement this in the API utility
     // For now, we'll use individual calls
     const promises = propertyIds.map((propertyId) =>
-      this.unsaveProperty(propertyId, oxyServices, activeSessionId),
+      this.unsaveProperty(propertyId),
     );
     await Promise.all(promises);
   }

@@ -1,4 +1,3 @@
-import { OxyServices } from '@oxyhq/services';
 import { api, ApiResponse } from '@/utils/api';
 
 export type ViewingStatus = 'pending' | 'approved' | 'declined' | 'cancelled';
@@ -33,70 +32,56 @@ export const viewingService = {
   async createViewingRequest(
     propertyId: string,
     payload: { date: string; time: string; message?: string },
-    oxyServices: OxyServices,
-    activeSessionId: string,
   ): Promise<ApiResponse<ViewingRequest>> {
     const response = await api.post<ApiResponse<ViewingRequest>>(
       `/api/properties/${propertyId}/viewings`,
       payload,
-      { oxyServices, activeSessionId },
     );
     return response.data;
   },
 
   async listMyViewingRequests(
-    params: { status?: ViewingStatus; page?: number; limit?: number } | undefined,
-    oxyServices: OxyServices,
-    activeSessionId: string,
+    params?: { status?: ViewingStatus; page?: number; limit?: number },
   ): Promise<ApiResponse<ViewingRequest[]>> {
     const response = await api.get<ApiResponse<ViewingRequest[]>>('/api/viewings/me', {
       params,
-      oxyServices,
-      activeSessionId,
     });
     return response.data;
   },
 
   async listPropertyViewingRequests(
     propertyId: string,
-    params: { status?: ViewingStatus; page?: number; limit?: number } | undefined,
-    oxyServices: OxyServices,
-    activeSessionId: string,
+    params?: { status?: ViewingStatus; page?: number; limit?: number },
   ): Promise<ApiResponse<ViewingRequest[]>> {
     const response = await api.get<ApiResponse<ViewingRequest[]>>(
       `/api/properties/${propertyId}/viewings`,
       {
         params,
-        oxyServices,
-        activeSessionId,
       },
     );
     return response.data;
   },
 
-  async approve(viewingId: string, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse<ViewingRequest>> {
+  async approve(viewingId: string): Promise<ApiResponse<ViewingRequest>> {
     const response = await api.post<ApiResponse<ViewingRequest>>(
       `/api/viewings/${viewingId}/approve`,
       {},
-      { oxyServices, activeSessionId },
     );
     return response.data;
   },
 
-  async decline(viewingId: string, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse<ViewingRequest>> {
+  async decline(viewingId: string): Promise<ApiResponse<ViewingRequest>> {
     const response = await api.post<ApiResponse<ViewingRequest>>(
       `/api/viewings/${viewingId}/decline`,
       {},
-      { oxyServices, activeSessionId },
     );
     return response.data;
   },
 
-  async cancel(viewingId: string, oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse<ViewingRequest>> {
+  async cancel(viewingId: string): Promise<ApiResponse<ViewingRequest>> {
     const response = await api.post<ApiResponse<ViewingRequest>>(
       `/api/viewings/${viewingId}/cancel`,
       {},
-      { oxyServices, activeSessionId },
     );
     return response.data;
   },
@@ -104,13 +89,10 @@ export const viewingService = {
   async update(
     viewingId: string,
     payload: { date: string; time: string; message?: string },
-    oxyServices: OxyServices,
-    activeSessionId: string,
   ): Promise<ApiResponse<ViewingRequest>> {
     const response = await api.put<ApiResponse<ViewingRequest>>(
       `/api/viewings/${viewingId}`,
       payload,
-      { oxyServices, activeSessionId },
     );
     return response.data;
   },

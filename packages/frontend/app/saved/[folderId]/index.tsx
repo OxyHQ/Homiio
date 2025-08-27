@@ -24,15 +24,14 @@ export default function SavedFolderScreen() {
   // Use React Query directly for instant updates
   const { data: savedPropertiesData, isLoading: savedLoading } = useQuery({
     queryKey: ['savedProperties'],
-    queryFn: () => savedPropertyService.getSavedProperties(oxyServices!, activeSessionId!),
-    enabled: !!oxyServices && !!activeSessionId,
+    queryFn: () => savedPropertyService.getSavedProperties(),
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,
   });
 
   const { data: foldersData, isLoading: foldersLoading } = useQuery({
     queryKey: ['savedFolders'],
-    queryFn: () => savedPropertyFolderService.getSavedPropertyFolders(oxyServices!, activeSessionId!),
+    queryFn: () => savedPropertyFolderService.getSavedPropertyFolders(),
     enabled: !!oxyServices && !!activeSessionId,
     staleTime: 1000 * 60,
     gcTime: 1000 * 60 * 10,

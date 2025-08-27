@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import profileService from '@/services/profileService';
 import { Profile, UpdateProfileData, ProfileType } from '@homiio/shared-types';
-import { OxyServices } from '@oxyhq/services';
 
 interface ProfileState {
   // State
@@ -22,38 +21,20 @@ interface ProfileState {
   setLandlordProfileLoading: (loading: boolean) => void;
   setLandlordProfileError: (error: string | null) => void;
 
-  // Async Actions
-  fetchPrimaryProfile: (
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ) => Promise<Profile | null>;
-  fetchUserProfiles: (oxyServices?: OxyServices, activeSessionId?: string) => Promise<Profile[]>;
-  fetchLandlordProfileById: (
-    profileId: string,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ) => Promise<Profile | null>;
-  createProfile: (
-    profileData: any,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
+    // Async Actions
+  fetchPrimaryProfile: () => Promise<Profile | null>;
+  fetchUserProfiles: () => Promise<Profile[]>;
+  fetchLandlordProfile: (profileId: string) => Promise<Profile | null>;
+  createProfile: (profileData: {
+    profileType: ProfileType;
+    personalProfile?: any;
+    businessProfile?: any;
+  }) => Promise<Profile>;
+  updatePrimaryProfile: (
+    profileData: UpdateProfileData,
   ) => Promise<Profile>;
-  updateProfile: (
-    profileId: string,
-    updateData: UpdateProfileData,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ) => Promise<Profile>;
-  deleteProfile: (
-    profileId: string,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ) => Promise<void>;
-  activateProfile: (
-    profileId: string,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ) => Promise<Profile>;
+  deleteProfile: (profileId: string) => Promise<void>;
+  fetchPublicLandlordProfile: (profileId: string) => Promise<Profile | null>;
 }
 
 export const useProfileStore = create<ProfileState>((set, get) => ({

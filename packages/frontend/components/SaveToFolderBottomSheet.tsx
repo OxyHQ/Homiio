@@ -20,7 +20,6 @@ import Button from './Button';
 import { Property } from '@homiio/shared-types';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useOxy } from '@oxyhq/services';
 import savedPropertyService from '@/services/savedPropertyService';
 import { toast } from 'sonner';
 
@@ -56,7 +55,6 @@ export function SaveToFolderBottomSheet({
 }: SaveToFolderBottomSheetProps) {
   const { t: _t } = useTranslation();
   const { folders, isLoading, loadFolders } = useSavedPropertiesContext();
-  const { oxyServices, activeSessionId } = useOxy();
   const queryClient = useQueryClient();
 
   const [showCreateFolder, setShowCreateFolder] = useState(false);
@@ -67,10 +65,7 @@ export function SaveToFolderBottomSheet({
   // React Query mutations
   const saveToFolderMutation = useMutation({
     mutationFn: async ({ propertyId, folderId }: { propertyId: string; folderId: string | null }) => {
-      if (!oxyServices || !activeSessionId) {
-        throw new Error('Authentication required');
-      }
-      return savedPropertyService.saveProperty(propertyId, undefined, oxyServices, activeSessionId, folderId);
+      return savedPropertyService.saveProperty(propertyId, undefined, folderId || undefined);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
@@ -85,10 +80,7 @@ export function SaveToFolderBottomSheet({
 
   const createFolderMutation = useMutation({
     mutationFn: async (folderData: { name: string; color: string; icon: string }) => {
-      if (!oxyServices || !activeSessionId) {
-        throw new Error('Authentication required');
-      }
-      return savedPropertyFolderService.createSavedPropertyFolder(folderData, oxyServices, activeSessionId);
+      return savedPropertyFolderService.createSavedPropertyFolder(folderData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['savedFolders'] });

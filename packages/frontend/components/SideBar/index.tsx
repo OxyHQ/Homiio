@@ -5,7 +5,6 @@ import {
   Text,
   View,
   ViewStyle,
-  TouchableOpacity,
   StyleSheet,
 } from 'react-native';
 import { Pressable } from 'react-native-web-hover';
@@ -31,9 +30,7 @@ import { ProfileIcon, ProfileIconActive } from '@/assets/icons/profile-icon';
 import { webAlert } from '@/utils/api';
 import { phuduFontWeights } from '@/styles/fonts';
 import { useProfile } from '@/context/ProfileContext';
-import { useQuery } from '@tanstack/react-query';
-import savedPropertyService from '@/services/savedPropertyService';
-import savedPropertyFolderService from '@/services/savedPropertyFolderService';
+import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 
 const IconComponent = Ionicons as any;
 
@@ -43,24 +40,10 @@ export function SideBar() {
   const { t } = useTranslation();
   const router = useRouter();
   const { primaryProfile, isLoading } = useProfile();
-  const { isAuthenticated, user, showBottomSheet, logout, oxyServices, activeSessionId } = useOxy();
+  const { isAuthenticated: _isAuthenticated, user, showBottomSheet, logout } = useOxy();
 
-  // Use React Query directly for instant updates
-  const { data: savedPropertiesData, isLoading: savedLoading } = useQuery({
-    queryKey: ['savedProperties'],
-    queryFn: () => savedPropertyService.getSavedProperties(oxyServices!, activeSessionId!),
-    enabled: !!isAuthenticated && !!oxyServices && !!activeSessionId,
-    staleTime: 1000 * 30,
-    gcTime: 1000 * 60 * 10,
-  });
-
-  const { data: foldersData, isLoading: foldersLoading } = useQuery({
-    queryKey: ['savedFolders'],
-    queryFn: () => savedPropertyFolderService.getSavedPropertyFolders(oxyServices!, activeSessionId!),
-    enabled: !!isAuthenticated && !!oxyServices && !!activeSessionId,
-    staleTime: 1000 * 60,
-    gcTime: 1000 * 60 * 10,
-  });
+  // Use SavedPropertiesContext for consistent state with SaveButton
+  const { savedProperties, folders, isLoading: savedLoading } = useSavedPropertiesContext();
 
   // Get all saved items (folders and properties) ordered by recency
   const recentSavedItems = React.useMemo(() => {
@@ -78,16 +61,16 @@ export function SideBar() {
       timestamp: number;
     }[] = [];
 
-    const savedProperties = savedPropertiesData?.properties || [];
-    const folders = foldersData?.folders || [];
+    const savedProps = Array.isArray(savedProperties) ? savedProperties : [];
+    const savedFolders = Array.isArray(folders) ? folders : [];
 
     // Add folders with their most recent activity (excluding default folder)
-    folders.forEach((folder: any) => {
+    savedFolders.forEach((folder: any) => {
       // Skip the default folder
       if (folder.isDefault) return;
 
       // Get properties saved to this folder
-      const folderProperties = savedProperties.filter((property: any) =>
+      const folderProperties = savedProps.filter((property: any) =>
         property.folderId === folder._id
       );
 
@@ -126,9 +109,9 @@ export function SideBar() {
     });
 
     // Add properties (including those in default folder, excluding those in custom folders)
-    savedProperties.forEach((property: any) => {
+    savedProps.forEach((property: any) => {
       // Get the default folder
-      const defaultFolder = folders.find((folder: any) => folder.isDefault);
+      const defaultFolder = savedFolders.find((folder: any) => folder.isDefault);
 
       // Skip properties that are saved to custom folders (but allow default folder)
       if (property.folderId && property.folderId !== defaultFolder?._id) return;
@@ -148,7 +131,7 @@ export function SideBar() {
     return allItems
       .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, 5);
-  }, [savedPropertiesData, foldersData]);
+  }, [savedProperties, folders]);
 
   // Only show roommates for personal profiles and when profile data is loaded
   // If still loading profiles, don't show roommates to avoid flickering
@@ -408,7 +391,7 @@ export function SideBar() {
                     );
                   }
                 })}
-                {recentSavedItems.length === 0 && !savedLoading && !foldersLoading && isExpanded && (
+                {recentSavedItems.length === 0 && !savedLoading && isExpanded && (
                   <View style={styles.emptyRecentlySaved}>
                     <Text style={styles.emptyRecentlySavedText}>
                       {t('sidebar.savedProperties.empty', { defaultValue: 'No saved properties or folders' })}

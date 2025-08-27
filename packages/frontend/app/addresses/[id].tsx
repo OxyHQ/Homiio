@@ -18,7 +18,6 @@ import { ThemedText } from '@/components/ThemedText';
 import { PropertyCard } from '@/components/PropertyCard';
 import { AddressDisplay } from '@/components/AddressDisplay';
 import { NeighborhoodRatingWidget } from '@/components/widgets/NeighborhoodRatingWidget';
-import { useOxy } from '@oxyhq/services';
 import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
 
 // Services and hooks
@@ -129,7 +128,6 @@ export default function AddressDetailsPage() {
 
     // Get derived values
     const addressId = id;
-    const { oxyServices, activeSessionId } = useOxy();
 
     // Filter reviews based on active tab
     const getFilteredReviews = () => {
@@ -163,34 +161,22 @@ export default function AddressDetailsPage() {
     // Fetch data
     const fetchAddress = useCallback(async () => {
         try {
-            if (!oxyServices || !activeSessionId) {
-                throw new Error('Authentication required');
-            }
-            const response = await api.get(`/api/addresses/${addressId}`, {
-                oxyServices,
-                activeSessionId
-            });
+            const response = await api.get(`/api/addresses/${addressId}`);
             // Extract address from the nested response structure
             setAddress(response.data?.address || response.data);
         } catch (err) {
             console.error('Error fetching address:', err);
             throw err;
         }
-    }, [addressId, oxyServices, activeSessionId]);
+    }, [addressId]);
 
     const fetchPropertiesAtAddress = useCallback(async () => {
         try {
-            if (!oxyServices || !activeSessionId) {
-                setProperties([]);
-                return;
-            }
             const response = await api.get('/api/properties/search', {
                 params: {
                     addressId: addressId,
                     limit: 50
-                },
-                oxyServices,
-                activeSessionId
+                }
             });
             const properties = response.data?.data || response.data?.properties || [];
             setProperties(properties);
@@ -198,17 +184,11 @@ export default function AddressDetailsPage() {
             console.error('Error fetching properties:', err);
             throw err;
         }
-    }, [addressId, oxyServices, activeSessionId]);
+    }, [addressId]);
 
     const fetchAddressReviews = useCallback(async () => {
         try {
-            if (!oxyServices || !activeSessionId) {
-                throw new Error('Authentication required');
-            }
-            const response = await api.get(`/api/reviews/address/${addressId}`, {
-                oxyServices,
-                activeSessionId
-            });
+            const response = await api.get(`/api/reviews/address/${addressId}`);
 
             // Handle hierarchical review response structure
             let reviewsData: any[] = [];
@@ -256,7 +236,7 @@ export default function AddressDetailsPage() {
             setReviews([]);
             throw err;
         }
-    }, [addressId, oxyServices, activeSessionId]);
+    }, [addressId]);
 
     // Fetch all data
     const fetchAllData = useCallback(async (refresh = false) => {

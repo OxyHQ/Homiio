@@ -1,5 +1,4 @@
-import { userApi } from '@/utils/api';
-import { OxyServices } from '@oxyhq/services';
+import { api } from '@/utils/api';
 import type { Property } from '@homiio/shared-types';
 
 export interface RecentlyViewedResponse {
@@ -12,13 +11,10 @@ export const recentlyViewedService = {
   /**
    * Get recently viewed properties
    */
-  async getRecentlyViewedProperties(
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<RecentlyViewedResponse> {
+  async getRecentlyViewedProperties(): Promise<RecentlyViewedResponse> {
     try {
-      const response = await userApi.getRecentProperties(oxyServices, activeSessionId);
-      return response;
+      const response = await api.get('/api/profiles/me/recent-properties');
+      return response.data;
     } catch (error: any) {
       return {
         success: false,
@@ -30,14 +26,10 @@ export const recentlyViewedService = {
   /**
    * Track property view
    */
-  async trackPropertyView(
-    propertyId: string,
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<RecentlyViewedResponse> {
+  async trackPropertyView(propertyId: string): Promise<RecentlyViewedResponse> {
     try {
-      const response = await userApi.trackPropertyView(propertyId, oxyServices, activeSessionId);
-      return response;
+      const response = await api.post(`/api/profiles/me/recent-properties/${propertyId}`);
+      return response.data;
     } catch (error: any) {
       return {
         success: false,
@@ -49,13 +41,10 @@ export const recentlyViewedService = {
   /**
    * Clear all recently viewed properties
    */
-  async clearRecentlyViewedProperties(
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<RecentlyViewedResponse> {
+  async clearRecentlyViewedProperties(): Promise<RecentlyViewedResponse> {
     try {
-      const response = await userApi.clearRecentProperties(oxyServices, activeSessionId);
-      return response;
+      const response = await api.delete('/api/profiles/me/recent-properties');
+      return response.data;
     } catch (error: any) {
       return {
         success: false,

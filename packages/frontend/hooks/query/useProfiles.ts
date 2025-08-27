@@ -1,84 +1,75 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import profileService, { type Profile, type CreateProfileData, type UpdateProfileData } from '@/services/profileService';
-import { useOxy } from '@oxyhq/services';
 
 const keys = {
-  primary: (activeSessionId?: string) => ['profile', 'primary', activeSessionId] as const,
-  all: (activeSessionId?: string) => ['profiles', 'all', activeSessionId] as const,
+  primary: () => ['profile', 'primary'] as const,
+  all: () => ['profiles', 'all'] as const,
 };
 
 export function usePrimaryProfileQuery() {
-  const { oxyServices, activeSessionId } = useOxy();
   return useQuery({
-    queryKey: keys.primary(activeSessionId ?? undefined),
-    enabled: !!oxyServices && !!activeSessionId,
+    queryKey: keys.primary(),
     queryFn: async (): Promise<Profile | null> =>
-      profileService.getOrCreatePrimaryProfile(oxyServices, activeSessionId ?? undefined),
+      profileService.getOrCreatePrimaryProfile(),
   });
 }
 
 export function useUserProfilesQuery() {
-  const { oxyServices, activeSessionId } = useOxy();
   return useQuery({
-    queryKey: keys.all(activeSessionId ?? undefined),
-    enabled: !!oxyServices && !!activeSessionId,
+    queryKey: keys.all(),
     queryFn: async (): Promise<Profile[]> =>
-      profileService.getUserProfiles(oxyServices, activeSessionId ?? undefined),
+      profileService.getUserProfiles(),
   });
 }
 
 export function useCreateProfileMutation() {
-  const { oxyServices, activeSessionId } = useOxy();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: CreateProfileData): Promise<Profile> =>
-      profileService.createProfile(payload, oxyServices, activeSessionId ?? undefined),
+      profileService.createProfile(payload),
     onSuccess: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: keys.primary(activeSessionId ?? undefined) }),
-        queryClient.invalidateQueries({ queryKey: keys.all(activeSessionId ?? undefined) }),
+        queryClient.invalidateQueries({ queryKey: keys.primary() }),
+        queryClient.invalidateQueries({ queryKey: keys.all() }),
       ]);
     },
   });
 }
 
 export function useUpdateProfileMutation() {
-  const { oxyServices, activeSessionId } = useOxy();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ profileId, data }: { profileId: string; data: UpdateProfileData }): Promise<Profile> =>
-      profileService.updateProfile(profileId, data, oxyServices, activeSessionId ?? undefined),
+      profileService.updateProfile(profileId, data),
     onSuccess: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: keys.primary(activeSessionId ?? undefined) }),
-        queryClient.invalidateQueries({ queryKey: keys.all(activeSessionId ?? undefined) }),
+        queryClient.invalidateQueries({ queryKey: keys.primary() }),
+        queryClient.invalidateQueries({ queryKey: keys.all() }),
       ]);
     },
   });
 }
 
 export function useDeleteProfileMutation() {
-  const { oxyServices, activeSessionId } = useOxy();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (profileId: string): Promise<void> =>
-      profileService.deleteProfile(profileId, oxyServices, activeSessionId ?? undefined),
+      profileService.deleteProfile(profileId),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: keys.all(activeSessionId ?? undefined) });
+      await queryClient.invalidateQueries({ queryKey: keys.all() });
     },
   });
 }
 
 export function useActivateProfileMutation() {
-  const { oxyServices, activeSessionId } = useOxy();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (profileId: string): Promise<Profile> =>
-      profileService.activateProfile(profileId, oxyServices, activeSessionId ?? undefined),
+      profileService.activateProfile(profileId),
     onSuccess: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: keys.primary(activeSessionId ?? undefined) }),
-        queryClient.invalidateQueries({ queryKey: keys.all(activeSessionId ?? undefined) }),
+        queryClient.invalidateQueries({ queryKey: keys.primary() }),
+        queryClient.invalidateQueries({ queryKey: keys.all() }),
       ]);
     },
   });

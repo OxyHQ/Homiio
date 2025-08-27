@@ -1,4 +1,4 @@
-import { OxyServices } from '@oxyhq/services';
+import { api } from '@/utils/api';
 
 export interface SavedPropertyFolder {
   _id: string;
@@ -18,55 +18,32 @@ export interface SavedPropertyFoldersResponse {
 }
 
 class SavedPropertyFolderService {
-  async getSavedPropertyFolders(
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<SavedPropertyFoldersResponse> {
-    const { userApi } = await import('@/utils/api');
-    const response = await userApi.getSavedPropertyFolders(oxyServices, activeSessionId);
+  async getSavedPropertyFolders(): Promise<SavedPropertyFoldersResponse> {
+    const response = await api.get('/api/profiles/me/saved-property-folders');
 
+    // The API returns { success: true, data: { folders: [...] }, message: "..." }
     return {
-      folders: response.data?.folders || response.data || [],
+      folders: response.data?.folders || [],
     };
   }
 
   async createSavedPropertyFolder(
     folderData: { name: string; description?: string; color?: string; icon?: string },
-    oxyServices: OxyServices,
-    activeSessionId: string,
   ): Promise<SavedPropertyFolder> {
-    const { userApi } = await import('@/utils/api');
-    const response = await userApi.createSavedPropertyFolder(
-      folderData,
-      oxyServices,
-      activeSessionId,
-    );
+    const response = await api.post('/api/profiles/me/saved-property-folders', folderData);
     return response.data;
   }
 
   async updateSavedPropertyFolder(
     folderId: string,
     folderData: { name?: string; description?: string; color?: string; icon?: string },
-    oxyServices: OxyServices,
-    activeSessionId: string,
   ): Promise<SavedPropertyFolder> {
-    const { userApi } = await import('@/utils/api');
-    const response = await userApi.updateSavedPropertyFolder(
-      folderId,
-      folderData,
-      oxyServices,
-      activeSessionId,
-    );
+    const response = await api.put(`/api/profiles/me/saved-property-folders/${folderId}`, folderData);
     return response.data;
   }
 
-  async deleteSavedPropertyFolder(
-    folderId: string,
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<void> {
-    const { userApi } = await import('@/utils/api');
-    await userApi.deleteSavedPropertyFolder(folderId, oxyServices, activeSessionId);
+  async deleteSavedPropertyFolder(folderId: string): Promise<void> {
+    await api.delete(`/api/profiles/me/saved-property-folders/${folderId}`);
   }
 }
 

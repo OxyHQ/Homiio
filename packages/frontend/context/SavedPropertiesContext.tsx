@@ -4,15 +4,15 @@ import React, {
   useState,
   useCallback,
   useEffect,
+  useMemo,
   ReactNode,
 } from 'react';
-import { useOxy } from '@oxyhq/services';
 import { toast } from 'sonner';
 import savedPropertyFolderService, {
   SavedPropertyFolder,
 } from '@/services/savedPropertyFolderService';
 import savedPropertyService, { SavedProperty } from '@/services/savedPropertyService';
-import { useSavedPropertiesStore } from '@/store/savedPropertiesStore';
+
 import { useQueryClient } from '@tanstack/react-query';
 
 interface SavedPropertiesContextType {
@@ -20,6 +20,8 @@ interface SavedPropertiesContextType {
   folders: SavedPropertyFolder[];
   savedProperties: SavedProperty[];
   savedPropertyIds: Set<string>;
+  savedPropertiesCount: number;
+  savingPropertyIds: Set<string>;
   isLoading: boolean;
   error: string | null;
 
@@ -37,11 +39,12 @@ interface SavedPropertiesContextType {
     folderData: { name?: string; description?: string; color?: string; icon?: string },
   ) => Promise<SavedPropertyFolder | undefined>;
   deleteFolder: (folderId: string) => Promise<void>;
-  savePropertyToFolder: (propertyId: string, folderId: string | null) => Promise<void>;
+  savePropertyToFolder: (propertyId: string, folderId: string | null, property?: any) => Promise<void>;
   unsaveProperty: (propertyId: string) => Promise<void>;
   getDefaultFolder: () => SavedPropertyFolder | undefined;
   getFolderById: (folderId: string) => SavedPropertyFolder | undefined;
   isPropertySaved: (propertyId: string) => boolean;
+  isPropertySaving: (propertyId: string) => boolean;
 
   // Initialization
   isInitialized: boolean;
@@ -62,28 +65,20 @@ interface SavedPropertiesProviderProps {
 }
 
 export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = ({ children }) => {
-  const { oxyServices, activeSessionId } = useOxy();
+  // Remove unused authentication imports since we use clean api now
   const queryClient = useQueryClient();
   const [folders, setFolders] = useState<SavedPropertyFolder[]>([]);
-  const savedProperties = useSavedPropertiesStore((s) => s.properties) as any as SavedProperty[];
-  const setSavedPropertiesZ = useSavedPropertiesStore((s) => s.setProperties);
-  const foldersZ = useSavedPropertiesStore((s) => s.folders);
-  const setFoldersZ = useSavedPropertiesStore((s) => s.setFolders);
-  const addFolderLocal = useSavedPropertiesStore((s) => s.addFolder);
-  const updateFolderLocal = useSavedPropertiesStore((s) => s.updateFolderLocal);
-  const removeFolderLocal = useSavedPropertiesStore((s) => s.removeFolderLocal);
-  const savingPropertyIds = useSavedPropertiesStore((s) => s.savingPropertyIds);
-  const addSavingPropertyId = useSavedPropertiesStore((s) => s.addSavingPropertyId);
-  const removeSavingPropertyId = useSavedPropertiesStore((s) => s.removeSavingPropertyId);
-  const adjustFolderCount = useSavedPropertiesStore((s) => s.adjustFolderCount);
+  const [savedProperties, setSavedProperties] = useState<any[]>([]);
+  const [_savingPropertyIds, setSavingPropertyIds] = useState<Set<string>>(new Set());
   const [savedPropertyIds, setSavedPropertyIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  const loadFolders = useCallback(async () => {
-    if (!oxyServices || !activeSessionId) return;
+  // Memoize the saved properties count to prevent unnecessary recalculations
+  const savedPropertiesCount = useMemo(() => savedProperties.length, [savedProperties.length]);
 
+  const loadFolders = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -91,31 +86,36 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
       const response = await queryClient.fetchQuery({
         queryKey: ['savedFolders'],
         queryFn: async () =>
-          savedPropertyFolderService.getSavedPropertyFolders(oxyServices, activeSessionId),
+          savedPropertyFolderService.getSavedPropertyFolders(),
         staleTime: 1000 * 60,
         gcTime: 1000 * 60 * 10,
       });
       setFolders(response.folders);
-      setFoldersZ(response.folders as any);
     } catch (error: any) {
       setError(error.message || 'Failed to load folders');
       toast.error('Failed to load folders');
     } finally {
       setIsLoading(false);
     }
-  }, [oxyServices, activeSessionId, queryClient, setFoldersZ]);
+  }, [queryClient]);
 
   const loadSavedProperties = useCallback(async () => {
-    if (!oxyServices || !activeSessionId) return;
-
     try {
       const response = await queryClient.fetchQuery({
         queryKey: ['savedProperties'],
-        queryFn: async () => savedPropertyService.getSavedProperties(oxyServices, activeSessionId),
-        staleTime: 1000 * 30,
+        queryFn: async () => savedPropertyService.getSavedProperties(),
+        staleTime: 1000 * 60,
         gcTime: 1000 * 60 * 10,
       });
-      setSavedPropertiesZ(response.properties as any);
+
+      if (!response || !response.properties || !Array.isArray(response.properties)) {
+        console.error('Invalid response structure:', response);
+        setSavedProperties([]);
+        setSavedPropertyIds(new Set());
+        return;
+      }
+
+      setSavedProperties(response.properties as any);
 
       // Sync the saved property IDs set
       const propertyIds = new Set(
@@ -125,23 +125,18 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
     } catch (error: any) {
       console.error('Failed to load saved properties:', error);
     }
-  }, [oxyServices, activeSessionId, queryClient, setSavedPropertiesZ]);
+  }, [queryClient]);
 
   const createFolder = useCallback(
     async (folderData: { name: string; description?: string; color?: string; icon?: string }) => {
-      if (!oxyServices || !activeSessionId) return;
-
       try {
         setIsLoading(true);
         setError(null);
 
         const newFolder = await savedPropertyFolderService.createSavedPropertyFolder(
           folderData,
-          oxyServices,
-          activeSessionId,
         );
         setFolders((prev) => [...prev, newFolder]);
-        addFolderLocal(newFolder as any);
         toast.success('Folder created successfully');
         return newFolder;
       } catch (error: any) {
@@ -152,7 +147,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         setIsLoading(false);
       }
     },
-    [oxyServices, activeSessionId],
+    [],
   );
 
   const updateFolder = useCallback(
@@ -160,8 +155,6 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
       folderId: string,
       folderData: { name?: string; description?: string; color?: string; icon?: string },
     ) => {
-      if (!oxyServices || !activeSessionId) return;
-
       try {
         setIsLoading(true);
         setError(null);
@@ -169,13 +162,10 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         const updatedFolder = await savedPropertyFolderService.updateSavedPropertyFolder(
           folderId,
           folderData,
-          oxyServices,
-          activeSessionId,
         );
         setFolders((prev) =>
           prev.map((folder) => (folder._id === folderId ? updatedFolder : folder)),
         );
-        updateFolderLocal(folderId, updatedFolder as any);
         toast.success('Folder updated successfully');
         return updatedFolder;
       } catch (error: any) {
@@ -186,24 +176,19 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         setIsLoading(false);
       }
     },
-    [oxyServices, activeSessionId],
+    [],
   );
 
   const deleteFolder = useCallback(
     async (folderId: string) => {
-      if (!oxyServices || !activeSessionId) return;
-
       try {
         setIsLoading(true);
         setError(null);
 
         await savedPropertyFolderService.deleteSavedPropertyFolder(
           folderId,
-          oxyServices,
-          activeSessionId,
         );
         setFolders((prev) => prev.filter((folder) => folder._id !== folderId));
-        removeFolderLocal(folderId);
         toast.success('Folder deleted successfully');
       } catch (error: any) {
         setError(error.message || 'Failed to delete folder');
@@ -213,41 +198,93 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         setIsLoading(false);
       }
     },
-    [oxyServices, activeSessionId],
+    [],
   );
 
   const savePropertyToFolder = useCallback(
-    async (propertyId: string, folderId: string | null) => {
-      if (!oxyServices || !activeSessionId) return;
-
+    async (propertyId: string, folderId: string | null, property?: any) => {
       try {
         setError(null);
 
         console.log('Saving property to folder:', { propertyId, folderId });
 
         // Optimistic update - add property ID to saved set and show saving state
-        setSavedPropertyIds((prev) => new Set([...prev, propertyId]));
-        addSavingPropertyId(propertyId);
-
-        // Optimistically adjust folder counts (if target folder known)
-        if (folderId) {
-          adjustFolderCount(folderId, 1);
-        }
+        setSavedPropertyIds((prev) => {
+          if (prev.has(propertyId)) {
+            // Already in set, return same reference
+            return prev;
+          }
+          return new Set([...prev, propertyId]);
+        });
+        setSavingPropertyIds((prev) => {
+          if (prev.has(propertyId)) {
+            // Already saving, return same reference
+            return prev;
+          }
+          return new Set([...prev, propertyId]);
+        });
         // Save property directly to the specified folder using the unified save API
-        await savedPropertyService.saveProperty(
+        const saveResponse = await savedPropertyService.saveProperty(
           propertyId,
-          undefined,
-          oxyServices,
-          activeSessionId,
-          folderId,
+          undefined, // notes
+          folderId || undefined, // folderId
         );
 
-        // Refresh saved properties so folder views update immediately
-        await loadSavedProperties();
-        await queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
+        // Update local state with the saved property
+        if (saveResponse?.success) {
+          // Add the property to the saved properties list
+          const newProperty = {
+            _id: propertyId,
+            id: propertyId,
+            savedAt: new Date().toISOString(),
+            folderId: folderId,
+            // Include other property data if available
+            ...(property || {})
+          };
+
+          setSavedProperties((prev: any[]) => {
+            // Check if property already exists
+            const existingIndex = prev.findIndex(p => (p._id || p.id) === propertyId);
+            if (existingIndex >= 0) {
+              // Check if the property data actually changed
+              const existingProperty = prev[existingIndex];
+              const hasChanges = (
+                existingProperty.folderId !== newProperty.folderId ||
+                existingProperty.savedAt !== newProperty.savedAt ||
+                JSON.stringify(existingProperty) !== JSON.stringify(newProperty)
+              );
+
+              if (!hasChanges) {
+                // No changes, return the same array reference to prevent unnecessary re-renders
+                return prev;
+              }
+
+              // Update existing
+              const updated = [...prev];
+              updated[existingIndex] = { ...existingProperty, ...newProperty };
+              return updated;
+            } else {
+              // Add new
+              return [...prev, newProperty];
+            }
+          });
+
+          // Update the saved property IDs set (only if not already present)
+          setSavedPropertyIds((prev) => {
+            if (prev.has(propertyId)) {
+              // Already in set, return same reference
+              return prev;
+            }
+            return new Set([...prev, propertyId]);
+          });
+        }
 
         console.log('Property saved successfully');
-        removeSavingPropertyId(propertyId);
+        setSavingPropertyIds((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(propertyId);
+          return newSet;
+        });
         toast.success('Property saved successfully');
         // Refresh folders to update counts immediately
         await loadFolders();
@@ -261,23 +298,22 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
           newSet.delete(propertyId);
           return newSet;
         });
-        removeSavingPropertyId(propertyId);
-        if (folderId) {
-          adjustFolderCount(folderId, -1);
-        }
+        setSavingPropertyIds((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(propertyId);
+          return newSet;
+        });
 
         setError(error.message || 'Failed to save property');
         toast.error('Failed to save property');
         throw error;
       }
     },
-    [oxyServices, activeSessionId, folders, loadSavedProperties, loadFolders, queryClient, adjustFolderCount],
+    [loadFolders, queryClient, setSavedProperties, setSavedPropertyIds, setSavingPropertyIds, setError],
   );
 
   const unsaveProperty = useCallback(
     async (propertyId: string) => {
-      if (!oxyServices || !activeSessionId) return;
-
       try {
         setError(null);
 
@@ -289,25 +325,55 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
           newSet.delete(propertyId);
           return newSet;
         });
-        addSavingPropertyId(propertyId);
+        setSavingPropertyIds((prev) => new Set([...prev, propertyId]));
 
         // Unsave property using the API
-        await savedPropertyService.unsaveProperty(propertyId, oxyServices, activeSessionId);
+        const unsaveResponse = await savedPropertyService.unsaveProperty(propertyId);
 
-        // Refresh saved properties so folder views update immediately
-        await loadSavedProperties();
-        await queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
+        // Update local state by removing the property
+        if (unsaveResponse?.success || unsaveResponse === undefined) {
+          // Remove from saved properties list - only if the property exists
+          setSavedProperties((prev: any[]) => {
+            const propertyExists = prev.some(p => (p._id || p.id) === propertyId);
+            if (!propertyExists) {
+              // Property not in list, return same array reference
+              return prev;
+            }
+            return prev.filter(p => (p._id || p.id) !== propertyId);
+          });
+
+          // Remove from saved property IDs set
+          setSavedPropertyIds((prev) => {
+            if (!prev.has(propertyId)) {
+              // Property ID not in set, return same set reference
+              return prev;
+            }
+            const newSet = new Set(prev);
+            newSet.delete(propertyId);
+            return newSet;
+          });
+        }
 
         console.log('Property unsaved successfully');
-        removeSavingPropertyId(propertyId);
+        setSavingPropertyIds((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(propertyId);
+          return newSet;
+        });
         toast.success('Property removed from saved');
         // Decrement count in the folder that held this property
-        // Try to find the property in store to get its folderId
-        const existing = (useSavedPropertiesStore.getState().properties as any[]).find(
-          (p: any) => (p._id || p.id) === propertyId,
-        );
+        // Try to find the property in local state to get its folderId
+        const existing = savedProperties.find((p: any) => (p._id || p.id) === propertyId);
+        // TODO: Implement folder count adjustment with local state
+        // For now, we'll refresh folders to update counts
         if (existing?.folderId) {
-          adjustFolderCount(existing.folderId, -1);
+          setFolders((prevFolders) =>
+            prevFolders.map((folder) =>
+              folder._id === existing.folderId
+                ? { ...folder, propertyCount: Math.max(0, (folder.propertyCount || 0) - 1) }
+                : folder
+            )
+          );
         }
         // Refresh folders to update counts immediately
         await loadFolders();
@@ -316,7 +382,11 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         // If we get a 404, the property is already not saved, so treat as success
         if (error?.status === 404 || error?.message?.includes('not found')) {
           console.log('Property already unsaved (404), updating UI state');
-          removeSavingPropertyId(propertyId);
+          setSavingPropertyIds((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(propertyId);
+            return newSet;
+          });
           // Don't revert optimistic update since the property is actually unsaved
           // Don't show error toast since this is expected behavior
           return; // Success - don't throw error
@@ -326,14 +396,18 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
 
         // Revert optimistic update on error
         setSavedPropertyIds((prev) => new Set([...prev, propertyId]));
-        removeSavingPropertyId(propertyId);
+        setSavingPropertyIds((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(propertyId);
+          return newSet;
+        });
 
         setError(error.message || 'Failed to unsave property');
         toast.error('Failed to unsave property');
         throw error;
       }
     },
-    [oxyServices, activeSessionId, loadSavedProperties, loadFolders, queryClient, adjustFolderCount],
+    [loadFolders, queryClient, setSavedProperties, setSavedPropertyIds, setSavingPropertyIds, setError, savedProperties],
   );
 
   const getDefaultFolder = useCallback(() => {
@@ -354,9 +428,16 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
     [savedPropertyIds],
   );
 
+  const isPropertySaving = useCallback(
+    (propertyId: string) => {
+      return _savingPropertyIds.has(propertyId);
+    },
+    [_savingPropertyIds],
+  );
+
   // Initialize data when auth is available
   useEffect(() => {
-    if (oxyServices && activeSessionId && !isInitialized) {
+    if (!isInitialized) {
       const initializeData = async () => {
         try {
           // Load both folders and saved properties in parallel
@@ -369,12 +450,14 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
 
       initializeData();
     }
-  }, [oxyServices, activeSessionId, isInitialized, loadFolders, loadSavedProperties]);
+  }, [isInitialized, loadFolders, loadSavedProperties]);
 
   const value: SavedPropertiesContextType = {
     folders,
     savedProperties,
     savedPropertyIds,
+    savedPropertiesCount,
+    savingPropertyIds: _savingPropertyIds,
     isLoading,
     error,
     loadFolders,
@@ -387,6 +470,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
     getDefaultFolder,
     getFolderById,
     isPropertySaved,
+    isPropertySaving,
     isInitialized,
   };
 

@@ -1,23 +1,10 @@
-import { OxyServices } from '@oxyhq/services';
+import { oxyClient } from '@oxyhq/services';
 import { Platform } from 'react-native';
 import { API_URL } from '@/config';
 
 // API Configuration
 const API_CONFIG = {
   baseURL: API_URL,
-  endpoints: {
-    health: '/api/health',
-    profile: '/api/profiles',
-    data: '/api/data',
-    users: undefined,
-    profiles: {
-      recentProperties: '/api/profiles/me/recent-properties',
-      savedProperties: '/api/profiles/me/saved-properties',
-      saveProperty: '/api/profiles/me/save-property',
-      savedSearches: '/api/profiles/me/saved-searches',
-      properties: '/api/profiles/me/properties',
-    },
-  },
 };
 
 export interface ApiResponse<T = any> {
@@ -25,13 +12,6 @@ export interface ApiResponse<T = any> {
   message?: string;
   error?: string;
   data?: T;
-}
-
-export interface UserProfile {
-  id: string;
-  email: string;
-  name: string;
-  createdAt: string;
 }
 
 /**
@@ -84,10 +64,10 @@ export const api = {
     endpoint: string,
     options?: {
       params?: Record<string, any>;
-      oxyServices?: OxyServices;
-      activeSessionId?: string;
+      requireAuth?: boolean;
     },
   ): Promise<{ data: T }> {
+
     const url = new URL(`${API_CONFIG.baseURL}${endpoint}`);
 
     // Add query parameters if provided
@@ -103,16 +83,16 @@ export const api = {
       'Content-Type': 'application/json',
     };
 
-    // Handle authentication if OxyServices is provided
-    if (options?.oxyServices && options?.activeSessionId) {
+    // Handle authentication if required
+    if (options?.requireAuth !== false) {
       try {
-        const tokenData = await options.oxyServices.getTokenBySession(options.activeSessionId);
+        const token = await oxyClient.getAccessToken();
 
-        if (!tokenData) {
+        if (!token) {
           throw new ApiError('No authentication token found', 401);
         }
 
-        headers['Authorization'] = `Bearer ${tokenData.accessToken}`;
+        headers['Authorization'] = `Bearer ${token}`;
       } catch (error) {
         console.error('Failed to get token:', error);
         throw new ApiError('Authentication failed', 401);
@@ -140,24 +120,23 @@ export const api = {
     endpoint: string,
     body?: any,
     options?: {
-      oxyServices?: OxyServices;
-      activeSessionId?: string;
+      requireAuth?: boolean;
     },
   ): Promise<{ data: T }> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
-    // Handle authentication if OxyServices is provided
-    if (options?.oxyServices && options?.activeSessionId) {
+    // Handle authentication if required
+    if (options?.requireAuth !== false) {
       try {
-        const tokenData = await options.oxyServices.getTokenBySession(options.activeSessionId);
+        const token = await oxyClient.getAccessToken();
 
-        if (!tokenData) {
+        if (!token) {
           throw new ApiError('No authentication token found', 401);
         }
 
-        headers['Authorization'] = `Bearer ${tokenData.accessToken}`;
+        headers['Authorization'] = `Bearer ${token}`;
       } catch (error) {
         console.error('Failed to get token:', error);
         throw new ApiError('Authentication failed', 401);
@@ -186,24 +165,23 @@ export const api = {
     endpoint: string,
     body?: any,
     options?: {
-      oxyServices?: OxyServices;
-      activeSessionId?: string;
+      requireAuth?: boolean;
     },
   ): Promise<{ data: T }> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
-    // Handle authentication if OxyServices is provided
-    if (options?.oxyServices && options?.activeSessionId) {
+    // Handle authentication if required
+    if (options?.requireAuth !== false) {
       try {
-        const tokenData = await options.oxyServices.getTokenBySession(options.activeSessionId);
+        const token = await oxyClient.getAccessToken();
 
-        if (!tokenData) {
+        if (!token) {
           throw new ApiError('No authentication token found', 401);
         }
 
-        headers['Authorization'] = `Bearer ${tokenData.accessToken}`;
+        headers['Authorization'] = `Bearer ${token}`;
       } catch (error) {
         console.error('Failed to get token:', error);
         throw new ApiError('Authentication failed', 401);
@@ -231,24 +209,23 @@ export const api = {
   async delete<T = any>(
     endpoint: string,
     options?: {
-      oxyServices?: OxyServices;
-      activeSessionId?: string;
+      requireAuth?: boolean;
     },
   ): Promise<{ data: T }> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
-    // Handle authentication if OxyServices is provided
-    if (options?.oxyServices && options?.activeSessionId) {
+    // Handle authentication if required
+    if (options?.requireAuth !== false) {
       try {
-        const tokenData = await options.oxyServices.getTokenBySession(options.activeSessionId);
+        const token = await oxyClient.getAccessToken();
 
-        if (!tokenData) {
+        if (!token) {
           throw new ApiError('No authentication token found', 401);
         }
 
-        headers['Authorization'] = `Bearer ${tokenData.accessToken}`;
+        headers['Authorization'] = `Bearer ${token}`;
       } catch (error) {
         console.error('Failed to get token:', error);
         throw new ApiError('Authentication failed', 401);
@@ -276,24 +253,23 @@ export const api = {
     endpoint: string,
     body?: any,
     options?: {
-      oxyServices?: OxyServices;
-      activeSessionId?: string;
+      requireAuth?: boolean;
     },
   ): Promise<{ data: T }> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
-    // Handle authentication if OxyServices is provided
-    if (options?.oxyServices && options?.activeSessionId) {
+    // Handle authentication if required
+    if (options?.requireAuth !== false) {
       try {
-        const tokenData = await options.oxyServices.getTokenBySession(options.activeSessionId);
+        const token = await oxyClient.getAccessToken();
 
-        if (!tokenData) {
+        if (!token) {
           throw new ApiError('No authentication token found', 401);
         }
 
-        headers['Authorization'] = `Bearer ${tokenData.accessToken}`;
+        headers['Authorization'] = `Bearer ${token}`;
       } catch (error) {
         console.error('Failed to get token:', error);
         throw new ApiError('Authentication failed', 401);
@@ -313,391 +289,6 @@ export const api = {
     }
 
     return { data };
-  },
-};
-
-/**
- * Profile API functions for user profile management
- * All functions require authentication via OxyServices
- */
-export const profileApi = {
-  // Get user profile (authenticated) - creates personal profile if it doesn't exist
-  async getUserProfile(
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<ApiResponse<UserProfile>> {
-    try {
-      const response = await api.get<ApiResponse<UserProfile>>(API_CONFIG.endpoints.profile, {
-        oxyServices,
-        activeSessionId,
-      });
-      return response.data;
-    } catch (error) {
-      // If profile doesn't exist (404), create a new personal profile
-      if (error instanceof ApiError && error.status === 404) {
-        try {
-          // Get user info from token to create basic profile
-          const tokenData = await oxyServices.getTokenBySession(activeSessionId);
-          if (!tokenData) {
-            throw new ApiError('No authentication token found', 401);
-          }
-
-          // Create basic personal profile with minimal required data
-          const basicProfileData = {
-            // The backend should extract user info from the authenticated token
-            // We're just sending a flag to indicate this is a personal profile creation
-            isPersonalProfile: true,
-          };
-
-          const createResponse = await api.post<ApiResponse<UserProfile>>(
-            API_CONFIG.endpoints.profile,
-            basicProfileData,
-            {
-              oxyServices,
-              activeSessionId,
-            },
-          );
-          return createResponse.data;
-        } catch (createError) {
-          console.error('Failed to create personal profile:', createError);
-          throw createError;
-        }
-      }
-      // Re-throw other errors
-      throw error;
-    }
-  },
-
-  // Create personal profile (authenticated)
-  async createPersonalProfile(
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<ApiResponse<UserProfile>> {
-    const response = await api.post<ApiResponse<UserProfile>>(
-      API_CONFIG.endpoints.profile,
-      { isPersonalProfile: true },
-      {
-        oxyServices,
-        activeSessionId,
-      },
-    );
-    return response.data;
-  },
-
-  // Update user profile (authenticated)
-  async updateUserProfile(
-    profileData: Partial<UserProfile>,
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<ApiResponse<UserProfile>> {
-    const response = await api.put<ApiResponse<UserProfile>>(
-      API_CONFIG.endpoints.profile,
-      profileData,
-      {
-        oxyServices,
-        activeSessionId,
-      },
-    );
-    return response.data;
-  },
-};
-
-/**
- * Data API functions for general data operations
- * All functions require authentication via OxyServices
- */
-export const dataApi = {
-  // Get user data (authenticated)
-  async getUserData(oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.get<ApiResponse>(API_CONFIG.endpoints.data, {
-      oxyServices,
-      activeSessionId,
-    });
-    return response.data;
-  },
-
-  // Create user data (authenticated)
-  async createUserData(
-    data: Record<string, any>,
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<ApiResponse> {
-    const response = await api.post<ApiResponse>(API_CONFIG.endpoints.data, data, {
-      oxyServices,
-      activeSessionId,
-    });
-    return response.data;
-  },
-};
-
-/**
- * User API functions for user-specific operations
- * All functions require authentication via OxyServices
- */
-export const userApi = {
-  // Get recently viewed properties (authenticated)
-  async getRecentProperties(
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<ApiResponse> {
-    const response = await api.get<ApiResponse>(API_CONFIG.endpoints.profiles.recentProperties, {
-      oxyServices,
-      activeSessionId,
-    });
-    return response.data;
-  },
-
-  // Track property view (authenticated)
-  async trackPropertyView(
-    propertyId: string,
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<ApiResponse> {
-    const response = await api.post<ApiResponse>(
-      `/api/properties/${propertyId}/track-view`,
-      {},
-      {
-        oxyServices,
-        activeSessionId,
-      },
-    );
-    return response.data;
-  },
-
-  // Clear recently viewed properties (authenticated)
-  async clearRecentProperties(
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<ApiResponse> {
-    const response = await api.delete<ApiResponse>(API_CONFIG.endpoints.profiles.recentProperties, {
-      oxyServices,
-      activeSessionId,
-    });
-    return response.data;
-  },
-
-  // Get saved properties (authenticated)
-  async getSavedProperties(
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<ApiResponse> {
-    const response = await api.get<ApiResponse>(API_CONFIG.endpoints.profiles.savedProperties, {
-      oxyServices,
-      activeSessionId,
-    });
-    return response.data;
-  },
-
-  // Save a property (authenticated)
-  async saveProperty(
-    propertyId: string,
-    notes: string | undefined,
-    oxyServices: OxyServices,
-    activeSessionId: string,
-    folderId?: string | null,
-  ): Promise<ApiResponse> {
-    const response = await api.post<ApiResponse>(
-      API_CONFIG.endpoints.profiles.saveProperty,
-      { propertyId, notes, folderId },
-      {
-        oxyServices,
-        activeSessionId,
-      },
-    );
-    return response.data;
-  },
-
-  // Unsave a property (authenticated)
-  async unsaveProperty(
-    propertyId: string,
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<ApiResponse> {
-    const response = await api.delete<ApiResponse>(
-      `${API_CONFIG.endpoints.profiles.savedProperties}/${propertyId}`,
-      {
-        oxyServices,
-        activeSessionId,
-      },
-    );
-    return response.data;
-  },
-
-  // Update saved property notes (authenticated)
-  async updateSavedPropertyNotes(
-    propertyId: string,
-    notes: string,
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<ApiResponse> {
-    const response = await api.patch<ApiResponse>(
-      `${API_CONFIG.endpoints.profiles.savedProperties}/${propertyId}/notes`,
-      { notes },
-      {
-        oxyServices,
-        activeSessionId,
-      },
-    );
-    return response.data;
-  },
-
-  // Get saved property folders (authenticated)
-  async getSavedPropertyFolders(
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<ApiResponse> {
-    const response = await api.get<ApiResponse>('/api/profiles/me/saved-property-folders', {
-      oxyServices,
-      activeSessionId,
-    });
-    return response.data;
-  },
-
-  // Create saved property folder (authenticated)
-  async createSavedPropertyFolder(
-    folderData: { name: string; description?: string; color?: string; icon?: string },
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<ApiResponse> {
-    const response = await api.post<ApiResponse>(
-      '/api/profiles/me/saved-property-folders',
-      folderData,
-      {
-        oxyServices,
-        activeSessionId,
-      },
-    );
-    return response.data;
-  },
-
-  // Update saved property folder (authenticated)
-  async updateSavedPropertyFolder(
-    folderId: string,
-    folderData: { name?: string; description?: string; color?: string; icon?: string },
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<ApiResponse> {
-    const response = await api.put<ApiResponse>(
-      `/api/profiles/me/saved-property-folders/${folderId}`,
-      folderData,
-      {
-        oxyServices,
-        activeSessionId,
-      },
-    );
-    return response.data;
-  },
-
-  // Delete saved property folder (authenticated)
-  async deleteSavedPropertyFolder(
-    folderId: string,
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<ApiResponse> {
-    const response = await api.delete<ApiResponse>(
-      `/api/profiles/me/saved-property-folders/${folderId}`,
-      {
-        oxyServices,
-        activeSessionId,
-      },
-    );
-    return response.data;
-  },
-
-  // Get user properties (authenticated)
-  async getUserProperties(
-    page: number = 1,
-    limit: number = 10,
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<ApiResponse> {
-    const response = await api.get<ApiResponse>(
-      `${API_CONFIG.endpoints.profiles.properties}?page=${page}&limit=${limit}`,
-      {
-        oxyServices,
-        activeSessionId,
-      },
-    );
-    return response.data;
-  },
-
-  // Get saved searches (authenticated)
-  async getSavedSearches(oxyServices: OxyServices, activeSessionId: string): Promise<ApiResponse> {
-    const response = await api.get<ApiResponse>(API_CONFIG.endpoints.profiles.savedSearches, {
-      oxyServices,
-      activeSessionId,
-    });
-    return response.data;
-  },
-
-  // Save a search (authenticated)
-  async saveSearch(
-    searchData: { name: string; query: string; filters?: any; notificationsEnabled?: boolean },
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<ApiResponse> {
-    const response = await api.post<ApiResponse>(
-      API_CONFIG.endpoints.profiles.savedSearches,
-      searchData,
-      {
-        oxyServices,
-        activeSessionId,
-      },
-    );
-    return response.data;
-  },
-
-  // Delete a saved search (authenticated)
-  async deleteSavedSearch(
-    searchId: string,
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<ApiResponse> {
-    const response = await api.delete<ApiResponse>(
-      `${API_CONFIG.endpoints.profiles.savedSearches}/${searchId}`,
-      {
-        oxyServices,
-        activeSessionId,
-      },
-    );
-    return response.data;
-  },
-
-  // Update a saved search (authenticated)
-  async updateSavedSearch(
-    searchId: string,
-    searchData: { name?: string; query?: string; filters?: any; notificationsEnabled?: boolean },
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<ApiResponse> {
-    const response = await api.patch<ApiResponse>(
-      `${API_CONFIG.endpoints.profiles.savedSearches}/${searchId}`,
-      searchData,
-      {
-        oxyServices,
-        activeSessionId,
-      },
-    );
-    return response.data;
-  },
-
-  // Toggle notifications for a saved search (authenticated)
-  async toggleSearchNotifications(
-    searchId: string,
-    notificationsEnabled: boolean,
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<ApiResponse> {
-    // Backend uses PUT for update and PUT for notifications per profiles routes
-    const response = await api.put<ApiResponse>(
-      `${API_CONFIG.endpoints.profiles.savedSearches}/${searchId}/notifications`,
-      { notificationsEnabled },
-      {
-        oxyServices,
-        activeSessionId,
-      },
-    );
-    return response.data;
   },
 };
 
@@ -743,119 +334,8 @@ export function webAlert(
   }
 }
 
-// Health check API
-export const healthApi = {
-  // Check server health (public endpoint)
-  async checkHealth(): Promise<ApiResponse> {
-    const response = await api.get<ApiResponse>(API_CONFIG.endpoints.health);
-    return response.data;
-  },
-};
-
-/**
- * Geocoding API functions
- */
-export const geocodingApi = {
-  // Reverse geocode coordinates to get address
-  async reverseGeocode(longitude: number, latitude: number): Promise<ApiResponse<{
-    street?: string;
-    houseNumber?: string;
-    neighborhood?: string;
-    city?: string;
-    state?: string;
-    country?: string;
-    postalCode?: string;
-    fullAddress?: string;
-  }>> {
-    const response = await api.get<ApiResponse>('/api/geocoding/reverse', {
-      params: { longitude, latitude },
-    });
-    return response.data;
-  },
-
-  // Forward geocode address to get coordinates
-  async forwardGeocode(address: string): Promise<ApiResponse<{
-    street?: string;
-    houseNumber?: string;
-    neighborhood?: string;
-    city?: string;
-    state?: string;
-    country?: string;
-    postalCode?: string;
-    fullAddress?: string;
-    coordinates?: {
-      longitude: number;
-      latitude: number;
-    };
-  }>> {
-    const response = await api.get<ApiResponse>('/api/geocoding/forward', {
-      params: { address },
-    });
-    return response.data;
-  },
-};
-
-/**
- * Sindi chat history API functions
- */
-export const sindiApi = {
-  // Get Sindi chat history (authenticated)
-  async getSindiChatHistory(
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<{ history: any[] }> {
-    const response = await api.get<{ history: any[] }>('/api/ai/history', {
-      oxyServices,
-      activeSessionId,
-    });
-    return response.data;
-  },
-
-  // Clear Sindi chat history (authenticated)
-  async clearSindiChatHistory(
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<{ success: boolean }> {
-    const response = await api.delete<{ success: boolean }>('/api/ai/history', {
-      oxyServices,
-      activeSessionId,
-    });
-    return response.data;
-  },
-
-  // Save Sindi chat history (user/assistant message pair)
-  async saveSindiChatHistory(
-    userMessage: string,
-    assistantMessage: string,
-    oxyServices: OxyServices,
-    activeSessionId: string,
-  ): Promise<{ success: boolean }> {
-    const response = await api.post<{ success: boolean }>(
-      '/api/ai/history',
-      {
-        userMessage,
-        assistantMessage,
-      },
-      {
-        oxyServices,
-        activeSessionId,
-      },
-    );
-    return response.data;
-  },
-};
-
 // Export the API configuration for external use
 export { API_CONFIG };
 
-// Default export with all APIs
-export default {
-  ...api,
-  profile: profileApi,
-  data: dataApi,
-  health: healthApi,
-  config: API_CONFIG,
-  user: userApi,
-  sindi: sindiApi,
-  geocoding: geocodingApi,
-};
+// Default export
+export default api;

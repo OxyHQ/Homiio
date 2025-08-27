@@ -42,11 +42,8 @@ import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { Property } from '@homiio/shared-types';
 import { useSavedProfiles } from '@/store/savedProfilesStore';
 import { getPropertyTitle } from '@/utils/propertyUtils';
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { useOxy } from '@oxyhq/services';
-import savedPropertyService from '@/services/savedPropertyService';
-import { toast } from 'sonner';
 import { ThemedText } from '@/components/ThemedText';
+import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 
 const IconComponent = Ionicons as any;
 
@@ -93,91 +90,27 @@ export function SaveButton({
   const [isPressed, setIsPressed] = useState(false);
   const bottomSheetContext = useContext(BottomSheetContext);
   const { saveProfile, unsaveProfile } = useSavedProfiles();
-  const { oxyServices, activeSessionId } = useOxy();
-  const queryClient = useQueryClient();
   const sizeAll = Math.max(10, size * 1);
 
-  // Get saved properties from React Query to determine saved state
-  const { data: savedPropertiesData } = useQuery({
-    queryKey: ['savedProperties'],
-    queryFn: () => savedPropertyService.getSavedProperties(oxyServices!, activeSessionId!),
-    enabled: !!oxyServices && !!activeSessionId && !!property,
-    staleTime: 1000 * 30,
-    gcTime: 1000 * 60 * 10,
-  });
+  // Use SavedPropertiesContext for all state management
+  const {
+    savePropertyToFolder,
+    unsaveProperty,
+    isLoading: contextLoading,
+    isPropertySaved,
+    savedProperties
+  } = useSavedPropertiesContext();
 
-  // Determine if property is saved from React Query data
-  const savedProperties = savedPropertiesData?.properties || [];
+  // Determine property ID
   const propertyId = property?._id || property?.id;
-  const isSaved = propertyId
-    ? savedProperties.some((p: any) => (p._id || p.id) === propertyId)
-    : propIsSaved; // Fallback to prop if no propertyId
 
-  // Calculate saved properties count
+  // Use context's isPropertySaved method for reliable state
+  const isSaved = propertyId ? isPropertySaved(propertyId) : propIsSaved;
+
+  // Calculate saved properties count from context
   const savedCount = savedProperties.length;
 
-  // React Query mutations for instant updates
-  const savePropertyMutation = useMutation({
-    mutationFn: async (propertyId: string) => {
-      if (!oxyServices || !activeSessionId) {
-        throw new Error('Authentication required');
-      }
-      try {
-        return await savedPropertyService.saveProperty(propertyId, undefined, oxyServices, activeSessionId);
-      } catch (error: any) {
-        // If the property is already saved (409 conflict), treat it as success
-        if (error?.status === 409 || error?.message?.includes('already saved') || error?.message?.includes('already exists')) {
-          console.log('Property already saved (409), treating as success');
-          // Return a mock success response
-          return { success: true, message: 'Property already saved' };
-        }
-        throw error;
-      }
-    },
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
-      queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
-      // Only show toast if it's a real save operation, not a 409
-      if (!data?.message?.includes('already saved')) {
-        toast.success('Property saved successfully');
-      }
-    },
-    onError: (error: any) => {
-      console.error('Failed to save property:', error);
-      toast.error('Failed to save property');
-    },
-  });
 
-  const unsavePropertyMutation = useMutation({
-    mutationFn: async (propertyId: string) => {
-      if (!oxyServices || !activeSessionId) {
-        throw new Error('Authentication required');
-      }
-      try {
-        return await savedPropertyService.unsaveProperty(propertyId, oxyServices, activeSessionId);
-      } catch (error: any) {
-        // If the property is already unsaved (404), treat it as success
-        if (error?.status === 404 || error?.message?.includes('not found')) {
-          console.log('Property already unsaved (404), treating as success');
-          // Return a mock success response
-          return { success: true, message: 'Property already unsaved' };
-        }
-        throw error;
-      }
-    },
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
-      queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
-      // Only show toast if it's a real unsave operation, not a 404
-      if (!data?.message?.includes('already unsaved')) {
-        toast.success('Property removed from saved');
-      }
-    },
-    onError: (error: any) => {
-      console.error('Failed to unsave property:', error);
-      toast.error('Failed to unsave property');
-    },
-  });
 
   // Extract propertyTitle from property object
   const propertyTitle = property ? getPropertyTitle(property) : '';
@@ -214,40 +147,53 @@ export function SaveButton({
     return null;
   };
 
-  const isButtonDisabled = disabled || isLoading || isPressed ||
-    savePropertyMutation.isPending || unsavePropertyMutation.isPending;
+  const isButtonDisabled = disabled || isLoading || isPressed || contextLoading;
 
   const handleInternalSave = async () => {
     if (!propertyId) return;
 
+    console.log('SaveButton: handleInternalSave called, isSaved:', isSaved, 'propertyId:', propertyId, 'profileId:', profileId);
+
     try {
       if (profileId) {
+        console.log('SaveButton: Handling profile save/unsave');
         if (isSaved) {
           await unsaveProfile(profileId);
         } else {
           await saveProfile(profileId);
         }
       } else if (propertyId) {
+        console.log('SaveButton: Handling property save/unsave, current isSaved:', isSaved);
         if (isSaved) {
-          await unsavePropertyMutation.mutateAsync(propertyId);
+          console.log('SaveButton: Calling unsave from context');
+          // Use context method for proper state management
+          await unsaveProperty(propertyId);
         } else {
-          await savePropertyMutation.mutateAsync(propertyId);
+          console.log('SaveButton: Calling save from context');
+          // Use context method for proper state management
+          await savePropertyToFolder(propertyId, null, property); // Pass property object
         }
       }
     } catch (error) {
       console.error('Failed to toggle save:', error);
-      // Re-throw the error so the mutation's onError handler can process it
+      // Re-throw the error so it can be handled by the caller
       throw error;
     }
   };
 
   const handlePress = () => {
-    if (isButtonDisabled) return;
+    console.log('SaveButton: handlePress called, isButtonDisabled:', isButtonDisabled, 'propertyId:', propertyId, 'isSaved:', isSaved);
+
+    if (isButtonDisabled) {
+      console.log('SaveButton: Button disabled, ignoring press');
+      return;
+    }
 
     setIsPressed(true);
 
     // Use internal save logic if propertyId is provided, otherwise use external onPress
     if (profileId || propertyId) {
+      console.log('SaveButton: Using internal save logic');
       handleInternalSave()
         .catch((error) => {
           // Error is already handled by mutation onError handlers
@@ -257,6 +203,7 @@ export function SaveButton({
           setIsPressed(false);
         });
     } else if (onPress) {
+      console.log('SaveButton: Using external onPress');
       onPress();
       setIsPressed(false);
     }
@@ -341,7 +288,7 @@ export function SaveButton({
           minWidth: showCount && countDisplayMode === 'inline' ? size + 20 : size,
         }}
       >
-        {showLoading && (isLoading || savePropertyMutation.isPending || unsavePropertyMutation.isPending) ? (
+        {showLoading && (isLoading || contextLoading) ? (
           <LoadingSpinner size={sizeAll} color={getIconColor()} showText={false} />
         ) : (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: sizeAll / 4 }}>

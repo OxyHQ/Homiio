@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions, Animated, Easing, LayoutChangeEvent, NativeSyntheticEvent, NativeScrollEvent, Platform, UIManager, Image } from 'react-native';
 import AnimatedRe, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';

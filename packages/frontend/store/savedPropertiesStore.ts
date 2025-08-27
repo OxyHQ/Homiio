@@ -149,9 +149,9 @@ export const useSavedPropertiesStore = create<SavedPropertiesState>()((set, get)
 
 // Selector hooks for easier access
 export const useSavedPropertiesSelectors = () => {
-  const properties = useSavedPropertiesStore((state) => state.properties);
-  const savedItems = useSavedPropertiesStore((state) => state.savedItems);
-  const savingPropertyIds = useSavedPropertiesStore((state) => state.savingPropertyIds);
+  const properties = useSavedPropertiesStore((state) => Array.isArray(state.properties) ? state.properties : []);
+  const savedItems = useSavedPropertiesStore((state) => Array.isArray(state.savedItems) ? state.savedItems : []);
+  const savingPropertyIds = useSavedPropertiesStore((state) => Array.isArray(state.savingPropertyIds) ? state.savingPropertyIds : []);
   const isLoading = useSavedPropertiesStore((state) => state.isLoading);
   const error = useSavedPropertiesStore((state) => state.error);
   const getSavedItemsByType = useSavedPropertiesStore((state) => state.getSavedItemsByType);
