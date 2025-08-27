@@ -31,7 +31,6 @@ export default function PropertiesScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { oxyServices, activeSessionId } = useOxy();
   const [viewMode, setViewMode] = useState<'list' | 'grid'>(isMobile ? 'grid' : 'list');
   const [fadeAnim] = useState(new Animated.Value(1));
   const [isLoading, setIsLoading] = useState(false);
