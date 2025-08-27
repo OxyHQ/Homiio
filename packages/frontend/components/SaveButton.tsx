@@ -32,7 +32,7 @@
  * ```
  */
 
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useRef } from 'react';
 import { TouchableOpacity, StyleSheet, ViewStyle, View, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
@@ -96,9 +96,9 @@ export function SaveButton({
   const {
     savePropertyToFolder,
     unsaveProperty,
-    isLoading: contextLoading,
     isPropertySaved,
-    savedProperties,
+    isPropertySaving,
+    savedPropertiesCount,
     isInitialized
   } = useSavedPropertiesContext();
 
@@ -118,8 +118,24 @@ export function SaveButton({
       : initialSavedState
     : initialSavedState;
 
-  // Calculate saved properties count from context
-  const savedCount = savedProperties.length;
+  // Use the memoized count from context, but freeze it on first render
+  // This prevents other buttons from updating when this button isn't the one being pressed
+  const frozenCountRef = useRef<number | null>(null);
+  
+  // Initialize frozen count on first render when context is ready
+  if (frozenCountRef.current === null && isInitialized) {
+    frozenCountRef.current = savedPropertiesCount;
+  }
+  
+  // Update frozen count only when this specific property's save state changes
+  const [lastSavedState, setLastSavedState] = useState<boolean>(isSaved);
+  if (lastSavedState !== isSaved && frozenCountRef.current !== null) {
+    // This property's state changed, update the frozen count
+    frozenCountRef.current = savedPropertiesCount;
+    setLastSavedState(isSaved);
+  }
+  
+  const savedCount = frozenCountRef.current ?? savedPropertiesCount;
 
 
 
@@ -158,63 +174,45 @@ export function SaveButton({
     return null;
   };
 
-  const isButtonDisabled = disabled || isLoading || isPressed || contextLoading;
+  const isButtonDisabled = disabled || isLoading || isPressed || Boolean(propertyId && isPropertySaving(propertyId));
 
   const handleInternalSave = async () => {
     if (!propertyId) return;
 
-    console.log('SaveButton: handleInternalSave called, isSaved:', isSaved, 'propertyId:', propertyId, 'profileId:', profileId);
-
     try {
       if (profileId) {
-        console.log('SaveButton: Handling profile save/unsave');
         if (isSaved) {
           await unsaveProfile(profileId);
         } else {
           await saveProfile(profileId);
         }
       } else if (propertyId) {
-        console.log('SaveButton: Handling property save/unsave, current isSaved:', isSaved);
         if (isSaved) {
-          console.log('SaveButton: Calling unsave from context');
-          // Use context method for proper state management
           await unsaveProperty(propertyId);
         } else {
-          console.log('SaveButton: Calling save from context');
-          // Use context method for proper state management
-          await savePropertyToFolder(propertyId, null, property); // Pass property object
+          await savePropertyToFolder(propertyId, null, property);
         }
       }
     } catch (error) {
       console.error('Failed to toggle save:', error);
-      // Re-throw the error so it can be handled by the caller
       throw error;
     }
   };
 
   const handlePress = () => {
-    console.log('SaveButton: handlePress called, isButtonDisabled:', isButtonDisabled, 'propertyId:', propertyId, 'isSaved:', isSaved);
-
-    if (isButtonDisabled) {
-      console.log('SaveButton: Button disabled, ignoring press');
-      return;
-    }
+    if (isButtonDisabled) return;
 
     setIsPressed(true);
 
-    // Use internal save logic if propertyId is provided, otherwise use external onPress
     if (profileId || propertyId) {
-      console.log('SaveButton: Using internal save logic');
       handleInternalSave()
         .catch((error) => {
-          // Error is already handled by mutation onError handlers
-          console.log('Save operation failed:', error);
+          console.error('Save operation failed:', error);
         })
         .finally(() => {
           setIsPressed(false);
         });
     } else if (onPress) {
-      console.log('SaveButton: Using external onPress');
       onPress();
       setIsPressed(false);
     }
@@ -243,8 +241,7 @@ export function SaveButton({
               onClose={() => {
                 bottomSheetContext?.closeBottomSheet();
               }}
-              onSave={(folderId: string | null) => {
-                console.log('Property saved to folder:', folderId);
+              onSave={(_folderId: string | null) => {
                 // The bottom sheet will auto-close after saving
               }}
             />,
@@ -263,8 +260,7 @@ export function SaveButton({
             onClose={() => {
               bottomSheetContext?.closeBottomSheet();
             }}
-            onSave={(folderId: string | null) => {
-              console.log('Property saved to folder:', folderId);
+            onSave={(_folderId: string | null) => {
               // The bottom sheet will auto-close after saving
             }}
           />,
@@ -299,7 +295,7 @@ export function SaveButton({
           minWidth: showCount && countDisplayMode === 'inline' ? size + 20 : size,
         }}
       >
-        {showLoading && (isLoading || contextLoading) ? (
+        {showLoading && (isLoading || (propertyId && isPropertySaving(propertyId))) ? (
           <LoadingSpinner size={sizeAll} color={getIconColor()} showText={false} />
         ) : (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: sizeAll / 4 }}>

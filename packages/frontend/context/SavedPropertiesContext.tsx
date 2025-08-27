@@ -39,7 +39,7 @@ interface SavedPropertiesContextType {
     folderData: { name?: string; description?: string; color?: string; icon?: string },
   ) => Promise<SavedPropertyFolder | undefined>;
   deleteFolder: (folderId: string) => Promise<void>;
-  savePropertyToFolder: (propertyId: string, folderId: string | null, property?: any) => Promise<void>;
+  savePropertyToFolder: (propertyId: string, folderId: string | null, property?: Partial<SavedProperty>) => Promise<void>;
   unsaveProperty: (propertyId: string) => Promise<void>;
   getDefaultFolder: () => SavedPropertyFolder | undefined;
   getFolderById: (folderId: string) => SavedPropertyFolder | undefined;
@@ -67,7 +67,7 @@ interface SavedPropertiesProviderProps {
 export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = ({ children }) => {
   const queryClient = useQueryClient();
   const [folders, setFolders] = useState<SavedPropertyFolder[]>([]);
-  const [savedProperties, setSavedProperties] = useState<any[]>([]);
+  const [savedProperties, setSavedProperties] = useState<SavedProperty[]>([]);
   const [_savingPropertyIds, setSavingPropertyIds] = useState<Set<string>>(new Set());
   const [savedPropertyIds, setSavedPropertyIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
@@ -100,6 +100,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
 
   const loadSavedProperties = useCallback(async () => {
     try {
+      setError(null);
       const response = await queryClient.fetchQuery({
         queryKey: ['savedProperties'],
         queryFn: async () => savedPropertyService.getSavedProperties(),
@@ -114,15 +115,17 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         return;
       }
 
-      setSavedProperties(response.properties as any);
+      setSavedProperties(response.properties);
 
-      // Sync the saved property IDs set
       const propertyIds = new Set(
         response.properties.map((p) => p._id || p.id).filter((id): id is string => Boolean(id)),
       );
       setSavedPropertyIds(propertyIds);
     } catch (error: any) {
       console.error('Failed to load saved properties:', error);
+      setError(error.message || 'Failed to load saved properties');
+      setSavedProperties([]);
+      setSavedPropertyIds(new Set());
     }
   }, [queryClient]);
 
@@ -201,51 +204,38 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
   );
 
   const savePropertyToFolder = useCallback(
-    async (propertyId: string, folderId: string | null, property?: any) => {
+    async (propertyId: string, folderId: string | null, property?: Partial<SavedProperty>) => {
       try {
         setError(null);
 
-        console.log('Saving property to folder:', { propertyId, folderId });
-
-        // Optimistic update - add property ID to saved set and show saving state
+        // Optimistic updates
         setSavedPropertyIds((prev) => {
-          if (prev.has(propertyId)) {
-            // Already in set, return same reference
-            return prev;
-          }
+          if (prev.has(propertyId)) return prev;
           return new Set([...prev, propertyId]);
         });
         setSavingPropertyIds((prev) => {
-          if (prev.has(propertyId)) {
-            // Already saving, return same reference
-            return prev;
-          }
+          if (prev.has(propertyId)) return prev;
           return new Set([...prev, propertyId]);
         });
-        // Save property directly to the specified folder using the unified save API
+
         const saveResponse = await savedPropertyService.saveProperty(
           propertyId,
-          undefined, // notes
-          folderId || undefined, // folderId
+          undefined,
+          folderId || undefined,
         );
 
-        // Update local state with the saved property
         if (saveResponse?.success) {
-          // Add the property to the saved properties list
-          const newProperty = {
+          const newProperty: Partial<SavedProperty> = {
             _id: propertyId,
             id: propertyId,
             savedAt: new Date().toISOString(),
-            folderId: folderId,
-            // Include other property data if available
+            folderId: folderId || undefined,
             ...(property || {})
           };
 
-          setSavedProperties((prev: any[]) => {
-            // Check if property already exists
+          setSavedProperties((prev) => {
             const existingIndex = prev.findIndex(p => (p._id || p.id) === propertyId);
             if (existingIndex >= 0) {
-              // Check if the property data actually changed
               const existingProperty = prev[existingIndex];
               const hasChanges = (
                 existingProperty.folderId !== newProperty.folderId ||
@@ -253,32 +243,18 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
                 JSON.stringify(existingProperty) !== JSON.stringify(newProperty)
               );
 
-              if (!hasChanges) {
-                // No changes, return the same array reference to prevent unnecessary re-renders
-                return prev;
-              }
+              if (!hasChanges) return prev;
 
-              // Update existing
               const updated = [...prev];
-              updated[existingIndex] = { ...existingProperty, ...newProperty };
+              updated[existingIndex] = { ...existingProperty, ...newProperty } as SavedProperty;
               return updated;
             } else {
-              // Add new
-              return [...prev, newProperty];
+              const fullProperty = { ...newProperty, ...(property || {}) } as SavedProperty;
+              return [...prev, fullProperty];
             }
-          });
-
-          // Update the saved property IDs set (only if not already present)
-          setSavedPropertyIds((prev) => {
-            if (prev.has(propertyId)) {
-              // Already in set, return same reference
-              return prev;
-            }
-            return new Set([...prev, propertyId]);
           });
         }
 
-        console.log('Property saved successfully');
         setSavingPropertyIds((prev) => {
           const newSet = new Set(prev);
           newSet.delete(propertyId);
@@ -308,7 +284,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         throw error;
       }
     },
-    [loadFolders, queryClient, setSavedProperties, setSavedPropertyIds, setSavingPropertyIds, setError],
+    [loadFolders, queryClient],
   );
 
   const unsaveProperty = useCallback(
@@ -316,9 +292,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
       try {
         setError(null);
 
-        console.log('Unsaving property:', { propertyId });
-
-        // Optimistic update - remove property ID from saved set immediately
+        // Optimistic updates
         setSavedPropertyIds((prev) => {
           const newSet = new Set(prev);
           newSet.delete(propertyId);
@@ -326,45 +300,25 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         });
         setSavingPropertyIds((prev) => new Set([...prev, propertyId]));
 
-        // Unsave property using the API
         const unsaveResponse = await savedPropertyService.unsaveProperty(propertyId);
 
-        // Update local state by removing the property
         if (unsaveResponse?.success || unsaveResponse === undefined) {
-          // Remove from saved properties list - only if the property exists
-          setSavedProperties((prev: any[]) => {
+          setSavedProperties((prev) => {
             const propertyExists = prev.some(p => (p._id || p.id) === propertyId);
-            if (!propertyExists) {
-              // Property not in list, return same array reference
-              return prev;
-            }
+            if (!propertyExists) return prev;
             return prev.filter(p => (p._id || p.id) !== propertyId);
-          });
-
-          // Remove from saved property IDs set
-          setSavedPropertyIds((prev) => {
-            if (!prev.has(propertyId)) {
-              // Property ID not in set, return same set reference
-              return prev;
-            }
-            const newSet = new Set(prev);
-            newSet.delete(propertyId);
-            return newSet;
           });
         }
 
-        console.log('Property unsaved successfully');
         setSavingPropertyIds((prev) => {
           const newSet = new Set(prev);
           newSet.delete(propertyId);
           return newSet;
         });
         toast.success('Property removed from saved');
-        // Decrement count in the folder that held this property
-        // Try to find the property in local state to get its folderId
-        const existing = savedProperties.find((p: any) => (p._id || p.id) === propertyId);
-        // TODO: Implement folder count adjustment with local state
-        // For now, we'll refresh folders to update counts
+
+        // Update folder counts locally
+        const existing = savedProperties.find((p) => (p._id || p.id) === propertyId);
         if (existing?.folderId) {
           setFolders((prevFolders) =>
             prevFolders.map((folder) =>
@@ -374,21 +328,17 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
             )
           );
         }
-        // Refresh folders to update counts immediately
+
         await loadFolders();
         await queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
       } catch (error: any) {
-        // If we get a 404, the property is already not saved, so treat as success
         if (error?.status === 404 || error?.message?.includes('not found')) {
-          console.log('Property already unsaved (404), updating UI state');
           setSavingPropertyIds((prev) => {
             const newSet = new Set(prev);
             newSet.delete(propertyId);
             return newSet;
           });
-          // Don't revert optimistic update since the property is actually unsaved
-          // Don't show error toast since this is expected behavior
-          return; // Success - don't throw error
+          return;
         }
 
         console.error('Failed to unsave property:', error);
@@ -406,7 +356,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         throw error;
       }
     },
-    [loadFolders, queryClient, setSavedProperties, setSavedPropertyIds, setSavingPropertyIds, setError, savedProperties],
+    [loadFolders, queryClient, savedProperties],
   );
 
   const getDefaultFolder = useCallback(() => {
@@ -439,11 +389,8 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
     if (!isInitialized) {
       const initializeData = async () => {
         try {
-          console.log('SavedPropertiesContext: Initializing data');
-          // Load both folders and saved properties in parallel
           await Promise.all([loadFolders(), loadSavedProperties()]);
           setIsInitialized(true);
-          console.log('SavedPropertiesContext: Data initialized successfully');
         } catch (error) {
           console.error('Failed to initialize saved properties data:', error);
         }
