@@ -32,7 +32,7 @@
  * ```
  */
 
-import React, { useState, useContext, useRef } from 'react';
+import React, { useState, useContext } from 'react';
 import { TouchableOpacity, StyleSheet, ViewStyle, View, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
@@ -98,7 +98,6 @@ export function SaveButton({
     unsaveProperty,
     isPropertySaved,
     isPropertySaving,
-    savedPropertiesCount,
     isInitialized
   } = useSavedPropertiesContext();
 
@@ -118,24 +117,14 @@ export function SaveButton({
       : initialSavedState
     : initialSavedState;
 
-  // Use the memoized count from context, but freeze it on first render
-  // This prevents other buttons from updating when this button isn't the one being pressed
-  const frozenCountRef = useRef<number | null>(null);
-  
-  // Initialize frozen count on first render when context is ready
-  if (frozenCountRef.current === null && isInitialized) {
-    frozenCountRef.current = savedPropertiesCount;
-  }
-  
-  // Update frozen count only when this specific property's save state changes
-  const [lastSavedState, setLastSavedState] = useState<boolean>(isSaved);
-  if (lastSavedState !== isSaved && frozenCountRef.current !== null) {
-    // This property's state changed, update the frozen count
-    frozenCountRef.current = savedPropertiesCount;
-    setLastSavedState(isSaved);
-  }
-  
-  const savedCount = frozenCountRef.current ?? savedPropertiesCount;
+  // For individual property buttons, we should not display a global count of ALL saved properties
+  // Each button represents the save status of ONE property only
+  // The count (if shown) should represent this specific property's save status:
+  // - 0 if not saved by current user
+  // - 1 if saved by current user  
+  // - Or could represent total saves by all users for social features (not implemented)
+  // For now, we show simple binary status: saved (1) or not saved (0)
+  const savedCount = isSaved ? 1 : 0;
 
 
 
