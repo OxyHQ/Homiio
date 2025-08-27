@@ -1,26 +1,33 @@
+// packages/frontend/babel.config.js
 module.exports = function (api) {
   api.cache(true);
   return {
-    presets: [['babel-preset-expo', { jsxImportSource: 'nativewind' }], 'nativewind/babel'],
+    // 👇 Treat NativeWind as a PRESET for your version
+    presets: [
+      'babel-preset-expo',
+      'nativewind/babel',
+    ],
     plugins: [
-      ['module:react-native-dotenv'],
-      // Add module resolver for better import handling
-      [
-        'module-resolver',
-        {
-          root: ['.'],
-          alias: {
-            '@': './',
-          },
-          extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
-        },
-      ],
-      // Add support for dynamic imports
+      // dotenv (make sure the package is installed in this workspace)
+      ['module:react-native-dotenv', {
+        moduleName: '@env',
+        path: '.env',
+        allowUndefined: true,
+        safe: false,
+      }],
+
+      // resolver
+      ['module-resolver', {
+        root: ['.'],
+        alias: { '@': './' },
+        extensions: ['.ts', '.tsx', '.js', '.jsx', '.json', '.svg'],
+      }],
+
       '@babel/plugin-transform-dynamic-import',
-      // Add support for export namespace from
       '@babel/plugin-proposal-export-namespace-from',
-      // Add support for reanimated
-      'react-native-reanimated/plugin', // Ensure this is the last plugin
+
+      // must be LAST
+      'react-native-reanimated/plugin',
     ],
   };
 };
