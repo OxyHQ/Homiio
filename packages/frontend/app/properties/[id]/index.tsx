@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   Platform,
   Share,
+  Animated,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -41,6 +42,7 @@ import { ReviewsSection } from '../../../components/property/ReviewsSection';
 import { PropertyActionBar } from '../../../components/property/PropertyActionBar';
 
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
+import { useLayoutScroll } from '@/context/LayoutScrollContext';
 
 import { SaveButton } from '@/components/SaveButton';
 import * as Linking from 'expo-linking';
@@ -70,6 +72,7 @@ export default function PropertyDetailPage() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const { oxyServices, activeSessionId } = useOxy();
+  const layoutScrollContext = useLayoutScroll();
 
 
   const {
@@ -107,9 +110,7 @@ export default function PropertyDetailPage() {
         try {
           // Fetch landlord profile
           const profile = await profileService.getProfileById(
-            normalizedLandlordProfileId,
-            oxyServices,
-            activeSessionId,
+            normalizedLandlordProfileId
           );
           setLandlordProfile(profile);
 
@@ -117,8 +118,6 @@ export default function PropertyDetailPage() {
           const { properties } = await propertyService.getOwnerProperties(
             normalizedLandlordProfileId,
             id as string, // Exclude current property
-            oxyServices,
-            activeSessionId,
           );
           setOwnerProperties(properties);
         } catch (error) {
@@ -221,9 +220,7 @@ export default function PropertyDetailPage() {
 
       try {
         const response = await ViewingService.listMyViewingRequests(
-          { page: 1, limit: 50 },
-          oxyServices,
-          activeSessionId,
+          { page: 1, limit: 50 }
         );
 
         const viewings = Array.isArray(response?.data) ? response.data : [];
@@ -377,7 +374,9 @@ export default function PropertyDetailPage() {
   }
 
   return (
-    <View style={styles.safeArea}>
+    <View
+      style={styles.scrollContainer}
+    >
       <View style={Platform.OS === 'web' ? styles.webHeaderWrapper : styles.nativeHeaderWrapper}>
         <Header
           options={{
@@ -430,7 +429,13 @@ export default function PropertyDetailPage() {
           }}
         />
       </View>
-      <View>
+      <Animated.ScrollView
+        style={{ flex: 1 }}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: layoutScrollContext?.scrollY || new Animated.Value(0) } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}>
         <HeaderSection
           title={property.title}
           location={property.location}
@@ -466,7 +471,7 @@ export default function PropertyDetailPage() {
           <SindiAnalysis property={apiProperty as any} />
           <FraudWarning text={t('Never pay or transfer funds outside the Homio platform') || 'Never pay or transfer funds outside the Homio platform'} />
         </View>
-      </View>
+      </Animated.ScrollView>
       <PropertyActionBar
         property={apiProperty as any}
         landlordProfile={landlordProfile}
@@ -483,6 +488,7 @@ export default function PropertyDetailPage() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, position: 'relative' },
   contentArea: {},
+  scrollContainer: { flexGrow: 1 },
   headerButton: { padding: 8 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   loadingText: { marginTop: 10, fontSize: 16, color: colors.COLOR_BLACK_LIGHT_3 },

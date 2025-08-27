@@ -88,9 +88,6 @@ export const api = {
       try {
         const token = await oxyClient.getAccessToken();
 
-        if (!token) {
-          throw new ApiError('No authentication token found', 401);
-        }
 
         headers['Authorization'] = `Bearer ${token}`;
       } catch (error) {
@@ -132,9 +129,6 @@ export const api = {
       try {
         const token = await oxyClient.getAccessToken();
 
-        if (!token) {
-          throw new ApiError('No authentication token found', 401);
-        }
 
         headers['Authorization'] = `Bearer ${token}`;
       } catch (error) {
@@ -177,9 +171,6 @@ export const api = {
       try {
         const token = await oxyClient.getAccessToken();
 
-        if (!token) {
-          throw new ApiError('No authentication token found', 401);
-        }
 
         headers['Authorization'] = `Bearer ${token}`;
       } catch (error) {
@@ -221,9 +212,6 @@ export const api = {
       try {
         const token = await oxyClient.getAccessToken();
 
-        if (!token) {
-          throw new ApiError('No authentication token found', 401);
-        }
 
         headers['Authorization'] = `Bearer ${token}`;
       } catch (error) {
@@ -265,9 +253,6 @@ export const api = {
       try {
         const token = await oxyClient.getAccessToken();
 
-        if (!token) {
-          throw new ApiError('No authentication token found', 401);
-        }
 
         headers['Authorization'] = `Bearer ${token}`;
       } catch (error) {

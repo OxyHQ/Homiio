@@ -1,28 +1,24 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo, useContext } from 'react';
 import {
-  View, StyleSheet, Dimensions, TextInput, TouchableOpacity,
-  Platform, ScrollView, FlatList,
+  View, StyleSheet,
+  Platform,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Map, { MapApi } from '@/components/Map';
-import { PropertyCard } from '@/components/PropertyCard';
-import { ThemedText } from '@/components/ThemedText';
+import { PropertyListBottomSheet } from '@/components/PropertyListBottomSheet';
 import { Property } from '@homiio/shared-types';
 import { propertyService } from '@/services/propertyService';
 import { useMapState } from '@/context/MapStateContext';
-import { colors } from '@/styles/colors';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SaveSearchBottomSheet } from '@/components/SaveSearchBottomSheet';
 import { SearchFiltersBottomSheet } from '@/components/SearchFiltersBottomSheet';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
-import { useTranslation } from 'react-i18next';
 import * as Location from 'expo-location';
 import { useSearchMode } from '@/context/SearchModeContext';
-import { SearchSkeleton } from '@/components/ui/skeletons/SearchSkeleton';
+import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 
 // Small helper to apply platform-appropriate shadows (uses boxShadow on web)
-const shadow = (level: 'sm' | 'md' = 'md') => Platform.select({
+const _shadow = (level: 'sm' | 'md' = 'md') => Platform.select({
   web: {
     boxShadow: level === 'md'
       ? '0 2px 4px rgba(0,0,0,0.1)'
@@ -53,208 +49,6 @@ const styles = StyleSheet.create({
   map: {
     ...StyleSheet.absoluteFillObject,
   },
-  searchContainerAbsolute: {
-    position: 'absolute',
-    top: Platform.OS === 'web' ? 16 : 48,
-    left: 16,
-    right: 16,
-    zIndex: 10,
-    maxWidth: 600,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  searchContainerRelative: {
-    padding: 16,
-    maxWidth: 600,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  filtersToolbarContainer: {
-    position: 'absolute',
-    top: Platform.OS === 'web' ? 120 : 152,
-    left: 16,
-    right: 16,
-    zIndex: 10,
-    maxWidth: 600,
-    alignSelf: 'center',
-  },
-  filtersToolbar: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    paddingVertical: 12,
-    ...shadow('md'),
-  },
-  filtersScrollContent: {
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  quickFilterChip: {
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_5,
-    backgroundColor: colors.primaryLight,
-  },
-  quickFilterTextActive: {
-    color: 'white',
-    fontWeight: '600',
-  },
-  advancedFiltersContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.COLOR_BLACK_LIGHT_6,
-    marginTop: 12,
-  },
-  advancedFiltersButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: colors.primaryLight,
-    borderWidth: 1,
-    borderColor: colors.primaryColor,
-    gap: 6,
-  },
-  advancedFiltersButtonActive: {
-    backgroundColor: colors.primaryColor,
-  },
-  advancedFiltersText: {
-    fontSize: 14,
-    color: colors.primaryColor,
-    fontWeight: '500',
-  },
-  advancedFiltersTextActive: {
-    color: 'white',
-  },
-  clearFiltersButton: {
-    padding: 4,
-  },
-  searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primaryLight,
-    borderRadius: 24,
-    paddingHorizontal: 12,
-    paddingVertical: Platform.OS === 'web' ? 8 : 4,
-    flex: 1,
-    marginRight: 8,
-    position: 'relative',
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: Platform.select({
-    web: {
-      flex: 1, fontSize: 16, color: '#333', paddingVertical: 8, borderWidth: 0,
-    },
-    default: {
-      flex: 1, fontSize: 16, color: '#333', paddingVertical: 8,
-    },
-  }),
-  clearButton: {
-    padding: 4,
-  },
-  searchResults: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginTop: 8,
-    maxHeight: 300,
-    ...shadow('md'),
-    zIndex: 1000,
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-  },
-  searchResultItem: {
-    flexDirection: 'row', alignItems: 'center', padding: 12,
-    borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
-  },
-  locationIcon: {
-    marginRight: 12,
-  },
-  searchResultText: {
-    flex: 1,
-  },
-  primaryText: {
-    fontSize: 16, color: '#333', marginBottom: 2,
-  },
-  secondaryText: {
-    fontSize: 14, color: '#666',
-  },
-
-
-  listContainer: {
-    flex: 1, padding: 16,
-  },
-  noResults: {
-    textAlign: 'center', fontSize: 16, color: '#666', marginTop: 32,
-  },
-  propertyCarouselContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingVertical: 16,
-    zIndex: 10,
-  },
-  carouselList: {
-    paddingHorizontal: 16,
-  },
-
-  searchHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    ...shadow('md'),
-    position: 'relative',
-  },
-  saveButton: {
-    backgroundColor: colors.primaryLight,
-    borderRadius: 35,
-    padding: 8,
-    ...shadow('sm'),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  searchHeaderContainer: {
-    position: 'absolute',
-    top: Platform.OS === 'web' ? 16 : 48,
-    left: 16,
-    right: 16,
-    zIndex: 10,
-    maxWidth: 600,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  filterButton: {
-    backgroundColor: colors.primaryLight,
-    borderRadius: 35,
-    padding: 8,
-    ...shadow('sm'),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  toggleButton: {
-    backgroundColor: colors.primaryLight,
-    borderRadius: 35,
-    padding: 8,
-    ...shadow('sm'),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 });
 
 interface SearchResult {
@@ -274,13 +68,16 @@ const defaultFilters: Filters = {
 
 
 export default function SearchScreen() {
-  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams();
   const { getMapState, setMapState } = useMapState();
   const { isAuthenticated } = useSavedSearches();
   const bottomSheet = useContext(BottomSheetContext);
   const screenId = 'search-screen';
+
+  // Bottom sheet state
+  const bottomSheetRef = useRef<BottomSheet>(null);
+  const snapPoints = useMemo(() => ['25%', '50%', '90%'], []);
 
   // Restore saved state on mount
   const savedState = getMapState(screenId);
@@ -289,8 +86,6 @@ export default function SearchScreen() {
   const urlQuery = params.query as string;
 
   const mapRef = useRef<MapApi>(null);
-  const flatListRef = useRef<FlatList>(null);
-  const searchInputRef = useRef<TextInput>(null);
   const [searchQuery, setSearchQuery] = useState(urlQuery || savedState?.searchQuery || '');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -301,12 +96,11 @@ export default function SearchScreen() {
     setSearchQuery(query);
   }, []);
   const { setIsMapMode } = useSearchMode();
-  const [showMap, setShowMap] = useState(true);
 
-  // Sync local showMap state with context isMapMode
+  // Set to map mode since we're always showing the map now
   React.useEffect(() => {
-    setIsMapMode(showMap);
-  }, [showMap, setIsMapMode]);
+    setIsMapMode(true);
+  }, [setIsMapMode]);
   const [filters, setFilters] = useState<Filters>({
     minPrice: savedState?.filters?.minPrice || defaultFilters.minPrice,
     maxPrice: savedState?.filters?.maxPrice || defaultFilters.maxPrice,
@@ -403,10 +197,10 @@ export default function SearchScreen() {
     setHighlightedPropertyId(null);
     try {
       const response = await propertyService.findPropertiesInBounds(bounds, {
-        minPrice: filters.minPrice,
-        maxPrice: filters.maxPrice,
-        minBedrooms: typeof filters.bedrooms === 'string' ? 5 : filters.bedrooms,
-        minBathrooms: typeof filters.bathrooms === 'string' ? 4 : filters.bathrooms,
+        minRent: filters.minPrice,
+        maxRent: filters.maxPrice,
+        bedrooms: typeof filters.bedrooms === 'string' ? 5 : filters.bedrooms,
+        bathrooms: typeof filters.bathrooms === 'string' ? 4 : filters.bathrooms,
       });
 
       // Only update properties if they've actually changed
@@ -454,9 +248,6 @@ export default function SearchScreen() {
     setSearchResults([]);
     setShowResults(false);
 
-    // Close search results and blur the input immediately
-    searchInputRef.current?.blur();
-
     // Set the search query to the selected location name
     setSearchQuery(result.place_name);
     lastSelectedLocationRef.current = result.place_name;
@@ -473,7 +264,6 @@ export default function SearchScreen() {
     const index = properties.findIndex(p => p._id === id);
     if (index !== -1) {
       setHighlightedPropertyId(id);
-      flatListRef.current?.scrollToIndex({ animated: true, index });
 
       // Save highlighted marker to state
       setMapState(screenId, { highlightedMarkerId: id });
@@ -503,20 +293,22 @@ export default function SearchScreen() {
     }, 500); // Increased to 500ms to reduce frequency
   }, [fetchProperties, savedState?.bounds]);
 
-  const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: { item: Property }[] }) => {
-    if (viewableItems.length > 0) {
-      const visibleId = viewableItems[0].item._id;
-      setHighlightedPropertyId(visibleId);
-    }
+  const onViewableItemsChanged = useMemo(() => {
+    return (viewableItems: { item: Property }[]) => {
+      if (viewableItems.length > 0) {
+        const visibleId = viewableItems[0].item._id;
+        setHighlightedPropertyId(visibleId);
+      }
+    };
   }, []);
-
-  const viewabilityConfig = useMemo(() => ({
-    itemVisiblePercentThreshold: 50,
-  }), []);
 
   const handlePropertyPress = useCallback((property: Property) => {
     router.push(`/properties/${property._id}`);
   }, [router]);
+
+  const handleCloseBottomSheet = useCallback(() => {
+    bottomSheetRef.current?.close();
+  }, []);
 
   const _handleResetMap = useCallback(() => {
     // Clear saved map state and reset to current location
@@ -579,15 +371,6 @@ export default function SearchScreen() {
       fetchProperties(defaultBounds);
     }
   }, [properties.length, savedState, fetchProperties]);
-
-  // Auto-focus search input when component mounts
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      searchInputRef.current?.focus();
-    }, 100); // Small delay to ensure component is fully rendered
-
-    return () => clearTimeout(timer);
-  }, []);
 
   // Handle URL query changes
   useEffect(() => {
@@ -678,231 +461,52 @@ export default function SearchScreen() {
     );
   }, [isAuthenticated, router, bottomSheet, searchQuery, filters]);
 
-  const renderSearchHeader = () => (
-    <View style={styles.searchHeader}>
-      <View style={styles.searchInputContainer}>
-        <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
-        <TextInput
-          ref={searchInputRef}
-          style={styles.searchInput}
-          placeholder="Search for a city, neighborhood, or address..."
-          value={searchQuery}
-          onChangeText={(text) => {
-            setSearchQuerySafely(text);
-          }}
-          returnKeyType="search"
-          onFocus={() => {
-            // Only show results if we have a query and have results
-            if (searchQuery.trim() && searchResults.length > 0) {
-              setShowResults(true);
-            }
-          }}
-          onBlur={() => {
-            // Handle search input blur
-          }}
-        />
-        {isSearching ? <View style={[styles.searchIcon, { width: 20, height: 20, justifyContent: "center", alignItems: "center" }]}><View style={{ width: 16, height: 16, borderWidth: 2, borderColor: "#666", borderTopColor: "transparent", borderRadius: 8 }} /></View>
-          : searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuerySafely('')} style={styles.clearButton}>
-              <Ionicons name="close-circle" size={20} color="#999" />
-            </TouchableOpacity>
-          )}
-      </View>
-
-      {/* Search Results for Header */}
-      {showResults && searchResults.length > 0 && (
-        <View style={[styles.searchResults, { position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000 }]}>
-          <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 300 }}>
-            {searchResults.map((result) => (
-              <TouchableOpacity key={result.id} style={styles.searchResultItem} onPress={() => handleSelectLocation(result)} >
-                <Ionicons name="location-outline" size={20} color="#666" style={styles.locationIcon} />
-                <View style={styles.searchResultText}>
-                  <ThemedText style={styles.primaryText}>{result.text}</ThemedText>
-                  <ThemedText style={styles.secondaryText}>{result.place_name.replace(`${result.text}, `, '')}</ThemedText>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
-      {showResults && searchResults.length === 0 && searchQuery.trim() && !isSearching && (
-        <View style={[styles.searchResults, { position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000, padding: 12 }]}>
-          <ThemedText style={styles.secondaryText}>No results found</ThemedText>
-        </View>
-      )}
-
-      <View style={styles.headerButtons}>
-        <TouchableOpacity
-          style={styles.filterButton}
-          onPress={handleOpenFilters}
-          accessibilityLabel={t('More Filters')}
-        >
-          <Ionicons name="options-outline" size={20} color={colors.primaryColor} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.saveButton}
-          onPress={handleOpenSaveModal}
-          accessibilityLabel={t('Save Search')}
-        >
-          <Ionicons name="bookmark-outline" size={20} color={colors.primaryColor} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.toggleButton}
-          onPress={handleRefreshLocation}
-          accessibilityLabel={t('Refresh Location')}
-        >
-          <Ionicons
-            name="location"
-            size={20}
-            color={colors.primaryColor}
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.toggleButton}
-          onPress={() => setShowMap(!showMap)}
-        >
-          <Ionicons
-            name={showMap ? 'list-outline' : 'map-outline'}
-            size={20}
-            color={colors.primaryColor}
-          />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  const renderPropertyList = () => (
-    <ScrollView style={styles.listContainer}>
-      {isLoadingProperties ? <SearchSkeleton showFilters={false} itemCount={6} />
-        : !properties || properties.length === 0 ? <ThemedText style={styles.noResults}>No properties found.</ThemedText>
-          : properties.map((property) => (
-            <PropertyCard key={property._id} property={property}
-              onPress={() => handlePropertyPress(property)}
-              showSaveButton showVerifiedBadge showSaveCount={true} saveCountDisplayMode="inline" style={{ marginBottom: 16 }} />
-          ))}
-    </ScrollView>
-  );
-
-  const _renderSearchBar = (containerStyle: any) => (
-    <View style={containerStyle}>
-      <View style={styles.searchInputContainer}>
-        <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
-        <TextInput
-          ref={searchInputRef}
-          style={styles.searchInput}
-          placeholder="Search for a city, neighborhood, or address..."
-          value={searchQuery}
-          onChangeText={(text) => {
-            setSearchQuerySafely(text);
-          }}
-          returnKeyType="search"
-          onFocus={() => {
-            // Only show results if we have a query and have results
-            if (searchQuery.trim() && searchResults.length > 0) {
-              setShowResults(true);
-            }
-          }}
-          onBlur={() => {
-            // Handle search input blur
-          }}
-        />
-        {isSearching ? <View style={[styles.searchIcon, { width: 20, height: 20, justifyContent: "center", alignItems: "center" }]}><View style={{ width: 16, height: 16, borderWidth: 2, borderColor: "#666", borderTopColor: "transparent", borderRadius: 8 }} /></View>
-          : searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuerySafely('')} style={styles.clearButton}>
-              <Ionicons name="close-circle" size={20} color="#999" />
-            </TouchableOpacity>
-          )}
-      </View>
-
-      {showResults && searchResults.length > 0 && (
-        <ScrollView style={styles.searchResults} keyboardShouldPersistTaps="handled">
-          {searchResults.map((result) => (
-            <TouchableOpacity key={result.id} style={styles.searchResultItem} onPress={() => handleSelectLocation(result)} >
-              <Ionicons name="location-outline" size={20} color="#666" style={styles.locationIcon} />
-              <View style={styles.searchResultText}>
-                <ThemedText style={styles.primaryText}>{result.text}</ThemedText>
-                <ThemedText style={styles.secondaryText}>{result.place_name.replace(`${result.text}, `, '')}</ThemedText>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
-      {showResults && searchResults.length === 0 && searchQuery.trim() && !isSearching && (
-        <View style={[styles.searchResults, { padding: 12 }]}>
-          <ThemedText style={styles.secondaryText}>No results found</ThemedText>
-        </View>
-      )}
-    </View>
-  );
-
   return (
     <View style={styles.container}>
-      {showMap ? (
-        <>
-          <Map
-            key="search-map"
-            ref={mapRef}
-            style={styles.map}
-            screenId={screenId}
-            startFromCurrentLocation={!savedState} // Use current location if no saved state
-            initialZoom={savedState?.zoom || 12}
-            markers={mapMarkers}
-            onRegionChange={handleRegionChange}
-            onMarkerPress={handleMarkerPress}
+      <Map
+        key="search-map"
+        ref={mapRef}
+        style={styles.map}
+        screenId={screenId}
+        startFromCurrentLocation={!savedState} // Use current location if no saved state
+        initialZoom={savedState?.zoom || 12}
+        markers={mapMarkers}
+        onRegionChange={handleRegionChange}
+        onMarkerPress={handleMarkerPress}
+      />
+
+      {/* Property List Bottom Sheet */}
+      <BottomSheet
+        ref={bottomSheetRef}
+        index={properties.length > 0 ? 0 : -1}
+        snapPoints={snapPoints}
+        onClose={handleCloseBottomSheet}
+        enablePanDownToClose={true}
+        backgroundStyle={{ backgroundColor: '#fff' }}
+      >
+        <BottomSheetView style={{ flex: 1 }}>
+          <PropertyListBottomSheet
+            properties={properties}
+            highlightedPropertyId={highlightedPropertyId}
+            onPropertyPress={handlePropertyPress}
+            isLoading={isLoadingProperties}
+            onViewableItemsChanged={onViewableItemsChanged}
+            _mapBounds={savedState?.bounds || null}
+            totalCount={undefined} // We can add this later if backend returns total count
+            // Search functionality props
+            searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuerySafely}
+            searchResults={searchResults}
+            isSearching={isSearching}
+            showSearchResults={showResults}
+            onSelectLocation={handleSelectLocation}
+            // Filter functionality props
+            onOpenFilters={handleOpenFilters}
+            onSaveSearch={handleOpenSaveModal}
+            onRefreshLocation={handleRefreshLocation}
           />
-
-          {/* Search Header with Save Button */}
-          <View style={styles.searchHeaderContainer}>
-            {renderSearchHeader()}
-          </View>
-
-          {properties.length > 0 && (
-            <View style={styles.propertyCarouselContainer}>
-              <FlatList
-                ref={flatListRef}
-                data={properties}
-                keyExtractor={(item) => item._id}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.carouselList}
-                onViewableItemsChanged={onViewableItemsChanged}
-                viewabilityConfig={viewabilityConfig}
-                getItemLayout={(data, index) => (
-                  { length: Dimensions.get('window').width * 0.85 + 12, offset: (Dimensions.get('window').width * 0.85 + 12) * index, index }
-                )}
-                renderItem={({ item }) => (
-                  <PropertyCard
-                    property={item}
-                    variant="compact"
-                    orientation="horizontal"
-                    onPress={() => handlePropertyPress(item)}
-                    style={{
-                      backgroundColor: '#fff',
-                      borderRadius: 12,
-                      overflow: 'hidden',
-                      borderWidth: item._id === highlightedPropertyId ? 2 : 0,
-                      borderColor: '#007AFF',
-                      padding: 10,
-                      height: '100%',
-                      width: Dimensions.get('window').width * 0.85,
-                      marginRight: 12,
-                      maxWidth: 400,
-                    }}
-                  />
-                )}
-              />
-            </View>
-          )}
-        </>
-      ) : (
-        <>
-          {renderSearchHeader()}
-          {renderPropertyList()}
-        </>
-      )}
+        </BottomSheetView>
+      </BottomSheet>
     </View>
   );
 }
