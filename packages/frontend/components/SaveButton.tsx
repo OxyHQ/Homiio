@@ -98,14 +98,25 @@ export function SaveButton({
     unsaveProperty,
     isLoading: contextLoading,
     isPropertySaved,
-    savedProperties
+    savedProperties,
+    isInitialized
   } = useSavedPropertiesContext();
 
   // Determine property ID
   const propertyId = property?._id || property?.id;
 
-  // Use context's isPropertySaved method for reliable state
-  const isSaved = propertyId ? isPropertySaved(propertyId) : propIsSaved;
+  // Determine initial saved state from prop or property object
+  const initialSavedState =
+    typeof propIsSaved === 'boolean'
+      ? propIsSaved
+      : (property as any)?.isSaved;
+
+  // Use context state when initialized, otherwise fall back to initial state
+  const isSaved = propertyId
+    ? isInitialized
+      ? isPropertySaved(propertyId)
+      : initialSavedState
+    : initialSavedState;
 
   // Calculate saved properties count from context
   const savedCount = savedProperties.length;
