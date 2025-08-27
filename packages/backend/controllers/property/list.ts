@@ -253,7 +253,13 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
         const decorated = properties.map((p: any, index: number) => {
           const distance = computeDistance(p);
           const savesCount = savesMap[String(p._id)] || 0;
-            return { index, distance, savesCount, inside: Number.isFinite(distance) && distance <= preferredRadiusMeters, prop: p };
+          return {
+            index,
+            distance,
+            savesCount,
+            inside: Number.isFinite(distance) && distance <= preferredRadiusMeters,
+            prop: { ...p, isSaved: false }
+          };
         });
         decorated.sort((a, b) => {
           if (a.inside !== b.inside) return a.inside ? -1 : 1;
@@ -263,10 +269,10 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
         });
         ordered = decorated.map(d => ({ ...d.prop, savesCount: d.savesCount, distance: d.distance }));
       } catch {
-        ordered = properties.map((p: any) => ({ ...p, savesCount: savesMap[String(p._id)] || 0 }));
+        ordered = properties.map((p: any) => ({ ...p, savesCount: savesMap[String(p._id)] || 0, isSaved: false }));
       }
     } else {
-      ordered = properties.map((p: any) => ({ ...p, savesCount: savesMap[String(p._id)] || 0 }));
+      ordered = properties.map((p: any) => ({ ...p, savesCount: savesMap[String(p._id)] || 0, isSaved: false }));
     }
 
     if ((req as any).user?.id || (req as any).user?._id) {
@@ -280,6 +286,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
             .limit(10)
             .lean();
           const savedProperties = await Saved.find({ profileId: activeProfile._id, targetType: 'property' }).lean();
+          const savedIds = new Set(savedProperties.map((s: any) => s.targetId.toString()));
           const preferenceWeights = { propertyTypes: {}, priceRanges: {}, locations: {}, amenities: {} } as any;
           recentlyViewed.forEach((view: any) => {
             const property = ordered.find(p => p._id.toString() === view.propertyId.toString());
@@ -301,6 +308,8 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
             }
           });
           const personalized = ordered.map(property => {
+            const propertyId = property._id.toString();
+            const isSaved = savedIds.has(propertyId);
             let personalizedScore = (property.savesCount || 0) * 10;
             personalizedScore += (preferenceWeights.propertyTypes[property.type] || 0) * 15;
             const rent = property.rent?.amount || 0;
@@ -318,9 +327,8 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
             if (property.isEcoFriendly) personalizedScore += 15;
             const isRecentlyViewed = recentlyViewed.some((view: any) => view.propertyId.toString() === property._id.toString());
             if (isRecentlyViewed) personalizedScore -= 30;
-            const isSaved = savedProperties.some((saved: any) => saved.targetId.toString() === property._id.toString());
             if (isSaved) personalizedScore -= 20;
-            return { ...property, personalizedScore };
+            return { ...property, personalizedScore, isSaved };
           });
           personalized.sort((a, b) => (b.personalizedScore || 0) - (a.personalizedScore || 0));
           ordered = personalized;
