@@ -18,7 +18,7 @@ import Button from '@/components/Button';
 import { Property } from '@homiio/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { useSavedProperties } from '@/hooks/useSavedProperties';
-import { useOxy } from '@oxyhq/services';
+import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { ThemedText } from '@/components/ThemedText';
 import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
 
@@ -30,7 +30,6 @@ export default function PropertiesScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { oxyServices, activeSessionId } = useOxy();
   const [viewMode, setViewMode] = useState<'list' | 'grid'>(isMobile ? 'grid' : 'list');
   const [fadeAnim] = useState(new Animated.Value(1));
   const [isLoading, setIsLoading] = useState(false);
@@ -42,11 +41,14 @@ export default function PropertiesScreen() {
 
   const { properties: allProperties, loading, loadProperties } = useProperties();
   const { isSaved, toggleSaved } = useSavedProperties();
+  const { isInitialized } = useSavedPropertiesContext();
 
   // Combine properties with saved status
   const propertiesWithSavedStatus = allProperties.map((property) => ({
     ...property,
-    isSaved: isSaved(property._id || property.id || ''),
+    isSaved: isInitialized
+      ? isSaved(property._id || property.id || '')
+      : (property as any)?.isSaved,
   }));
 
   useEffect(() => {

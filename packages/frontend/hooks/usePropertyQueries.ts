@@ -11,12 +11,14 @@ export const useProperties = () => {
   const { properties, loading, error, pagination } = usePropertySelectors();
   const { setProperties, clearError, setFilters, clearFilters, setPagination } = usePropertyStore();
   const queryClient = useQueryClient();
+  const { oxyServices, activeSessionId } = useOxy();
 
   const loadProperties = useCallback(
     async (filters?: PropertyFilters) => {
       const result = await queryClient.fetchQuery({
         queryKey: ['properties', { filters: filters ?? null }],
-        queryFn: async () => propertyService.getProperties(filters),
+        queryFn: async () =>
+          propertyService.getProperties(filters, oxyServices, activeSessionId || ''),
         staleTime: 1000 * 30,
         gcTime: 1000 * 60 * 10,
       });
@@ -30,7 +32,7 @@ export const useProperties = () => {
       if (filters) setFilters(filters);
       return result;
     },
-    [queryClient, setPagination, setProperties, setFilters],
+    [queryClient, setPagination, setProperties, setFilters, oxyServices, activeSessionId],
   );
 
   const clearErrorAction = useCallback(() => {
