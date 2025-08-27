@@ -200,7 +200,11 @@ export function PropertyCard({
 
   const isEco = Boolean(property.isEcoFriendly);
   const isFeatured = variant === 'featured';
-  const isPropertySavedState = propertyData.id && isInitialized ? isPropertySaved(propertyData.id) : false;
+  const isPropertySavedState = propertyData.id
+    ? isInitialized
+      ? isPropertySaved(propertyData.id)
+      : (property as any)?.isSaved || false
+    : false;
 
   // Get variant-specific styles
   const variantStyles = getVariantStyles(variant);
