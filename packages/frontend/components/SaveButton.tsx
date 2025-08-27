@@ -98,14 +98,16 @@ export function SaveButton({
     unsaveProperty,
     isLoading: contextLoading,
     isPropertySaved,
-    savedProperties
+    savedProperties,
+    isInitialized
   } = useSavedPropertiesContext();
 
   // Determine property ID
   const propertyId = property?._id || property?.id;
 
-  // Use context's isPropertySaved method for reliable state
-  const isSaved = propertyId ? isPropertySaved(propertyId) : propIsSaved;
+  // Use context's isPropertySaved method for reliable state, but only after initialization
+  // If not initialized, use the prop value or show loading state
+  const isSaved = propertyId && isInitialized ? isPropertySaved(propertyId) : propIsSaved;
 
   // Calculate saved properties count from context
   const savedCount = savedProperties.length;
@@ -148,6 +150,9 @@ export function SaveButton({
   };
 
   const isButtonDisabled = disabled || isLoading || isPressed || contextLoading;
+
+  // Show loading state if we're waiting for initialization and no prop value is provided
+  const shouldShowLoading = showLoading && (isLoading || contextLoading || (!isInitialized && propertyId && propIsSaved === undefined));
 
   const handleInternalSave = async () => {
     if (!propertyId) return;
@@ -288,7 +293,7 @@ export function SaveButton({
           minWidth: showCount && countDisplayMode === 'inline' ? size + 20 : size,
         }}
       >
-        {showLoading && (isLoading || contextLoading) ? (
+        {shouldShowLoading ? (
           <LoadingSpinner size={sizeAll} color={getIconColor()} showText={false} />
         ) : (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: sizeAll / 4 }}>
