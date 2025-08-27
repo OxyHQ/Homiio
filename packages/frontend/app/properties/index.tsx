@@ -19,6 +19,7 @@ import { Property } from '@homiio/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { useSavedProperties } from '@/hooks/useSavedProperties';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
+import { useOxy } from '@oxyhq/services';
 import { ThemedText } from '@/components/ThemedText';
 import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
 
