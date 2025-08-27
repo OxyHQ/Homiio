@@ -65,7 +65,6 @@ interface SavedPropertiesProviderProps {
 }
 
 export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = ({ children }) => {
-  // Remove unused authentication imports since we use clean api now
   const queryClient = useQueryClient();
   const [folders, setFolders] = useState<SavedPropertyFolder[]>([]);
   const [savedProperties, setSavedProperties] = useState<any[]>([]);
@@ -435,14 +434,16 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
     [_savingPropertyIds],
   );
 
-  // Initialize data when auth is available
+  // Initialize data when component mounts
   useEffect(() => {
     if (!isInitialized) {
       const initializeData = async () => {
         try {
+          console.log('SavedPropertiesContext: Initializing data');
           // Load both folders and saved properties in parallel
           await Promise.all([loadFolders(), loadSavedProperties()]);
           setIsInitialized(true);
+          console.log('SavedPropertiesContext: Data initialized successfully');
         } catch (error) {
           console.error('Failed to initialize saved properties data:', error);
         }

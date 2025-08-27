@@ -18,8 +18,8 @@ class SavedPropertyService {
     const response = await api.get('/api/profiles/me/saved-properties');
     
     // The API returns { success: true, data: [...], message: "..." }
-    // where data is directly the array of properties
-    const properties = Array.isArray(response.data) ? response.data : [];
+    // where response.data contains the wrapper and response.data.data contains the actual properties array
+    const properties = Array.isArray(response.data.data) ? response.data.data : [];
     
     return {
       properties,

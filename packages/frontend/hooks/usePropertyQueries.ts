@@ -1,5 +1,4 @@
 import { useCallback, useState, useEffect } from 'react';
-import { useOxy } from '@oxyhq/services';
 import { usePropertyStore, usePropertySelectors } from '@/store/propertyStore';
 import { Property, PropertyFilters, propertyService } from '@/services/propertyService';
 import { CreatePropertyData } from '@homiio/shared-types';
@@ -11,14 +10,13 @@ export const useProperties = () => {
   const { properties, loading, error, pagination } = usePropertySelectors();
   const { setProperties, clearError, setFilters, clearFilters, setPagination } = usePropertyStore();
   const queryClient = useQueryClient();
-  const { oxyServices, activeSessionId } = useOxy();
 
   const loadProperties = useCallback(
     async (filters?: PropertyFilters) => {
       const result = await queryClient.fetchQuery({
         queryKey: ['properties', { filters: filters ?? null }],
         queryFn: async () =>
-          propertyService.getProperties(filters, oxyServices, activeSessionId || ''),
+          propertyService.getProperties(filters),
         staleTime: 1000 * 30,
         gcTime: 1000 * 60 * 10,
       });
@@ -32,7 +30,7 @@ export const useProperties = () => {
       if (filters) setFilters(filters);
       return result;
     },
-    [queryClient, setPagination, setProperties, setFilters, oxyServices, activeSessionId],
+    [queryClient, setPagination, setProperties, setFilters],
   );
 
   const clearErrorAction = useCallback(() => {
@@ -65,7 +63,6 @@ export const useProperties = () => {
 export const useProperty = (id: string) => {
   const { currentProperty } = usePropertySelectors();
   const { setCurrentProperty, clearCurrentProperty } = usePropertyStore();
-  const { oxyServices, activeSessionId } = useOxy();
   const queryClient = useQueryClient();
 
   const {
@@ -76,7 +73,7 @@ export const useProperty = (id: string) => {
   } = useQuery({
     queryKey: ['property', id],
     queryFn: async () =>
-      propertyService.getPropertyById(id, oxyServices, activeSessionId || ''),
+      propertyService.getPropertyById(id),
     enabled: Boolean(id),
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,
@@ -165,7 +162,6 @@ export const useSearchProperties = (query?: string, filters?: PropertyFilters) =
 export const useCreateProperty = () => {
   const { loading, error } = usePropertySelectors();
   const { setLoading, setError } = usePropertyStore();
-  const { oxyServices, activeSessionId } = useOxy();
 
   const create = useCallback(
     async (data: CreatePropertyData) => {
@@ -174,11 +170,7 @@ export const useCreateProperty = () => {
         setError(null);
 
         // Use the propertyService instead of propertyApi
-        const response = await propertyService.createProperty(
-          data,
-          oxyServices,
-          activeSessionId || '',
-        );
+        const response = await propertyService.createProperty(data);
 
         toast.success('Property created successfully');
         return response;
@@ -191,7 +183,7 @@ export const useCreateProperty = () => {
         setLoading('create', false);
       }
     },
-    [oxyServices, activeSessionId, setLoading, setError],
+    [setLoading, setError],
   );
 
   return {
@@ -204,7 +196,6 @@ export const useCreateProperty = () => {
 export const useUpdateProperty = () => {
   const { loading, error } = usePropertySelectors();
   const { setLoading, setError } = usePropertyStore();
-  const { oxyServices, activeSessionId } = useOxy();
 
   const update = useCallback(
     async (id: string, data: Partial<CreatePropertyData>) => {
@@ -216,8 +207,6 @@ export const useUpdateProperty = () => {
         const response = await propertyService.updateProperty(
           id,
           data,
-          oxyServices,
-          activeSessionId || '',
         );
 
         toast.success('Property updated successfully');
@@ -231,7 +220,7 @@ export const useUpdateProperty = () => {
         setLoading('update', false);
       }
     },
-    [oxyServices, activeSessionId, setLoading, setError],
+    [setLoading, setError],
   );
 
   return {
@@ -275,10 +264,9 @@ export const useDeleteProperty = () => {
 };
 
 // Hook for user's owned properties
-export const useUserProperties = () => {
+export const useUserProperties = (profileId?: string) => {
   const { loading, error } = usePropertySelectors();
   const { setLoading, setError } = usePropertyStore();
-  const { oxyServices, activeSessionId } = useOxy();
 
   const [userProperties, setUserProperties] = useState<Property[]>([]);
   const [pagination, setPagination] = useState({
@@ -288,26 +276,25 @@ export const useUserProperties = () => {
   });
 
   const fetchUserProperties = useCallback(
-    async (page = 1, limit = 10) => {
-      if (!oxyServices || !activeSessionId) {
-        console.log('OxyServices not available - returning empty properties');
+    async (_page = 1, _limit = 10) => {
+      if (!profileId) {
+        console.warn('No profile ID provided to fetch user properties');
         return { properties: [], total: 0, page: 1, totalPages: 1 };
       }
 
       try {
         setLoading('properties', true);
         setError(null);
-        console.log('Fetching user properties with OxyServices authentication');
+        console.log('Fetching user properties');
 
-        // Import the API function
-        const { userApi } = await import('@/utils/api');
-        const response = await userApi.getUserProperties(page, limit, oxyServices, activeSessionId);
+        // Use propertyService to get owner properties
+        const response = await propertyService.getOwnerProperties(profileId);
 
         const result = {
-          properties: response.data?.properties || response.data || [],
-          total: response.data?.total || 0,
-          page: response.data?.page || 1,
-          totalPages: response.data?.totalPages || 1,
+          properties: response.properties || [],
+          total: response.total || 0,
+          page: response.page || 1,
+          totalPages: response.totalPages || 1,
         };
 
         setUserProperties(result.properties);
@@ -328,7 +315,7 @@ export const useUserProperties = () => {
         setLoading('properties', false);
       }
     },
-    [oxyServices, activeSessionId, setLoading, setError],
+    [setLoading, setError, profileId],
   );
 
   // Load properties on mount

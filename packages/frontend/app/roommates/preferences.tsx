@@ -5,7 +5,6 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/colors';
 import { useProfile } from '@/context/ProfileContext';
-import { useOxy } from '@oxyhq/services';
 import { roommateService } from '@/services/roommateService';
 import { useProfileStore } from '@/store/profileStore';
 import Button from '@/components/Button';
@@ -49,48 +48,47 @@ export default function RoommatePreferencesPage() {
     }
   }, [primaryProfile, isPersonalProfile]);
 
-  const { oxyServices, activeSessionId } = useOxy();
   const queryClient = useQueryClient();
 
   // Keep toggle in sync with backend status to avoid stale UI state
   useEffect(() => {
     (async () => {
-      if (!oxyServices || !activeSessionId) return;
-      const status = await roommateService.getMyRoommateStatus(oxyServices, activeSessionId);
+      const status = await roommateService.getMyRoommateStatus();
       if (status && typeof status.hasRoommateMatching === 'boolean') {
         setRoommateEnabled(Boolean(status.hasRoommateMatching));
       }
     })();
     // Only on mount/auth change
-     
-  }, [oxyServices, activeSessionId]);
+
+  }, []);
 
   const preferencesQuery = useQuery({
     queryKey: ['roommates', 'preferences'],
-    queryFn: async () => roommateService.getMyRoommatePreferences(oxyServices!, activeSessionId!),
-    enabled: Boolean(oxyServices && activeSessionId),
+    queryFn: async () => roommateService.getMyRoommatePreferences(),
     staleTime: 1000 * 60,
     gcTime: 1000 * 60 * 10,
-    onSuccess: (data) => {
-      if (data) {
-        setPreferences((prev) => ({ ...prev, ...(data as any) }));
-      }
-    },
   });
+
+  // Update preferences when query data changes
+  useEffect(() => {
+    if (preferencesQuery.data) {
+      setPreferences((prev) => ({ ...prev, ...preferencesQuery.data }));
+    }
+  }, [preferencesQuery.data]);
 
   const toggleMutation = useMutation({
     mutationKey: ['roommates', 'toggle'],
     mutationFn: async (enabled: boolean) => {
-      return roommateService.toggleRoommateMatching(enabled, oxyServices!, activeSessionId!);
+      return roommateService.toggleRoommateMatching(enabled);
     },
     onMutate: async (enabled: boolean) => {
       const previous = roommateEnabled;
       setRoommateEnabled(enabled);
       return { previous };
     },
-    onSuccess: async (data, intendedEnabled) => {
+    onSuccess: async (data) => {
       // Refresh profile, then set switch from authoritative store value
-      await useProfileStore.getState().fetchPrimaryProfile(oxyServices!, activeSessionId!);
+      await useProfileStore.getState().fetchPrimaryProfile();
       const storeEnabled = Boolean(
         useProfileStore.getState().primaryProfile?.personalProfile?.settings?.roommate?.enabled,
       );
@@ -109,10 +107,6 @@ export default function RoommatePreferencesPage() {
 
 
   const handleToggleRoommateMatching = async (enabled: boolean) => {
-    if (!oxyServices || !activeSessionId) {
-      Alert.alert('Not signed in', 'Please sign in to change roommate matching settings.');
-      return;
-    }
     setIsSaving(true);
     try {
       await toggleMutation.mutateAsync(enabled);
@@ -184,7 +178,7 @@ export default function RoommatePreferencesPage() {
               onValueChange={handleToggleRoommateMatching}
               trackColor={{ false: colors.COLOR_BLACK_LIGHT_6, true: colors.primaryColor }}
               thumbColor={colors.primaryLight}
-              disabled={isSaving || toggleMutation.isPending || !oxyServices || !activeSessionId}
+              disabled={isSaving || toggleMutation.isPending}
             />
           </View>
         </View>

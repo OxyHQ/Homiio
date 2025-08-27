@@ -1,6 +1,8 @@
 import { api } from '@/utils/api';
-import { OxyServices } from '@oxyhq/services';
-import { PropertyType, PropertyFilters, Property } from '@homiio/shared-types';
+import { PropertyType, PropertyFilters, Property, PropertyImage } from '@homiio/shared-types';
+
+// Re-export types for use in other files
+export { Property, PropertyFilters, PropertyType } from '@homiio/shared-types';
 
 export interface PropertySearchResult {
   property: Property;
@@ -13,8 +15,6 @@ class PropertyService {
   // Get all properties with filters (legacy method)
   async getProperties(
     filters?: PropertyFilters,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
   ): Promise<{
     properties: Property[];
     total: number;
@@ -24,8 +24,6 @@ class PropertyService {
     try {
       const response = await api.get(this.baseUrl, {
         params: filters,
-        oxyServices,
-        activeSessionId,
       });
       return {
         properties: response.data.data || response.data.results || response.data.properties || [],
@@ -39,45 +37,9 @@ class PropertyService {
     }
   }
 
-  // Get rooms for a property
-  async getPropertyRooms(
-    propertyId: string,
-    filters?: PropertyFilters,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ): Promise<{
-    rooms: Property[];
-    total: number;
-    page: number;
-    totalPages: number;
-  }> {
-    try {
-      const response = await api.get(`${this.baseUrl}`, {
-        params: {
-          ...filters,
-          type: PropertyType.ROOM,
-          parentPropertyId: propertyId
-        },
-        oxyServices,
-        activeSessionId,
-      });
-      return {
-        rooms: response.data.data || response.data.results || response.data.properties || [],
-        total: response.data.pagination?.total || response.data.total || 0,
-        page: response.data.pagination?.page || response.data.page || 1,
-        totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1
-      };
-    } catch (error) {
-      console.error('Error getting property rooms:', error);
-      return { rooms: [], total: 0, page: 1, totalPages: 1 };
-    }
-  }
-
   // Get all available rooms
   async getRooms(
     filters?: PropertyFilters,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
   ): Promise<{
     rooms: Property[];
     total: number;
@@ -90,8 +52,6 @@ class PropertyService {
           ...filters,
           type: PropertyType.ROOM
         },
-        oxyServices,
-        activeSessionId,
       });
       return {
         rooms: response.data.data || response.data.results || response.data.properties || [],
@@ -109,8 +69,6 @@ class PropertyService {
   async searchProperties(
     query: string,
     filters?: PropertyFilters,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
   ): Promise<{
     properties: Property[];
     total: number;
@@ -120,8 +78,6 @@ class PropertyService {
     try {
       const response = await api.get(`${this.baseUrl}/search`, {
         params: { query, ...filters },
-        oxyServices,
-        activeSessionId,
       });
       return {
         properties: response.data.data || response.data.results || response.data.properties || [],
@@ -138,14 +94,9 @@ class PropertyService {
   // Get property details by ID
   async getPropertyById(
     propertyId: string,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
   ): Promise<Property | null> {
     try {
-      const response = await api.get(`${this.baseUrl}/${propertyId}`, {
-        oxyServices,
-        activeSessionId,
-      });
+      const response = await api.get(`${this.baseUrl}/${propertyId}`);
       return response.data.data;
     } catch (error) {
       console.error('Error fetching property details:', error);
@@ -157,8 +108,6 @@ class PropertyService {
   async getOwnerProperties(
     profileId: string,
     excludePropertyId?: string,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
   ): Promise<{
     properties: Property[];
     total: number;
@@ -172,9 +121,7 @@ class PropertyService {
           excludeIds: excludePropertyId,
           sortBy: 'createdAt',
           sortOrder: 'desc'
-        },
-        oxyServices,
-        activeSessionId,
+        }
       });
       return {
         properties: response.data.data || response.data.results || response.data.properties || [],
@@ -191,11 +138,9 @@ class PropertyService {
   // Get property rooms
   async getPropertyRooms(
     propertyId: string,
-    filters?: any,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
+    filters?: PropertyFilters,
   ): Promise<{
-    rooms: any[];
+    rooms: Property[];
     total: number;
     page: number;
     totalPages: number;
@@ -203,8 +148,6 @@ class PropertyService {
     try {
       const response = await api.get(`${this.baseUrl}/${propertyId}/rooms`, {
         params: filters,
-        oxyServices,
-        activeSessionId,
       });
       return response.data;
     } catch (error) {
@@ -230,7 +173,7 @@ class PropertyService {
       const locationMatch = preferences.preferredLocations.some(
         (loc: any) =>
           property.address.city.toLowerCase() === loc.city.toLowerCase() &&
-          property.address.state.toLowerCase() === loc.state.toLowerCase()
+          property.address.state?.toLowerCase() === loc.state?.toLowerCase()
       );
       if (!locationMatch) {
         score -= 15;
@@ -245,25 +188,25 @@ class PropertyService {
     // Lifestyle match
     if (preferences.lifestyle && property.rules) {
       // Pets
-      if (preferences.lifestyle.pets && !property.rules.pets) {
+      if (preferences.lifestyle.pets && !property.rules.petsAllowed) {
         score -= 10;
       }
 
       // Smoking
-      if (!preferences.lifestyle.smoking && property.rules.smoking) {
+      if (!preferences.lifestyle.smoking && property.rules.smokingAllowed) {
         score -= 10;
       }
 
       // Guests
-      if (preferences.lifestyle.guests && !property.rules.guests) {
+      if (preferences.lifestyle.guests && !property.rules.guestsAllowed) {
         score -= 5;
       }
     }
 
     // Move-in date match
-    if (preferences.moveInDate && property.availability.availableFrom) {
+    if (preferences.moveInDate && property.availableFrom) {
       const preferredDate = new Date(preferences.moveInDate);
-      const availableDate = new Date(property.availability.availableFrom);
+      const availableDate = new Date(property.availableFrom);
       const diffDays = Math.abs(preferredDate.getTime() - availableDate.getTime()) / (1000 * 60 * 60 * 24);
       
       if (diffDays > 30) {
@@ -272,9 +215,9 @@ class PropertyService {
     }
 
     // Amenities match
-    if (preferences.desiredAmenities) {
+    if (preferences.desiredAmenities && property.amenities) {
       const matchedAmenities = preferences.desiredAmenities.filter((a: string) => 
-        property.amenities.includes(a)
+        property.amenities?.includes(a)
       );
       if (matchedAmenities.length < preferences.desiredAmenities.length / 2) {
         score -= 10;
@@ -298,13 +241,30 @@ class PropertyService {
 
   // Get primary image URL
   getPrimaryImageUrl(property: Property): string | null {
-    const primaryImage = property.images.find(img => img.isPrimary);
-    return primaryImage?.url || property.images[0]?.url || null;
+    if (!property.images || property.images.length === 0) return null;
+    
+    const primaryImage = property.images.find(img => 
+      typeof img === 'object' && 'isPrimary' in img && img.isPrimary
+    ) as PropertyImage | undefined;
+    
+    if (primaryImage && typeof primaryImage === 'object' && 'url' in primaryImage) {
+      return primaryImage.url;
+    }
+    
+    const firstImage = property.images[0];
+    if (typeof firstImage === 'string') {
+      return firstImage;
+    } else if (typeof firstImage === 'object' && 'url' in firstImage) {
+      return firstImage.url;
+    }
+    
+    return null;
   }
 
   // Check if property is available
   isPropertyAvailable(property: Property): boolean {
-    return property.availability.isAvailable;
+    // Check if property status indicates availability
+    return property.status === 'published';
   }
 
   // Get property type display name
@@ -316,8 +276,6 @@ class PropertyService {
   async findPropertiesInBounds(
     bounds: { west: number; south: number; east: number; north: number },
     filters?: PropertyFilters,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
   ): Promise<{
     properties: Property[];
     total: number;
@@ -333,8 +291,6 @@ class PropertyService {
       
       const response = await api.get(`${this.baseUrl}/search`, {
         params,
-        oxyServices,
-        activeSessionId,
       });
       
       return {
@@ -352,14 +308,9 @@ class PropertyService {
   // Get property statistics
   async getPropertyStats(
     propertyId: string,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
   ): Promise<any> {
     try {
-      const response = await api.get(`${this.baseUrl}/${propertyId}/stats`, {
-        oxyServices,
-        activeSessionId,
-      });
+      const response = await api.get(`${this.baseUrl}/${propertyId}/stats`);
       return response.data.data;
     } catch (error) {
       console.error('Error fetching property stats:', error);
@@ -370,14 +321,9 @@ class PropertyService {
   // Create property
   async createProperty(
     data: Partial<Property>,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
   ): Promise<Property> {
     try {
-      const response = await api.post(this.baseUrl, data, {
-        oxyServices,
-        activeSessionId,
-      });
+      const response = await api.post(this.baseUrl, data);
       return response.data.data;
     } catch (error) {
       console.error('Error creating property:', error);
@@ -389,14 +335,9 @@ class PropertyService {
   async updateProperty(
     propertyId: string,
     data: Partial<Property>,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
   ): Promise<Property> {
     try {
-      const response = await api.put(`${this.baseUrl}/${propertyId}`, data, {
-        oxyServices,
-        activeSessionId,
-      });
+      const response = await api.put(`${this.baseUrl}/${propertyId}`, data);
       return response.data.data;
     } catch (error) {
       console.error('Error updating property:', error);
@@ -407,14 +348,9 @@ class PropertyService {
   // Delete property
   async deleteProperty(
     propertyId: string,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
   ): Promise<void> {
     try {
-      await api.delete(`${this.baseUrl}/${propertyId}`, {
-        oxyServices,
-        activeSessionId,
-      });
+      await api.delete(`${this.baseUrl}/${propertyId}`);
     } catch (error) {
       console.error('Error deleting property:', error);
       throw error;
