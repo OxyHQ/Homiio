@@ -1,26 +1,16 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useOxy } from '@oxyhq/services';
 import { toast } from 'sonner';
+import { api } from '@/utils/api';
 
 type UpdateNotesVars = { propertyId: string; notes: string };
 
 export function useSavedNotesMutation() {
-  const { oxyServices, activeSessionId } = useOxy();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationKey: ['updateSavedPropertyNotes'],
     mutationFn: async ({ propertyId, notes }: UpdateNotesVars) => {
-      if (!oxyServices || !activeSessionId) {
-        throw new Error('Not authenticated');
-      }
-      const { userApi } = await import('@/utils/api');
-      const res = await userApi.updateSavedPropertyNotes(
-        propertyId,
-        notes,
-        oxyServices,
-        activeSessionId,
-      );
+      const res = await api.patch(`/me/saved-properties/${propertyId}/notes`, { notes });
       return res;
     },
     // Optimistic update to the savedProperties query cache

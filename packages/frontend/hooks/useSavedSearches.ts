@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useSavedSearchesStore, useSavedSearchesSelectors } from '@/store/savedSearchesStore';
-import { useOxy } from '@oxyhq/services';
 import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { api } from '@/utils/api';
 
 export const useSavedSearches = (): {
   searches: any[];
@@ -40,7 +40,7 @@ export const useSavedSearches = (): {
     setLoading,
     setError,
   } = useSavedSearchesStore();
-  const { oxyServices, activeSessionId } = useOxy();
+
   const hasFetchedRef = useRef(false);
   const queryClient = useQueryClient();
 
@@ -53,17 +53,12 @@ export const useSavedSearches = (): {
       filters?: any;
       notificationsEnabled?: boolean;
     }) => {
-      const { userApi } = await import('@/utils/api');
-      const response = await userApi.saveSearch(
-        {
-          name: vars.name,
-          query: vars.query,
-          filters: vars.filters,
-          notificationsEnabled: Boolean(vars.notificationsEnabled),
-        },
-        oxyServices!,
-        activeSessionId!,
-      );
+      const response = await api.post('/me/saved-searches', {
+        name: vars.name,
+        query: vars.query,
+        filters: vars.filters,
+        notificationsEnabled: Boolean(vars.notificationsEnabled),
+      });
 
       const s = (response as any).data?.search || (response as any).data || {};
       const normalized = {
@@ -103,19 +98,14 @@ export const useSavedSearches = (): {
 
   // Fetch saved searches via React Query and sync to Zustand
   const fetchSavedSearchesCallback = useCallback(async () => {
-    if (!oxyServices || !activeSessionId) {
-      console.log('useSavedSearches: No authentication, skipping fetch');
-      return;
-    }
 
     try {
       setLoading(true);
       setError(null);
 
-      const { userApi } = await import('@/utils/api');
       const response = await queryClient.fetchQuery({
         queryKey: ['savedSearches'],
-        queryFn: async () => userApi.getSavedSearches(oxyServices, activeSessionId),
+        queryFn: async () => api.get('/me/saved-searches'),
         staleTime: 1000 * 30,
         gcTime: 1000 * 60 * 10,
       });
@@ -141,15 +131,11 @@ export const useSavedSearches = (): {
     } finally {
       setLoading(false);
     }
-  }, [oxyServices, activeSessionId, setSearches, setLoading, setError, queryClient]);
+  }, [setSearches, setLoading, setError, queryClient]);
 
   // Save a new search using Zustand store
   const saveSearch = useCallback(
     async (name: string, query: string, filters?: any, notificationsEnabled: boolean = false) => {
-      if (!oxyServices || !activeSessionId) {
-        toast.error('Please sign in to save searches');
-        return false;
-      }
 
       if (!name.trim() || !query.trim()) {
         toast.error('Search name and query are required');
@@ -189,21 +175,14 @@ export const useSavedSearches = (): {
         return false;
       }
     },
-    [oxyServices, activeSessionId, searches, t, saveSearchMutation],
+    [searches, t, saveSearchMutation],
   );
 
   // Delete a saved search using Zustand store
   const deleteSavedSearch = useCallback(
     async (searchId: string, searchName?: string) => {
-      if (!oxyServices || !activeSessionId) {
-        toast.error('Please sign in to manage searches');
-        return false;
-      }
-
       try {
-        // Import the API function
-        const { userApi } = await import('@/utils/api');
-        await userApi.deleteSavedSearch(searchId, oxyServices, activeSessionId);
+        await api.delete(`/me/saved-searches/${searchId}`);
 
         // Remove from store
         removeSearch(searchId);
@@ -221,7 +200,7 @@ export const useSavedSearches = (): {
         return false;
       }
     },
-    [oxyServices, activeSessionId, removeSearch, setError, queryClient],
+    [removeSearch, setError, queryClient],
   );
 
   // Update a saved search using Zustand store
@@ -230,15 +209,8 @@ export const useSavedSearches = (): {
       searchId: string,
       updates: { name?: string; query?: string; filters?: any; notificationsEnabled?: boolean },
     ) => {
-      if (!oxyServices || !activeSessionId) {
-        toast.error('Please sign in to update searches');
-        return false;
-      }
-
       try {
-        // Import the API function
-        const { userApi } = await import('@/utils/api');
-        await userApi.updateSavedSearch(searchId, updates, oxyServices, activeSessionId);
+        await api.patch(`/me/saved-searches/${searchId}`, updates);
 
         // Update in store
         updateSearchAction(searchId, updates);
@@ -255,24 +227,17 @@ export const useSavedSearches = (): {
         return false;
       }
     },
-    [oxyServices, activeSessionId, updateSearchAction, setError, queryClient],
+    [updateSearchAction, setError, queryClient],
   );
 
   // Toggle notifications for a search using Zustand store
   const toggleNotifications = useCallback(
     async (searchId: string, enabled: boolean) => {
-      if (!oxyServices || !activeSessionId) {
-        toast.error('Please sign in to manage notifications');
-        return false;
-      }
-
       try {
         if (!searchId) {
           throw new Error('Invalid saved search');
         }
-        // Import the API function
-        const { userApi } = await import('@/utils/api');
-        await userApi.toggleSearchNotifications(searchId, enabled, oxyServices, activeSessionId);
+        await api.patch(`/me/saved-searches/${searchId}/notifications`, { enabled });
 
         // Toggle in store
         toggleNotificationsAction(searchId);
@@ -294,7 +259,7 @@ export const useSavedSearches = (): {
         return false;
       }
     },
-    [oxyServices, activeSessionId, toggleNotificationsAction, setError, queryClient, t],
+    [toggleNotificationsAction, setError, queryClient, t],
   );
 
   // Check if a search exists by name or query
@@ -317,11 +282,9 @@ export const useSavedSearches = (): {
     [searches],
   );
 
-  // Load saved searches on mount or when auth changes
+  // Load saved searches on mount
   useEffect(() => {
     if (
-      oxyServices &&
-      activeSessionId &&
       !hasFetchedRef.current &&
       searches.length === 0 &&
       !isLoading
@@ -329,14 +292,7 @@ export const useSavedSearches = (): {
       hasFetchedRef.current = true;
       fetchSavedSearchesCallback();
     }
-  }, [oxyServices, activeSessionId, searches.length, isLoading, fetchSavedSearchesCallback]);
-
-  // Reset fetch flag when auth changes
-  useEffect(() => {
-    if (!oxyServices || !activeSessionId) {
-      hasFetchedRef.current = false;
-    }
-  }, [oxyServices, activeSessionId]);
+  }, [searches.length, isLoading, fetchSavedSearchesCallback]);
 
   return {
     // State
@@ -359,6 +315,6 @@ export const useSavedSearches = (): {
 
     // Computed
     hasSearches: searches.length > 0,
-    isAuthenticated: !!oxyServices && !!activeSessionId,
+    isAuthenticated: true, // Authentication is now handled by the API layer
   };
 };

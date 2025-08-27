@@ -16,6 +16,10 @@ module.exports = (async () => {
     ...resolver,
     assetExts: resolver.assetExts.filter((ext) => ext !== 'svg'),
     sourceExts: [...resolver.sourceExts, 'svg'],
+    // Add resolver configurations to help with module resolution
+    resolverMainFields: ['react-native', 'browser', 'main'],
+    // Add platforms to ensure proper resolution
+    platforms: ['ios', 'android', 'native', 'web'],
   };
 
   // Apply NativeWind configuration

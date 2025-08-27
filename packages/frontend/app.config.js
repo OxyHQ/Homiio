@@ -87,6 +87,14 @@ module.exports = function (config) {
             include: ['@expo/vector-icons'],
           },
         },
+        // Add Metro configuration for better module resolution
+        metro: {
+          resolver: {
+            alias: {
+              '@react-native-async-storage/async-storage': require.resolve('@react-native-async-storage/async-storage'),
+            },
+          },
+        },
       },
       plugins: [
         'expo-router',

@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useTrustScoreStore } from '@/store/trustScoreStore';
-import { useOxy } from '@oxyhq/services';
+import profileService from '@/services/profileService';
 
 export const useTrustScore = (profileId?: string) => {
   const {
@@ -16,7 +16,6 @@ export const useTrustScore = (profileId?: string) => {
     setError,
     clearError,
   } = useTrustScoreStore();
-  const { oxyServices, activeSessionId } = useOxy();
 
   // Local state for current profile ID
   const [currentProfileId, setCurrentProfileId] = useState<string | undefined>(profileId);
@@ -29,11 +28,9 @@ export const useTrustScore = (profileId?: string) => {
     async (targetProfileId?: string) => {
       const profileToFetch = targetProfileId || currentProfileId || profileId;
 
-      if (!profileToFetch || !oxyServices || !activeSessionId) {
+      if (!profileToFetch) {
         console.warn('Missing required parameters for fetching trust score:', {
           profileToFetch,
-          oxyServices: !!oxyServices,
-          activeSessionId,
         });
         return;
       }
@@ -42,12 +39,8 @@ export const useTrustScore = (profileId?: string) => {
         setLoading(true);
         setError(null);
 
-        // Import the profile service
-        const profileService = await import('@/services/profileService');
-        const profile = await profileService.default.getProfileById(
+        const profile = await profileService.getProfileById(
           profileToFetch,
-          oxyServices,
-          activeSessionId,
         );
 
         // Update store with response data
@@ -86,8 +79,6 @@ export const useTrustScore = (profileId?: string) => {
     [
       currentProfileId,
       profileId,
-      oxyServices,
-      activeSessionId,
       setLoading,
       setError,
       setScore,
@@ -101,11 +92,9 @@ export const useTrustScore = (profileId?: string) => {
     async (factor: string, value: number, targetProfileId?: string) => {
       const profileToUpdate = targetProfileId || currentProfileId || profileId;
 
-      if (!profileToUpdate || !oxyServices || !activeSessionId) {
+      if (!profileToUpdate) {
         console.warn('Missing required parameters for updating trust score:', {
           profileToUpdate,
-          oxyServices: !!oxyServices,
-          activeSessionId,
         });
         return;
       }
@@ -114,14 +103,10 @@ export const useTrustScore = (profileId?: string) => {
         setLoading(true);
         setError(null);
 
-        // Import the profile service
-        const profileService = await import('@/services/profileService');
-        const profile = await profileService.default.updateTrustScore(
+        const profile = await profileService.updateTrustScore(
           profileToUpdate,
           factor,
-          value,
-          oxyServices,
-          activeSessionId,
+          value
         );
 
         // Update store with response data
@@ -151,8 +136,6 @@ export const useTrustScore = (profileId?: string) => {
     [
       currentProfileId,
       profileId,
-      oxyServices,
-      activeSessionId,
       setLoading,
       setError,
       setScore,
@@ -166,11 +149,9 @@ export const useTrustScore = (profileId?: string) => {
     async (targetProfileId?: string) => {
       const profileToRecalculate = targetProfileId || currentProfileId || profileId;
 
-      if (!profileToRecalculate || !oxyServices || !activeSessionId) {
+      if (!profileToRecalculate) {
         console.warn('Missing required parameters for recalculating trust score:', {
           profileToRecalculate,
-          oxyServices: !!oxyServices,
-          activeSessionId,
         });
         return;
       }
@@ -179,12 +160,7 @@ export const useTrustScore = (profileId?: string) => {
         setLoading(true);
         setError(null);
 
-        // Import the profile service
-        const profileService = await import('@/services/profileService');
-        const response = await profileService.default.recalculatePrimaryTrustScore(
-          oxyServices,
-          activeSessionId,
-        );
+        const response = await profileService.recalculatePrimaryTrustScore();
 
         // Update store with response data
         if (response && response.profile && response.profile.personalProfile?.trustScore) {
@@ -213,8 +189,6 @@ export const useTrustScore = (profileId?: string) => {
     [
       currentProfileId,
       profileId,
-      oxyServices,
-      activeSessionId,
       setLoading,
       setError,
       setScore,

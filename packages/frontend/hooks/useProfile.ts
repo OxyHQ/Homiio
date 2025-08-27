@@ -3,6 +3,7 @@ import { useProfileStore } from '@/store/profileStore';
 import { Profile, CreateProfileData } from '@/services/profileService';
 import { useOxy } from '@oxyhq/services';
 import { toast } from 'sonner';
+import profileService from '@/services/profileService';
 
 export const useProfile = () => {
   const { primaryProfile, allProfiles, isLoading, error } = useProfileStore();
@@ -16,11 +17,9 @@ export const useProfile = () => {
       setLoading(true);
       setError(null);
 
-      const profileService = await import('@/services/profileService');
-
       const [primaryProfile, allProfiles] = await Promise.all([
-        profileService.default.getOrCreatePrimaryProfile(oxyServices, activeSessionId),
-        profileService.default.getUserProfiles(oxyServices, activeSessionId),
+        profileService.getOrCreatePrimaryProfile(oxyServices, activeSessionId),
+        profileService.getUserProfiles(oxyServices, activeSessionId),
       ]);
 
       setPrimaryProfile(primaryProfile);
@@ -41,8 +40,7 @@ export const useProfile = () => {
         setLoading(true);
         setError(null);
 
-        const profileService = await import('@/services/profileService');
-        const newProfile = await profileService.default.createProfile(
+        const newProfile = await profileService.createProfile(
           profileData,
           oxyServices,
           activeSessionId,
@@ -82,8 +80,7 @@ export const useProfile = () => {
         setLoading(true);
         setError(null);
 
-        const profileService = await import('@/services/profileService');
-        const updatedProfile = await profileService.default.updateProfile(
+        const updatedProfile = await profileService.updateProfile(
           profileId,
           updateData,
           oxyServices,
@@ -127,8 +124,7 @@ export const useProfile = () => {
         setLoading(true);
         setError(null);
 
-        const profileService = await import('@/services/profileService');
-        await profileService.default.deleteProfile(profileId, oxyServices, activeSessionId);
+        await profileService.deleteProfile(profileId, oxyServices, activeSessionId);
 
         const filteredProfiles = allProfiles.filter(
           (p: Profile) => p.id !== profileId && p._id !== profileId,
@@ -167,8 +163,7 @@ export const useProfile = () => {
         setLoading(true);
         setError(null);
 
-        const profileService = await import('@/services/profileService');
-        const activatedProfile = await profileService.default.activateProfile(
+        const activatedProfile = await profileService.activateProfile(
           profileId,
           oxyServices,
           activeSessionId,

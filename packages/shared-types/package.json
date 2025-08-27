@@ -22,14 +22,15 @@
     "author": "Homiio Team",
     "license": "UNLICENSED",
     "dependencies": {
+        "mongoose": "^8.18.0",
         "typescript": "^5.0.0"
     },
     "devDependencies": {
-        "@types/node": "^20.0.0",
-        "eslint": "^9.0.0",
         "@eslint/js": "^9.0.0",
+        "@types/node": "^20.0.0",
         "@typescript-eslint/eslint-plugin": "^7.0.0",
-        "@typescript-eslint/parser": "^7.0.0"
+        "@typescript-eslint/parser": "^7.0.0",
+        "eslint": "^9.0.0"
     },
     "files": [
         "dist/**/*"

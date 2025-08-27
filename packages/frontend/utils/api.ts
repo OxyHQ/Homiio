@@ -1,5 +1,5 @@
+import { Alert, Platform } from 'react-native';
 import { oxyClient } from '@oxyhq/services';
-import { Platform } from 'react-native';
 import { API_URL } from '@/config';
 
 // API Configuration
@@ -313,9 +313,7 @@ export function webAlert(
     }
   } else {
     // On mobile, use React Native Alert
-    // require is discouraged; import at top-level could cause platform issues.
-    // Use dynamic import with then-able.
-    import('react-native').then(({ Alert }) => Alert.alert(title, message, buttons));
+    Alert.alert(title, message, buttons);
   }
 }
 

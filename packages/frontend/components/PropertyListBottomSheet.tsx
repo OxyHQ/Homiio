@@ -384,7 +384,6 @@ const styles = StyleSheet.create({
             color: '#333',
             paddingVertical: 8,
             borderWidth: 0,
-            outline: 'none',
         },
         default: {
             flex: 1,

@@ -1,48 +1,32 @@
-import { useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useNeighborhoodStore } from '@/store/neighborhoodStore';
-import { useOxy } from '@oxyhq/services';
 import type { NeighborhoodFilters } from '@/services/neighborhoodService';
+import { api } from '@/utils/api';
 
 export function useNeighborhood() {
   const {
     currentNeighborhood,
-    popularNeighborhoods,
-    searchResults,
+    nearbyNeighborhoods,
     isLoading,
     error,
     setCurrentNeighborhood,
-    setPopularNeighborhoods,
-    setSearchResults,
+    setNearbyNeighborhoods,
     setLoading,
     setError,
-    clearCurrentNeighborhood,
-    clearSearchResults,
     clearError,
   } = useNeighborhoodStore();
-  const { oxyServices, activeSessionId } = useOxy();
 
-  const isAuthenticated = !!(oxyServices && activeSessionId);
 
   // Fetch neighborhood by location
   const fetchByLocation = useCallback(
     async (latitude: number, longitude: number) => {
-      if (!isAuthenticated) {
-        console.log('useNeighborhood: User not authenticated, skipping API call');
-        return;
-      }
-
       try {
         setLoading(true);
         setError(null);
 
-        // Import the API function
-        const { neighborhoodApi } = await import('@/utils/api');
-        const response = await neighborhoodApi.getNeighborhoodByLocation(
-          latitude,
-          longitude,
-          oxyServices,
-          activeSessionId,
-        );
+        const response = await api.get('/neighborhoods/location', {
+          params: { latitude, longitude }
+        });
 
         setCurrentNeighborhood(response.data);
       } catch (error: any) {
@@ -52,30 +36,19 @@ export function useNeighborhood() {
         setLoading(false);
       }
     },
-    [oxyServices, activeSessionId, isAuthenticated, setCurrentNeighborhood, setLoading, setError],
+    [setCurrentNeighborhood, setLoading, setError],
   );
 
   // Fetch neighborhood by name
   const fetchByName = useCallback(
     async (name: string, city?: string, state?: string) => {
-      if (!isAuthenticated) {
-        console.log('useNeighborhood: User not authenticated, skipping API call');
-        return;
-      }
-
       try {
         setLoading(true);
         setError(null);
 
-        // Import the API function
-        const { neighborhoodApi } = await import('@/utils/api');
-        const response = await neighborhoodApi.getNeighborhoodByName(
-          name,
-          city,
-          state,
-          oxyServices,
-          activeSessionId,
-        );
+        const response = await api.get('/neighborhoods/name', {
+          params: { name, city, state }
+        });
 
         setCurrentNeighborhood(response.data);
       } catch (error: any) {
@@ -85,28 +58,17 @@ export function useNeighborhood() {
         setLoading(false);
       }
     },
-    [oxyServices, activeSessionId, isAuthenticated, setCurrentNeighborhood, setLoading, setError],
+    [setCurrentNeighborhood, setLoading, setError],
   );
 
   // Fetch neighborhood by property
   const fetchByProperty = useCallback(
     async (propertyId: string) => {
-      if (!isAuthenticated) {
-        console.log('useNeighborhood: User not authenticated, skipping API call');
-        return;
-      }
-
       try {
         setLoading(true);
         setError(null);
 
-        // Import the API function
-        const { neighborhoodApi } = await import('@/utils/api');
-        const response = await neighborhoodApi.getNeighborhoodByProperty(
-          propertyId,
-          oxyServices,
-          activeSessionId,
-        );
+        const response = await api.get(`/neighborhoods/property/${propertyId}`);
 
         setCurrentNeighborhood(response.data);
       } catch (error: any) {
@@ -116,30 +78,21 @@ export function useNeighborhood() {
         setLoading(false);
       }
     },
-    [oxyServices, activeSessionId, isAuthenticated, setCurrentNeighborhood, setLoading, setError],
+    [setCurrentNeighborhood, setLoading, setError],
   );
 
   // Search neighborhoods
   const search = useCallback(
     async (filters: NeighborhoodFilters) => {
-      if (!isAuthenticated) {
-        console.log('useNeighborhood: User not authenticated, skipping API call');
-        return;
-      }
-
       try {
         setLoading(true);
         setError(null);
 
-        // Import the API function
-        const { neighborhoodApi } = await import('@/utils/api');
-        const response = await neighborhoodApi.searchNeighborhoods(
-          filters,
-          oxyServices,
-          activeSessionId,
-        );
+        const response = await api.get('/neighborhoods/search', {
+          params: filters
+        });
 
-        setSearchResults(response.data || []);
+        setNearbyNeighborhoods(response.data || []);
       } catch (error: any) {
         console.error('useNeighborhood: Failed to search neighborhoods:', error);
         setError(error.message || 'Failed to search neighborhoods');
@@ -147,32 +100,21 @@ export function useNeighborhood() {
         setLoading(false);
       }
     },
-    [oxyServices, activeSessionId, isAuthenticated, setSearchResults, setLoading, setError],
+    [setNearbyNeighborhoods, setLoading, setError],
   );
 
   // Fetch popular neighborhoods
   const fetchPopular = useCallback(
     async (city: string, state?: string, limit?: number) => {
-      if (!isAuthenticated) {
-        console.log('useNeighborhood: User not authenticated, skipping API call');
-        return;
-      }
-
       try {
         setLoading(true);
         setError(null);
 
-        // Import the API function
-        const { neighborhoodApi } = await import('@/utils/api');
-        const response = await neighborhoodApi.getPopularNeighborhoods(
-          city,
-          state,
-          limit,
-          oxyServices,
-          activeSessionId,
-        );
+        const response = await api.get('/neighborhoods/popular', {
+          params: { city, state, limit }
+        });
 
-        setPopularNeighborhoods(response.data || []);
+        setNearbyNeighborhoods(response.data || []);
       } catch (error: any) {
         console.error('useNeighborhood: Failed to fetch popular neighborhoods:', error);
         setError(error.message || 'Failed to fetch popular neighborhoods');
@@ -180,7 +122,7 @@ export function useNeighborhood() {
         setLoading(false);
       }
     },
-    [oxyServices, activeSessionId, isAuthenticated, setPopularNeighborhoods, setLoading, setError],
+    [setNearbyNeighborhoods, setLoading, setError],
   );
 
   // Manual actions
@@ -192,12 +134,12 @@ export function useNeighborhood() {
   );
 
   const clearCurrent = useCallback(() => {
-    clearCurrentNeighborhood();
-  }, [clearCurrentNeighborhood]);
+    setCurrentNeighborhood(null);
+  }, [setCurrentNeighborhood]);
 
   const clearSearch = useCallback(() => {
-    clearSearchResults();
-  }, [clearSearchResults]);
+    setNearbyNeighborhoods([]);
+  }, [setNearbyNeighborhoods]);
 
   const setErrorState = useCallback(
     (error: string | null) => {
@@ -211,10 +153,10 @@ export function useNeighborhood() {
   }, [clearError]);
 
   const reset = useCallback(() => {
-    clearCurrentNeighborhood();
-    clearSearchResults();
+    setCurrentNeighborhood(null);
+    setNearbyNeighborhoods([]);
     clearError();
-  }, [clearCurrentNeighborhood, clearSearchResults, clearError]);
+  }, [setCurrentNeighborhood, setNearbyNeighborhoods, clearError]);
 
   // Check if data is stale (older than 5 minutes)
   const isDataStale = useCallback(() => {
@@ -225,13 +167,11 @@ export function useNeighborhood() {
   return {
     // State
     currentNeighborhood,
-    popularNeighborhoods,
-    searchResults,
+    nearbyNeighborhoods,
     isLoading,
     isSearching: isLoading, // Not implemented in Zustand store yet
     error,
     lastFetched: null, // Not implemented in Zustand store yet
-    isAuthenticated,
     isDataStale,
 
     // Actions

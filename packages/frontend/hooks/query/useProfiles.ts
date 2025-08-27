@@ -65,12 +65,8 @@ export function useActivateProfileMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (profileId: string): Promise<Profile> => {
-      // Import profileStore dynamically to avoid circular dependencies
-      const { useProfileStore } = await import('@/store/profileStore');
-      
-      // Call both the service and update the store state immediately
-      const activatedProfile = await useProfileStore.getState().activateProfile(profileId);
-      
+      // Use the service directly since the store will handle its own state updates
+      const activatedProfile = await profileService.activateProfile(profileId);
       return activatedProfile;
     },
     onSuccess: async () => {
