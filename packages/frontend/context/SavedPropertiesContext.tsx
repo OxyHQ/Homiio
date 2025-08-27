@@ -445,6 +445,9 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
           setIsInitialized(true);
         } catch (error) {
           console.error('Failed to initialize saved properties data:', error);
+          // Set initialized to true even on failure to prevent infinite loading
+          // SaveButton components can still function with prop values
+          setIsInitialized(true);
         }
       };
 
