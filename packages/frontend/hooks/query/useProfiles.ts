@@ -64,8 +64,15 @@ export function useDeleteProfileMutation() {
 export function useActivateProfileMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (profileId: string): Promise<Profile> =>
-      profileService.activateProfile(profileId),
+    mutationFn: async (profileId: string): Promise<Profile> => {
+      // Import profileStore dynamically to avoid circular dependencies
+      const { useProfileStore } = await import('@/store/profileStore');
+      
+      // Call both the service and update the store state immediately
+      const activatedProfile = await useProfileStore.getState().activateProfile(profileId);
+      
+      return activatedProfile;
+    },
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: keys.primary() }),

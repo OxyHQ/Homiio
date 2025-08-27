@@ -39,7 +39,7 @@ const WindowHeight = Dimensions.get('window').height;
 export function SideBar() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { primaryProfile, isLoading } = useProfile();
+  const { canAccessRoommates } = useProfile();
   const { isAuthenticated: _isAuthenticated, user, showBottomSheet, logout } = useOxy();
 
   // Use SavedPropertiesContext for consistent state with SaveButton
@@ -133,10 +133,6 @@ export function SideBar() {
       .slice(0, 5);
   }, [savedProperties, folders]);
 
-  // Only show roommates for personal profiles and when profile data is loaded
-  // If still loading profiles, don't show roommates to avoid flickering
-  const isPersonalProfile = !isLoading && primaryProfile?.profileType === 'personal';
-
   const handleSignOut = () => {
     webAlert(t('settings.signOut'), t('settings.signOutMessage'), [
       {
@@ -205,7 +201,7 @@ export function SideBar() {
       },
 
       // Only show roommates for personal profiles
-      ...(isPersonalProfile
+      ...(canAccessRoommates
         ? [
           {
             title: t('sidebar.navigation.roommates'),
@@ -364,6 +360,8 @@ export function SideBar() {
               <View style={styles.recentlySavedList}>
                 {recentSavedItems.map((item, _index) => {
                   if (item.type === 'folder') {
+                    // Only show folder if it has properties
+                    if (!item.propertyCount || item.propertyCount === 0) return null;
                     return (
                       <SavedFolderItem
                         key={item.id}
@@ -391,7 +389,7 @@ export function SideBar() {
                     );
                   }
                 })}
-                {recentSavedItems.length === 0 && !savedLoading && isExpanded && (
+                {recentSavedItems.filter(item => item.type !== 'folder' || (item.propertyCount && item.propertyCount > 0)).length === 0 && !savedLoading && isExpanded && (
                   <View style={styles.emptyRecentlySaved}>
                     <Text style={styles.emptyRecentlySavedText}>
                       {t('sidebar.savedProperties.empty', { defaultValue: 'No saved properties or folders' })}

@@ -21,20 +21,18 @@ interface ProfileState {
   setLandlordProfileLoading: (loading: boolean) => void;
   setLandlordProfileError: (error: string | null) => void;
 
-    // Async Actions
+  // Async Actions
   fetchPrimaryProfile: () => Promise<Profile | null>;
   fetchUserProfiles: () => Promise<Profile[]>;
-  fetchLandlordProfile: (profileId: string) => Promise<Profile | null>;
+  fetchLandlordProfileById: (profileId: string) => Promise<Profile | null>;
   createProfile: (profileData: {
     profileType: ProfileType;
     personalProfile?: any;
     businessProfile?: any;
   }) => Promise<Profile>;
-  updatePrimaryProfile: (
-    profileData: UpdateProfileData,
-  ) => Promise<Profile>;
+  updateProfile: (profileId: string, profileData: UpdateProfileData) => Promise<Profile>;
   deleteProfile: (profileId: string) => Promise<void>;
-  fetchPublicLandlordProfile: (profileId: string) => Promise<Profile | null>;
+  activateProfile: (profileId: string) => Promise<Profile>;
 }
 
 export const useProfileStore = create<ProfileState>((set, get) => ({
@@ -48,19 +46,19 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   landlordProfileError: null,
 
   // Synchronous actions
-  setPrimaryProfile: (profile) => set({ primaryProfile: profile }),
-  setAllProfiles: (profiles) => set({ allProfiles: profiles }),
-  setLoading: (loading) => set({ isLoading: loading }),
-  setError: (error) => set({ error }),
-  setLandlordProfile: (profile) => set({ landlordProfile: profile }),
-  setLandlordProfileLoading: (loading) => set({ landlordProfileLoading: loading }),
-  setLandlordProfileError: (error) => set({ landlordProfileError: error }),
+  setPrimaryProfile: (profile: Profile | null) => set({ primaryProfile: profile }),
+  setAllProfiles: (profiles: Profile[]) => set({ allProfiles: profiles }),
+  setLoading: (loading: boolean) => set({ isLoading: loading }),
+  setError: (error: string | null) => set({ error }),
+  setLandlordProfile: (profile: Profile | null) => set({ landlordProfile: profile }),
+  setLandlordProfileLoading: (loading: boolean) => set({ landlordProfileLoading: loading }),
+  setLandlordProfileError: (error: string | null) => set({ landlordProfileError: error }),
 
   // Async actions
-  fetchPrimaryProfile: async (oxyServices, activeSessionId) => {
+  fetchPrimaryProfile: async () => {
     try {
       set({ isLoading: true, error: null });
-      const profile = await profileService.getOrCreatePrimaryProfile(oxyServices, activeSessionId);
+      const profile = await profileService.getOrCreatePrimaryProfile();
       set({ primaryProfile: profile, isLoading: false });
       return profile;
     } catch (error: any) {
@@ -70,10 +68,10 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     }
   },
 
-  fetchUserProfiles: async (oxyServices, activeSessionId) => {
+  fetchUserProfiles: async () => {
     try {
       set({ isLoading: true, error: null });
-      const profiles = await profileService.getUserProfiles(oxyServices, activeSessionId);
+      const profiles = await profileService.getUserProfiles();
       set({ allProfiles: profiles, isLoading: false });
       return profiles;
     } catch (error: any) {
@@ -83,10 +81,10 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     }
   },
 
-  fetchLandlordProfileById: async (profileId, oxyServices, activeSessionId) => {
+  fetchLandlordProfileById: async (profileId: string) => {
     try {
       set({ landlordProfileLoading: true, landlordProfileError: null, landlordProfile: null });
-      const profile = await profileService.getProfileById(profileId, oxyServices, activeSessionId);
+      const profile = await profileService.getProfileById(profileId);
       set({ landlordProfile: profile, landlordProfileLoading: false });
       return profile;
     } catch (error: any) {
@@ -100,7 +98,11 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     }
   },
 
-  createProfile: async (profileData, oxyServices, activeSessionId) => {
+  createProfile: async (profileData: {
+    profileType: ProfileType;
+    personalProfile?: any;
+    businessProfile?: any;
+  }) => {
     try {
       // Check if trying to create a personal profile
       if (profileData.profileType === ProfileType.PERSONAL) {
@@ -110,7 +112,13 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       }
 
       set({ isLoading: true, error: null });
-      const profile = await profileService.createProfile(profileData, oxyServices, activeSessionId);
+      
+      // Transform the data to match the service expectation
+      const createData = {
+        data: profileData
+      };
+      
+      const profile = await profileService.createProfile(createData as any);
 
       // Update state
       const { allProfiles } = get();
@@ -130,21 +138,16 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     }
   },
 
-  updateProfile: async (profileId, updateData, oxyServices, activeSessionId) => {
+  updateProfile: async (profileId: string, updateData: UpdateProfileData) => {
     try {
       set({ isLoading: true, error: null });
-      const updatedProfile = await profileService.updateProfile(
-        profileId,
-        updateData,
-        oxyServices,
-        activeSessionId,
-      );
+      const updatedProfile = await profileService.updateProfile(profileId, updateData);
 
       // Update state
       const { allProfiles, primaryProfile } = get();
 
       // Update in allProfiles
-      const updatedAllProfiles = allProfiles.map((profile) =>
+      const updatedAllProfiles = allProfiles.map((profile: Profile) =>
         profile.id === updatedProfile.id || profile._id === updatedProfile._id
           ? updatedProfile
           : profile,
@@ -171,17 +174,17 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     }
   },
 
-  deleteProfile: async (profileId, oxyServices, activeSessionId) => {
+  deleteProfile: async (profileId: string) => {
     try {
       set({ isLoading: true, error: null });
-      await profileService.deleteProfile(profileId, oxyServices, activeSessionId);
+      await profileService.deleteProfile(profileId);
 
       // Update state
       const { allProfiles, primaryProfile } = get();
 
       // Remove from allProfiles
       const updatedAllProfiles = allProfiles.filter(
-        (profile) => !(profile.id === profileId || profile._id === profileId),
+        (profile: Profile) => !(profile.id === profileId || profile._id === profileId),
       );
 
       // If primary profile was deleted, set the first remaining profile as primary
@@ -202,22 +205,18 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     }
   },
 
-  activateProfile: async (profileId, oxyServices, activeSessionId) => {
+  activateProfile: async (profileId: string) => {
     try {
       set({ isLoading: true, error: null });
 
       // Use the new activateProfile method in the service
-      const activatedProfile = await profileService.activateProfile(
-        profileId,
-        oxyServices,
-        activeSessionId,
-      );
+      const activatedProfile = await profileService.activateProfile(profileId);
 
       // Update state
       const { allProfiles } = get();
 
       // Update all profiles to set isActive correctly
-      const updatedAllProfiles = allProfiles.map((profile) => ({
+      const updatedAllProfiles = allProfiles.map((profile: Profile) => ({
         ...profile,
         isActive: profile.id === activatedProfile.id || profile._id === activatedProfile._id,
       }));

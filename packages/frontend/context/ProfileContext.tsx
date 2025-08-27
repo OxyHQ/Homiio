@@ -8,7 +8,7 @@ interface ProfileContextType {
   primaryProfile: Profile | null;
   allProfiles: Profile[];
   isLoading: boolean;
-  error: Error | null;
+  error: string | null;
   hasPrimaryProfile: boolean;
   refetch: () => void;
   // Profile type specific helpers
@@ -20,12 +20,16 @@ interface ProfileContextType {
   isPersonalProfile: boolean;
   hasPersonalProfile: boolean;
   canAccessRoommates: boolean;
+  // New utility methods
+  refresh: () => Promise<void>;
+  activateProfile: (profileId: string) => Promise<Profile>;
+  isInitialized: boolean;
 }
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
-  const { oxyServices, activeSessionId } = useOxy();
+  const { oxyServices, activeSessionId, isAuthenticated } = useOxy();
   const {
     primaryProfile,
     allProfiles,
@@ -34,37 +38,72 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     setPrimaryProfile,
     setAllProfiles,
     setError,
+    activateProfile: storeActivateProfile,
   } = useProfileStore();
 
-  // Memoize load profiles function
+  // Track initialization state
+  const [isInitialized, setIsInitialized] = React.useState(false);
+
+  // Memoize load profiles function with better error handling
   const loadProfiles = useCallback(async () => {
     try {
       console.log('ProfileContext: Loading profiles for authenticated user');
-      await useProfileStore
-        .getState()
-        .fetchPrimaryProfile(oxyServices, activeSessionId || undefined);
-      await useProfileStore
-        .getState()
-        .fetchUserProfiles(oxyServices, activeSessionId || undefined);
+      
+      // Load both primary profile and all profiles concurrently
+      const [primaryProfileResult, userProfilesResult] = await Promise.allSettled([
+        useProfileStore.getState().fetchPrimaryProfile(),
+        useProfileStore.getState().fetchUserProfiles(),
+      ]);
+
+      // Handle primary profile result
+      if (primaryProfileResult.status === 'rejected') {
+        console.error('ProfileContext: Failed to fetch primary profile:', primaryProfileResult.reason);
+      }
+
+      // Handle user profiles result
+      if (userProfilesResult.status === 'rejected') {
+        console.error('ProfileContext: Failed to fetch user profiles:', userProfilesResult.reason);
+      }
+
+      // Mark as initialized even if some calls failed
+      setIsInitialized(true);
+      
       console.log('ProfileContext: Profiles loaded successfully');
     } catch (err: any) {
       console.error('ProfileContext: Error loading profiles:', err);
       setError(err.message || 'Failed to load profiles');
+      setIsInitialized(true); // Still mark as initialized to prevent infinite loading
     }
-  }, [oxyServices, activeSessionId, setError]);
+  }, [setError]);
 
-  // Recently viewed is now handled by React Query hooks automatically
+  // Refresh function for manual refresh
+  const refresh = useCallback(async () => {
+    setIsInitialized(false);
+    await loadProfiles();
+  }, [loadProfiles]);
 
+  // Authentication effect with improved logic
   useEffect(() => {
-    if (oxyServices && activeSessionId) {
+    let mounted = true;
+
+    if (isAuthenticated && oxyServices && activeSessionId) {
       console.log('ProfileContext: User authenticated, loading profiles...');
-      loadProfiles();
-    } else {
+      loadProfiles().catch(error => {
+        if (mounted) {
+          console.error('ProfileContext: Failed to load profiles:', error);
+        }
+      });
+    } else if (!isAuthenticated) {
       console.log('ProfileContext: User not authenticated, clearing profiles');
       setPrimaryProfile(null);
       setAllProfiles([]);
+      setIsInitialized(false);
     }
-  }, [oxyServices, activeSessionId, setPrimaryProfile, setAllProfiles, loadProfiles]);
+
+    return () => {
+      mounted = false;
+    };
+  }, [isAuthenticated, oxyServices, activeSessionId, loadProfiles, setPrimaryProfile, setAllProfiles]);
 
   // Memoize profile helpers
   const personalProfile = useMemo(
@@ -83,14 +122,14 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
   );
 
   const ownedAgencyProfiles = useMemo(() => {
-    if (!oxyServices || !activeSessionId) return [];
+    if (!activeSessionId) return [];
 
     return allProfiles.filter(
       (profile) =>
         profile.profileType === 'agency' &&
-        profile.ownerId === activeSessionId,
+        (profile as any).ownerId === activeSessionId,
     );
-  }, [allProfiles, oxyServices, activeSessionId]);
+  }, [allProfiles, activeSessionId]);
 
   // Memoize profile checks
   const isPersonalProfile = useMemo(
@@ -113,12 +152,26 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     [hasPersonalProfile, isPersonalProfile],
   );
 
+  // Wrap the store's activateProfile method
+  const activateProfile = useCallback(async (profileId: string) => {
+    try {
+      const activatedProfile = await storeActivateProfile(profileId);
+      // The store handles state updates, we just return the result
+      return activatedProfile;
+    } catch (error) {
+      console.error('ProfileContext: Profile activation failed:', error);
+      throw error;
+    }
+  }, [storeActivateProfile]);
+
   // Memoize refetch function
   const refetch = useCallback(() => {
-    if (oxyServices && activeSessionId) {
-      loadProfiles();
+    if (isAuthenticated && oxyServices && activeSessionId) {
+      loadProfiles().catch(error => {
+        console.error('ProfileContext: Refetch failed:', error);
+      });
     }
-  }, [oxyServices, activeSessionId, loadProfiles]);
+  }, [isAuthenticated, oxyServices, activeSessionId, loadProfiles]);
 
   // Memoize context value
   const contextValue = useMemo(
@@ -136,6 +189,9 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
       isPersonalProfile,
       hasPersonalProfile,
       canAccessRoommates,
+      refresh,
+      activateProfile,
+      isInitialized,
     }),
     [
       primaryProfile,
@@ -151,6 +207,9 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
       isPersonalProfile,
       hasPersonalProfile,
       canAccessRoommates,
+      refresh,
+      activateProfile,
+      isInitialized,
     ],
   );
 
