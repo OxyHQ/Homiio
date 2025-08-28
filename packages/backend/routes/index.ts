@@ -15,7 +15,6 @@ const roommates = require('./roommates').default;
 const viewings = require('./viewings').default;
 const telegram = require('./telegram');
 const tips = require('./tips').default;
-const test = require('./test').default;
 const images = require('./images');
 const { asyncHandler } = require('../middlewares');
 const billing = require('./billing').default;
@@ -35,7 +34,6 @@ export default function() {
   const viewingRoutes = viewings();
   const telegramRoutes = telegram();
   const tipsRoutes = tips();
-  const testRoutes = test();
   const imageRoutes = images;
   const billingRoutes = billing();
   const scraperRoutes = scraper();
@@ -56,7 +54,6 @@ export default function() {
   router.use('/roommates', roommateRoutes);
   router.use('/telegram', telegramRoutes);
   router.use('/tips', tipsRoutes);
-  router.use('/test', testRoutes);
   router.use('/images', imageRoutes);
   router.use('/billing', billingRoutes);
   router.use('/scraper', scraperRoutes);
