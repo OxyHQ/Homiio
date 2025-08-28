@@ -27,7 +27,7 @@ module.exports = function (config) {
       scheme: 'homiio',
       userInterfaceStyle: 'automatic',
       newArchEnabled: true,
-      jsEngine: 'jsc',
+      jsEngine: 'hermes',
       ios: {
         supportsTablet: true,
         bundleIdentifier: 'com.homiio.android',

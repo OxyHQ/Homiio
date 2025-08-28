@@ -34,7 +34,7 @@ export default function () {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.set('Pragma', 'no-cache');
     res.set('Expires', '0');
-    const oxyUserId = req.user?.id || req.user?._id;
+    const oxyUserId = (req as any).user?.id || (req as any).user?._id;
     if (!oxyUserId) return res.status(401).json({ success: false, error: { message: 'Authentication required' }});
     
     // Find billing record for this user
@@ -53,7 +53,7 @@ export default function () {
   }));
   
   router.post('/me/entitlements/consume-file-credit', asyncHandler(async (req, res) => {
-    const oxyUserId = req.user?.id || req.user?._id;
+    const oxyUserId = (req as any).user?.id || (req as any).user?._id;
     if (!oxyUserId) return res.status(401).json({ success: false, error: { message: 'Authentication required' }});
     const { Billing } = require('../models');
     
