@@ -126,6 +126,7 @@ class SourceScraper {
 class CronJobManager {
   private logger: Logger;
   private jobs: Map<string, cron.ScheduledTask> = new Map();
+  private jobStatus: Map<string, { isRunning: boolean; lastRun?: Date; nextRun?: Date }> = new Map();
 
   constructor() {
     this.logger = new Logger('CronJobManager');
@@ -155,6 +156,7 @@ class CronJobManager {
     });
 
     this.jobs.set('scrape', job);
+    this.jobStatus.set('scrape', { isRunning: true, lastRun: undefined, nextRun: undefined });
     job.start();
   }
 
@@ -170,6 +172,7 @@ class CronJobManager {
     });
 
     this.jobs.set('health', job);
+    this.jobStatus.set('health', { isRunning: true, lastRun: undefined, nextRun: undefined });
     job.start();
   }
 
@@ -185,6 +188,7 @@ class CronJobManager {
     });
 
     this.jobs.set('cleanup', job);
+    this.jobStatus.set('cleanup', { isRunning: true, lastRun: undefined, nextRun: undefined });
     job.start();
   }
 
@@ -194,6 +198,13 @@ class CronJobManager {
   private async runScrapeCycle(): Promise<void> {
     const startTime = Date.now();
     const cycleId = `cycle_${Date.now()}`;
+    
+    // Update job status
+    const status = this.jobStatus.get('scrape');
+    if (status) {
+      status.lastRun = new Date();
+      status.isRunning = true;
+    }
     
     try {
       this.logger.info(`Starting scrape cycle ${cycleId}`);
@@ -230,6 +241,13 @@ class CronJobManager {
    * Run health check
    */
   private async runHealthCheck(): Promise<void> {
+    // Update job status
+    const status = this.jobStatus.get('health');
+    if (status) {
+      status.lastRun = new Date();
+      status.isRunning = true;
+    }
+    
     try {
       const health = await healthService.getScraperHealth();
       
@@ -256,6 +274,13 @@ class CronJobManager {
    * Run cleanup of expired properties
    */
   private async runCleanup(): Promise<void> {
+    // Update job status
+    const status = this.jobStatus.get('cleanup');
+    if (status) {
+      status.lastRun = new Date();
+      status.isRunning = true;
+    }
+    
     try {
       this.logger.info('Starting expired property cleanup');
       
@@ -285,6 +310,7 @@ class CronJobManager {
       this.logger.info(`Stopped cron job: ${name}`);
     });
     this.jobs.clear();
+    this.jobStatus.clear();
   }
 
   /**
@@ -292,8 +318,8 @@ class CronJobManager {
    */
   getStatus(): Record<string, boolean> {
     const status: Record<string, boolean> = {};
-    this.jobs.forEach((job, name) => {
-      status[name] = job.getStatus() === 'scheduled';
+    this.jobStatus.forEach((jobStatus, name) => {
+      status[name] = jobStatus.isRunning;
     });
     return status;
   }
