@@ -306,10 +306,6 @@ export default function SearchScreen() {
     router.push(`/properties/${property._id}`);
   }, [router]);
 
-  const handleCloseBottomSheet = useCallback(() => {
-    bottomSheetRef.current?.close();
-  }, []);
-
   const _handleResetMap = useCallback(() => {
     // Clear saved map state and reset to current location
     setMapState(screenId, {
@@ -478,11 +474,12 @@ export default function SearchScreen() {
       {/* Property List Bottom Sheet */}
       <BottomSheet
         ref={bottomSheetRef}
-        index={properties.length > 0 ? 0 : -1}
+        index={0}
         snapPoints={snapPoints}
-        onClose={handleCloseBottomSheet}
-        enablePanDownToClose={true}
+        enablePanDownToClose={false}
+        enableOverDrag={false}
         backgroundStyle={{ backgroundColor: '#fff' }}
+        style={{ minHeight: 200 }}
       >
         <BottomSheetView style={{ flex: 1 }}>
           <PropertyListBottomSheet

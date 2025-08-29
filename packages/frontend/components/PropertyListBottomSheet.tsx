@@ -152,10 +152,99 @@ export function PropertyListBottomSheet({
         );
     }
 
-    // Show empty state
+    // Show empty state with search functionality still visible
     if (!properties || properties.length === 0) {
         return (
             <View style={styles.container}>
+                {/* Enhanced Header with count and area info */}
+                <Header
+                    options={{
+                        title: t('No properties found in this area'),
+                        subtitle: t('Try searching for a different location or adjusting your filters'),
+                        titlePosition: 'left',
+                        transparent: false,
+                    }}
+                />
+
+                {/* Search Bar and Controls - Always visible */}
+                <View style={styles.searchContainer}>
+                    <View style={styles.searchHeader}>
+                        <View style={styles.searchInputContainer}>
+                            <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+                            <TextInput
+                                style={styles.searchInput}
+                                placeholder="Search for a city, neighborhood, or address..."
+                                value={searchQuery}
+                                onChangeText={onSearchQueryChange}
+                                returnKeyType="search"
+                            />
+                            {isSearching ? (
+                                <View style={styles.loadingSpinner}>
+                                    <View style={styles.spinner} />
+                                </View>
+                            ) : searchQuery.length > 0 && (
+                                <TouchableOpacity onPress={() => onSearchQueryChange?.('')} style={styles.clearButton}>
+                                    <Ionicons name="close-circle" size={20} color="#999" />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+
+                        <View style={styles.headerButtons}>
+                            <TouchableOpacity
+                                style={styles.filterButton}
+                                onPress={onOpenFilters}
+                                accessibilityLabel="More Filters"
+                            >
+                                <Ionicons name="options-outline" size={20} color={colors.primaryColor} />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.saveButton}
+                                onPress={onSaveSearch}
+                                accessibilityLabel="Save Search"
+                            >
+                                <Ionicons name="bookmark-outline" size={20} color={colors.primaryColor} />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.refreshButton}
+                                onPress={onRefreshLocation}
+                                accessibilityLabel="Refresh Location"
+                            >
+                                <Ionicons name="location" size={20} color={colors.primaryColor} />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    {/* Search Results */}
+                    {showSearchResults && searchResults.length > 0 && (
+                        <View style={styles.searchResults}>
+                            <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 200 }}>
+                                {searchResults.map((result) => (
+                                    <TouchableOpacity
+                                        key={result.id}
+                                        style={styles.searchResultItem}
+                                        onPress={() => onSelectLocation?.(result)}
+                                    >
+                                        <Ionicons name="location-outline" size={20} color="#666" style={styles.locationIcon} />
+                                        <View style={styles.searchResultText}>
+                                            <ThemedText style={styles.primaryText}>{result.text}</ThemedText>
+                                            <ThemedText style={styles.secondaryText}>
+                                                {result.place_name.replace(`${result.text}, `, '')}
+                                            </ThemedText>
+                                        </View>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        </View>
+                    )}
+                    {showSearchResults && searchResults.length === 0 && searchQuery.trim() && !isSearching && (
+                        <View style={[styles.searchResults, { padding: 12 }]}>
+                            <ThemedText style={styles.secondaryText}>No results found</ThemedText>
+                        </View>
+                    )}
+                </View>
+
                 <View style={styles.emptyContainer}>
                     <ThemedText style={styles.emptyText}>
                         {t('No properties found in this area')}
