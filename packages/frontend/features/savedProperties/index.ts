@@ -168,42 +168,7 @@ export const savedPropertiesUtils = {
   },
 } as const;
 
-/**
- * Development helpers (only available in development)
- */
-export const savedPropertiesDevTools = __DEV__ ? {
-  /**
-   * Log current saved properties state
-   */
-  logState: (context: ReturnType<typeof useSavedProperties>) => {
-    console.group('🏠 Saved Properties State');
-    console.log('Properties:', context.properties);
-    console.log('Folders:', context.folders);
-    console.log('Count:', context.propertiesCount);
-    console.log('Loading:', context.isLoading);
-    console.log('Error:', context.error);
-    console.groupEnd();
-  },
-  
-  /**
-   * Test save/unsave operation
-   */
-  testSaveOperation: async (propertyId: string, context: ReturnType<typeof useSavedProperties>) => {
-    try {
-      console.log(`🧪 Testing save operation for property: ${propertyId}`);
-      
-      if (context.isPropertySaved(propertyId)) {
-        await context.unsaveProperty({ propertyId });
-        console.log('✅ Unsave operation completed');
-      } else {
-        await context.saveProperty({ propertyId });
-        console.log('✅ Save operation completed');
-      }
-    } catch (error) {
-      console.error('❌ Save operation failed:', error);
-    }
-  },
-} : undefined;
+
 
 /**
  * Version information

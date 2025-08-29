@@ -91,7 +91,6 @@
     "@babel/plugin-proposal-export-namespace-from": "^7.18.9",
     "@babel/plugin-transform-dynamic-import": "^7.27.1",
     "@react-native-async-storage/async-storage": "^2.2.0",
-    "@tanstack/react-query-devtools": "^5.85.1",
     "@types/react": "~19.0.10",
     "autoprefixer": "^10.4.21",
     "babel-plugin-module-resolver": "^5.0.2",

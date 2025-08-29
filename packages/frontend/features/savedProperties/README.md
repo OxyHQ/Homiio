@@ -340,32 +340,7 @@ function AnalyticsDashboard() {
 }
 ```
 
-## 🧪 Development Tools
 
-### Debug Mode
-
-```tsx
-import { savedPropertiesDevTools } from '@/features/savedProperties';
-
-function DebugPanel() {
-  const savedPropertiesContext = useSavedProperties();
-
-  if (__DEV__ && savedPropertiesDevTools) {
-    return (
-      <div>
-        <button onClick={() => savedPropertiesDevTools.logState(savedPropertiesContext)}>
-          Log State
-        </button>
-        <button onClick={() => savedPropertiesDevTools.testSaveOperation('test-property', savedPropertiesContext)}>
-          Test Save Operation
-        </button>
-      </div>
-    );
-  }
-
-  return null;
-}
-```
 
 ### Testing
 
