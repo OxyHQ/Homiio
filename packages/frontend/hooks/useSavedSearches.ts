@@ -53,14 +53,15 @@ export const useSavedSearches = (): {
       filters?: any;
       notificationsEnabled?: boolean;
     }) => {
-      const response = await api.post('/me/saved-searches', {
+      const response = await api.post('/api/profiles/me/saved-searches', {
         name: vars.name,
         query: vars.query,
         filters: vars.filters,
         notificationsEnabled: Boolean(vars.notificationsEnabled),
       });
 
-      const s = (response as any).data?.search || (response as any).data || {};
+      const payload = (response as any).data;
+      const s = (payload as any)?.data?.search ?? (payload as any)?.data ?? (payload as any)?.search ?? payload ?? {};
       const normalized = {
         id: s.id || s._id,
         name: s.name || s.title || vars.name,
@@ -70,6 +71,10 @@ export const useSavedSearches = (): {
           typeof s.notifications === 'boolean'
             ? s.notifications
             : Boolean(s.notificationsEnabled ?? s.emailNotifications ?? s.pushNotifications ?? false),
+        notificationsEnabled:
+          typeof s.notificationsEnabled === 'boolean'
+            ? s.notificationsEnabled
+            : (typeof s.notifications === 'boolean' ? s.notifications : false),
         createdAt: s.createdAt || s.created_at || new Date().toISOString(),
         updatedAt: s.updatedAt || s.updated_at || new Date().toISOString(),
       };
@@ -105,12 +110,13 @@ export const useSavedSearches = (): {
 
       const response = await queryClient.fetchQuery({
         queryKey: ['savedSearches'],
-        queryFn: async () => api.get('/me/saved-searches'),
+        queryFn: async () => api.get('/api/profiles/me/saved-searches'),
         staleTime: 1000 * 30,
         gcTime: 1000 * 60 * 10,
       });
 
-      const raw = response.data?.searches || response.data || [];
+      const payload = response.data as any;
+      const raw = payload?.data ?? payload?.searches ?? payload ?? [];
       const normalized = (Array.isArray(raw) ? raw : []).map((s: any) => ({
         id: s.id || s._id,
         name: s.name || s.title || '',
@@ -120,6 +126,11 @@ export const useSavedSearches = (): {
           typeof s.notifications === 'boolean'
             ? s.notifications
             : Boolean(s.notificationsEnabled ?? s.emailNotifications ?? s.pushNotifications ?? false),
+        // Provide both shapes for downstream components
+        notificationsEnabled:
+          typeof s.notificationsEnabled === 'boolean'
+            ? s.notificationsEnabled
+            : (typeof s.notifications === 'boolean' ? s.notifications : false),
         createdAt: s.createdAt || s.created_at || new Date().toISOString(),
         updatedAt: s.updatedAt || s.updated_at || new Date().toISOString(),
       }));
@@ -182,7 +193,7 @@ export const useSavedSearches = (): {
   const deleteSavedSearch = useCallback(
     async (searchId: string, searchName?: string) => {
       try {
-        await api.delete(`/me/saved-searches/${searchId}`);
+        await api.delete(`/api/profiles/me/saved-searches/${searchId}`);
 
         // Remove from store
         removeSearch(searchId);
@@ -210,7 +221,7 @@ export const useSavedSearches = (): {
       updates: { name?: string; query?: string; filters?: any; notificationsEnabled?: boolean },
     ) => {
       try {
-        await api.patch(`/me/saved-searches/${searchId}`, updates);
+        await api.put(`/api/profiles/me/saved-searches/${searchId}`, updates);
 
         // Update in store
         updateSearchAction(searchId, updates);
@@ -237,7 +248,7 @@ export const useSavedSearches = (): {
         if (!searchId) {
           throw new Error('Invalid saved search');
         }
-        await api.patch(`/me/saved-searches/${searchId}/notifications`, { enabled });
+        await api.put(`/api/profiles/me/saved-searches/${searchId}/notifications`, { enabled });
 
         // Toggle in store
         toggleNotificationsAction(searchId);

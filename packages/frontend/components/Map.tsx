@@ -37,6 +37,7 @@ type MapEvent =
         bearing: number;
         pitch: number;
         bounds: { west: number; south: number; east: number; north: number };
+        isFinal?: boolean; // true when move/zoom gesture ends
     };
 
 export interface MarkerInput {
@@ -86,7 +87,7 @@ export interface MapProps {
     onAddressSelect?: (address: AddressData, coordinates: LonLat) => void;
     onAddressLookupStart?: () => void;
     onAddressLookupEnd?: () => void;
-    onRegionChange?: (e: { center: LonLat; zoom: number; bearing: number; pitch: number; bounds: { west: number; south: number; east: number; north: number } }) => void;
+    onRegionChange?: (e: { center: LonLat; zoom: number; bearing: number; pitch: number; bounds: { west: number; south: number; east: number; north: number }; isFinal?: boolean }) => void;
     onMarkerPress?: (e: { id: string; lngLat: LonLat }) => void;
     onClusterPress?: (e: { leaves: any[] }) => void;
 }
@@ -223,7 +224,7 @@ const buildHTML = (
     const c = map.getCenter();
     const b = map.getBounds();
     const boundsPayload = { west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() };
-    post({ type:'region', center:[c.lng,c.lat], zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch(), bounds: boundsPayload });
+    post({ type:'region', center:[c.lng,c.lat], zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch(), bounds: boundsPayload, isFinal: force });
   };
   
   ['move','zoom','rotate','pitch'].forEach(ev => map.on(ev, () => { emit(false); }));
@@ -295,8 +296,10 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     // Get saved map state if screenId is provided
     const savedState = screenId ? getMapState(screenId) : null;
 
-    const effectiveCoordinates = savedState?.center || initialCoordinates;
-    const effectiveZoom = savedState?.zoom || initialZoom;    // Memoize marker style configuration
+    // Freeze initial center/zoom for HTML to prevent iframe reloads
+    const initialCenterRef = useRef<LonLat>(savedState?.center || initialCoordinates);
+    const initialZoomRef = useRef<number>(savedState?.zoom || initialZoom);
+    // Memoize marker style configuration
     const markerStyleFinal = useMemo<Required<MarkerStyle>>(() => ({
         chipBg: markerStyle?.chipBg ?? '#111827',
         chipText: markerStyle?.chipText ?? '#FFFFFF',
@@ -340,18 +343,18 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
         getUserLocation();
     }, [startFromCurrentLocation]);
 
-    // Generate HTML once with initial coordinates to prevent iframe reloads
+    // Generate HTML once with frozen initial coordinates to prevent iframe reloads
     const html = useMemo(
         () => buildHTML(
             MAPBOX_TOKEN,
-            effectiveCoordinates, // Use actual initial coordinates
-            effectiveZoom,        // Use actual initial zoom
+            initialCenterRef.current,
+            initialZoomRef.current,
             styleURL,
             markerStyleFinal,
             clusterFinal,
             enableAddressLookup
         ),
-        [styleURL, markerStyleFinal, clusterFinal, enableAddressLookup, effectiveCoordinates, effectiveZoom] // Regenerate when coordinates change
+        [styleURL, markerStyleFinal, clusterFinal, enableAddressLookup]
     );
 
     const webviewRef = useRef<any>(null);

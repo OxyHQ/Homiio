@@ -8,7 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import Map, { MapApi } from '@/components/Map';
+import MapView, { MapApi } from '@/components/Map';
 import { PropertyListBottomSheet } from '@/components/PropertyListBottomSheet';
 import { Property } from '@homiio/shared-types';
 import { propertyService } from '@/services/propertyService';
@@ -17,6 +17,7 @@ import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SaveSearchBottomSheet } from '@/components/SaveSearchBottomSheet';
 import { SearchFiltersBottomSheet } from '@/components/SearchFiltersBottomSheet';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
+import { onApplySavedSearch } from '@/utils/searchEvents';
 import * as Location from 'expo-location';
 import { useSearchMode } from '@/context/SearchModeContext';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
@@ -29,6 +30,8 @@ import Animated, {
   interpolate,
   Extrapolation
 } from 'react-native-reanimated';
+import { useQueryClient } from '@tanstack/react-query';
+import { useMapSearchStore } from '@/store/mapSearchStore';
 
 // Small helper to apply platform-appropriate shadows (uses boxShadow on web)
 const _shadow = (level: 'sm' | 'md' = 'md') => Platform.select({
@@ -210,6 +213,7 @@ const defaultFilters: Filters = {
 export default function SearchScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const queryClient = useQueryClient();
   const { getMapState, setMapState } = useMapState();
   const { isAuthenticated } = useSavedSearches();
   const bottomSheet = useContext(BottomSheetContext);
@@ -304,19 +308,26 @@ export default function SearchScreen() {
     type: (savedState?.filters as any)?.type || defaultFilters.type,
     amenities: (savedState?.filters as any)?.amenities || defaultFilters.amenities,
   });
-  const [properties, setProperties] = useState<Property[]>([]);
+  // Global accumulated properties for the map session
+  const accumulatedProperties = useMapSearchStore((s) => s.properties);
+  const mergeMapProperties = useMapSearchStore((s) => s.mergeProperties);
   const [isLoadingProperties, setIsLoadingProperties] = useState(false);
   const [highlightedPropertyId, setHighlightedPropertyId] = useState<string | null>(savedState?.highlightedMarkerId || null);
-  const regionChangeDebounce = useRef<NodeJS.Timeout | null>(null);
+  // Keep track of last fetch center to trigger updates by distance moved
+  const lastFetchCenterRef = useRef<[number, number] | null>(savedState?.center || null);
+  const lastFetchZoomRef = useRef<number | null>(savedState?.zoom ?? null);
+  const MIN_MOVE_DISTANCE_METERS = 500; // Minimum distance user must move to refetch
+  const MIN_ZOOM_DELTA = 0.8; // Minimum zoom change to refetch
   const lastSelectedLocationRef = useRef<string>('');
+  const [currentBounds, setCurrentBounds] = useState<{ west: number; south: number; east: number; north: number } | null>(savedState?.bounds || null);
 
   // Memoize markers to prevent unnecessary re-renders
   const mapMarkers = useMemo(() => {
-    if (!properties || properties.length === 0) {
+    if (!accumulatedProperties || accumulatedProperties.length === 0) {
       return [];
     }
 
-    const validProperties = properties.filter(p => {
+    const validProperties = accumulatedProperties.filter(p => {
       // Check both new structure (address.coordinates) and old structure (location)
       const hasNewCoordinates = p?.address?.coordinates?.coordinates?.length === 2;
       const hasOldCoordinates = p?.location?.coordinates?.length === 2;
@@ -341,7 +352,7 @@ export default function SearchScreen() {
     }).filter((marker): marker is { id: string; coordinates: [number, number]; priceLabel: string } => marker !== null); // Remove any null markers
 
     return markers;
-  }, [properties]);
+  }, [accumulatedProperties]);
 
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -393,48 +404,40 @@ export default function SearchScreen() {
     setIsLoadingProperties(true);
     setHighlightedPropertyId(null);
     try {
-      const response = await propertyService.findPropertiesInBounds(bounds, {
+      // Quantize bounds to reduce cache key churn and leverage caching
+      const round = (n: number, d = 3) => Math.round(n * Math.pow(10, d)) / Math.pow(10, d);
+      const qb = { west: round(bounds.west), south: round(bounds.south), east: round(bounds.east), north: round(bounds.north) };
+      const key = ['propertiesInBounds', qb, {
         minRent: filters.minPrice,
         maxRent: filters.maxPrice,
         bedrooms: typeof filters.bedrooms === 'string' ? 5 : filters.bedrooms,
         bathrooms: typeof filters.bathrooms === 'string' ? 4 : filters.bathrooms,
-        type: filters.type,
-        amenities: filters.amenities,
+        type: filters.type || null,
+        amenities: (filters.amenities || []).slice().sort(),
+      }];
+
+      const response = await queryClient.ensureQueryData({
+        queryKey: key,
+        queryFn: async () => propertyService.findPropertiesInBounds(bounds, {
+          minRent: filters.minPrice,
+          maxRent: filters.maxPrice,
+          bedrooms: typeof filters.bedrooms === 'string' ? 5 : filters.bedrooms,
+          bathrooms: typeof filters.bathrooms === 'string' ? 4 : filters.bathrooms,
+          type: filters.type,
+          amenities: filters.amenities,
+        }),
+        staleTime: 1000 * 60, // 1 min fresh
+        gcTime: 1000 * 60 * 10,
       });
 
-      // Only update properties if they've actually changed
-      setProperties(prevProperties => {
-        const newProperties = response.properties;
-
-        // Check if properties have actually changed
-        if (prevProperties.length !== newProperties.length) {
-          return newProperties;
-        }
-
-        // Deep comparison to check if properties have actually changed
-        const hasChanged = newProperties.some((newProp, index) => {
-          const prevProp = prevProperties[index];
-          if (!prevProp || prevProp._id !== newProp._id || prevProp.rent?.amount !== newProp.rent?.amount) {
-            return true;
-          }
-
-          // Compare coordinates from both structures
-          const prevNewCoords = JSON.stringify(prevProp.address?.coordinates?.coordinates);
-          const newNewCoords = JSON.stringify(newProp.address?.coordinates?.coordinates);
-          const prevOldCoords = JSON.stringify(prevProp.location?.coordinates);
-          const newOldCoords = JSON.stringify(newProp.location?.coordinates);
-
-          return prevNewCoords !== newNewCoords || prevOldCoords !== newOldCoords;
-        });
-
-        return hasChanged ? newProperties : prevProperties;
-      });
+      // Merge fetched properties into the global map store
+      mergeMapProperties(response.properties || []);
     } catch {
-      setProperties([]);
+      // Keep existing properties on fetch error
     } finally {
       setIsLoadingProperties(false);
     }
-  }, [filters]);
+  }, [filters, queryClient, mergeMapProperties]);
 
   useEffect(() => {
     mapRef.current?.highlightMarker(highlightedPropertyId);
@@ -473,14 +476,51 @@ export default function SearchScreen() {
 
     // Navigate map and fetch properties immediately
     mapRef.current?.navigateToLocation(result.center, 14);
+    // Update last fetch baseline to avoid duplicate fetch on region end
+    lastFetchCenterRef.current = result.center as [number, number];
+    lastFetchZoomRef.current = 14;
     const radius = 0.05;
     const bounds = result.bbox ? { west: result.bbox[0], south: result.bbox[1], east: result.bbox[2], north: result.bbox[3] }
       : { west: lng - radius, south: lat - radius, east: lng + radius, north: lat + radius };
     fetchProperties(bounds);
   }, [fetchProperties]);
 
+  // Apply saved search without navigation (no map reload)
+  useEffect(() => {
+    const unsubscribe = onApplySavedSearch(async (saved) => {
+      try {
+        // Update text field and filters first
+        setSearchQuery(saved.query || '');
+        lastSelectedLocationRef.current = saved.query || '';
+        setFilters((prev) => ({
+          minPrice: (saved.filters?.minPrice ?? prev.minPrice) as number,
+          maxPrice: (saved.filters?.maxPrice ?? prev.maxPrice) as number,
+          bedrooms: (saved.filters?.bedrooms ?? prev.bedrooms) as any,
+          bathrooms: (saved.filters?.bathrooms ?? prev.bathrooms) as any,
+          type: (saved.filters as any)?.type ?? prev.type,
+          amenities: (saved.filters as any)?.amenities ?? prev.amenities,
+        }));
+
+        // Geocode query and move map, then fetch properties
+        const mapboxToken = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
+        if (!mapboxToken || !saved.query) return;
+
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(saved.query)}.json?access_token=${mapboxToken}`;
+        const resp = await fetch(url);
+        const data = await resp.json();
+        const feature = data?.features?.[0];
+        if (feature) {
+          handleSelectLocation(feature);
+        }
+      } catch {
+        // Silent fail; UI remains unchanged
+      }
+    });
+    return unsubscribe;
+  }, [handleSelectLocation]);
+
   const handleMarkerPress = ({ id }: { id: string; lngLat: [number, number] }) => {
-    const index = properties.findIndex(p => p._id === id);
+    const index = accumulatedProperties.findIndex(p => p._id === id);
     if (index !== -1) {
       setHighlightedPropertyId(id);
 
@@ -489,28 +529,48 @@ export default function SearchScreen() {
     }
   };
 
-  const handleRegionChange = useCallback(({ bounds }: { bounds: { west: number; south: number; east: number; north: number } }) => {
-    if (regionChangeDebounce.current) clearTimeout(regionChangeDebounce.current);
-    if (!bounds) return;
+  const handleRegionChange = useCallback(({ center, bounds, zoom, isFinal }: { center: [number, number]; bounds: { west: number; south: number; east: number; north: number }; zoom: number; isFinal?: boolean }) => {
+    if (!bounds || !center) return;
+    // Always update current bounds for bottom sheet filtering
+    setCurrentBounds(bounds);
+    // Only react when the gesture ends to avoid rapid updates while panning
+    if (!isFinal) return;
 
-    // Increase debounce time to reduce API calls and prevent map reloading
-    regionChangeDebounce.current = setTimeout(() => {
-      // Only fetch if bounds have changed significantly (to prevent unnecessary API calls)
-      const currentBounds = savedState?.bounds;
-      if (currentBounds) {
-        const boundsChanged = Math.abs(currentBounds.west - bounds.west) > 0.02 ||
-          Math.abs(currentBounds.south - bounds.south) > 0.02 ||
-          Math.abs(currentBounds.east - bounds.east) > 0.02 ||
-          Math.abs(currentBounds.north - bounds.north) > 0.02;
+    // Haversine distance in meters between two [lng, lat] points
+    const distanceMeters = (a: [number, number], b: [number, number]) => {
+      const toRad = (x: number) => (x * Math.PI) / 180;
+      const R = 6371000; // meters
+      const dLat = toRad(b[1] - a[1]);
+      const dLon = toRad(b[0] - a[0]);
+      const lat1 = toRad(a[1]);
+      const lat2 = toRad(b[1]);
+      const sinDLat = Math.sin(dLat / 2);
+      const sinDLon = Math.sin(dLon / 2);
+      const h = sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon;
+      return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+    };
 
-        if (!boundsChanged) {
-          return; // Skip API call if bounds haven't changed significantly
-        }
-      }
+    // Compute viewport diagonal in meters and adapt threshold to zoom level
+    const diagonalMeters = distanceMeters([bounds.west, bounds.north], [bounds.east, bounds.south]);
+    const adaptiveThreshold = Math.max(MIN_MOVE_DISTANCE_METERS, diagonalMeters * 0.3); // 30% of viewport diagonal
 
+    // If first time, fetch immediately and set baseline
+    if (!lastFetchCenterRef.current || lastFetchZoomRef.current === null) {
+      lastFetchCenterRef.current = center;
+      lastFetchZoomRef.current = zoom;
       fetchProperties(bounds);
-    }, 500); // Increased to 500ms to reduce frequency
-  }, [fetchProperties, savedState?.bounds]);
+      return;
+    }
+
+    const moved = distanceMeters(lastFetchCenterRef.current, center);
+    const zoomChanged = Math.abs((lastFetchZoomRef.current ?? zoom) - zoom);
+
+    if (moved >= adaptiveThreshold || zoomChanged >= MIN_ZOOM_DELTA) {
+      lastFetchCenterRef.current = center;
+      lastFetchZoomRef.current = zoom;
+      fetchProperties(bounds);
+    }
+  }, [fetchProperties]);
 
   const onViewableItemsChanged = useMemo(() => {
     return (viewableItems: { item: Property }[]) => {
@@ -520,6 +580,21 @@ export default function SearchScreen() {
       }
     };
   }, []);
+
+  // Only show properties visible on screen in the list
+  const visibleProperties = useMemo(() => {
+    if (!currentBounds) return accumulatedProperties;
+    const within = (lng: number, lat: number) => (
+      lng >= currentBounds.west && lng <= currentBounds.east &&
+      lat >= currentBounds.south && lat <= currentBounds.north
+    );
+    return accumulatedProperties.filter(p => {
+      const coords = (p.address?.coordinates?.coordinates || p.location?.coordinates) as [number, number] | undefined;
+      if (!coords || coords.length !== 2) return false;
+      const [lng, lat] = coords;
+      return typeof lng === 'number' && typeof lat === 'number' && within(lng, lat);
+    });
+  }, [accumulatedProperties, currentBounds]);
 
   const handlePropertyPress = useCallback((property: Property) => {
     router.push(`/properties/${property._id}`);
@@ -557,6 +632,9 @@ export default function SearchScreen() {
 
       // Navigate to the new location
       mapRef.current?.navigateToLocation(coordinates, 14);
+      // Update last fetch baseline to avoid duplicate fetch on region end
+      lastFetchCenterRef.current = coordinates;
+      lastFetchZoomRef.current = 14;
 
       // Clear saved state to force fresh location
       setMapState(screenId, {
@@ -573,7 +651,7 @@ export default function SearchScreen() {
   // Initial fetch of properties when component mounts
   useEffect(() => {
     // Only fetch if we don't have properties and no saved state
-    if (properties.length === 0 && !savedState) {
+    if (accumulatedProperties.length === 0 && !savedState) {
       // Fetch properties for a default area (Barcelona)
       const defaultBounds = {
         west: 2.0,
@@ -583,7 +661,7 @@ export default function SearchScreen() {
       };
       fetchProperties(defaultBounds);
     }
-  }, [properties.length, savedState, fetchProperties]);
+  }, [accumulatedProperties.length, savedState, fetchProperties]);
 
   // Auto-focus search input when screen opens (only if coming from home screen)
   useEffect(() => {
@@ -604,7 +682,7 @@ export default function SearchScreen() {
     } else {
       console.log('Not coming from home - not auto-focusing');
     }
-  }, [handleSearchFocus, params.fromHome]);
+  }, [handleSearchFocus, params, urlQuery]);
 
   // Handle URL query changes
   useEffect(() => {
@@ -613,22 +691,6 @@ export default function SearchScreen() {
       setShowResults(true);
     }
   }, [urlQuery, searchQuery]);
-
-  useEffect(() => {
-    return () => {
-      if (regionChangeDebounce.current) clearTimeout(regionChangeDebounce.current);
-    };
-  }, []);
-
-  // Clear map state after a delay when component unmounts (to allow for quick navigation back)
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      // Only clear state if user hasn't navigated back within 5 minutes
-      // This allows for quick back/forward navigation while clearing stale state
-    }, 5 * 60 * 1000); // 5 minutes
-
-    return () => clearTimeout(timeoutId);
-  }, []);
 
   const handleFilterChange = useCallback((sectionId: string, value: any) => {
     setFilters(prev => {
@@ -782,7 +844,7 @@ export default function SearchScreen() {
 
   return (
     <View style={styles.container}>
-      <Map
+      <MapView
         key="search-map"
         ref={mapRef}
         style={styles.map}
@@ -829,7 +891,7 @@ export default function SearchScreen() {
         enableOverDrag={false}
         enableHandlePanningGesture={enableHandlePanning}
         enableContentPanningGesture={enableContentPanning}
-        backgroundStyle={{ backgroundColor: '#fff' }}
+        backgroundStyle={{ backgroundColor: '#fff', }}
         style={{
           minHeight: 200,
           maxWidth: 600,
@@ -882,12 +944,12 @@ export default function SearchScreen() {
             ) : (
               // Show property list when search is not focused
               <PropertyListBottomSheet
-                properties={properties}
+                properties={visibleProperties}
                 highlightedPropertyId={highlightedPropertyId}
                 onPropertyPress={handlePropertyPress}
                 isLoading={isLoadingProperties}
                 onViewableItemsChanged={onViewableItemsChanged}
-                _mapBounds={savedState?.bounds || null}
+                _mapBounds={currentBounds || null}
                 totalCount={undefined} // We can add this later if backend returns total count
                 onOpenFilters={handleOpenFilters}
                 onSaveSearch={handleOpenSaveModal}

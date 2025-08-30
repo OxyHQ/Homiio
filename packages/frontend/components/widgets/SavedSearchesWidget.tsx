@@ -10,12 +10,13 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
 import { webAlert } from '@/utils/api';
+import { emitApplySavedSearch } from '@/utils/searchEvents';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SavedSearchActionsBottomSheet } from '@/components/SavedSearchActionsBottomSheet';
 import Button from '../Button';
@@ -45,6 +46,7 @@ const IconComponent = Ionicons as any;
 export function SavedSearchesWidget() {
   const { t } = useTranslation();
   const router = useRouter();
+  const pathname = usePathname() || '/';
   const { searches, isAuthenticated, deleteSavedSearch, updateSearch, toggleNotifications } =
     useSavedSearches();
 
@@ -61,6 +63,11 @@ export function SavedSearchesWidget() {
   const [editError, setEditError] = useState('');
 
   const navigateToSearch = (search: SavedSearch) => {
+    if (pathname.startsWith('/search')) {
+      // Apply search via event bus so the map is not reloaded
+      emitApplySavedSearch({ query: search.query, filters: search.filters });
+      return;
+    }
     router.push(`/search/${encodeURIComponent(search.query)}`);
   };
 
