@@ -249,8 +249,8 @@ export default function HomePage() {
   }, [cities]);
 
   const handleSearchPress = useCallback(() => {
-    // Navigate to search screen
-    router.push('/search');
+    // Navigate to search screen with a flag to indicate coming from home
+    router.push('/search?fromHome=true');
   }, [router]);
 
   const onRefresh = useCallback(async () => {

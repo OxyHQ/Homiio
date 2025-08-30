@@ -27,7 +27,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   interpolate,
-  Extrapolate
+  Extrapolation
 } from 'react-native-reanimated';
 
 // Small helper to apply platform-appropriate shadows (uses boxShadow on web)
@@ -78,8 +78,8 @@ const styles = StyleSheet.create({
   searchBar: {
     backgroundColor: '#fff',
     borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
     ..._shadow('md'),
@@ -218,8 +218,7 @@ export default function SearchScreen() {
   // Bottom sheet state
   const bottomSheetRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => {
-    console.log('Snap points configured:', ['25%', '50%', '90%', '100%']);
-    return ['25%', '50%', '90%', '100%'];
+    return ['25%', '30%', '100%'];
   }, []);
 
   // Animated values for bottom sheet padding transition
@@ -233,6 +232,7 @@ export default function SearchScreen() {
   const urlQuery = params.query as string;
 
   const mapRef = useRef<MapApi>(null);
+  const searchInputRef = useRef<TextInput>(null);
   const [searchQuery, setSearchQuery] = useState(urlQuery || savedState?.searchQuery || '');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -440,7 +440,7 @@ export default function SearchScreen() {
     mapRef.current?.highlightMarker(highlightedPropertyId);
   }, [highlightedPropertyId]);
 
-  const handleSelectLocation = (result: SearchResult) => {
+  const handleSelectLocation = useCallback((result: SearchResult) => {
     const [lng, lat] = result.center;
 
     // Clear search results and hide results immediately
@@ -477,7 +477,7 @@ export default function SearchScreen() {
     const bounds = result.bbox ? { west: result.bbox[0], south: result.bbox[1], east: result.bbox[2], north: result.bbox[3] }
       : { west: lng - radius, south: lat - radius, east: lng + radius, north: lat + radius };
     fetchProperties(bounds);
-  };
+  }, [fetchProperties]);
 
   const handleMarkerPress = ({ id }: { id: string; lngLat: [number, number] }) => {
     const index = properties.findIndex(p => p._id === id);
@@ -585,6 +585,27 @@ export default function SearchScreen() {
     }
   }, [properties.length, savedState, fetchProperties]);
 
+  // Auto-focus search input when screen opens (only if coming from home screen)
+  useEffect(() => {
+    console.log('Search screen mounted - urlQuery:', urlQuery, 'params:', params);
+    // Only auto-focus if coming from home screen (fromHome=true parameter)
+    if (params.fromHome === 'true') {
+      console.log('Auto-focusing search input and expanding bottom sheet');
+      const timer = setTimeout(() => {
+        searchInputRef.current?.focus();
+        // Expand bottom sheet to 100% when coming from home screen search
+        handleSearchFocus();
+        // Re-enable gestures after a short delay to allow dragging
+        setTimeout(() => {
+          setIsSearchFocused(false);
+        }, 500);
+      }, 300);
+      return () => clearTimeout(timer);
+    } else {
+      console.log('Not coming from home - not auto-focusing');
+    }
+  }, [handleSearchFocus, params.fromHome]);
+
   // Handle URL query changes
   useEffect(() => {
     if (urlQuery && urlQuery !== searchQuery) {
@@ -681,9 +702,9 @@ export default function SearchScreen() {
   const animatedBottomSheetPaddingStyle = useAnimatedStyle(() => {
     const paddingTop = interpolate(
       animatedIndex.value,
-      [0, 1, 2, 3], // snap points indices
-      [0, searchBarHeight * 0.3, searchBarHeight, searchBarHeight], // padding values
-      Extrapolate.CLAMP
+      [0, 1, 2], // snap points indices
+      [0, 0, searchBarHeight], // padding values
+      Extrapolation.CLAMP
     );
 
     return {
@@ -697,7 +718,7 @@ export default function SearchScreen() {
       animatedIndex.value,
       [0, 1, 2, 3], // snap points indices
       [1, 0.3, 0, 0], // opacity values - hide when at top
-      Extrapolate.CLAMP
+      Extrapolation.CLAMP
     );
 
     console.log('Animated opacity:', opacity, 'for index:', animatedIndex.value);
@@ -773,11 +794,11 @@ export default function SearchScreen() {
         onMarkerPress={handleMarkerPress}
       />
 
-      {/* Google Maps-style Search Bar */}
       <View style={styles.searchBarContainer}>
         <View style={styles.searchBar}>
           <Ionicons name="search" size={20} style={styles.searchIcon} />
           <TextInput
+            ref={searchInputRef}
             style={styles.searchInput}
             placeholder="Search cities, neighborhoods, streets, or addresses..."
             value={searchQuery}
