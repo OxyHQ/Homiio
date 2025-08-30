@@ -2,6 +2,9 @@ import React, { useState, useRef, useEffect, useCallback, useMemo, useContext } 
 import {
   View, StyleSheet,
   Platform,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Map, { MapApi } from '@/components/Map';
@@ -16,6 +19,15 @@ import { useSavedSearches } from '@/hooks/useSavedSearches';
 import * as Location from 'expo-location';
 import { useSearchMode } from '@/context/SearchModeContext';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
+import { Ionicons } from '@expo/vector-icons';
+import { ThemedText } from '@/components/ThemedText';
+import { colors } from '@/styles/colors';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  interpolate,
+  Extrapolate
+} from 'react-native-reanimated';
 
 // Small helper to apply platform-appropriate shadows (uses boxShadow on web)
 const _shadow = (level: 'sm' | 'md' = 'md') => Platform.select({
@@ -49,23 +61,112 @@ const styles = StyleSheet.create({
   map: {
     ...StyleSheet.absoluteFillObject,
   },
+  // Google Maps-style search bar
+  searchBarContainer: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 40,
+    left: 16,
+    right: 16,
+    zIndex: 1000,
+  },
+  searchBar: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    ..._shadow('md'),
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  searchIcon: {
+    marginRight: 12,
+    color: '#666',
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+    paddingVertical: 4,
+  },
+  searchClearButton: {
+    padding: 4,
+  },
+  searchResultsContainer: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 120 : 100,
+    left: 16,
+    right: 16,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    maxHeight: 300,
+    zIndex: 999,
+    ..._shadow('md'),
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  searchResultIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f8f9fa',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  searchResultText: {
+    flex: 1,
+  },
+  searchResultTitle: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  searchResultSubtitle: {
+    fontSize: 14,
+    color: '#666',
+  },
+  // Animated search bar container
+  animatedSearchBarContainer: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    zIndex: 1000,
+  },
 });
 
 interface SearchResult {
   id: string; place_name: string; center: [number, number]; text: string;
   context?: { text: string }[]; bbox?: [number, number, number, number];
+  place_type?: string[];
 }
 
 interface Filters {
-  minPrice: number; maxPrice: number; bedrooms: number | string; bathrooms: number | string;
+  minPrice: number;
+  maxPrice: number;
+  bedrooms: number | string;
+  bathrooms: number | string;
+  type?: string;
+  amenities?: string[];
 }
 
 const defaultFilters: Filters = {
-  minPrice: 0, maxPrice: 5000, bedrooms: 1, bathrooms: 1,
+  minPrice: 0,
+  maxPrice: 5000,
+  bedrooms: 1,
+  bathrooms: 1,
+  type: undefined,
+  amenities: [],
 };
-
-
-
 
 export default function SearchScreen() {
   const router = useRouter();
@@ -78,6 +179,10 @@ export default function SearchScreen() {
   // Bottom sheet state
   const bottomSheetRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => ['25%', '50%', '90%'], []);
+
+  // Animated values for bottom sheet padding transition
+  const animatedIndex = useSharedValue(0);
+  const searchBarHeight = 80; // Height of search bar + padding
 
   // Restore saved state on mount
   const savedState = getMapState(screenId);
@@ -106,6 +211,8 @@ export default function SearchScreen() {
     maxPrice: savedState?.filters?.maxPrice || defaultFilters.maxPrice,
     bedrooms: savedState?.filters?.bedrooms || defaultFilters.bedrooms,
     bathrooms: savedState?.filters?.bathrooms || defaultFilters.bathrooms,
+    type: (savedState?.filters as any)?.type || defaultFilters.type,
+    amenities: (savedState?.filters as any)?.amenities || defaultFilters.amenities,
   });
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoadingProperties, setIsLoadingProperties] = useState(false);
@@ -201,6 +308,8 @@ export default function SearchScreen() {
         maxRent: filters.maxPrice,
         bedrooms: typeof filters.bedrooms === 'string' ? 5 : filters.bedrooms,
         bathrooms: typeof filters.bathrooms === 'string' ? 4 : filters.bathrooms,
+        type: filters.type,
+        amenities: filters.amenities,
       });
 
       // Only update properties if they've actually changed
@@ -321,8 +430,6 @@ export default function SearchScreen() {
     setSearchQuery('');
   }, [setMapState, screenId]);
 
-
-
   const handleRefreshLocation = useCallback(async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -376,8 +483,6 @@ export default function SearchScreen() {
     }
   }, [urlQuery, searchQuery]);
 
-
-
   useEffect(() => {
     return () => {
       if (regionChangeDebounce.current) clearTimeout(regionChangeDebounce.current);
@@ -408,14 +513,19 @@ export default function SearchScreen() {
           return prev;
         case 'type':
           // Handle property type filter
-          return prev;
+          return { ...prev, type: value };
         case 'bedrooms':
           return { ...prev, bedrooms: parseInt(value) };
         case 'bathrooms':
           return { ...prev, bathrooms: parseInt(value) };
         case 'amenities':
-          // Handle amenities filter
-          return prev;
+          // Handle amenities filter - toggle the amenity in the array
+          const currentAmenities = prev.amenities || [];
+          const amenityValue = value as string;
+          const newAmenities = currentAmenities.includes(amenityValue)
+            ? currentAmenities.filter(a => a !== amenityValue)
+            : [...currentAmenities, amenityValue];
+          return { ...prev, amenities: newAmenities };
         default:
           return prev;
       }
@@ -457,6 +567,88 @@ export default function SearchScreen() {
     );
   }, [isAuthenticated, router, bottomSheet, searchQuery, filters]);
 
+  // Animated style for bottom sheet top padding
+  const animatedBottomSheetPaddingStyle = useAnimatedStyle(() => {
+    const paddingTop = interpolate(
+      animatedIndex.value,
+      [0, 1, 2], // snap points indices
+      [0, searchBarHeight * 0.3, searchBarHeight], // padding values
+      Extrapolate.CLAMP
+    );
+
+    return {
+      paddingTop,
+    };
+  });
+
+  // Animated style for bottom sheet handle opacity
+  const animatedHandleStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(
+      animatedIndex.value,
+      [0, 1, 2], // snap points indices
+      [1, 0.3, 0], // opacity values - hide when at top
+      Extrapolate.CLAMP
+    );
+
+    console.log('Animated opacity:', opacity, 'for index:', animatedIndex.value);
+
+    return {
+      opacity,
+    };
+  }, []);
+
+  // Custom handle component with animated opacity
+  const CustomHandle = useCallback(() => {
+    return (
+      <Animated.View style={[{
+        width: 40,
+        height: 4,
+        backgroundColor: '#000',
+        borderRadius: 2,
+        alignSelf: 'center',
+        marginTop: 8,
+        marginBottom: 8,
+      }, animatedHandleStyle]} />
+    );
+  }, [animatedHandleStyle]);
+
+  // Render search result item
+  const renderSearchResult = useCallback((result: SearchResult) => {
+    const getIcon = () => {
+      const placeTypes = result.place_type || [];
+      if (placeTypes.includes('place') || placeTypes.includes('city')) {
+        return 'business';
+      } else if (placeTypes.includes('neighborhood') || placeTypes.includes('locality')) {
+        return 'location';
+      } else if (placeTypes.includes('address') || placeTypes.includes('street')) {
+        return 'map';
+      } else if (placeTypes.includes('poi')) {
+        return 'home';
+      }
+      return 'location-outline';
+    };
+
+    return (
+      <TouchableOpacity
+        key={result.id}
+        style={styles.searchResultItem}
+        onPress={() => handleSelectLocation(result)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.searchResultIcon}>
+          <Ionicons name={getIcon()} size={20} color={colors.primaryColor} />
+        </View>
+        <View style={styles.searchResultText}>
+          <ThemedText style={styles.searchResultTitle}>{result.text}</ThemedText>
+          <ThemedText style={styles.searchResultSubtitle}>
+            {result.place_name.replace(`${result.text}, `, '')}
+          </ThemedText>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color="#ccc" />
+      </TouchableOpacity>
+    );
+  }, [handleSelectLocation]);
+
   return (
     <View style={styles.container}>
       <Map
@@ -471,6 +663,37 @@ export default function SearchScreen() {
         onMarkerPress={handleMarkerPress}
       />
 
+      {/* Google Maps-style Search Bar */}
+      <View style={styles.searchBarContainer}>
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={20} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search cities, neighborhoods, streets, or addresses..."
+            value={searchQuery}
+            onChangeText={setSearchQuerySafely}
+            returnKeyType="search"
+            autoCorrect={false}
+            autoCapitalize="none"
+            clearButtonMode="while-editing"
+          />
+          {isSearching && (
+            <View style={{ width: 20, height: 20, justifyContent: 'center', alignItems: 'center' }}>
+              <View style={{ width: 16, height: 16, borderWidth: 2, borderColor: '#666', borderTopColor: 'transparent', borderRadius: 8 }} />
+            </View>
+          )}
+        </View>
+      </View>
+
+      {/* Search Results Dropdown */}
+      {showResults && searchResults.length > 0 && (
+        <View style={styles.searchResultsContainer}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {searchResults.map(renderSearchResult)}
+          </ScrollView>
+        </View>
+      )}
+
       {/* Property List Bottom Sheet */}
       <BottomSheet
         ref={bottomSheetRef}
@@ -480,28 +703,29 @@ export default function SearchScreen() {
         enableOverDrag={false}
         backgroundStyle={{ backgroundColor: '#fff' }}
         style={{ minHeight: 200 }}
+        animatedIndex={animatedIndex}
+        onAnimate={(fromIndex, toIndex) => {
+          // Update animated index for handle opacity
+          animatedIndex.value = toIndex;
+          console.log('Bottom sheet index:', toIndex, 'Opacity should be:', toIndex === 2 ? 0 : toIndex === 1 ? 0.3 : 1);
+        }}
+        handleComponent={CustomHandle}
       >
         <BottomSheetView style={{ flex: 1 }}>
-          <PropertyListBottomSheet
-            properties={properties}
-            highlightedPropertyId={highlightedPropertyId}
-            onPropertyPress={handlePropertyPress}
-            isLoading={isLoadingProperties}
-            onViewableItemsChanged={onViewableItemsChanged}
-            _mapBounds={savedState?.bounds || null}
-            totalCount={undefined} // We can add this later if backend returns total count
-            // Search functionality props
-            searchQuery={searchQuery}
-            onSearchQueryChange={setSearchQuerySafely}
-            searchResults={searchResults}
-            isSearching={isSearching}
-            showSearchResults={showResults}
-            onSelectLocation={handleSelectLocation}
-            // Filter functionality props
-            onOpenFilters={handleOpenFilters}
-            onSaveSearch={handleOpenSaveModal}
-            onRefreshLocation={handleRefreshLocation}
-          />
+          <Animated.View style={[{ flex: 1 }, animatedBottomSheetPaddingStyle]}>
+            <PropertyListBottomSheet
+              properties={properties}
+              highlightedPropertyId={highlightedPropertyId}
+              onPropertyPress={handlePropertyPress}
+              isLoading={isLoadingProperties}
+              onViewableItemsChanged={onViewableItemsChanged}
+              _mapBounds={savedState?.bounds || null}
+              totalCount={undefined} // We can add this later if backend returns total count
+              onOpenFilters={handleOpenFilters}
+              onSaveSearch={handleOpenSaveModal}
+              onRefreshLocation={handleRefreshLocation}
+            />
+          </Animated.View>
         </BottomSheetView>
       </BottomSheet>
     </View>

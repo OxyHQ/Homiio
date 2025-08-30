@@ -47,12 +47,6 @@ export const RightBar = React.memo(function RightBar() {
     return 'home'; // Default to home
   }, [pathname]);
 
-  // Memoize search screen check
-  const isSearchScreen = useMemo(() =>
-    pathname === '/search' || pathname.startsWith('/search/'),
-    [pathname]
-  );
-
   // Memoize property information extraction
   const propertyInfo = useMemo(() => {
     // Extract property ID from property details page
@@ -94,22 +88,12 @@ export const RightBar = React.memo(function RightBar() {
     return {};
   }, [pathname]);
 
-  // Memoize styles
-  const containerStyle = useMemo(() => [
-    styles.container,
-    isSearchScreen && isMapMode && styles.fixedContainer
-  ], [isSearchScreen, isMapMode]);
-
-  const stickyWidgetsContainerStyle = useMemo(() => [
-    styles.stickyWidgetsContainer
-  ], []);
-
   if (!isRightBarVisible) return null;
 
   return (
-    <View style={containerStyle}>
+    <View style={styles.container}>
       {/* Sticky Widgets Container */}
-      <View style={stickyWidgetsContainerStyle}>
+      <View style={styles.stickyWidgetsContainer}>
         <WidgetManager
           screenId={screenId}
           propertyId={propertyInfo.propertyId}

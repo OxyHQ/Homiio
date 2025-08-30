@@ -7,6 +7,8 @@ interface Filters {
     maxPrice: number;
     bedrooms: number | string;
     bathrooms: number | string;
+    type?: string;
+    amenities?: string[];
 }
 
 interface SearchFiltersBottomSheetProps {
@@ -55,7 +57,7 @@ export function SearchFiltersBottomSheet({
                 label: t(type.label),
                 value: type.id
             })),
-            value: undefined // Add property type filter logic
+            value: filters.type
         },
         {
             id: 'price',
@@ -99,7 +101,7 @@ export function SearchFiltersBottomSheet({
                 label: t(amenity.replace('_', ' ')),
                 value: amenity
             })),
-            value: undefined // Add amenities filter logic
+            value: filters.amenities
         }
     ], [t, filters]);
 

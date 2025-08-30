@@ -73,12 +73,6 @@ export default function RootLayout() {
   const isScreenNotMobile = useIsScreenNotMobile();
   const pathname = usePathname() || '/';
 
-  // Memoize search screen check
-  const isSearchScreen = useMemo(() =>
-    pathname === '/search' || pathname.startsWith('/search/'),
-    [pathname]
-  );
-
   const styles = useMemo(() => StyleSheet.create({
     container: {
       ...(isScreenNotMobile ? {
@@ -95,9 +89,6 @@ export default function RootLayout() {
       justifyContent: 'space-between',
       flexDirection: isScreenNotMobile ? 'row' : 'column',
       flex: 1,
-      ...(isSearchScreen && isScreenNotMobile ? {
-        paddingRight: 0, // Account for fixed right bar width (350 + 20 padding)
-      } : {}),
     },
     mainContentWrapper: {
       flex: isScreenNotMobile ? 2.2 : 1,
@@ -108,7 +99,7 @@ export default function RootLayout() {
       } : {}),
       backgroundColor: colors.primaryLight,
     },
-  }), [isScreenNotMobile, isSearchScreen]);
+  }), [isScreenNotMobile]);
   const posthogApiKey = process.env.EXPO_PUBLIC_POSTHOG_KEY || 'phc_wRxFcPEaeeRHAKoMi4gzleLdNE9Ny4JEwYe8Z5h3soO';
   const posthogHost = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
   const layoutScrollY = useMemo(() => new Animated.Value(0), []);

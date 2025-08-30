@@ -1,40 +1,30 @@
 import React, { useMemo, useRef, useCallback } from 'react';
-import { View, StyleSheet, FlatList, Dimensions, TextInput, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, StyleSheet, FlatList, Dimensions, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Property } from '@homiio/shared-types';
 import { PropertyCard } from '@/components/PropertyCard';
 import { ThemedText } from '@/components/ThemedText';
-import { Header } from '@/components/Header';
 import { colors } from '@/styles/colors';
 import { useTranslation } from 'react-i18next';
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-// Responsive column calculation
+// Responsive column calculation for better grid layout
 const getOptimalColumns = (width: number): number => {
-    const minCardWidth = 160; // Minimum card width for readability
+    const minCardWidth = 180; // Increased minimum card width for better readability
     const padding = 32; // Total horizontal padding (16 on each side)
-    const spacing = 8; // Spacing between columns
+    const spacing = 12; // Increased spacing between columns
 
     const availableWidth = width - padding;
     const maxColumns = Math.floor((availableWidth + spacing) / (minCardWidth + spacing));
 
-    // Ensure we have at least 1 column and at most 3 columns for optimal UX
-    return Math.max(1, Math.min(3, maxColumns));
+    // Ensure we have at least 1 column and at most 2 columns for better card size
+    return Math.max(1, Math.min(2, maxColumns));
 };
 
 const HORIZONTAL_PADDING = 16;
-const ITEM_SPACING = 8;
+const ITEM_SPACING = 12; // Increased spacing
 const NUM_COLUMNS = getOptimalColumns(screenWidth);
-
-interface SearchResult {
-    id: string;
-    place_name: string;
-    center: [number, number];
-    text: string;
-    context?: { text: string }[];
-    bbox?: [number, number, number, number];
-}
 
 interface PropertyListBottomSheetProps {
     /** Array of properties to display */
@@ -53,13 +43,6 @@ interface PropertyListBottomSheetProps {
     _mapBounds?: { west: number; south: number; east: number; north: number } | null;
     /** Total count of available properties in the area */
     totalCount?: number;
-    /** Search functionality props */
-    searchQuery?: string;
-    onSearchQueryChange?: (query: string) => void;
-    searchResults?: SearchResult[];
-    isSearching?: boolean;
-    showSearchResults?: boolean;
-    onSelectLocation?: (result: SearchResult) => void;
     /** Filter functionality props */
     onOpenFilters?: () => void;
     onSaveSearch?: () => void;
@@ -67,8 +50,8 @@ interface PropertyListBottomSheetProps {
 }
 
 /**
- * Bottom sheet component that displays properties in a grid layout.
- * Shows properties currently visible within the map viewport for intuitive search results.
+ * Google Maps-style bottom sheet component for displaying property results.
+ * Clean, minimal design focused only on showing results with proper scrolling.
  */
 export function PropertyListBottomSheet({
     properties,
@@ -79,12 +62,6 @@ export function PropertyListBottomSheet({
     flatListRef,
     _mapBounds,
     totalCount,
-    searchQuery = '',
-    onSearchQueryChange,
-    searchResults = [],
-    isSearching = false,
-    showSearchResults = false,
-    onSelectLocation,
     onOpenFilters,
     onSaveSearch,
     onRefreshLocation,
@@ -152,225 +129,96 @@ export function PropertyListBottomSheet({
         );
     }
 
-    // Show empty state with search functionality still visible
-    if (!properties || properties.length === 0) {
-        return (
-            <View style={styles.container}>
-                {/* Enhanced Header with count and area info */}
-                <Header
-                    options={{
-                        title: t('No properties found in this area'),
-                        subtitle: t('Try searching for a different location or adjusting your filters'),
-                        titlePosition: 'left',
-                        transparent: false,
-                    }}
-                />
-
-                {/* Search Bar and Controls - Always visible */}
-                <View style={styles.searchContainer}>
-                    <View style={styles.searchHeader}>
-                        <View style={styles.searchInputContainer}>
-                            <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
-                            <TextInput
-                                style={styles.searchInput}
-                                placeholder="Search for a city, neighborhood, or address..."
-                                value={searchQuery}
-                                onChangeText={onSearchQueryChange}
-                                returnKeyType="search"
-                            />
-                            {isSearching ? (
-                                <View style={styles.loadingSpinner}>
-                                    <View style={styles.spinner} />
-                                </View>
-                            ) : searchQuery.length > 0 && (
-                                <TouchableOpacity onPress={() => onSearchQueryChange?.('')} style={styles.clearButton}>
-                                    <Ionicons name="close-circle" size={20} color="#999" />
-                                </TouchableOpacity>
-                            )}
-                        </View>
-
-                        <View style={styles.headerButtons}>
-                            <TouchableOpacity
-                                style={styles.filterButton}
-                                onPress={onOpenFilters}
-                                accessibilityLabel="More Filters"
-                            >
-                                <Ionicons name="options-outline" size={20} color={colors.primaryColor} />
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.saveButton}
-                                onPress={onSaveSearch}
-                                accessibilityLabel="Save Search"
-                            >
-                                <Ionicons name="bookmark-outline" size={20} color={colors.primaryColor} />
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.refreshButton}
-                                onPress={onRefreshLocation}
-                                accessibilityLabel="Refresh Location"
-                            >
-                                <Ionicons name="location" size={20} color={colors.primaryColor} />
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-
-                    {/* Search Results */}
-                    {showSearchResults && searchResults.length > 0 && (
-                        <View style={styles.searchResults}>
-                            <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 200 }}>
-                                {searchResults.map((result) => (
-                                    <TouchableOpacity
-                                        key={result.id}
-                                        style={styles.searchResultItem}
-                                        onPress={() => onSelectLocation?.(result)}
-                                    >
-                                        <Ionicons name="location-outline" size={20} color="#666" style={styles.locationIcon} />
-                                        <View style={styles.searchResultText}>
-                                            <ThemedText style={styles.primaryText}>{result.text}</ThemedText>
-                                            <ThemedText style={styles.secondaryText}>
-                                                {result.place_name.replace(`${result.text}, `, '')}
-                                            </ThemedText>
-                                        </View>
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
-                        </View>
-                    )}
-                    {showSearchResults && searchResults.length === 0 && searchQuery.trim() && !isSearching && (
-                        <View style={[styles.searchResults, { padding: 12 }]}>
-                            <ThemedText style={styles.secondaryText}>No results found</ThemedText>
-                        </View>
-                    )}
-                </View>
-
-                <View style={styles.emptyContainer}>
-                    <ThemedText style={styles.emptyText}>
-                        {t('No properties found in this area')}
-                    </ThemedText>
-                    <ThemedText style={styles.emptySubtext}>
-                        {t('Try moving the map to explore different areas or zoom out to see more results')}
-                    </ThemedText>
-                </View>
-            </View>
-        );
-    }
-
     return (
         <View style={styles.container}>
-            {/* Enhanced Header with count and area info */}
-            <Header
-                options={{
-                    title: properties.length > 0
-                        ? `${properties.length} properties in this area`
-                        : t('No properties found in this area'),
-                    subtitle: totalCount && totalCount > properties.length
-                        ? t('{{total}} total available - zoom out to see more', { total: totalCount })
-                        : undefined,
-                    titlePosition: 'left',
-                    transparent: false,
-                }}
-            />
-
-            {/* Search Bar and Controls */}
-            <View style={styles.searchContainer}>
-                <View style={styles.searchHeader}>
-                    <View style={styles.searchInputContainer}>
-                        <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
-                        <TextInput
-                            style={styles.searchInput}
-                            placeholder="Search for a city, neighborhood, or address..."
-                            value={searchQuery}
-                            onChangeText={onSearchQueryChange}
-                            returnKeyType="search"
-                        />
-                        {isSearching ? (
-                            <View style={styles.loadingSpinner}>
-                                <View style={styles.spinner} />
-                            </View>
-                        ) : searchQuery.length > 0 && (
-                            <TouchableOpacity onPress={() => onSearchQueryChange?.('')} style={styles.clearButton}>
-                                <Ionicons name="close-circle" size={20} color="#999" />
-                            </TouchableOpacity>
-                        )}
+            {/* Header with Action Buttons */}
+            <View style={styles.headerContainer}>
+                <View style={styles.headerContent}>
+                    <View style={styles.headerTitleSection}>
+                        <ThemedText style={styles.headerTitle}>
+                            {properties.length > 0
+                                ? `${properties.length} properties found`
+                                : t('No properties found')}
+                        </ThemedText>
+                        <ThemedText style={styles.headerSubtitle}>
+                            {properties.length > 0 && totalCount && totalCount > properties.length
+                                ? t('{{total}} total available - zoom out to see more', { total: totalCount })
+                                : t('Try adjusting your search or moving the map')}
+                        </ThemedText>
                     </View>
-
-                    <View style={styles.headerButtons}>
+                    <View style={styles.headerActions}>
                         <TouchableOpacity
-                            style={styles.filterButton}
+                            style={styles.headerActionButton}
                             onPress={onOpenFilters}
-                            accessibilityLabel="More Filters"
+                            accessibilityLabel="Filters"
+                            activeOpacity={0.7}
                         >
                             <Ionicons name="options-outline" size={20} color={colors.primaryColor} />
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                            style={styles.saveButton}
+                            style={styles.headerActionButton}
                             onPress={onSaveSearch}
                             accessibilityLabel="Save Search"
+                            activeOpacity={0.7}
                         >
                             <Ionicons name="bookmark-outline" size={20} color={colors.primaryColor} />
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                            style={styles.refreshButton}
+                            style={styles.headerActionButton}
                             onPress={onRefreshLocation}
-                            accessibilityLabel="Refresh Location"
+                            accessibilityLabel="My Location"
+                            activeOpacity={0.7}
                         >
                             <Ionicons name="location" size={20} color={colors.primaryColor} />
                         </TouchableOpacity>
                     </View>
                 </View>
-
-                {/* Search Results */}
-                {showSearchResults && searchResults.length > 0 && (
-                    <View style={styles.searchResults}>
-                        <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 200 }}>
-                            {searchResults.map((result) => (
-                                <TouchableOpacity
-                                    key={result.id}
-                                    style={styles.searchResultItem}
-                                    onPress={() => onSelectLocation?.(result)}
-                                >
-                                    <Ionicons name="location-outline" size={20} color="#666" style={styles.locationIcon} />
-                                    <View style={styles.searchResultText}>
-                                        <ThemedText style={styles.primaryText}>{result.text}</ThemedText>
-                                        <ThemedText style={styles.secondaryText}>
-                                            {result.place_name.replace(`${result.text}, `, '')}
-                                        </ThemedText>
-                                    </View>
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                    </View>
-                )}
-                {showSearchResults && searchResults.length === 0 && searchQuery.trim() && !isSearching && (
-                    <View style={[styles.searchResults, { padding: 12 }]}>
-                        <ThemedText style={styles.secondaryText}>No results found</ThemedText>
-                    </View>
-                )}
             </View>
 
-            {/* Property grid */}
-            <FlatList
-                ref={listRef}
-                data={properties}
-                keyExtractor={keyExtractor}
-                numColumns={NUM_COLUMNS}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.listContent}
-                onViewableItemsChanged={handleViewableItemsChanged}
-                viewabilityConfig={viewabilityConfig}
-                renderItem={renderPropertyCard}
-                initialNumToRender={6}
-                maxToRenderPerBatch={10}
-                windowSize={10}
-                removeClippedSubviews={true}
-                // Performance optimizations
-                updateCellsBatchingPeriod={100}
-                legacyImplementation={false}
-            />
+            {/* Properties Content */}
+            {properties.length > 0 ? (
+                <FlatList
+                    ref={listRef}
+                    data={properties}
+                    keyExtractor={keyExtractor}
+                    numColumns={NUM_COLUMNS}
+                    showsVerticalScrollIndicator={true}
+                    contentContainerStyle={styles.listContent}
+                    onViewableItemsChanged={handleViewableItemsChanged}
+                    viewabilityConfig={viewabilityConfig}
+                    renderItem={renderPropertyCard}
+                    initialNumToRender={6}
+                    maxToRenderPerBatch={10}
+                    windowSize={10}
+                    removeClippedSubviews={true}
+                    updateCellsBatchingPeriod={100}
+                    legacyImplementation={false}
+                    scrollEnabled={true}
+                    nestedScrollEnabled={false}
+                    columnWrapperStyle={NUM_COLUMNS > 1 ? styles.columnWrapper : undefined}
+                    bounces={true}
+                    alwaysBounceVertical={false}
+                    scrollEventThrottle={16}
+                    keyboardShouldPersistTaps="handled"
+                    style={styles.flatListStyle}
+                    automaticallyAdjustContentInsets={false}
+                    contentInsetAdjustmentBehavior="never"
+                />
+            ) : (
+                <View style={styles.emptyStateContainer}>
+                    <View style={styles.emptyStateContent}>
+                        <Ionicons name="home-outline" size={64} color="#ccc" />
+                        <ThemedText style={styles.emptyStateTitle}>
+                            No properties found in this area
+                        </ThemedText>
+                        <ThemedText style={styles.emptyStateSubtitle}>
+                            Try moving the map to explore different areas or adjust your filters
+                        </ThemedText>
+                    </View>
+                </View>
+            )}
         </View>
     );
 }
@@ -380,36 +228,107 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         flex: 1,
     },
+    // Header Styles
+    headerContainer: {
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+    },
+    headerContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+    },
+    headerTitleSection: {
+        flex: 1,
+        marginRight: 16,
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 2,
+    },
+    headerSubtitle: {
+        fontSize: 14,
+        color: '#666',
+    },
+    headerActions: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    headerActionButton: {
+        backgroundColor: '#f8f9fa',
+        borderRadius: 10,
+        padding: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: '#e9ecef',
+    },
+    // Properties Content
+    propertiesContent: {
+        flex: 1,
+    },
+    flatListStyle: {
+        flex: 1,
+        minHeight: 400, // Ensure minimum height for scrolling
+    },
     listContent: {
         paddingHorizontal: HORIZONTAL_PADDING,
         paddingBottom: 16,
         paddingTop: 8,
+        flexGrow: 1, // Allow content to grow
+    },
+    columnWrapper: {
+        justifyContent: 'space-between',
+        marginBottom: ITEM_SPACING,
     },
     gridItem: {
         flex: 1,
         marginHorizontal: ITEM_SPACING / 2,
-        marginBottom: ITEM_SPACING,
-        minWidth: 0, // Ensures flex works properly
+        minWidth: 0,
     },
     propertyCard: {
         backgroundColor: '#fff',
-        borderRadius: 12,
+        borderRadius: 16,
         overflow: 'hidden',
         flex: 1,
-        // Shadow for elevation
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 3.84,
-        elevation: 5,
+        borderWidth: 1,
+        borderColor: '#f0f0f0',
     },
     highlightedCard: {
         borderWidth: 2,
         borderColor: colors.primaryColor,
     },
+    // Empty State Styles
+    emptyStateContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 32,
+        paddingVertical: 40,
+    },
+    emptyStateContent: {
+        alignItems: 'center',
+    },
+    emptyStateTitle: {
+        fontSize: 20,
+        fontWeight: '600',
+        color: '#333',
+        marginTop: 16,
+        marginBottom: 8,
+        textAlign: 'center',
+    },
+    emptyStateSubtitle: {
+        fontSize: 16,
+        color: '#666',
+        textAlign: 'center',
+        lineHeight: 24,
+    },
+    // Loading Styles
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
@@ -419,157 +338,5 @@ const styles = StyleSheet.create({
     loadingText: {
         fontSize: 16,
         color: colors.COLOR_BLACK_LIGHT_3,
-    },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 32,
-        paddingVertical: 32,
-    },
-    emptyText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: colors.COLOR_BLACK_LIGHT_2,
-        textAlign: 'center',
-        marginBottom: 8,
-    },
-    emptySubtext: {
-        fontSize: 14,
-        color: colors.COLOR_BLACK_LIGHT_3,
-        textAlign: 'center',
-        lineHeight: 20,
-    },
-    // Search container styles
-    searchContainer: {
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    searchHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    searchInputContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: colors.primaryLight,
-        borderRadius: 24,
-        paddingHorizontal: 12,
-        paddingVertical: Platform.OS === 'web' ? 8 : 4,
-        flex: 1,
-        marginRight: 8,
-    },
-    searchIcon: {
-        marginRight: 8,
-    },
-    searchInput: Platform.select({
-        web: {
-            flex: 1,
-            fontSize: 16,
-            color: '#333',
-            paddingVertical: 8,
-            borderWidth: 0,
-        },
-        default: {
-            flex: 1,
-            fontSize: 16,
-            color: '#333',
-            paddingVertical: 8,
-        },
-    }),
-    clearButton: {
-        padding: 4,
-    },
-    loadingSpinner: {
-        width: 20,
-        height: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    spinner: {
-        width: 16,
-        height: 16,
-        borderWidth: 2,
-        borderColor: '#666',
-        borderTopColor: 'transparent',
-        borderRadius: 8,
-    },
-    headerButtons: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    filterButton: {
-        backgroundColor: colors.primaryLight,
-        borderRadius: 20,
-        padding: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
-        shadowRadius: 3,
-        elevation: 2,
-    },
-    saveButton: {
-        backgroundColor: colors.primaryLight,
-        borderRadius: 20,
-        padding: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
-        shadowRadius: 3,
-        elevation: 2,
-    },
-    refreshButton: {
-        backgroundColor: colors.primaryLight,
-        borderRadius: 20,
-        padding: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
-        shadowRadius: 3,
-        elevation: 2,
-    },
-    searchResults: {
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        marginTop: 8,
-        maxHeight: 200,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    searchResultItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    locationIcon: {
-        marginRight: 12,
-    },
-    searchResultText: {
-        flex: 1,
-    },
-    primaryText: {
-        fontSize: 16,
-        color: '#333',
-        marginBottom: 2,
-    },
-    secondaryText: {
-        fontSize: 14,
-        color: '#666',
     },
 });
