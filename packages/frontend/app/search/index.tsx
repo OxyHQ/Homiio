@@ -5,6 +5,7 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  Dimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Map, { MapApi } from '@/components/Map';
@@ -53,6 +54,8 @@ const _shadow = (level: 'sm' | 'md' = 'md') => Platform.select({
     },
 });
 
+const { width: screenWidth } = Dimensions.get('window');
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -68,6 +71,9 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     zIndex: 1000,
+    maxWidth: 600,
+    alignSelf: 'center',
+    marginHorizontal: screenWidth >= 600 ? 32 : 0,
   },
   searchBar: {
     backgroundColor: '#fff',
@@ -93,19 +99,7 @@ const styles = StyleSheet.create({
   searchClearButton: {
     padding: 4,
   },
-  searchResultsContainer: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 120 : 100,
-    left: 16,
-    right: 16,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    maxHeight: 300,
-    zIndex: 999,
-    ..._shadow('md'),
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-  },
+
   searchResultItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -141,6 +135,51 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     zIndex: 1000,
+  },
+  // Bottom sheet search styles
+  bottomSheetSearchContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  bottomSheetSearchHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  bottomSheetSearchTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  bottomSheetSearchSubtitle: {
+    fontSize: 14,
+    color: '#666',
+  },
+  bottomSheetSearchResults: {
+    flex: 1,
+  },
+  bottomSheetNoResults: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 32,
+  },
+  bottomSheetNoResultsText: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  bottomSheetNoResultsSubtext: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
 
@@ -178,7 +217,10 @@ export default function SearchScreen() {
 
   // Bottom sheet state
   const bottomSheetRef = useRef<BottomSheet>(null);
-  const snapPoints = useMemo(() => ['25%', '50%', '90%'], []);
+  const snapPoints = useMemo(() => {
+    console.log('Snap points configured:', ['25%', '50%', '90%', '100%']);
+    return ['25%', '50%', '90%', '100%'];
+  }, []);
 
   // Animated values for bottom sheet padding transition
   const animatedIndex = useSharedValue(0);
@@ -195,10 +237,58 @@ export default function SearchScreen() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showResults, setShowResults] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  // Memoize gesture enable states to prevent infinite loops
+  const enableHandlePanning = useMemo(() => {
+    console.log('Gesture state update - isSearchFocused:', isSearchFocused, 'enableHandlePanning:', !isSearchFocused);
+    return !isSearchFocused;
+  }, [isSearchFocused]);
+  const enableContentPanning = useMemo(() => {
+    console.log('Gesture state update - isSearchFocused:', isSearchFocused, 'enableContentPanning:', !isSearchFocused);
+    return !isSearchFocused;
+  }, [isSearchFocused]);
 
   // Simple search query setter
   const setSearchQuerySafely = useCallback((query: string) => {
     setSearchQuery(query);
+  }, []);
+
+  // Handle search focus/blur
+  const handleSearchFocus = useCallback(() => {
+    setIsSearchFocused(true);
+    console.log('Search focused - attempting to reach 100% snap point');
+    // Move bottom sheet to 100% when search is focused
+    // Use snapToIndex(3) directly to ensure we reach 100%
+    if (bottomSheetRef.current) {
+      // Use a delay to ensure the bottom sheet is ready and try multiple approaches
+      setTimeout(() => {
+        if (bottomSheetRef.current) {
+          // First try snapToIndex(3)
+          bottomSheetRef.current.snapToIndex(3);
+          console.log('snapToIndex(3) called - should reach 100%');
+
+          // Also try expand() as backup
+          setTimeout(() => {
+            if (bottomSheetRef.current) {
+              try {
+                bottomSheetRef.current.expand();
+                console.log('expand() called as backup');
+              } catch (error) {
+                console.log('expand() backup failed:', error);
+              }
+            }
+          }, 200);
+        }
+      }, 100);
+    } else {
+      console.log('bottomSheetRef.current is null');
+    }
+  }, []);
+
+  const handleSearchBlur = useCallback(() => {
+    // Don't unfocus immediately - let the user interact with results
+    // We'll handle unfocusing when they actually select a result
   }, []);
   const { setIsMapMode } = useSearchMode();
 
@@ -360,6 +450,26 @@ export default function SearchScreen() {
     // Set the search query to the selected location name
     setSearchQuery(result.place_name);
     lastSelectedLocationRef.current = result.place_name;
+
+    // Unfocus search and move bottom sheet back to default position
+    setIsSearchFocused(false);
+
+    // Use a small delay to ensure state is updated before moving bottom sheet
+    setTimeout(() => {
+      if (Platform.OS === 'web') {
+        bottomSheetRef.current?.collapse();
+      } else {
+        bottomSheetRef.current?.snapToIndex(0);
+      }
+
+      // Force a re-render to ensure gesture states are updated
+      setTimeout(() => {
+        if (bottomSheetRef.current) {
+          // Force the bottom sheet to refresh its gesture states
+          bottomSheetRef.current.snapToIndex(0);
+        }
+      }, 50);
+    }, 100);
 
     // Navigate map and fetch properties immediately
     mapRef.current?.navigateToLocation(result.center, 14);
@@ -571,8 +681,8 @@ export default function SearchScreen() {
   const animatedBottomSheetPaddingStyle = useAnimatedStyle(() => {
     const paddingTop = interpolate(
       animatedIndex.value,
-      [0, 1, 2], // snap points indices
-      [0, searchBarHeight * 0.3, searchBarHeight], // padding values
+      [0, 1, 2, 3], // snap points indices
+      [0, searchBarHeight * 0.3, searchBarHeight, searchBarHeight], // padding values
       Extrapolate.CLAMP
     );
 
@@ -585,8 +695,8 @@ export default function SearchScreen() {
   const animatedHandleStyle = useAnimatedStyle(() => {
     const opacity = interpolate(
       animatedIndex.value,
-      [0, 1, 2], // snap points indices
-      [1, 0.3, 0], // opacity values - hide when at top
+      [0, 1, 2, 3], // snap points indices
+      [1, 0.3, 0, 0], // opacity values - hide when at top
       Extrapolate.CLAMP
     );
 
@@ -672,6 +782,8 @@ export default function SearchScreen() {
             placeholder="Search cities, neighborhoods, streets, or addresses..."
             value={searchQuery}
             onChangeText={setSearchQuerySafely}
+            onFocus={handleSearchFocus}
+            onBlur={handleSearchBlur}
             returnKeyType="search"
             autoCorrect={false}
             autoCapitalize="none"
@@ -685,14 +797,7 @@ export default function SearchScreen() {
         </View>
       </View>
 
-      {/* Search Results Dropdown */}
-      {showResults && searchResults.length > 0 && (
-        <View style={styles.searchResultsContainer}>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {searchResults.map(renderSearchResult)}
-          </ScrollView>
-        </View>
-      )}
+
 
       {/* Property List Bottom Sheet */}
       <BottomSheet
@@ -701,30 +806,73 @@ export default function SearchScreen() {
         snapPoints={snapPoints}
         enablePanDownToClose={false}
         enableOverDrag={false}
+        enableHandlePanningGesture={enableHandlePanning}
+        enableContentPanningGesture={enableContentPanning}
         backgroundStyle={{ backgroundColor: '#fff' }}
-        style={{ minHeight: 200 }}
+        style={{
+          minHeight: 200,
+          maxWidth: 600,
+          alignSelf: 'center',
+          marginHorizontal: screenWidth >= 600 ? 32 : 0,
+        }}
         animatedIndex={animatedIndex}
         onAnimate={(fromIndex, toIndex) => {
           // Update animated index for handle opacity
           animatedIndex.value = toIndex;
-          console.log('Bottom sheet index:', toIndex, 'Opacity should be:', toIndex === 2 ? 0 : toIndex === 1 ? 0.3 : 1);
+          console.log('Bottom sheet animation - from:', fromIndex, 'to:', toIndex, 'snapPoints:', snapPoints);
         }}
         handleComponent={CustomHandle}
       >
         <BottomSheetView style={{ flex: 1 }}>
           <Animated.View style={[{ flex: 1 }, animatedBottomSheetPaddingStyle]}>
-            <PropertyListBottomSheet
-              properties={properties}
-              highlightedPropertyId={highlightedPropertyId}
-              onPropertyPress={handlePropertyPress}
-              isLoading={isLoadingProperties}
-              onViewableItemsChanged={onViewableItemsChanged}
-              _mapBounds={savedState?.bounds || null}
-              totalCount={undefined} // We can add this later if backend returns total count
-              onOpenFilters={handleOpenFilters}
-              onSaveSearch={handleOpenSaveModal}
-              onRefreshLocation={handleRefreshLocation}
-            />
+            {isSearchFocused ? (
+              // Show search results in bottom sheet when search is focused
+              <View style={styles.bottomSheetSearchContainer}>
+                <View style={styles.bottomSheetSearchHeader}>
+                  <ThemedText style={styles.bottomSheetSearchTitle}>
+                    Search Results
+                  </ThemedText>
+                  <ThemedText style={styles.bottomSheetSearchSubtitle}>
+                    {searchResults.length > 0
+                      ? `${searchResults.length} results found`
+                      : 'No results found'}
+                  </ThemedText>
+                </View>
+                <ScrollView
+                  style={styles.bottomSheetSearchResults}
+                  showsVerticalScrollIndicator={true}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {searchResults.length > 0 ? (
+                    searchResults.map(renderSearchResult)
+                  ) : (
+                    <View style={styles.bottomSheetNoResults}>
+                      <Ionicons name="search-outline" size={48} color="#ccc" />
+                      <ThemedText style={styles.bottomSheetNoResultsText}>
+                        No results found
+                      </ThemedText>
+                      <ThemedText style={styles.bottomSheetNoResultsSubtext}>
+                        Try searching for a different location
+                      </ThemedText>
+                    </View>
+                  )}
+                </ScrollView>
+              </View>
+            ) : (
+              // Show property list when search is not focused
+              <PropertyListBottomSheet
+                properties={properties}
+                highlightedPropertyId={highlightedPropertyId}
+                onPropertyPress={handlePropertyPress}
+                isLoading={isLoadingProperties}
+                onViewableItemsChanged={onViewableItemsChanged}
+                _mapBounds={savedState?.bounds || null}
+                totalCount={undefined} // We can add this later if backend returns total count
+                onOpenFilters={handleOpenFilters}
+                onSaveSearch={handleOpenSaveModal}
+                onRefreshLocation={handleRefreshLocation}
+              />
+            )}
           </Animated.View>
         </BottomSheetView>
       </BottomSheet>
