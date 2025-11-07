@@ -28,7 +28,7 @@
     "@aws-sdk/s3-request-presigner": "^3.864.0",
     "@homiio/shared-types": "file:../shared-types",
     "@oxyhq/services": "^5.11.8",
-    "ai": "^4.3.16",
+    "ai": "^5.0.52",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
