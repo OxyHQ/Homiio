@@ -1,6 +1,10 @@
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import i18next from 'i18next';
+
+// Only import expo-notifications on native platforms.
+// On web and during SSR (Node.js static rendering), the module is not loaded.
+const Notifications: typeof import('expo-notifications') | null =
+  Platform.OS !== 'web' ? require('expo-notifications') : null;
 
 export interface NotificationData {
   screen?: string;
@@ -21,11 +25,11 @@ export interface NotificationContent {
 export interface ScheduledNotification {
   id: string;
   content: NotificationContent;
-  trigger: Notifications.NotificationTriggerInput;
+  trigger: any;
   repeats?: boolean;
 }
 
-export type NotificationCategory = 
+export type NotificationCategory =
   | 'property'
   | 'message'
   | 'contract'
@@ -35,24 +39,22 @@ export type NotificationCategory =
   | 'marketing';
 
 export async function requestNotificationPermissions() {
-  if (Platform.OS === 'web') {
-    return false;
-  }
-  
+  if (!Notifications) return false;
+
   try {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
-    
+
     if (existingStatus !== 'granted') {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
     }
-    
+
     if (finalStatus !== 'granted') {
       console.warn('Notification permissions not granted');
       return false;
     }
-    
+
     return true;
   } catch (error) {
     console.error('Error requesting notification permissions:', error);
@@ -61,10 +63,8 @@ export async function requestNotificationPermissions() {
 }
 
 export async function scheduleDemoNotification() {
-  if (Platform.OS === 'web') {
-    return;
-  }
-  
+  if (!Notifications) return;
+
   try {
     await Notifications.scheduleNotificationAsync({
       content: {
@@ -74,7 +74,7 @@ export async function scheduleDemoNotification() {
         sound: true,
         priority: 'high',
       },
-      trigger: null, // Shows notification immediately
+      trigger: null,
     });
   } catch (error) {
     console.error('Error scheduling demo notification:', error);
@@ -82,8 +82,8 @@ export async function scheduleDemoNotification() {
 }
 
 export async function createNotification(
-  title: string, 
-  body: string, 
+  title: string,
+  body: string,
   data: NotificationData = {},
   options: {
     sound?: boolean;
@@ -91,10 +91,8 @@ export async function createNotification(
     badge?: number;
   } = {}
 ) {
-  if (Platform.OS === 'web') {
-    return;
-  }
-  
+  if (!Notifications) return;
+
   try {
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
@@ -105,9 +103,9 @@ export async function createNotification(
         priority: options.priority ?? 'default',
         badge: options.badge,
       },
-      trigger: null, // Shows notification immediately
+      trigger: null,
     });
-    
+
     return notificationId;
   } catch (error) {
     console.error('Error creating notification:', error);
@@ -117,20 +115,20 @@ export async function createNotification(
 
 export async function scheduleNotification(
   content: NotificationContent,
-  trigger: Notifications.NotificationTriggerInput,
+  trigger: any,
   repeats: boolean = false
 ): Promise<string> {
-  if (Platform.OS === 'web') {
+  if (!Notifications) {
     throw new Error('Notifications not supported on web');
   }
-  
+
   try {
     const notificationId = await Notifications.scheduleNotificationAsync({
       content,
       trigger,
       repeats,
     });
-    
+
     return notificationId;
   } catch (error) {
     console.error('Error scheduling notification:', error);
@@ -139,10 +137,8 @@ export async function scheduleNotification(
 }
 
 export async function cancelNotification(notificationId: string) {
-  if (Platform.OS === 'web') {
-    return;
-  }
-  
+  if (!Notifications) return;
+
   try {
     await Notifications.cancelScheduledNotificationAsync(notificationId);
   } catch (error) {
@@ -151,10 +147,8 @@ export async function cancelNotification(notificationId: string) {
 }
 
 export async function cancelAllNotifications() {
-  if (Platform.OS === 'web') {
-    return;
-  }
-  
+  if (!Notifications) return;
+
   try {
     await Notifications.cancelAllScheduledNotificationsAsync();
   } catch (error) {
@@ -162,11 +156,9 @@ export async function cancelAllNotifications() {
   }
 }
 
-export async function getScheduledNotifications(): Promise<Notifications.NotificationRequest[]> {
-  if (Platform.OS === 'web') {
-    return [];
-  }
-  
+export async function getScheduledNotifications(): Promise<any[]> {
+  if (!Notifications) return [];
+
   try {
     return await Notifications.getAllScheduledNotificationsAsync();
   } catch (error) {
@@ -176,10 +168,8 @@ export async function getScheduledNotifications(): Promise<Notifications.Notific
 }
 
 export async function getBadgeCount(): Promise<number> {
-  if (Platform.OS === 'web') {
-    return 0;
-  }
-  
+  if (!Notifications) return 0;
+
   try {
     return await Notifications.getBadgeCountAsync();
   } catch (error) {
@@ -189,10 +179,8 @@ export async function getBadgeCount(): Promise<number> {
 }
 
 export async function setBadgeCount(count: number) {
-  if (Platform.OS === 'web') {
-    return;
-  }
-  
+  if (!Notifications) return;
+
   try {
     await Notifications.setBadgeCountAsync(count);
   } catch (error) {
@@ -201,10 +189,8 @@ export async function setBadgeCount(count: number) {
 }
 
 export async function clearBadge() {
-  if (Platform.OS === 'web') {
-    return;
-  }
-  
+  if (!Notifications) return;
+
   try {
     await Notifications.setBadgeCountAsync(0);
   } catch (error) {
@@ -213,17 +199,13 @@ export async function clearBadge() {
 }
 
 export async function setupNotifications() {
-  if (Platform.OS === 'web') {
-    return;
-  }
-  
+  if (!Notifications) return;
+
   try {
-    // Configure notification handler
     Notifications.setNotificationHandler({
       handleNotification: async (notification) => {
-        // You can customize this based on notification type
         const { data } = notification.request.content;
-        
+
         return {
           shouldShowAlert: true,
           shouldPlaySound: true,
@@ -232,7 +214,6 @@ export async function setupNotifications() {
       },
     });
 
-    // Set up notification categories for iOS
     if (Platform.OS === 'ios') {
       await Notifications.setNotificationCategoryAsync('property', [
         {
@@ -277,7 +258,6 @@ export async function setupNotifications() {
   }
 }
 
-// Utility functions for common notification types
 export async function createPropertyNotification(
   propertyId: string,
   title: string,
@@ -342,7 +322,7 @@ export async function createRepeatingNotification(
   interval: 'hour' | 'day' | 'week',
   data: Record<string, any> = {}
 ) {
-  const trigger: Notifications.NotificationTriggerInput = {
+  const trigger = {
     seconds: interval === 'hour' ? 3600 : interval === 'day' ? 86400 : 604800,
     repeats: true,
   };
@@ -361,4 +341,9 @@ export async function createRepeatingNotification(
     trigger,
     true
   );
+}
+
+/** Get the Notifications module (native only). Returns null on web. */
+export function getNotificationsModule() {
+  return Notifications;
 }

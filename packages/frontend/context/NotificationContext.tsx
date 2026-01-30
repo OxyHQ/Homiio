@@ -7,7 +7,6 @@ import React, {
     useRef,
     ReactNode,
 } from 'react';
-import * as Notifications from 'expo-notifications';
 import { AppState, AppStateStatus, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -24,6 +23,7 @@ import {
     cancelAllNotifications,
     createNotification,
     scheduleNotification,
+    getNotificationsModule,
     NotificationData,
     NotificationContent,
     NotificationCategory,
@@ -49,7 +49,7 @@ export interface NotificationState {
     // Local state
     hasPermission: boolean;
     badgeCount: number;
-    scheduledNotifications: Notifications.NotificationRequest[];
+    scheduledNotifications: any[];
 
     // Server state
     notifications: Notification[];
@@ -86,7 +86,7 @@ export interface NotificationActions {
 
     scheduleLocalNotification: (
         content: NotificationContent,
-        trigger: Notifications.NotificationTriggerInput,
+        trigger: any,
         repeats?: boolean
     ) => Promise<string>;
 
@@ -152,8 +152,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     });
 
     // Refs
-    const notificationListener = useRef<Notifications.Subscription>();
-    const responseListener = useRef<Notifications.Subscription>();
+    const notificationListener = useRef<any>();
+    const responseListener = useRef<any>();
     const appStateListener = useRef<any>();
 
     // Initialize notifications
@@ -240,7 +240,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     const scheduleLocalNotification = useCallback(async (
         content: NotificationContent,
-        trigger: Notifications.NotificationTriggerInput,
+        trigger: any,
         repeats?: boolean
     ) => {
         try {
@@ -442,7 +442,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     // Set up notification listeners
     useEffect(() => {
-        if (Platform.OS === 'web') return;
+        const Notifications = getNotificationsModule();
+        if (!Notifications) return;
 
         // Listen for notifications received while app is running
         notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
@@ -450,10 +451,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
             // Handle notification based on type
             if (data?.type === 'property' && data?.propertyId) {
-                // Navigate to property or update property list
                 router.push(`/properties/${data.propertyId}`);
             } else if (data?.type === 'message' && data?.messageId) {
-                // Navigate to messages
                 router.push('/messages');
             }
 
@@ -465,12 +464,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
             const { data } = response.notification.request.content;
 
-            // Handle notification tap
             if (data?.screen) {
                 router.push(data.screen);
             }
 
-            // Mark as read if it's a server notification
             if (data?.id) {
                 markAsRead(data.id);
             }
@@ -479,7 +476,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         // Listen for app state changes
         appStateListener.current = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
             if (nextAppState === 'active') {
-                // App became active, refresh notifications and clear badge
                 refreshAll();
                 clearBadgeCount();
             }
