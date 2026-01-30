@@ -1,5 +1,5 @@
 import { Alert, Platform } from 'react-native';
-import { oxyClient } from '@oxyhq/services';
+import { oxyClient } from '@oxyhq/core';
 import { API_URL } from '@/config';
 
 // API Configuration

@@ -38,7 +38,7 @@ import { LayoutScrollProvider } from '@/context/LayoutScrollContext';
 import { MapStateProvider } from '@/context/MapStateContext';
 import { SearchModeProvider } from '@/context/SearchModeContext';
 import { NotificationProvider } from '@/context/NotificationContext';
-import { OxyProvider, OxyServices } from '@oxyhq/services';
+import { OxyProvider } from '@oxyhq/services';
 import { PostHogProvider } from 'posthog-react-native';
 import '../styles/global.css';
 import { OXY_BASE_URL } from '@/config';
@@ -143,8 +143,6 @@ export default function RootLayout() {
   // --- Keyboard State ---
   const keyboardVisible = useKeyboardVisibility();
 
-  const oxyServices = useMemo(() => new OxyServices({ baseURL: OXY_BASE_URL }), []);
-
   const initializeApp = useCallback(async () => {
     try {
       if (loaded) {
@@ -215,13 +213,7 @@ export default function RootLayout() {
               autocapture
             >
               <QueryClientProvider client={queryClient}>
-                <OxyProvider
-                  oxyServices={oxyServices}
-                  initialScreen="SignIn"
-                  autoPresent={false}
-                  storageKeyPrefix="oxy_example"
-                  theme="light"
-                >
+                <OxyProvider baseURL={OXY_BASE_URL}>
                   <ProfileProvider>
                     <SavedPropertiesProvider>
                       <NotificationProvider>

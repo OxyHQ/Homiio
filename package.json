@@ -35,7 +35,8 @@
     },
     "dependencies": {
         "@gorhom/bottom-sheet": "^5.1.8",
-        "@oxyhq/services": "^5.11.8",
+        "@oxyhq/core": "^6.0.0",
+        "@oxyhq/services": "^6.0.0",
         "typescript": "^5.9.2"
     },
     "overrides": {}

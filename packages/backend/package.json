@@ -27,7 +27,7 @@
     "@aws-sdk/client-s3": "^3.864.0",
     "@aws-sdk/s3-request-presigner": "^3.864.0",
     "@homiio/shared-types": "file:../shared-types",
-    "@oxyhq/services": "^5.11.8",
+    "@oxyhq/core": "^6.0.0",
     "ai": "^4.3.16",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.3",

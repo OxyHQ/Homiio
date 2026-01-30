@@ -12,7 +12,7 @@ import { requestLogger, errorLogger } from './middlewares/logging';
 import { notFound, errorHandler } from './middlewares/errorHandler';
 import database from './database/connection';
 import publicRoutes from './routes/public';
-import { OxyServices } from '@oxyhq/services/core';
+import { OxyServices } from '@oxyhq/core';
 import { stripeWebhook, confirmCheckoutSession } from './controllers/billingController';
 import { initCronJobs } from './services/cron';
 
