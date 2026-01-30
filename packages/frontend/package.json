@@ -27,7 +27,7 @@
     "@gorhom/bottom-sheet": "^5.1.6",
     "@homiio/shared-types": "file:../shared-types",
     "@oxyhq/core": "^1.0.0",
-    "@oxyhq/services": "^6.0.0",
+    "@oxyhq/services": "^6.0.1",
     "@react-native-community/netinfo": "11.4.1",
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.3.8",
