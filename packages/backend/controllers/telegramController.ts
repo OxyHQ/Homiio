@@ -25,7 +25,7 @@ class TelegramController {
 
       // Try to get bot info to determine if initialized
       try {
-        const botInfo = await telegramService.getBotInfo();
+        const botInfo: any = await telegramService.getBotInfo();
         status.initialized = true;
         status.botInfo = {
           id: botInfo.id,

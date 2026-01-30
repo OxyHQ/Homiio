@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { api } from '@/utils/api';
-import { OxyServices } from '@oxyhq/services';
+import { OxyServices } from '@oxyhq/core';
 
 export interface Entitlements {
   plusActive: boolean;

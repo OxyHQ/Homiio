@@ -20,19 +20,20 @@ const handleValidationErrors = (req: Request, res: Response, next: NextFunction)
       params: req.params,
       query: req.query
     });
-    
+
     const formattedErrors = errors.array().map((error: any) => ({
       field: error.path || error.param,
       message: error.msg,
       value: error.value,
       location: error.location
     }));
-    
-    return res.status(400).json({
+
+    res.status(400).json({
       error: 'Validation failed',
       details: formattedErrors,
       message: `Validation failed for: ${formattedErrors.map(e => e.field).join(', ')}`
     });
+    return;
   }
   next();
 };
@@ -127,21 +128,24 @@ const validateDateRange = [
  */
 const validateFileUpload = (req: Request, res: Response, next: NextFunction): void => {
   if (!req.file && !req.files) {
-    return res.status(400).json({ error: 'No file uploaded' });
+    res.status(400).json({ error: 'No file uploaded' });
+    return;
   }
-  
-  const file = req.file || req.files[0];
+
+  const file = req.file || (req.files as Express.Multer.File[])[0];
   const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
   const maxSize = 10 * 1024 * 1024; // 10MB
-  
+
   if (!allowedTypes.includes(file.mimetype)) {
-    return res.status(400).json({ error: 'Invalid file type' });
+    res.status(400).json({ error: 'Invalid file type' });
+    return;
   }
-  
+
   if (file.size > maxSize) {
-    return res.status(400).json({ error: 'File too large' });
+    res.status(400).json({ error: 'File too large' });
+    return;
   }
-  
+
   next();
 };
 

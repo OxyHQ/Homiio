@@ -4,7 +4,7 @@
  */
 
 import { api } from '@/utils/api';
-import { OxyServices } from '@oxyhq/services';
+import { OxyServices } from '@oxyhq/core';
 import { ApiResponse } from '../types/api';
 import { 
   ReviewDocument, 

@@ -140,7 +140,7 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
       body: req.body,
       params: req.params,
       query: req.query,
-      user: req.user ? { id: req.user.id, role: req.user.role } : null
+      user: (req as any).user ? { id: (req as any).user.id, role: (req as any).user.role } : null
     };
   }
 
