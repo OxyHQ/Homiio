@@ -39,6 +39,7 @@ import { MapStateProvider } from '@/context/MapStateContext';
 import { SearchModeProvider } from '@/context/SearchModeContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { OxyProvider } from '@oxyhq/services';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { PostHogProvider } from 'posthog-react-native';
 import '../styles/global.css';
 import { OXY_BASE_URL } from '@/config';
@@ -213,6 +214,7 @@ export default function RootLayout() {
               autocapture
             >
               <QueryClientProvider client={queryClient}>
+                <BottomSheetModalProvider>
                 <OxyProvider baseURL={OXY_BASE_URL}>
                   <ProfileProvider>
                     <SavedPropertiesProvider>
@@ -259,6 +261,7 @@ export default function RootLayout() {
                     </SavedPropertiesProvider>
                   </ProfileProvider>
                 </OxyProvider>
+                </BottomSheetModalProvider>
               </QueryClientProvider>
             </PostHogProvider>
           )}
