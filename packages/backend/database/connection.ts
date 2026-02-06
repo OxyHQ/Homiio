@@ -9,10 +9,12 @@ import config from '../config';
 class Database {
   private connection: any;
   private isConnected: boolean;
+  private listenerRegistered: boolean;
 
   constructor() {
     this.connection = null;
     this.isConnected = false;
+    this.listenerRegistered = false;
   }
 
   /**
@@ -22,19 +24,14 @@ class Database {
     try {
       // Check if already connected and connection is healthy
       if (this.isConnected && mongoose.connection.readyState === 1) {
-        console.log('📦 Database already connected and healthy');
         return this.connection;
       }
 
       // If connection exists but is not healthy, close it first
       if (mongoose.connection.readyState !== 0) {
-        console.log('📦 Closing existing unhealthy connection...');
         await mongoose.connection.close();
         this.isConnected = false;
       }
-
-      console.log('📦 Connecting to database...');
-      console.log(`📦 Database URL: ${config.database.url}`);
 
       // Set mongoose options
       mongoose.set('strictQuery', false);
@@ -46,16 +43,12 @@ class Database {
 
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          console.log(`📦 Database connection attempt ${attempt}/${maxRetries}`);
           this.connection = await mongoose.connect(config.database.url, config.database.options);
-          break; // Success, exit retry loop
+          break;
         } catch (error) {
           lastError = error;
-          console.error(`❌ Database connection attempt ${attempt} failed:`, error.message);
-          
           if (attempt < maxRetries) {
-            const delay = attempt * 1000; // Exponential backoff
-            console.log(`📦 Retrying in ${delay}ms...`);
+            const delay = attempt * 1000;
             await new Promise(resolve => setTimeout(resolve, delay));
           }
         }
@@ -67,35 +60,37 @@ class Database {
 
       this.isConnected = true;
 
-      console.log('✅ Database connected successfully');
-      console.log(`📦 Database: ${this.connection.connection.name}`);
-      console.log(`📦 Host: ${this.connection.connection.host}:${this.connection.connection.port}`);
+      // Connection successful
 
       // Handle connection events
       mongoose.connection.on('error', (error) => {
-        console.error('❌ Database connection error:', error);
+        console.error('Database connection error:', error.message);
         this.isConnected = false;
       });
 
       mongoose.connection.on('disconnected', () => {
-        console.log('⚠️  Database disconnected');
         this.isConnected = false;
       });
 
       mongoose.connection.on('reconnected', () => {
-        console.log('🔄 Database reconnected');
         this.isConnected = true;
       });
 
-      // Handle process termination
-      process.on('SIGINT', async () => {
-        await this.disconnect();
-        process.exit(0);
-      });
+      // Handle process termination — register only once to prevent memory leak
+      if (!this.listenerRegistered) {
+        this.listenerRegistered = true;
+        process.on('SIGINT', async () => {
+          await this.disconnect();
+          process.exit(0);
+        });
+        process.on('SIGTERM', async () => {
+          await this.disconnect();
+          process.exit(0);
+        });
+      }
 
       return this.connection;
     } catch (error) {
-      console.error('❌ Database connection failed:', error.message);
       this.isConnected = false;
       throw error;
     }
@@ -106,16 +101,10 @@ class Database {
    */
   async disconnect() {
     try {
-      if (!this.isConnected) {
-        console.log('📦 Database already disconnected');
-        return;
-      }
-
+      if (!this.isConnected) return;
       await mongoose.connection.close();
       this.isConnected = false;
-      console.log('📦 Database disconnected gracefully');
     } catch (error) {
-      console.error('❌ Error disconnecting from database:', error.message);
       throw error;
     }
   }
@@ -145,12 +134,10 @@ class Database {
    */
   async forceReconnect() {
     try {
-      console.log('📦 Force reconnecting to database...');
       this.isConnected = false;
       await mongoose.connection.close();
       return await this.connect();
     } catch (error) {
-      console.error('❌ Force reconnect failed:', error.message);
       throw error;
     }
   }

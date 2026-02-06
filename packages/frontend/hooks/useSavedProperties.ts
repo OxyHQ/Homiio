@@ -70,7 +70,6 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
           await savePropertyToFolder(propertyId, null, propertyData);
         }
       } catch (error: any) {
-        console.error('Failed to toggle saved property:', error);
         throw error;
       }
     },
@@ -91,7 +90,6 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
       try {
         await savePropertyToFolder(propertyId, null, propertyData);
       } catch (error: any) {
-        console.error('Failed to save property:', error);
         throw error;
       }
     },
@@ -112,7 +110,6 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
       try {
         await unsavePropertyFromContext(propertyId);
       } catch (error: any) {
-        console.error('Failed to unsave property:', error);
         throw error;
       }
     },

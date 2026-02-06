@@ -19,8 +19,8 @@ const notFound = (res: Response, data: any) => res.status(404).json({ success: f
 const serverError = (res: Response, data: any) => res.status(500).json({ success: false, ...data });
 
 const logger = {
-  info: (message: string, data?: any) => console.log(`[INFO] ${message}`, data || ''),
-  error: (message: string, error?: any) => console.error(`[ERROR] ${message}`, error || '')
+  info: (message: string, data?: any) => {},
+  error: (message: string, error?: any) => {}
 };
 
 /**

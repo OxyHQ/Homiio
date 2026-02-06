@@ -60,7 +60,6 @@ i18nInit({
   interpolation: { escapeValue: false },
 })
   .catch((error: unknown) => {
-    console.error('Failed to initialize i18n:', error);
   });
 
 
@@ -108,36 +107,25 @@ export default function RootLayout() {
     defaultOptions: {
       queries: {
         retry: 2,
-        staleTime: 1000 * 30,
-        gcTime: 1000 * 60 * 10,
+        staleTime: 1000 * 60 * 5,  // 5 min — reduces duplicate fetches
+        gcTime: 1000 * 60 * 30,    // 30 min — keeps data in cache longer
         refetchOnReconnect: true,
-        refetchOnWindowFocus: true,
+        refetchOnWindowFocus: false, // Disable to prevent unnecessary refetches
       },
     },
   }), []);
 
-  // --- Font Loading ---
+  // --- Font Loading (reduced from 22 to 10 — only essential weights) ---
   const [loaded] = useFonts({
-    'Roboto-Light': require('@/assets/fonts/Roboto/Roboto-Light.ttf'),
     'Roboto-Regular': require('@/assets/fonts/Roboto/Roboto-Regular.ttf'),
-    'Roboto-Black': require('@/assets/fonts/Roboto/Roboto-Black.ttf'),
     'Roboto-Medium': require('@/assets/fonts/Roboto/Roboto-Medium.ttf'),
-    'Roboto-ExtraBold': require('@/assets/fonts/Roboto/Roboto-ExtraBold.ttf'),
     'Roboto-Bold': require('@/assets/fonts/Roboto/Roboto-Bold.ttf'),
-    // ... keep Inter and Phudu fonts for fallback or legacy
-    'Inter-Black': require('@/assets/fonts/inter/Inter-Black.otf'),
-    'Inter-Bold': require('@/assets/fonts/inter/Inter-Bold.otf'),
-    'Inter-ExtraBold': require('@/assets/fonts/inter/Inter-ExtraBold.otf'),
-    'Inter-ExtraLight': require('@/assets/fonts/inter/Inter-ExtraLight.otf'),
-    'Inter-Light': require('@/assets/fonts/inter/Inter-Light.otf'),
-    'Inter-Medium': require('@/assets/fonts/inter/Inter-Medium.otf'),
     'Inter-Regular': require('@/assets/fonts/inter/Inter-Regular.otf'),
+    'Inter-Medium': require('@/assets/fonts/inter/Inter-Medium.otf'),
     'Inter-SemiBold': require('@/assets/fonts/inter/Inter-SemiBold.otf'),
-    'Inter-Thin': require('@/assets/fonts/inter/Inter-Thin.otf'),
-    'Phudu-Thin': require('@/assets/fonts/Phudu-VariableFont_wght.ttf'),
+    'Inter-Bold': require('@/assets/fonts/inter/Inter-Bold.otf'),
+    // Phudu is a variable font — one file covers all weights
     'Phudu-Regular': require('@/assets/fonts/Phudu-VariableFont_wght.ttf'),
-    'Phudu-Medium': require('@/assets/fonts/Phudu-VariableFont_wght.ttf'),
-    'Phudu-SemiBold': require('@/assets/fonts/Phudu-VariableFont_wght.ttf'),
     'Phudu-Bold': require('@/assets/fonts/Phudu-VariableFont_wght.ttf'),
   });
 

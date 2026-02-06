@@ -27,19 +27,11 @@ export async function searchProperties(req, res, next) {
       if (city) addressQuery.city = new RegExp(String(city), 'i');
       if (state) addressQuery.state = new RegExp(String(state), 'i');
       
-      console.log('Property search - Address lookup:', { city, state, addressQuery });
-      
       const matchingAddresses = await Address.find(addressQuery).select('_id');
       const addressIds = matchingAddresses.map((addr: any) => addr._id);
-      
-      console.log('Property search - Found addresses:', { 
-        count: matchingAddresses.length, 
-        addressIds: addressIds.slice(0, 5) 
-      });
-      
+
       if (addressIds.length === 0) {
         // No matching addresses found, return empty result
-        console.log('Property search - No addresses found for location, returning empty result');
         return res.json(paginationResponse([], parseInt(page), parseInt(limit), 0, 'No properties found for the specified location'));
       }
       
@@ -135,18 +127,7 @@ export async function searchProperties(req, res, next) {
     const skip = (parseInt(page)-1)*parseInt(limit);
     const baseFilter = andConditions.length? { $and: andConditions }: {};
     
-    console.log('Property search - Final query setup:', { 
-      hasQuery: !!query, 
-      baseFilter: JSON.stringify(baseFilter, null, 2),
-      skip,
-      limit: parseInt(limit)
-    });
-    
-    const runQuery = async (filter, useTextSort) => { 
-      console.log('Property search - Running query:', { 
-        filter: JSON.stringify(filter, null, 2), 
-        useTextSort 
-      });
+    const runQuery = async (filter, useTextSort) => {
       
       const q = Property.find(filter).populate('addressId').skip(skip).limit(parseInt(limit)); 
       const effBudget = (String(budgetFriendly).toLowerCase()==='true'); 
@@ -157,13 +138,8 @@ export async function searchProperties(req, res, next) {
         if (effBudget) q.sort({ 'rent.amount':1 }); 
         else q.sort({ createdAt:-1 }); 
       } 
-      const [items,count]= await Promise.all([q.lean(), Property.countDocuments(filter)]); 
-      
-      console.log('Property search - Query result:', { 
-        itemsCount: items.length, 
-        totalCount: count 
-      });
-      
+      const [items,count]= await Promise.all([q.lean(), Property.countDocuments(filter)]);
+
       return { items, count }; 
     };
     let resultItems=[]; let resultTotal=0;
@@ -226,12 +202,6 @@ export async function searchProperties(req, res, next) {
         resultTotal = fallbackRes.count;
       }
     }
-    
-    console.log('Property search - Final results:', { 
-      resultItems: resultItems.length, 
-      resultTotal,
-      query: query || 'no query'
-    });
     
     res.json(paginationResponse(resultItems, parseInt(page), parseInt(limit), resultTotal, 'Search completed successfully'));
   } catch (error) { next(error); }

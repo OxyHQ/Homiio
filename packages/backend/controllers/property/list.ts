@@ -52,8 +52,8 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       radius
     } = req.query as any;
 
-    const pageNumber = parseInt(String(page));
-    const limitNumber = parseInt(String(limit));
+    const pageNumber = Math.max(1, parseInt(String(page)) || 1);
+    const limitNumber = Math.min(100, Math.max(1, parseInt(String(limit)) || 10));
 
     const filters: any = {};
     if (profileId) filters.profileId = profileId;
@@ -281,15 +281,32 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
         const { Profile, RecentlyViewed, Saved } = require('../../models');
         const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
         if (activeProfile) {
-          const recentlyViewed = await RecentlyViewed.find({ profileId: activeProfile._id })
-            .sort({ viewedAt: -1 })
-            .limit(10)
-            .lean();
-          const savedProperties = await Saved.find({ profileId: activeProfile._id, targetType: 'property' }).lean();
+          // Fetch recently viewed and saved in parallel (was sequential before)
+          const [recentlyViewed, savedProperties] = await Promise.all([
+            RecentlyViewed.find({ profileId: activeProfile._id })
+              .sort({ viewedAt: -1 })
+              .limit(10)
+              .select('propertyId')
+              .lean(),
+            Saved.find({ profileId: activeProfile._id, targetType: 'property' })
+              .select('targetId')
+              .lean()
+          ]);
+
           const savedIds = new Set(savedProperties.map((s: any) => s.targetId.toString()));
-          const preferenceWeights = { propertyTypes: {}, priceRanges: {}, locations: {}, amenities: {} } as any;
-          recentlyViewed.forEach((view: any) => {
-            const property = ordered.find(p => p._id.toString() === view.propertyId.toString());
+
+          // Build O(1) lookup map instead of O(n) .find() per view item
+          const orderedMap = new Map<string, any>();
+          for (const p of ordered) {
+            orderedMap.set(p._id.toString(), p);
+          }
+
+          const preferenceWeights = { propertyTypes: {} as any, priceRanges: {} as any, locations: {} as any, amenities: {} as any };
+          const recentlyViewedIds = new Set<string>();
+          for (const view of recentlyViewed) {
+            const viewPropId = view.propertyId.toString();
+            recentlyViewedIds.add(viewPropId);
+            const property = orderedMap.get(viewPropId); // O(1) instead of O(n)
             if (property) {
               preferenceWeights.propertyTypes[property.type] = (preferenceWeights.propertyTypes[property.type] || 0) + 1;
               const rent = property.rent?.amount || 0;
@@ -301,12 +318,13 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
                 preferenceWeights.locations[property.address.city] = (preferenceWeights.locations[property.address.city] || 0) + 1;
               }
               if (property.amenities) {
-                property.amenities.forEach((amenity: string) => {
+                for (const amenity of property.amenities) {
                   preferenceWeights.amenities[amenity] = (preferenceWeights.amenities[amenity] || 0) + 1;
-                });
+                }
               }
             }
-          });
+          }
+
           const personalized = ordered.map(property => {
             const propertyId = property._id.toString();
             const isSaved = savedIds.has(propertyId);
@@ -319,14 +337,13 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
             }
             if (property.addressId?.city) personalizedScore += (preferenceWeights.locations[property.addressId.city] || 0) * 20;
             if (property.amenities) {
-              property.amenities.forEach((amenity: string) => {
+              for (const amenity of property.amenities) {
                 personalizedScore += (preferenceWeights.amenities[amenity] || 0) * 5;
-              });
+              }
             }
             if (property.isVerified) personalizedScore += 25;
             if (property.isEcoFriendly) personalizedScore += 15;
-            const isRecentlyViewed = recentlyViewed.some((view: any) => view.propertyId.toString() === property._id.toString());
-            if (isRecentlyViewed) personalizedScore -= 30;
+            if (recentlyViewedIds.has(propertyId)) personalizedScore -= 30; // O(1) instead of O(n) .some()
             if (isSaved) personalizedScore -= 20;
             return { ...property, personalizedScore, isSaved };
           });

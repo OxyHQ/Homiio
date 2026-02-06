@@ -9,11 +9,6 @@ const { ProfileType } = require('@homiio/shared-types');
 // Get all roommate profiles with enriched Oxy user data
 const getRoommateProfiles = async (req, res) => {
   try {
-    console.log('=== Roommate Profiles API Called ===');
-    console.log('User ID:', req.user?.id || req.user?._id);
-    console.log('Profile ID:', req.user?.profileId);
-    console.log('Query params:', req.query);
-    
     const { page = 1, limit = 20, minMatchPercentage, maxBudget, withPets, nonSmoking, interests, ageRange, gender, location } = req.query;
     
     // Build base query for personal profiles with roommate matching enabled
@@ -22,8 +17,6 @@ const getRoommateProfiles = async (req, res) => {
       'personalProfile.settings.roommate.enabled': true,
       _id: { $ne: req.user.profileId } // Exclude current user's profile
     };
-
-    console.log('Base query:', JSON.stringify(query, null, 2));
 
     // Add basic filters that apply to profile data (not preferences)
     if (gender && gender !== 'any') {
@@ -43,8 +36,6 @@ const getRoommateProfiles = async (req, res) => {
       };
     }
 
-    console.log('Final query:', JSON.stringify(query, null, 2));
-
     const skip = (parseInt(page) - 1) * parseInt(limit);
     
     const profiles = await Profile.find(query)
@@ -52,12 +43,8 @@ const getRoommateProfiles = async (req, res) => {
       .limit(parseInt(limit))
       .sort({ updatedAt: -1 });
 
-    console.log(`Found ${profiles.length} profiles with roommate matching enabled`);
-
     const total = await Profile.countDocuments(query);
     const totalPages = Math.ceil(total / parseInt(limit));
-
-    console.log(`Total profiles: ${total}, Total pages: ${totalPages}`);
 
     // Get current user's profile and preferences
     const currentProfile = await Profile.findById(req.user.profileId);
@@ -66,8 +53,6 @@ const getRoommateProfiles = async (req, res) => {
     let profilesWithMatches = profiles;
 
     if (currentUserPrefs) {
-      console.log('Current user has roommate preferences, calculating match percentages and applying filters');
-      
       profilesWithMatches = profiles.map(profile => {
         const profilePrefs = profile.personalProfile?.settings?.roommate?.preferences;
         const matchPercentage = calculateMatchPercentage(currentUserPrefs, profilePrefs);
@@ -86,7 +71,6 @@ const getRoommateProfiles = async (req, res) => {
           if (!profilePrefs?.budget?.max) return true; // Include if no budget preference
           return profilePrefs.budget.max >= budget; // Profile owner's max budget should be >= current user's max budget
         });
-        console.log(`After budget filter (maxBudget=${budget}): ${profilesWithMatches.length} profiles`);
       }
 
       if (withPets === 'true') {
@@ -95,7 +79,6 @@ const getRoommateProfiles = async (req, res) => {
           if (!profilePrefs?.lifestyle?.pets) return true; // Include if no pet preference
           return profilePrefs.lifestyle.pets === 'yes'; // Profile owner should want pets
         });
-        console.log(`After pets filter (withPets=true): ${profilesWithMatches.length} profiles`);
       }
 
       if (nonSmoking === 'true') {
@@ -104,7 +87,6 @@ const getRoommateProfiles = async (req, res) => {
           if (!profilePrefs?.lifestyle?.smoking) return true; // Include if no smoking preference
           return profilePrefs.lifestyle.smoking === 'no'; // Profile owner should not want smoking
         });
-        console.log(`After smoking filter (nonSmoking=true): ${profilesWithMatches.length} profiles`);
       }
 
       // Filter by minimum match percentage if specified
@@ -112,13 +94,11 @@ const getRoommateProfiles = async (req, res) => {
         profilesWithMatches = profilesWithMatches.filter(
           profile => profile.matchPercentage >= parseInt(minMatchPercentage)
         );
-        console.log(`After minMatchPercentage filter: ${profilesWithMatches.length} profiles`);
       }
 
       // Sort by match percentage
       profilesWithMatches.sort((a, b) => b.matchPercentage - a.matchPercentage);
     } else {
-      console.log('Current user does not have roommate preferences');
     }
 
     // No Oxy enrichment, just return profiles
@@ -129,7 +109,6 @@ const getRoommateProfiles = async (req, res) => {
       totalPages
     });
   } catch (error) {
-    console.error('Error fetching roommate profiles:', error);
     res.status(500).json({ error: 'Failed to fetch roommate profiles' });
   }
 };
@@ -161,7 +140,6 @@ const getMyRoommatePreferences = async (req, res) => {
 
     res.json({ data: profile.personalProfile.settings.roommate.preferences });
   } catch (error) {
-    console.error('Error fetching roommate preferences:', error);
     res.status(500).json({ error: 'Failed to fetch roommate preferences' });
   }
 };
@@ -212,7 +190,6 @@ const updateRoommatePreferences = async (req, res) => {
 
     res.json({ data: updatedProfile.personalProfile.settings.roommate.preferences, enabled: updatedProfile.personalProfile.settings?.roommate?.enabled || false });
   } catch (error) {
-    console.error('Error updating roommate preferences:', error);
     res.status(500).json({ error: 'Failed to update roommate preferences' });
   }
 };
@@ -254,7 +231,6 @@ const toggleRoommateMatching = async (req, res) => {
       enabled: updatedEnabled,
     });
   } catch (error) {
-    console.error('Error toggling roommate matching:', error);
     res.status(500).json({ error: 'Failed to toggle roommate matching' });
   }
 };
@@ -289,7 +265,6 @@ const getRoommateRequests = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching roommate requests:', error);
     res.status(500).json({ error: 'Failed to fetch roommate requests' });
   }
 };
@@ -333,7 +308,6 @@ const sendRoommateRequest = async (req, res) => {
     // For now, just return success
     res.json({ message: 'Roommate request sent successfully' });
   } catch (error) {
-    console.error('Error sending roommate request:', error);
     res.status(500).json({ error: 'Failed to send roommate request' });
   }
 };
@@ -347,7 +321,6 @@ const acceptRoommateRequest = async (req, res) => {
     // For now, just return success
     res.json({ message: 'Roommate request accepted successfully' });
   } catch (error) {
-    console.error('Error accepting roommate request:', error);
     res.status(500).json({ error: 'Failed to accept roommate request' });
   }
 };
@@ -361,7 +334,6 @@ const declineRoommateRequest = async (req, res) => {
     // For now, just return success
     res.json({ message: 'Roommate request declined successfully' });
   } catch (error) {
-    console.error('Error declining roommate request:', error);
     res.status(500).json({ error: 'Failed to decline roommate request' });
   }
 };
@@ -441,7 +413,6 @@ const getCurrentUserRoommateStatus = async (req, res) => {
       } : null
     });
   } catch (error) {
-    console.error('Error fetching current user roommate status:', error);
     res.status(500).json({ error: 'Failed to fetch roommate status' });
   }
 };

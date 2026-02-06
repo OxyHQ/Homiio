@@ -1015,7 +1015,6 @@ export const getAllTips = async (req: Request, res: Response) => {
       total: tips.length
     });
   } catch (error) {
-    console.error('Error fetching tips:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch tips',
@@ -1049,7 +1048,6 @@ export const getTipById = async (req: Request, res: Response) => {
       data: tip
     });
   } catch (error) {
-    console.error('Error fetching tip:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch tip',
@@ -1077,7 +1075,6 @@ export const getTipsByCategory = async (req: Request, res: Response) => {
       total: tips.length
     });
   } catch (error) {
-    console.error('Error fetching tips by category:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch tips by category',
@@ -1107,7 +1104,6 @@ export const getFeaturedTips = async (req: Request, res: Response) => {
       total: tips.length
     });
   } catch (error) {
-    console.error('Error fetching featured tips:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch featured tips',
@@ -1154,7 +1150,6 @@ export const searchTips = async (req: Request, res: Response) => {
       total: tips.length
     });
   } catch (error) {
-    console.error('Error searching tips:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to search tips',

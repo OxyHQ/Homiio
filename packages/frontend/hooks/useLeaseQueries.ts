@@ -13,7 +13,6 @@ export const useUserLeases = () => {
   const fetchLeases = useCallback(
     async (filters?: LeaseFilters) => {
       if (!oxyServices || !activeSessionId) {
-        console.log('OxyServices not available - cannot fetch leases');
         return;
       }
 
@@ -24,9 +23,7 @@ export const useUserLeases = () => {
         const response = await leaseService.getLeases(filters, oxyServices, activeSessionId);
 
         setLeases(response.leases || []);
-        console.log('Successfully fetched user leases');
       } catch (error: any) {
-        console.error('Error fetching leases:', error);
         setError(error.message || 'Failed to fetch leases');
       } finally {
         setLoading(false);

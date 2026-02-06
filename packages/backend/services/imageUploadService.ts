@@ -31,14 +31,6 @@ export class ImageUploadService {
   ];
 
   constructor() {
-    console.log('S3 Configuration:', {
-      endpoint: config.s3.endpoint,
-      region: config.s3.region,
-      accessKeyId: config.s3.accessKeyId ? '***SET***' : '***NOT SET***',
-      secretAccessKey: config.s3.secretAccessKey ? '***SET***' : '***NOT SET***',
-      bucketName: config.s3.bucketName
-    });
-    
     this.s3Client = new S3Client({
       endpoint: config.s3.endpoint,
       region: config.s3.region,
@@ -81,7 +73,6 @@ export class ImageUploadService {
         },
       };
     } catch (error) {
-      console.error('Error uploading image:', error);
       throw new Error('Failed to upload image');
     }
   }
@@ -95,7 +86,6 @@ export class ImageUploadService {
       
       await this.s3Client.send(command);
     } catch (error) {
-      console.error('Error deleting image:', error);
       throw new Error('Failed to delete image');
     }
   }
@@ -105,7 +95,6 @@ export class ImageUploadService {
       const deletePromises = imageKeys.map(key => this.deleteImage(key));
       await Promise.all(deletePromises);
     } catch (error) {
-      console.error('Error deleting image variants:', error);
       throw new Error('Failed to delete image variants');
     }
   }

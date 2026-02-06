@@ -1,6 +1,7 @@
 const { Profile } = require("../models");
 const { successResponse } = require("../middlewares/errorHandler");
 const { ProfileType, EmploymentStatus, LeaseDuration } = require("@homiio/shared-types");
+const { Saved, SavedPropertyFolder, SavedSearch, RecentlyViewed, Property } = require("../models");
 
 // Create a simple errorResponse function since it's not exported from errorHandler
 const errorResponse = (message = 'Error occurred', code = 'ERROR') => {
@@ -13,8 +14,15 @@ const errorResponse = (message = 'Error occurred', code = 'ERROR') => {
 };
 
 // Simple in-memory cache for profile data
-const profileCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_MAX_SIZE = 1000;
+const profileCache = new Map<string, { data: any; timestamp: number }>();
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of profileCache) {
+    if (now - entry.timestamp >= CACHE_TTL) profileCache.delete(key);
+  }
+}, 60_000).unref();
 
 class ProfileController {
   constructor() {
@@ -122,7 +130,6 @@ class ProfileController {
       if (!activeProfile) {
         return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
       }
-      const { Saved } = require('../models');
       await Saved.updateOne(
         { profileId: activeProfile._id, targetType: 'profile', targetId: profileId },
         { $set: { profileId: activeProfile._id, targetType: 'profile', targetId: profileId, createdAt: new Date() } },
@@ -130,7 +137,6 @@ class ProfileController {
       );
       return res.json(successResponse({}, "Profile saved"));
     } catch (error) {
-      console.error('Error saving profile:', error);
       next(error);
     }
   }
@@ -152,11 +158,9 @@ class ProfileController {
       if (!activeProfile) {
         return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
       }
-      const { Saved } = require('../models');
       await Saved.deleteOne({ profileId: activeProfile._id, targetType: 'profile', targetId: profileId });
       return res.json(successResponse({}, "Profile unsaved"));
     } catch (error) {
-      console.error('Error unsaving profile:', error);
       next(error);
     }
   }
@@ -178,11 +182,9 @@ class ProfileController {
       if (!activeProfile) {
         return res.json(successResponse({ saved: false }, "No active profile"));
       }
-      const { Saved } = require('../models');
       const exists = await Saved.findOne({ profileId: activeProfile._id, targetType: 'profile', targetId: profileId }).lean();
       return res.json(successResponse({ saved: !!exists }, "Saved status"));
     } catch (error) {
-      console.error('Error checking saved profile:', error);
       next(error);
     }
   }
@@ -200,11 +202,11 @@ class ProfileController {
   getCachedProfile(oxyUserId, type = 'active') {
     const key = this.getCacheKey(oxyUserId, type);
     const cached = profileCache.get(key);
-    
+
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       return cached.data;
     }
-    
+
     return null;
   }
 
@@ -233,7 +235,7 @@ class ProfileController {
   async test(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
-      
+
       res.json({
         success: true,
         message: 'Profile controller is working',
@@ -242,7 +244,6 @@ class ProfileController {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error("Error in test endpoint:", error);
       next(error);
     }
   }
@@ -253,66 +254,55 @@ class ProfileController {
   async getOrCreateActiveProfile(req: any, res: any, next: any) {
     try {
       const oxyUserId = this._getOxyUserId(req);
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
         );
       }
 
-      console.log(`ProfileController: Getting or creating active profile for user ${oxyUserId}`);
-
   // Check cache first
       let profile = this.getCachedProfile(oxyUserId, 'active');
-      
+
       if (!profile) {
         // Try to find existing active profile
         profile = await Profile.findActiveByOxyUserId(oxyUserId);
-        
+
         if (!profile) {
-          console.log(`ProfileController: No active profile found for user ${oxyUserId}, checking for personal profile`);
-          
           // Check if there's a personal profile (even if not active)
           const personalProfile = await Profile.findOne({ oxyUserId, profileType: ProfileType.PERSONAL });
-          
+
           if (personalProfile) {
-            console.log(`ProfileController: Found existing personal profile for user ${oxyUserId}, making it active`);
             // Make personal profile active but don't change active status
             personalProfile.isActive = true;
             await personalProfile.save();
-            
+
             // Clear cache after making profile active
             this.clearCachedProfile(oxyUserId, 'active');
-            
+
             profile = personalProfile;
           } else {
-    console.log(`ProfileController: No personal profile found for user ${oxyUserId}, creating default personal profile`);
     const defaultPersonalProfile = await this._createDefaultPersonalProfile(oxyUserId);
     // Clear cache after creating new profile
     this.clearCachedProfile(oxyUserId, 'active');
     profile = defaultPersonalProfile;
-    console.log(`ProfileController: Successfully created default personal profile for user ${oxyUserId}`);
           }
         } else {
-          console.log(`ProfileController: Found existing active profile for user ${oxyUserId}`);
           // Always return full profile data unless explicitly requesting minimal
           const minimal = req.query.minimal === 'true';
           if (!minimal) {
             profile = await Profile.findById(profile._id);
           }
         }
-        
+
         // Cache the result
         this.setCachedProfile(oxyUserId, profile, 'active');
-      } else {
-        console.log(`ProfileController: Retrieved cached profile for user ${oxyUserId}`);
       }
 
       res.json(
         successResponse(profile, "Profile retrieved successfully")
       );
     } catch (error) {
-      console.error("Error getting active profile:", error);
       next(error);
     }
   }
@@ -323,7 +313,7 @@ class ProfileController {
   async getUserProfiles(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -332,12 +322,11 @@ class ProfileController {
 
       // Get all profiles including profile-specific data for display
       const profiles = await Profile.findByOxyUserId(oxyUserId);
-      
+
       res.json(
         successResponse(profiles, "Profiles retrieved successfully")
       );
     } catch (error) {
-      console.error("Error getting user profiles:", error);
       next(error);
     }
   }
@@ -349,7 +338,7 @@ class ProfileController {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { profileType } = req.params;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -363,7 +352,7 @@ class ProfileController {
       }
 
       const profile = await Profile.findByOxyUserIdAndType(oxyUserId, profileType);
-      
+
       if (!profile) {
         return res.status(404).json(
           errorResponse("Profile not found", "PROFILE_NOT_FOUND")
@@ -374,7 +363,6 @@ class ProfileController {
         successResponse(profile, "Profile retrieved successfully")
       );
     } catch (error) {
-      console.error("Error getting profile by type:", error);
       next(error);
     }
   }
@@ -386,7 +374,7 @@ class ProfileController {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       let { profileType, data, isPersonalProfile } = req.body as any;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -492,7 +480,7 @@ class ProfileController {
             }
           };
           break;
-          
+
         case ProfileType.AGENCY:
           profileData.agencyProfile = {
             businessType: data.businessType,
@@ -508,7 +496,7 @@ class ProfileController {
             }]
           };
           break;
-          
+
         case ProfileType.BUSINESS:
           profileData.businessProfile = {
             businessType: data.businessType,
@@ -533,12 +521,12 @@ class ProfileController {
       }
 
   const profile = new Profile(profileData);
-      
+
       // Calculate initial trust score for personal profiles
       if (profileType === ProfileType.PERSONAL) {
         profile.calculateTrustScore();
       }
-      
+
       await profile.save();
 
       // Clear cache after creating new profile
@@ -548,7 +536,6 @@ class ProfileController {
         successResponse(profile, "Profile created successfully")
       );
     } catch (error) {
-      console.error("Error creating profile:", error);
       next(error);
     }
   }
@@ -561,7 +548,7 @@ class ProfileController {
       const oxyUserId = req.user?.id || req.user?._id;
       const { profileId } = req.params;
       const updateData = req.body;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -569,7 +556,7 @@ class ProfileController {
       }
 
       const profile = await Profile.findById(profileId);
-      
+
       if (!profile) {
         return res.status(404).json(
           errorResponse("Profile not found", "PROFILE_NOT_FOUND")
@@ -615,7 +602,6 @@ class ProfileController {
         successResponse(profile, "Profile updated successfully")
       );
     } catch (error) {
-      console.error("Error updating profile:", error);
       next(error);
     }
   }
@@ -627,7 +613,7 @@ class ProfileController {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { profileId } = req.params;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -635,7 +621,7 @@ class ProfileController {
       }
 
       const profile = await Profile.findById(profileId);
-      
+
       if (!profile) {
         return res.status(404).json(
           errorResponse("Profile not found", "PROFILE_NOT_FOUND")
@@ -671,7 +657,6 @@ class ProfileController {
         successResponse({ profileId }, "Profile deleted successfully")
       );
     } catch (error) {
-      console.error("Error deleting profile:", error);
       next(error);
     }
   }
@@ -682,7 +667,7 @@ class ProfileController {
   async getAgencyMemberships(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -690,12 +675,11 @@ class ProfileController {
       }
 
       const memberships = await Profile.findAgencyMemberships(oxyUserId);
-      
+
       res.json(
         successResponse(memberships, "Agency memberships retrieved successfully")
       );
     } catch (error) {
-      console.error("Error getting agency memberships:", error);
       next(error);
     }
   }
@@ -708,7 +692,7 @@ class ProfileController {
       const oxyUserId = req.user?.id || req.user?._id;
       const { profileId } = req.params;
       const { memberOxyUserId, role } = req.body;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -716,7 +700,7 @@ class ProfileController {
       }
 
       const profile = await Profile.findById(profileId);
-      
+
       if (!profile) {
         return res.status(404).json(
           errorResponse("Profile not found", "PROFILE_NOT_FOUND")
@@ -742,7 +726,6 @@ class ProfileController {
         successResponse(profile, "Member added successfully")
       );
     } catch (error) {
-      console.error("Error adding agency member:", error);
       if (error.message === "Member already exists in this agency") {
         return res.status(409).json(
           errorResponse(error.message, "MEMBER_ALREADY_EXISTS")
@@ -759,7 +742,7 @@ class ProfileController {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { profileId, memberOxyUserId } = req.params;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -767,7 +750,7 @@ class ProfileController {
       }
 
       const profile = await Profile.findById(profileId);
-      
+
       if (!profile) {
         return res.status(404).json(
           errorResponse("Profile not found", "PROFILE_NOT_FOUND")
@@ -800,7 +783,6 @@ class ProfileController {
         successResponse(profile, "Member removed successfully")
       );
     } catch (error) {
-      console.error("Error removing agency member:", error);
       next(error);
     }
   }
@@ -812,7 +794,7 @@ class ProfileController {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const updateData = req.body;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -820,11 +802,11 @@ class ProfileController {
       }
 
       // Find the active profile for this user (non-lean for updates)
-      const profile = await Profile.findOne({ 
-        oxyUserId, 
-        isActive: true 
+      const profile = await Profile.findOne({
+        oxyUserId,
+        isActive: true
       });
-      
+
       if (!profile) {
         return res.status(404).json(
           errorResponse("Active profile not found", "PROFILE_NOT_FOUND")
@@ -877,7 +859,6 @@ class ProfileController {
         successResponse(profile, "Active profile updated successfully")
       );
     } catch (error) {
-      console.error("Error updating active profile:", error);
       next(error);
     }
   }
@@ -889,7 +870,7 @@ class ProfileController {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { factor, value } = req.body;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -897,11 +878,11 @@ class ProfileController {
       }
 
       // Find the active profile for this user (non-lean for updates)
-      const profile = await Profile.findOne({ 
-        oxyUserId, 
-        isActive: true 
+      const profile = await Profile.findOne({
+        oxyUserId,
+        isActive: true
       });
-      
+
       if (!profile) {
         return res.status(404).json(
           errorResponse("Active profile not found", "PROFILE_NOT_FOUND")
@@ -923,7 +904,6 @@ class ProfileController {
         successResponse(profile, "Trust score updated successfully")
       );
     } catch (error) {
-      console.error("Error updating active trust score:", error);
       next(error);
     }
   }
@@ -936,7 +916,7 @@ class ProfileController {
       const oxyUserId = req.user?.id || req.user?._id;
       const { profileId } = req.params;
       const { factor, value } = req.body;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -944,7 +924,7 @@ class ProfileController {
       }
 
       const profile = await Profile.findById(profileId);
-      
+
       if (!profile) {
         return res.status(404).json(
           errorResponse("Profile not found", "PROFILE_NOT_FOUND")
@@ -972,7 +952,6 @@ class ProfileController {
         successResponse(profile, "Trust score updated successfully")
       );
     } catch (error) {
-      console.error("Error updating trust score:", error);
       next(error);
     }
   }
@@ -983,7 +962,7 @@ class ProfileController {
   async getTrustScore(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -998,10 +977,10 @@ class ProfileController {
 
       // Get only the trust score data
       const profile = await Profile.findActiveByOxyUserId(
-        oxyUserId, 
+        oxyUserId,
         'personalProfile.trustScore profileType'
       );
-      
+
       if (!profile || profile.profileType !== ProfileType.PERSONAL) {
         return res.status(404).json(
           errorResponse("Personal profile not found", "PROFILE_NOT_FOUND")
@@ -1009,7 +988,7 @@ class ProfileController {
       }
 
       const trustScore = profile.personalProfile?.trustScore || { score: 0, factors: [] };
-      
+
       // Cache the result
       this.setCachedProfile(oxyUserId, trustScore, 'trustScore');
 
@@ -1017,7 +996,6 @@ class ProfileController {
         successResponse(trustScore, "Trust score retrieved successfully")
       );
     } catch (error) {
-      console.error("Error getting trust score:", error);
       next(error);
     }
   }
@@ -1028,7 +1006,7 @@ class ProfileController {
   async recalculateActiveTrustScore(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -1036,11 +1014,11 @@ class ProfileController {
       }
 
       // Find the active profile for this user (non-lean for method calls)
-      const profile = await Profile.findOne({ 
-        oxyUserId, 
-        isActive: true 
+      const profile = await Profile.findOne({
+        oxyUserId,
+        isActive: true
       });
-      
+
       if (!profile) {
         return res.status(404).json(
           errorResponse("Active profile not found", "PROFILE_NOT_FOUND")
@@ -1064,7 +1042,6 @@ class ProfileController {
         }, "Trust score recalculated successfully")
       );
     } catch (error) {
-      console.error("Error recalculating active trust score:", error);
       next(error);
     }
   }
@@ -1076,7 +1053,7 @@ class ProfileController {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { profileId } = req.params;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -1084,7 +1061,7 @@ class ProfileController {
       }
 
       const profile = await Profile.findById(profileId);
-      
+
       if (!profile) {
         return res.status(404).json(
           errorResponse("Profile not found", "PROFILE_NOT_FOUND")
@@ -1112,7 +1089,6 @@ class ProfileController {
         successResponse(profile, "Profile activated successfully")
       );
     } catch (error) {
-      console.error("Error activating profile:", error);
       next(error);
     }
   }
@@ -1123,16 +1099,7 @@ class ProfileController {
   async getProfileById(req: any, res: any, next: any) {
     try {
       const { profileId } = req.params;
-      
-      console.log(`[getProfileById] Called for profileId: ${profileId}`, {
-        hasUser: !!req.user,
-        userId: req.userId,
-        userFields: req.user ? Object.keys(req.user) : [],
-        headers: {
-          authorization: req.headers.authorization ? 'present' : 'missing'
-        }
-      });
-      
+
       if (!profileId) {
         return res.status(400).json(
           errorResponse("Profile ID is required", "PROFILE_ID_REQUIRED")
@@ -1140,24 +1107,17 @@ class ProfileController {
       }
 
       const profile = await Profile.findById(profileId);
-      
+
       if (!profile) {
         return res.status(404).json(
           errorResponse("Profile not found", "PROFILE_NOT_FOUND")
         );
       }
 
-      console.log(`[getProfileById] Found profile: ${profile._id}`, {
-        profileType: profile.profileType,
-        isActive: profile.isActive,
-        oxyUserId: profile.oxyUserId
-      });
-
       res.json(
         successResponse(profile, "Profile retrieved successfully")
       );
     } catch (error) {
-      console.error("Error getting profile by ID:", error);
       next(error);
     }
   }
@@ -1169,7 +1129,7 @@ class ProfileController {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { page = 1, limit = 10 } = req.query;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -1178,7 +1138,7 @@ class ProfileController {
 
       // Get the active profile for the current user
       const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      
+
       if (!activeProfile) {
         return res.json(
           successResponse({
@@ -1190,9 +1150,6 @@ class ProfileController {
         );
       }
 
-          // Import Property
-    const { Property } = require('../models');
-      
       // Query database for user's properties using profileId
       const skip = (parseInt(page) - 1) * parseInt(limit);
       const [properties, total] = await Promise.all([
@@ -1216,7 +1173,6 @@ class ProfileController {
         }, "Properties retrieved successfully")
       );
     } catch (error) {
-      console.error("Error getting profile properties:", error);
       next(error);
     }
   }
@@ -1228,11 +1184,8 @@ class ProfileController {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { limit = 10 } = req.query;
-      
-      console.log(`[getRecentProperties] Called for oxyUserId: ${oxyUserId}, limit: ${limit}`);
-      
+
       if (!oxyUserId) {
-        console.log('[getRecentProperties] No oxyUserId found, returning 401');
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
         );
@@ -1240,22 +1193,11 @@ class ProfileController {
 
       // Get the active profile for the current user
   let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      
-      console.log(`[getRecentProperties] Active profile lookup result:`, {
-        found: !!activeProfile,
-        profileId: activeProfile?._id,
-        profileType: activeProfile?.profileType
-      });
-      
+
       if (!activeProfile) {
         return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
       }
 
-      // Import RecentlyViewed
-      const { RecentlyViewed } = require('../models');
-      
-      console.log(`[getRecentProperties] Querying RecentlyViewed for profileId: ${activeProfile._id}`);
-      
       // Get recently viewed properties
       const recentViews = await RecentlyViewed.find({ profileId: activeProfile._id })
         .sort({ viewedAt: -1 })
@@ -1268,18 +1210,6 @@ class ProfileController {
           }
         })
         .lean();
-
-      console.log(`[getRecentProperties] Found ${recentViews.length} recently viewed records`);
-      
-      // Debug: Log the raw recently viewed records
-      recentViews.forEach((view, index) => {
-        console.log(`[getRecentProperties] Record ${index}:`, {
-          propertyId: view.propertyId ? (typeof view.propertyId === 'object' ? view.propertyId._id : view.propertyId) : 'null',
-          hasPopulatedProperty: !!view.propertyId && typeof view.propertyId === 'object',
-          viewedAt: view.viewedAt,
-          populatedPropertyKeys: view.propertyId && typeof view.propertyId === 'object' ? Object.keys(view.propertyId) : 'none'
-        });
-      });
 
       // Map and filter properties, ensuring no duplicates by property ID
       const propertiesMap = new Map();
@@ -1295,26 +1225,13 @@ class ProfileController {
           }
         }
       });
-      
+
       const properties = Array.from(propertiesMap.values());
-
-      console.log(`[getRecentProperties] After mapping and filtering:`);
-      properties.forEach((prop, index) => {
-        console.log(`[getRecentProperties] Property ${index}:`, {
-          hasProperty: !!prop,
-          hasId: !!(prop._id || prop.id),
-          propertyId: prop._id || prop.id || 'missing',
-          keys: prop ? Object.keys(prop) : 'none'
-        });
-      });
-
-      console.log(`[getRecentProperties] Returning ${properties.length} properties after filtering`);
 
       res.json(
         successResponse(properties, "Recent properties retrieved successfully")
       );
     } catch (error) {
-      console.error("Error getting recent properties:", error);
       next(error);
     }
   }
@@ -1325,15 +1242,8 @@ class ProfileController {
   async getSavedProperties(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
-      
-      console.log('[getSavedProperties] Called with:', {
-        hasUser: !!req.user,
-        oxyUserId,
-        userObject: req.user ? { id: req.user.id, _id: req.user._id } : null
-      });
-      
+
       if (!oxyUserId) {
-        console.log('[getSavedProperties] No oxyUserId found, returning 401');
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
         );
@@ -1341,19 +1251,12 @@ class ProfileController {
 
       // Get the active profile for the current user
   let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      
-      console.log('[getSavedProperties] Active profile search result:', {
-        found: !!activeProfile,
-        profileId: activeProfile?._id,
-        profileType: activeProfile?.profileType
-      });
-      
+
       if (!activeProfile) {
         return res.json(successResponse([], "No profile found for user"));
       }
 
       // Use unified Saved collection
-      const { Saved, Property } = require('../models');
       const savedRows = await Saved.find({ profileId: activeProfile._id, targetType: 'property' })
         .sort({ createdAt: -1 })
         .lean();
@@ -1379,18 +1282,9 @@ class ProfileController {
         .filter(Boolean);
 
       const response = successResponse(merged, "Saved properties retrieved successfully");
-      
-      console.log('[getSavedProperties] Final response:', {
-        success: response.success,
-        message: response.message,
-        dataType: typeof response.data,
-        dataLength: Array.isArray(response.data) ? response.data.length : 'not array',
-        responseSize: JSON.stringify(response).length
-      });
 
       res.json(response);
     } catch (error) {
-      console.error("Error getting saved properties:", error);
       next(error);
     }
   }
@@ -1408,13 +1302,11 @@ class ProfileController {
       if (!activeProfile) {
         return res.json(successResponse([] , "No profile found for user"));
       }
-      const { Saved } = require('../models');
       const follows = await Saved.find({ profileId: activeProfile._id, targetType: 'profile' }).lean();
       const ids = follows.map(f => f.targetId);
       const profiles = await Profile.find({ _id: { $in: ids } }).lean();
       return res.json(successResponse(profiles, "Saved profiles retrieved"));
     } catch (error) {
-      console.error('Error getting saved profiles:', error);
       next(error);
     }
   }
@@ -1426,9 +1318,7 @@ class ProfileController {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { propertyId, notes, folderId } = req.body;
-      
-      console.log('saveProperty called:', { oxyUserId, propertyId, notes, folderId });
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -1447,9 +1337,6 @@ class ProfileController {
         return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
       }
 
-      // Import Saved collection and SavedPropertyFolder model
-      const { SavedPropertyFolder, Saved } = require('../models');
-      
       // Find or create default folder if no folderId provided
       let targetFolder;
       if (folderId) {
@@ -1484,7 +1371,7 @@ class ProfileController {
           await targetFolder.save();
         }
       }
-      
+
       // Check if property is already saved
       const existingSaved = await Saved.findOne({ profileId: activeProfile._id, targetType: 'property', targetId: propertyId });
 
@@ -1499,7 +1386,6 @@ class ProfileController {
         successResponse({ folderId: targetFolder?._id }, "Property saved successfully")
       );
     } catch (error) {
-      console.error("Error saving property:", error);
       next(error);
     }
   }
@@ -1511,7 +1397,7 @@ class ProfileController {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { propertyId } = req.params;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -1526,7 +1412,7 @@ class ProfileController {
 
       // Get the active profile for the current user
       let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      
+
       if (!activeProfile) {
         // If no active profile exists, there can't be any saved properties
         return res.status(404).json(
@@ -1534,7 +1420,6 @@ class ProfileController {
         );
       }
 
-      const { Saved } = require('../models');
       const result = await Saved.deleteOne({ profileId: activeProfile._id, targetType: 'property', targetId: propertyId });
       if (result.deletedCount === 0) {
         return res.status(404).json(errorResponse("Saved property not found", "SAVED_PROPERTY_NOT_FOUND"));
@@ -1544,7 +1429,6 @@ class ProfileController {
         successResponse(null, "Property unsaved successfully")
       );
     } catch (error) {
-      console.error("Error unsaving property:", error);
       next(error);
     }
   }
@@ -1557,7 +1441,7 @@ class ProfileController {
       const oxyUserId = req.user?.id || req.user?._id;
       const { propertyId } = req.params;
       const { notes } = req.body;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -1572,16 +1456,13 @@ class ProfileController {
 
       // Get the active profile for the current user
       let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      
+
       if (!activeProfile) {
         // If no active profile exists, there can't be any saved properties
         return res.status(404).json(
           errorResponse("Saved property not found", "SAVED_PROPERTY_NOT_FOUND")
         );
       }
-
-      // Use unified Saved collection as the source of truth
-      const { Saved, SavedPropertyFolder } = require('../models');
 
       // Update notes on the saved record
       const updated = await Saved.findOneAndUpdate(
@@ -1607,11 +1488,10 @@ class ProfileController {
           }
         }
       } catch (e) {
-        console.warn('Non-fatal: failed to mirror notes to SavedPropertyFolder', e?.message || e);
+        // Non-fatal: failed to mirror notes to SavedPropertyFolder
       }
       res.json(successResponse(updated, "Property notes updated successfully"));
     } catch (error) {
-      console.error("Error updating saved property notes:", error);
       next(error);
     }
   }
@@ -1622,7 +1502,7 @@ class ProfileController {
   async getSavedPropertyFolders(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -1631,16 +1511,13 @@ class ProfileController {
 
       // Get the active profile for the current user
       let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      
+
       if (!activeProfile) {
         return res.status(404).json(
           errorResponse("Profile not found", "PROFILE_NOT_FOUND")
         );
       }
 
-      // Import SavedPropertyFolder
-      const { SavedPropertyFolder } = require('../models');
-      
       // Get all folders for this profile
       const folders = await SavedPropertyFolder.find({ profileId: activeProfile._id })
         .sort({ isDefault: -1, createdAt: 1 })
@@ -1650,7 +1527,6 @@ class ProfileController {
       const folderIds = folders.map((f: any) => f._id);
       let countsByFolder: Record<string, number> = {};
       if (folderIds.length > 0) {
-        const { Saved } = require('../models');
         const counts = await Saved.aggregate([
           { $match: { profileId: activeProfile._id, targetType: 'property', folderId: { $in: folderIds } } },
           { $group: { _id: '$folderId', count: { $sum: 1 } } },
@@ -1670,7 +1546,6 @@ class ProfileController {
         successResponse({ folders: foldersWithCount }, "Saved property folders retrieved successfully")
       );
     } catch (error) {
-      console.error("Error getting saved property folders:", error);
       next(error);
     }
   }
@@ -1682,7 +1557,7 @@ class ProfileController {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { name, description, color, icon } = req.body;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -1697,16 +1572,13 @@ class ProfileController {
 
       // Get the active profile for the current user
       let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      
+
       if (!activeProfile) {
         return res.status(404).json(
           errorResponse("Profile not found", "PROFILE_NOT_FOUND")
         );
       }
 
-      // Import SavedPropertyFolder
-      const { SavedPropertyFolder } = require('../models');
-      
       // Check if folder with same name already exists
       const existingFolder = await SavedPropertyFolder.findOne({
         profileId: activeProfile._id,
@@ -1735,7 +1607,6 @@ class ProfileController {
         successResponse(folder, "Folder created successfully")
       );
     } catch (error) {
-      console.error("Error creating saved property folder:", error);
       next(error);
     }
   }
@@ -1748,7 +1619,7 @@ class ProfileController {
       const oxyUserId = req.user?.id || req.user?._id;
       const { folderId } = req.params;
       const { name, description, color, icon } = req.body;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -1763,16 +1634,13 @@ class ProfileController {
 
       // Get the active profile for the current user
       let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      
+
       if (!activeProfile) {
         return res.status(404).json(
           errorResponse("Profile not found", "PROFILE_NOT_FOUND")
         );
       }
 
-      // Import SavedPropertyFolder
-      const { SavedPropertyFolder } = require('../models');
-      
       // Find the folder
       const folder = await SavedPropertyFolder.findOne({
         _id: folderId,
@@ -1824,7 +1692,6 @@ class ProfileController {
         successResponse(updatedFolder, "Folder updated successfully")
       );
     } catch (error) {
-      console.error("Error updating saved property folder:", error);
       next(error);
     }
   }
@@ -1836,7 +1703,7 @@ class ProfileController {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { folderId } = req.params;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -1851,16 +1718,13 @@ class ProfileController {
 
       // Get the active profile for the current user
       let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      
+
       if (!activeProfile) {
         return res.status(404).json(
           errorResponse("Profile not found", "PROFILE_NOT_FOUND")
         );
       }
 
-  // Import models
-  const { SavedPropertyFolder, Saved } = require('../models');
-      
       // Find the folder
       const folder = await SavedPropertyFolder.findOne({
         _id: folderId,
@@ -1893,7 +1757,6 @@ class ProfileController {
         successResponse(null, "Folder deleted successfully")
       );
     } catch (error) {
-      console.error("Error deleting saved property folder:", error);
       next(error);
     }
   }
@@ -1907,9 +1770,7 @@ class ProfileController {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { propertyId } = req.params;
-      
-      console.log(`[trackPropertyView] Called for user ${oxyUserId}, property ${propertyId}`);
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -1924,25 +1785,21 @@ class ProfileController {
 
       // Get the active profile for the current user
       let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      
+
       if (!activeProfile) {
         return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
       }
 
-      // Import RecentlyViewed
-      const { RecentlyViewed } = require('../models');
-      
       // Check if view already exists
-      const existingView = await RecentlyViewed.findOne({ 
-        profileId: activeProfile._id, 
-        propertyId 
+      const existingView = await RecentlyViewed.findOne({
+        profileId: activeProfile._id,
+        propertyId
       });
 
       if (existingView) {
         // Update existing view timestamp
         existingView.viewedAt = new Date();
         await existingView.save();
-        console.log(`[trackPropertyView] Updated existing view for property ${propertyId}`);
       } else {
         // Create new view record
         const propertyView = new RecentlyViewed({
@@ -1951,14 +1808,12 @@ class ProfileController {
           viewedAt: new Date()
         });
         await propertyView.save();
-        console.log(`[trackPropertyView] Created new view record for property ${propertyId}`);
       }
 
       res.json(
         successResponse(null, "Property view tracked successfully")
       );
     } catch (error) {
-      console.error("Error tracking property view:", error);
       next(error);
     }
   }
@@ -1969,7 +1824,7 @@ class ProfileController {
   async clearRecentProperties(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -1978,26 +1833,22 @@ class ProfileController {
 
       // Get the active profile for the current user
       const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      
+
       if (!activeProfile) {
         return res.status(404).json(
           errorResponse("Profile not found", "PROFILE_NOT_FOUND")
         );
       }
 
-      // Import RecentlyViewed
-      const { RecentlyViewed } = require('../models');
-      
       // Clear all recently viewed properties for this profile
-      const result = await RecentlyViewed.deleteMany({ 
-        profileId: activeProfile._id 
+      const result = await RecentlyViewed.deleteMany({
+        profileId: activeProfile._id
       });
 
       res.json(
         successResponse({ deletedCount: result.deletedCount }, "Recently viewed properties cleared successfully")
       );
     } catch (error) {
-      console.error("Error clearing recent properties:", error);
       next(error);
     }
   }
@@ -2008,9 +1859,7 @@ class ProfileController {
   async debugRecentProperties(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
-      
-      console.log(`[debugRecentProperties] Called for oxyUserId: ${oxyUserId}`);
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -2019,12 +1868,6 @@ class ProfileController {
 
       // Get the active profile for the current user
       const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      
-      console.log(`[debugRecentProperties] Active profile:`, {
-        found: !!activeProfile,
-        profileId: activeProfile?._id,
-        profileType: activeProfile?.profileType
-      });
 
       if (!activeProfile) {
         return res.json(
@@ -2036,9 +1879,6 @@ class ProfileController {
         );
       }
 
-      // Import RecentlyViewed and Property
-      const { RecentlyViewed, Property } = require('../models');
-      
       // Get recently viewed records WITHOUT population
       const rawRecentViews = await RecentlyViewed.find({ profileId: activeProfile._id })
         .sort({ viewedAt: -1 })
@@ -2072,8 +1912,6 @@ class ProfileController {
       // Get total count
       const totalCount = await RecentlyViewed.countDocuments({ profileId: activeProfile._id });
 
-      console.log(`[debugRecentProperties] Raw: ${rawRecentViews.length}, Populated: ${populatedRecentViews.length}, Total: ${totalCount}`);
-
       res.json(
         successResponse({
           oxyUserId,
@@ -2096,7 +1934,6 @@ class ProfileController {
         }, "Debug info retrieved successfully")
       );
     } catch (error) {
-      console.error("Error in debug recent properties:", error);
       next(error);
     }
   }
@@ -2107,15 +1944,8 @@ class ProfileController {
   async getSavedSearches(req: any, res: any, next: any) {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
-      
-      console.log('[getSavedSearches] Called with:', {
-        hasUser: !!req.user,
-        oxyUserId,
-        userObject: req.user ? { id: req.user.id, _id: req.user._id } : null
-      });
-      
+
       if (!oxyUserId) {
-        console.log('[getSavedSearches] No oxyUserId found, returning 401');
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
         );
@@ -2123,49 +1953,21 @@ class ProfileController {
 
       // Get the active profile for the current user
   let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      
-      console.log('[getSavedSearches] Active profile search result:', {
-        found: !!activeProfile,
-        profileId: activeProfile?._id,
-        profileType: activeProfile?.profileType
-      });
-      
+
       if (!activeProfile) {
         // If user has no active profile, return empty list rather than creating data implicitly
         return res.json(successResponse([], "No profile found for user"));
       }
 
-      // Import SavedSearchModel
-      const { SavedSearch } = require('../models');
-      
-      console.log('[getSavedSearches] Querying SavedSearch with profileId:', activeProfile._id);
-      
       // Get saved searches
       const savedSearches = await SavedSearch.find({ profileId: activeProfile._id })
         .sort({ createdAt: -1 })
         .lean();
 
-      console.log('[getSavedSearches] SavedSearch query result:', {
-        count: savedSearches.length,
-        firstItem: savedSearches[0] ? {
-          id: savedSearches[0]._id,
-          name: savedSearches[0].name,
-          query: savedSearches[0].query,
-          createdAt: savedSearches[0].createdAt
-        } : null
-      });
-
       const response = successResponse(savedSearches, "Saved searches retrieved successfully");
-      
-      console.log('[getSavedSearches] Final response:', {
-        success: response.success,
-        message: response.message,
-        dataLength: Array.isArray(response.data) ? response.data.length : 'not array'
-      });
 
       res.json(response);
     } catch (error) {
-      console.error("Error getting saved searches:", error);
       next(error);
     }
   }
@@ -2177,9 +1979,7 @@ class ProfileController {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { name, query, filters, notificationsEnabled } = req.body;
-      
-      console.log('saveSearch called:', { oxyUserId, name, query, filters, notificationsEnabled });
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -2198,12 +1998,9 @@ class ProfileController {
         return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
       }
 
-      // Import SavedSearch
-      const { SavedSearch } = require('../models');
-      
       // Check if search with same name already exists
-      const existingSearch = await SavedSearch.findOne({ 
-        profileId: activeProfile._id, 
+      const existingSearch = await SavedSearch.findOne({
+        profileId: activeProfile._id,
         name: name.trim()
       });
 
@@ -2230,7 +2027,6 @@ class ProfileController {
         successResponse(savedSearch, "Search saved successfully")
       );
     } catch (error) {
-      console.error("Error saving search:", error);
       next(error);
     }
   }
@@ -2242,7 +2038,7 @@ class ProfileController {
     try {
       const oxyUserId = req.user?.id || req.user?._id;
       const { searchId } = req.params;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -2257,18 +2053,15 @@ class ProfileController {
 
       // Get the active profile for the current user
       const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      
+
       if (!activeProfile) {
         return res.status(404).json(
           errorResponse("Saved search not found", "SAVED_SEARCH_NOT_FOUND")
         );
       }
 
-      // Import SavedSearch
-      const { SavedSearch } = require('../models');
-      
       // Remove saved search
-      const result = await SavedSearch.deleteOne({ 
+      const result = await SavedSearch.deleteOne({
         _id: searchId,
         profileId: activeProfile._id
       });
@@ -2283,7 +2076,6 @@ class ProfileController {
         successResponse(null, "Search deleted successfully")
       );
     } catch (error) {
-      console.error("Error deleting saved search:", error);
       next(error);
     }
   }
@@ -2296,7 +2088,7 @@ class ProfileController {
       const oxyUserId = req.user?.id || req.user?._id;
       const { searchId } = req.params;
       const { name, query, filters, notificationsEnabled } = req.body;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -2311,16 +2103,13 @@ class ProfileController {
 
       // Get the active profile for the current user
       const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      
+
       if (!activeProfile) {
         return res.status(404).json(
           errorResponse("Saved search not found", "SAVED_SEARCH_NOT_FOUND")
         );
       }
 
-      // Import SavedSearch
-      const { SavedSearch } = require('../models');
-      
       // Prepare update data
       const updateData: any = { updatedAt: new Date() };
       if (name !== undefined) updateData.name = name.trim();
@@ -2345,7 +2134,6 @@ class ProfileController {
         successResponse(savedSearch, "Search updated successfully")
       );
     } catch (error) {
-      console.error("Error updating saved search:", error);
       next(error);
     }
   }
@@ -2358,7 +2146,7 @@ class ProfileController {
       const oxyUserId = req.user?.id || req.user?._id;
       const { searchId } = req.params;
       const { notificationsEnabled } = req.body;
-      
+
       if (!oxyUserId) {
         return res.status(401).json(
           errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
@@ -2373,20 +2161,17 @@ class ProfileController {
 
       // Get the active profile for the current user
       const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      
+
       if (!activeProfile) {
         return res.status(404).json(
           errorResponse("Saved search not found", "SAVED_SEARCH_NOT_FOUND")
         );
       }
 
-      // Import SavedSearch
-      const { SavedSearch } = require('../models');
-      
       // Update notifications setting
       const savedSearch = await SavedSearch.findOneAndUpdate(
         { _id: searchId, profileId: activeProfile._id },
-        { 
+        {
           notificationsEnabled: !!notificationsEnabled,
           updatedAt: new Date()
         },
@@ -2403,10 +2188,9 @@ class ProfileController {
         successResponse(savedSearch, "Search notifications updated successfully")
       );
     } catch (error) {
-      console.error("Error toggling search notifications:", error);
       next(error);
     }
   }
 }
 
-module.exports = new ProfileController(); 
+module.exports = new ProfileController();

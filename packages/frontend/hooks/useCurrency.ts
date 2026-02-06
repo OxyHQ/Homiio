@@ -30,7 +30,6 @@ export const useCurrency = () => {
         setCurrentCurrency(savedCurrencyCode);
       }
     } catch (error) {
-      console.error('Failed to load saved currency:', error);
       setError('Failed to load saved currency');
     } finally {
       setLoading(false);
@@ -43,7 +42,6 @@ export const useCurrency = () => {
       setCurrentCurrency(currencyCode);
       await AsyncStorage.setItem(CURRENCY_STORAGE_KEY, currencyCode);
     } catch (error) {
-      console.error('Failed to save currency preference:', error);
       setError('Failed to save currency preference');
     } finally {
       setLoading(false);

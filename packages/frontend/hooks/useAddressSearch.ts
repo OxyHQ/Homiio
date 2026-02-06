@@ -120,7 +120,6 @@ export const useAddressSearch = (options: AddressSearchOptions = {}): UseAddress
 
         setSuggestions(transformedSuggestions);
       } catch (err: any) {
-        console.error('Error fetching address suggestions:', err);
         setError(err.message || 'Failed to fetch address suggestions');
         setSuggestions([]);
       } finally {
@@ -250,7 +249,6 @@ export const useReverseGeocode = () => {
       const data = await response.json();
       setResult(data);
     } catch (err: any) {
-      console.error('Error reverse geocoding:', err);
       setError(err.message || 'Failed to reverse geocode');
       setResult(null);
     } finally {

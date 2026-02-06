@@ -61,7 +61,6 @@ export class ImageController {
         },
       });
     } catch (error) {
-      console.error('Error in uploadImage:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to upload image',
@@ -72,24 +71,6 @@ export class ImageController {
 
   async uploadMultipleImages(req: Request, res: Response): Promise<void> {
     try {
-      console.log('=== CONTROLLER DEBUG START ===');
-      console.log('Backend received request:', {
-        body: req.body,
-        files: req.files,
-        fileCount: req.files?.length,
-        headers: req.headers['content-type']
-      });
-      
-      if (req.files) {
-        console.log('Files received:', req.files.map((f: any) => ({
-          fieldname: f.fieldname,
-          originalname: f.originalname,
-          mimetype: f.mimetype,
-          size: f.size
-        })));
-      }
-      console.log('=== CONTROLLER DEBUG END ===');
-      
       if (!req.files || (Array.isArray(req.files) && req.files.length === 0)) {
         res.status(400).json({
           success: false,
@@ -145,7 +126,6 @@ export class ImageController {
             },
           });
         } catch (error) {
-          console.error(`Error uploading ${file.originalname}:`, error);
           // Continue with other files even if one fails
         }
       }
@@ -159,7 +139,6 @@ export class ImageController {
         },
       });
     } catch (error) {
-      console.error('Error in uploadMultipleImages:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to upload images',
@@ -187,7 +166,6 @@ export class ImageController {
         message: 'Image deleted successfully',
       });
     } catch (error) {
-      console.error('Error in deleteImage:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to delete image',
@@ -215,7 +193,6 @@ export class ImageController {
         message: 'Image variants deleted successfully',
       });
     } catch (error) {
-      console.error('Error in deleteImageVariants:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to delete image variants',
@@ -246,7 +223,6 @@ export class ImageController {
         },
       });
     } catch (error) {
-      console.error('Error in getImageInfo:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get image info',

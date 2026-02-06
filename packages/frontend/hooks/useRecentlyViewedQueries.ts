@@ -51,7 +51,6 @@ export const useRecentlyViewedProperties = () => {
     gcTime: 1000 * 60 * 10, // 10 minutes
     retry: 2,
     onError: (error: any) => {
-      console.error('useRecentlyViewedProperties: Error fetching from database:', error);
       useRecentlyViewedStore.getState().setError(error.message || 'Failed to load recently viewed properties');
     },
   });
@@ -81,7 +80,6 @@ export const useTrackPropertyView = () => {
     },
     // No optimistic updates - let the main hook handle all cache updates
     onError: (err, propertyId) => {
-      console.error('Error tracking property view:', err);
       toast.error('Failed to track property view');
     },
     // No onSettled callback to avoid interfering with local cache updates
@@ -119,7 +117,6 @@ export const useClearRecentlyViewed = () => {
       toast.success('Recently viewed properties cleared');
     },
     onError: (error: any) => {
-      console.error('Error clearing recently viewed properties:', error);
       toast.error('Failed to clear recently viewed properties');
     },
   });

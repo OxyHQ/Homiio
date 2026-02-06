@@ -177,7 +177,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                 }));
             }
         } catch (error) {
-            console.error('Error initializing notifications:', error);
             setState(prev => ({ ...prev, error: 'Failed to initialize notifications' }));
         }
     }, []);
@@ -189,7 +188,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             setState(prev => ({ ...prev, hasPermission }));
             return hasPermission;
         } catch (error) {
-            console.error('Error requesting permissions:', error);
             return false;
         }
     }, []);
@@ -200,7 +198,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             await setBadgeCount(count);
             setState(prev => ({ ...prev, badgeCount: count }));
         } catch (error) {
-            console.error('Error updating badge count:', error);
         }
     }, []);
 
@@ -209,7 +206,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             await clearBadge();
             setState(prev => ({ ...prev, badgeCount: 0 }));
         } catch (error) {
-            console.error('Error clearing badge count:', error);
         }
     }, []);
 
@@ -233,7 +229,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
             return notificationId;
         } catch (error) {
-            console.error('Error creating local notification:', error);
             return undefined;
         }
     }, []);
@@ -252,7 +247,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
             return notificationId;
         } catch (error) {
-            console.error('Error scheduling local notification:', error);
             throw error;
         }
     }, []);
@@ -265,7 +259,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             const scheduledNotifications = await getScheduledNotifications();
             setState(prev => ({ ...prev, scheduledNotifications }));
         } catch (error) {
-            console.error('Error canceling local notification:', error);
         }
     }, []);
 
@@ -274,7 +267,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             await cancelAllNotifications();
             setState(prev => ({ ...prev, scheduledNotifications: [] }));
         } catch (error) {
-            console.error('Error canceling all local notifications:', error);
         }
     }, []);
 
@@ -299,7 +291,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                 isLoading: false,
             }));
         } catch (error) {
-            console.error('Error loading notifications:', error);
             setState(prev => ({
                 ...prev,
                 error: 'Failed to load notifications',
@@ -330,7 +321,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             // Invalidate queries
             queryClient.invalidateQueries({ queryKey: ['notifications'] });
         } catch (error) {
-            console.error('Error marking notification as read:', error);
         }
     }, [oxyServices, activeSessionId, state.unreadCount, updateBadgeCount, queryClient]);
 
@@ -353,7 +343,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             // Invalidate queries
             queryClient.invalidateQueries({ queryKey: ['notifications'] });
         } catch (error) {
-            console.error('Error marking all notifications as read:', error);
         }
     }, [oxyServices, activeSessionId, clearBadgeCount, queryClient]);
 
@@ -375,7 +364,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             // Invalidate queries
             queryClient.invalidateQueries({ queryKey: ['notifications'] });
         } catch (error) {
-            console.error('Error deleting notification:', error);
         }
     }, [oxyServices, activeSessionId, queryClient]);
 
@@ -390,7 +378,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             // Here you would typically save preferences to the server
             // await notificationService.updatePreferences(preferences);
         } catch (error) {
-            console.error('Error updating preferences:', error);
         }
     }, []);
 
@@ -419,7 +406,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                 });
             }
         } catch (error) {
-            console.error('Error connecting notification socket:', error);
         }
     }, [oxyServices, activeSessionId, state.unreadCount, updateBadgeCount]);
 
@@ -428,7 +414,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             await disconnectNotificationSocket();
             setState(prev => ({ ...prev, isSocketConnected: false }));
         } catch (error) {
-            console.error('Error disconnecting notification socket:', error);
         }
     }, []);
 

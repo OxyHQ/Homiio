@@ -147,7 +147,6 @@ export default function RoommatesPage() {
       }
       Alert.alert('Success', result.message || `Roommate matching ${result.enabled ? 'enabled' : 'disabled'}`);
     } catch (error: any) {
-      console.error('Error toggling roommate matching:', error);
       Alert.alert('Error', 'Failed to toggle roommate matching');
     } finally {
       setIsToggling(false);

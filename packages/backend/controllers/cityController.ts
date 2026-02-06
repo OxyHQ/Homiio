@@ -84,7 +84,6 @@ class CityController {
         }
       });
     } catch (error) {
-      console.error('Error fetching cities:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to fetch cities',
@@ -108,7 +107,6 @@ class CityController {
         data: cities
       });
     } catch (error) {
-      console.error('Error fetching popular cities:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to fetch popular cities',
@@ -139,7 +137,6 @@ class CityController {
         data: city
       });
     } catch (error) {
-      console.error('Error fetching city:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to fetch city',
@@ -182,7 +179,6 @@ class CityController {
         data: city
       });
     } catch (error) {
-      console.error('Error fetching city by location:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to fetch city',
@@ -322,7 +318,6 @@ class CityController {
         }
       });
     } catch (error) {
-      console.error('Error fetching properties by city:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to fetch properties',
@@ -347,7 +342,6 @@ class CityController {
         data: city
       });
     } catch (error) {
-      console.error('Error creating city:', error);
       res.status(400).json({
         success: false,
         message: 'Failed to create city',
@@ -379,7 +373,6 @@ class CityController {
         data: city
       });
     } catch (error) {
-      console.error('Error updating city properties count:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to update city properties count',
@@ -412,7 +405,6 @@ class CityController {
         data: cities
       });
     } catch (error) {
-      console.error('Error searching cities:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to search cities',

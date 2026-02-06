@@ -109,7 +109,6 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
       });
 
       if (!response || !response.properties || !Array.isArray(response.properties)) {
-        console.error('Invalid response structure:', response);
         setSavedProperties([]);
         setSavedPropertyIds(new Set());
         return;
@@ -122,7 +121,6 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
       );
       setSavedPropertyIds(propertyIds);
     } catch (error: any) {
-      console.error('Failed to load saved properties:', error);
       setError(error.message || 'Failed to load saved properties');
       setSavedProperties([]);
       setSavedPropertyIds(new Set());
@@ -262,11 +260,8 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         });
         toast.success('Property saved successfully');
         // Refresh folders to update counts immediately
-        await loadFolders();
         await queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
       } catch (error: any) {
-        console.error('Failed to save property:', error);
-
         // Revert optimistic update on error
         setSavedPropertyIds((prev) => {
           const newSet = new Set(prev);
@@ -329,7 +324,6 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
           );
         }
 
-        await loadFolders();
         await queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
       } catch (error: any) {
         if (error?.status === 404 || error?.message?.includes('not found')) {
@@ -340,8 +334,6 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
           });
           return;
         }
-
-        console.error('Failed to unsave property:', error);
 
         // Revert optimistic update on error
         setSavedPropertyIds((prev) => new Set([...prev, propertyId]));
@@ -392,7 +384,6 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
           await Promise.all([loadFolders(), loadSavedProperties()]);
           setIsInitialized(true);
         } catch (error) {
-          console.error('Failed to initialize saved properties data:', error);
         }
       };
 

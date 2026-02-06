@@ -320,8 +320,7 @@ export default function SubscriptionsScreen() {
                                 try {
                                     const response = await api.get('/api/billing/debug-subscription', { oxyServices, activeSessionId: activeSessionId || undefined });
                                     if (response.data.success) {
-                                        console.log('🔍 Debug info:', response.data.debugInfo);
-                                        Alert.alert(
+                                            Alert.alert(
                                             'Debug Info',
                                             `Database Active: ${response.data.debugInfo.database.plusActive}\n` +
                                             `Stripe Status: ${response.data.debugInfo.stripe?.status || 'Error'}\n` +

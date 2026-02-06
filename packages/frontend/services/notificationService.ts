@@ -113,7 +113,6 @@ class NotificationService {
       const response = await this.getNotifications({ unreadOnly: true, limit: 1 });
       return response.total;
     } catch (error) {
-      console.error('Failed to get unread count:', error);
       return 0;
     }
   }
@@ -123,7 +122,6 @@ class NotificationService {
       const response = await this.getNotifications({ type, limit });
       return response.notifications;
     } catch (error) {
-      console.error(`Failed to get notifications by type ${type}:`, error);
       return [];
     }
   }
@@ -133,7 +131,6 @@ class NotificationService {
       const response = await this.getNotifications({ priority: 'high', limit });
       return response.notifications;
     } catch (error) {
-      console.error('Failed to get high priority notifications:', error);
       return [];
     }
   }

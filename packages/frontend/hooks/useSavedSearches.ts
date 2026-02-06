@@ -137,7 +137,6 @@ export const useSavedSearches = (): {
 
       setSearches(normalized);
     } catch (error: any) {
-      console.error('Failed to fetch saved searches:', error);
       setError(error.message || 'Failed to fetch saved searches');
     } finally {
       setLoading(false);
@@ -181,7 +180,6 @@ export const useSavedSearches = (): {
         });
         return true;
       } catch (error: any) {
-        console.error('Failed to save search:', error);
         // onError already handled toast/error
         return false;
       }
@@ -204,7 +202,6 @@ export const useSavedSearches = (): {
         toast.success(`Search ${searchName ? `"${searchName}"` : ''} deleted successfully`);
         return true;
       } catch (error: any) {
-        console.error('Failed to delete search:', error);
         const errorMessage = error.message || 'Failed to delete search';
         toast.error(errorMessage);
         setError(errorMessage);
@@ -231,7 +228,6 @@ export const useSavedSearches = (): {
         toast.success('Search updated successfully');
         return true;
       } catch (error: any) {
-        console.error('Failed to update search:', error);
         const errorMessage = error.message || 'Failed to update search';
         toast.error(errorMessage);
         setError(errorMessage);
@@ -260,7 +256,6 @@ export const useSavedSearches = (): {
         );
         return true;
       } catch (error: any) {
-        console.error('Failed to toggle notifications:', error);
         const message =
           error && typeof error === 'object' && typeof (error as any).message === 'string'
             ? (error as any).message

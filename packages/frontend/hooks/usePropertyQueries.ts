@@ -285,7 +285,6 @@ export const useUserProperties = (profileId?: string) => {
       try {
         setLoading('properties', true);
         setError(null);
-        console.log('Fetching user properties');
 
         // Use propertyService to get owner properties
         const response = await propertyService.getOwnerProperties(profileId);
@@ -304,12 +303,10 @@ export const useUserProperties = (profileId?: string) => {
           totalPages: result.totalPages,
         });
 
-        console.log(`Successfully fetched ${result.properties.length} user properties`);
         return result;
       } catch (error: any) {
         const errorMessage = error.message || 'Failed to fetch user properties';
         setError(errorMessage);
-        console.error('Error fetching user properties:', error);
         return { properties: [], total: 0, page: 1, totalPages: 1 };
       } finally {
         setLoading('properties', false);

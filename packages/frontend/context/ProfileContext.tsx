@@ -47,8 +47,6 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
   // Memoize load profiles function with better error handling
   const loadProfiles = useCallback(async () => {
     try {
-      console.log('ProfileContext: Loading profiles for authenticated user');
-      
       // Load both primary profile and all profiles concurrently
       const [primaryProfileResult, userProfilesResult] = await Promise.allSettled([
         useProfileStore.getState().fetchPrimaryProfile(),
@@ -57,20 +55,15 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
       // Handle primary profile result
       if (primaryProfileResult.status === 'rejected') {
-        console.error('ProfileContext: Failed to fetch primary profile:', primaryProfileResult.reason);
       }
 
       // Handle user profiles result
       if (userProfilesResult.status === 'rejected') {
-        console.error('ProfileContext: Failed to fetch user profiles:', userProfilesResult.reason);
       }
 
       // Mark as initialized even if some calls failed
       setIsInitialized(true);
-      
-      console.log('ProfileContext: Profiles loaded successfully');
     } catch (err: any) {
-      console.error('ProfileContext: Error loading profiles:', err);
       setError(err.message || 'Failed to load profiles');
       setIsInitialized(true); // Still mark as initialized to prevent infinite loading
     }
@@ -87,14 +80,11 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
 
     if (isAuthenticated && oxyServices && activeSessionId) {
-      console.log('ProfileContext: User authenticated, loading profiles...');
       loadProfiles().catch(error => {
         if (mounted) {
-          console.error('ProfileContext: Failed to load profiles:', error);
         }
       });
     } else if (!isAuthenticated) {
-      console.log('ProfileContext: User not authenticated, clearing profiles');
       setPrimaryProfile(null);
       setAllProfiles([]);
       setIsInitialized(false);
@@ -159,7 +149,6 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
       // The store handles state updates, we just return the result
       return activatedProfile;
     } catch (error) {
-      console.error('ProfileContext: Profile activation failed:', error);
       throw error;
     }
   }, [storeActivateProfile]);
@@ -168,7 +157,6 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
   const refetch = useCallback(() => {
     if (isAuthenticated && oxyServices && activeSessionId) {
       loadProfiles().catch(error => {
-        console.error('ProfileContext: Refetch failed:', error);
       });
     }
   }, [isAuthenticated, oxyServices, activeSessionId, loadProfiles]);

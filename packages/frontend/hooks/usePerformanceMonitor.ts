@@ -15,10 +15,6 @@ export function usePerformanceMonitor(componentName: string, dependencies?: any[
       const timeSinceLastRender = now - lastRenderTime.current;
       lastRenderTime.current = now;
 
-      console.log(
-        `🔄 ${componentName} rendered #${renderCount.current} (${timeSinceLastRender}ms since last render)`,
-        dependencies ? `Dependencies: ${JSON.stringify(dependencies)}` : ''
-      );
     }
   });
 
@@ -26,7 +22,6 @@ export function usePerformanceMonitor(componentName: string, dependencies?: any[
   useEffect(() => {
     return () => {
       if (__DEV__) {
-        console.log(`🗑️ ${componentName} unmounted after ${renderCount.current} renders`);
       }
     };
   }, [componentName]);
@@ -51,7 +46,6 @@ export function usePerformanceTimer() {
       const startTime = timers.current.get(name);
       if (startTime) {
         const duration = performance.now() - startTime;
-        console.log(`⏱️ ${name} took ${duration.toFixed(2)}ms`);
         timers.current.delete(name);
       }
     }

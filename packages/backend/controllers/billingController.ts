@@ -84,7 +84,6 @@ export async function createCheckoutSession(req: Request, res: Response) {
 
     return res.json({ success: true, url: session.url, id: session.id });
   } catch (error: any) {
-    console.error('Stripe checkout session error:', error);
     return res.status(500).json({ success: false, error: { message: error.message || 'Failed to create checkout session' }});
   }
 }
@@ -93,61 +92,40 @@ export async function stripeWebhook(req: Request, res: Response) {
   const sig = req.headers['stripe-signature'] as string;
   const webhookSecret = config.stripe?.webhookSecret;
   const stripe = getStripe();
-  
-  console.log('🔔 Stripe webhook received:', {
-    hasSignature: !!sig,
-    hasWebhookSecret: !!webhookSecret,
-    hasStripe: !!stripe,
-    contentType: req.headers['content-type'],
-    hasRawBody: !!(req as any).rawBody || !!(req as any).bodyRaw || !!(req as any).body
-  });
-  
+
   if (!stripe) return res.status(501).json({ success: false, error: { message: 'Stripe not configured' }});
   if (!webhookSecret) return res.status(500).json({ success: false, error: { message: 'Webhook secret not configured' }});
 
+  // Only use rawBody for signature verification — never fall back to parsed body
+  const rawBody = (req as any).rawBody;
+  if (!rawBody) return res.status(400).json({ success: false, error: { message: 'Missing raw body for signature verification' }});
+
   let event;
   try {
-    // raw body is required; ensure server.ts skips JSON parsing for this route
-    event = stripe.webhooks.constructEvent((req as any).rawBody || (req as any).bodyRaw || (req as any).body, sig, webhookSecret);
-    console.log('✅ Webhook signature verified, event type:', event.type);
+    event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
   } catch (err: any) {
-    console.error('❌ Webhook signature verification failed:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
   try {
-    console.log('🔔 Processing webhook event:', event.type);
-    
+
     switch (event.type) {
       case 'checkout.session.completed': {
         const session: any = event.data.object;
         const product = session.metadata?.product;
         const oxyUserId = session.client_reference_id || session.metadata?.oxyUserId;
-        
-        console.log('💰 Checkout session completed:', {
-          sessionId: session.id,
-          product,
-          oxyUserId,
-          paymentStatus: session.payment_status,
-          status: session.status,
-          subscriptionId: session.subscription
-        });
-        
+
         if (!oxyUserId) {
-          console.error('❌ No oxyUserId found in session:', session);
           break;
         }
-        
+
         // Idempotent update using processedSessions guard
         const sessionId = String(session.id);
-        
+
         if (product === 'file') {
-          console.log('📄 Processing file credit purchase for user:', oxyUserId);
-          
           // Ensure billing record exists
           let billing = await Billing.findOne({ oxyUserId });
           if (!billing) {
-            console.log('📝 Creating billing record for user:', oxyUserId);
             billing = new Billing({
               oxyUserId,
               plusActive: false,
@@ -156,25 +134,21 @@ export async function stripeWebhook(req: Request, res: Response) {
             });
             await billing.save();
           }
-          
+
           const result = await Billing.updateOne(
             { oxyUserId, 'processedSessions': { $ne: sessionId } },
-            { 
-              $set: { 
+            {
+              $set: {
                 'lastPaymentAt': new Date(),
-              }, 
-              $inc: { 'fileCredits': 1 }, 
+              },
+              $inc: { 'fileCredits': 1 },
               $addToSet: { 'processedSessions': sessionId }
             }
           );
-          console.log('📄 File credit update result:', result);
         } else if (product === 'plus') {
-          console.log('⭐ Processing Plus subscription for user:', oxyUserId);
-          
           // Ensure billing record exists
           let billing = await Billing.findOne({ oxyUserId });
           if (!billing) {
-            console.log('📝 Creating billing record for user:', oxyUserId);
             billing = new Billing({
               oxyUserId,
               plusActive: false,
@@ -183,40 +157,32 @@ export async function stripeWebhook(req: Request, res: Response) {
             });
             await billing.save();
           }
-          
-          const setUpdate: any = { 
-            'lastPaymentAt': new Date(), 
-            'plusActive': true, 
-            'plusSince': new Date() 
+
+          const setUpdate: any = {
+            'lastPaymentAt': new Date(),
+            'plusActive': true,
+            'plusSince': new Date()
           };
-          
+
           if (session.subscription) {
             setUpdate['plusStripeSubscriptionId'] = String(session.subscription);
           }
-          
+
           const result = await Billing.updateOne(
             { oxyUserId, 'processedSessions': { $ne: sessionId } },
-            { 
-              $set: setUpdate, 
+            {
+              $set: setUpdate,
               $addToSet: { 'processedSessions': sessionId }
             }
           );
-          console.log('⭐ Plus subscription update result:', result);
-          
+
           // Verify the update worked
           const updatedProfile = await Billing.findOne({ oxyUserId }).lean();
-          console.log('✅ Profile billing after update:', updatedProfile);
-          
-          if (result.modifiedCount === 0) {
-            console.warn('⚠️ No documents were modified. Session may have been processed already.');
-          }
+
         } else if (product === 'founder') {
-          console.log('💝 Processing Founder supporter for user:', oxyUserId);
-          
           // Ensure billing record exists
           let billing = await Billing.findOne({ oxyUserId });
           if (!billing) {
-            console.log('📝 Creating billing record for user:', oxyUserId);
             billing = new Billing({
               oxyUserId,
               plusActive: false,
@@ -225,43 +191,39 @@ export async function stripeWebhook(req: Request, res: Response) {
             });
             await billing.save();
           }
-          
+
           const result = await Billing.updateOne(
             { oxyUserId, 'processedSessions': { $ne: sessionId } },
-            { 
-              $set: { 
+            {
+              $set: {
                 'lastPaymentAt': new Date(),
                 'founderSupporter': true,
                 'founderSince': new Date()
-              }, 
+              },
               $addToSet: { 'processedSessions': sessionId }
             }
           );
-          console.log('💝 Founder supporter update result:', result);
         }
         break;
       }
       case 'customer.subscription.updated': {
         const sub: any = event.data.object;
         const subId = sub.id;
-        console.log('📝 Subscription updated:', subId, 'cancel_at_period_end:', sub.cancel_at_period_end);
-        
+
         if (subId) {
           const updateData: any = {};
-          
+
           // If subscription is set to cancel at period end, mark it as canceled
           if (sub.cancel_at_period_end && sub.canceled_at) {
             updateData.plusActive = false;
             updateData.plusCanceledAt = new Date(sub.canceled_at * 1000); // Convert timestamp to Date
-            console.log('❌ Marking subscription as canceled at period end:', subId);
           }
-          
+
           if (Object.keys(updateData).length > 0) {
             const result = await Billing.updateMany(
-              { 'plusStripeSubscriptionId': subId }, 
+              { 'plusStripeSubscriptionId': subId },
               { $set: updateData }
             );
-            console.log('📝 Subscription update result:', result);
           }
         }
         break;
@@ -269,15 +231,13 @@ export async function stripeWebhook(req: Request, res: Response) {
       case 'invoice.payment_succeeded': {
         const invoice: any = event.data.object;
         const subId = invoice.subscription;
-        console.log('✅ Payment succeeded for subscription:', subId);
-        
+
         if (subId) {
           // Update last payment date for active subscriptions
           const result = await Billing.updateMany(
-            { 'plusStripeSubscriptionId': subId, 'plusActive': true }, 
+            { 'plusStripeSubscriptionId': subId, 'plusActive': true },
             { $set: { 'lastPaymentAt': new Date() } }
           );
-          console.log('✅ Payment update result:', result);
         }
         break;
       }
@@ -285,56 +245,40 @@ export async function stripeWebhook(req: Request, res: Response) {
       case 'customer.subscription.deleted': {
         const sub: any = event.data.object;
         const subId = sub.id || sub.subscription;
-        console.log('❌ Subscription cancelled/failed:', subId);
-        
+
         if (subId) {
           const result = await Billing.updateMany(
-            { 'plusStripeSubscriptionId': subId }, 
-            { 
-              $set: { 
+            { 'plusStripeSubscriptionId': subId },
+            {
+              $set: {
                 'plusActive': false,
                 'plusCanceledAt': new Date()
-              } 
+              }
             }
           );
-          console.log('❌ Deactivated subscription result:', result);
         }
         break;
       }
       default:
-        console.log('ℹ️ Unhandled webhook event type:', event.type);
         break;
     }
     return res.json({ received: true });
   } catch (err: any) {
-    console.error('❌ Webhook handling error:', err);
     return res.status(500).json({ error: 'Webhook handler failure' });
   }
 }
 
 export async function confirmCheckoutSession(req: Request, res: Response) {
   try {
-    console.log('🔔 Confirm checkout session called:', req.body);
-    
     const stripe = requireStripe(res);
     if (!stripe) return;
     const { session_id } = (req.body || {}) as { session_id?: string };
     if (!session_id) return res.status(400).json({ success: false, error: { message: 'Missing session_id' }});
 
-    console.log('🔍 Retrieving Stripe session:', session_id);
     const session = await stripe.checkout.sessions.retrieve(session_id, { expand: ['subscription'] });
     if (!session) return res.status(404).json({ success: false, error: { message: 'Session not found' }});
 
-    console.log('✅ Session retrieved:', {
-      id: session.id,
-      status: session.status,
-      paymentStatus: session.payment_status,
-      product: (session.metadata as any)?.product,
-      oxyUserId: (session.client_reference_id as string) || (session.metadata as any)?.oxyUserId
-    });
-
     if (session.payment_status !== 'paid' && session.status !== 'complete') {
-      console.log('❌ Session not completed:', { paymentStatus: session.payment_status, status: session.status });
       return res.status(409).json({ success: false, error: { message: 'Session not completed' }});
     }
 
@@ -342,14 +286,11 @@ export async function confirmCheckoutSession(req: Request, res: Response) {
     const oxyUserId = (session.client_reference_id as string) || (session.metadata as any)?.oxyUserId;
     if (!product || !oxyUserId) return res.status(400).json({ success: false, error: { message: 'Missing product/oxyUserId in session' }});
 
-    console.log('💰 Processing confirmed session:', { product, oxyUserId });
-
     const sessionId = String(session.id);
-    
+
     // Ensure billing record exists
     let billing = await Billing.findOne({ oxyUserId });
     if (!billing) {
-      console.log('📝 Creating billing record for user:', oxyUserId);
       billing = new Billing({
         oxyUserId,
         plusActive: false,
@@ -358,53 +299,46 @@ export async function confirmCheckoutSession(req: Request, res: Response) {
       });
       await billing.save();
     }
-    
+
     if (product === 'file') {
-      console.log('📄 Processing file credit purchase');
       const result = await Billing.updateOne(
         { oxyUserId, 'processedSessions': { $ne: sessionId } },
-        { 
-          $set: { 'lastPaymentAt': new Date() }, 
-          $inc: { 'fileCredits': 1 }, 
+        {
+          $set: { 'lastPaymentAt': new Date() },
+          $inc: { 'fileCredits': 1 },
           $addToSet: { 'processedSessions': sessionId }
         }
       );
-      console.log('📄 File credit update result:', result);
     } else if (product === 'plus') {
-      console.log('⭐ Processing Plus subscription');
-      
-      const setUpdate: any = { 
-        'lastPaymentAt': new Date(), 
+      const setUpdate: any = {
+        'lastPaymentAt': new Date(),
         'plusActive': true,
         'plusSince': new Date()
       };
-      
+
       if (session.subscription) {
         setUpdate['plusStripeSubscriptionId'] = String(session.subscription['id'] || session.subscription);
       }
-      
+
       const result = await Billing.updateOne(
         { oxyUserId, 'processedSessions': { $ne: sessionId } },
-        { 
-          $set: setUpdate, 
+        {
+          $set: setUpdate,
           $addToSet: { 'processedSessions': sessionId }
         }
       );
-      console.log('⭐ Plus subscription update result:', result);
-      
+
       // Return current entitlements
       const updated = await Billing.findOne({ oxyUserId }).lean();
-      console.log('✅ Final entitlements:', updated);
-      
+
       if (result.modifiedCount === 0) {
-        console.warn('⚠️ No documents were modified. Session may have been processed already.');
         // Still return entitlements even if already processed
         const billingRecord = await Billing.findOne({ oxyUserId }).lean();
         return res.json({ success: true, entitlements: billingRecord });
       }
-      
-      return res.json({ 
-        success: true, 
+
+      return res.json({
+        success: true,
         entitlements: updated || {
           plusActive: false,
           fileCredits: 0,
@@ -413,24 +347,21 @@ export async function confirmCheckoutSession(req: Request, res: Response) {
         }
       });
     } else if (product === 'founder') {
-      console.log('💝 Processing Founder supporter');
-      
       const result = await Billing.updateOne(
         { oxyUserId, 'processedSessions': { $ne: sessionId } },
-        { 
-          $set: { 
+        {
+          $set: {
             'lastPaymentAt': new Date(),
             'founderSupporter': true,
             'founderSince': new Date()
-          }, 
+          },
           $addToSet: { 'processedSessions': sessionId }
         }
       );
-      console.log('💝 Founder supporter update result:', result);
-      
+
       const updated = await Billing.findOne({ oxyUserId }).lean();
-      return res.json({ 
-        success: true, 
+      return res.json({
+        success: true,
         entitlements: updated || {
           founderSupporter: true,
           founderSince: new Date(),
@@ -439,10 +370,9 @@ export async function confirmCheckoutSession(req: Request, res: Response) {
         }
       });
     }
-    
+
     return res.json({ success: true, message: 'Session processed successfully' });
   } catch (error: any) {
-    console.error('Confirm checkout session error:', error);
     return res.status(500).json({ success: false, error: { message: error.message || 'Failed to confirm session' }});
   }
 }
@@ -460,10 +390,9 @@ export async function testWebhookConfig(req: Request, res: Response) {
       successUrl: process.env.STRIPE_SUCCESS_URL || `${process.env.API_URL || 'http://localhost:3000'}/payments/success`,
       cancelUrl: process.env.STRIPE_CANCEL_URL || `${process.env.API_URL || 'http://localhost:3000'}/profile/subscriptions`
     };
-    
+
     return res.json({ success: true, config });
   } catch (err: any) {
-    console.error('Test webhook config error:', err);
     return res.status(500).json({ success: false, error: { message: err.message }});
   }
 }
@@ -495,15 +424,12 @@ export async function debugBillingStatus(req: Request, res: Response) {
       processedSessionsCount: (billing.processedSessions || []).length
     };
 
-    console.log('🔍 Billing debug info for user:', oxyUserId, billingInfo);
-
-    return res.json({ 
-      success: true, 
+    return res.json({
+      success: true,
       billing: billingInfo,
       message: billingInfo.plusActive ? 'Plus subscription is active' : 'Plus subscription is not active'
     });
   } catch (err: any) {
-    console.error('❌ Debug billing status error:', err);
     return res.status(500).json({ success: false, error: { message: err.message || 'Failed to get billing status' }});
   }
 }
@@ -517,8 +443,6 @@ export async function debugSubscriptionStatus(req: Request, res: Response) {
     if (!oxyUserId) {
       return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }});
     }
-
-    console.log('🔍 Debugging subscription status for user:', oxyUserId);
 
     // Find the billing record
     const billing = await Billing.findOne({ oxyUserId });
@@ -571,11 +495,10 @@ export async function debugSubscriptionStatus(req: Request, res: Response) {
 
     return res.json({ success: true, debugInfo });
   } catch (error: any) {
-    console.error('Debug subscription error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: { 
-        message: error.message || 'Internal server error', 
+    return res.status(500).json({
+      success: false,
+      error: {
+        message: error.message || 'Internal server error',
         code: 'INTERNAL_ERROR'
       }
     });
@@ -594,12 +517,9 @@ export async function manuallyActivateSubscription(req: Request, res: Response) 
       return res.status(400).json({ success: false, error: { message: 'Missing session_id' }});
     }
 
-    console.log('🔧 Manual subscription activation:', { oxyUserId, session_id, product });
-
     // Find or create billing record for this user
     let billing = await Billing.findOne({ oxyUserId });
     if (!billing) {
-      console.log('📝 Creating new billing record for user:', oxyUserId);
       billing = new Billing({
         oxyUserId,
         plusActive: false,
@@ -609,12 +529,11 @@ export async function manuallyActivateSubscription(req: Request, res: Response) 
     }
 
     const sessionId = String(session_id);
-    
+
     // Check if already processed
     if (billing.processedSessions?.includes(sessionId)) {
-      console.log('⚠️ Session already processed:', sessionId);
-      return res.json({ 
-        success: true, 
+      return res.json({
+        success: true,
         entitlements: billing.toObject(),
         message: 'Subscription already activated'
       });
@@ -627,13 +546,11 @@ export async function manuallyActivateSubscription(req: Request, res: Response) 
       billing.lastPaymentAt = new Date();
       billing.processedSessions = billing.processedSessions || [];
       billing.processedSessions.push(sessionId);
-      
+
       await billing.save();
-      
-      console.log('✅ Plus subscription manually activated for user:', oxyUserId);
-      
-      return res.json({ 
-        success: true, 
+
+      return res.json({
+        success: true,
         entitlements: billing.toObject(),
         message: 'Plus subscription activated successfully'
       });
@@ -643,13 +560,11 @@ export async function manuallyActivateSubscription(req: Request, res: Response) 
       billing.lastPaymentAt = new Date();
       billing.processedSessions = billing.processedSessions || [];
       billing.processedSessions.push(sessionId);
-      
+
       await billing.save();
-      
-      console.log('✅ File credit manually added for user:', oxyUserId);
-      
-      return res.json({ 
-        success: true, 
+
+      return res.json({
+        success: true,
         entitlements: billing.toObject(),
         message: 'File credit added successfully'
       });
@@ -657,7 +572,6 @@ export async function manuallyActivateSubscription(req: Request, res: Response) 
 
     return res.status(400).json({ success: false, error: { message: 'Invalid product type' }});
   } catch (err: any) {
-    console.error('❌ Manual activation error:', err);
     return res.status(500).json({ success: false, error: { message: err.message || 'Failed to activate subscription' }});
   }
 }
@@ -697,34 +611,31 @@ export async function createCustomerPortalSession(req: Request, res: Response) {
 
             return res.json({ success: true, url: session.url });
         } catch (stripeError: any) {
-            console.error('Stripe customer portal error:', stripeError);
-            
             // Check if it's a configuration error
             if (stripeError.message && stripeError.message.includes('No configuration provided')) {
-                return res.status(503).json({ 
-                    success: false, 
-                    error: { 
+                return res.status(503).json({
+                    success: false,
+                    error: {
                         message: 'Customer portal not configured. Please contact support to manage your subscription.',
                         code: 'PORTAL_NOT_CONFIGURED'
                     }
                 });
             }
-            
+
             // For other Stripe errors, return a generic error
-            return res.status(500).json({ 
-                success: false, 
-                error: { 
+            return res.status(500).json({
+                success: false,
+                error: {
                     message: 'Unable to access subscription management. Please contact support.',
                     code: 'STRIPE_ERROR'
                 }
             });
         }
     } catch (error: any) {
-        console.error('Customer portal session error:', error);
-        return res.status(500).json({ 
-            success: false, 
-            error: { 
-                message: 'Internal server error', 
+        return res.status(500).json({
+            success: false,
+            error: {
+                message: 'Internal server error',
                 code: 'INTERNAL_ERROR'
             }
         });
@@ -738,19 +649,15 @@ export async function manuallyCancelSubscription(req: Request, res: Response) {
       return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }});
     }
 
-    console.log('🔧 Manually canceling subscription for user:', oxyUserId);
-
     const result = await Billing.updateOne(
       { oxyUserId },
-      { 
-        $set: { 
+      {
+        $set: {
           'plusActive': false,
           'plusCanceledAt': new Date()
-        } 
+        }
       }
     );
-
-    console.log('🔧 Manual cancellation result:', result);
 
     if (result.modifiedCount === 0) {
       return res.status(404).json({ success: false, error: { message: 'No subscription found to cancel' }});
@@ -760,11 +667,10 @@ export async function manuallyCancelSubscription(req: Request, res: Response) {
     const updated = await Billing.findOne({ oxyUserId }).lean();
     return res.json({ success: true, entitlements: updated });
   } catch (error: any) {
-    console.error('Manual cancellation error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: { 
-        message: 'Internal server error', 
+    return res.status(500).json({
+      success: false,
+      error: {
+        message: 'Internal server error',
         code: 'INTERNAL_ERROR'
       }
     });
@@ -781,20 +687,11 @@ export async function syncSubscriptionStatus(req: Request, res: Response) {
       return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }});
     }
 
-    console.log('🔄 Syncing subscription status for user:', oxyUserId);
-
     // Find the billing record
     const billing = await Billing.findOne({ oxyUserId });
     if (!billing) {
       return res.status(404).json({ success: false, error: { message: 'No billing record found' }});
     }
-
-    console.log('🔄 Current billing record:', {
-      oxyUserId: billing.oxyUserId,
-      plusActive: billing.plusActive,
-      plusStripeSubscriptionId: billing.plusStripeSubscriptionId,
-      plusCanceledAt: billing.plusCanceledAt
-    });
 
     if (!billing.plusStripeSubscriptionId) {
       return res.status(404).json({ success: false, error: { message: 'No subscription ID found' }});
@@ -804,18 +701,10 @@ export async function syncSubscriptionStatus(req: Request, res: Response) {
     let subscription;
     try {
       subscription = await stripe.subscriptions.retrieve(billing.plusStripeSubscriptionId);
-      console.log('🔄 Stripe subscription status:', {
-        id: subscription.id,
-        status: subscription.status,
-        cancel_at_period_end: subscription.cancel_at_period_end,
-        canceled_at: subscription.canceled_at,
-        current_period_end: subscription.current_period_end
-      });
     } catch (stripeError: any) {
-      console.error('🔄 Stripe error:', stripeError);
-      return res.status(404).json({ 
-        success: false, 
-        error: { 
+      return res.status(404).json({
+        success: false,
+        error: {
           message: `Subscription not found in Stripe: ${stripeError.message}`,
           code: 'SUBSCRIPTION_NOT_FOUND'
         }
@@ -824,28 +713,25 @@ export async function syncSubscriptionStatus(req: Request, res: Response) {
 
     const updateData: any = {};
     let statusChanged = false;
-    
+
     // Update based on Stripe status
     if (subscription.cancel_at_period_end && subscription.canceled_at) {
       if (!billing.plusCanceledAt || billing.plusActive) {
         updateData.plusCanceledAt = new Date(subscription.canceled_at * 1000);
         updateData.plusActive = false;
         statusChanged = true;
-        console.log('❌ Marking as canceled at period end');
       }
     } else if (subscription.status === 'active' && !subscription.cancel_at_period_end) {
       if (!billing.plusActive || billing.plusCanceledAt) {
         updateData.plusActive = true;
         updateData.plusCanceledAt = undefined;
         statusChanged = true;
-        console.log('✅ Marking as active');
       }
     } else if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
       if (billing.plusActive || !billing.plusCanceledAt) {
         updateData.plusActive = false;
         updateData.plusCanceledAt = new Date();
         statusChanged = true;
-        console.log('❌ Marking as canceled');
       }
     }
 
@@ -854,15 +740,12 @@ export async function syncSubscriptionStatus(req: Request, res: Response) {
         { oxyUserId },
         { $set: updateData }
       );
-      console.log('🔄 Database update result:', result);
-    } else {
-      console.log('🔄 No changes needed - status already up to date');
     }
 
     // Return updated entitlements
     const updated = await Billing.findOne({ oxyUserId }).lean();
-    return res.json({ 
-      success: true, 
+    return res.json({
+      success: true,
       entitlements: updated,
       syncInfo: {
         stripeStatus: subscription.status,
@@ -873,11 +756,10 @@ export async function syncSubscriptionStatus(req: Request, res: Response) {
       }
     });
   } catch (error: any) {
-    console.error('Sync subscription error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: { 
-        message: error.message || 'Internal server error', 
+    return res.status(500).json({
+      success: false,
+      error: {
+        message: error.message || 'Internal server error',
         code: 'INTERNAL_ERROR'
       }
     });
@@ -891,12 +773,10 @@ export async function cancelSubscription(req: Request, res: Response) {
 
     const { immediate = false } = req.body;
     const oxyUserId = (req as any)?.user?.id || (req as any)?.user?._id;
-    
+
     if (!oxyUserId) {
       return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }});
     }
-
-    console.log('🔧 Canceling subscription for user:', oxyUserId, 'immediate:', immediate);
 
     // Find the billing record to get the subscription ID
     const billing = await Billing.findOne({ oxyUserId });
@@ -905,9 +785,8 @@ export async function cancelSubscription(req: Request, res: Response) {
     }
 
     // Cancel the subscription in Stripe
-    console.log('🔧 Canceling subscription in Stripe:', billing.plusStripeSubscriptionId);
     let canceledSubscription;
-    
+
     if (immediate) {
       // Cancel immediately
       canceledSubscription = await stripe.subscriptions.cancel(billing.plusStripeSubscriptionId);
@@ -918,16 +797,9 @@ export async function cancelSubscription(req: Request, res: Response) {
       });
     }
 
-    console.log('🔧 Stripe cancellation result:', {
-      id: canceledSubscription.id,
-      status: canceledSubscription.status,
-      cancel_at_period_end: canceledSubscription.cancel_at_period_end,
-      canceled_at: canceledSubscription.canceled_at
-    });
-
     // Update the database to reflect the cancellation
     const updateData: any = {};
-    
+
     if (immediate) {
       updateData.plusActive = false;
       updateData.plusCanceledAt = new Date(canceledSubscription.canceled_at * 1000);
@@ -941,17 +813,14 @@ export async function cancelSubscription(req: Request, res: Response) {
       { $set: updateData }
     );
 
-    console.log('🔧 Database update result:', result);
-
     // Return updated entitlements
     const updated = await Billing.findOne({ oxyUserId }).lean();
     return res.json({ success: true, entitlements: updated });
   } catch (error: any) {
-    console.error('Cancel subscription error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: { 
-        message: error.message || 'Failed to cancel subscription', 
+    return res.status(500).json({
+      success: false,
+      error: {
+        message: error.message || 'Failed to cancel subscription',
         code: 'CANCEL_ERROR'
       }
     });
@@ -964,12 +833,10 @@ export async function reactivateSubscription(req: Request, res: Response) {
     if (!stripe) return;
 
     const oxyUserId = (req as any)?.user?.id || (req as any)?.user?._id;
-    
+
     if (!oxyUserId) {
       return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }});
     }
-
-    console.log('🔄 Reactivating subscription for user:', oxyUserId);
 
     // Find the billing record to get the subscription ID
     const billing = await Billing.findOne({ oxyUserId });
@@ -978,40 +845,29 @@ export async function reactivateSubscription(req: Request, res: Response) {
     }
 
     // Reactivate the subscription in Stripe
-    console.log('🔄 Reactivating subscription in Stripe:', billing.plusStripeSubscriptionId);
     const reactivatedSubscription = await stripe.subscriptions.update(billing.plusStripeSubscriptionId, {
       cancel_at_period_end: false
-    });
-
-    console.log('🔄 Stripe reactivation result:', {
-      id: reactivatedSubscription.id,
-      status: reactivatedSubscription.status,
-      cancel_at_period_end: reactivatedSubscription.cancel_at_period_end,
-      canceled_at: reactivatedSubscription.canceled_at
     });
 
     // Update the database to reflect the reactivation
     const result = await Billing.updateOne(
       { oxyUserId },
-      { 
-        $set: { 
+      {
+        $set: {
           'plusActive': true,
           'plusCanceledAt': undefined
-        } 
+        }
       }
     );
-
-    console.log('🔄 Database update result:', result);
 
     // Return updated entitlements
     const updated = await Billing.findOne({ oxyUserId }).lean();
     return res.json({ success: true, entitlements: updated });
   } catch (error: any) {
-    console.error('Reactivate subscription error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: { 
-        message: error.message || 'Failed to reactivate subscription', 
+    return res.status(500).json({
+      success: false,
+      error: {
+        message: error.message || 'Failed to reactivate subscription',
         code: 'REACTIVATE_ERROR'
       }
     });
@@ -1020,25 +876,18 @@ export async function reactivateSubscription(req: Request, res: Response) {
 
 export async function testWebhookEndpoint(req: Request, res: Response) {
   try {
-    console.log('🔧 Testing webhook endpoint');
-    console.log('🔧 Headers:', req.headers);
-    console.log('🔧 Body:', req.body);
-    console.log('🔧 Method:', req.method);
-    console.log('🔧 URL:', req.url);
-    
-    return res.json({ 
-      success: true, 
+    return res.json({
+      success: true,
       message: 'Webhook endpoint is working',
       timestamp: new Date().toISOString(),
       headers: req.headers,
       body: req.body
     });
   } catch (error: any) {
-    console.error('Webhook test error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: { 
-        message: 'Webhook test failed', 
+    return res.status(500).json({
+      success: false,
+      error: {
+        message: 'Webhook test failed',
         code: 'WEBHOOK_TEST_ERROR'
       }
     });
