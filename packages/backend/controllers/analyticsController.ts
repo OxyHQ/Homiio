@@ -161,7 +161,6 @@ class AnalyticsController {
       );
     } catch (error) {
       // If there's a complete failure, return empty/fallback data
-      console.error('Error in getAppStats:', error);
       return res.json(
         successResponse(
           {

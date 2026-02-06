@@ -208,7 +208,6 @@ export default function () {
 
       res.json({ success: true, conversation: sharedConversation });
     } catch (error) {
-      console.error('Failed to get shared conversation:', error);
       res.status(500).json({ error: 'Failed to get shared conversation' });
     }
   }));
