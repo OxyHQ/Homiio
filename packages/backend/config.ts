@@ -22,6 +22,7 @@ export interface Config {
   database: {
     url: string;
     options: {
+      dbName: string;
       maxPoolSize: number;
       serverSelectionTimeoutMS: number;
       socketTimeoutMS: number;
@@ -117,6 +118,7 @@ const config: Config = {
   database: {
     url: process.env.MONGODB_URI || process.env.DATABASE_URL || 'mongodb://localhost:27017/homiio',
     options: {
+      dbName: `homiio-${process.env.NODE_ENV || 'development'}`,
       // Optimized for serverless environments
       maxPoolSize: process.env.VERCEL ? 1 : 10, // Smaller pool for serverless
       serverSelectionTimeoutMS: process.env.VERCEL ? 30000 : 5000, // Longer timeout for serverless
