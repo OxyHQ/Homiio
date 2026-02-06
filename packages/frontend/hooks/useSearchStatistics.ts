@@ -43,7 +43,6 @@ export const useSearchStatistics = () => {
           });
         }
       } catch (error) {
-        console.error('Failed to fetch search statistics:', error);
         // Return fallback data if API fails
         const fallbackData = {
           totalSearches: 0,

@@ -145,7 +145,6 @@ conversationSchema.virtual('lastMessage').get(function() {
 
 // Pre-save middleware to update analytics
 conversationSchema.pre('save', function(next) {
-  console.log('Pre-save middleware - messages count:', this.messages ? this.messages.length : 0);
   if (this.messages) {
     this.analytics.messageCount = this.messages.length;
     this.analytics.lastActivity = new Date();
@@ -165,20 +164,10 @@ conversationSchema.pre('save', function(next) {
   next();
 });
 
-// Post-save middleware to debug
 conversationSchema.post('save', function(doc) {
-  console.log('Post-save middleware - saved conversation messages count:', doc.messages ? doc.messages.length : 0);
 });
 
-// Add validation debugging to conversation schema
 conversationSchema.pre('validate', function(next) {
-  console.log('Conversation validation - messages count:', this.messages ? this.messages.length : 0);
-  if (this.messages && this.messages.length > 0) {
-    console.log('Conversation validation - first message:', {
-      role: this.messages[0].role,
-      content: this.messages[0].content ? this.messages[0].content.substring(0, 50) : 'undefined'
-    });
-  }
   next();
 });
 
@@ -214,20 +203,14 @@ conversationSchema.statics.createConversation = function(profileId, data) {
 
 // Instance methods
 conversationSchema.methods.addMessage = function(role, content, attachments = []) {
-  console.log('addMessage called with:', { role, content: content.substring(0, 50), attachmentsCount: attachments.length });
-  console.log('Messages before adding:', this.messages.length);
-  
   this.messages.push({
     role,
     content,
     attachments,
     timestamp: new Date(),
   });
-  
-  console.log('Messages after adding:', this.messages.length);
-  console.log('About to save conversation with messages:', this.messages.length);
+
   return this.save().then(savedDoc => {
-    console.log('Conversation saved successfully. Messages in saved doc:', savedDoc.messages.length);
     return savedDoc;
   });
 };

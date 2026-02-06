@@ -10,13 +10,6 @@ const storage = multer.memoryStorage();
 
 // File filter to only allow images
 const fileFilter = (req: Request, file: any, cb: multer.FileFilterCallback) => {
-  console.log('File filter called with:', {
-    fieldname: file.fieldname,
-    originalname: file.originalname,
-    mimetype: file.mimetype,
-    size: file.size
-  });
-  
   const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
   
   if (allowedMimeTypes.includes(file.mimetype)) {
@@ -54,32 +47,12 @@ const testUpload = multer({
   },
 });
 
-// Debug middleware to log request details
+// Debug middleware (no-op)
 const debugMulter = (req: any, res: any, next: any) => {
-  console.log('=== MULTER DEBUG START ===');
-  console.log('Multer debug - Request details:', {
-    method: req.method,
-    url: req.url,
-    contentType: req.headers['content-type'],
-    body: req.body,
-    files: req.files,
-    fileCount: req.files?.length || 0,
-    rawBody: req.body ? Object.keys(req.body) : 'no body'
-  });
-  console.log('=== MULTER DEBUG END ===');
   next();
 };
 
-// Debug middleware to log after multer processing
 const debugAfterMulter = (req: any, res: any, next: any) => {
-  console.log('=== AFTER MULTER DEBUG ===');
-  console.log('After multer - Request details:', {
-    body: req.body,
-    files: req.files,
-    fileCount: req.files?.length || 0,
-    fileNames: req.files?.map((f: any) => f.originalname) || []
-  });
-  console.log('=== AFTER MULTER DEBUG END ===');
   next();
 };
 

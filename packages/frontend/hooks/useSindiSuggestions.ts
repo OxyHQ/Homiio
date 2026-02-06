@@ -73,7 +73,6 @@ export function useSindiSuggestions({ property, conversationContext }: UseSindiS
                 }
 
             } catch (err) {
-                console.error('Failed to fetch AI suggestions:', err);
                 setError(err instanceof Error ? err.message : 'Failed to load suggestions');
                 setSuggestions(DEFAULT_SUGGESTIONS);
             } finally {

@@ -113,7 +113,6 @@ export function useAddressDetail(): UseAddressDetailReturn {
 
         return null;
       } catch (err) {
-        console.error('Geocoding error:', err);
         setError('Failed to geocode address');
         return null;
       } finally {
@@ -169,7 +168,6 @@ export function useAddressDetail(): UseAddressDetailReturn {
             : null,
         );
       } catch (err) {
-        console.error('Neighborhood data fetch error:', err);
         setError('Failed to fetch neighborhood data');
       } finally {
         setLoading(false);
@@ -266,7 +264,6 @@ export function useAddressDetail(): UseAddressDetailReturn {
             : null,
         );
       } catch (err) {
-        console.error('Amenities fetch error:', err);
         setError('Failed to fetch nearby amenities');
       } finally {
         setLoading(false);

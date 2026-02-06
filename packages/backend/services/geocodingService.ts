@@ -83,7 +83,6 @@ export async function reverseGeocode(longitude: number, latitude: number): Promi
     };
 
   } catch (error) {
-    console.error('Geocoding error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Geocoding failed'
@@ -150,7 +149,6 @@ export async function forwardGeocode(address: string): Promise<GeocodingResult> 
     };
 
   } catch (error) {
-    console.error('Geocoding error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Geocoding failed'

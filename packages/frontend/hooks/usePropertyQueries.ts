@@ -307,7 +307,6 @@ export const useUserProperties = (profileId?: string) => {
       } catch (error: any) {
         const errorMessage = error.message || 'Failed to fetch user properties';
         setError(errorMessage);
-        console.error('Error fetching user properties:', error);
         return { properties: [], total: 0, page: 1, totalPages: 1 };
       } finally {
         setLoading('properties', false);

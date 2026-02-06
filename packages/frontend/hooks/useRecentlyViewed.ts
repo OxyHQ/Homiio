@@ -43,7 +43,6 @@ export function useRecentlyViewed() {
     if (oxyServices && activeSessionId) {
       trackPropertyViewMutation.mutate(propertyId, {
         onError: (error) => {
-          console.error('useRecentlyViewed: Failed to track property view:', error);
         }
       });
     }
@@ -62,7 +61,6 @@ export function useRecentlyViewed() {
       try {
         await clearRecentlyViewedMutation.mutateAsync();
       } catch (error) {
-        console.error('useRecentlyViewed: Failed to clear from database:', error);
         await refetch();
       }
     }
