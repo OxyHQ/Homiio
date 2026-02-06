@@ -169,7 +169,6 @@ export default function WriteReviewPage() {
                         mapRef.current.navigateToLocation([lng, lat], 15);
                     }
                 } catch (err) {
-                    console.error('Error fetching address:', err);
                     setError('Failed to load address information');
                 } finally {
                     setLoading(false);
@@ -182,8 +181,6 @@ export default function WriteReviewPage() {
 
     // Handle address selection from map
     const handleAddressSelect = React.useCallback((address: any, coordinates: [number, number]) => {
-        console.log('handleAddressSelect received address data:', address);
-
         // Update form with coordinates
         setFormData(prev => ({
             ...prev,
@@ -345,7 +342,6 @@ export default function WriteReviewPage() {
                 Alert.alert('Error', result.error || 'Failed to submit review');
             }
         } catch (err) {
-            console.error('Error submitting review:', err);
             Alert.alert('Error', 'Failed to submit review. Please try again.');
         } finally {
             setSubmitting(false);

@@ -52,26 +52,18 @@ class ProfileService {
    */
   async getOrCreatePrimaryProfile(): Promise<Profile | null> {
     try {
-      console.log('ProfileService: Fetching primary profile from /api/profiles/me');
       const response = await api.get(`${this.baseUrl}/me`);
       const profile = response.data.data; // Can be null if not created
-      console.log(
-        'ProfileService: Successfully retrieved primary profile:',
-        profile ? 'Profile exists' : 'No profile',
-      );
       return profile;
     } catch (error: any) {
       if (error instanceof ApiError && error.status === 404) {
-        console.log('ProfileService: 404 error, creating basic personal profile');
         // Create a basic personal profile if none exists
         const createResponse = await api.post(
           `${this.baseUrl}`,
           { isPersonalProfile: true },
         );
-        console.log('ProfileService: Successfully created personal profile');
         return createResponse.data.data;
       }
-      console.error('Error fetching primary profile:', error);
       throw error;
     }
   }
@@ -85,7 +77,6 @@ class ProfileService {
       const profiles = response.data.data;
       return profiles;
     } catch (error) {
-      console.error('Error getting user profiles:', error);
       throw error;
     }
   }
@@ -99,7 +90,6 @@ class ProfileService {
       const profile = response.data.data;
       return profile;
     } catch (error) {
-      console.error('Error getting profile by type:', error);
       throw error;
     }
   }
@@ -112,7 +102,6 @@ class ProfileService {
       const response = await api.post(`${this.baseUrl}`, profileData);
       return response.data.data;
     } catch (error) {
-      console.error('Error creating profile:', error);
       throw error;
     }
   }
@@ -122,16 +111,11 @@ class ProfileService {
    */
   async updatePrimaryProfile(updateData: UpdateProfileData): Promise<Profile> {
     try {
-      console.log('ProfileService: Updating primary profile with data:', updateData);
-
       const response = await api.put(`${this.baseUrl}/me`, updateData);
       const updatedProfile = response.data.data;
 
-      console.log('ProfileService: Received updated profile from server:', updatedProfile);
-
       return updatedProfile;
     } catch (error) {
-      console.error('Error updating primary profile:', error);
       throw error;
     }
   }
@@ -162,18 +146,12 @@ class ProfileService {
    */
   async updateProfile(profileId: string, updateData: UpdateProfileData): Promise<Profile> {
     try {
-      console.log('ProfileService.updateProfile called with:', { profileId, updateData });
-      console.log('Making API call to:', `${this.baseUrl}/${profileId}`);
-
       const response = await api.put(`${this.baseUrl}/${profileId}`, updateData);
-      console.log('ProfileService.updateProfile API response:', response);
 
       const updatedProfile = response.data.data;
-      console.log('ProfileService.updateProfile updated profile:', updatedProfile);
 
       return updatedProfile;
     } catch (error) {
-      console.error('ProfileService.updateProfile error:', error);
       throw error;
     }
   }
@@ -185,7 +163,6 @@ class ProfileService {
     try {
       await api.delete(`${this.baseUrl}/${profileId}`);
     } catch (error) {
-      console.error('Error deleting profile:', error);
       throw error;
     }
   }
@@ -199,7 +176,6 @@ class ProfileService {
       const memberships = response.data.data;
       return memberships;
     } catch (error) {
-      console.error('Error getting agency memberships:', error);
       throw error;
     }
   }
@@ -215,7 +191,6 @@ class ProfileService {
       });
       return response.data.data;
     } catch (error) {
-      console.error('Error adding agency member:', error);
       throw error;
     }
   }
@@ -228,7 +203,6 @@ class ProfileService {
       const response = await api.delete(`${this.baseUrl}/${profileId}/members/${memberOxyUserId}`);
       return response.data.data;
     } catch (error) {
-      console.error('Error removing agency member:', error);
       throw error;
     }
   }
@@ -244,7 +218,6 @@ class ProfileService {
       });
       return response.data.data;
     } catch (error) {
-      console.error('Error updating trust score:', error);
       throw error;
     }
   }
@@ -254,18 +227,12 @@ class ProfileService {
    */
   async activateProfile(profileId: string): Promise<Profile> {
     try {
-      console.log('ProfileService.activateProfile called with:', { profileId });
-      console.log('Making API call to:', `${this.baseUrl}/${profileId}/activate`);
-
       const response = await api.post(`${this.baseUrl}/${profileId}/activate`);
-      console.log('ProfileService.activateProfile API response:', response);
 
       const activatedProfile = response.data.data;
-      console.log('ProfileService.activateProfile activated profile:', activatedProfile);
 
       return activatedProfile;
     } catch (error) {
-      console.error('ProfileService.activateProfile error:', error);
       throw error;
     }
   }
@@ -278,7 +245,6 @@ class ProfileService {
       const response = await api.get(`${this.baseUrl}/${profileId}`);
       return response.data.data;
     } catch (error) {
-      console.error('Error getting profile by ID:', error);
       throw error;
     }
   }

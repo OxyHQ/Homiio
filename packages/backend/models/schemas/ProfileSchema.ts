@@ -750,20 +750,16 @@ profileSchema.methods.calculateTrustScore = function(forceRecalculate = false) {
   if (this.personalProfile) {
     const personal = this.personalProfile;
     
-    // Basic Information (20 points)
-    if (personal.basicInfo) {
+    // Basic Information (20 points) — uses personalInfo (schema field name)
+    if (personal.personalInfo) {
       const basicMax = 20;
       let basicScore = 0;
-      
-      if (personal.basicInfo.firstName) basicScore += 2;
-      if (personal.basicInfo.lastName) basicScore += 2;
-      if (personal.basicInfo.dateOfBirth) basicScore += 3;
-      if (personal.basicInfo.phoneNumber) basicScore += 3;
-      if (personal.basicInfo.emergencyContact) basicScore += 3;
-      if (personal.basicInfo.nationality) basicScore += 2;
-      if (personal.basicInfo.languages && personal.basicInfo.languages.length > 0) basicScore += 2;
-      if (personal.basicInfo.bio && personal.basicInfo.bio.length > 10) basicScore += 3;
-      
+
+      if (personal.personalInfo.bio && personal.personalInfo.bio.length > 10) basicScore += 5;
+      if (personal.personalInfo.occupation) basicScore += 5;
+      if (personal.personalInfo.employer) basicScore += 5;
+      if (personal.personalInfo.moveInDate) basicScore += 5;
+
       totalScore += basicScore;
       maxScore += basicMax;
       factors.push({
@@ -774,19 +770,16 @@ profileSchema.methods.calculateTrustScore = function(forceRecalculate = false) {
       });
     }
 
-    // Employment Information (25 points)
-    if (personal.employment) {
+    // Employment Information (25 points) — uses personalInfo fields (schema field names)
+    if (personal.personalInfo) {
       const employmentMax = 25;
       let employmentScore = 0;
-      
-      if (personal.employment.employmentStatus) employmentScore += 5;
-      if (personal.employment.employerName) employmentScore += 5;
-      if (personal.employment.jobTitle) employmentScore += 3;
-      if (personal.employment.employmentStartDate) employmentScore += 3;
-      if (personal.employment.monthlyIncome) employmentScore += 5;
-      if (personal.employment.employmentType) employmentScore += 2;
-      if (personal.employment.employerPhone) employmentScore += 2;
-      
+
+      if (personal.personalInfo.employmentStatus) employmentScore += 8;
+      if (personal.personalInfo.employer) employmentScore += 5;
+      if (personal.personalInfo.occupation) employmentScore += 5;
+      if (personal.personalInfo.annualIncome) employmentScore += 7;
+
       totalScore += employmentScore;
       maxScore += employmentMax;
       factors.push({

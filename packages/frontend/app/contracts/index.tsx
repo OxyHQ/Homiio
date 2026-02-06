@@ -85,12 +85,10 @@ export default function ContractsScreen() {
 
   const handleSharePress = (contractId: string) => {
     // In a real app, this would open a share dialog
-    console.log(`Sharing contract ${contractId}`);
   };
 
   const handleDownloadPress = (contractId: string) => {
     // In a real app, this would download the contract document
-    console.log(`Downloading contract ${contractId}`);
   };
 
   const handleAddNewContract = () => {

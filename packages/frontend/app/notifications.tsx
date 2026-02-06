@@ -88,7 +88,6 @@ export default function NotificationsScreen() {
         try {
             await refreshAll();
         } catch (error) {
-            console.error('Error refreshing notifications:', error);
         } finally {
             setRefreshing(false);
         }
@@ -115,7 +114,6 @@ export default function NotificationsScreen() {
                 router.push('/payments');
             }
         } catch (error) {
-            console.error('Error handling notification press:', error);
         }
     }, [markAsRead, router]);
 
@@ -134,7 +132,6 @@ export default function NotificationsScreen() {
                             await deleteNotification(notification.id);
                             toast.success(t('notification.delete.success', 'Notification deleted'));
                         } catch (error) {
-                            console.error('Error deleting notification:', error);
                             toast.error(t('notification.delete.error', 'Failed to delete notification'));
                         }
                     },
@@ -149,7 +146,6 @@ export default function NotificationsScreen() {
             await markAllAsRead();
             toast.success(t('notification.markAllRead.success', 'All notifications marked as read'));
         } catch (error) {
-            console.error('Error marking all as read:', error);
             toast.error(t('notification.markAllRead.error', 'Failed to mark all as read'));
         }
     }, [markAllAsRead, t]);
@@ -164,7 +160,6 @@ export default function NotificationsScreen() {
                 toast.error(t('notification.permissions.denied', 'Notification permissions denied'));
             }
         } catch (error) {
-            console.error('Error requesting permissions:', error);
             toast.error(t('notification.permissions.error', 'Failed to request permissions'));
         }
     }, [requestPermissions, t]);

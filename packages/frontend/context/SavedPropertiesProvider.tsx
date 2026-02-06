@@ -122,8 +122,6 @@ export function SavedPropertiesProvider({
         propertyId: operation.propertyId,
         folderId: operation.folderId,
       });
-      
-      console.log('Property saved successfully');
     },
     onError: (error: SavedPropertiesError, operation) => {
       // Revert optimistic update
@@ -134,8 +132,6 @@ export function SavedPropertiesProvider({
       
       // Emit error event
       savedPropertiesEventBus.emit('ERROR', { error });
-      
-      console.error('Failed to save property:', error.message);
     },
     onSettled: (_, __, operation) => {
       // Always clear loading state
@@ -171,8 +167,6 @@ export function SavedPropertiesProvider({
       savedPropertiesEventBus.emit('PROPERTY_UNSAVED', {
         propertyId: operation.propertyId,
       });
-      
-      console.log('Property removed from saved');
     },
     onError: (error: SavedPropertiesError, operation) => {
       // Revert optimistic update
@@ -183,8 +177,6 @@ export function SavedPropertiesProvider({
       
       // Emit error event
       savedPropertiesEventBus.emit('ERROR', { error });
-      
-      console.error('Failed to unsave property:', error.message);
     },
     onSettled: (_, __, operation) => {
       // Always clear loading state
@@ -202,12 +194,10 @@ export function SavedPropertiesProvider({
       queryClient.invalidateQueries({ queryKey: SAVED_PROPERTIES_QUERY_KEYS.folders() });
       
       savedPropertiesEventBus.emit('FOLDER_CREATED', { folder });
-      console.log('Folder created successfully');
     },
     onError: (error: SavedPropertiesError) => {
       actions.setError(error.message);
       savedPropertiesEventBus.emit('ERROR', { error });
-      console.error('Failed to create folder:', error.message);
     },
   });
 
@@ -221,12 +211,10 @@ export function SavedPropertiesProvider({
       queryClient.invalidateQueries({ queryKey: SAVED_PROPERTIES_QUERY_KEYS.folders() });
       
       savedPropertiesEventBus.emit('FOLDER_UPDATED', { folder });
-      console.log('Folder updated successfully');
     },
     onError: (error: SavedPropertiesError) => {
       actions.setError(error.message);
       savedPropertiesEventBus.emit('ERROR', { error });
-      console.error('Failed to update folder:', error.message);
     },
   });
 
@@ -241,12 +229,10 @@ export function SavedPropertiesProvider({
       queryClient.invalidateQueries({ queryKey: SAVED_PROPERTIES_QUERY_KEYS.folders() });
       
       savedPropertiesEventBus.emit('FOLDER_DELETED', { folderId });
-      console.log('Folder deleted successfully');
     },
     onError: (error: SavedPropertiesError) => {
       actions.setError(error.message);
       savedPropertiesEventBus.emit('ERROR', { error });
-      console.error('Failed to delete folder:', error.message);
     },
   });
 

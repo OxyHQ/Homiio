@@ -136,51 +136,23 @@ export default function HomePage() {
   const { properties: recentlyViewedProperties } = useRecentlyViewed();
   const { savedProperties, isLoading: savedLoading } = useSavedProperties();
 
-  // Load properties on component mount
+  // Load properties, cities and tips in parallel on mount (was 3 separate waterfall useEffects)
   React.useEffect(() => {
-    loadProperties({
-      limit: 8,
-      status: 'published',
+    setCitiesLoading(true);
+    setTipsLoading(true);
+
+    Promise.all([
+      loadProperties({ limit: 8, status: 'published' }),
+      cityService.getPopularCities(8).then(r => r.data || []).catch(() => []),
+      tipsService.getHomePageTipsFallback().catch(() => []),
+    ]).then(([, citiesData, tipsData]) => {
+      setCities(citiesData);
+      setTips(tipsData);
+    }).finally(() => {
+      setCitiesLoading(false);
+      setTipsLoading(false);
     });
   }, [loadProperties]);
-
-  // Load cities on component mount
-  React.useEffect(() => {
-    const loadCities = async () => {
-      try {
-        setCitiesLoading(true);
-        const response = await cityService.getPopularCities(8);
-        setCities(response.data || []);
-      } catch (error) {
-        console.error('Failed to load cities:', error);
-        // Fallback to empty array
-        setCities([]);
-      } finally {
-        setCitiesLoading(false);
-      }
-    };
-
-    loadCities();
-  }, []);
-
-  // Load tips on component mount
-  React.useEffect(() => {
-    const loadTips = async () => {
-      try {
-        setTipsLoading(true);
-        // Temporarily use fallback data while debugging API
-        const tipsData = await tipsService.getHomePageTipsFallback();
-        setTips(tipsData);
-      } catch (error) {
-        console.error('Failed to load tips:', error);
-        setTips([]);
-      } finally {
-        setTipsLoading(false);
-      }
-    };
-
-    loadTips();
-  }, []);
 
   // Memoized data processing
   const featuredProperties = useMemo(() => {
@@ -260,83 +232,13 @@ export default function HomePage() {
         limit: 8,
         status: 'published',
       });
-    } catch (error) {
-      console.error('Error refreshing data:', error);
     } finally {
       setRefreshing(false);
     }
   }, [loadProperties]);
 
-  // Tip card styles for carousel (StyleSheet)
-  const tipCarouselCardStyles = StyleSheet.create({
-    card: {
-      backgroundColor: '#ffffff',
-      borderRadius: 12,
-      marginBottom: 16,
-      borderWidth: 1,
-      borderColor: colors.COLOR_BLACK_LIGHT_6,
-      overflow: 'hidden',
-      flex: 1,
-    },
-    imageContainer: {
-      height: 160,
-      position: 'relative',
-    },
-    image: {
-      width: '100%',
-      height: '100%',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    badge: {
-      position: 'absolute',
-      top: 10,
-      left: 10,
-      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-      borderRadius: 35,
-      paddingHorizontal: 8,
-      paddingVertical: 1,
-    },
-    badgeText: {
-      fontSize: 10,
-      fontWeight: '500' as any,
-      color: colors.COLOR_BLACK,
-      textTransform: 'uppercase' as const,
-      letterSpacing: 0.3,
-      fontFamily: phuduFontWeights.medium,
-    },
-    content: {
-      padding: 12,
-    },
-    title: {
-      fontSize: 15,
-      fontWeight: '600' as any,
-      color: colors.COLOR_BLACK,
-      marginBottom: 6,
-      fontFamily: phuduFontWeights.medium,
-      lineHeight: 20,
-    },
-    description: {
-      fontSize: 13,
-      color: colors.COLOR_BLACK_LIGHT_3,
-      lineHeight: 18,
-      marginBottom: 10,
-    },
-    meta: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    metaItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    metaText: {
-      fontSize: 12,
-      color: colors.COLOR_BLACK_LIGHT_4,
-      marginLeft: 4,
-    },
-  });
+  // Tip card styles — moved to module-level via useMemo to avoid recreating on every render
+  const tipCarouselCardStyles = React.useMemo(() => tipCardStyles, []);
 
   const layoutScroll = useLayoutScroll();
   const scrollY = layoutScroll?.scrollY || new Animated.Value(0);
@@ -486,27 +388,20 @@ export default function HomePage() {
         </View>
 
         {/* Featured Properties */}
-        {(() => {
-          console.log('Featured Properties Section Debug:', {
-            featuredPropertiesLength: featuredProperties.length,
-            propertiesLoading,
-            hasProperties: featuredProperties.length > 0
-          });
-          return featuredProperties.length > 0 ? (
-            <HomeCarouselSection
-              title={t('home.featured.title')}
-              items={featuredProperties}
-              loading={propertiesLoading}
-              renderItem={(property) => (
-                <PropertyCard
-                  property={property}
-                  variant="featured"
-                  onPress={() => router.push(`/properties/${property._id || property.id}`)}
-                />
-              )}
-            />
-          ) : null;
-        })()}
+        {featuredProperties.length > 0 ? (
+          <HomeCarouselSection
+            title={t('home.featured.title')}
+            items={featuredProperties}
+            loading={propertiesLoading}
+            renderItem={(property) => (
+              <PropertyCard
+                property={property}
+                variant="featured"
+                onPress={() => router.push(`/properties/${property._id || property.id}`)}
+              />
+            )}
+          />
+        ) : null}
 
         {/* Recently Viewed Properties */}
         {recentlyViewedProperties && recentlyViewedProperties.length > 0 ? (
@@ -609,69 +504,13 @@ export default function HomePage() {
           />
         ) : null}
 
-        {/* Stats Section */}
-        <View style={styles.statsSection}>
-          <View style={styles.sectionHeader}>
-            <ThemedText style={styles.sectionTitle}>{t('home.insights.title')}</ThemedText>
-          </View>
-          <View style={styles.statsChipsContainer}>
-            <TouchableOpacity style={styles.statChip} activeOpacity={0.8}>
-              <View style={styles.statChipGradient}>
-                <View style={styles.statChipContent}>
-                  <ThemedText style={styles.statChipNumber}>{properties?.length || 0}</ThemedText>
-                  <ThemedText style={styles.statChipLabel}>Total Properties</ThemedText>
-                </View>
-                <View style={styles.statChipIcon}>
-                  <Home size={22} color={colors.COLOR_BLACK} />
-                </View>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.statChip} activeOpacity={0.8}>
-              <View style={styles.statChipGradient}>
-                <View style={styles.statChipContent}>
-                  <ThemedText style={styles.statChipNumber}>
-                    {properties?.filter((p) => p.status === 'published').length || 0}
-                  </ThemedText>
-                  <ThemedText style={styles.statChipLabel}>Available Now</ThemedText>
-                </View>
-                <View style={styles.statChipIcon}>
-                  <IconComponent name="people" size={22} color={colors.COLOR_BLACK} />
-                </View>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.statChip} activeOpacity={0.8}>
-              <View style={styles.statChipGradient}>
-                <View style={styles.statChipContent}>
-                  <ThemedText style={styles.statChipNumber}>
-                    {properties?.filter((p) =>
-                      p.amenities?.some(
-                        (a) => a.includes('eco') || a.includes('green') || a.includes('solar'),
-                      ),
-                    ).length || 0}
-                  </ThemedText>
-                  <ThemedText style={styles.statChipLabel}>Eco-Friendly</ThemedText>
-                </View>
-                <View style={styles.statChipIcon}>
-                  <IconComponent name="leaf" size={22} color={colors.COLOR_BLACK} />
-                </View>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.statChip} activeOpacity={0.8}>
-              <View style={styles.statChipGradient}>
-                <View style={styles.statChipContent}>
-                  <ThemedText style={styles.statChipNumber}>{topCities.length}</ThemedText>
-                  <ThemedText style={styles.statChipLabel}>Cities Covered</ThemedText>
-                </View>
-                <View style={styles.statChipIcon}>
-                  <IconComponent name="star" size={22} color={colors.COLOR_BLACK} />
-                </View>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
+        {/* Stats Section — memoized to avoid filter recalc on every render */}
+        <StatsSection
+          properties={properties}
+          topCitiesCount={topCities.length}
+          styles={styles}
+          t={t}
+        />
 
         {/* Tips Section (Carousel) */}
         <HomeCarouselSection
@@ -849,6 +688,158 @@ export default function HomePage() {
     </View>
   );
 }
+
+// Memoized StatsSection to avoid filter recalculation on every render
+const StatsSection = React.memo(function StatsSection({
+  properties,
+  topCitiesCount,
+  styles,
+  t,
+}: {
+  properties: any[] | null | undefined;
+  topCitiesCount: number;
+  styles: any;
+  t: any;
+}) {
+  const stats = useMemo(() => {
+    const total = properties?.length || 0;
+    const available = properties?.filter((p) => p.status === 'published').length || 0;
+    const ecoFriendly = properties?.filter((p) =>
+      p.amenities?.some(
+        (a: string) => a.includes('eco') || a.includes('green') || a.includes('solar'),
+      ),
+    ).length || 0;
+    return { total, available, ecoFriendly };
+  }, [properties]);
+
+  return (
+    <View style={styles.statsSection}>
+      <View style={styles.sectionHeader}>
+        <ThemedText style={styles.sectionTitle}>{t('home.insights.title')}</ThemedText>
+      </View>
+      <View style={styles.statsChipsContainer}>
+        <TouchableOpacity style={styles.statChip} activeOpacity={0.8}>
+          <View style={styles.statChipGradient}>
+            <View style={styles.statChipContent}>
+              <ThemedText style={styles.statChipNumber}>{stats.total}</ThemedText>
+              <ThemedText style={styles.statChipLabel}>Total Properties</ThemedText>
+            </View>
+            <View style={styles.statChipIcon}>
+              <Home size={22} color={colors.COLOR_BLACK} />
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.statChip} activeOpacity={0.8}>
+          <View style={styles.statChipGradient}>
+            <View style={styles.statChipContent}>
+              <ThemedText style={styles.statChipNumber}>{stats.available}</ThemedText>
+              <ThemedText style={styles.statChipLabel}>Available Now</ThemedText>
+            </View>
+            <View style={styles.statChipIcon}>
+              <IconComponent name="people" size={22} color={colors.COLOR_BLACK} />
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.statChip} activeOpacity={0.8}>
+          <View style={styles.statChipGradient}>
+            <View style={styles.statChipContent}>
+              <ThemedText style={styles.statChipNumber}>{stats.ecoFriendly}</ThemedText>
+              <ThemedText style={styles.statChipLabel}>Eco-Friendly</ThemedText>
+            </View>
+            <View style={styles.statChipIcon}>
+              <IconComponent name="leaf" size={22} color={colors.COLOR_BLACK} />
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.statChip} activeOpacity={0.8}>
+          <View style={styles.statChipGradient}>
+            <View style={styles.statChipContent}>
+              <ThemedText style={styles.statChipNumber}>{topCitiesCount}</ThemedText>
+              <ThemedText style={styles.statChipLabel}>Cities Covered</ThemedText>
+            </View>
+            <View style={styles.statChipIcon}>
+              <IconComponent name="star" size={22} color={colors.COLOR_BLACK} />
+            </View>
+          </View>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+});
+
+// Tip card styles at module level (was created inside component on every render)
+const tipCardStyles = StyleSheet.create({
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.COLOR_BLACK_LIGHT_6,
+    overflow: 'hidden',
+    flex: 1,
+  },
+  imageContainer: {
+    height: 160,
+    position: 'relative',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 35,
+    paddingHorizontal: 8,
+    paddingVertical: 1,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '500' as any,
+    color: colors.COLOR_BLACK,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.3,
+    fontFamily: phuduFontWeights.medium,
+  },
+  content: {
+    padding: 12,
+  },
+  title: {
+    fontSize: 15,
+    fontWeight: '600' as any,
+    color: colors.COLOR_BLACK,
+    marginBottom: 6,
+    fontFamily: phuduFontWeights.medium,
+    lineHeight: 20,
+  },
+  description: {
+    fontSize: 13,
+    color: colors.COLOR_BLACK_LIGHT_3,
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  meta: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+  },
+  metaItem: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+  },
+  metaText: {
+    fontSize: 12,
+    color: colors.COLOR_BLACK_LIGHT_4,
+    marginLeft: 4,
+  },
+});
 
 const createStyles = (isScreenNotMobile: boolean, windowHeight: number) => StyleSheet.create({
   container: {

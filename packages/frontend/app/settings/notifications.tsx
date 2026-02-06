@@ -48,7 +48,6 @@ export default function NotificationSettingsScreen() {
             await updatePreferences({ [key]: value });
             toast.success(t('notification.settings.updated', 'Settings updated'));
         } catch (error) {
-            console.error('Error updating preference:', error);
             toast.error(t('notification.settings.error', 'Failed to update settings'));
         } finally {
             setIsUpdating(false);
@@ -65,7 +64,6 @@ export default function NotificationSettingsScreen() {
                 toast.error(t('notification.permissions.denied', 'Notification permissions denied'));
             }
         } catch (error) {
-            console.error('Error requesting permissions:', error);
             toast.error(t('notification.permissions.error', 'Failed to request permissions'));
         }
     }, [requestPermissions, t]);
@@ -81,7 +79,6 @@ export default function NotificationSettingsScreen() {
             );
             toast.success(t('notification.test.property.success', 'Property notification sent'));
         } catch (error) {
-            console.error('Error testing property notification:', error);
             toast.error(t('notification.test.error', 'Failed to send test notification'));
         }
     }, [t]);
@@ -96,7 +93,6 @@ export default function NotificationSettingsScreen() {
             );
             toast.success(t('notification.test.message.success', 'Message notification sent'));
         } catch (error) {
-            console.error('Error testing message notification:', error);
             toast.error(t('notification.test.error', 'Failed to send test notification'));
         }
     }, [t]);
@@ -115,7 +111,6 @@ export default function NotificationSettingsScreen() {
             );
             toast.success(t('notification.test.reminder.success', 'Reminder notification scheduled'));
         } catch (error) {
-            console.error('Error testing reminder notification:', error);
             toast.error(t('notification.test.error', 'Failed to send test notification'));
         }
     }, [t]);
@@ -130,7 +125,6 @@ export default function NotificationSettingsScreen() {
             );
             toast.success(t('notification.test.repeating.success', 'Repeating notification scheduled'));
         } catch (error) {
-            console.error('Error testing repeating notification:', error);
             toast.error(t('notification.test.error', 'Failed to send test notification'));
         }
     }, [t]);
@@ -150,7 +144,6 @@ export default function NotificationSettingsScreen() {
                             await clearBadgeCount();
                             toast.success(t('notification.clearAll.success', 'All notifications cleared'));
                         } catch (error) {
-                            console.error('Error clearing notifications:', error);
                             toast.error(t('notification.clearAll.error', 'Failed to clear notifications'));
                         }
                     },

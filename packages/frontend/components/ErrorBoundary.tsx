@@ -69,36 +69,18 @@ class ErrorBoundaryBase extends Component<Props, State> {
   }
 
   private logErrorDetails = (error: Error, errorInfo: ErrorInfo) => {
-    const errorDetails = {
-      errorId: this.state.errorId,
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
-      componentStack: errorInfo.componentStack,
-      timestamp: new Date().toISOString(),
-      userAgent: Platform.select({
-        web: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
-        default: `${Device.osName} ${Device.osVersion}`,
-      }),
-      appVersion: Constants.expoConfig?.version || 'unknown',
-      platform: Platform.OS,
-      deviceInfo: {
-        brand: Device.brand,
-        modelName: Device.modelName,
-        osName: Device.osName,
-        osVersion: Device.osVersion,
-      },
-    };
-
-    console.group('🚨 Error Boundary Details');
-    console.error('Error ID:', errorDetails.errorId);
-    console.error('Error:', error);
-    console.error('Error Info:', errorInfo);
-    console.error('Device Info:', errorDetails.deviceInfo);
-    console.groupEnd();
-
-    // In production, you might want to send this to an error reporting service
-    // Example: Sentry.captureException(error, { extra: errorDetails });
+    // Only log detailed errors in development
+    if (__DEV__) {
+      const errorDetails = {
+        errorId: this.state.errorId,
+        message: error.message,
+        name: error.name,
+        componentStack: errorInfo.componentStack,
+        platform: Platform.OS,
+      };
+      console.error('ErrorBoundary:', errorDetails);
+    }
+    // In production, send to error reporting service (PostHog, Sentry, etc.)
   };
 
   private handleRetry = () => {

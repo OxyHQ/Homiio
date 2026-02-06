@@ -194,8 +194,8 @@ export function PropertyCard({
     size: property.squareFootage || 0,
     sizeUnit: 'm²',
     isVerified: property.isVerified || false,
-    rating: 4.5, // Default rating since Property interface doesn't have this
-    reviewCount: 12, // Default review count since Property interface doesn't have this
+    rating: undefined,
+    reviewCount: undefined,
   };
 
   const isEco = Boolean(property.isEcoFriendly);
@@ -224,9 +224,6 @@ export function PropertyCard({
         styles.container,
         orientation === 'horizontal' ? styles.horizontalContainer : null,
         style as ViewStyle,
-        variant === 'featured' ? styles.featuredCard : null,
-        variant === 'compact' ? styles.compactCard : null,
-        variant === 'saved' ? styles.savedCard : null,
         isProcessing ? { opacity: 0.7 } : null,
       ]}
       onPress={onPress}
@@ -238,7 +235,6 @@ export function PropertyCard({
         style={[
           styles.imageContainer,
           orientation === 'horizontal' ? styles.horizontalImageContainer : null,
-          isFeatured ? styles.featuredImageContainer : null,
           isSelected ? styles.selectedImage : null,
           orientation === 'horizontal'
             ? { height: finalImageHeight, width: finalImageHeight }
@@ -328,18 +324,13 @@ export function PropertyCard({
         style={[
           styles.content,
           orientation === 'horizontal' ? styles.horizontalContent : null,
-          variant === 'compact' ? styles.compactContent : null,
-          variant === 'featured' ? styles.featuredContent : null,
-          variant === 'saved' ? styles.savedContent : null,
         ]}
       >
         {/* Title */}
         <ThemedText
           style={[
             styles.title,
-            variant === 'compact' ? styles.compactTitle : null,
             isFeatured ? styles.featuredTitle : null,
-            orientation === 'horizontal' ? styles.horizontalTitle : null,
           ]}
           numberOfLines={orientation === 'horizontal' ? undefined : finalTitleLines}
         >
@@ -351,7 +342,6 @@ export function PropertyCard({
           <ThemedText
             style={[
               styles.location,
-              variant === 'compact' ? styles.compactLocation : null,
               isFeatured ? styles.featuredLocation : null,
               orientation === 'horizontal' ? styles.horizontalLocation : null,
             ]}
@@ -400,8 +390,7 @@ export function PropertyCard({
             <ThemedText
               style={[
                 styles.price,
-                variant === 'compact' ? styles.compactPrice : null,
-                isFeatured ? styles.featuredPrice : null,
+                  isFeatured ? styles.featuredPrice : null,
               ]}
             >
               <CurrencyFormatter
@@ -490,8 +479,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#222222',
     lineHeight: 20,
-  },
-  horizontalTitle: {
   },
   location: {
     fontSize: 12,
@@ -676,16 +663,6 @@ const styles = StyleSheet.create({
   },
 
   // ===== COMPACT VARIANT STYLES =====
-  compactCard: {
-  },
-  compactContent: {
-  },
-  compactTitle: {
-  },
-  compactLocation: {
-  },
-  compactPrice: {
-  },
   compactNoteContainer: {
     paddingVertical: 6,
     paddingHorizontal: 8,
@@ -696,11 +673,6 @@ const styles = StyleSheet.create({
   },
 
   // ===== FEATURED VARIANT STYLES =====
-  featuredCard: {
-  },
-  featuredImageContainer: {},
-  featuredContent: {
-  },
   featuredTitle: {
     fontSize: 15,
     fontWeight: '700',
@@ -712,14 +684,4 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 
-  // ===== SAVED VARIANT STYLES =====
-  savedCard: {
-    // Saved card styling
-  },
-  savedContent: {
-    // Saved content styling
-  },
-
-  // ===== DEFAULT VARIANT STYLES =====
-  // (No specific styles needed - uses base styles)
 });

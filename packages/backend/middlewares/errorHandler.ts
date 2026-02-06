@@ -39,8 +39,10 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
   let error = { ...err };
   error.message = err.message;
 
-  // Log error
-  console.error(err);
+  // Only log full error in development to avoid PII in production logs
+  if (config.environment === 'development') {
+    console.error(err);
+  }
 
   // Mongoose bad ObjectId
   if (err.name === 'CastError') {

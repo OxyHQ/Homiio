@@ -30,7 +30,6 @@ export function useNeighborhood() {
 
         setCurrentNeighborhood(response.data);
       } catch (error: any) {
-        console.error('useNeighborhood: Failed to fetch neighborhood by location:', error);
         setError(error.message || 'Failed to fetch neighborhood by location');
       } finally {
         setLoading(false);
@@ -52,7 +51,6 @@ export function useNeighborhood() {
 
         setCurrentNeighborhood(response.data);
       } catch (error: any) {
-        console.error('useNeighborhood: Failed to fetch neighborhood by name:', error);
         setError(error.message || 'Failed to fetch neighborhood by name');
       } finally {
         setLoading(false);
@@ -72,7 +70,6 @@ export function useNeighborhood() {
 
         setCurrentNeighborhood(response.data);
       } catch (error: any) {
-        console.error('useNeighborhood: Failed to fetch neighborhood by property:', error);
         setError(error.message || 'Failed to fetch neighborhood by property');
       } finally {
         setLoading(false);
@@ -94,7 +91,6 @@ export function useNeighborhood() {
 
         setNearbyNeighborhoods(response.data || []);
       } catch (error: any) {
-        console.error('useNeighborhood: Failed to search neighborhoods:', error);
         setError(error.message || 'Failed to search neighborhoods');
       } finally {
         setLoading(false);
@@ -116,7 +112,6 @@ export function useNeighborhood() {
 
         setNearbyNeighborhoods(response.data || []);
       } catch (error: any) {
-        console.error('useNeighborhood: Failed to fetch popular neighborhoods:', error);
         setError(error.message || 'Failed to fetch popular neighborhoods');
       } finally {
         setLoading(false);

@@ -18,13 +18,14 @@ import { initCronJobs } from './services/cron';
 
 const oxy = new OxyServices({ baseURL: 'https://localhost:3001' });
 
+const isDev = config.environment === 'development';
+
 // Initialize database connection
 async function initializeDatabase() {
   try {
     await database.connect();
-    console.log('✅ Database initialized successfully');
   } catch (error) {
-    console.error('❌ Database initialization failed:', error.message);
+    console.error('Database initialization failed:', error.message);
     process.exit(1);
   }
 }
@@ -32,49 +33,38 @@ async function initializeDatabase() {
 // Express setup
 const app = express();
 
-// CORS configuration
+// CORS configuration — O(1) Set lookup instead of Array.includes per request
+const allowedOriginsSet = new Set([
+  'https://homiio.com',
+  'http://localhost:3000',
+  'http://localhost:8081',
+  'http://localhost:19006',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:8081',
+  'http://127.0.0.1:19006',
+  'http://192.168.86.44:8081'
+]);
+// Single combined regex for all private LAN ranges
+const lanRegex = /^https?:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?$/;
+
 const corsOptions = {
   origin: function (origin, callback) {
-    console.log('CORS Origin Check:', origin);
-    
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) {
-      console.log('CORS: Allowing request with no origin');
-      return callback(null, true);
-    }
-    
-    const allowedOrigins = [
-      'https://homiio.com',
-      'http://localhost:3000',
-      'http://localhost:8081',
-      'http://localhost:19006', // Expo web dev
-      'http://127.0.0.1:3000',
-      'http://127.0.0.1:8081',
-      'http://127.0.0.1:19006',
-      'http://192.168.86.44:8081'
-    ];
-    
-    // In development, allow localhost and private LAN IPs (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
-    if (config.environment === 'development') {
-      if (origin) {
-        const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1');
-        const isLan192 = /^http:\/\/192\.168\.[0-9]{1,3}\.[0-9]{1,5}$/.test(origin) || /^http:\/\/192\.168\.[0-9]{1,3}\.[0-9]{1,3}(?::\d+)?$/.test(origin);
-        const isLan10 = /^http:\/\/10\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(?::\d+)?$/.test(origin);
-        const isLan172 = /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.[0-9]{1,3}\.[0-9]{1,3}(?::\d+)?$/.test(origin);
-        if (isLocalhost || isLan192 || isLan10 || isLan172) {
-          console.log('CORS: Allowing development LAN origin:', origin);
-          return callback(null, true);
-        }
+    // Allow requests with no origin (mobile apps, curl, server-to-server)
+    if (!origin) return callback(null, true);
+
+    // O(1) exact match
+    if (allowedOriginsSet.has(origin)) return callback(null, true);
+
+    // Allow Vercel preview deployments
+    if (origin.endsWith('.vercel.app')) return callback(null, true);
+
+    // In development, allow localhost and private LAN IPs
+    if (isDev) {
+      if (origin.includes('localhost') || origin.includes('127.0.0.1') || lanRegex.test(origin)) {
+        return callback(null, true);
       }
     }
-    
-    if (allowedOrigins.includes(origin)) {
-      console.log('CORS: Allowing whitelisted origin:', origin);
-      return callback(null, true);
-    }
-    
-    console.log('CORS: Rejecting origin:', origin);
-    // Don't throw an error, just reject silently
+
     return callback(null, false);
   },
   credentials: true,
@@ -88,30 +78,23 @@ const corsOptions = {
     'Cache-Control',
     'Pragma'
   ],
-  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
-  maxAge: 86400 // 24 hours
+  exposedHeaders: ['Content-Length'],
+  maxAge: 86400
 };
 
 // Database connection middleware for serverless environments
 const ensureDatabaseConnection = async (req: any, res: any, next: any) => {
   try {
     const status = database.getStatus();
-    console.log('📦 Database status check:', status);
-    
     if (!status.isConnected || status.readyState !== 1) {
-      console.log('📦 Ensuring database connection for request...');
       try {
         await database.connect();
-        console.log('✅ Database connection established');
       } catch (connectError) {
-        console.error('❌ Initial connection failed, trying force reconnect...');
         await database.forceReconnect();
-        console.log('✅ Database force reconnection successful');
       }
     }
     next();
   } catch (error) {
-    console.error('❌ Database connection failed in middleware:', error.message);
     res.status(500).json({
       success: false,
       error: {
@@ -128,7 +111,6 @@ app.use(cors(corsOptions));
 
 // Stripe webhook must be mounted BEFORE any body parser that consumes the body
 app.post('/api/billing/webhook', bodyParser.raw({ type: '*/*' }), (req, res, next) => {
-  // Expose raw buffer to the webhook handler for signature verification
   (req as any).rawBody = (req as any).body;
   return stripeWebhook(req as any, res as any);
 });
@@ -138,22 +120,20 @@ app.post('/api/billing/confirm', bodyParser.json({ limit: '1mb' }), (req, res) =
   return confirmCheckoutSession(req as any, res as any);
 });
 
-// Apply body parser only for non-multipart requests
+// Pre-create body parsers to avoid re-creation per request
+const jsonParser = bodyParser.json({ limit: '25mb' });
+const urlencodedParser = bodyParser.urlencoded({ extended: true, limit: '25mb' });
+
+// Apply body parser based on content type
 app.use((req, res, next) => {
   const contentType = req.headers['content-type'] || '';
-  
   if (contentType.includes('multipart/form-data')) {
-    console.log('Skipping body parser for multipart request');
     next();
   } else if (contentType.includes('application/json')) {
-    console.log('Applying JSON body parser');
-    // Allow larger payloads to support inline data URLs for image turns in chat
-    bodyParser.json({ limit: '25mb' })(req, res, next);
+    jsonParser(req, res, next);
   } else if (contentType.includes('application/x-www-form-urlencoded')) {
-    console.log('Applying urlencoded body parser');
-    bodyParser.urlencoded({ extended: true, limit: '25mb' })(req, res, next);
+    urlencodedParser(req, res, next);
   } else {
-    console.log('No specific body parser for content-type:', contentType);
     next();
   }
 });
@@ -161,14 +141,8 @@ app.use(requestLogger);
 
 // Apply database middleware in serverless environments (before routes)
 if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
-  console.log('🔧 Applying database middleware for serverless environment');
   app.use(ensureDatabaseConnection);
 }
-
-app.use((req, res, next) => {
-  console.log('Authorization header:', req.headers.authorization);
-  next();
-});
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -178,7 +152,7 @@ app.get('/', (req, res) => {
     description: 'Housing and rental solutions API',
     features: [
       'Property management',
-      'Room management', 
+      'Room management',
       'Oxy ecosystem integration'
     ]
   });
@@ -187,9 +161,9 @@ app.get('/', (req, res) => {
 // Health check endpoint (unauthenticated)
 app.get('/health', async (req, res) => {
   const dbHealth = await database.healthCheck();
-  
-  res.json({ 
-    status: 'ok', 
+
+  res.json({
+    status: 'ok',
     timestamp: new Date().toISOString(),
     version,
     environment: config.environment,
@@ -207,21 +181,6 @@ app.use('/api', publicRoutes());
 // Mount authenticated API routes
 app.use('/api', oxy.auth(), routes());
 
-// Temporary test route without authentication to verify route mounting
-app.get('/api/test-routes', (req, res) => {
-  res.json({
-    message: 'Routes are mounted correctly',
-    timestamp: new Date().toISOString(),
-    availableRoutes: [
-      'GET /api/health',
-      'GET /api/profiles/me',
-      'POST /api/profiles/me/save-property',
-      'DELETE /api/profiles/me/saved-properties/:propertyId',
-      'PUT /api/profiles/me/saved-properties/:propertyId/notes'
-    ]
-  });
-});
-
 // Error handling middleware
 app.use(errorLogger);
 app.use(notFound);
@@ -232,46 +191,26 @@ const port = process.env.PORT || config.port;
 // Start server with database initialization
 async function startServer() {
   try {
-    // Initialize database first
     await initializeDatabase();
-    
-    // Start the Express server
+
     const server = app.listen(port, () => {
-      console.log(`🚀 Homio Backend running on port ${port}`);
-      console.log(`Environment: ${config.environment}`);
-      console.log('Features: Property & Room Management, AI Streaming');
-      console.log('Available endpoints:');
-      console.log('  GET  /health - Health check (public)');
-      console.log('  GET  /api/health - API health check');
-      console.log('  GET  /api/properties - List properties');
-      console.log('  GET  /api/properties/search - Search properties');
-      console.log('  POST /api/properties - Create property (authenticated)');
-      console.log('  GET  /api/properties/:id/rooms - List rooms in property');
-      console.log('  GET  /api/properties/:id/stats - Property statistics (authenticated)');
-      console.log('  GET  /api/properties/:id/rooms/:roomId/stats - Room statistics (authenticated)');
-      console.log('  GET  /api/analytics - User analytics (authenticated)');
-      console.log('  POST /api/test - Test endpoint (authenticated)');
-      console.log('  POST /api/ai/stream - AI text streaming (authenticated)');
-      console.log('  POST /api/ai/chat - AI chat completion (authenticated)');
-      console.log('  GET  /api/ai/health - AI service health check');
+      console.log(`Homio Backend running on port ${port} [${config.environment}]`);
       // Initialize cron jobs (only in non-serverless persistent environments)
       if (!process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
         initCronJobs();
       }
     });
 
-    // Handle EADDRINUSE gracefully
     server.on('error', (err: NodeJS.ErrnoException) => {
       if (err.code === 'EADDRINUSE') {
-        console.error(`❌ Port ${port} is already in use. Please stop the other process or use a different port (set PORT env variable).`);
-        process.exit(1);
+        console.error(`Port ${port} is already in use.`);
       } else {
-        console.error('❌ Server error:', err);
-        process.exit(1);
+        console.error('Server error:', err);
       }
+      process.exit(1);
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error.message);
+    console.error('Failed to start server:', error.message);
     process.exit(1);
   }
 }
@@ -283,4 +222,3 @@ module.exports = app;
 if (process.env.NODE_ENV !== 'production' || process.env.VERCEL !== '1') {
   startServer();
 }
-

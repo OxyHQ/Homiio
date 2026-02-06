@@ -44,7 +44,6 @@ class AddressService {
         message: 'Address fetched successfully'
       };
     } catch (error) {
-      console.error('Error fetching address:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to fetch address',
@@ -77,7 +76,6 @@ class AddressService {
         message: 'Addresses searched successfully'
       };
     } catch (error) {
-      console.error('Error searching addresses:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to search addresses',
@@ -111,7 +109,6 @@ class AddressService {
         message: 'Nearby addresses fetched successfully'
       };
     } catch (error) {
-      console.error('Error fetching nearby addresses:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to fetch nearby addresses',

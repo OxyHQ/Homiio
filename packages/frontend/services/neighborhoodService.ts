@@ -63,7 +63,6 @@ class NeighborhoodService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to fetch neighborhood by location:', error);
       // Return mock data for development
       return this.getMockNeighborhoodData();
     }
@@ -87,7 +86,6 @@ class NeighborhoodService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to fetch neighborhood by name:', error);
       // Return mock data for development
       return this.getMockNeighborhoodData(name, city, state);
     }
@@ -111,7 +109,6 @@ class NeighborhoodService {
       );
       return response.data;
     } catch (error) {
-      console.error('Failed to fetch neighborhood by property:', error);
       // Return mock data for development
       return this.getMockNeighborhoodData();
     }
@@ -133,7 +130,6 @@ class NeighborhoodService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to search neighborhoods:', error);
       // Return mock data for development
       return [this.getMockNeighborhoodData()];
     }
@@ -157,7 +153,6 @@ class NeighborhoodService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to fetch popular neighborhoods:', error);
       // Return mock data for development
       return [
         this.getMockNeighborhoodData('El Born', city, state),

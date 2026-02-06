@@ -104,7 +104,6 @@ const isObjectId = (id: string) => mongoose.Types.ObjectId.isValid(id);
 const getUserId = (req: any) => req.user?.oxyUserId || req.user?._id || req.user?.id;
 const getBaseUrl = () => {
   const baseUrl = process.env.INTERNAL_API_BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
-  console.log('AI API Base URL:', baseUrl);
   return baseUrl;
 };
 
@@ -234,12 +233,6 @@ const buildSearchParams = (
   addIf(params, 'maxYearBuilt', filters.maxYearBuilt);
   addBool(params, 'budgetFriendly', filters.budgetFriendly);
 
-  console.log('buildSearchParams output:', {
-    filters,
-    base,
-    finalParams: params.toString()
-  });
-  
   return params;
 };
 
@@ -263,7 +256,6 @@ async function generateAITitle(userMessage: string) {
     if (title.length > 50) title = `${title.slice(0, 47)}...`;
     return title && title !== 'New Conversation' ? title : null;
   } catch (e) {
-    console.error('[AI] title error:', e);
     return null;
   }
 }
@@ -313,8 +305,6 @@ Focus on extracting clear location information from the user's query.`;
     const raw = JSON.parse(trimmed.slice(start, end + 1));
     const out: PropertyFilters = {};
 
-    console.log('AI Filter Extraction:', { input: userText, extracted: raw });
-
     const numberish = (v: any) => (v != null && !isNaN(Number(v)) ? Number(v) : undefined);
     const put = (k: keyof PropertyFilters, v: any) => {
       const valid = Array.isArray(v) ? v.length > 0 : v !== undefined && v !== null && v !== '';
@@ -361,10 +351,8 @@ Focus on extracting clear location information from the user's query.`;
     put('availableFromBefore', typeof raw.availableFromBefore === 'string' ? raw.availableFromBefore : undefined);
     put('availableFromAfter', typeof raw.availableFromAfter === 'string' ? raw.availableFromAfter : undefined);
 
-    console.log('Final extracted filters:', out);
     return out;
   } catch (e) {
-    console.error('AI filter extraction error:', e);
     return {};
   }
 }
@@ -374,8 +362,6 @@ async function performAppPropertySearch(query: string, priorMessages: ChatMessag
     const prevIds = extractLastPropertyIdsFromMessages(priorMessages);
     const filters = await extractFiltersWithAI(query);
 
-    console.log('AI Property Search Debug:', { query, filters, prevIds });
-
     // Determine if this is a location-based search or text search
     const isLocationSearch = filters.city || filters.state;
     const hasTextualSearchTerms = /\b(furnished|pet|parking|balcony|pool|gym|modern|luxury|cheap|budget)\b/i.test(query);
@@ -383,13 +369,6 @@ async function performAppPropertySearch(query: string, priorMessages: ChatMessag
     // For location searches, don't pass the full query as text search
     const searchQuery = isLocationSearch && !hasTextualSearchTerms ? undefined : query;
     
-    console.log('Search strategy:', { 
-      isLocationSearch, 
-      hasTextualSearchTerms, 
-      willUseTextSearch: !!searchQuery,
-      extractedLocation: filters.city || filters.state
-    });
-
     // Nearby (anchor on previous shown property)
     let nearby: any[] = [];
     if (prevIds.length) {
@@ -405,14 +384,11 @@ async function performAppPropertySearch(query: string, priorMessages: ChatMessag
         params.set('latitude', String(latitude));
         params.set('maxDistance', '3000');
 
-        console.log('Nearby search URL:', `${getBaseUrl()}/api/properties/nearby?${params.toString()}`);
         const resp = await fetch(`${getBaseUrl()}/api/properties/nearby?${params.toString()}`);
         if (resp.ok) {
           const data = await resp.json();
           nearby = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
-          console.log('Nearby search result:', { count: nearby.length });
         } else {
-          console.error('Nearby search failed:', resp.status, await resp.text());
         }
       }
     }
@@ -423,22 +399,13 @@ async function performAppPropertySearch(query: string, priorMessages: ChatMessag
       query: searchQuery || '', // Convert undefined to empty string
       excludeIds: prevIds,
     });
-    console.log('Main search URL:', `${getBaseUrl()}/api/properties/search?${searchParams.toString()}`);
     const resp = await fetch(`${getBaseUrl()}/api/properties/search?${searchParams.toString()}`);
     const searchData = resp.ok ? await resp.json() : null;
     
-    if (!resp.ok) {
-      console.error('Main search failed:', resp.status, await resp.text());
-    } else {
-      console.log('Main search response structure:', Object.keys(searchData || {}));
-    }
-    
     const search = Array.isArray(searchData?.data) ? searchData.data : Array.isArray(searchData) ? searchData : [];
-    console.log('Search result:', { count: search.length });
 
     return { nearby: nearby.slice(0, RESULTS_RETURN_MAX), search: search.slice(0, RESULTS_RETURN_MAX) };
   } catch (e) {
-    console.error('[AI] property search error:', e);
     return { nearby: [], search: [] };
   }
 }
@@ -543,8 +510,6 @@ Return only the JSON array, no other text.`;
         suggestions = suggestions.slice(0, 8);
         
       } catch (parseError) {
-        console.error('Failed to parse AI suggestions:', parseError, 'Raw response:', generatedText);
-        
         // Fallback to default suggestions
         suggestions = [
           { text: 'How much should I budget?' },
@@ -566,7 +531,6 @@ Return only the JSON array, no other text.`;
       });
 
     } catch (error: any) {
-      console.error('[AI] Suggestions generation error:', error);
       return err(res, 500, 'Failed to generate suggestions');
     }
   });
@@ -618,13 +582,6 @@ Return only the JSON array, no other text.`;
       }
 
       const propertyResults = isAttachmentStub ? { nearby: [], search: [] } : await performAppPropertySearch(lastContent, messages);
-
-      console.log('Property search completed:', { 
-        isAttachmentStub, 
-        lastContent: lastContent.substring(0, 100), 
-        nearbyCount: propertyResults?.nearby?.length || 0,
-        searchCount: propertyResults?.search?.length || 0 
-      });
 
       // Build enhanced messages
       const enhanced: ChatMessage[] = [{ role: 'system', content: SINDI_SYSTEM_PROMPT }, ...messages];
@@ -774,7 +731,6 @@ Return only the JSON array, no other text.`;
           const toSave = hasInlineFile ? cleanedLastContent || 'Sent a file' : lastUser.content;
           await conversation.addMessage('user', toSave);
         } catch (e) {
-          console.error('[AI] save user message error:', e);
         }
       }
 
@@ -797,7 +753,6 @@ Return only the JSON array, no other text.`;
             }
           }
         } catch (e) {
-          console.error('[AI] stream capture error:', e);
         }
       })();
 
@@ -808,7 +763,6 @@ Return only the JSON array, no other text.`;
       onGracefulClose(req, res);
       (await result).pipeDataStreamToResponse(res);
     } catch (e: any) {
-      console.error('[AI] streaming error:', e);
       if ((res as any).headersSent) {
         try {
           (res as any).end?.();
@@ -895,7 +849,6 @@ Return only the JSON array, no other text.`;
 
       return err(res, 415, 'Unsupported media type. Please upload an image (png/jpeg/webp) or a PDF.');
     } catch (e: any) {
-      console.error('[AI] analyze-file error:', e?.message || e);
       return err(res, 500, 'internal error');
     }
   });
@@ -967,7 +920,6 @@ Return only the JSON array, no other text.`;
       onGracefulClose(req, res);
       await result.pipeDataStreamToResponse(res);
     } catch (e: any) {
-      console.error('[AI] analyze-file/stream error:', e?.message || e);
       if ((res as any).headersSent) {
         try {
           (res as any).end?.();

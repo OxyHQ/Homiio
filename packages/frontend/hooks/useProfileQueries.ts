@@ -12,7 +12,6 @@ export const useProfileRedux = () => {
 
   const fetchProfile = useCallback(async () => {
     if (!oxyServices || !activeSessionId) {
-      console.log('OxyServices not available - cannot fetch profile');
       return;
     }
 
@@ -24,9 +23,7 @@ export const useProfileRedux = () => {
       const profile = await useProfileStore
         .getState()
         .fetchPrimaryProfile(oxyServices, activeSessionId);
-      console.log('Successfully fetched user profile');
     } catch (error: any) {
-      console.error('Error fetching profile:', error);
       setError(error.message || 'Failed to fetch profile');
     } finally {
       setLoading(false);
@@ -48,7 +45,6 @@ export const useProfileRedux = () => {
         toast.success('Profile updated successfully');
         return updatedProfile;
       } catch (error: any) {
-        console.error('Error updating profile:', error);
         toast.error(error.message || 'Failed to update profile');
         throw error;
       }
@@ -70,7 +66,6 @@ export const useProfileRedux = () => {
       toast.success('Profile created successfully');
       return profile;
     } catch (error: any) {
-      console.error('Error creating profile:', error);
       toast.error(error.message || 'Failed to create profile');
       throw error;
     }

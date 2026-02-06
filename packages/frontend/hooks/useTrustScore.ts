@@ -70,7 +70,6 @@ export const useTrustScore = (profileId?: string) => {
           setProfileType(profile?.profileType || 'personal');
         }
       } catch (error: any) {
-        console.error('Error fetching trust score:', error);
         setError(error.message || 'Failed to fetch trust score');
       } finally {
         setLoading(false);
@@ -127,7 +126,6 @@ export const useTrustScore = (profileId?: string) => {
           setHistory([]); // History not available in current structure
         }
       } catch (error: any) {
-        console.error('Error updating trust score:', error);
         setError(error.message || 'Failed to update trust score');
       } finally {
         setLoading(false);
@@ -180,7 +178,6 @@ export const useTrustScore = (profileId?: string) => {
           setHistory([]); // History not available in current structure
         }
       } catch (error: any) {
-        console.error('Error recalculating trust score:', error);
         setError(error.message || 'Failed to recalculate trust score');
       } finally {
         setLoading(false);

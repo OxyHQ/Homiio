@@ -32,7 +32,6 @@ class PropertyService {
         totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1
       };
     } catch (error) {
-      console.error('Error getting properties:', error);
       return { properties: [], total: 0, page: 1, totalPages: 1 };
     }
   }
@@ -60,7 +59,6 @@ class PropertyService {
         totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1
       };
     } catch (error) {
-      console.error('Error getting rooms:', error);
       return { rooms: [], total: 0, page: 1, totalPages: 1 };
     }
   }
@@ -86,7 +84,6 @@ class PropertyService {
         totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1
       };
     } catch (error) {
-      console.error('Error searching properties:', error);
       return { properties: [], total: 0, page: 1, totalPages: 1 };
     }
   }
@@ -99,7 +96,6 @@ class PropertyService {
       const response = await api.get(`${this.baseUrl}/${propertyId}`);
       return response.data.data;
     } catch (error) {
-      console.error('Error fetching property details:', error);
       return null;
     }
   }
@@ -130,7 +126,6 @@ class PropertyService {
         totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1
       };
     } catch (error) {
-      console.error('Error getting owner properties:', error);
       return { properties: [], total: 0, page: 1, totalPages: 1 };
     }
   }
@@ -151,7 +146,6 @@ class PropertyService {
       });
       return response.data;
     } catch (error) {
-      console.error('Error fetching property rooms:', error);
       return { rooms: [], total: 0, page: 1, totalPages: 1 };
     }
   }
@@ -300,7 +294,6 @@ class PropertyService {
         totalPages: response.data.totalPages || 1
       };
     } catch (error) {
-      console.error('Error finding properties in bounds:', error);
       return { properties: [], total: 0, page: 1, totalPages: 1 };
     }
   }
@@ -313,7 +306,6 @@ class PropertyService {
       const response = await api.get(`${this.baseUrl}/${propertyId}/stats`);
       return response.data.data;
     } catch (error) {
-      console.error('Error fetching property stats:', error);
       return null;
     }
   }
@@ -326,7 +318,6 @@ class PropertyService {
       const response = await api.post(this.baseUrl, data);
       return response.data.data;
     } catch (error) {
-      console.error('Error creating property:', error);
       throw error;
     }
   }
@@ -340,7 +331,6 @@ class PropertyService {
       const response = await api.put(`${this.baseUrl}/${propertyId}`, data);
       return response.data.data;
     } catch (error) {
-      console.error('Error updating property:', error);
       throw error;
     }
   }
@@ -352,7 +342,6 @@ class PropertyService {
     try {
       await api.delete(`${this.baseUrl}/${propertyId}`);
     } catch (error) {
-      console.error('Error deleting property:', error);
       throw error;
     }
   }

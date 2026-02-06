@@ -26,9 +26,7 @@ const messageSchema = new mongoose.Schema({
   }],
 }, { _id: true });
 
-// Add validation debugging to message schema
 messageSchema.pre('validate', function(next) {
-  console.log('Message validation - role:', this.role, 'content:', this.content ? this.content.substring(0, 50) : 'undefined');
   next();
 });
 

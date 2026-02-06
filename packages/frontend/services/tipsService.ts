@@ -45,7 +45,6 @@ class TipsService {
       const response = await api.get<TipsResponse>(this.baseUrl);
       return response.data;
     } catch (error) {
-      console.error('Error fetching all tips:', error);
       throw error;
     }
   }
@@ -56,7 +55,6 @@ class TipsService {
       const response = await api.get<TipResponse>(`${this.baseUrl}/${id}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching tip by ID:', error);
       throw error;
     }
   }
@@ -67,7 +65,6 @@ class TipsService {
       const response = await api.get<TipsResponse>(`${this.baseUrl}/category/${category}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching tips by category:', error);
       throw error;
     }
   }
@@ -80,7 +77,6 @@ class TipsService {
       });
       return response.data;
     } catch (error) {
-      console.error('Error fetching featured tips:', error);
       throw error;
     }
   }
@@ -93,7 +89,6 @@ class TipsService {
       });
       return response.data;
     } catch (error) {
-      console.error('Error searching tips:', error);
       throw error;
     }
   }
@@ -104,7 +99,6 @@ class TipsService {
       const response = await this.getFeaturedTips(4);
       return response.data;
     } catch (error) {
-      console.error('Error fetching home page tips:', error);
       // Return fallback data if API fails
       return this.getFallbackTips();
     }
@@ -115,7 +109,6 @@ class TipsService {
     try {
       return this.getFallbackTips();
     } catch (error) {
-      console.error('Error getting fallback tips:', error);
       return [];
     }
   }

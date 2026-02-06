@@ -77,7 +77,6 @@ class ReviewService {
         message: 'Reviews fetched successfully'
       };
     } catch (error) {
-      console.error('Error fetching reviews by address:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to fetch reviews',
@@ -104,7 +103,6 @@ class ReviewService {
         message: 'Review stats fetched successfully'
       };
     } catch (error) {
-      console.error('Error fetching review stats:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to fetch review stats',
@@ -133,7 +131,6 @@ class ReviewService {
         message: 'Review created successfully'
       };
     } catch (error) {
-      console.error('Error creating review:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to create review',
@@ -160,7 +157,6 @@ class ReviewService {
         message: 'Review fetched successfully'
       };
     } catch (error) {
-      console.error('Error fetching review:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to fetch review',
@@ -196,7 +192,6 @@ class ReviewService {
         message: 'Review updated successfully'
       };
     } catch (error) {
-      console.error('Error updating review:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to update review',
@@ -225,7 +220,6 @@ class ReviewService {
         message: 'Review deleted successfully'
       };
     } catch (error) {
-      console.error('Error deleting review:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to delete review',
@@ -258,7 +252,6 @@ class ReviewService {
         message: 'User reviews fetched successfully'
       };
     } catch (error) {
-      console.error('Error fetching user reviews:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to fetch user reviews',

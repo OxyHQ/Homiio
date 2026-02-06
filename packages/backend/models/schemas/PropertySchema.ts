@@ -464,8 +464,10 @@ const propertySchema = new mongoose.Schema({
 
 // Indexes for better query performance
 propertySchema.index({ profileId: 1, status: 1 });
+propertySchema.index({ profileId: 1, createdAt: -1 }); // User's property list queries
 propertySchema.index({ addressId: 1 });
 propertySchema.index({ type: 1, 'availability.isAvailable': 1 });
+propertySchema.index({ status: 1, 'availability.isAvailable': 1 }); // Search queries
 propertySchema.index({ 'rent.amount': 1 });
 propertySchema.index({ bedrooms: 1, bathrooms: 1 });
 propertySchema.index({ amenities: 1 });
@@ -506,13 +508,16 @@ propertySchema.virtual('primaryImage').get(function() {
   return primary || this.images[0] || null;
 });
 
-// Post-query hook to handle lean queries (applies same transformation as toObject)
-propertySchema.post(['find', 'findOne', 'findOneAndUpdate'], function(docs) {
+// Post-query hook for lean queries — only transform when addressId is populated as object
+propertySchema.post(['find', 'findOne'], function(docs) {
   if (!docs) return;
-  
   if (Array.isArray(docs)) {
-    docs.forEach(transformAddressFields);
-  } else {
+    for (const doc of docs) {
+      if (doc && doc.addressId && typeof doc.addressId === 'object') {
+        transformAddressFields(doc);
+      }
+    }
+  } else if (docs.addressId && typeof docs.addressId === 'object') {
     transformAddressFields(docs);
   }
 });

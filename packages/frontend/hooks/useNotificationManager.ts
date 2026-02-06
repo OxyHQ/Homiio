@@ -38,7 +38,6 @@ export function useNotificationManager() {
         location,
       });
     } catch (error) {
-      console.error('Error creating property notification:', error);
     }
   }, []);
 
@@ -60,7 +59,6 @@ export function useNotificationManager() {
         type: 'price_change',
       });
     } catch (error) {
-      console.error('Error creating price change notification:', error);
     }
   }, []);
 
@@ -81,7 +79,6 @@ export function useNotificationManager() {
         type: 'viewing_reminder',
       });
     } catch (error) {
-      console.error('Error creating viewing reminder notification:', error);
     }
   }, []);
 
@@ -99,7 +96,6 @@ export function useNotificationManager() {
         type: 'new_message',
       });
     } catch (error) {
-      console.error('Error creating message notification:', error);
     }
   }, []);
 
@@ -144,7 +140,6 @@ export function useNotificationManager() {
         type: 'contract_update',
       });
     } catch (error) {
-      console.error('Error creating contract notification:', error);
     }
   }, [createLocalNotification]);
 
@@ -165,7 +160,6 @@ export function useNotificationManager() {
         type: 'payment_received',
       });
     } catch (error) {
-      console.error('Error creating payment notification:', error);
     }
   }, [createLocalNotification]);
 
@@ -186,7 +180,6 @@ export function useNotificationManager() {
         type: 'payment_due',
       });
     } catch (error) {
-      console.error('Error creating payment due notification:', error);
     }
   }, []);
 
@@ -202,7 +195,6 @@ export function useNotificationManager() {
         priority,
       }, { priority });
     } catch (error) {
-      console.error('Error creating system notification:', error);
     }
   }, [createLocalNotification]);
 
@@ -224,7 +216,6 @@ export function useNotificationManager() {
         type: 'app_update',
       }, { priority: 'high' });
     } catch (error) {
-      console.error('Error creating app update notification:', error);
     }
   }, [createLocalNotification]);
 
@@ -240,7 +231,6 @@ export function useNotificationManager() {
         type: 'promotion',
       });
     } catch (error) {
-      console.error('Error creating promotion notification:', error);
     }
   }, [createLocalNotification]);
 
@@ -256,7 +246,6 @@ export function useNotificationManager() {
         ...data,
       });
     } catch (error) {
-      console.error('Error scheduling daily digest:', error);
     }
   }, []);
 
@@ -271,7 +260,6 @@ export function useNotificationManager() {
         ...data,
       });
     } catch (error) {
-      console.error('Error scheduling weekly digest:', error);
     }
   }, []);
 
@@ -281,7 +269,6 @@ export function useNotificationManager() {
       await cancelAllLocalNotifications();
       await clearBadgeCount();
     } catch (error) {
-      console.error('Error clearing all notifications:', error);
     }
   }, [cancelAllLocalNotifications, clearBadgeCount]);
 
@@ -289,7 +276,6 @@ export function useNotificationManager() {
     try {
       await updateBadgeCount(count);
     } catch (error) {
-      console.error('Error setting notification badge:', error);
     }
   }, [updateBadgeCount]);
 

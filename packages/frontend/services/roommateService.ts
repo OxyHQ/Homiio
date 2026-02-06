@@ -48,7 +48,6 @@ class RoommateService {
       }
       return data;
     } catch (error) {
-      console.error('Error fetching roommate profiles:', error);
       return { profiles: [], total: 0, page: 1, totalPages: 1 };
     }
   }
@@ -65,7 +64,6 @@ class RoommateService {
       });
       return response.data.data;
     } catch (error) {
-      console.error('Error fetching roommate preferences:', error);
       return null;
     }
   }
@@ -82,7 +80,6 @@ class RoommateService {
       });
       return { hasRoommateMatching: Boolean(response.data.hasRoommateMatching) };
     } catch (error) {
-      console.error('Error fetching roommate status:', error);
       return null;
     }
   }
@@ -100,7 +97,6 @@ class RoommateService {
       });
       return response.data.data;
     } catch (error) {
-      console.error('Error updating roommate preferences:', error);
       throw error;
     }
   }
@@ -127,7 +123,6 @@ class RoommateService {
         message: data.message ?? `Roommate matching ${enabled ? 'enabled' : 'disabled'} successfully`,
       };
     } catch (error) {
-      console.error('Error toggling roommate matching:', error);
       throw error;
     }
   }
@@ -149,7 +144,6 @@ class RoommateService {
         },
       );
     } catch (error) {
-      console.error('Error sending roommate request:', error);
       throw error;
     }
   }
@@ -182,7 +176,6 @@ class RoommateService {
       }
       return data;
     } catch (error) {
-      console.error('Error fetching roommate requests:', error);
       return { sent: [], received: [] };
     }
   }
@@ -204,7 +197,6 @@ class RoommateService {
         },
       );
     } catch (error) {
-      console.error('Error declining roommate request:', error);
       throw error;
     }
   }
@@ -226,7 +218,6 @@ class RoommateService {
         },
       );
     } catch (error) {
-      console.error('Error accepting roommate request:', error);
       throw error;
     }
   }
@@ -252,7 +243,6 @@ class RoommateService {
         activeSessionId,
       });
     } catch (error) {
-      console.error('Error ending roommate relationship:', error);
       throw error;
     }
   }

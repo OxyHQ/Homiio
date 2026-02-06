@@ -1,6 +1,17 @@
 import { create } from 'zustand';
 
-// Define the shape of your global state
+/**
+ * @deprecated This monolithic store is deprecated. Use domain-specific stores instead:
+ * - usePropertyStore (store/propertyStore.ts)
+ * - useProfileStore (store/profileStore.ts)
+ * - useSavedPropertiesStore (store/savedPropertiesStore.ts)
+ * - useRecentlyViewedStore (store/recentlyViewedStore.ts)
+ * - useTrustScoreStore (store/trustScoreStore.ts)
+ * - useCurrencyStore (store/currencyStore.ts)
+ * - useRoommateStore (store/roommateStore.ts)
+ *
+ * This file is kept for backwards compatibility but will be removed in a future release.
+ */
 interface StoreState {
   trends: any;
   analytics: any;
@@ -17,7 +28,6 @@ interface StoreState {
   currency: any;
   createPropertyForm: any;
   roommate: any;
-  // Add actions for each slice
   setTrends: (trends: any) => void;
   setAnalytics: (analytics: any) => void;
   setProperties: (properties: any) => void;
@@ -35,6 +45,7 @@ interface StoreState {
   setRoommate: (roommate: any) => void;
 }
 
+/** @deprecated Use domain-specific stores instead */
 export const useStore = create<StoreState>((set) => ({
   trends: null,
   analytics: null,
@@ -67,7 +78,3 @@ export const useStore = create<StoreState>((set) => ({
   setCreatePropertyForm: (createPropertyForm) => set({ createPropertyForm }),
   setRoommate: (roommate) => set({ roommate }),
 }));
-
-// Example usage in a component:
-// const trends = useStore((state) => state.trends);
-// const setTrends = useStore((state) => state.setTrends);
