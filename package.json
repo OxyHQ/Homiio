@@ -24,7 +24,7 @@
     },
     "devDependencies": {
         "@types/node": "^20.0.0",
-        "ajv": "^8.17.1",
+        "ajv": "^8.18.0",
         "ajv-keywords": "^5.1.0",
         "prettier-plugin-tailwindcss": "^0.5.14",
         "tailwindcss": "^3.4.17"
