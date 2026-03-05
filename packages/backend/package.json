@@ -40,7 +40,7 @@
     "jsonwebtoken": "^9.0.2",
     "jwt-decode": "^4.0.0",
     "mongoose": "^8.0.0",
-    "multer": "^2.0.2",
+    "multer": "^2.1.1",
     "node-cron": "^3.0.3",
     "node-telegram-bot-api": "^0.66.0",
     "pdf-parse": "^1.1.1",
