@@ -59,7 +59,7 @@ try {
 
   // Step 3: Check if we're building frontend or backend
   const target = process.env.DO_TARGET || process.env.VERCEL_TARGET || 'frontend';
-  
+
   if (target === 'frontend') {
     console.log('🌐 Building frontend...');
     execSync('npm run build:frontend', { stdio: 'inherit' });
@@ -72,6 +72,7 @@ try {
   }
 
   console.log('✅ Build completed successfully!');
+  process.exit(0);
 } catch (error) {
   console.error('❌ Build failed:', error.message);
   process.exit(1);
