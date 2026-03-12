@@ -4,22 +4,18 @@ const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-console.log('🚀 Starting Vercel build process...');
+console.log('🚀 Starting build process...');
 
 // Ensure we're in the root directory
 const rootDir = path.resolve(__dirname, '..');
 process.chdir(rootDir);
 
 try {
-  // Step 1: Install dependencies
-  console.log('📦 Installing dependencies...');
-  execSync('npm install', { stdio: 'inherit' });
-
-  // Step 2: Build shared-types first
+  // Step 1: Build shared-types first
   console.log('🔨 Building shared-types...');
   execSync('npm run build:shared-types', { stdio: 'inherit' });
 
-  // Step 3: Ensure shared-types are properly linked for Vercel
+  // Step 2: Ensure shared-types are properly linked
   console.log('🔗 Linking shared-types...');
   const sharedTypesDist = path.join(rootDir, 'packages/shared-types/dist');
   const frontendNodeModules = path.join(rootDir, 'packages/frontend/node_modules/@homiio/shared-types');
@@ -61,7 +57,7 @@ try {
     }
   });
 
-  // Step 4: Check if we're building frontend or backend
+  // Step 3: Check if we're building frontend or backend
   const target = process.env.DO_TARGET || process.env.VERCEL_TARGET || 'frontend';
   
   if (target === 'frontend') {
@@ -79,4 +75,4 @@ try {
 } catch (error) {
   console.error('❌ Build failed:', error.message);
   process.exit(1);
-} 
+}
