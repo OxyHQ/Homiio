@@ -46,20 +46,23 @@ try {
     }
   };
 
-  // Copy to frontend node_modules
-  if (fs.existsSync(sharedTypesDist)) {
-    copyRecursive(sharedTypesDist, frontendNodeModules);
-    console.log('✅ Shared-types copied to frontend node_modules');
-  }
+  // Copy built files and package.json to node_modules
+  const sharedTypesRoot = path.join(rootDir, 'packages/shared-types');
+  const sharedTypesPackageJson = path.join(sharedTypesRoot, 'package.json');
 
-  // Copy to backend node_modules
-  if (fs.existsSync(sharedTypesDist)) {
-    copyRecursive(sharedTypesDist, backendNodeModules);
-    console.log('✅ Shared-types copied to backend node_modules');
-  }
+  [frontendNodeModules, backendNodeModules].forEach(dest => {
+    if (fs.existsSync(sharedTypesDist)) {
+      copyRecursive(sharedTypesDist, path.join(dest, 'dist'));
+      // Copy package.json so Node can resolve the package
+      if (fs.existsSync(sharedTypesPackageJson)) {
+        fs.copyFileSync(sharedTypesPackageJson, path.join(dest, 'package.json'));
+      }
+      console.log(`✅ Shared-types copied to ${path.relative(rootDir, dest)}`);
+    }
+  });
 
   // Step 4: Check if we're building frontend or backend
-  const target = process.env.VERCEL_TARGET || 'frontend';
+  const target = process.env.DO_TARGET || process.env.VERCEL_TARGET || 'frontend';
   
   if (target === 'frontend') {
     console.log('🌐 Building frontend...');
