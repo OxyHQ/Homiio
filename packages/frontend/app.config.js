@@ -173,6 +173,9 @@ module.exports = function (config) {
           },
         ],
         'expo-web-browser',
+        'expo-image',
+        'expo-localization',
+        'expo-sharing',
       ],
       extra: {
         eas: {

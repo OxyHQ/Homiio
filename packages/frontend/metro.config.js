@@ -1,23 +1,46 @@
-const path = require('path');
 const { getDefaultConfig } = require('expo/metro-config');
+const path = require('path');
 
-module.exports = (async () => {
-  const config = await getDefaultConfig(__dirname);
-  const { transformer, resolver } = config;
+const projectRoot = __dirname;
+const monorepoRoot = path.resolve(projectRoot, '../..');
 
-  const svgTransformer = require.resolve('react-native-svg-transformer', {
-    paths: [__dirname, path.resolve(__dirname, '../../node_modules')],
-  });
+const config = getDefaultConfig(projectRoot);
 
-  config.transformer = { ...transformer, babelTransformerPath: svgTransformer };
-  config.resolver = {
-    ...resolver,
-    assetExts: resolver.assetExts.filter(ext => ext !== 'svg'),
-    sourceExts: [...resolver.sourceExts, 'svg'],
-  };
+config.projectRoot = projectRoot;
+config.watchFolders = [monorepoRoot];
 
-  try {
-    const { withNativeWind } = require('nativewind/metro');
-    return withNativeWind(config, { input: './styles/global.css' });
-  } catch { return config; }
-})();
+const blockPath = (dir) => {
+  const resolved = path.resolve(dir);
+  return new RegExp(`${resolved.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/.*`);
+};
+
+config.resolver = {
+  ...config.resolver,
+  blockList: [
+    blockPath(path.join(monorepoRoot, 'packages/backend')),
+    blockPath(path.join(monorepoRoot, 'packages/shared-types/src')),
+    /\.expo\/.*/,
+    /\.metro\/.*/,
+    /\.cache\/.*/,
+  ],
+  extraNodeModules: {
+    '@homiio/shared-types': path.join(monorepoRoot, 'packages/shared-types'),
+  },
+  nodeModulesPaths: [
+    path.join(projectRoot, 'node_modules'),
+    path.join(monorepoRoot, 'node_modules'),
+  ],
+  unstable_enableSymlinks: true,
+  assetExts: config.resolver.assetExts.filter((ext) => ext !== 'svg'),
+  sourceExts: [...config.resolver.sourceExts, 'svg'],
+};
+
+// SVG transformer (custom wrapper for monorepo resolution)
+config.transformer = {
+  ...config.transformer,
+  babelTransformerPath: path.join(projectRoot, 'svg-transformer.js'),
+};
+
+// NativeWind
+const { withNativeWind } = require('nativewind/metro');
+module.exports = withNativeWind(config, { input: './styles/global.css' });
