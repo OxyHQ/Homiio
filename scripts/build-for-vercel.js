@@ -69,7 +69,7 @@ try {
     const result = spawnSync('npx', ['expo', 'export', '--platform', 'web', '--output-dir', 'dist'], {
       stdio: 'inherit',
       cwd: frontendDir,
-      timeout: 600000, // 10 minutes
+      timeout: 180000, // 3 minutes
       killSignal: 'SIGTERM',
       env: { ...process.env, EXPO_NO_TELEMETRY: '1' },
     });
