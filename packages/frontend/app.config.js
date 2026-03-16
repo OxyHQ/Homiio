@@ -69,7 +69,7 @@ module.exports = function (config) {
       },
       web: {
         bundler: 'metro',
-        output: 'static',
+        output: 'single',
         favicon: './assets/images/favicon.png',
         manifest: './public/manifest.json',
         meta: {
