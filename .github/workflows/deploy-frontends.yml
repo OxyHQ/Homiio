@@ -1,9 +1,11 @@
 name: Deploy Frontends
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
+      - '.github/workflows/deploy-frontends.yml'
       - 'packages/frontend/**'
       - 'packages/shared-types/**'
       - 'package.json'
@@ -23,6 +25,7 @@ jobs:
         run: npm run build --workspace=@homiio/shared-types
       - name: Build frontend
         run: npm run build --workspace=@homiio/frontend
+        timeout-minutes: 60
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
           NODE_ENV: production
