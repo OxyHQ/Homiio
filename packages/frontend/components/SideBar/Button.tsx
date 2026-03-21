@@ -1,6 +1,5 @@
 import React, { FC } from 'react';
-import { ViewStyle } from 'react-native';
-import { Pressable } from 'react-native-web-hover';
+import { ViewStyle, Pressable } from 'react-native';
 import { useMediaQuery } from 'react-responsive';
 import { Link } from 'expo-router'; // added Link import
 

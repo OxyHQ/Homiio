@@ -6,8 +6,8 @@ import {
   View,
   ViewStyle,
   StyleSheet,
+  Pressable,
 } from 'react-native';
-import { Pressable } from 'react-native-web-hover';
 import { usePathname, useRouter } from 'expo-router';
 import { useMediaQuery } from 'react-responsive';
 import { useTranslation } from 'react-i18next';

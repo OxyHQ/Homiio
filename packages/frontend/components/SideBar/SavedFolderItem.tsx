@@ -1,6 +1,5 @@
 import React from 'react';
-import { View, Text, Platform, Image } from 'react-native';
-import { Pressable } from 'react-native-web-hover';
+import { View, Text, Platform, Image, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
