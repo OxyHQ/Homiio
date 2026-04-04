@@ -9,7 +9,7 @@ on:
       - 'packages/frontend/**'
       - 'packages/shared-types/**'
       - 'package.json'
-      - 'package-lock.json'
+      - 'bun.lock'
 
 jobs:
   deploy-frontend:
@@ -19,12 +19,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
-      - run: npm ci
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
       - name: Build shared types
-        run: npm run build --workspace=@homiio/shared-types
+        run: bun run build --filter=@homiio/shared-types
       - name: Build frontend
-        run: npm run build --workspace=@homiio/frontend
+        run: bun run build --filter=@homiio/frontend
         timeout-minutes: 60
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
