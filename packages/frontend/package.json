@@ -25,7 +25,7 @@
     "@bitdrift/react-native": "^0.6.14",
     "@expo/vector-icons": "^15.0.2",
     "@gorhom/bottom-sheet": "^5.1.6",
-    "@homiio/shared-types": "file:../shared-types",
+    "@homiio/shared-types": "workspace:*",
     "@oxyhq/core": "1.11.10",
     "@oxyhq/services": "6.9.43",
     "@react-native-community/netinfo": "11.5.2",

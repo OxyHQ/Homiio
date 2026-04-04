@@ -30,7 +30,7 @@
         "@ai-sdk/openai": "^1.3.22",
         "@aws-sdk/client-s3": "^3.864.0",
         "@aws-sdk/s3-request-presigner": "^3.864.0",
-        "@homiio/shared-types": "file:../shared-types",
+        "@homiio/shared-types": "workspace:*",
         "@oxyhq/core": "1.11.10",
         "ai": "^4.3.16",
         "axios": "^1.13.4",
@@ -87,7 +87,7 @@
         "@bitdrift/react-native": "^0.6.14",
         "@expo/vector-icons": "^15.0.2",
         "@gorhom/bottom-sheet": "^5.1.6",
-        "@homiio/shared-types": "file:../shared-types",
+        "@homiio/shared-types": "workspace:*",
         "@oxyhq/core": "1.11.10",
         "@oxyhq/services": "6.9.43",
         "@react-native-community/netinfo": "11.5.2",
@@ -3043,11 +3043,7 @@
 
     "@expo/metro-config/postcss": ["postcss@8.4.49", "", { "dependencies": { "nanoid": "^3.3.7", "picocolors": "^1.1.1", "source-map-js": "^1.2.1" } }, "sha512-OCVPnIObs4N29kxTjzLfUryOkvZEq+pf8jTF0lg8E7uETuWHA+v7j3c/xJmiqpX450191LlmZfUKkXxkTry7nA=="],
 
-    "@homiio/backend/@homiio/shared-types": ["@homiio/shared-types@file:packages/shared-types", { "dependencies": { "mongoose": "^8.18.0", "typescript": "^5.0.0" }, "devDependencies": { "@eslint/js": "^9.0.0", "@types/node": "^20.0.0", "@typescript-eslint/eslint-plugin": "^7.0.0", "@typescript-eslint/parser": "^7.0.0", "eslint": "^9.0.0" } }],
-
     "@homiio/backend/@types/node": ["@types/node@24.12.0", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-GYDxsZi3ChgmckRT9HPU0WEhKLP08ev/Yfcq2AstjrDASOYCSXeyjDsHg4v5t4jOj7cyDX3vmprafKlWIG9MXQ=="],
-
-    "@homiio/frontend/@homiio/shared-types": ["@homiio/shared-types@file:packages/shared-types", { "dependencies": { "mongoose": "^8.18.0", "typescript": "^5.0.0" }, "devDependencies": { "@eslint/js": "^9.0.0", "@types/node": "^20.0.0", "@typescript-eslint/eslint-plugin": "^7.0.0", "@typescript-eslint/parser": "^7.0.0", "eslint": "^9.0.0" } }],
 
     "@isaacs/cliui/string-width": ["string-width@5.1.2", "", { "dependencies": { "eastasianwidth": "^0.2.0", "emoji-regex": "^9.2.2", "strip-ansi": "^7.0.1" } }, "sha512-HnLOCR3vjcY8beoNLtcjZ5/nxn2afmME6lhrDrebokqMap+XbeW8n9TXpPDOqdGK5qcI3oT0GKTW6wC7EMiVqA=="],
 
@@ -3418,8 +3414,6 @@
     "@expo/metro-config/glob/path-scurry": ["path-scurry@2.0.2", "", { "dependencies": { "lru-cache": "^11.0.0", "minipass": "^7.1.2" } }, "sha512-3O/iVVsJAPsOnpwWIeD+d6z/7PmqApyQePUtCndjatj/9I5LylHvt5qluFaBT3I5h3r1ejfR056c+FCv+NnNXg=="],
 
     "@expo/metro/metro-source-map/ob1": ["ob1@0.83.3", "", { "dependencies": { "flow-enums-runtime": "^0.0.6" } }, "sha512-egUxXCDwoWG06NGCS5s5AdcpnumHKJlfd3HH06P3m9TEMwwScfcY35wpQxbm9oHof+dM/lVH9Rfyu1elTVelSA=="],
-
-    "@homiio/backend/@homiio/shared-types/@types/node": ["@types/node@20.19.37", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-8kzdPJ3FsNsVIurqBs7oodNnCEVbni9yUEkaHbgptDACOPW04jimGagZ51E6+lXUwJjgnBw+hyko/lkFWCldqw=="],
 
     "@homiio/backend/@types/node/undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
 
