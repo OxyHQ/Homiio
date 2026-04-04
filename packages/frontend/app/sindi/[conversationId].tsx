@@ -13,7 +13,7 @@ import {
   Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useOxy } from '@oxyhq/services';
+import { useOxy, showSignInModal } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 
@@ -254,7 +254,7 @@ export default function ConversationDetail() {
           description={t('sindi.auth.message')}
           actionText="Sign In"
           actionIcon="log-in"
-          onAction={() => router.push('/profile')}
+          onAction={() => showSignInModal()}
           iconColor={colors.primaryColor}
         />
       </ThemedView>

@@ -14,7 +14,7 @@ import { colors } from '@/styles/colors';
 import { useRouter, usePathname } from 'expo-router';
 import React, { useMemo, useCallback } from 'react';
 import Avatar from './Avatar';
-import { useOxy } from '@oxyhq/services';
+import { showSignInModal } from '@oxyhq/services';
 import { useHasRentalProperties } from '@/hooks/useLeaseQueries';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SindiIconActive } from '@/assets/icons/sindi-icon';
@@ -22,7 +22,6 @@ import { SindiIconActive } from '@/assets/icons/sindi-icon';
 export const BottomBar = () => {
   const router = useRouter();
   const pathname = usePathname() || '/';
-  const { showBottomSheet } = useOxy();
   const { hasRentalProperties } = useHasRentalProperties();
   const insets = useSafeAreaInsets();
 
@@ -132,7 +131,7 @@ export const BottomBar = () => {
         </Pressable>
       )}
       <View style={styles.tab}>
-        <Avatar onPress={() => showBottomSheet?.('SignIn')} />
+        <Avatar onPress={() => showSignInModal()} />
       </View>
     </View>
   );
