@@ -35,8 +35,8 @@
     },
     "dependencies": {
         "@gorhom/bottom-sheet": "^5.1.8",
-        "@oxyhq/core": "1.11.10",
-        "@oxyhq/services": "6.9.43",
+        "@oxyhq/core": "1.11.11",
+        "@oxyhq/services": "6.9.44",
         "expo": "~55",
         "react": "19.2.0",
         "react-dom": "19.2.0",
