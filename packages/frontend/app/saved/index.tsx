@@ -21,7 +21,7 @@ import { ListItem } from '@/components/ListItem';
 import { colors } from '@/styles/colors';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { useSavedProperties } from '@/hooks/useSavedProperties';
-import { useOxy } from '@oxyhq/services';
+import { useOxy, showSignInModal } from '@oxyhq/services';
 import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
 import { useSavedNotesMutation } from '@/hooks/useSavedNotes';
 
@@ -784,6 +784,9 @@ export default function SavedPropertiesScreen() {
           icon="lock-closed"
           title={t('profile.signInRequired')}
           description={t('profile.signInMessage')}
+          actionText="Sign In"
+          actionIcon="log-in"
+          onAction={() => showSignInModal()}
         />
       </View>
     );

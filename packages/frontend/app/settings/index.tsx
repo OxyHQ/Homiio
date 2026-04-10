@@ -16,7 +16,7 @@ const IconComponent = Ionicons as any;
 export default function SettingsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { user, showBottomSheet } = useOxy();
+  const { user, showBottomSheet, logout } = useOxy();
   const { getCurrentCurrency } = useCurrency();
 
   // Settings state
@@ -34,9 +34,13 @@ export default function SettingsScreen() {
       {
         text: t('settings.signOut'),
         style: 'destructive',
-        onPress: () => {
-          // For now, just navigate back - the actual sign out would depend on your auth system
-          router.replace('/');
+        onPress: async () => {
+          try {
+            await logout();
+            router.replace('/');
+          } catch (error) {
+            console.error('Logout failed:', error);
+          }
         },
       },
     ]);

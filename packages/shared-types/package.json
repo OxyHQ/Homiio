@@ -6,12 +6,12 @@
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "scripts": {
-        "build": "npx tsc",
-        "dev": "npx tsc --watch",
-        "clean": "rm -rf dist",
+        "build": "bunx tsc",
+        "dev": "bunx tsc --watch",
+        "clean": "rm -rf dist tsconfig.tsbuildinfo",
         "lint": "eslint src --ext .ts",
         "test": "echo \"No tests specified\" && exit 0",
-        "prepublishOnly": "npm run build"
+        "prepublishOnly": "bun run build"
     },
     "keywords": [
         "typescript",

@@ -9,7 +9,7 @@ import {
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useOxy } from '@oxyhq/services';
+import { useOxy, showSignInModal } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
 import { SindiIcon } from '@/assets/icons';
 import Button from '@/components/button';
@@ -256,7 +256,7 @@ export default function Sindi() {
           description={t('sindi.auth.message')}
           actionText="Sign In"
           actionIcon="log-in"
-          onAction={() => router.push('/profile')}
+          onAction={() => showSignInModal()}
           iconColor={colors.primaryColor}
         />
       </ThemedView>

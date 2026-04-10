@@ -24,7 +24,7 @@ import { Hashtag, HashtagActive } from '@/assets/icons/hashtag-icon';
 import { Search, SearchActive } from '@/assets/icons/search-icon';
 import { Compose } from '@/assets/icons/compose-icon';
 import { Ionicons } from '@expo/vector-icons';
-import { useOxy } from '@oxyhq/services';
+import { useOxy, showSignInModal } from '@oxyhq/services';
 import { SindiIcon, SindiIconActive } from '@/assets/icons';
 import { ProfileIcon, ProfileIconActive } from '@/assets/icons/profile-icon';
 import { webAlert } from '@/utils/api';
@@ -40,7 +40,7 @@ export function SideBar() {
   const { t } = useTranslation();
   const router = useRouter();
   const { canAccessRoommates } = useProfile();
-  const { isAuthenticated: _isAuthenticated, user, showBottomSheet, logout } = useOxy();
+  const { isAuthenticated: _isAuthenticated, user, logout } = useOxy();
 
   // Use SavedPropertiesContext for consistent state with SaveButton
   const { savedProperties, folders, isLoading: savedLoading } = useSavedPropertiesContext();
@@ -417,7 +417,7 @@ export function SideBar() {
                 text={t('sidebar.actions.signIn')}
                 isExpanded={isExpanded}
                 onHoverExpand={handleHoverIn}
-                onPress={() => showBottomSheet?.('SignIn')}
+                onPress={() => showSignInModal()}
               />
             )}
           </View>

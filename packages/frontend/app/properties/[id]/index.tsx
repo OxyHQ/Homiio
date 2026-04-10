@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
 import { ThemedText } from '@/components/ThemedText';
 import { useProperty } from '@/hooks';
-import { useOxy } from '@oxyhq/services';
+import { useOxy, showSignInModal } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
 import { toast } from 'sonner';
 import * as Haptics from 'expo-haptics';
@@ -249,6 +249,7 @@ export default function PropertyDetailPage() {
 
     if (!oxyServices || !activeSessionId) {
       toast.error(t('error.auth.required', 'Please sign in to contact the owner'));
+      showSignInModal();
       return;
     }
     router.push(`/chat/${property?.id}`);
@@ -257,6 +258,7 @@ export default function PropertyDetailPage() {
   const handleCall = async () => {
     if (!oxyServices || !activeSessionId) {
       toast.error(t('error.auth.required', 'Please sign in to call the owner'));
+      showSignInModal();
       return;
     }
 
