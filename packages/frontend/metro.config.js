@@ -31,14 +31,18 @@ config.resolver = {
     path.join(monorepoRoot, 'node_modules'),
   ],
   unstable_enableSymlinks: true,
-  assetExts: config.resolver.assetExts.filter((ext) => ext !== 'svg'),
+  assetExts: [
+    ...config.resolver.assetExts.filter((ext) => ext !== 'svg'),
+    'woff2',
+    'woff',
+  ],
   sourceExts: [...config.resolver.sourceExts, 'svg'],
 };
 
-// SVG transformer (custom wrapper for monorepo resolution)
+// SVG transformer — use the package's built-in Expo entry directly.
 config.transformer = {
   ...config.transformer,
-  babelTransformerPath: path.join(projectRoot, 'svg-transformer.js'),
+  babelTransformerPath: require.resolve('react-native-svg-transformer/expo'),
 };
 
 // NativeWind

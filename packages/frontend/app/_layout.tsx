@@ -40,6 +40,7 @@ import { SearchModeProvider } from '@/context/SearchModeContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { OxyProvider } from '@oxyhq/services';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { BloomThemeProvider } from '@oxyhq/bloom';
 import { PostHogProvider } from 'posthog-react-native';
 import '../styles/global.css';
 import { OXY_BASE_URL } from '@/config';
@@ -187,6 +188,7 @@ export default function RootLayout() {
     <View style={{ flex: 1 }}>
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <GestureHandlerRootView style={{ flex: 1 }}>
+          <BloomThemeProvider fonts onFontsLoading={<AppSplashScreen />}>
           {!appIsReady ? (
             <AppSplashScreen
               startFade={splashState.startFade}
@@ -253,6 +255,7 @@ export default function RootLayout() {
               </QueryClientProvider>
             </PostHogProvider>
           )}
+          </BloomThemeProvider>
         </GestureHandlerRootView>
       </SafeAreaProvider>
     </View>

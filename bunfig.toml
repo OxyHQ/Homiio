@@ -1,0 +1,5 @@
+[install]
+# Expo/Metro/Babel rely on transitive deps being resolvable via the standard
+# node_modules chain (babel-preset-expo, @svgr/*, path-dirname, etc.).
+# Use hoisted linker to match npm/yarn behavior so plugin resolution works.
+linker = "hoisted"

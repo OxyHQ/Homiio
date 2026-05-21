@@ -26,6 +26,7 @@
     "@expo/vector-icons": "^15.0.2",
     "@gorhom/bottom-sheet": "^5.1.6",
     "@homiio/shared-types": "workspace:*",
+    "@oxyhq/bloom": "^0.3.3",
     "@oxyhq/core": "1.11.11",
     "@oxyhq/services": "6.9.43",
     "@react-native-community/netinfo": "11.5.2",

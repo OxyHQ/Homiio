@@ -30,8 +30,7 @@
         "tailwindcss": "^3.4.17"
     },
     "engines": {
-        "node": "22.x",
-        "npm": ">=8.0.0"
+        "node": "22.x"
     },
     "dependencies": {
         "@gorhom/bottom-sheet": "^5.1.8",
