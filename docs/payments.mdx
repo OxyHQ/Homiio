@@ -1,0 +1,173 @@
+---
+title: Payments
+description: Stripe Checkout, idempotent webhooks, customer portal, file credits, and the Homiio+ / Founder subscription tiers.
+order: 2
+---
+
+# Payments
+
+Homiio uses Stripe Checkout for all paid flows — there is no card form rendered in the app. The backend exposes three products (`plus`, `file`, `founder`) and persists entitlements in a single `Billing` document per Oxy user. Webhooks are idempotent via a per-user `processedSessions` array, so retried events can never double-credit.
+
+All billing endpoints live under `/api/billing` (`packages/backend/routes/billing.ts`, controller in `controllers/billingController.ts`).
+
+## Products
+
+| Product | Stripe mode | Effect | Default price |
+|---------|-------------|--------|---------------|
+| `plus` | `subscription` | `Billing.plusActive = true`, `plusSince` set, links `plusStripeSubscriptionId`. | EUR 9.99 / month |
+| `file` | `payment` | One-off — increments `Billing.fileCredits` by 1. | EUR 5.00 |
+| `founder` | `subscription` | Sets `Billing.founderSupporter = true`, `founderSince`. | EUR 10.00 / month |
+
+Price IDs are read from env (`STRIPE_PRICE_PLUS`, `STRIPE_PRICE_FILE`). If they're absent the controller falls back to inline `price_data` so the flow still works in dev without a configured catalogue.
+
+## The Billing document
+
+One per `oxyUserId` (enforced by a unique index). Living schema (`packages/backend/models/schemas/BillingSchema.ts`):
+
+```ts
+{
+  oxyUserId: string,         // Required, unique
+  plusActive: boolean,       // Homiio+ active
+  plusSince: Date,
+  plusCanceledAt: Date,      // Set when cancel_at_period_end fires
+  plusStripeSubscriptionId: string,
+  fileCredits: number,       // One-off contract-review credits
+  lastPaymentAt: Date,
+  processedSessions: string[], // Idempotency guard
+  founderSupporter: boolean,
+  founderSince: Date,
+  createdAt: Date,
+  updatedAt: Date,
+}
+```
+
+Instance helpers: `addFileCredit()`, `consumeFileCredit()` (no-ops with `'unlimited'` for `plus` users), `activatePlus(stripeSubscriptionId)`, `deactivatePlus()`, `addProcessedSession(sessionId)`, `isSessionProcessed(sessionId)`.
+
+A `pre('save')` hook throws if a duplicate `oxyUserId` document is created, preventing accidental forks.
+
+## Checkout flow
+
+```
+Client                  Backend                     Stripe
+   │                       │                           │
+   │  POST /billing/checkout                           │
+   │  { product: 'plus' }  │                           │
+   ├──────────────────────▶│                           │
+   │                       │  stripe.checkout.sessions.create()
+   │                       ├──────────────────────────▶│
+   │                       │   { url, id }             │
+   │                       │◀──────────────────────────┤
+   │  { url, id }          │                           │
+   │◀──────────────────────┤                           │
+   │                                                   │
+   │  Redirect / WebBrowser.openBrowserAsync(url)      │
+   ├──────────────────────────────────────────────────▶│
+   │                                                   │
+   │  (User completes Checkout, returns to success_url)│
+   │                                                   │
+   │                                                   │
+   │                  POST /billing/webhook (raw body) │
+   │                       │◀──────────────────────────┤
+   │                       │  checkout.session.completed
+   │                       │  → Billing.updateOne(...) │
+   │                       │                           │
+```
+
+### Create a Checkout session
+
+`POST /api/billing/checkout` (authenticated):
+
+```json
+{ "product": "plus" }
+```
+
+Response:
+
+```json
+{ "success": true, "url": "https://checkout.stripe.com/...", "id": "cs_live_..." }
+```
+
+The Oxy user id is passed as both `client_reference_id` and `metadata.oxyUserId` so the webhook can identify the user even if Stripe drops the reference on some object types.
+
+### Webhook (idempotent)
+
+`POST /api/billing/webhook` is **public** (Stripe signs requests). It must be mounted with a **raw body parser** in `server.ts` — the controller refuses to fall back to a parsed body for signature verification:
+
+```ts
+interface RawBodyRequest extends Request {
+  rawBody?: Buffer;
+}
+
+const { rawBody } = req as RawBodyRequest;
+if (!rawBody) {
+  return res.status(400).json({
+    success: false,
+    error: { message: 'Missing raw body for signature verification' },
+  });
+}
+const event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+```
+
+Idempotency is enforced at the MongoDB layer via `$addToSet` plus a `$ne` guard on the `processedSessions` array:
+
+```ts
+await Billing.updateOne(
+  { oxyUserId, processedSessions: { $ne: sessionId } },
+  {
+    $set: { lastPaymentAt: new Date(), plusActive: true, plusSince: new Date() },
+    $addToSet: { processedSessions: sessionId }
+  }
+);
+```
+
+If the same `checkout.session.completed` event is delivered twice, the second update matches zero documents and no extra credit or activation occurs.
+
+### Events handled
+
+| Stripe event | Action |
+|--------------|--------|
+| `checkout.session.completed` | Activates Plus / adds file credit / sets Founder flag based on `metadata.product`. |
+| `customer.subscription.updated` | If `cancel_at_period_end && canceled_at`, sets `plusActive: false` and `plusCanceledAt`. |
+| `invoice.payment_succeeded` | Updates `lastPaymentAt` for the linked subscription. |
+| `invoice.payment_failed` | Deactivates Plus, sets `plusCanceledAt`. |
+| `customer.subscription.deleted` | Deactivates Plus, sets `plusCanceledAt`. |
+
+## Customer portal
+
+`POST /api/billing/customer-portal` returns a Stripe-hosted billing portal URL where users can update payment methods, view invoices, and cancel subscriptions. The portal session is scoped to the user's Stripe customer (resolved via `plusStripeSubscriptionId` or freshly created).
+
+## Subscription lifecycle endpoints
+
+These give the app fine-grained control without bouncing the user through the portal:
+
+| Endpoint | Auth | Purpose |
+|----------|------|---------|
+| `POST /api/billing/cancel-subscription` | yes | Schedules a `cancel_at_period_end` on the active Plus subscription. |
+| `POST /api/billing/reactivate-subscription` | yes | Clears `cancel_at_period_end`. |
+| `POST /api/billing/sync-subscription` | yes | Pulls the live Stripe state and reconciles the `Billing` document. Useful after a manual change in the Stripe dashboard. |
+| `POST /api/billing/manual-cancel` | yes | Cancels immediately (admin / support flow). |
+| `POST /api/billing/manual-activate` | yes | Fallback for when a webhook fails to fire — activates from a `session_id`. |
+| `POST /api/billing/checkout` | yes | Create a Checkout session. |
+| `POST /api/billing/customer-portal` | yes | Open the Stripe-hosted portal. |
+| `POST /api/billing/webhook` | no (signed) | Stripe webhook. Raw body required. |
+
+## Debug and diagnostics
+
+For development and support, the controller exposes diagnostic endpoints. They never reveal Stripe secrets — only configuration *presence*:
+
+| Endpoint | Returns |
+|----------|---------|
+| `GET /api/billing/webhook-test` | Booleans for each env var (`hasSecretKey`, `hasWebhookSecret`, `hasPricePlus`, `hasPriceFile`) plus the computed webhook URL. |
+| `GET /api/billing/debug-billing` | The caller's `Billing` document plus a friendly status string. |
+| `GET /api/billing/debug-subscription` | Side-by-side comparison of the `Billing` document vs the live Stripe subscription, with a `needsSync` flag and a recommended `syncAction`. |
+| `POST /api/billing/webhook-test-endpoint` | Echo endpoint to verify Stripe can reach the server (no signature check). |
+
+## When Stripe isn't configured
+
+`getStripe()` returns `null` when `STRIPE_SECRET_KEY` is missing. Endpoints that require Stripe return `501 STRIPE_NOT_CONFIGURED` rather than crashing — useful for local development without Stripe credentials, and the rest of the app continues to work.
+
+## Confirming a session client-side
+
+After Checkout redirects back to the app, the frontend can call `POST /api/billing/confirm` with the `session_id` from the URL to immediately apply the entitlement (instead of waiting for the webhook). The controller re-verifies the session against Stripe (`session.payment_status === 'paid'`) and applies the same idempotent update path used by the webhook.
+
+This is the "belt and suspenders" pattern Stripe recommends — webhooks are authoritative, but the confirm endpoint smooths over the multi-second delay before the webhook lands.

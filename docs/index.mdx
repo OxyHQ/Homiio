@@ -1,0 +1,210 @@
+---
+title: Homiio
+description: Real estate platform with ethical pricing, AI tenant-rights assistant, Stripe billing, and PostHog analytics — Expo/RN + Node + Oxy.
+order: 0
+---
+
+# Homiio
+
+Homiio is a real estate platform built around fair pricing, tenant rights, and transparent listings. The frontend is a single Expo / React Native codebase that targets iOS, Android, and Web. The backend is a Node + Express API backed by MongoDB, Stripe for subscriptions, AWS S3 + Sharp for media, and the AI SDK for **Sindi**, the in-app tenant-rights assistant.
+
+<Badge variant="success">App</Badge> <Badge>iOS / Android / Web</Badge>
+
+## What it is
+
+A two-sided marketplace for renters and landlords with an opinionated stance:
+
+- **Ethical pricing first.** Properties expose income-based pricing flags, sliding-scale flags, utilities-included flags, and reduced-deposit flags — the schema is built around these signals.
+- **Tenant-rights aware.** Sindi (the in-app AI assistant) is wired to a tenant-first system prompt, references the Sindicat de Llogateres for Catalonia queries, and can pull matching listings inline.
+- **Beyond rentals.** Beyond apartments and houses, the `PropertyType` enum covers couchsurfing, co-living, hostels, guesthouses, campsites, boats, treehouses, and yurts — each with `accommodationDetails` for sleeping arrangement, host preferences, cultural exchange, languages, and meals included.
+- **Identity via Oxy.** Sign-in, account switching, and avatars come from `@oxyhq/services`. Homiio never stores passwords.
+
+Inside the repo:
+
+| Package | Role |
+|---------|------|
+| `frontend` (`@homiio/frontend`) | Expo Router app. NativeWind + Tailwind for styling, Zustand for local state, TanStack Query for server state, `@oxyhq/bloom` for primitives. |
+| `backend` (`@homiio/backend`) | Express 4 + Mongoose 8 API. Stripe billing, Sharp + S3 image pipeline, Telegram + WhatsApp scrapers, AI SDK streaming endpoints. |
+| `shared-types` (`@homiio/shared-types`) | Pure TypeScript types — `Property`, `Address`, `City`, `Lease`, `Profile`, `Review`. Built first via `postinstall`. |
+
+## Architecture
+
+```
+   ┌──────────────────────┐                  ┌──────────────────────┐
+   │   Homiio Frontend    │  ── REST ─────▶  │   Homiio Backend     │
+   │   (Expo / RN / Web)  │                  │   (Express + Mongo)  │
+   │                      │  ◀── AI stream ─ │                      │
+   └──────────────────────┘                  └──────────────────────┘
+            │                                          │
+            ▼                                          ▼
+     @oxyhq/services                           Stripe + S3 + OpenAI
+     (auth, account switcher)                  + Oxy API (identity)
+            │                                          │
+            ▼                                          ▼
+        PostHog                                  MongoDB
+   (analytics + session replay)        (Property, Profile, Billing, Lease,
+                                        City, Address, Review, Conversation)
+```
+
+Build order matters: `@homiio/shared-types` is built ahead of the others via a root `postinstall`, then `frontend` and `backend` can build in parallel.
+
+## Install
+
+```sh
+git clone https://github.com/OxyHQ/Homiio.git
+cd Homiio
+bun install
+```
+
+`bun install` resolves all three workspaces and runs `bun run build:shared-types` automatically as `postinstall`.
+
+### Prerequisites
+
+- Node.js 22.x (pinned in `engines`)
+- Bun 1.0+
+- MongoDB (local or hosted)
+- For iOS: macOS + Xcode. For Android: Android Studio.
+
+### Environment
+
+`packages/backend/.env`:
+
+```env
+MONGODB_URI=mongodb://localhost:27017/homiio
+OXY_API_URL=https://api.oxy.so
+PORT=3000
+NODE_ENV=development
+
+# Stripe (optional — billing endpoints return 501 STRIPE_NOT_CONFIGURED if unset)
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRICE_PLUS=price_...
+STRIPE_PRICE_FILE=price_...
+STRIPE_SUCCESS_URL=https://homiio.com/success
+STRIPE_CANCEL_URL=https://homiio.com/profile/subscriptions
+
+# AI (Sindi assistant)
+OPENAI_API_KEY=sk-...
+
+# Image pipeline
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_REGION=eu-west-1
+AWS_S3_BUCKET=homiio-images
+```
+
+`packages/frontend/.env`:
+
+```env
+EXPO_PUBLIC_API_URL=http://localhost:3000
+EXPO_PUBLIC_OXY_BASE_URL=https://api.oxy.so
+EXPO_PUBLIC_POSTHOG_KEY=phc_...
+EXPO_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
+```
+
+## Quick start
+
+```sh
+# Start everything
+bun run dev
+
+# Or one at a time
+bun run dev:frontend     # Expo tunnel
+bun run dev:backend      # nodemon + ts-node
+```
+
+In the Expo CLI, press `w` for web, `i` for iOS simulator, `a` for Android emulator.
+
+## Core concepts
+
+### Property model
+
+`Property` is the central entity. Beyond the obvious fields (`type`, `bedrooms`, `bathrooms`, `rent`, `address`), the schema captures the ethical-pricing signals that drive search and ranking:
+
+```ts
+interface PropertyRent {
+  amount: number;
+  currency: string;
+  paymentFrequency: 'monthly' | 'weekly' | 'daily';
+  deposit: number;
+  utilities: 'included' | 'excluded' | 'partial';
+  hasIncomeBasedPricing?: boolean;
+  hasSlidingScale?: boolean;
+  hasUtilitiesIncluded?: boolean;
+  hasReducedDeposit?: boolean;
+}
+```
+
+Properties can be internally listed (`profileId` set, `isExternal: false`) or scraped from external sources like Fotocasa (`source`, `sourceId`, `sourceUrl`, `expiresAt` for TTL). The `accommodationDetails` block adds couchsurfing / co-living / hostel / campsite specifics — sleeping arrangement, roommate preferences, host languages, cultural exchange flag, meals included.
+
+See [Listings](./listings) for the full schema, search filters, and the address-first creation flow.
+
+### Profiles, not users
+
+Homiio sits behind Oxy identity. Each Oxy user gets one or more **profiles** (Personal, Agency, Business, Cooperative). Personal profiles include an auto-calculated trust score from profile completion, verification status, rental history, and references.
+
+The frontend's `ProfileProvider` loads profiles immediately after `useOxy()` reports authentication; the backend's `getOrCreateActiveProfile` endpoint creates a default Personal profile on first sign-in. There's no separate "create your account" step — profile creation is transparent.
+
+### Sindi (AI tenant-rights assistant)
+
+Sindi is the in-app AI assistant. Backend route: `POST /api/ai/chat` streams responses via the [AI SDK](https://sdk.vercel.ai/) with `@ai-sdk/openai`. The system prompt is explicit:
+
+> You are Sindi, an AI tenant-rights assistant for Homiio. Be concise, accurate, and pro-tenant. Prioritize tenant rights, fair housing, and current local law. Search Homiio properties first when asked for places to rent; then add rights tips. Prefer official sources and Sindicat de Llogateres for Catalonia queries.
+
+When the user asks Sindi for listings, it can embed a machine-readable property block at the end of its reply:
+
+```
+<PROPERTIES_JSON>["propertyId1","propertyId2","propertyId3"]</PROPERTIES_JSON>
+```
+
+The frontend parses that tag and renders inline property cards under Sindi's message. Conversations are persisted as `Conversation` documents in MongoDB.
+
+### Stripe billing (Homiio+ / file credits / Founder)
+
+Three products are wired through Stripe Checkout:
+
+| Product | Mode | Effect |
+|---------|------|--------|
+| `plus` | `subscription` | Sets `Billing.plusActive: true`, unlocks unlimited contract reviews and premium features. |
+| `file` | `payment` | One-off, increments `Billing.fileCredits` by 1. |
+| `founder` | `subscription` | Sets `Billing.founderSupporter: true` — supporter tier. |
+
+Webhook handling is idempotent via a per-billing-record `processedSessions` array, so duplicate webhook deliveries can never double-credit. See [Payments](./payments) for the full lifecycle, customer-portal flow, and the manual-activation fallback for when webhooks fail.
+
+### PostHog analytics + session replay
+
+`PostHogProvider` wraps the entire app tree under `_layout.tsx` with `autocapture` and `enableSessionReplay: true`. Pages, taps, and form submissions are captured automatically; session replay captures the rendered DOM for web and the screen state on native. The provider sits *outside* the `QueryClientProvider` so analytics keep working even if the query client tears down.
+
+See [Analytics](./analytics) for the event taxonomy, the privacy controls, and how Homiio's backend analytics aggregator (`GET /api/analytics`, `GET /api/analytics/stats`) complements the client capture.
+
+### Identity via Oxy
+
+`OxyProvider` from `@oxyhq/services` owns the auth context, account switcher, and the bottom-sheet system. The frontend wires it inside `BottomSheetModalProvider` (from `@gorhom/bottom-sheet`) so Homiio's own sheets coexist with Oxy's.
+
+```tsx
+<PostHogProvider apiKey={posthogApiKey} options={{ host: posthogHost, enableSessionReplay: true }} autocapture>
+  <QueryClientProvider client={queryClient}>
+    <BottomSheetModalProvider>
+      <OxyProvider baseURL={OXY_BASE_URL}>
+        <ProfileProvider>
+          <SavedPropertiesProvider>
+            {/* ... */}
+          </SavedPropertiesProvider>
+        </ProfileProvider>
+      </OxyProvider>
+    </BottomSheetModalProvider>
+  </QueryClientProvider>
+</PostHogProvider>
+```
+
+## Routes at a glance
+
+**Frontend (Expo Router):** `addresses`, `contracts`, `horizon`, `insights`, `profile`, `properties`, `reviews`, `roommates`, `saved`, `search`, `settings`, `sindi`, `tips`, `viewings`.
+
+**Backend (Express):** `addresses`, `ai`, `analytics`, `billing`, `cities`, `images`, `leases`, `notifications`, `profiles`, `properties`, `public`, `reviews`, `roommates`, `rooms`, `scraper`, `telegram`, `tips`, `viewings`.
+
+## Documentation map
+
+- [Listings](./listings) — Property schema, search filters, accommodation types, external sourcing.
+- [Payments](./payments) — Stripe Checkout, webhook idempotency, customer portal, file credits.
+- [Analytics](./analytics) — PostHog wiring, session replay, backend stats aggregator.

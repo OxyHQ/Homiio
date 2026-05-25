@@ -1,0 +1,195 @@
+---
+title: Listings
+description: The Property schema, search and discovery, accommodation types beyond apartments, and external sourcing.
+order: 1
+---
+
+# Listings
+
+Listings are the heart of Homiio. The `Property` model captures more than typical real-estate listings: ethical-pricing flags, accommodation-specific details (couchsurfing through campsites), external sourcing metadata for scraped properties, and verification / eco flags. This page covers the schema, the public discovery routes, and the create / update flow.
+
+## The Property model
+
+`@homiio/shared-types` exports the canonical interface used by both the API and the app:
+
+```ts
+interface Property {
+  _id: string;
+  profileId?: string;          // Optional for external/scraped properties
+  source?: string;             // e.g. 'fotocasa', 'internal'
+  sourceId?: string;
+  sourceUrl?: string;
+  isExternal?: boolean;
+  expiresAt?: string;          // TTL for external properties (Mongo index)
+
+  address: Address;
+  location?: GeoJSONPoint;     // 2dsphere indexed for nearby queries
+
+  type: PropertyType;
+  housingType?: HousingType;
+  layoutType?: LayoutType;
+
+  bedrooms?: number;
+  bathrooms?: number;
+  squareFootage?: number;
+
+  rent: PropertyRent;          // amount + currency + frequency + utilities + ethical flags
+  priceUnit?: PriceUnit;       // day | night | week | month | year
+
+  amenities?: string[];
+  images?: PropertyImage[];
+  status: PropertyStatus;      // draft | published | reserved | rented | sold | inactive
+
+  rules?: PropertyRules;
+  accommodationDetails?: AccommodationDetails;
+
+  isVerified?: boolean;
+  isEcoFriendly?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+### Ethical-pricing flags
+
+`PropertyRent` is the load-bearing field for Homiio's pricing stance:
+
+```ts
+interface PropertyRent {
+  amount: number;
+  currency: string;
+  paymentFrequency: 'monthly' | 'weekly' | 'daily';
+  deposit: number;
+  utilities: 'included' | 'excluded' | 'partial';
+  hasIncomeBasedPricing?: boolean;
+  hasSlidingScale?: boolean;
+  hasUtilitiesIncluded?: boolean;
+  hasReducedDeposit?: boolean;
+}
+```
+
+These flags surface in search filters, listing badges, and Sindi's ranking. A landlord offering income-based pricing is preferred in tenant-rights-leaning queries.
+
+### Accommodation types
+
+`PropertyType` covers the full housing spectrum, not just apartments:
+
+```ts
+enum PropertyType {
+  APARTMENT, HOUSE, ROOM, STUDIO,
+  COUCHSURFING, ROOMMATES, COLIVING,
+  HOSTEL, GUESTHOUSE, CAMPSITE,
+  BOAT, TREEHOUSE, YURT, OTHER
+}
+```
+
+For non-traditional types, `accommodationDetails` carries the type-specific fields:
+
+```ts
+interface AccommodationDetails {
+  sleepingArrangement?: 'couch' | 'air_mattress' | 'floor' | 'tent' | 'hammock';
+  roommatePreferences?: string[];
+  colivingFeatures?: string[];
+  hostelRoomType?: 'dormitory' | 'private_room' | 'mixed_dorm' | 'female_dorm' | 'male_dorm';
+  campsiteType?: 'tent_site' | 'rv_site' | 'cabin' | 'glamping' | 'backcountry';
+  maxStay?: number;
+  minAge?: number;
+  maxAge?: number;
+  languages?: string[];
+  culturalExchange?: boolean;
+  mealsIncluded?: boolean;
+  wifiPassword?: string;
+  houseRules?: string[];
+}
+```
+
+`PriceUnit` (`day | night | week | month | year`) defaults to `month` for traditional rentals and switches to `night` for hostels/campsites.
+
+## Public discovery routes
+
+Anonymous browsing is wired via `routes/public.ts` — no auth required:
+
+| Route | Purpose |
+|-------|---------|
+| `GET /api/properties` | Paginated list with `PropertyFilters` query params. |
+| `GET /api/properties/search` | Full-text + filter search. |
+| `GET /api/properties/by-ids` | Batched lookup; used by Sindi to hydrate the `<PROPERTIES_JSON>` block. |
+| `GET /api/properties/nearby` | `lat`, `lng`, `radius` (km) — uses MongoDB 2dsphere. |
+| `GET /api/properties/radius` | Bounding-box variant. |
+| `GET /api/properties/:propertyId` | Single property detail. |
+| `GET /api/properties/:propertyId/stats` | Public stats — view count, save count. |
+
+`PropertyFilters` accepts every meaningful axis:
+
+```ts
+interface PropertyFilters {
+  type?: string;
+  status?: string;
+  available?: boolean;
+  minRent?: number;
+  maxRent?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  search?: string;
+  page?: number;
+  limit?: number;
+  lat?: number;
+  lng?: number;
+  radius?: number;
+  city?: string;
+  state?: string;
+  country?: string;
+  amenities?: string[];
+  petFriendly?: boolean;
+  furnished?: boolean;
+  parking?: boolean;
+  verified?: boolean;
+  eco?: boolean;
+}
+```
+
+## Authenticated owner routes
+
+Mounted under `/api/properties` and gated by `oxy.auth()`:
+
+| Route | Purpose |
+|-------|---------|
+| `POST /api/properties` | Create a new property. Runs `validation.validateProperty`. |
+| `PUT /api/properties/:propertyId` | Update. Owner-scoped. |
+| `DELETE /api/properties/:propertyId` | Delete. Owner-scoped. |
+| `POST /api/properties/:propertyId/track-view` | Track a view on the active profile (drives the Recently Viewed list). |
+| `GET /api/properties/me/list` | All properties owned by the calling profile. |
+| `GET /api/properties/owner/:profileId` | Properties owned by a specific profile. |
+
+Property handlers live under `controllers/property/` and are aggregated by `propertyController.ts` for backwards compatibility.
+
+## Address-first creation flow
+
+Addresses are first-class — they live in their own collection (`addresses`) and properties reference them by `addressId`. The creation flow in the app is:
+
+1. User picks an address on a map screen (`app/properties/address-detail.tsx`) or types it. The frontend calls `GET /api/geocoding/forward` to resolve.
+2. The backend creates or returns an existing `Address` document with a 2dsphere `location` and normalised street/city/state/country.
+3. The user fills out the property form (`app/properties/create.tsx`), which posts to `POST /api/properties` with `addressId`.
+4. The new property inherits the address's `location` for nearby queries.
+
+This separation means the same physical address can host multiple historical listings, useful for showing rent-history transparency on a per-address basis.
+
+## External sourcing (scraper)
+
+Scraped properties (e.g. from Fotocasa) carry:
+
+- `source: 'fotocasa'`
+- `sourceId: '<their id>'`
+- `sourceUrl: 'https://www.fotocasa.es/...'`
+- `isExternal: true`
+- `expiresAt`: TTL — Mongo's `expireAfterSeconds: 0` index on this field auto-removes stale external listings.
+
+Scraped properties don't require a `profileId`, so they coexist with internally-listed properties without a phantom owner. The scraper service lives at `services/scraperService.ts` and is exposed via the admin-only `routes/scraper.ts`.
+
+## Drafts and recently viewed
+
+The frontend has dedicated screens for owner drafts (`app/properties/drafts.tsx`) and per-user recently-viewed (`app/properties/recently-viewed.tsx`). Drafts are properties with `status: 'draft'`; recently-viewed is populated by `POST /api/properties/:propertyId/track-view` and stored in the `RecentlyViewedSchema` collection.
+
+## Saved properties and collections
+
+Users can save properties to named collections (the `Saved` and `SavedPropertyFolderSchema` collections). `SavedPropertiesContext` on the frontend hydrates the saved set immediately after profile load so heart icons render in the correct state on first paint.

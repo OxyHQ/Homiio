@@ -1,0 +1,11 @@
+{
+  "package": "homiio",
+  "displayName": "Homiio",
+  "shortName": "homiio",
+  "repo": "https://github.com/OxyHQ/Homiio",
+  "category": "app",
+  "versions": ["main"],
+  "defaultVersion": "main",
+  "docsPath": "docs/",
+  "description": "Real estate platform — Expo/RN + Stripe + PostHog + Oxy integration"
+}
