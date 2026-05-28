@@ -1,3 +1,19 @@
+/**
+ * Homiio home — the brand-defining surface. Treats the page as a series
+ * of strongly-spaced Airbnb-2026 sections:
+ *
+ *   1. Hero canvas (Barcelona-flavored full-bleed photo, gradient overlay,
+ *      hero pill SearchBar floats centered on web / sits below on mobile).
+ *   2. Category strip with primary-colored active state.
+ *   3. Property carousels (featured, recently viewed, saved, nearby).
+ *   4. Top cities (carousel).
+ *   5. Stats banner (Typography.H2 numbers, generous whitespace).
+ *   6. Tips (carousel).
+ *   7. Trust 3-up grid (single icon + sentence-case title + description).
+ *   8. FAQ accordion.
+ *
+ * Rhythm is 96px on web / 56px on mobile between sections.
+ */
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   View,
@@ -8,44 +24,152 @@ import {
   Image,
   Animated,
   ScrollView,
-  useWindowDimensions
+  useWindowDimensions,
+  Pressable,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useRouter } from 'expo-router';
-import { colors } from '@/styles/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
-import { Home } from '@/assets/icons';
+
+import { H1, H2, P, Text as BloomText } from '@oxyhq/bloom/typography';
+
+import { colors } from '@/styles/colors';
+import type { Property } from '@homiio/shared-types';
 
 // Import real data hooks
 import { useProperties } from '@/hooks';
-// import { useOxy } from '@oxyhq/services'; // Removed unused import
 import { cityService } from '@/services/cityService';
 import { tipsService, TipArticle } from '@/services/tipsService';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
-import { useSavedProperties } from '@/hooks/useSavedProperties';
+import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 
 // Import components
 import { PropertyCard } from '@/components/PropertyCard';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';
 import { HomeCategoryStrip } from '@/components/HomeCategoryStrip';
 import { SearchBar } from '@/components/SearchBar';
-import { ThemedText } from '@/components/ThemedText';
+import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useMediaQuery } from 'react-responsive';
 import { useLayoutScroll } from '@/context/LayoutScrollContext';
-import { resolveSectionSpacing } from '@/constants/styles';
+import {
+  resolveSectionSpacing,
+  spacing,
+  tracker,
+  withShadow,
+} from '@/constants/styles';
 
-// Type assertion for Ionicons compatibility with React 19
-const IconComponent = Ionicons as any;
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+interface TrustFeature {
+  icon: IoniconName;
+  titleKey: string;
+  titleFallback: string;
+  descKey: string;
+  descFallback: string;
+}
+
+const TRUST_FEATURES: TrustFeature[] = [
+  {
+    icon: 'shield-checkmark-outline',
+    titleKey: 'home.trust.verifiedListings.title',
+    titleFallback: 'Verified listings',
+    descKey: 'home.trust.verifiedListings.description',
+    descFallback: 'Every host and address is checked before going live.',
+  },
+  {
+    icon: 'document-text-outline',
+    titleKey: 'home.trust.fairAgreements.title',
+    titleFallback: 'Fair agreements',
+    descKey: 'home.trust.fairAgreements.description',
+    descFallback: 'Standardized contracts and transparent fees, no surprises.',
+  },
+  {
+    icon: 'star-outline',
+    titleKey: 'home.trust.trustScore.title',
+    titleFallback: 'Trust score',
+    descKey: 'home.trust.trustScore.description',
+    descFallback: 'Community-driven reputation for hosts and tenants alike.',
+  },
+];
+
+interface FaqItem {
+  id: string;
+  questionKey: string;
+  questionFallback: string;
+  answerKey: string;
+  answerFallback: string;
+}
+
+const FAQ_ITEMS: FaqItem[] = [
+  {
+    id: 'faq1',
+    questionKey: 'home.faq.scheduleViewing.question',
+    questionFallback: 'How do I schedule a viewing?',
+    answerKey: 'home.faq.scheduleViewing.answer',
+    answerFallback: 'Open any listing and tap "Request a viewing".',
+  },
+  {
+    id: 'faq2',
+    questionKey: 'home.faq.verifiedProperty.question',
+    questionFallback: 'What is a verified property?',
+    answerKey: 'home.faq.verifiedProperty.answer',
+    answerFallback: 'A listing whose address, owner, and photos have been checked.',
+  },
+  {
+    id: 'faq3',
+    questionKey: 'home.faq.reportSuspicious.question',
+    questionFallback: 'How do I report a suspicious listing?',
+    answerKey: 'home.faq.reportSuspicious.answer',
+    answerFallback: 'Use the "Report this listing" link on any property page.',
+  },
+  {
+    id: 'faq4',
+    questionKey: 'home.faq.applicationRequirements.question',
+    questionFallback: 'What do I need to apply?',
+    answerKey: 'home.faq.applicationRequirements.answer',
+    answerFallback: 'ID, proof of income, and a short note about yourself.',
+  },
+];
+
+interface NearbyCity {
+  _id?: string;
+  id?: string;
+  name: string;
+  latitude?: number;
+  longitude?: number;
+  distance?: number;
+}
+
+interface TopCity {
+  id: string;
+  name: string;
+  count: number;
+  state?: string;
+  country?: string;
+}
+
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const toRad = (v: number) => (v * Math.PI) / 180;
+  const R = 6371; // km
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 export default function HomePage() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
-  const [cities, setCities] = useState<any[]>([]);
+  const [cities, setCities] = useState<NearbyCity[]>([]);
   const [citiesLoading, setCitiesLoading] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
   const [tips, setTips] = useState<TipArticle[]>([]);
@@ -55,18 +179,19 @@ export default function HomePage() {
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(
     null,
   );
-  const [nearbyCities, setNearbyCities] = useState<any[]>([]);
-  const [nearbyProperties, setNearbyProperties] = useState<{ [cityId: string]: any[] }>({});
+  const [nearbyCities, setNearbyCities] = useState<NearbyCity[]>([]);
+  const [nearbyProperties, setNearbyProperties] = useState<Record<string, Property[]>>({});
   const [nearbyLoading, setNearbyLoading] = useState(false);
-  const isScreenNotMobile = useMediaQuery({ minWidth: 700 });
+  const isWide = useMediaQuery({ minWidth: 768 });
+  const isXL = useMediaQuery({ minWidth: 1024 });
 
   // Get user location on mount
   useEffect(() => {
     (async () => {
       try {
-        let { status } = await Location.requestForegroundPermissionsAsync();
+        const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') return;
-        let location = await Location.getCurrentPositionAsync({});
+        const location = await Location.getCurrentPositionAsync({});
         setUserLocation({
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
@@ -80,18 +205,6 @@ export default function HomePage() {
   // Find two closest cities and fetch their properties
   useEffect(() => {
     if (!userLocation || !cities || cities.length === 0) return;
-    // Calculate distance to each city
-    function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
-      const toRad = (v: number) => (v * Math.PI) / 180;
-      const R = 6371; // km
-      const dLat = toRad(lat2 - lat1);
-      const dLon = toRad(lon2 - lon1);
-      const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
-    }
     const withDistance = cities
       .filter((city) => city.latitude && city.longitude)
       .map((city) => ({
@@ -99,11 +212,11 @@ export default function HomePage() {
         distance: getDistance(
           userLocation.latitude,
           userLocation.longitude,
-          city.latitude,
-          city.longitude,
+          city.latitude ?? 0,
+          city.longitude ?? 0,
         ),
       }));
-    const sorted = withDistance.sort((a, b) => a.distance - b.distance);
+    const sorted = withDistance.sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
     setNearbyCities(sorted.slice(0, 2));
   }, [userLocation, cities]);
 
@@ -113,15 +226,16 @@ export default function HomePage() {
     setNearbyLoading(true);
     Promise.all(
       nearbyCities.map(async (city) => {
+        const cityId = city._id || city.id || '';
         try {
-          const res = await cityService.getPropertiesByCity(city._id || city.id, { limit: 8 });
-          return { cityId: city._id || city.id, properties: res.properties || [] };
+          const res = await cityService.getPropertiesByCity(cityId, { limit: 8 });
+          return { cityId, properties: (res.properties as Property[]) || [] };
         } catch {
-          return { cityId: city._id || city.id, properties: [] };
+          return { cityId, properties: [] as Property[] };
         }
       }),
     ).then((results) => {
-      const map: { [cityId: string]: any[] } = {};
+      const map: Record<string, Property[]> = {};
       results.forEach((r) => {
         map[r.cityId] = r.properties;
       });
@@ -135,16 +249,16 @@ export default function HomePage() {
 
   // Recently viewed and saved properties
   const { properties: recentlyViewedProperties } = useRecentlyViewed();
-  const { savedProperties, isLoading: savedLoading } = useSavedProperties();
+  const { savedProperties, isLoading: savedLoading } = useSavedPropertiesContext();
 
-  // Load properties, cities and tips in parallel on mount (was 3 separate waterfall useEffects)
-  React.useEffect(() => {
+  // Load properties, cities and tips in parallel on mount
+  useEffect(() => {
     setCitiesLoading(true);
     setTipsLoading(true);
 
     Promise.all([
       loadProperties({ limit: 8, status: 'published' }),
-      cityService.getPopularCities(8).then(r => r.data || []).catch(() => []),
+      cityService.getPopularCities(8).then((r) => r.data || []).catch(() => []),
       tipsService.getHomePageTipsFallback().catch(() => []),
     ]).then(([, citiesData, tipsData]) => {
       setCities(citiesData);
@@ -156,66 +270,26 @@ export default function HomePage() {
   }, [loadProperties]);
 
   // Memoized data processing
-  const featuredProperties = useMemo(() => {
+  const featuredProperties = useMemo<Property[]>(() => {
     if (!properties) return [];
-    return properties.slice(0, 4);
+    return properties.slice(0, 8) as Property[];
   }, [properties]);
 
-  // Memoize property types to prevent unnecessary re-renders
-  const propertyTypes = useMemo(
-    () => [
-      {
-        id: 'apartment',
-        name: t('search.propertyType.apartments'),
-        icon: 'business-outline',
-        count: 0,
-      },
-      { id: 'house', name: t('search.propertyType.houses'), icon: 'home-outline', count: 0 },
-      { id: 'room', name: t('search.propertyType.rooms'), icon: 'bed-outline', count: 0 },
-      { id: 'studio', name: t('search.propertyType.studios'), icon: 'home-outline', count: 0 },
-      { id: 'coliving', name: t('search.propertyType.coliving'), icon: 'people-outline', count: 0 },
-      {
-        id: 'public_housing',
-        name: t('search.propertyType.publicHousing'),
-        icon: 'library-outline',
-        count: 0,
-      },
-    ],
-    [t],
-  );
-
-  // Option A: Pure flex-wrap grid (no explicit width calculations / breakpoints)
-  // Each chip gets a flexible basis and minWidth; layout naturally flows into 1..N columns.
-
-  // Calculate property type counts
-  const propertyTypeCounts = useMemo(() => {
-    if (!properties) return propertyTypes;
-
-    const counts = properties.reduce(
-      (acc: Record<string, number>, property: any) => {
-        acc[property.type] = (acc[property.type] || 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
-
-    return propertyTypes.map((type) => ({
-      ...type,
-      count: counts[type.id] || 0,
-    }));
-  }, [properties, propertyTypes]);
-
   // Get top cities from API
-  const topCities = useMemo(() => {
+  const topCities = useMemo<TopCity[]>(() => {
     if (!cities || cities.length === 0) return [];
 
-    return cities
-      .sort((a, b) => (b.propertiesCount || 0) - (a.propertiesCount || 0))
-      .slice(0, 4)
+    const withCount = cities as Array<
+      NearbyCity & { propertiesCount?: number; state?: string; country?: string }
+    >;
+    return withCount
+      .slice()
+      .sort((a, b) => (b.propertiesCount ?? 0) - (a.propertiesCount ?? 0))
+      .slice(0, 6)
       .map((city) => ({
-        id: city._id || city.id,
+        id: String(city._id || city.id || ''),
         name: city.name,
-        count: city.propertiesCount || 0,
+        count: city.propertiesCount ?? 0,
         state: city.state,
         country: city.country,
       }));
@@ -233,205 +307,94 @@ export default function HomePage() {
     }
   }, [loadProperties]);
 
-  // Tip card styles — moved to module-level via useMemo to avoid recreating on every render
-  const tipCarouselCardStyles = React.useMemo(() => tipCardStyles, []);
-
   const layoutScroll = useLayoutScroll();
   const scrollY = layoutScroll?.scrollY || new Animated.Value(0);
   const { height: windowHeight } = useWindowDimensions();
-  const styles = React.useMemo(() => createStyles(isScreenNotMobile, windowHeight), [isScreenNotMobile, windowHeight]);
+  const styles = useMemo(
+    () => createStyles(isWide, isXL, windowHeight),
+    [isWide, isXL, windowHeight],
+  );
 
-  const translateY = scrollY.interpolate({
-    inputRange: [-300, 0, 1000],
-    outputRange: [-150, 0, 300],
-    extrapolate: 'clamp'
+  const heroParallax = scrollY.interpolate({
+    inputRange: [-300, 0, 800],
+    outputRange: [-120, 0, 240],
+    extrapolate: 'clamp',
   });
 
+  const sectionGap = resolveSectionSpacing(isWide);
+
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.root}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{ paddingBottom: spacing['5xl'] }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false }
+          { useNativeDriver: false },
         )}
         scrollEventThrottle={16}
       >
-        {/* Hero Section */}
-        <View style={[styles.heroSection, { paddingTop: insets.top + 50, overflow: 'hidden' }]}>
-          <Animated.View style={{
-            position: 'absolute',
-            top: -150,
-            left: 0,
-            right: 0,
-            bottom: -150,
-            transform: [{ translateY }]
-          }}>
+        {/* === Hero canvas === */}
+        <View style={[styles.heroSection, { paddingTop: insets.top + (isWide ? 32 : 56) }]}>
+          <Animated.View style={[styles.heroImageWrap, { transform: [{ translateY: heroParallax }] }]}>
             <Image
               source={require('@/assets/images/hero.jpg')}
-              style={{
-                width: '100%',
-                height: '100%',
-              }}
+              style={styles.heroImage}
               resizeMode="cover"
             />
           </Animated.View>
-          <View style={styles.heroOverlay} />
-          {!isScreenNotMobile && (
-            <LinearGradient
-              colors={['transparent', colors.primaryLight]}
-              style={{
-                position: 'absolute',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: 200,
-                zIndex: 1,
-              }}
-              pointerEvents="none"
-            />
-          )}
-          <View style={[styles.heroContent, { zIndex: 2 }]}>
-            <ThemedText style={styles.heroTitle}>{t('home.hero.title')}</ThemedText>
-            <ThemedText style={styles.heroSubtitle}>{t('home.hero.subtitle')}</ThemedText>
 
-            <View style={styles.searchPillContainer}>
-              <SearchBar />
-            </View>
+          {/* 6-stop dark→transparent gradient for legibility */}
+          <LinearGradient
+            colors={[
+              'rgba(0,0,0,0.10)',
+              'rgba(0,0,0,0.15)',
+              'rgba(0,0,0,0.25)',
+              'rgba(0,0,0,0.40)',
+              'rgba(0,0,0,0.55)',
+              'rgba(0,0,0,0.72)',
+            ]}
+            locations={[0, 0.35, 0.55, 0.7, 0.85, 1]}
+            style={styles.heroGradient}
+            pointerEvents="none"
+          />
 
-            {/* Property Types */}
-            <View style={styles.propertyChipsContainer}>
-              {propertyTypeCounts.map((type) => (
-                <TouchableOpacity
-                  key={type.id}
-                  style={styles.propertyChip}
-                  onPress={() => router.push(`/properties/type/${type.id}`)}
-                  activeOpacity={0.8}
-                >
-                  <IconComponent
-                    name={type.icon as keyof typeof IconComponent.glyphMap}
-                    size={20}
-                    color={colors.COLOR_BLACK}
-                  />
-                  <ThemedText style={styles.propertyChipName}>{type.name}</ThemedText>
-                  <View style={styles.propertyChipCountBadge}>
-                    <ThemedText style={styles.propertyChipCountText}>{type.count}</ThemedText>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
+          <View style={styles.heroContent}>
+            <H1 style={styles.heroTitle}>{t('home.hero.title')}</H1>
+            <P style={styles.heroSubtitle}>{t('home.hero.subtitle')}</P>
+
+            {/* On wide breakpoints the pill anchors at hero bottom-center.
+                On mobile it sits below the hero via a separate slot. */}
+            {isWide ? (
+              <View style={styles.searchPillSlotWeb}>
+                <SearchBar />
+              </View>
+            ) : null}
           </View>
         </View>
 
-        {/* Airbnb-style category strip (driven by RentalModeContext) */}
-        <HomeCategoryStrip />
-
-        {/* Trust Features */}
-        <View style={styles.trustSection}>
-          <View style={styles.sectionHeader}>
-            <ThemedText style={styles.sectionTitle}>{t('home.trust.title')}</ThemedText>
+        {/* Mobile: search pill outside the hero, pinned to top of scroll body */}
+        {!isWide ? (
+          <View style={styles.searchPillSlotMobile}>
+            <SearchBar />
           </View>
-          <View style={styles.trustFeatures}>
-            <View style={styles.trustFeature}>
-              <View style={styles.featureIconCircle}>
-                <IconComponent name="shield-checkmark" size={24} color={colors.primaryColor} />
-              </View>
-              <ThemedText style={styles.featureTitle}>
-                {t('home.trust.verifiedListings.title')}
-              </ThemedText>
-              <ThemedText style={styles.featureDescription}>
-                {t('home.trust.verifiedListings.description')}
-              </ThemedText>
-            </View>
+        ) : null}
 
-            <View style={styles.trustFeature}>
-              <View style={styles.featureIconCircle}>
-                <IconComponent name="document-text" size={24} color={colors.primaryColor} />
-              </View>
-              <ThemedText style={styles.featureTitle}>
-                {t('home.trust.fairAgreements.title')}
-              </ThemedText>
-              <ThemedText style={styles.featureDescription}>
-                {t('home.trust.fairAgreements.description')}
-              </ThemedText>
-            </View>
-
-            <View style={styles.trustFeature}>
-              <View style={styles.featureIconCircle}>
-                <IconComponent name="star" size={24} color={colors.primaryColor} />
-              </View>
-              <ThemedText style={styles.featureTitle}>
-                {t('home.trust.trustScore.title')}
-              </ThemedText>
-              <ThemedText style={styles.featureDescription}>
-                {t('home.trust.trustScore.description')}
-              </ThemedText>
-            </View>
-          </View>
+        {/* === Category strip === */}
+        <View style={[styles.categoryStripWrap, { marginTop: isWide ? spacing['3xl'] : spacing.lg }]}>
+          <HomeCategoryStrip />
         </View>
 
-        {/* Featured Properties */}
+        {/* === Featured Properties === */}
         {featuredProperties.length > 0 ? (
-          <HomeCarouselSection
-            title={t('home.featured.title')}
-            items={featuredProperties}
-            loading={propertiesLoading}
-            renderItem={(property) => (
-              <PropertyCard
-                property={property}
-                variant="featured"
-                onPress={() => router.push(`/properties/${property._id || property.id}`)}
-              />
-            )}
-          />
-        ) : null}
-
-        {/* Recently Viewed Properties */}
-        {recentlyViewedProperties && recentlyViewedProperties.length > 0 ? (
-          <HomeCarouselSection
-            title={t('home.recentlyViewed.title') || 'Recently Viewed'}
-            items={recentlyViewedProperties}
-            loading={false}
-            renderItem={(property) => (
-              <PropertyCard
-                property={property}
-                variant="featured"
-                onPress={() => router.push(`/properties/${property._id || property.id}`)}
-              />
-            )}
-          />
-        ) : null}
-
-        {/* Saved Properties */}
-        {savedProperties && savedProperties.length > 0 ? (
-          <HomeCarouselSection
-            title={t('home.saved.title') || 'Saved Properties'}
-            items={savedProperties}
-            loading={savedLoading}
-            renderItem={(property) => (
-              <PropertyCard
-                property={property}
-                variant="featured"
-                onPress={() => router.push(`/properties/${property._id || property.id}`)}
-              />
-            )}
-          />
-        ) : null}
-
-        {/* Nearby Cities Sections */}
-        {nearbyCities.map((city) => {
-          const cityProperties = nearbyProperties[city._id || city.id];
-          if (!cityProperties || cityProperties.length === 0) return null;
-
-          return (
+          <View style={{ marginTop: sectionGap }}>
             <HomeCarouselSection
-              key={city._id || city.id}
-              title={t('home.nearby.title', { city: city.name }) || `Properties in ${city.name}`}
-              items={cityProperties}
-              loading={nearbyLoading}
+              eyebrow={t('home.featured.eyebrow', 'Recommended for you')}
+              title={t('home.featured.title')}
+              items={featuredProperties}
+              loading={propertiesLoading}
               renderItem={(property) => (
                 <PropertyCard
                   property={property}
@@ -440,234 +403,187 @@ export default function HomePage() {
                 />
               )}
             />
+          </View>
+        ) : null}
+
+        {/* === Recently Viewed === */}
+        {recentlyViewedProperties && recentlyViewedProperties.length > 0 ? (
+          <View style={{ marginTop: sectionGap }}>
+            <HomeCarouselSection
+              eyebrow={t('home.recentlyViewed.eyebrow', 'Pick up where you left off')}
+              title={t('home.recentlyViewed.title') || 'Recently viewed'}
+              items={recentlyViewedProperties}
+              loading={false}
+              renderItem={(property) => (
+                <PropertyCard
+                  property={property}
+                  variant="featured"
+                  onPress={() => router.push(`/properties/${property._id || property.id}`)}
+                />
+              )}
+            />
+          </View>
+        ) : null}
+
+        {/* === Saved Properties === */}
+        {savedProperties && savedProperties.length > 0 ? (
+          <View style={{ marginTop: sectionGap }}>
+            <HomeCarouselSection<Property>
+              eyebrow={t('home.saved.eyebrow', 'From your shortlist')}
+              title={t('home.saved.title') || 'Saved properties'}
+              items={savedProperties as Property[]}
+              loading={savedLoading}
+              renderItem={(property) => (
+                <PropertyCard
+                  property={property}
+                  variant="featured"
+                  onPress={() => router.push(`/properties/${property._id || property.id}`)}
+                />
+              )}
+            />
+          </View>
+        ) : null}
+
+        {/* === Nearby Cities Sections === */}
+        {nearbyCities.map((city) => {
+          const cityId = city._id || city.id || '';
+          const cityProperties = nearbyProperties[cityId] as Property[] | undefined;
+          if (!cityProperties || cityProperties.length === 0) return null;
+
+          return (
+            <View key={cityId} style={{ marginTop: sectionGap }}>
+              <HomeCarouselSection
+                eyebrow={t('home.nearby.eyebrow', 'Close to you')}
+                title={t('home.nearby.title', { city: city.name }) || `Homes in ${city.name}`}
+                items={cityProperties}
+                loading={nearbyLoading}
+                renderItem={(property) => (
+                  <PropertyCard
+                    property={property}
+                    variant="featured"
+                    onPress={() => router.push(`/properties/${property._id || property.id}`)}
+                  />
+                )}
+              />
+            </View>
           );
         })}
 
-        {/* Top Cities (Carousel) */}
+        {/* === Top Cities === */}
         {topCities.length > 0 ? (
-          <HomeCarouselSection
-            title={t('home.cities.title')}
-            items={topCities}
-            loading={citiesLoading}
-            minItemsToShow={1}
-            renderItem={(city) => (
-              <TouchableOpacity
-                key={city.id}
-                style={styles.cityCard}
-                onPress={() => router.push(`/properties/city/${city.id}`)}
-                activeOpacity={0.85}
-              >
-                <LinearGradient
-                  colors={[colors.primaryColor, colors.secondaryLight]}
-                  style={styles.cityImagePlaceholder}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  {/* Subtle overlay for better text readability */}
-                  <View
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      backgroundColor: 'rgba(0, 0, 0, 0.15)',
-                      borderRadius: 25,
-                    }}
-                  />
-                  {/* City Info at bottom */}
-                  <View style={{ width: '100%' }}>
-                    <ThemedText style={styles.cityName}>{city.name}</ThemedText>
-                    {(city.state || city.country) && (
-                      <ThemedText style={styles.cityLocation}>
-                        {[city.state, city.country].filter(Boolean).join(', ')}
-                      </ThemedText>
-                    )}
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            )}
-          />
+          <View style={{ marginTop: sectionGap }}>
+            <HomeCarouselSection
+              eyebrow={t('home.cities.eyebrow', 'Explore Spain')}
+              title={t('home.cities.title')}
+              items={topCities}
+              loading={citiesLoading}
+              minItemsToShow={1}
+              maxCardWidth={260}
+              renderItem={(city) => (
+                <CityTile
+                  city={city}
+                  onPress={() => router.push(`/properties/city/${city.id}`)}
+                />
+              )}
+            />
+          </View>
         ) : null}
 
-        {/* Stats Section — memoized to avoid filter recalc on every render */}
-        <StatsSection
-          properties={properties}
-          topCitiesCount={topCities.length}
-          styles={styles}
-          t={t}
-        />
+        {/* === Stats banner === */}
+        <View style={{ marginTop: sectionGap }}>
+          <StatsSection
+            properties={properties}
+            topCitiesCount={topCities.length}
+            t={t}
+            styles={styles}
+          />
+        </View>
 
-        {/* Tips Section (Carousel) */}
-        <HomeCarouselSection
-          title={t('home.tips.title')}
-          items={tips}
-          loading={tipsLoading}
-          onViewAll={() => router.push('/tips')}
-          viewAllText={t('home.viewAll')}
-          minItemsToShow={1}
-          maxCardWidth={420}
-          renderItem={(tip) => (
-            <TouchableOpacity
-              key={tip.id}
-              style={{ flex: 1 }}
-              onPress={() => router.push(`/tips/${tip.id}`)}
-              activeOpacity={0.85}
-            >
-              <View style={tipCarouselCardStyles.card}>
-                <View style={tipCarouselCardStyles.imageContainer}>
-                  <LinearGradient
-                    colors={tip.gradientColors as [string, string]}
-                    style={tipCarouselCardStyles.image}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <IconComponent name={tip.icon} size={32} color="white" />
-                  </LinearGradient>
-                  <View style={tipCarouselCardStyles.badge}>
-                    <ThemedText style={tipCarouselCardStyles.badgeText}>
-                      {tip.category}
-                    </ThemedText>
-                  </View>
-                </View>
-                <View style={tipCarouselCardStyles.content}>
-                  <ThemedText style={tipCarouselCardStyles.title} numberOfLines={2}>
-                    {tip.title}
-                  </ThemedText>
-                  <ThemedText style={tipCarouselCardStyles.description} numberOfLines={2}>
-                    {tip.description}
-                  </ThemedText>
-                  <View style={tipCarouselCardStyles.meta}>
-                    <View style={tipCarouselCardStyles.metaItem}>
-                      <IconComponent name="time-outline" size={14} color={colors.COLOR_BLACK_LIGHT_4} />
-                      <ThemedText style={tipCarouselCardStyles.metaText}>{tip.readTime}</ThemedText>
-                    </View>
-                    <View style={tipCarouselCardStyles.metaItem}>
-                      <IconComponent name="calendar-outline" size={14} color={colors.COLOR_BLACK_LIGHT_4} />
-                      <ThemedText style={tipCarouselCardStyles.metaText}>{tip.publishDate}</ThemedText>
-                    </View>
-                  </View>
-                </View>
+        {/* === Tips === */}
+        <View style={{ marginTop: sectionGap }}>
+          <HomeCarouselSection
+            eyebrow={t('home.tips.eyebrow', 'Renting smarter')}
+            title={t('home.tips.title')}
+            items={tips}
+            loading={tipsLoading}
+            onViewAll={() => router.push('/tips')}
+            viewAllText={t('home.viewAll')}
+            minItemsToShow={1}
+            maxCardWidth={420}
+            renderItem={(tip) => (
+              <TipTile tip={tip} onPress={() => router.push(`/tips/${tip.id}`)} />
+            )}
+          />
+        </View>
 
+        {/* === Trust grid === */}
+        <View style={[styles.trustSection, { marginTop: sectionGap }]}>
+          <View style={styles.sectionHeaderCenter}>
+            <SectionEyebrow style={styles.eyebrowCenter}>
+              {t('home.trust.eyebrow', 'Why Homiio')}
+            </SectionEyebrow>
+            <H1 style={styles.bigSectionTitle}>{t('home.trust.title', 'Housing you can trust')}</H1>
+          </View>
+          <View style={styles.trustGrid}>
+            {TRUST_FEATURES.map((feature) => (
+              <View key={feature.titleKey} style={styles.trustCard}>
+                <View style={styles.trustIconCircle}>
+                  <Ionicons name={feature.icon} size={26} color={colors.primaryColor} />
+                </View>
+                <H2 style={styles.trustTitle}>{t(feature.titleKey, feature.titleFallback)}</H2>
+                <BloomText style={styles.trustDescription}>
+                  {t(feature.descKey, feature.descFallback)}
+                </BloomText>
               </View>
-            </TouchableOpacity>
-          )}
-        />
+            ))}
+          </View>
+        </View>
 
-        {/* FAQ Section */}
-        <View style={styles.faqSection}>
-          <View style={styles.sectionHeader}>
-            <ThemedText style={styles.sectionTitle}>{t('home.faq.title')}</ThemedText>
+        {/* === FAQ === */}
+        <View style={[styles.faqSection, { marginTop: sectionGap }]}>
+          <View style={styles.sectionHeaderLeft}>
+            <SectionEyebrow>{t('home.faq.eyebrow', 'Questions')}</SectionEyebrow>
+            <H1 style={styles.bigSectionTitle}>{t('home.faq.title')}</H1>
           </View>
           <View style={styles.faqContainer}>
-            <View style={[styles.faqItem, styles.faqItemFirst]}>
-              <TouchableOpacity
-                style={styles.faqQuestion}
-                onPress={() => {
-                  // Toggle FAQ answer visibility
-                  const faqId = 'faq1';
-                  setExpandedFaq(expandedFaq === faqId ? null : faqId);
-                }}
-                activeOpacity={0.7}
-              >
-                <ThemedText style={styles.faqQuestionText}>
-                  {t('home.faq.scheduleViewing.question')}
-                </ThemedText>
-                <IconComponent
-                  name={expandedFaq === 'faq1' ? 'chevron-up' : 'chevron-down'}
-                  size={20}
-                  color={colors.COLOR_BLACK_LIGHT_3}
-                />
-              </TouchableOpacity>
-              {expandedFaq === 'faq1' && (
-                <View style={styles.faqAnswer}>
-                  <ThemedText style={styles.faqAnswerText}>
-                    {t('home.faq.scheduleViewing.answer')}
-                  </ThemedText>
+            {FAQ_ITEMS.map((item, idx) => {
+              const isFirst = idx === 0;
+              const isLast = idx === FAQ_ITEMS.length - 1;
+              const isOpen = expandedFaq === item.id;
+              return (
+                <View
+                  key={item.id}
+                  style={[
+                    styles.faqItem,
+                    isFirst && styles.faqItemFirst,
+                    isLast && styles.faqItemLast,
+                  ]}
+                >
+                  <Pressable
+                    style={styles.faqQuestion}
+                    onPress={() => setExpandedFaq(isOpen ? null : item.id)}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: isOpen }}
+                  >
+                    <BloomText style={styles.faqQuestionText}>
+                      {t(item.questionKey, item.questionFallback)}
+                    </BloomText>
+                    <Ionicons
+                      name={isOpen ? 'chevron-up' : 'chevron-down'}
+                      size={20}
+                      color={colors.COLOR_BLACK_LIGHT_3}
+                    />
+                  </Pressable>
+                  {isOpen ? (
+                    <View style={styles.faqAnswer}>
+                      <BloomText style={styles.faqAnswerText}>
+                        {t(item.answerKey, item.answerFallback)}
+                      </BloomText>
+                    </View>
+                  ) : null}
                 </View>
-              )}
-            </View>
-
-            <View style={styles.faqItem}>
-              <TouchableOpacity
-                style={styles.faqQuestion}
-                onPress={() => {
-                  const faqId = 'faq2';
-                  setExpandedFaq(expandedFaq === faqId ? null : faqId);
-                }}
-                activeOpacity={0.7}
-              >
-                <ThemedText style={styles.faqQuestionText}>
-                  {t('home.faq.verifiedProperty.question')}
-                </ThemedText>
-                <IconComponent
-                  name={expandedFaq === 'faq2' ? 'chevron-up' : 'chevron-down'}
-                  size={20}
-                  color={colors.COLOR_BLACK_LIGHT_3}
-                />
-              </TouchableOpacity>
-              {expandedFaq === 'faq2' && (
-                <View style={styles.faqAnswer}>
-                  <ThemedText style={styles.faqAnswerText}>
-                    {t('home.faq.verifiedProperty.answer')}
-                  </ThemedText>
-                </View>
-              )}
-            </View>
-
-            <View style={styles.faqItem}>
-              <TouchableOpacity
-                style={styles.faqQuestion}
-                onPress={() => {
-                  const faqId = 'faq3';
-                  setExpandedFaq(expandedFaq === faqId ? null : faqId);
-                }}
-                activeOpacity={0.7}
-              >
-                <ThemedText style={styles.faqQuestionText}>
-                  {t('home.faq.reportSuspicious.question')}
-                </ThemedText>
-                <IconComponent
-                  name={expandedFaq === 'faq3' ? 'chevron-up' : 'chevron-down'}
-                  size={20}
-                  color={colors.COLOR_BLACK_LIGHT_3}
-                />
-              </TouchableOpacity>
-              {expandedFaq === 'faq3' && (
-                <View style={styles.faqAnswer}>
-                  <ThemedText style={styles.faqAnswerText}>
-                    {t('home.faq.reportSuspicious.answer')}
-                  </ThemedText>
-                </View>
-              )}
-            </View>
-
-            <View style={[styles.faqItem, styles.faqItemLast]}>
-              <TouchableOpacity
-                style={styles.faqQuestion}
-                onPress={() => {
-                  const faqId = 'faq4';
-                  setExpandedFaq(expandedFaq === faqId ? null : faqId);
-                }}
-                activeOpacity={0.7}
-              >
-                <ThemedText style={styles.faqQuestionText}>
-                  {t('home.faq.applicationRequirements.question')}
-                </ThemedText>
-                <IconComponent
-                  name={expandedFaq === 'faq4' ? 'chevron-up' : 'chevron-down'}
-                  size={20}
-                  color={colors.COLOR_BLACK_LIGHT_3}
-                />
-              </TouchableOpacity>
-              {expandedFaq === 'faq4' && (
-                <View style={styles.faqAnswer}>
-                  <ThemedText style={styles.faqAnswerText}>
-                    {t('home.faq.applicationRequirements.answer')}
-                  </ThemedText>
-                </View>
-              )}
-            </View>
+              );
+            })}
           </View>
         </View>
       </ScrollView>
@@ -675,97 +591,217 @@ export default function HomePage() {
   );
 }
 
-// Memoized StatsSection to avoid filter recalculation on every render
+// === Subcomponents ===
+
+interface CityTileProps {
+  city: TopCity;
+  onPress: () => void;
+}
+
+const CityTile: React.FC<CityTileProps> = ({ city, onPress }) => {
+  return (
+    <TouchableOpacity
+      style={cityStyles.card}
+      onPress={onPress}
+      activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={`Explore homes in ${city.name}`}
+    >
+      <LinearGradient
+        colors={[colors.primaryColor, colors.secondaryLight]}
+        style={cityStyles.gradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={cityStyles.scrim} />
+        <View style={cityStyles.cityInfo}>
+          <BloomText style={cityStyles.cityName}>{city.name}</BloomText>
+          {(city.state || city.country) ? (
+            <BloomText style={cityStyles.cityLocation}>
+              {[city.state, city.country].filter(Boolean).join(', ')}
+            </BloomText>
+          ) : null}
+        </View>
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+};
+
+interface TipTileProps {
+  tip: TipArticle;
+  onPress: () => void;
+}
+
+const TipTile: React.FC<TipTileProps> = ({ tip, onPress }) => {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.9}
+      style={tipStyles.card}
+    >
+      <View style={tipStyles.imageContainer}>
+        <LinearGradient
+          colors={tip.gradientColors as [string, string]}
+          style={tipStyles.image}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <Ionicons
+            name={tip.icon as IoniconName}
+            size={36}
+            color="#ffffff"
+          />
+        </LinearGradient>
+        <View style={tipStyles.badge}>
+          <BloomText style={tipStyles.badgeText}>{tip.category}</BloomText>
+        </View>
+      </View>
+      <View style={tipStyles.content}>
+        <BloomText style={tipStyles.title} numberOfLines={2}>{tip.title}</BloomText>
+        <BloomText style={tipStyles.description} numberOfLines={2}>{tip.description}</BloomText>
+        <View style={tipStyles.meta}>
+          <View style={tipStyles.metaItem}>
+            <Ionicons name="time-outline" size={14} color={colors.COLOR_BLACK_LIGHT_4} />
+            <BloomText style={tipStyles.metaText}>{tip.readTime}</BloomText>
+          </View>
+          <View style={tipStyles.metaItem}>
+            <Ionicons name="calendar-outline" size={14} color={colors.COLOR_BLACK_LIGHT_4} />
+            <BloomText style={tipStyles.metaText}>{tip.publishDate}</BloomText>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+interface StatsSectionProps {
+  properties: Property[] | null | undefined;
+  topCitiesCount: number;
+  t: TFunction<'translation', undefined>;
+  styles: ReturnType<typeof createStyles>;
+}
+
 const StatsSection = React.memo(function StatsSection({
   properties,
   topCitiesCount,
-  styles,
   t,
-}: {
-  properties: any[] | null | undefined;
-  topCitiesCount: number;
-  styles: any;
-  t: any;
-}) {
+  styles,
+}: StatsSectionProps) {
   const stats = useMemo(() => {
-    const total = properties?.length || 0;
-    const available = properties?.filter((p) => p.status === 'published').length || 0;
-    const ecoFriendly = properties?.filter((p) =>
+    const list = properties ?? [];
+    const total = list.length;
+    const available = list.filter((p) => p.status === 'published').length;
+    const ecoFriendly = list.filter((p) =>
       p.amenities?.some(
-        (a: string) => a.includes('eco') || a.includes('green') || a.includes('solar'),
+        (a) => a.includes('eco') || a.includes('green') || a.includes('solar'),
       ),
-    ).length || 0;
+    ).length;
     return { total, available, ecoFriendly };
   }, [properties]);
 
+  const statItems = [
+    {
+      number: String(stats.total),
+      label: t('home.stats.totalProperties', 'Total properties'),
+      icon: 'home-outline' as IoniconName,
+    },
+    {
+      number: String(stats.available),
+      label: t('home.stats.availableNow', 'Available now'),
+      icon: 'flash-outline' as IoniconName,
+    },
+    {
+      number: String(stats.ecoFriendly),
+      label: t('home.stats.ecoFriendly', 'Eco friendly'),
+      icon: 'leaf-outline' as IoniconName,
+    },
+    {
+      number: String(topCitiesCount),
+      label: t('home.stats.citiesCovered', 'Cities covered'),
+      icon: 'compass-outline' as IoniconName,
+    },
+  ];
+
   return (
     <View style={styles.statsSection}>
-      <View style={styles.sectionHeader}>
-        <ThemedText style={styles.sectionTitle}>{t('home.insights.title')}</ThemedText>
+      <View style={styles.sectionHeaderLeft}>
+        <SectionEyebrow>{t('home.stats.eyebrow', 'By the numbers')}</SectionEyebrow>
+        <H1 style={styles.bigSectionTitle}>{t('home.insights.title')}</H1>
       </View>
-      <View style={styles.statsChipsContainer}>
-        <TouchableOpacity style={styles.statChip} activeOpacity={0.8}>
-          <View style={styles.statChipGradient}>
-            <View style={styles.statChipContent}>
-              <ThemedText style={styles.statChipNumber}>{stats.total}</ThemedText>
-              <ThemedText style={styles.statChipLabel}>Total Properties</ThemedText>
+      <View style={styles.statsGrid}>
+        {statItems.map((item) => (
+          <View key={item.label} style={styles.statTile}>
+            <View style={styles.statHeader}>
+              <View style={styles.statIconBg}>
+                <Ionicons name={item.icon} size={20} color={colors.COLOR_BLACK} />
+              </View>
             </View>
-            <View style={styles.statChipIcon}>
-              <Home size={22} color={colors.COLOR_BLACK} />
-            </View>
+            <H2 style={styles.statNumber}>{item.number}</H2>
+            <BloomText style={styles.statLabel}>{item.label}</BloomText>
           </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.statChip} activeOpacity={0.8}>
-          <View style={styles.statChipGradient}>
-            <View style={styles.statChipContent}>
-              <ThemedText style={styles.statChipNumber}>{stats.available}</ThemedText>
-              <ThemedText style={styles.statChipLabel}>Available Now</ThemedText>
-            </View>
-            <View style={styles.statChipIcon}>
-              <IconComponent name="people" size={22} color={colors.COLOR_BLACK} />
-            </View>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.statChip} activeOpacity={0.8}>
-          <View style={styles.statChipGradient}>
-            <View style={styles.statChipContent}>
-              <ThemedText style={styles.statChipNumber}>{stats.ecoFriendly}</ThemedText>
-              <ThemedText style={styles.statChipLabel}>Eco-Friendly</ThemedText>
-            </View>
-            <View style={styles.statChipIcon}>
-              <IconComponent name="leaf" size={22} color={colors.COLOR_BLACK} />
-            </View>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.statChip} activeOpacity={0.8}>
-          <View style={styles.statChipGradient}>
-            <View style={styles.statChipContent}>
-              <ThemedText style={styles.statChipNumber}>{topCitiesCount}</ThemedText>
-              <ThemedText style={styles.statChipLabel}>Cities Covered</ThemedText>
-            </View>
-            <View style={styles.statChipIcon}>
-              <IconComponent name="star" size={22} color={colors.COLOR_BLACK} />
-            </View>
-          </View>
-        </TouchableOpacity>
+        ))}
       </View>
     </View>
   );
 });
 
-// Tip card styles at module level (was created inside component on every render)
-const tipCardStyles = StyleSheet.create({
+// === Styles ===
+
+const cityStyles = StyleSheet.create({
+  card: {
+    width: '100%',
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  gradient: {
+    width: '100%',
+    height: 180,
+    justifyContent: 'flex-end',
+    alignItems: 'flex-start',
+    padding: spacing.lg,
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  scrim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.18)',
+    borderRadius: 24,
+  },
+  cityInfo: {
+    width: '100%',
+  },
+  cityName: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#ffffff',
+    letterSpacing: tracker.tight,
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+    marginBottom: spacing.xs,
+  },
+  cityLocation: {
+    fontSize: 13,
+    color: '#ffffff',
+    opacity: 0.92,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+});
+
+const tipStyles = StyleSheet.create({
   card: {
     backgroundColor: '#ffffff',
-    borderRadius: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
+    borderRadius: 16,
     overflow: 'hidden',
     flex: 1,
+    ...withShadow('sm'),
   },
   imageContainer: {
     height: 160,
@@ -779,673 +815,284 @@ const tipCardStyles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    top: 10,
-    left: 10,
+    top: spacing.md,
+    left: spacing.md,
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 35,
-    paddingHorizontal: 8,
-    paddingVertical: 1,
+    borderRadius: 999,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
   },
   badgeText: {
     fontSize: 10,
-    fontWeight: '500' as any,
+    fontWeight: '600',
     color: colors.COLOR_BLACK,
-    textTransform: 'uppercase' as const,
-    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+    letterSpacing: tracker.eyebrow,
   },
   content: {
-    padding: 12,
+    padding: spacing.lg,
   },
   title: {
     fontSize: 15,
-    fontWeight: '600' as any,
+    fontWeight: '700',
     color: colors.COLOR_BLACK,
-    marginBottom: 6,
+    marginBottom: spacing.xs,
     lineHeight: 20,
   },
   description: {
     fontSize: 13,
     color: colors.COLOR_BLACK_LIGHT_3,
     lineHeight: 18,
-    marginBottom: 10,
+    marginBottom: spacing.md,
   },
   meta: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   metaItem: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   metaText: {
     fontSize: 12,
     color: colors.COLOR_BLACK_LIGHT_4,
-    marginLeft: 4,
   },
 });
 
-const createStyles = (isScreenNotMobile: boolean, windowHeight: number) => StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  heroSection: {
-    flex: 1,
-    maxWidth: '100%',
-    ...(isScreenNotMobile ? {
-      borderRadius: 200,
-      height: 400,
-      marginTop: Math.max(0, (windowHeight - 400) / 2), // Center vertically by calculating (window height - hero height) / 2
-      marginHorizontal: 20,
-      marginBottom: 20,
-      paddingHorizontal: 120,
-    } : {
-      paddingHorizontal: 16,
-      minHeight: 550,
-      marginTop: 0,
-    }),
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 20,
-    position: 'relative',
-    zIndex: 1000,
-    overflow: 'hidden',
-  },
-  heroOverlay: {
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  heroContent: {
-    width: '100%',
-    maxWidth: 800,
-    alignItems: 'center',
-  },
-  heroTitle: {
-    fontSize: 28,
-    color: 'white',
-    textAlign: 'center',
-    marginBottom: 10,
-    fontWeight: 'bold',
-  },
-  heroSubtitle: {
-    fontSize: 16,
-    color: 'white',
-    opacity: 0.9,
-    textAlign: 'center',
-    marginBottom: Platform.select({
-      web: 30,
-      ios: 8,
-      android: 8,
-    }),
-    maxWidth: 400,
-  },
-  searchPillContainer: {
-    width: '100%',
-    marginTop: 24,
-    marginBottom: 12,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingHorizontal: 16,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    color: colors.COLOR_BLACK,
-    fontWeight: 'bold',
-  },
-  viewAllText: {
-    color: colors.primaryColor,
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  trustSection: {
-    paddingVertical: resolveSectionSpacing(isScreenNotMobile) / 2,
-  },
-  trustFeatures: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-  },
-  trustFeature: {
-    width: '30%',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  featureIconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  featureTitle: {
-    marginBottom: 4,
-    textAlign: 'center',
-    fontWeight: 'bold',
-  },
-  featureDescription: {
-    textAlign: 'center',
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  featuredSection: {
-    paddingVertical: 12,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 16,
-  },
-  loadingText: {
-    marginTop: 10,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 16,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_3,
-    marginTop: 10,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    marginTop: 5,
-  },
-  horizontalScroll: {
-    flexDirection: 'row',
-  },
-  propertyCardContainer: {
-    marginRight: 15,
-    width: 280,
-  },
-  propertyCardSkeleton: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-    width: '100%',
-    height: 280,
-  },
-  propertyCardImageSkeleton: {
-    height: 140,
-    backgroundColor: '#f0f0f0',
-    position: 'relative',
-  },
-  propertyCardContentSkeleton: {
-    padding: 12,
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  propertyCardSaveButtonSkeleton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#d0d0d0',
-  },
-  propertyCardBadgeSkeleton: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    width: 60,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#d0d0d0',
-  },
-  citiesSection: {
-    paddingVertical: resolveSectionSpacing(isScreenNotMobile) / 2,
-    marginTop: 16,
-  },
-  cityCard: {
-    width: '100%',
-    backgroundColor: '#ffffff',
-    borderRadius: 25,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  cityImagePlaceholder: {
-    width: '100%',
-    height: 160,
-    justifyContent: 'flex-end',
-    alignItems: 'flex-start',
-    position: 'relative',
-    padding: 16,
-    borderRadius: 25,
-    overflow: 'hidden',
-  },
-  propertyCountBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-end',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
+const createStyles = (
+  isWide: boolean,
+  isXL: boolean,
+  windowHeight: number,
+) => {
+  const heroHeight = isXL ? Math.min(640, windowHeight * 0.72) : isWide ? 520 : 560;
+  return StyleSheet.create({
+    root: {
+      flex: 1,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  propertyCountText: {
-    fontSize: 11,
-    color: colors.COLOR_BLACK,
-    marginLeft: 4,
-    fontWeight: '500',
-  },
-  cityIconContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    borderRadius: 24,
-    padding: 10,
-    alignSelf: 'flex-start',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
+    container: {
+      flex: 1,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  cityName: {
-    fontWeight: '600',
-    fontSize: 22,
-    color: 'white',
-    textAlign: 'left',
-    letterSpacing: -0.2,
-    textShadowColor: 'rgba(0, 0, 0, 0.4)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-    marginBottom: 4,
-  },
-  cityLocation: {
-    fontSize: 14,
-    color: 'white',
-    textAlign: 'left',
-    opacity: 0.9,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  typesSection: {
-    paddingVertical: 12,
-  },
-  propertyChipsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 16,
-    justifyContent: 'flex-start',
-  },
-  propertyChip: {
-    borderRadius: 35,
-    overflow: 'hidden',
-    flexGrow: 1,
-    flexBasis: '30%',
-    minWidth: 140,
-    backgroundColor: '#ffffff',
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-    paddingHorizontal: 12,
-    justifyContent: 'space-between',
-  },
-  propertyChipName: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK,
-    fontWeight: '500',
-    flex: 1,
-    marginLeft: 6,
-  },
-  propertyChipCountBadge: {
-    backgroundColor: colors.COLOR_BLACK,
-    borderRadius: 35,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    minWidth: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  propertyChipCountText: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#ffffff',
-  },
-  statsSection: {
-    paddingVertical: 8,
-  },
-  statsChipsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    paddingHorizontal: 16,
-  },
-  statChip: {
-    flex: 1,
-    minWidth: '45%',
-    borderRadius: 16,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-  },
-  statChipGradient: {
-    position: 'relative',
-    padding: 10,
-  },
-  statChipContent: {
-    alignItems: 'flex-start',
-  },
-  statChipIcon: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-  },
-  statChipNumber: {
-    fontSize: 28,
-    color: colors.COLOR_BLACK,
-    marginBottom: 8,
-    fontWeight: 'bold',
-  },
-  statChipLabel: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    fontWeight: '500',
-  },
-  verifiedBadge: {
-    backgroundColor: colors.primaryColor,
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 15,
-    marginTop: 5,
-  },
-  verifiedBadgeText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  // Popular Amenities Section
-  amenitiesShowcase: {
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    backgroundColor: '#f8f9fa',
-  },
-  amenitySectionSubtitle: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  amenityChipsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 24,
-  },
-  homeAmenityChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-  },
-  homeEssentialChip: {
-    backgroundColor: '#f0fdf4',
-    borderColor: '#059669',
-  },
-  homeAccessibilityChip: {
-    backgroundColor: '#f0f0ff',
-    borderColor: '#6366f1',
-  },
-  homeEcoChip: {
-    backgroundColor: '#f0fdf4',
-    borderColor: '#16a34a',
-  },
-  homeAmenityChipText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.COLOR_BLACK,
-    marginLeft: 6,
-  },
-  homeEssentialChipText: {
-    color: '#059669',
-  },
-  homeAccessibilityChipText: {
-    color: '#6366f1',
-  },
-  homeEcoChipText: {
-    color: '#16a34a',
-  },
-  homeIncludedDot: {
-    width: 6,
-    height: 6,
-  },
-  // Search Suggestions Styles
-  suggestionsContainer: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    backgroundColor: 'white',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_4,
-    maxHeight: 400,
-    zIndex: 1001,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
+
+    // Hero
+    heroSection: {
+      width: '100%',
+      height: heroHeight,
+      position: 'relative',
+      overflow: 'hidden',
+      justifyContent: 'flex-end',
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 10,
-  },
-  suggestionsList: {
-    maxHeight: 400,
-  },
-  suggestionSection: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.COLOR_BLACK_LIGHT_4,
-  },
-  suggestionSectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-    marginBottom: 8,
-    paddingHorizontal: 16,
-  },
-  suggestionItems: {
-    paddingHorizontal: 16,
-  },
-  suggestionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginBottom: 4,
-  },
-  suggestionText: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK,
-    marginLeft: 12,
-    flex: 1,
-  },
-  viewAllAmenitiesButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'white',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: colors.primaryColor,
-  },
-  viewAllAmenitiesText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primaryColor,
-    marginRight: 6,
-  },
-  // Tips Section Styles
-  tipsSection: {
-    paddingVertical: resolveSectionSpacing(isScreenNotMobile) / 2,
-    marginTop: 16,
-  },
-  tipCardContainer: {
-    marginRight: 15,
-    width: 280,
-  },
-  tipCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-    height: 320,
-  },
-  tipImageContainer: {
-    height: 140,
-    position: 'relative',
-  },
-  tipImagePlaceholder: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  tipCategoryBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  tipCategoryText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  tipCardContent: {
-    padding: 12,
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  tipCardTitle: {
-    fontSize: 16,
-    color: colors.COLOR_BLACK,
-    marginBottom: 6,
-    fontWeight: '500',
-    lineHeight: 20,
-  },
-  tipCardDescription: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    lineHeight: 18,
-    marginBottom: 12,
-  },
-  tipCardMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  tipCardMetaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  tipCardMetaText: {
-    fontSize: 11,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    marginLeft: 4,
-  },
-  // FAQ Section Styles
-  faqSection: {
-    paddingVertical: resolveSectionSpacing(isScreenNotMobile) / 2,
-    marginTop: 16,
-  },
-  faqContainer: {
-    paddingHorizontal: 16,
-  },
-  faqItem: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-    borderRadius: 8,
-    marginBottom: 1,
-    overflow: 'hidden',
-  },
-  faqItemFirst: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-  },
-  faqItemLast: {
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
-    marginBottom: 0,
-  },
-  faqQuestion: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 12,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-  },
-  faqQuestionText: {
-    fontSize: 16,
-    color: colors.COLOR_BLACK,
-    flex: 1,
-    marginRight: 12,
-    fontWeight: '500',
-  },
-  faqAnswer: {
-    paddingHorizontal: 12,
-    paddingBottom: 12,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_8,
-  },
-  faqAnswerText: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    lineHeight: 20,
-  },
-});
+    heroImageWrap: {
+      position: 'absolute',
+      top: -120,
+      left: 0,
+      right: 0,
+      bottom: -120,
+    },
+    heroImage: {
+      width: '100%',
+      height: '100%',
+    },
+    heroGradient: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
+    heroContent: {
+      width: '100%',
+      maxWidth: 1200,
+      alignSelf: 'center',
+      paddingHorizontal: isWide ? spacing['4xl'] : spacing.xl,
+      paddingBottom: isWide ? spacing['5xl'] : spacing['3xl'],
+      alignItems: isWide ? 'center' : 'flex-start',
+    },
+    heroTitle: {
+      fontSize: isXL ? 56 : isWide ? 44 : 34,
+      lineHeight: isXL ? 60 : isWide ? 48 : 38,
+      color: '#ffffff',
+      fontWeight: '700',
+      letterSpacing: tracker.tight,
+      textAlign: isWide ? 'center' : 'left',
+      marginBottom: spacing.md,
+      maxWidth: 720,
+    },
+    heroSubtitle: {
+      fontSize: isWide ? 18 : 16,
+      lineHeight: isWide ? 26 : 22,
+      color: '#ffffff',
+      opacity: 0.92,
+      textAlign: isWide ? 'center' : 'left',
+      marginBottom: spacing['2xl'],
+      maxWidth: 520,
+    },
+    searchPillSlotWeb: {
+      width: '100%',
+      maxWidth: 880,
+      marginTop: spacing.lg,
+    },
+    searchPillSlotMobile: {
+      width: '100%',
+      paddingHorizontal: 0,
+      paddingTop: spacing.lg,
+      marginTop: -spacing['3xl'],
+      zIndex: 5,
+    },
+
+    // Category strip
+    categoryStripWrap: {
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.sm,
+    },
+
+    // Section headers
+    sectionHeaderLeft: {
+      paddingHorizontal: spacing.lg,
+      marginBottom: spacing.xl,
+    },
+    sectionHeaderCenter: {
+      paddingHorizontal: spacing.lg,
+      marginBottom: spacing.xl,
+      alignItems: isWide ? 'center' : 'flex-start',
+    },
+    eyebrowCenter: {
+      textAlign: isWide ? 'center' : 'left',
+    },
+    bigSectionTitle: {
+      fontSize: isWide ? 32 : 26,
+      lineHeight: isWide ? 38 : 32,
+      color: colors.COLOR_BLACK,
+      fontWeight: '700',
+      letterSpacing: tracker.tight,
+      textAlign: isWide ? 'center' : 'left',
+    },
+
+    // Trust
+    trustSection: {
+      paddingHorizontal: isWide ? spacing['3xl'] : 0,
+    },
+    trustGrid: {
+      flexDirection: isWide ? 'row' : 'column',
+      gap: spacing.xl,
+      paddingHorizontal: isWide ? 0 : spacing.lg,
+    },
+    trustCard: {
+      flex: isWide ? 1 : undefined,
+      alignItems: isWide ? 'flex-start' : 'center',
+      paddingVertical: spacing.lg,
+      paddingHorizontal: spacing.md,
+      gap: spacing.sm,
+    },
+    trustIconCircle: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: colors.COLOR_BLACK_LIGHT_7,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: spacing.sm,
+    },
+    trustTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.COLOR_BLACK,
+      lineHeight: 24,
+      textAlign: isWide ? 'left' : 'center',
+    },
+    trustDescription: {
+      fontSize: 14,
+      color: colors.COLOR_BLACK_LIGHT_3,
+      lineHeight: 20,
+      textAlign: isWide ? 'left' : 'center',
+    },
+
+    // Stats
+    statsSection: {
+      paddingHorizontal: isWide ? spacing['3xl'] : 0,
+    },
+    statsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.lg,
+      paddingHorizontal: isWide ? 0 : spacing.lg,
+    },
+    statTile: {
+      flex: 1,
+      minWidth: isWide ? 200 : '45%',
+      padding: spacing.xl,
+      backgroundColor: colors.COLOR_BLACK_LIGHT_8,
+      borderRadius: 16,
+      gap: spacing.sm,
+    },
+    statHeader: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+    },
+    statIconBg: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: '#ffffff',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    statNumber: {
+      fontSize: 32,
+      fontWeight: '700',
+      color: colors.COLOR_BLACK,
+      letterSpacing: tracker.tight,
+      lineHeight: 36,
+    },
+    statLabel: {
+      fontSize: 13,
+      color: colors.COLOR_BLACK_LIGHT_3,
+      fontWeight: '500',
+    },
+
+    // FAQ
+    faqSection: {
+      paddingHorizontal: isWide ? spacing['3xl'] : 0,
+    },
+    faqContainer: {
+      paddingHorizontal: isWide ? 0 : spacing.lg,
+    },
+    faqItem: {
+      backgroundColor: colors.COLOR_BLACK_LIGHT_8,
+      marginBottom: 2,
+      overflow: 'hidden',
+    },
+    faqItemFirst: {
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+    },
+    faqItemLast: {
+      borderBottomLeftRadius: 16,
+      borderBottomRightRadius: 16,
+      marginBottom: 0,
+    },
+    faqQuestion: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: spacing.lg,
+    },
+    faqQuestionText: {
+      fontSize: 16,
+      color: colors.COLOR_BLACK,
+      flex: 1,
+      marginRight: spacing.md,
+      fontWeight: '600',
+    },
+    faqAnswer: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.lg,
+    },
+    faqAnswerText: {
+      fontSize: 14,
+      color: colors.COLOR_BLACK_LIGHT_3,
+      lineHeight: 22,
+    },
+  });
+};
