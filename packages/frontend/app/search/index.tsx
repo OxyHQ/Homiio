@@ -10,16 +10,17 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import MapView, { MapApi } from '@/components/Map';
 import { PropertyListBottomSheet } from '@/components/PropertyListBottomSheet';
-import { Property } from '@homiio/shared-types';
+import { Property, RentMode } from '@homiio/shared-types';
 import { propertyService } from '@/services/propertyService';
 import { useMapState } from '@/context/MapStateContext';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SaveSearchBottomSheet } from '@/components/SaveSearchBottomSheet';
-import { SearchFiltersBottomSheet } from '@/components/SearchFiltersBottomSheet';
+import { SearchFiltersBottomSheet, SearchFilters } from '@/components/SearchFiltersBottomSheet';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
 import { onApplySavedSearch } from '@/utils/searchEvents';
 import * as Location from 'expo-location';
 import { useSearchMode } from '@/context/SearchModeContext';
+import { useRentalMode } from '@/context/RentalModeContext';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
@@ -192,14 +193,7 @@ interface SearchResult {
   place_type?: string[];
 }
 
-interface Filters {
-  minPrice: number;
-  maxPrice: number;
-  bedrooms: number | string;
-  bathrooms: number | string;
-  type?: string;
-  amenities?: string[];
-}
+type Filters = SearchFilters;
 
 const defaultFilters: Filters = {
   minPrice: 0,
@@ -295,6 +289,7 @@ export default function SearchScreen() {
     // We'll handle unfocusing when they actually select a result
   }, []);
   const { setIsMapMode } = useSearchMode();
+  const { mode: rentalMode } = useRentalMode();
 
   // Set to map mode since we're always showing the map now
   React.useEffect(() => {
@@ -407,25 +402,31 @@ export default function SearchScreen() {
       // Quantize bounds to reduce cache key churn and leverage caching
       const round = (n: number, d = 3) => Math.round(n * Math.pow(10, d)) / Math.pow(10, d);
       const qb = { west: round(bounds.west), south: round(bounds.south), east: round(bounds.east), north: round(bounds.north) };
-      const key = ['propertiesInBounds', qb, {
+      const rentModeFilter = rentalMode === 'vacation' ? RentMode.VACATION : RentMode.LONG_TERM;
+      const baseFilters = {
         minRent: filters.minPrice,
         maxRent: filters.maxPrice,
         bedrooms: typeof filters.bedrooms === 'string' ? 5 : filters.bedrooms,
         bathrooms: typeof filters.bathrooms === 'string' ? 4 : filters.bathrooms,
-        type: filters.type || null,
-        amenities: (filters.amenities || []).slice().sort(),
-      }];
+        type: filters.type,
+        amenities: filters.amenities,
+        rentMode: rentModeFilter,
+        ...(rentalMode === 'vacation'
+          ? {
+              checkIn: filters.checkIn,
+              checkOut: filters.checkOut,
+              guests: filters.guests,
+              instantBook: filters.instantBook,
+            }
+          : {
+              furnished: filters.furnished,
+            }),
+      };
+      const key = ['propertiesInBounds', qb, baseFilters];
 
       const response = await queryClient.ensureQueryData({
         queryKey: key,
-        queryFn: async () => propertyService.findPropertiesInBounds(bounds, {
-          minRent: filters.minPrice,
-          maxRent: filters.maxPrice,
-          bedrooms: typeof filters.bedrooms === 'string' ? 5 : filters.bedrooms,
-          bathrooms: typeof filters.bathrooms === 'string' ? 4 : filters.bathrooms,
-          type: filters.type,
-          amenities: filters.amenities,
-        }),
+        queryFn: async () => propertyService.findPropertiesInBounds(bounds, baseFilters),
         staleTime: 1000 * 60, // 1 min fresh
         gcTime: 1000 * 60 * 10,
       });
@@ -437,7 +438,7 @@ export default function SearchScreen() {
     } finally {
       setIsLoadingProperties(false);
     }
-  }, [filters, queryClient, mergeMapProperties]);
+  }, [filters, queryClient, mergeMapProperties, rentalMode]);
 
   useEffect(() => {
     mapRef.current?.highlightMarker(highlightedPropertyId);
@@ -692,33 +693,59 @@ export default function SearchScreen() {
     }
   }, [urlQuery, searchQuery]);
 
-  const handleFilterChange = useCallback((sectionId: string, value: any) => {
+  const handleFilterChange = useCallback((sectionId: string, value: unknown) => {
     setFilters(prev => {
       switch (sectionId) {
-        case 'price':
+        case 'price': {
           if (Array.isArray(value)) {
+            const [min, max] = value;
             return {
               ...prev,
-              minPrice: value[0],
-              maxPrice: value[1]
+              minPrice: typeof min === 'number' ? min : prev.minPrice,
+              maxPrice: typeof max === 'number' ? max : prev.maxPrice,
             };
           }
           return prev;
+        }
         case 'type':
-          // Handle property type filter
-          return { ...prev, type: value };
+          return { ...prev, type: typeof value === 'string' ? value : undefined };
         case 'bedrooms':
-          return { ...prev, bedrooms: parseInt(value) };
+          return { ...prev, bedrooms: typeof value === 'string' || typeof value === 'number' ? Number(value) : prev.bedrooms };
         case 'bathrooms':
-          return { ...prev, bathrooms: parseInt(value) };
-        case 'amenities':
-          // Handle amenities filter - toggle the amenity in the array
+          return { ...prev, bathrooms: typeof value === 'string' || typeof value === 'number' ? Number(value) : prev.bathrooms };
+        case 'amenities': {
           const currentAmenities = prev.amenities || [];
-          const amenityValue = value as string;
-          const newAmenities = currentAmenities.includes(amenityValue)
-            ? currentAmenities.filter(a => a !== amenityValue)
-            : [...currentAmenities, amenityValue];
+          if (typeof value !== 'string') return prev;
+          const newAmenities = currentAmenities.includes(value)
+            ? currentAmenities.filter(a => a !== value)
+            : [...currentAmenities, value];
           return { ...prev, amenities: newAmenities };
+        }
+        // Vacation-mode sections
+        case 'checkIn':
+          return { ...prev, checkIn: typeof value === 'string' ? value : undefined };
+        case 'checkOut':
+          return { ...prev, checkOut: typeof value === 'string' ? value : undefined };
+        case 'guests':
+          return { ...prev, guests: typeof value === 'number' ? value : prev.guests };
+        case 'instantBook':
+          return { ...prev, instantBook: Boolean(value) };
+        case 'cancellationPolicy':
+          return { ...prev, cancellationPolicy: typeof value === 'string' ? value as Filters['cancellationPolicy'] : undefined };
+        // Long-term-mode sections
+        case 'moveIn':
+          return { ...prev, moveIn: typeof value === 'string' ? value : undefined };
+        case 'leaseDuration':
+          return { ...prev, leaseDuration: typeof value === 'string' ? value : undefined };
+        case 'maxDeposit': {
+          if (Array.isArray(value)) {
+            const [, max] = value;
+            return { ...prev, maxDeposit: typeof max === 'number' ? max : prev.maxDeposit };
+          }
+          return prev;
+        }
+        case 'furnished':
+          return { ...prev, furnished: Boolean(value) };
         default:
           return prev;
       }

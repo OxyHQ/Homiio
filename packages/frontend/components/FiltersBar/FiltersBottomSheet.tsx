@@ -3,6 +3,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { colors } from '@/styles/colors';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Switch } from '@oxyhq/bloom/switch';
 
 export type FilterValue = string | number | boolean | (string | number)[];
 
@@ -15,11 +16,13 @@ export interface FilterOption {
 export interface FilterSection {
     id: string;
     title: string;
-    type: 'range' | 'chips' | 'toggle';
+    type: 'range' | 'chips' | 'toggle' | 'date' | 'counter';
     options?: FilterOption[];
     min?: number;
     max?: number;
     value?: FilterValue;
+    /** Placeholder shown for date / counter sections when empty. */
+    placeholder?: string;
 }
 
 interface FiltersBottomSheetProps {
@@ -73,7 +76,6 @@ export function FiltersBottomSheet({
                         <View style={styles.rangeContainer}>
                             <TouchableOpacity
                                 style={styles.rangeInput}
-                                onPress={() => {/* TODO: Show number picker */ }}
                             >
                                 <ThemedText>
                                     {Array.isArray(section.value) && section.value[0] !== undefined
@@ -84,13 +86,60 @@ export function FiltersBottomSheet({
                             <ThemedText style={styles.rangeSeparator}>-</ThemedText>
                             <TouchableOpacity
                                 style={styles.rangeInput}
-                                onPress={() => {/* TODO: Show number picker */ }}
                             >
                                 <ThemedText>
                                     {Array.isArray(section.value) && section.value[1] !== undefined
                                         ? section.value[1]
                                         : 'Max'}
                                 </ThemedText>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
+                    {section.type === 'toggle' && (
+                        <View style={styles.toggleRow}>
+                            <Switch
+                                value={Boolean(section.value)}
+                                onValueChange={(next) => onFilterChange(section.id, next)}
+                            />
+                        </View>
+                    )}
+
+                    {section.type === 'date' && (
+                        <TouchableOpacity
+                            style={styles.dateInput}
+                            onPress={() => onFilterChange(section.id, '')}
+                        >
+                            <ThemedText style={styles.dateInputText}>
+                                {typeof section.value === 'string' && section.value.length > 0
+                                    ? section.value
+                                    : section.placeholder || 'Select date'}
+                            </ThemedText>
+                        </TouchableOpacity>
+                    )}
+
+                    {section.type === 'counter' && (
+                        <View style={styles.counterRow}>
+                            <TouchableOpacity
+                                style={styles.counterButton}
+                                onPress={() => {
+                                    const current = typeof section.value === 'number' ? section.value : 0;
+                                    onFilterChange(section.id, Math.max(0, current - 1));
+                                }}
+                            >
+                                <ThemedText style={styles.counterButtonText}>-</ThemedText>
+                            </TouchableOpacity>
+                            <ThemedText style={styles.counterValue}>
+                                {typeof section.value === 'number' ? section.value : 0}
+                            </ThemedText>
+                            <TouchableOpacity
+                                style={styles.counterButton}
+                                onPress={() => {
+                                    const current = typeof section.value === 'number' ? section.value : 0;
+                                    onFilterChange(section.id, current + 1);
+                                }}
+                            >
+                                <ThemedText style={styles.counterButtonText}>+</ThemedText>
                             </TouchableOpacity>
                         </View>
                     )}
@@ -177,6 +226,49 @@ const styles = StyleSheet.create({
     rangeSeparator: {
         marginHorizontal: 12,
         color: colors.COLOR_BLACK_LIGHT_4,
+    },
+    toggleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    dateInput: {
+        height: 44,
+        borderWidth: 1,
+        borderColor: colors.COLOR_BLACK_LIGHT_6,
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        justifyContent: 'center',
+    },
+    dateInputText: {
+        fontSize: 14,
+        color: colors.COLOR_BLACK_LIGHT_3,
+    },
+    counterRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 16,
+    },
+    counterButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        borderWidth: 1,
+        borderColor: colors.COLOR_BLACK_LIGHT_6,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    counterButtonText: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: colors.COLOR_BLACK,
+    },
+    counterValue: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: colors.COLOR_BLACK,
+        minWidth: 24,
+        textAlign: 'center',
     },
     footer: {
         flexDirection: 'row',

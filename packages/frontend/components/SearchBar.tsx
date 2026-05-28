@@ -10,7 +10,7 @@ import { Chip } from '@oxyhq/bloom/chip';
 
 import { useRentalMode, type RentalMode } from '@/context/RentalModeContext';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
-import { SearchFiltersBottomSheet } from '@/components/SearchFiltersBottomSheet';
+import { SearchFiltersBottomSheet, SearchFilters } from '@/components/SearchFiltersBottomSheet';
 import { colors } from '@/styles/colors';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -39,13 +39,13 @@ const VACATION_CHIPS: SecondaryChip[] = [
   { id: 'who', label: 'searchBar.vacation.who', icon: 'people-outline' },
 ];
 
-const FILTER_FALLBACK = {
+const FILTER_FALLBACK: SearchFilters = {
   minPrice: 0,
   maxPrice: 5000,
   bedrooms: 1,
   bathrooms: 1,
   type: undefined,
-  amenities: [] as string[],
+  amenities: [],
 };
 
 export const SearchBar = ({
