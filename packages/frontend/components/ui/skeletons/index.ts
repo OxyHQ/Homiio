@@ -9,4 +9,3 @@ export { ProfileSkeleton } from './ProfileSkeleton';
 export { SearchSkeleton } from './SearchSkeleton';
 export { InsightsSkeleton } from './InsightsSkeleton';
 export { TipsSkeleton } from './TipsSkeleton';
-export { ButtonSkeleton } from './UtilitySkeleton';
