@@ -17,6 +17,7 @@ import { PropertyCard } from '@/components/PropertyCard';
 import { useUserProperties } from '@/hooks/usePropertyQueries';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
 
 // Type assertion for Ionicons compatibility with React 19
@@ -115,13 +116,11 @@ export default function MyPropertiesScreen() {
   );
 
   const renderErrorState = () => (
-    <EmptyState
-      icon="alert-circle-outline"
+    <ErrorState
       title={t('properties.my.errorTitle')}
       description={t('properties.my.errorDescription')}
-      actionText={t('common.retry')}
-      actionIcon="refresh"
-      onAction={handleRefresh}
+      retryLabel={t('common.retry')}
+      onRetry={handleRefresh}
     />
   );
 

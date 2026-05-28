@@ -49,6 +49,7 @@ import { useLayoutScroll } from '@/context/LayoutScrollContext';
 import { useIsDesktop } from '@/hooks/useOptimizedMediaQuery';
 
 import { SaveButton } from '@/components/SaveButton';
+import { ErrorState } from '@/components/ui/ErrorState';
 import * as Linking from 'expo-linking';
 import { propertyService } from '@/services/propertyService';
 import ViewingService from '@/services/viewingService';
@@ -371,14 +372,16 @@ export default function PropertyDetailPage() {
           }}
         />
         <SafeAreaView style={styles.contentArea} edges={['top']}>
-          <View style={styles.errorContainer}>
-            <ThemedText style={styles.errorText}>
-              {t('property.notFound') || 'Property not found'}
-            </ThemedText>
-            <Button onPress={() => router.back()} style={styles.goBackButton}>
-              {t('goBack') || 'Go Back'}
-            </Button>
-          </View>
+          <ErrorState
+            icon="home-outline"
+            title={t('property.notFound') || 'Property not found'}
+            description={
+              t('property.notFoundHelp') ||
+              'It may have been removed or the link is broken.'
+            }
+            retryLabel={t('goBack') || 'Go back'}
+            onRetry={() => router.back()}
+          />
         </SafeAreaView>
       </View>
     );

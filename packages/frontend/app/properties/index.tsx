@@ -11,6 +11,8 @@ import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { Header } from '@/components/Header';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { PropertyList } from '@/components/PropertyList';
 import { useProperties } from '@/hooks';
 import { SearchBar } from '@/components/SearchBar';
@@ -117,19 +119,19 @@ export default function PropertiesScreen() {
   );
 
   const renderErrorState = () => (
-    <View style={styles.errorState}>
-      <IconComponent name="alert-circle" size={48} color={colors.COLOR_BLACK_LIGHT_4} />
-      <ThemedText style={styles.errorTitle}>{error}</ThemedText>
-      <Button onPress={() => loadProperties()}>Try Again</Button>
-    </View>
+    <ErrorState
+      title={error || 'Something went wrong'}
+      retryLabel="Try again"
+      onRetry={() => loadProperties()}
+    />
   );
 
   const renderEmptyState = () => (
-    <View style={styles.emptyState}>
-      <IconComponent name="home-outline" size={48} color={colors.COLOR_BLACK_LIGHT_4} />
-      <ThemedText style={styles.emptyTitle}>No properties found</ThemedText>
-      <ThemedText style={styles.emptyDescription}>Try adjusting your search criteria</ThemedText>
-    </View>
+    <EmptyState
+      icon="home-outline"
+      title="No properties found"
+      description="Try adjusting your search criteria"
+    />
   );
 
   return (
