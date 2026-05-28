@@ -19,7 +19,7 @@ import { Badge } from '@oxyhq/bloom/badge';
 import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
 
 import { colors } from '@/styles/colors';
-import { cardShadow, radius } from '@/constants/styles';
+import { radius, spacing, withShadow } from '@/constants/styles';
 import type { Profile, Property } from '@homiio/shared-types';
 
 interface HostStatsCardProps {
@@ -105,7 +105,7 @@ export const HostStatsCard: React.FC<HostStatsCardProps> = ({
   if (property?.housingType === 'public') {
     const state = property.address?.state;
     return (
-      <View style={[styles.card, cardShadow.md]}>
+      <View style={[styles.card, withShadow('md')]}>
         <View style={styles.governmentAvatar}>
           <Ionicons name="library" size={28} color="#ffffff" />
         </View>
@@ -131,7 +131,7 @@ export const HostStatsCard: React.FC<HostStatsCardProps> = ({
 
   return (
     <Pressable
-      style={[styles.card, cardShadow.md]}
+      style={[styles.card, withShadow('md')]}
       onPress={handleOpenProfile}
       accessibilityRole="button"
       accessibilityLabel={t('property.host.openProfile', 'Open host profile') || 'Open host profile'}
@@ -183,16 +183,16 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: spacing.lg,
     backgroundColor: '#ffffff',
     borderRadius: radius.lg,
-    padding: 20,
-    marginHorizontal: 16,
-    marginBottom: 16,
+    padding: spacing.xl,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
   },
   body: {
     flex: 1,
-    gap: 4,
+    gap: spacing.xs,
   },
   name: {
     fontSize: 18,

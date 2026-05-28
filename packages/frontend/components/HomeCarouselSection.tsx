@@ -1,3 +1,13 @@
+/**
+ * Horizontal carousel used across the home page for properties, cities,
+ * and tips. Renders an optional eyebrow label, an H1-sized title, an
+ * optional "View all" link, and a snap-to-card horizontal scroller with
+ * left/right arrow controls that only appear when the content overflows.
+ *
+ * Section rhythm is owned by the parent — this component renders the
+ * scroller and only adds a small bottom margin so consecutive sections
+ * still breathe even when no eyebrow is passed.
+ */
 import React, { useRef, useState } from 'react';
 import {
   View,
@@ -8,22 +18,31 @@ import {
   NativeScrollEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+
+import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
+
 import { colors } from '@/styles/colors';
-import { cardShadow } from '@/constants/styles';
-import { ThemedText } from './ThemedText';
+import { cardShadow, spacing, tracker } from '@/constants/styles';
+import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 
 interface HomeCarouselSectionProps<T> {
+  /** Optional small uppercase label above the title (Airbnb-2026 pattern). */
+  eyebrow?: string;
   title: string;
   items: T[];
   loading: boolean;
   renderItem: (item: T, idx: number) => React.ReactNode;
   onViewAll?: () => void;
   viewAllText?: string;
-  minItemsToShow?: number; // Minimum number of items to show at start
+  minItemsToShow?: number;
   maxCardWidth?: number;
 }
 
+const CARD_GAP = 16;
+const HORIZONTAL_PADDING = 32;
+
 export function HomeCarouselSection<T>({
+  eyebrow,
   title,
   items,
   loading,
@@ -38,51 +57,37 @@ export function HomeCarouselSection<T>({
   const [containerWidth, setContainerWidth] = useState(0);
   const [scrollX, setScrollX] = useState(0);
   const [_isDragging, setIsDragging] = useState(false);
-  const cardGap = 16;
 
-  // Calculate card width to fit within container while respecting a max width
-  const horizontalPadding = 32; // 16px left + 16px right
   let calculatedCardWidth = maxCardWidth;
 
   if (containerWidth > 0) {
-    const availableWidth = Math.max(0, containerWidth - horizontalPadding);
-
-    // Minimum number of cards needed so that per-card width does not exceed maxCardWidth
-    const minCardsToFit = Math.max(1, Math.ceil((availableWidth + cardGap) / (maxCardWidth + cardGap)));
+    const availableWidth = Math.max(0, containerWidth - HORIZONTAL_PADDING);
+    const minCardsToFit = Math.max(
+      1,
+      Math.ceil((availableWidth + CARD_GAP) / (maxCardWidth + CARD_GAP)),
+    );
 
     if (items.length >= minCardsToFit) {
-      const totalGaps = (minCardsToFit - 1) * cardGap;
+      const totalGaps = (minCardsToFit - 1) * CARD_GAP;
       const exactWidth = (availableWidth - totalGaps) / minCardsToFit;
       calculatedCardWidth = Math.min(maxCardWidth, Math.floor(exactWidth));
     } else {
-      // Not enough cards to fill the viewport; keep max size and align left
       calculatedCardWidth = maxCardWidth;
     }
   }
 
-  // Calculate maxScroll so the last card is perfectly aligned
-  const totalCardsWidth = items.length * calculatedCardWidth + (items.length - 1) * cardGap;
-  const availableScrollWidth = containerWidth - horizontalPadding; // Account for horizontal padding
+  const totalCardsWidth = items.length * calculatedCardWidth + (items.length - 1) * CARD_GAP;
+  const availableScrollWidth = containerWidth - HORIZONTAL_PADDING;
   const maxScroll = Math.max(0, totalCardsWidth - availableScrollWidth);
-  const totalContentWidth =
-    items.length * calculatedCardWidth + (items.length - 1) * cardGap + horizontalPadding;
   const itemsPerPage =
     containerWidth > 0
-      ? Math.floor((availableScrollWidth + cardGap) / (calculatedCardWidth + cardGap))
+      ? Math.floor((availableScrollWidth + CARD_GAP) / (calculatedCardWidth + CARD_GAP))
       : 1;
-  const _maxCarouselIndex =
-    calculatedCardWidth > 0
-      ? Math.max(
-        0,
-        Math.ceil((totalContentWidth - containerWidth) / (calculatedCardWidth + cardGap)),
-      )
-      : 0;
 
-  // Fast magnetic snap function
   const snapToNearestCard = (currentScrollX: number) => {
     if (calculatedCardWidth <= 0) return 0;
 
-    const cardSpacing = calculatedCardWidth + cardGap;
+    const cardSpacing = calculatedCardWidth + CARD_GAP;
     const nearestIndex = Math.round(currentScrollX / cardSpacing);
     const clampedIndex = Math.max(0, Math.min(nearestIndex, items.length - 1));
     const targetScrollX = clampedIndex * cardSpacing;
@@ -92,7 +97,7 @@ export function HomeCarouselSection<T>({
 
   const handleScrollLeft = () => {
     if (!disableLeftArrow) {
-      const cardSpacing = calculatedCardWidth + cardGap;
+      const cardSpacing = calculatedCardWidth + CARD_GAP;
       const pageStride = Math.max(1, itemsPerPage) * cardSpacing;
       const currentPage = Math.floor(scrollX / pageStride);
       const targetPage = Math.max(0, currentPage - 1);
@@ -107,7 +112,7 @@ export function HomeCarouselSection<T>({
 
   const handleScrollRight = () => {
     if (!disableRightArrow) {
-      const cardSpacing = calculatedCardWidth + cardGap;
+      const cardSpacing = calculatedCardWidth + CARD_GAP;
       const pageStride = Math.max(1, itemsPerPage) * cardSpacing;
       const currentPage = Math.floor(scrollX / pageStride);
       const targetScrollX = Math.min(maxScroll, (currentPage + 1) * pageStride);
@@ -126,8 +131,7 @@ export function HomeCarouselSection<T>({
         const clampedScroll = Math.min(x, maxScroll);
         setScrollX(clampedScroll);
 
-        // Update carousel index based on current scroll position
-        const currentIndex = Math.round(clampedScroll / (calculatedCardWidth + cardGap));
+        const currentIndex = Math.round(clampedScroll / (calculatedCardWidth + CARD_GAP));
         const clampedIndex = Math.max(0, Math.min(currentIndex, items.length - 1));
         setCarouselIndex(clampedIndex);
       }
@@ -142,7 +146,6 @@ export function HomeCarouselSection<T>({
     const x = e.nativeEvent.contentOffset.x;
     const clampedScroll = Math.min(x, maxScroll);
 
-    // Immediate snap on drag end for faster response
     const snappedScrollX = snapToNearestCard(clampedScroll);
 
     if (Math.abs(snappedScrollX - clampedScroll) > 2) {
@@ -152,7 +155,7 @@ export function HomeCarouselSection<T>({
       setScrollX(clampedScroll);
     }
 
-    const snappedIndex = Math.round(snappedScrollX / (calculatedCardWidth + cardGap));
+    const snappedIndex = Math.round(snappedScrollX / (calculatedCardWidth + CARD_GAP));
     const clampedIndex = Math.max(0, Math.min(snappedIndex, items.length - 1));
     setCarouselIndex(clampedIndex);
   };
@@ -163,7 +166,6 @@ export function HomeCarouselSection<T>({
         const x = e.nativeEvent.contentOffset.x;
         const clampedScroll = Math.min(x, maxScroll);
 
-        // Apply magnetic snap with very low threshold for faster response
         const snappedScrollX = snapToNearestCard(clampedScroll);
 
         if (Math.abs(snappedScrollX - clampedScroll) > 1) {
@@ -173,7 +175,7 @@ export function HomeCarouselSection<T>({
           setScrollX(clampedScroll);
         }
 
-        const snappedIndex = Math.round(snappedScrollX / (calculatedCardWidth + cardGap));
+        const snappedIndex = Math.round(snappedScrollX / (calculatedCardWidth + CARD_GAP));
         const clampedIndex = Math.max(0, Math.min(snappedIndex, items.length - 1));
         setCarouselIndex(clampedIndex);
       }
@@ -183,35 +185,44 @@ export function HomeCarouselSection<T>({
   const disableLeftArrow = scrollX <= 0;
 
   return (
-    <View style={[styles.section, { paddingHorizontal: 0 }]}>
+    <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <ThemedText style={styles.sectionTitle}>{title}</ThemedText>
-        {onViewAll && (
-          <TouchableOpacity onPress={onViewAll}>
-            <ThemedText style={styles.viewAllText}>{viewAllText}</ThemedText>
-          </TouchableOpacity>
-        )}
-        {disableLeftArrow && disableRightArrow ? null : (
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <TouchableOpacity
-              onPress={handleScrollLeft}
-              disabled={disableLeftArrow}
-              style={[styles.arrowButton, { opacity: disableLeftArrow ? 0.3 : 1, marginRight: 8 }]}
-            >
-              <Ionicons name="chevron-back" size={20} color={colors.primaryColor} />
+        <View style={styles.headerText}>
+          {eyebrow ? <SectionEyebrow>{eyebrow}</SectionEyebrow> : null}
+          <H1 style={styles.sectionTitle}>{title}</H1>
+        </View>
+        <View style={styles.headerActions}>
+          {onViewAll && (
+            <TouchableOpacity onPress={onViewAll} hitSlop={8}>
+              <BloomText style={styles.viewAllText}>{viewAllText}</BloomText>
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleScrollRight}
-              disabled={disableRightArrow}
-              style={[styles.arrowButton, { opacity: disableRightArrow ? 0.3 : 1 }]}
-            >
-              <Ionicons name="chevron-forward" size={20} color={colors.primaryColor} />
-            </TouchableOpacity>
-          </View>
-        )}
+          )}
+          {disableLeftArrow && disableRightArrow ? null : (
+            <View style={styles.arrowGroup}>
+              <TouchableOpacity
+                onPress={handleScrollLeft}
+                disabled={disableLeftArrow}
+                style={[styles.arrowButton, { opacity: disableLeftArrow ? 0.3 : 1 }]}
+                accessibilityRole="button"
+                accessibilityLabel="Scroll left"
+              >
+                <Ionicons name="chevron-back" size={18} color={colors.COLOR_BLACK} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleScrollRight}
+                disabled={disableRightArrow}
+                style={[styles.arrowButton, { opacity: disableRightArrow ? 0.3 : 1 }]}
+                accessibilityRole="button"
+                accessibilityLabel="Scroll right"
+              >
+                <Ionicons name="chevron-forward" size={18} color={colors.COLOR_BLACK} />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </View>
       <View
-        style={{ flexDirection: 'row', alignItems: 'center' }}
+        style={styles.scrollWrapper}
         onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
       >
         <ScrollView
@@ -219,7 +230,7 @@ export function HomeCarouselSection<T>({
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.horizontalScroll}
-          contentContainerStyle={{ paddingHorizontal: 16, justifyContent: 'flex-start' }}
+          contentContainerStyle={styles.horizontalScrollContent}
           scrollEnabled={true}
           onScrollBeginDrag={handleScrollBeginDrag}
           onScrollEndDrag={handleScrollEndDrag}
@@ -227,21 +238,21 @@ export function HomeCarouselSection<T>({
           onScroll={handleScroll}
           scrollEventThrottle={8}
           decelerationRate={0.8}
-          snapToInterval={calculatedCardWidth + cardGap}
+          snapToInterval={calculatedCardWidth + CARD_GAP}
           snapToAlignment="start"
           bounces={false}
         >
-          <View style={{ flexDirection: 'row', gap: 16 }}>
+          <View style={styles.rowFlex}>
             {loading
               ? Array.from({ length: 4 }).map((_, idx) => (
                 <View
                   key={idx}
-                  style={{
-                    width: calculatedCardWidth,
-                    height: 200,
-                    backgroundColor: '#f0f0f0',
-                    borderRadius: 8,
-                  }}
+                  style={[
+                    styles.skeleton,
+                    {
+                      width: calculatedCardWidth,
+                    },
+                  ]}
                 />
               ))
               : items.map((item, idx) => (
@@ -258,41 +269,70 @@ export function HomeCarouselSection<T>({
 
 const styles = StyleSheet.create({
   section: {
-    marginBottom: 24,
+    marginBottom: spacing['3xl'],
   },
   sectionHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
-    marginBottom: 8,
-    paddingHorizontal: 16,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.lg,
+  },
+  headerText: {
+    flex: 1,
+    flexShrink: 1,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
   },
   sectionTitle: {
-    fontSize: 24,
+    fontSize: 26,
     color: colors.COLOR_BLACK,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    letterSpacing: tracker.tight,
+    lineHeight: 32,
   },
   viewAllText: {
-    color: colors.primaryColor,
+    color: colors.COLOR_BLACK,
     fontWeight: '600',
-    fontSize: 16,
-    marginLeft: 12,
+    fontSize: 14,
+    textDecorationLine: 'underline',
+  },
+  arrowGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  scrollWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   horizontalScroll: {
     flexDirection: 'row',
+  },
+  horizontalScrollContent: {
+    paddingHorizontal: spacing.lg,
+    justifyContent: 'flex-start',
+  },
+  rowFlex: {
+    flexDirection: 'row',
+    gap: CARD_GAP,
+  },
+  skeleton: {
+    height: 200,
+    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
+    borderRadius: 16,
   },
   arrowButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 4,
     ...cardShadow.sm,
   },
 });
-
-
-
-

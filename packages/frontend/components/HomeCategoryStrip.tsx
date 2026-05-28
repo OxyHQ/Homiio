@@ -1,4 +1,18 @@
-import React, { useCallback, useMemo } from 'react';
+/**
+ * Home category strip — Airbnb-2026 inspired horizontal scroller that
+ * switches the home feed's lens (Studios / Apartments / Houses for
+ * long-term; Beachfront / Cabins / Pools for vacation).
+ *
+ * Visual language:
+ *   - 28px outline-style Ionicons (not filled blobs).
+ *   - 12px label sitting 8px under the icon.
+ *   - Active state = primary color icon + label, 2px underline bar.
+ *   - On web: 32px gap between items, subtle scale-1.04 on hover.
+ *   - On mobile: 22px gap, snap-to-item via scroll inertia.
+ *
+ * Spacing is anchored on the design-token `spacing` scale.
+ */
+import React, { useCallback, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +22,7 @@ import { Text } from '@oxyhq/bloom/typography';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { useHomeCategoryStore, type HomeCategory } from '@/store/homeCategoryStore';
 import { colors } from '@/styles/colors';
+import { spacing, tracker } from '@/constants/styles';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -45,6 +60,59 @@ interface HomeCategoryStripProps {
   className?: string;
 }
 
+interface CategoryItemProps {
+  item: CategoryDef;
+  active: boolean;
+  label: string;
+  onPress: () => void;
+}
+
+const CategoryItem: React.FC<CategoryItemProps> = ({ item, active, label, onPress }) => {
+  const [hovered, setHovered] = useState(false);
+
+  const tint = active ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3;
+  const scale = hovered && Platform.OS === 'web' ? 1.04 : 1;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
+      className="items-center justify-start"
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={label}
+      style={{
+        opacity: active ? 1 : 0.78,
+        transform: [{ scale }],
+      }}
+    >
+      <View className="items-center justify-center" style={{ paddingBottom: spacing.sm }}>
+        <Ionicons name={item.icon} size={30} color={tint} />
+      </View>
+      <Text
+        style={{
+          fontSize: 12,
+          fontWeight: active ? '700' : '500',
+          color: tint,
+          letterSpacing: tracker.wide,
+        }}
+      >
+        {label}
+      </Text>
+      <View
+        className="rounded-full"
+        style={{
+          marginTop: spacing.sm,
+          height: 2,
+          width: '100%',
+          backgroundColor: active ? colors.primaryColor : 'transparent',
+        }}
+      />
+    </Pressable>
+  );
+};
+
 export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({ className }) => {
   const { t } = useTranslation();
   const { mode } = useRentalMode();
@@ -63,50 +131,30 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({ className 
     [category, setCategory],
   );
 
+  const isWeb = Platform.OS === 'web';
+
   return (
     <View className={className ?? 'w-full py-4'}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        decelerationRate={isWeb ? 'normal' : 'fast'}
+        snapToAlignment="start"
         contentContainerStyle={
-          Platform.OS === 'web'
-            ? { paddingHorizontal: 24, gap: 32 }
-            : { paddingHorizontal: 16, gap: 22 }
+          isWeb
+            ? { paddingHorizontal: spacing['2xl'], gap: spacing['3xl'] }
+            : { paddingHorizontal: spacing.lg, gap: spacing['2xl'] }
         }
       >
-        {items.map((item) => {
-          const active = category === item.id;
-          const tint = active ? colors.COLOR_BLACK : colors.COLOR_BLACK_LIGHT_3;
-          return (
-            <Pressable
-              key={item.id}
-              onPress={() => handlePress(item.id)}
-              className="items-center justify-start"
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-              accessibilityLabel={t(item.labelKey, item.fallback)}
-              style={{ opacity: active ? 1 : 0.7 }}
-            >
-              <View className="items-center justify-center pb-2">
-                <Ionicons name={item.icon} size={26} color={tint} />
-              </View>
-              <Text
-                style={{
-                  fontSize: 12,
-                  fontWeight: active ? '700' : '500',
-                  color: tint,
-                  letterSpacing: 0.2,
-                }}
-              >
-                {t(item.labelKey, item.fallback)}
-              </Text>
-              <View
-                className="mt-2 h-[2px] w-full rounded-full"
-                style={{ backgroundColor: active ? colors.COLOR_BLACK : 'transparent' }}
-              />
-            </Pressable>
-          );
-        })}
+        {items.map((item) => (
+          <CategoryItem
+            key={item.id}
+            item={item}
+            active={category === item.id}
+            label={t(item.labelKey, item.fallback)}
+            onPress={() => handlePress(item.id)}
+          />
+        ))}
       </ScrollView>
     </View>
   );

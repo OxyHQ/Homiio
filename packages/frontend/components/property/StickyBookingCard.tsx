@@ -24,7 +24,7 @@ import { BookingWidget } from '@/components/BookingWidget';
 import { ApplyToRentCTA } from '@/components/property/ApplyToRentCTA';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { colors } from '@/styles/colors';
-import { cardShadow, radius } from '@/constants/styles';
+import { radius, spacing, withShadow } from '@/constants/styles';
 import { RentMode, type Property } from '@homiio/shared-types';
 
 interface StickyBookingCardProps {
@@ -61,7 +61,7 @@ export const StickyBookingCard: React.FC<StickyBookingCardProps> = ({
 
   return (
     <View style={Platform.OS === 'web' ? styles.stickyWrapperWeb : null}>
-      <View style={[styles.card, cardShadow.md]}>
+      <View style={[styles.card, withShadow('md')]}>
         <View style={styles.priceRow}>
           <H3 style={styles.price}>{priceLabel}</H3>
           {priceSubtitle ? (
@@ -112,15 +112,13 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#ffffff',
     borderRadius: radius.lg,
-    padding: 24,
+    padding: spacing['2xl'],
     maxWidth: 380,
     width: '100%',
-    gap: 16,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
+    gap: spacing.lg,
   },
   priceRow: {
-    gap: 4,
+    gap: spacing.xs,
   },
   price: {
     fontSize: 22,
@@ -134,17 +132,17 @@ const styles = StyleSheet.create({
   widgetSlot: {
     // The wrapped widgets carry their own padding; clip the slot
     // so the negative-margin styles from BookingWidget don't leak.
-    marginHorizontal: -8,
+    marginHorizontal: -spacing.sm,
   },
   divider: {
     height: 1,
     backgroundColor: colors.COLOR_BLACK_LIGHT_6,
-    marginVertical: 4,
+    marginVertical: spacing.xs,
   },
   reportRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
   reportLabel: {
     fontSize: 13,
