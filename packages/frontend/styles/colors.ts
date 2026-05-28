@@ -80,4 +80,22 @@ export const colors = {
   danger: '#D7263D',
   /** Soft danger background used behind danger icons (icon badges). */
   dangerSubtle: '#FBE9EC',
+  /** Success accent (confirmed bookings, approved applications). */
+  success: '#2E7D5B',
+  /** Soft success surface used behind success badges and calendar blocks. */
+  successSubtle: '#E5F5EC',
+  /** Warning accent (pending requests, in-review items). */
+  warning: '#B5651D',
+  /** Soft warning surface used behind warning badges and calendar blocks. */
+  warningSubtle: '#FBEFDD',
+  /** Informational accent (neutral statuses, secondary metadata highlights). */
+  info: '#175FAC',
+  /** Soft info surface for info badges and inline notices. */
+  infoSubtle: '#E5F0FF',
+  /** Subtle background used to mark "blocked" / unavailable calendar cells. */
+  blockedSubtle: '#F5E6E8',
+  /** Soft accent surface used for rating stars and amber highlights. */
+  ratingStar: '#F2B400',
+  /** Mid-strength border color for hairlines on cards. */
+  border: '#ECECEC',
 } as const;

@@ -1,11 +1,20 @@
+/**
+ * Host reservations inbox.
+ *
+ * Stream Q polish:
+ *   - Bloom Chip filter row, Bloom Button actions, Bloom Skeleton + Loading.
+ *   - Shared EmptyState / ErrorState components.
+ *   - SectionEyebrow + H2 with design tokens for visual rhythm.
+ */
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { toast } from 'sonner';
 import { Button } from '@oxyhq/bloom/button';
 import { Chip } from '@oxyhq/bloom/chip';
-import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
+import * as Skeleton from '@oxyhq/bloom/skeleton';
+import { H2 } from '@oxyhq/bloom/typography';
 import { useOxy, showSignInModal } from '@oxyhq/services';
 import {
   Reservation,
@@ -14,10 +23,13 @@ import {
 import { Header } from '@/components/Header';
 import { ReservationCard } from '@/components/ReservationCard';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import {
   useReservationsQuery,
   useUpdateReservation,
 } from '@/hooks/useReservationQueries';
+import { radius, spacing, withShadow } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
 type StatusFilter = 'all' | ReservationStatus;
@@ -92,6 +104,21 @@ const PendingActions: React.FC<PendingActionsProps> = ({ reservation }) => {
   );
 };
 
+const ReservationListSkeleton: React.FC = () => (
+  <View style={styles.listWrap}>
+    {Array.from({ length: 3 }).map((_, index) => (
+      <View key={index} style={styles.skeletonCard}>
+        <View style={styles.skeletonHeader}>
+          <Skeleton.Text style={{ width: 140, lineHeight: 20 }} />
+          <Skeleton.Pill size={20} />
+        </View>
+        <Skeleton.Text style={{ width: 200, lineHeight: 16 }} />
+        <Skeleton.Text style={{ width: 160, lineHeight: 14 }} />
+      </View>
+    ))}
+  </View>
+);
+
 export default function HostReservationsScreen() {
   const { oxyServices, activeSessionId } = useOxy();
   const isAuthed = Boolean(oxyServices && activeSessionId);
@@ -137,6 +164,11 @@ export default function HostReservationsScreen() {
     );
   }
 
+  const activeLabel =
+    statusFilter === 'all'
+      ? 'All reservations'
+      : FILTERS.find((entry) => entry.id === statusFilter)?.label ?? 'Reservations';
+
   return (
     <View style={styles.root}>
       <Header
@@ -169,28 +201,17 @@ export default function HostReservationsScreen() {
             })}
           </ScrollView>
 
-          {reservationsQuery.isLoading ? (
-            <View style={styles.loadingWrap}>
-              <ActivityIndicator color={colors.primaryColor} />
-            </View>
-          ) : null}
+          {reservationsQuery.isLoading ? <ReservationListSkeleton /> : null}
 
           {reservationsQuery.isError ? (
-            <View style={styles.errorWrap}>
-              <BloomText style={styles.errorTitle}>
-                Couldn't load reservations
-              </BloomText>
-              <BloomText style={styles.errorSubtitle}>
-                {reservationsQuery.error?.message ?? 'Please try again.'}
-              </BloomText>
-              <Button
-                variant="primary"
-                size="medium"
-                onPress={() => reservationsQuery.refetch()}
-              >
-                Retry
-              </Button>
-            </View>
+            <ErrorState
+              icon="cloud-offline-outline"
+              title="Couldn't load reservations"
+              description={
+                reservationsQuery.error?.message ?? 'Please try again.'
+              }
+              onRetry={() => reservationsQuery.refetch()}
+            />
           ) : null}
 
           {!reservationsQuery.isLoading &&
@@ -207,11 +228,10 @@ export default function HostReservationsScreen() {
 
           {items.length > 0 ? (
             <View style={styles.listWrap}>
-              <H3 style={styles.sectionTitle}>
-                {statusFilter === 'all'
-                  ? 'All reservations'
-                  : FILTERS.find((entry) => entry.id === statusFilter)?.label}
-              </H3>
+              <View style={styles.sectionHeader}>
+                <SectionEyebrow>Reservations</SectionEyebrow>
+                <H2 style={styles.sectionTitle}>{activeLabel}</H2>
+              </View>
               {items.map((reservation) => (
                 <ReservationCard
                   key={reservation.id}
@@ -231,49 +251,44 @@ export default function HostReservationsScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.surface,
   },
   safeArea: {
     flex: 1,
   },
   content: {
-    padding: 16,
-    gap: 12,
+    padding: spacing.lg,
+    gap: spacing.lg,
   },
   filterRow: {
     flexDirection: 'row',
-    gap: 8,
-    paddingVertical: 4,
-  },
-  loadingWrap: {
-    padding: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  errorWrap: {
-    alignItems: 'center',
-    padding: 24,
-    gap: 12,
-  },
-  errorTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  errorSubtitle: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    textAlign: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   emptyWrap: {
     flex: 1,
     justifyContent: 'center',
   },
   listWrap: {
-    gap: 4,
+    gap: spacing.md,
+  },
+  sectionHeader: {
+    gap: spacing.xs,
+    paddingHorizontal: spacing.xs,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 8,
+    letterSpacing: -0.5,
+  },
+  skeletonCard: {
+    backgroundColor: colors.surfaceElevated,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    gap: spacing.sm,
+    ...withShadow('sm'),
+  },
+  skeletonHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
 });

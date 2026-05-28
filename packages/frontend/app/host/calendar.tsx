@@ -1,20 +1,27 @@
+/**
+ * Host calendar — date-based availability view per property.
+ *
+ * Stream Q polish (Airbnb-2026):
+ *   - Bloom primitives only (Typography, Button, Chip, Menu, Skeleton, Loading).
+ *   - Property picker uses Bloom Menu (dropdown) instead of a horizontal chip row.
+ *   - Cards rendered on white surfaces with `withShadow('sm')`, `radius.lg`.
+ *   - All copy lives in Bloom Typography, no raw RN <Text>.
+ *   - Block-dates flow now reuses ConfirmDialog + Bloom TextField.
+ */
 import React, { useCallback, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@oxyhq/bloom/button';
-import { Chip } from '@oxyhq/bloom/chip';
-import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
+import { Loading } from '@oxyhq/bloom/loading';
+import * as Menu from '@oxyhq/bloom/menu';
+import * as Skeleton from '@oxyhq/bloom/skeleton';
+import * as TextField from '@oxyhq/bloom/text-field';
+import { Text as BloomText, H2 } from '@oxyhq/bloom/typography';
 import { useOxy, showSignInModal } from '@oxyhq/services';
 import {
   AvailabilityWindow,
@@ -23,9 +30,12 @@ import {
   Reservation,
   ReservationStatus,
 } from '@homiio/shared-types';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Header } from '@/components/Header';
 import { HostCalendarGrid, HostCalendarSelection } from '@/components/HostCalendarGrid';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useProfile } from '@/context/ProfileContext';
 import {
   reservationKeys,
@@ -35,6 +45,7 @@ import {
 import { useUserProperties } from '@/hooks/usePropertyQueries';
 import { propertyService } from '@/services/propertyService';
 import { getPropertyTitle } from '@/utils/propertyUtils';
+import { radius, spacing, withShadow } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
 interface BlockDialogState {
@@ -50,6 +61,8 @@ const INITIAL_BLOCK_STATE: BlockDialogState = {
   end: null,
   reason: '',
 };
+
+const HOST_CALENDAR_TITLE = 'Host calendar';
 
 export default function HostCalendarScreen() {
   const router = useRouter();
@@ -167,7 +180,7 @@ export default function HostCalendarScreen() {
         <Header
           options={{
             showBackButton: true,
-            title: 'Host calendar',
+            title: HOST_CALENDAR_TITLE,
             titlePosition: 'center',
           }}
         />
@@ -193,13 +206,43 @@ export default function HostCalendarScreen() {
         <Header
           options={{
             showBackButton: true,
-            title: 'Host calendar',
+            title: HOST_CALENDAR_TITLE,
             titlePosition: 'center',
           }}
         />
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator color={colors.primaryColor} />
-        </View>
+        <ScrollView contentContainerStyle={styles.content}>
+          <View style={styles.skeletonHeader}>
+            <Skeleton.Text style={{ width: 120, lineHeight: 14 }} />
+            <Skeleton.Box height={48} borderRadius={radius.md} />
+          </View>
+          <View style={styles.skeletonHeader}>
+            <Skeleton.Text style={{ width: 200, lineHeight: 28 }} />
+            <Skeleton.Text style={{ width: 160, lineHeight: 16 }} />
+          </View>
+          <Skeleton.Box height={320} borderRadius={radius.lg} />
+        </ScrollView>
+      </View>
+    );
+  }
+
+  if (propertiesQuery.isError) {
+    return (
+      <View style={styles.root}>
+        <Header
+          options={{
+            showBackButton: true,
+            title: HOST_CALENDAR_TITLE,
+            titlePosition: 'center',
+          }}
+        />
+        <SafeAreaView edges={['bottom']} style={styles.safeArea}>
+          <ErrorState
+            icon="cloud-offline-outline"
+            title="Couldn't load your properties"
+            description={propertiesQuery.error?.message ?? 'Please try again.'}
+            onRetry={() => propertiesQuery.refetch()}
+          />
+        </SafeAreaView>
       </View>
     );
   }
@@ -210,7 +253,7 @@ export default function HostCalendarScreen() {
         <Header
           options={{
             showBackButton: true,
-            title: 'Host calendar',
+            title: HOST_CALENDAR_TITLE,
             titlePosition: 'center',
           }}
         />
@@ -218,8 +261,8 @@ export default function HostCalendarScreen() {
           <View style={styles.emptyWrap}>
             <EmptyState
               icon="home-outline"
-              title="No hosted properties"
-              description="List a property to start receiving bookings."
+              title="Add your first property"
+              description="List a place so guests can request dates here."
               actionText="Create listing"
               actionIcon="add"
               onAction={() => router.push('/properties/create')}
@@ -235,41 +278,62 @@ export default function HostCalendarScreen() {
       <Header
         options={{
           showBackButton: true,
-          title: 'Host calendar',
+          title: HOST_CALENDAR_TITLE,
           titlePosition: 'center',
         }}
       />
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
-          <View>
-            <BloomText style={styles.sectionLabel}>Property</BloomText>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.chipsRow}
-            >
-              {properties.map((property) => {
-                const id = property._id ?? property.id ?? '';
-                const isActive = id === effectivePropertyId;
-                return (
-                  <Chip
-                    key={id}
-                    onPress={() => setSelectedPropertyId(id)}
-                    variant={isActive ? 'solid' : 'outlined'}
-                    color={isActive ? 'primary' : 'default'}
-                    selected={isActive}
+          <View style={styles.pickerCard}>
+            <SectionEyebrow>Property</SectionEyebrow>
+            <Menu.Root>
+              <Menu.Trigger label="Choose property">
+                {({ props: triggerProps }) => (
+                  <Button
+                    onPress={triggerProps.onPress}
+                    accessibilityLabel={triggerProps.accessibilityLabel}
+                    accessibilityHint={triggerProps.accessibilityHint}
+                    variant="secondary"
+                    size="large"
+                    style={styles.pickerButton}
+                    icon={
+                      <Ionicons
+                        name="chevron-down"
+                        size={18}
+                        color={colors.COLOR_BLACK}
+                      />
+                    }
+                    iconPosition="right"
                   >
-                    {getPropertyTitle(property)}
-                  </Chip>
-                );
-              })}
-            </ScrollView>
+                    {selectedProperty
+                      ? getPropertyTitle(selectedProperty)
+                      : 'Choose property'}
+                  </Button>
+                )}
+              </Menu.Trigger>
+              <Menu.Outer>
+                <Menu.Group>
+                  {properties.map((property) => {
+                    const id = property._id ?? property.id ?? '';
+                    return (
+                      <Menu.Item
+                        key={id}
+                        label={getPropertyTitle(property)}
+                        onPress={() => setSelectedPropertyId(id)}
+                      >
+                        <Menu.ItemText>{getPropertyTitle(property)}</Menu.ItemText>
+                      </Menu.Item>
+                    );
+                  })}
+                </Menu.Group>
+              </Menu.Outer>
+            </Menu.Root>
           </View>
 
           {selectedProperty ? (
             <>
-              <View>
-                <H3 style={styles.title}>{getPropertyTitle(selectedProperty)}</H3>
+              <View style={styles.titleBlock}>
+                <H2 style={styles.title}>{getPropertyTitle(selectedProperty)}</H2>
                 {selectedProperty.address ? (
                   <BloomText style={styles.subtitle}>
                     {[selectedProperty.address.city, selectedProperty.address.country]
@@ -279,94 +343,103 @@ export default function HostCalendarScreen() {
                 ) : null}
               </View>
 
-              {availabilityQuery.isLoading ? (
-                <View style={styles.loadingWrap}>
-                  <ActivityIndicator color={colors.primaryColor} />
-                </View>
-              ) : (
-                <HostCalendarGrid
-                  windows={availabilityQuery.data?.windows}
-                  reservations={reservationsForProperty}
-                  onSelectRange={handleSelectRange}
-                  onPressReservation={(reservationId) =>
-                    router.push(`/reservations/${reservationId}`)
-                  }
-                />
-              )}
+              <View style={styles.legendRow}>
+                <LegendChip color={colors.successSubtle} dot={colors.success} label="Confirmed" />
+                <LegendChip color={colors.warningSubtle} dot={colors.warning} label="Pending" />
+                <LegendChip color={colors.blockedSubtle} dot={colors.danger} label="Blocked" />
+                <LegendChip color={colors.mutedSubtle} dot={colors.COLOR_BLACK_LIGHT_4} label="Available" />
+              </View>
+
+              <View style={styles.calendarCard}>
+                {availabilityQuery.isLoading ? (
+                  <View style={styles.loadingWrap}>
+                    <Loading variant="default" />
+                  </View>
+                ) : availabilityQuery.isError ? (
+                  <ErrorState
+                    icon="cloud-offline-outline"
+                    title="Couldn't load availability"
+                    description={
+                      availabilityQuery.error?.message ?? 'Please try again.'
+                    }
+                    onRetry={() => availabilityQuery.refetch()}
+                  />
+                ) : (
+                  <HostCalendarGrid
+                    windows={availabilityQuery.data?.windows}
+                    reservations={reservationsForProperty}
+                    onSelectRange={handleSelectRange}
+                    onPressReservation={(reservationId) =>
+                      router.push(`/reservations/${reservationId}`)
+                    }
+                  />
+                )}
+              </View>
             </>
           ) : null}
         </ScrollView>
 
-        <Modal
+        <ConfirmDialog
           visible={blockState.visible}
-          transparent
-          animationType="fade"
-          onRequestClose={closeDialog}
+          title="Block these dates"
+          message={
+            blockState.start && blockState.end
+              ? `${format(blockState.start, 'EEE, MMM d')} → ${format(
+                  new Date(blockState.end.getTime() - 24 * 60 * 60 * 1000),
+                  'EEE, MMM d, yyyy',
+                )}`
+              : 'Choose how long these dates are unavailable.'
+          }
+          confirmLabel="Block"
+          loading={submitting}
+          onConfirm={handleConfirmBlock}
+          onCancel={closeDialog}
         >
-          <View style={styles.modalBackdrop}>
-            <View style={styles.modalCard}>
-              <H3 style={styles.modalTitle}>Block these dates</H3>
-              {blockState.start && blockState.end ? (
-                <BloomText style={styles.modalBody}>
-                  {format(blockState.start, 'EEE, MMM d')}
-                  {' → '}
-                  {format(
-                    new Date(blockState.end.getTime() - 24 * 60 * 60 * 1000),
-                    'EEE, MMM d, yyyy',
-                  )}
-                </BloomText>
-              ) : null}
-              <TextInput
-                value={blockState.reason}
-                onChangeText={(reason) =>
-                  setBlockState((state) => ({ ...state, reason }))
-                }
-                placeholder="Reason (optional)"
-                style={styles.input}
-                editable={!submitting}
-                placeholderTextColor={colors.COLOR_BLACK_LIGHT_4}
-              />
-              <View style={styles.modalActions}>
-                <Button
-                  variant="ghost"
-                  size="medium"
-                  onPress={closeDialog}
-                  disabled={submitting}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="primary"
-                  size="medium"
-                  onPress={handleConfirmBlock}
-                  loading={submitting}
-                  disabled={submitting}
-                >
-                  Block
-                </Button>
-              </View>
-            </View>
-          </View>
-        </Modal>
+          <TextField.Input
+            label="Reason (optional)"
+            value={blockState.reason}
+            onChangeText={(reason) =>
+              setBlockState((state) => ({ ...state, reason }))
+            }
+            editable={!submitting}
+            placeholder="Maintenance, personal use, ..."
+          />
+        </ConfirmDialog>
       </SafeAreaView>
     </View>
   );
 }
 
+interface LegendChipProps {
+  color: string;
+  dot: string;
+  label: string;
+}
+
+const LegendChip: React.FC<LegendChipProps> = ({ color, dot, label }) => (
+  <View style={[styles.legendChip, { backgroundColor: color }]}>
+    <View style={[styles.legendDot, { backgroundColor: dot }]} />
+    <BloomText style={styles.legendLabel}>{label}</BloomText>
+  </View>
+);
+
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.surface,
   },
   safeArea: {
     flex: 1,
   },
   content: {
-    padding: 16,
-    gap: 16,
+    padding: spacing.lg,
+    gap: spacing['2xl'],
+  },
+  skeletonHeader: {
+    gap: spacing.sm,
   },
   loadingWrap: {
-    padding: 24,
+    padding: spacing['2xl'],
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -374,64 +447,54 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    color: colors.COLOR_BLACK_LIGHT_3,
-    letterSpacing: 0.5,
-    marginBottom: 8,
+  pickerCard: {
+    gap: spacing.sm,
+    backgroundColor: colors.surfaceElevated,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    ...withShadow('sm'),
   },
-  chipsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingVertical: 4,
+  pickerButton: {
+    justifyContent: 'space-between',
+    alignSelf: 'stretch',
+  },
+  titleBlock: {
+    gap: spacing.xs,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    marginTop: 4,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 420,
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    gap: 12,
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  modalBody: {
     fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
+    color: colors.muted,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: colors.COLOR_BLACK,
-  },
-  modalActions: {
+  legendRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-    marginTop: 8,
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  legendChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.pill,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  legendLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.COLOR_BLACK_LIGHT_2,
+  },
+  calendarCard: {
+    backgroundColor: colors.surfaceElevated,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    ...withShadow('sm'),
   },
 });
