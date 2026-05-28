@@ -188,8 +188,8 @@ export default function RootLayout() {
               autocapture
             >
               <QueryClientProvider client={queryClient}>
-                <BottomSheetModalProvider>
                 <RentalModeProvider>
+                <BottomSheetModalProvider>
                 <OxyProvider baseURL={OXY_BASE_URL}>
                   <ProfileProvider>
                     <SavedPropertiesProvider>
@@ -236,8 +236,8 @@ export default function RootLayout() {
                     </SavedPropertiesProvider>
                   </ProfileProvider>
                 </OxyProvider>
-                </RentalModeProvider>
                 </BottomSheetModalProvider>
+                </RentalModeProvider>
               </QueryClientProvider>
             </PostHogProvider>
           )}
