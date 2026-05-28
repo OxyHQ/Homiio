@@ -511,8 +511,19 @@ export function SideBar() {
   if (isCollapsed) {
     return (
       <View
-        className="flex h-full flex-col bg-background border-r border-border items-center"
-        style={{ width: COLLAPSED_WIDTH }}
+        className="flex flex-col bg-background border-r border-border items-center"
+        style={[
+          { width: COLLAPSED_WIDTH },
+          Platform.OS === 'web'
+            ? ({
+                position: 'sticky',
+                top: 0,
+                alignSelf: 'flex-start',
+                height: '100vh',
+                maxHeight: '100vh',
+              } as object)
+            : { flex: 1, height: '100%' },
+        ]}
       >
         <View className="h-14 items-center justify-center shrink-0">
           <SidebarBrand onPress={handleHome} />
