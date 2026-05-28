@@ -37,6 +37,7 @@ import { BottomSheetProvider } from '@/context/BottomSheetContext';
 import { LayoutScrollProvider } from '@/context/LayoutScrollContext';
 import { MapStateProvider } from '@/context/MapStateContext';
 import { SearchModeProvider } from '@/context/SearchModeContext';
+import { RentalModeProvider } from '@/context/RentalModeContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { OxyProvider } from '@oxyhq/services';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
@@ -215,6 +216,7 @@ export default function RootLayout() {
                               <ErrorBoundary>
                                 <MapStateProvider>
                                   <SearchModeProvider>
+                                    <RentalModeProvider>
                                     <LayoutScrollProvider value={{ scrollY: layoutScrollY }}>
                                       <Animated.ScrollView
                                         contentContainerStyle={styles.container}
@@ -234,6 +236,7 @@ export default function RootLayout() {
                                         </View>
                                       </Animated.ScrollView>
                                     </LayoutScrollProvider>
+                                    </RentalModeProvider>
                                   </SearchModeProvider>
                                 </MapStateProvider>
                                 <StatusBar style="auto" />
