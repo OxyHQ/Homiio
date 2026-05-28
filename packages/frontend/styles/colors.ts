@@ -63,4 +63,21 @@ export const colors = {
   busy: '#FF3B30',
   away: '#FFCC00',
   sindiColor: '#175fac',
+
+  // Semantic tokens — use these in new components instead of brand/grey
+  // aliases above. Keeps the design system aligned with Bloom's theme
+  // language (danger/success/warning + muted/surface) without coupling
+  // consumers to the Bloom theme provider for static styles.
+  /** Page surface (off-white background, same as Bloom `background`). */
+  surface: '#FAFAFA',
+  /** Raised card surface (white card on top of `surface`). */
+  surfaceElevated: '#FFFFFF',
+  /** Muted neutral text used for secondary labels. */
+  muted: '#5e5e5e',
+  /** Soft neutral fill used for chips/badges that sit on `surface`. */
+  mutedSubtle: '#F1F1F1',
+  /** Strong danger color used for error icons + critical labels. */
+  danger: '#D7263D',
+  /** Soft danger background used behind danger icons (icon badges). */
+  dangerSubtle: '#FBE9EC',
 } as const;
