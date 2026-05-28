@@ -1,46 +1,79 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Platform,
-  Alert,
-} from 'react-native';
-import { Header } from '@/components/Header';
-import { useOxy } from '@oxyhq/services';
-import { useTranslation } from 'react-i18next';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+/**
+ * Profile — personal home for the signed-in tenant/host.
+ *
+ * Stream P polish: an Airbnb-2026 layout. Hero block with large Avatar,
+ * display name, optional bio, trust badges and an outline "Edit profile"
+ * button. Below: a 3-up stats row (saved / applications / reservations)
+ * with big H2 numerals. Below that: SettingsList-style sections (Profile
+ * switcher, Trust score, Subscriptions, Sign out).
+ */
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors } from '@/styles/colors';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { ProfileSkeleton } from '@/components/ui/skeletons/ProfileSkeleton';
-import { useActivateProfileMutation, useDeleteProfileMutation, usePrimaryProfileQuery, useUserProfilesQuery } from '@/hooks/query/useProfiles';
+import { Ionicons } from '@expo/vector-icons';
+
+import { Avatar } from '@oxyhq/bloom/avatar';
+import { Badge } from '@oxyhq/bloom/badge';
+import { Button } from '@oxyhq/bloom/button';
+import {
+  SettingsListGroup,
+  SettingsListItem,
+} from '@oxyhq/bloom/settings-list';
+import {
+  H1,
+  H2,
+  Text as BloomText,
+} from '@oxyhq/bloom/typography';
+import { useOxy } from '@oxyhq/services';
+import { TenantApplicationStatus } from '@homiio/shared-types';
+
+import { Header } from '@/components/Header';
+import { CardSurface } from '@/components/ui/CardSurface';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { ListSkeleton } from '@/components/ui/ListSkeleton';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import {
+  useActivateProfileMutation,
+  usePrimaryProfileQuery,
+  useUserProfilesQuery,
+} from '@/hooks/query/useProfiles';
+import { useMyApplications } from '@/hooks/useApplicationQueries';
+import { useReservationsQuery } from '@/hooks/useReservationQueries';
+import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import type { Profile } from '@/services/profileService';
-import { ThemedText } from '@/components/ThemedText';
+import { colors } from '@/styles/colors';
+import { spacing, tracker } from '@/constants/styles';
 
-// Type assertion for Ionicons compatibility with React 19
-const IconComponent = Ionicons as any;
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
-// Helper function to get profile display name
+const RowIcon: React.FC<{ name: IoniconName; destructive?: boolean }> = ({
+  name,
+  destructive,
+}) => (
+  <Ionicons
+    name={name}
+    size={20}
+    color={destructive ? colors.danger : colors.muted}
+  />
+);
+
 const getProfileDisplayName = (profile: Profile): string => {
   switch (profile.profileType) {
     case 'personal':
-      // Personal profiles are unique and linked to the Oxy account
-      return 'Personal Profile';
+      return 'Personal profile';
     case 'agency':
-      return profile.agencyProfile?.legalCompanyName || 'Agency Profile';
+      return profile.agencyProfile?.legalCompanyName || 'Agency profile';
     case 'business':
-      return profile.businessProfile?.legalCompanyName || 'Business Profile';
+      return profile.businessProfile?.legalCompanyName || 'Business profile';
     case 'cooperative':
-      return profile.cooperativeProfile?.legalName || 'Cooperative Profile';
+      return profile.cooperativeProfile?.legalName || 'Cooperative profile';
     default:
       return 'Profile';
   }
 };
 
-// Helper function to get profile description
 const getProfileDescription = (profile: Profile): string | undefined => {
   switch (profile.profileType) {
     case 'agency':
@@ -50,741 +83,513 @@ const getProfileDescription = (profile: Profile): string | undefined => {
     case 'cooperative':
       return profile.cooperativeProfile?.description;
     default:
-      return undefined;
+      return profile.personalProfile?.personalInfo?.bio;
   }
 };
 
-// Web-compatible alert function
-const webAlert = (
-  title: string,
-  message: string,
-  buttons: {
-    text: string;
-    style?: 'default' | 'cancel' | 'destructive';
-    onPress?: () => void;
-  }[],
-) => {
-  if (Platform.OS === 'web') {
-    const result = window.confirm(`${title}\n\n${message}`);
-    if (result) {
-      const confirmButton = buttons.find((btn) => btn.style !== 'cancel');
-      confirmButton?.onPress?.();
-    }
-  } else {
-    Alert.alert(title, message, buttons);
+const profileTypeIcon = (type: Profile['profileType']): IoniconName => {
+  switch (type) {
+    case 'personal':
+      return 'person-outline';
+    case 'agency':
+      return 'briefcase-outline';
+    case 'business':
+      return 'business-outline';
+    case 'cooperative':
+      return 'people-outline';
+    default:
+      return 'person-outline';
   }
 };
 
 export default function ProfileScreen() {
-  useTranslation();
+  const { t } = useTranslation();
   const router = useRouter();
-  const { logout, oxyServices, activeSessionId } = useOxy();
+  const { logout, user } = useOxy();
 
-  // Use Redux hooks consistently
-  const { data: _primaryProfile, isLoading: isLoadingPrimary, error: errorPrimary } = usePrimaryProfileQuery();
-  const { data: profiles = [], isLoading: isLoadingAll, error: errorAll, refetch } = useUserProfilesQuery();
+  const primaryProfileQuery = usePrimaryProfileQuery();
+  const profilesQuery = useUserProfilesQuery();
   const { mutateAsync: activateProfile } = useActivateProfileMutation();
-  const { mutateAsync: _deleteProfile } = useDeleteProfileMutation();
 
-  const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
-  const [isSwitching, setIsSwitching] = useState(false);
+  const applicationsQuery = useMyApplications();
+  const reservationsQuery = useReservationsQuery({ limit: 200 });
+  const { savedProperties } = useSavedPropertiesContext();
 
-  // Check if user has a primary profile (not used directly)
+  const [pendingSwitch, setPendingSwitch] = useState<Profile | null>(null);
+  const [pendingLogout, setPendingLogout] = useState(false);
+  const [busyLogout, setBusyLogout] = useState(false);
+  const [busySwitch, setBusySwitch] = useState(false);
 
-  useEffect(() => {
-    // queries auto-run via enabled, but keep hook for dependencies if needed
-  }, [oxyServices, activeSessionId]);
+  const profiles = profilesQuery.data ?? [];
+  const activeProfile = useMemo(
+    () => profiles.find((profile) => profile.isActive) ?? primaryProfileQuery.data ?? null,
+    [profiles, primaryProfileQuery.data],
+  );
 
-  useEffect(() => {
-    if (profiles && profiles.length > 0) {
-      const activeProfile = profiles.find((p) => p.isActive);
-      const profileId =
-        activeProfile?.id || activeProfile?._id || profiles[0].id || profiles[0]._id;
-      if (profileId) {
-        setActiveProfileId(profileId);
-      }
-    }
-  }, [profiles]);
+  const isLoading = primaryProfileQuery.isLoading || profilesQuery.isLoading;
+  const isError = primaryProfileQuery.isError || profilesQuery.isError;
 
-  const handleProfileSwitch = async (profileId: string) => {
+  const totalApplications = applicationsQuery.data?.data?.length ?? 0;
+  const approvedApplications = useMemo(
+    () =>
+      (applicationsQuery.data?.data ?? []).filter(
+        (application) =>
+          application.status === TenantApplicationStatus.APPROVED,
+      ).length,
+    [applicationsQuery.data?.data],
+  );
+  const totalReservations = reservationsQuery.data?.items?.length ?? 0;
+  const totalSaved = savedProperties.length;
+
+  const handleSwitch = useCallback(async () => {
+    const profile = pendingSwitch;
+    if (!profile) return;
+    const profileId = profile.id || profile._id;
     if (!profileId) {
-      toast.error('Invalid profile ID');
+      toast.error(t('profile.invalidProfile', 'Invalid profile data'));
+      setPendingSwitch(null);
       return;
     }
-
-    const profile = profiles?.find((p) => p.id === profileId || p._id === profileId);
-    if (!profile) {
-      toast.error('Profile not found');
-      return;
+    setBusySwitch(true);
+    try {
+      await activateProfile(profileId);
+      toast.success(
+        t('profile.switched', 'Switched to {{name}}', {
+          name: getProfileDisplayName(profile),
+        }),
+      );
+      setPendingSwitch(null);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : t('profile.switchFailed', 'Failed to switch profile');
+      toast.error(message);
+    } finally {
+      setBusySwitch(false);
     }
+  }, [pendingSwitch, activateProfile, t]);
 
-    // Check if this profile is already active
-    if (profile.isActive) {
-      return;
+  const handleLogout = useCallback(async () => {
+    setBusyLogout(true);
+    try {
+      await logout();
+      router.replace('/');
+      toast.success(t('settings.signOutSuccess', 'Signed out'));
+    } catch {
+      toast.error(t('settings.signOutFailed', 'Failed to sign out'));
+    } finally {
+      setBusyLogout(false);
+      setPendingLogout(false);
     }
+  }, [logout, router, t]);
 
-    const profileName = getProfileDisplayName(profile);
-    const finalProfileId = profile.id || profile._id;
+  useEffect(() => {
+    // Touch the active session so the queries refetch on focus.
+  }, [primaryProfileQuery.dataUpdatedAt]);
 
-    if (!finalProfileId) {
-      toast.error('Invalid profile data');
-      return;
-    }
-
-    webAlert('Switch Profile', `Are you sure you want to switch to "${profileName}"?`, [
-      {
-        text: 'Cancel',
-        style: 'cancel',
-      },
-      {
-        text: 'Switch',
-        onPress: async () => {
-          setIsSwitching(true);
-
-          try {
-            // Call the actual activateProfile method
-            await activateProfile(finalProfileId);
-
-            // Update local state
-            setActiveProfileId(finalProfileId);
-            toast.success(`Switched to ${profileName}`);
-          } catch (error: any) {
-            console.error('Profile switch failed:', error);
-            toast.error(error.message || 'Failed to switch profile');
-          } finally {
-            setIsSwitching(false);
-          }
-        },
-      },
-    ]);
-  };
-
-  // Delete handler is defined inline where needed in UI
-
-  const handleLogout = () => {
-    webAlert('Sign Out', 'Are you sure you want to sign out?', [
-      {
-        text: 'Cancel',
-        style: 'cancel',
-      },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await logout();
-            router.replace('/');
-            toast.success('Signed out successfully');
-          } catch (error) {
-            console.error('Logout failed:', error);
-            toast.error('Failed to sign out');
-          }
-        },
-      },
-    ]);
-  };
-
-  const isLoading = isLoadingPrimary || isLoadingAll;
-  const error = errorPrimary || errorAll;
+  const header = (
+    <Header
+      options={{
+        title: t('profile.title', 'Profile'),
+      }}
+    />
+  );
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <Header options={{ title: 'Profile Management' }} />
-        <ProfileSkeleton />
-      </SafeAreaView>
+      <View style={styles.root}>
+        {header}
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <View style={styles.heroSkeleton}>
+            <ListSkeleton rows={2} rowHeight={120} />
+          </View>
+          <ListSkeleton rows={3} rowHeight={72} />
+        </ScrollView>
+      </View>
     );
   }
 
-  if (error) {
+  if (isError) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <Header options={{ title: 'Profile Management' }} />
-        <View style={styles.errorContainer}>
-          <IconComponent name="alert-circle" size={48} color="#ff4757" />
-          <ThemedText style={styles.errorTitle}>Failed to load profiles</ThemedText>
-          <ThemedText style={styles.errorMessage}>Please try again later</ThemedText>
-          <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-            <ThemedText style={styles.retryButtonText}>Retry</ThemedText>
-          </TouchableOpacity>
+      <View style={styles.root}>
+        {header}
+        <View style={styles.centerWrap}>
+          <ErrorState
+            title={t('profile.loadFailed', 'Failed to load profile')}
+            description={t('profile.loadFailedHint', 'Please try again later.')}
+            retryLabel={t('common.retry', 'Retry')}
+            onRetry={() => {
+              primaryProfileQuery.refetch();
+              profilesQuery.refetch();
+            }}
+          />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
-  const activeProfile = profiles?.find((p) => p.isActive);
-  const personalProfiles = profiles?.filter((p) => p.profileType === 'personal') || [];
-  const businessProfiles = profiles?.filter((p) => p.profileType === 'business') || [];
-  const agencyProfiles = profiles?.filter((p) => p.profileType === 'agency') || [];
-  const cooperativeProfiles = profiles?.filter((p) => p.profileType === 'cooperative') || [];
+  const displayName =
+    typeof user?.name === 'string'
+      ? user.name
+      : user?.name?.full ||
+        user?.name?.first ||
+        user?.username ||
+        (activeProfile ? getProfileDisplayName(activeProfile) : 'Your profile');
+  const bio = activeProfile ? getProfileDescription(activeProfile) : undefined;
+  const avatarUri = activeProfile?.personalProfile?.personalInfo?.avatar;
+  const trustScore = activeProfile?.personalProfile?.trustScore?.score;
+  const verification = activeProfile?.personalProfile?.verification;
+  const verifiedBadges: { label: string; key: string }[] = [];
+  if (verification?.identity) verifiedBadges.push({ label: 'ID verified', key: 'identity' });
+  if (verification?.income) verifiedBadges.push({ label: 'Income verified', key: 'income' });
+  if (verification?.references)
+    verifiedBadges.push({ label: 'References verified', key: 'references' });
+  if (verification?.background)
+    verifiedBadges.push({ label: 'Background verified', key: 'background' });
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <Header options={{ title: 'Profile Management' }} />
-      <ScrollView style={styles.content}>
-        {/* No Profile Section - Show when no primary profile exists */}
-        {!activeProfile && !isLoading && (
-          <View style={styles.section}>
-            <View
-              style={[
-                styles.settingItem,
-                styles.firstSettingItem,
-                styles.lastSettingItem,
-                styles.noProfileCard,
-              ]}
-            >
-              <View style={styles.settingInfo}>
-                <IconComponent
-                  name="person-add"
-                  size={24}
-                  color={colors.primaryColor}
-                  style={styles.settingIcon}
-                />
-                <View style={styles.settingTextContainer}>
-                  <ThemedText style={styles.settingLabel}>No Profile Found</ThemedText>
-                  <ThemedText style={styles.settingDescription}>
-                    You don&apos;t have any profiles yet. Create your first profile to get started.
-                  </ThemedText>
-                </View>
-              </View>
-              <TouchableOpacity
-                style={styles.createProfileButton}
-                onPress={() => router.push('/profile/create')}
-              >
-                <ThemedText style={styles.createProfileButtonText}>Create Profile</ThemedText>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {/* Active Profile Section */}
-        {activeProfile && (
-          <View style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Active Profile</ThemedText>
-
-            <View style={[styles.settingItem, styles.firstSettingItem, styles.lastSettingItem]}>
-              <View style={styles.settingInfo}>
-                <IconComponent
-                  name={
-                    activeProfile.profileType === 'personal'
-                      ? 'person'
-                      : activeProfile.profileType === 'cooperative'
-                        ? 'people'
-                        : 'business'
-                  }
-                  size={20}
-                  color="#666"
-                  style={styles.settingIcon}
-                />
-                <View>
-                  <ThemedText style={styles.settingLabel}>
-                    {getProfileDisplayName(activeProfile)}
-                  </ThemedText>
-                  <ThemedText style={styles.settingDescription}>
-                    {activeProfile.profileType === 'personal'
-                      ? 'Personal Profile'
-                      : activeProfile.profileType === 'agency'
-                        ? 'Agency Profile'
-                        : activeProfile.profileType === 'business'
-                          ? 'Business Profile'
-                          : 'Cooperative Profile'}
-                    {getProfileDescription(activeProfile) &&
-                      ` • ${getProfileDescription(activeProfile)}`}
-                  </ThemedText>
-                </View>
-              </View>
-              <View style={styles.activeBadge}>
-                <ThemedText style={styles.activeBadgeText}>Active</ThemedText>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* Info Card */}
-        <View style={styles.section}>
-          <View style={[styles.settingItem, styles.firstSettingItem, styles.lastSettingItem]}>
-            <View style={styles.settingInfo}>
-              <IconComponent
-                name="information-circle"
-                size={20}
-                color="#666"
-                style={styles.settingIcon}
+    <View style={styles.root}>
+      {header}
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <View style={styles.heroWrap}>
+          <CardSurface padding={spacing['2xl']}>
+            <View style={styles.heroRow}>
+              <Avatar
+                size={88}
+                shape="squircle"
+                uri={avatarUri}
+                name={displayName}
               />
-              <View style={styles.settingTextContainer}>
-                <ThemedText style={styles.settingLabel}>Profile Management</ThemedText>
-                <ThemedText style={styles.settingDescription}>
-                  Personal profiles are unique and linked to your Oxy account. You can have multiple
-                  business, agency, or cooperative profiles. Inactive profiles are shown and can be
-                  reactivated.
-                </ThemedText>
+              <View style={styles.heroBody}>
+                <H1 style={styles.heroName}>{displayName}</H1>
+                <BloomText style={styles.heroSubtitle}>
+                  {user?.username ? `@${user.username}` : ''}
+                </BloomText>
+                {bio ? (
+                  <BloomText style={styles.heroBio} numberOfLines={3}>
+                    {bio}
+                  </BloomText>
+                ) : null}
               </View>
             </View>
-          </View>
+
+            {verifiedBadges.length > 0 || typeof trustScore === 'number' ? (
+              <View style={styles.badgesRow}>
+                {typeof trustScore === 'number' ? (
+                  <Badge
+                    content={`Trust ${Math.round(trustScore)}`}
+                    color="success"
+                    variant="subtle"
+                    size="small"
+                  />
+                ) : null}
+                {verifiedBadges.map((badge) => (
+                  <Badge
+                    key={badge.key}
+                    content={badge.label}
+                    color="info"
+                    variant="subtle"
+                    size="small"
+                  />
+                ))}
+              </View>
+            ) : null}
+
+            <View style={styles.heroActions}>
+              <Button
+                variant="secondary"
+                size="medium"
+                onPress={() => router.push('/profile/edit')}
+              >
+                {t('profile.edit', 'Edit profile')}
+              </Button>
+              <Button
+                variant="ghost"
+                size="medium"
+                onPress={() => router.push('/profile/trust-score')}
+              >
+                {t('profile.trustScoreCta', 'View trust score')}
+              </Button>
+            </View>
+          </CardSurface>
         </View>
 
-        {/* Personal Profiles Section */}
-        {personalProfiles.length > 0 && (
-          <View style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Personal Profiles</ThemedText>
-            {personalProfiles.map((profile, index) => {
-              return (
-                <TouchableOpacity
-                  key={profile.id || profile._id}
-                  style={[
-                    styles.settingItem,
-                    index === 0 && styles.firstSettingItem,
-                    index === personalProfiles.length - 1 && styles.lastSettingItem,
-                  ]}
-                  onPress={() => {
-                    const profileId = profile.id || profile._id;
-                    if (profileId) {
-                      handleProfileSwitch(profileId);
-                    } else {
-                      toast.error('Invalid profile data');
-                    }
-                  }}
-                  disabled={isSwitching}
-                >
-                  <View style={styles.settingInfo}>
-                    <IconComponent
-                      name="person"
-                      size={20}
-                      color="#666"
-                      style={styles.settingIcon}
+        <View style={styles.statsWrap}>
+          <StatTile
+            label={t('profile.stats.saved', 'Saved')}
+            value={totalSaved}
+            onPress={() => router.push('/saved')}
+          />
+          <StatTile
+            label={t('profile.stats.applications', 'Applications')}
+            value={totalApplications}
+            description={
+              approvedApplications > 0
+                ? t('profile.stats.applicationsApproved', '{{count}} approved', {
+                    count: approvedApplications,
+                  })
+                : undefined
+            }
+            onPress={() => router.push('/applications')}
+          />
+          <StatTile
+            label={t('profile.stats.stays', 'Stays')}
+            value={totalReservations}
+            onPress={() => router.push('/stays')}
+          />
+        </View>
+
+        <SettingsListGroup title={t('profile.sections.activity', 'Activity')}>
+          <SettingsListItem
+            icon={<RowIcon name="bookmark-outline" />}
+            title={t('saved.header', 'Saved')}
+            value={String(totalSaved)}
+            onPress={() => router.push('/saved')}
+          />
+          <SettingsListItem
+            icon={<RowIcon name="document-text-outline" />}
+            title={t('profile.applications', 'My applications')}
+            value={String(totalApplications)}
+            onPress={() => router.push('/applications')}
+          />
+          <SettingsListItem
+            icon={<RowIcon name="bed-outline" />}
+            title={t('profile.stays', 'Stays')}
+            value={String(totalReservations)}
+            onPress={() => router.push('/stays')}
+          />
+        </SettingsListGroup>
+
+        <SettingsListGroup
+          title={t('profile.sections.profile', 'Profile')}
+          footer={
+            activeProfile
+              ? t('profile.activeFooter', 'Active: {{name}}', {
+                  name: getProfileDisplayName(activeProfile),
+                })
+              : undefined
+          }
+        >
+          {profiles.map((profile) => {
+            const isActive = profile.isActive;
+            return (
+              <SettingsListItem
+                key={profile.id || profile._id}
+                icon={<RowIcon name={profileTypeIcon(profile.profileType)} />}
+                title={getProfileDisplayName(profile)}
+                description={getProfileDescription(profile) ?? undefined}
+                rightElement={
+                  isActive ? (
+                    <Badge
+                      content={t('profile.active', 'Active')}
+                      variant="subtle"
+                      color="success"
+                      size="small"
                     />
-                    <View style={styles.settingTextContainer}>
-                      <ThemedText style={styles.settingLabel}>
-                        {getProfileDisplayName(profile)}
-                      </ThemedText>
-                      <ThemedText style={styles.settingDescription}>
-                        Personal Profile
-                        {getProfileDescription(profile) && ` • ${getProfileDescription(profile)}`}
-                        {' • Linked to Oxy Account'}
-                        {!profile.isActive && ' • Inactive'}
-                      </ThemedText>
-                    </View>
-                  </View>
-                  <View style={styles.itemActions}>
-                    {profile.isActive && (
-                      <View style={styles.activeBadge}>
-                        <ThemedText style={styles.activeBadgeText}>Active</ThemedText>
-                      </View>
-                    )}
-                    {isSwitching && (profile.id || profile._id) === activeProfileId && (
-                                            <View style={{ width: 20, height: 20, justifyContent: "center", alignItems: "center" }}>
-                        <View style={{ width: 16, height: 16, borderWidth: 2, borderColor: colors.primaryColor, borderTopColor: "transparent", borderRadius: 8 }} />
-                      </View>
-                    )}
-                    <IconComponent name="chevron-forward" size={16} color="#ccc" />
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
-
-        {/* Business Profiles Section */}
-        {businessProfiles.length > 0 && (
-          <View style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Business Profiles</ThemedText>
-            {businessProfiles.map((profile, index) => {
-              return (
-                <TouchableOpacity
-                  key={profile.id || profile._id}
-                  style={[
-                    styles.settingItem,
-                    index === 0 && styles.firstSettingItem,
-                    index === businessProfiles.length - 1 && styles.lastSettingItem,
-                  ]}
-                  onPress={() => {
-                    const profileId = profile.id || profile._id;
-                    if (profileId) {
-                      handleProfileSwitch(profileId);
-                    } else {
-                      toast.error('Invalid profile data');
-                    }
-                  }}
-                  disabled={isSwitching}
-                >
-                  <View style={styles.settingInfo}>
-                    <IconComponent
-                      name="business"
-                      size={20}
-                      color="#666"
-                      style={styles.settingIcon}
-                    />
-                    <View style={styles.settingTextContainer}>
-                      <ThemedText style={styles.settingLabel}>
-                        {getProfileDisplayName(profile)}
-                      </ThemedText>
-                      <ThemedText style={styles.settingDescription}>
-                        Business Profile
-                        {getProfileDescription(profile) && ` • ${getProfileDescription(profile)}`}
-                        {!profile.isActive && ' • Inactive'}
-                      </ThemedText>
-                    </View>
-                  </View>
-                  <View style={styles.itemActions}>
-                    {profile.isActive && (
-                      <View style={styles.activeBadge}>
-                        <ThemedText style={styles.activeBadgeText}>Active</ThemedText>
-                      </View>
-                    )}
-                    {isSwitching && (profile.id || profile._id) === activeProfileId && (
-                                            <View style={{ width: 20, height: 20, justifyContent: "center", alignItems: "center" }}>
-                        <View style={{ width: 16, height: 16, borderWidth: 2, borderColor: colors.primaryColor, borderTopColor: "transparent", borderRadius: 8 }} />
-                      </View>
-                    )}
-                    <IconComponent name="chevron-forward" size={16} color="#ccc" />
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
-
-        {/* Agency Profiles Section */}
-        {agencyProfiles.length > 0 && (
-          <View style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Agency Profiles</ThemedText>
-            {agencyProfiles.map((profile, index) => {
-              return (
-                <TouchableOpacity
-                  key={profile.id || profile._id}
-                  style={[
-                    styles.settingItem,
-                    index === 0 && styles.firstSettingItem,
-                    index === agencyProfiles.length - 1 && styles.lastSettingItem,
-                  ]}
-                  onPress={() => {
-                    const profileId = profile.id || profile._id;
-                    if (profileId) {
-                      handleProfileSwitch(profileId);
-                    } else {
-                      toast.error('Invalid profile data');
-                    }
-                  }}
-                  disabled={isSwitching}
-                >
-                  <View style={styles.settingInfo}>
-                    <IconComponent
-                      name="business"
-                      size={20}
-                      color="#666"
-                      style={styles.settingIcon}
-                    />
-                    <View style={styles.settingTextContainer}>
-                      <ThemedText style={styles.settingLabel}>
-                        {getProfileDisplayName(profile)}
-                      </ThemedText>
-                      <ThemedText style={styles.settingDescription}>
-                        Agency Profile
-                        {getProfileDescription(profile) && ` • ${getProfileDescription(profile)}`}
-                        {!profile.isActive && ' • Inactive'}
-                      </ThemedText>
-                    </View>
-                  </View>
-                  <View style={styles.itemActions}>
-                    {profile.isActive && (
-                      <View style={styles.activeBadge}>
-                        <ThemedText style={styles.activeBadgeText}>Active</ThemedText>
-                      </View>
-                    )}
-                    {isSwitching && (profile.id || profile._id) === activeProfileId && (
-                                            <View style={{ width: 20, height: 20, justifyContent: "center", alignItems: "center" }}>
-                        <View style={{ width: 16, height: 16, borderWidth: 2, borderColor: colors.primaryColor, borderTopColor: "transparent", borderRadius: 8 }} />
-                      </View>
-                    )}
-                    <IconComponent name="chevron-forward" size={16} color="#ccc" />
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
-
-        {/* Cooperative Profiles Section */}
-        {cooperativeProfiles.length > 0 && (
-          <View style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Cooperative Profiles</ThemedText>
-            {cooperativeProfiles.map((profile, index) => {
-              return (
-                <TouchableOpacity
-                  key={profile.id || profile._id}
-                  style={[
-                    styles.settingItem,
-                    index === 0 && styles.firstSettingItem,
-                    index === cooperativeProfiles.length - 1 && styles.lastSettingItem,
-                  ]}
-                  onPress={() => {
-                    const profileId = profile.id || profile._id;
-                    if (profileId) {
-                      handleProfileSwitch(profileId);
-                    } else {
-                      toast.error('Invalid profile data');
-                    }
-                  }}
-                  disabled={isSwitching}
-                >
-                  <View style={styles.settingInfo}>
-                    <IconComponent
-                      name="people"
-                      size={20}
-                      color="#666"
-                      style={styles.settingIcon}
-                    />
-                    <View style={styles.settingTextContainer}>
-                      <ThemedText style={styles.settingLabel}>
-                        {getProfileDisplayName(profile)}
-                      </ThemedText>
-                      <ThemedText style={styles.settingDescription}>
-                        Cooperative Profile
-                        {getProfileDescription(profile) && ` • ${getProfileDescription(profile)}`}
-                        {!profile.isActive && ' • Inactive'}
-                      </ThemedText>
-                    </View>
-                  </View>
-                  <View style={styles.itemActions}>
-                    {profile.isActive && (
-                      <View style={styles.activeBadge}>
-                        <ThemedText style={styles.activeBadgeText}>Active</ThemedText>
-                      </View>
-                    )}
-                    {isSwitching && (profile.id || profile._id) === activeProfileId && (
-                                            <View style={{ width: 20, height: 20, justifyContent: "center", alignItems: "center" }}>
-                        <View style={{ width: 16, height: 16, borderWidth: 2, borderColor: colors.primaryColor, borderTopColor: "transparent", borderRadius: 8 }} />
-                      </View>
-                    )}
-                    <IconComponent name="chevron-forward" size={16} color="#ccc" />
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
-
-        {/* Actions Section */}
-        <View style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>Actions</ThemedText>
-
-          {/* Subscriptions */}
-          <TouchableOpacity
-            style={[styles.settingItem, styles.firstSettingItem]}
-            onPress={() => router.push('/profile/subscriptions')}
-          >
-            <View style={styles.settingInfo}>
-              <IconComponent name="star-outline" size={20} color="#666" style={styles.settingIcon} />
-              <View>
-                <ThemedText style={styles.settingLabel}>Subscriptions</ThemedText>
-                <ThemedText style={styles.settingDescription}>
-                  Manage Homiio Plus or buy one-time file analysis
-                </ThemedText>
-              </View>
-            </View>
-            <IconComponent name="chevron-forward" size={16} color="#ccc" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.settingItem]}
-            onPress={() => router.push('/profile/edit')}
-          >
-            <View style={styles.settingInfo}>
-              <IconComponent name="create" size={20} color="#666" style={styles.settingIcon} />
-              <View>
-                <ThemedText style={styles.settingLabel}>Edit Current Profile</ThemedText>
-                <ThemedText style={styles.settingDescription}>
-                  Modify profile information
-                </ThemedText>
-              </View>
-            </View>
-            <IconComponent name="chevron-forward" size={16} color="#ccc" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.settingItem, styles.lastSettingItem]}
+                  ) : undefined
+                }
+                onPress={
+                  isActive ? undefined : () => setPendingSwitch(profile)
+                }
+              />
+            );
+          })}
+          <SettingsListItem
+            icon={<RowIcon name="add-circle-outline" />}
+            title={t('profile.createNew', 'Create new profile')}
+            description={t(
+              'profile.createNewDescription',
+              'Add a business, agency, or cooperative profile.',
+            )}
             onPress={() => router.push('/profile/create')}
-          >
-            <View style={styles.settingInfo}>
-              <IconComponent name="add-circle" size={20} color="#666" style={styles.settingIcon} />
-              <View>
-                <ThemedText style={styles.settingLabel}>Create New Profile</ThemedText>
-                <ThemedText style={styles.settingDescription}>
-                  Add a new business, agency, or cooperative profile
-                </ThemedText>
-              </View>
-            </View>
-            <IconComponent name="chevron-forward" size={16} color="#ccc" />
-          </TouchableOpacity>
-        </View>
+          />
+        </SettingsListGroup>
 
-        {/* Sign Out Section */}
-        <View style={styles.section}>
-          <TouchableOpacity
-            style={[
-              styles.settingItem,
-              styles.firstSettingItem,
-              styles.lastSettingItem,
-              styles.signOutButton,
-            ]}
-            onPress={handleLogout}
-          >
-            <View style={styles.settingInfo}>
-              <IconComponent name="log-out" size={20} color="#ff4757" style={styles.settingIcon} />
-              <View>
-                <ThemedText style={[styles.settingLabel, { color: '#ff4757' }]}>
-                  Sign Out
-                </ThemedText>
-                <ThemedText style={styles.settingDescription}>Sign out of your account</ThemedText>
-              </View>
-            </View>
-          </TouchableOpacity>
-        </View>
+        <SettingsListGroup title={t('profile.sections.account', 'Account')}>
+          <SettingsListItem
+            icon={<RowIcon name="star-outline" />}
+            title={t('profile.subscriptions', 'Subscriptions')}
+            description={t(
+              'profile.subscriptionsDescription',
+              'Manage Homiio Plus or buy one-time file analysis.',
+            )}
+            onPress={() => router.push('/profile/subscriptions')}
+          />
+          <SettingsListItem
+            icon={<RowIcon name="settings-outline" />}
+            title={t('settings.title', 'Settings')}
+            onPress={() => router.push('/settings')}
+          />
+        </SettingsListGroup>
+
+        <SettingsListGroup>
+          <SettingsListItem
+            icon={<RowIcon name="log-out" destructive />}
+            title={t('settings.signOut', 'Sign out')}
+            destructive
+            onPress={() => setPendingLogout(true)}
+          />
+        </SettingsListGroup>
+
+        <View style={styles.bottomPadding} />
       </ScrollView>
-    </SafeAreaView>
+
+      <ConfirmDialog
+        visible={Boolean(pendingSwitch)}
+        title={t('profile.switchTitle', 'Switch profile?')}
+        message={
+          pendingSwitch
+            ? t('profile.switchMessage', 'Activate {{name}}?', {
+                name: getProfileDisplayName(pendingSwitch),
+              })
+            : ''
+        }
+        confirmLabel={t('profile.switchConfirm', 'Switch')}
+        loading={busySwitch}
+        onConfirm={handleSwitch}
+        onCancel={() => setPendingSwitch(null)}
+      />
+      <ConfirmDialog
+        visible={pendingLogout}
+        title={t('settings.signOut', 'Sign out')}
+        message={t('settings.signOutMessage', 'Are you sure you want to sign out?')}
+        confirmLabel={t('settings.signOut', 'Sign out')}
+        confirmDestructive
+        loading={busyLogout}
+        onConfirm={handleLogout}
+        onCancel={() => setPendingLogout(false)}
+      />
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f2f2f2',
-  },
+interface StatTileProps {
+  label: string;
+  value: number;
+  description?: string;
+  onPress?: () => void;
+}
 
-  content: {
+const StatTile: React.FC<StatTileProps> = ({ label, value, description, onPress }) => (
+  <View style={styles.statTile}>
+    <CardSurface padding={spacing.lg}>
+      <View
+        accessibilityRole={onPress ? 'button' : undefined}
+        accessibilityLabel={`${label}: ${value}`}
+      >
+        <H2 style={styles.statValue}>{value}</H2>
+        <BloomText style={styles.statLabel}>{label}</BloomText>
+        {description ? (
+          <BloomText style={styles.statDescription}>{description}</BloomText>
+        ) : null}
+        {onPress ? (
+          <View style={styles.statButton}>
+            <Button
+              variant="ghost"
+              size="small"
+              onPress={onPress}
+              accessibilityLabel={`Open ${label}`}
+            >
+              {`View ${label.toLowerCase()}`}
+            </Button>
+          </View>
+        ) : null}
+      </View>
+    </CardSurface>
+  </View>
+);
+
+const styles = StyleSheet.create({
+  root: {
     flex: 1,
-    padding: 16,
+    backgroundColor: colors.surface,
   },
-  loadingContainer: {
+  scroll: {
+    paddingTop: spacing.lg,
+    paddingBottom: spacing['4xl'],
+  },
+  centerWrap: {
     flex: 1,
+    alignItems: 'center',
     justifyContent: 'center',
+    padding: spacing['2xl'],
+  },
+  heroSkeleton: {
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  heroWrap: {
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  heroRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
+    gap: spacing.lg,
+    marginBottom: spacing.md,
   },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#666',
-  },
-  errorContainer: {
+  heroBody: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    gap: spacing.xs,
   },
-  errorTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginTop: 12,
-    marginBottom: 4,
+  heroName: {
+    fontSize: 24,
+    fontWeight: '700',
+    letterSpacing: tracker.tight,
   },
-  errorMessage: {
+  heroSubtitle: {
+    fontSize: 13,
+    color: colors.muted,
+  },
+  heroBio: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 20,
+    color: colors.muted,
+    lineHeight: 20,
   },
-  retryButton: {
-    backgroundColor: colors.primaryColor,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
-  },
-  settingItem: {
-    backgroundColor: '#fff',
-    padding: 16,
+  badgesRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 2,
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginBottom: spacing.md,
   },
-  firstSettingItem: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    marginBottom: 2,
-  },
-  lastSettingItem: {
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    marginBottom: 8,
-  },
-  settingInfo: {
+  heroActions: {
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  statsWrap: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  statTile: {
     flex: 1,
   },
-  settingIcon: {
-    marginRight: 12,
+  statValue: {
+    fontSize: 28,
+    fontWeight: '700',
+    letterSpacing: tracker.tight,
   },
-  settingLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 2,
-  },
-  settingDescription: {
-    fontSize: 14,
-    color: '#666',
-  },
-  activeBadge: {
-    backgroundColor: colors.primaryColor,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-  },
-  activeBadgeText: {
-    fontSize: 10,
+  statLabel: {
+    fontSize: 12,
+    color: colors.muted,
+    textTransform: 'uppercase',
+    letterSpacing: tracker.eyebrow,
     fontWeight: '600',
-    color: '#fff',
+    marginTop: spacing.xs,
   },
-  itemActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  statDescription: {
+    fontSize: 11,
+    color: colors.muted,
+    marginTop: spacing.xs,
   },
-  activeItem: {
-    backgroundColor: '#f8fafc',
-    borderWidth: 1,
-    borderColor: colors.primaryColor,
-  },
-  signOutButton: {
-    borderWidth: 1,
-    borderColor: '#ff4757',
-  },
-  settingTextContainer: {
-    flex: 1,
-  },
-  noProfileCard: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  createProfileButton: {
-    backgroundColor: colors.primaryColor,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 16,
+  statButton: {
+    marginTop: spacing.sm,
     alignSelf: 'flex-start',
   },
-  createProfileButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-    textAlign: 'center',
+  bottomPadding: {
+    height: spacing['4xl'],
   },
 });

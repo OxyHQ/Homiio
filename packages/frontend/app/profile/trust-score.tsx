@@ -1,99 +1,138 @@
+/**
+ * Profile → Trust score detail screen.
+ *
+ * Stream P polish: shared Header, Bloom Button for the edit CTA, Bloom
+ * typography end-to-end, and CardSurface for the explanatory banner.
+ * The inline TrustScoreManager remains the source of truth for the
+ * factor breakdown.
+ */
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
-import { colors } from '@/styles/colors';
-import { Ionicons } from '@expo/vector-icons';
-import { TrustScoreManager } from '@/components/TrustScoreManager';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
+
+import { Button } from '@oxyhq/bloom/button';
+import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
+
+import { Header } from '@/components/Header';
+import { CardSurface } from '@/components/ui/CardSurface';
+import { TrustScoreManager } from '@/components/TrustScoreManager';
+import { colors } from '@/styles/colors';
+import { spacing } from '@/constants/styles';
 
 export default function TrustScorePage() {
   const { t } = useTranslation();
   const router = useRouter();
 
-  const handleEditProfile = () => {
-    router.push('/profile/edit');
-  };
-
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-      <View style={styles.header}>
-        <View style={styles.titleContainer}>
-          <Text style={styles.title}>{t('Trust Score')}</Text>
-          <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
-            <Ionicons name="create-outline" size={20} color={colors.primaryLight} />
-            <Text style={styles.editButtonText}>Edit Profile</Text>
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.subtitle}>
-          Build trust with landlords and roommates through verification and positive interactions
-        </Text>
-        <View style={styles.improvementHint}>
-          <Ionicons name="information-circle-outline" size={16} color={colors.primaryColor} />
-          <Text style={styles.improvementHintText}>
-            Complete your profile information to improve your trust score
-          </Text>
-        </View>
-      </View>
+    <View style={styles.root}>
+      <Header
+        options={{
+          showBackButton: true,
+          title: t('Trust Score'),
+          titlePosition: 'center',
+        }}
+      />
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <View style={styles.heroWrap}>
+          <CardSurface padding={spacing['2xl']}>
+            <View style={styles.heroHeader}>
+              <H1 style={styles.heroTitle}>{t('Trust Score')}</H1>
+              <Button
+                variant="secondary"
+                size="medium"
+                onPress={() => router.push('/profile/edit')}
+                icon={
+                  <Ionicons
+                    name="create-outline"
+                    size={16}
+                    color={colors.primaryColor}
+                  />
+                }
+              >
+                {t('profile.edit', 'Edit profile')}
+              </Button>
+            </View>
 
-      <TrustScoreManager />
-    </SafeAreaView>
+            <BloomText style={styles.subtitle}>
+              {t(
+                'profile.trustScoreSubtitle',
+                'Build trust with landlords and roommates through verification and positive interactions.',
+              )}
+            </BloomText>
+
+            <View style={styles.hint}>
+              <Ionicons
+                name="information-circle-outline"
+                size={16}
+                color={colors.primaryColor}
+              />
+              <BloomText style={styles.hintText}>
+                {t(
+                  'profile.trustScoreHint',
+                  'Complete your profile information to improve your trust score.',
+                )}
+              </BloomText>
+            </View>
+          </CardSurface>
+        </View>
+
+        <View style={styles.managerWrap}>
+          <TrustScoreManager />
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    padding: 20,
-    backgroundColor: colors.primaryLight,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.primaryDark,
+  root: {
     flex: 1,
+    backgroundColor: colors.surface,
   },
-  editButton: {
+  scroll: {
+    paddingTop: spacing.lg,
+    paddingBottom: spacing['4xl'],
+  },
+  heroWrap: {
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  heroHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primaryColor,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    gap: 6,
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+    flexWrap: 'wrap',
   },
-  editButtonText: {
-    color: colors.primaryLight,
-    fontSize: 14,
-    fontWeight: '600',
+  heroTitle: {
+    fontSize: 24,
+    fontWeight: '700',
   },
   subtitle: {
-    fontSize: 16,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    lineHeight: 22,
-    marginBottom: 12,
+    fontSize: 14,
+    color: colors.muted,
+    lineHeight: 20,
+    marginBottom: spacing.md,
   },
-  improvementHint: {
+  hint: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primaryLight_1,
-    padding: 12,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.primaryColor,
-    gap: 8,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 12,
+    backgroundColor: colors.primaryLight_2,
   },
-  improvementHintText: {
-    fontSize: 14,
+  hintText: {
+    fontSize: 13,
     color: colors.primaryColor,
-    flex: 1,
     lineHeight: 18,
+    flex: 1,
+  },
+  managerWrap: {
+    paddingHorizontal: spacing.lg,
   },
 });
