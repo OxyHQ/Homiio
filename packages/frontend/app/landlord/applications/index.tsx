@@ -1,23 +1,19 @@
 /**
  * Landlord applicant inbox.
  *
- * Lists tenant applications the current landlord has received, grouped by
- * property. Supports filtering by status (chips) and searching by applicant
- * name (Bloom SearchInput). Route gated by useHostStatus — non-hosts can
- * still hit the URL directly but get a host-only empty state.
+ * Stream Q polish:
+ *   - Bloom Chip filter row + Bloom SearchInput.
+ *   - Shared EmptyState / ErrorState components.
+ *   - Loading uses Skeleton.Box rows.
+ *   - All copy via Bloom Typography. Sections use SectionEyebrow + H3.
  */
 import React, { useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQueries } from '@tanstack/react-query';
-import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
-import { Button } from '@oxyhq/bloom/button';
+import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
 import { Chip } from '@oxyhq/bloom/chip';
+import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { SearchInput } from '@oxyhq/bloom/search-input';
 import { useOxy, showSignInModal } from '@oxyhq/services';
 import {
@@ -28,11 +24,14 @@ import {
 import { Header } from '@/components/Header';
 import { ApplicationCard } from '@/components/ApplicationCard';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useHostStatus } from '@/hooks/useHostStatus';
 import { useLandlordApplications } from '@/hooks/useApplicationQueries';
 import { useProperty } from '@/hooks';
 import profileService from '@/services/profileService';
 import { getPropertyTitle } from '@/utils/propertyUtils';
+import { radius, spacing, withShadow } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
 type StatusFilter = 'all' | TenantApplicationStatus;
@@ -120,7 +119,10 @@ const PropertyGroupBlock: React.FC<PropertyGroupBlockProps> = ({
   const title = property ? getPropertyTitle(property) : 'Property';
   return (
     <View style={styles.groupBlock}>
-      <H3 style={styles.groupTitle}>{title}</H3>
+      <View style={styles.groupHeader}>
+        <SectionEyebrow>Property</SectionEyebrow>
+        <H3 style={styles.groupTitle}>{title}</H3>
+      </View>
       {applications.map((application) => {
         const applicantId = String(application.applicantProfileId);
         const applicant = applicants.get(applicantId) ?? null;
@@ -138,6 +140,21 @@ const PropertyGroupBlock: React.FC<PropertyGroupBlockProps> = ({
     </View>
   );
 };
+
+const ApplicationsSkeleton: React.FC = () => (
+  <View style={styles.skeletonGroup}>
+    {Array.from({ length: 3 }).map((_, idx) => (
+      <View key={idx} style={styles.skeletonCard}>
+        <Skeleton.Box width={84} height={84} borderRadius={radius.md} />
+        <View style={styles.skeletonBody}>
+          <Skeleton.Text style={{ width: 180, lineHeight: 18 }} />
+          <Skeleton.Text style={{ width: 220, lineHeight: 14 }} />
+          <Skeleton.Text style={{ width: 140, lineHeight: 14 }} />
+        </View>
+      </View>
+    ))}
+  </View>
+);
 
 export default function LandlordApplicationsScreen() {
   const { isAuthenticated } = useOxy();
@@ -228,9 +245,9 @@ export default function LandlordApplicationsScreen() {
             titlePosition: 'center',
           }}
         />
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator color={colors.primaryColor} />
-        </View>
+        <ScrollView contentContainerStyle={styles.content}>
+          <ApplicationsSkeleton />
+        </ScrollView>
       </View>
     );
   }
@@ -269,6 +286,14 @@ export default function LandlordApplicationsScreen() {
       />
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
+          <View style={styles.titleBlock}>
+            <SectionEyebrow>Inbox</SectionEyebrow>
+            <H2 style={styles.title}>Applicants</H2>
+            <BloomText style={styles.subtitle}>
+              Review prospective tenants and decide on each application.
+            </BloomText>
+          </View>
+
           <SearchInput
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -297,28 +322,17 @@ export default function LandlordApplicationsScreen() {
             })}
           </ScrollView>
 
-          {applicationsQuery.isPending ? (
-            <View style={styles.loadingWrap}>
-              <ActivityIndicator color={colors.primaryColor} />
-            </View>
-          ) : null}
+          {applicationsQuery.isPending ? <ApplicationsSkeleton /> : null}
 
           {applicationsQuery.isError ? (
-            <View style={styles.errorWrap}>
-              <BloomText style={styles.errorTitle}>
-                Couldn&apos;t load applicants
-              </BloomText>
-              <BloomText style={styles.errorSubtitle}>
-                {applicationsQuery.error?.message ?? 'Please try again.'}
-              </BloomText>
-              <Button
-                variant="primary"
-                size="medium"
-                onPress={() => applicationsQuery.refetch()}
-              >
-                Retry
-              </Button>
-            </View>
+            <ErrorState
+              icon="cloud-offline-outline"
+              title="Couldn't load applicants"
+              description={
+                applicationsQuery.error?.message ?? 'Please try again.'
+              }
+              onRetry={() => applicationsQuery.refetch()}
+            />
           ) : null}
 
           {!applicationsQuery.isPending &&
@@ -350,50 +364,58 @@ export default function LandlordApplicationsScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.surface,
   },
   safeArea: {
     flex: 1,
   },
   content: {
-    padding: 16,
-    gap: 12,
+    padding: spacing.lg,
+    gap: spacing.lg,
+  },
+  titleBlock: {
+    gap: spacing.xs,
+  },
+  title: {
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: colors.muted,
   },
   filterRow: {
     flexDirection: 'row',
-    gap: 8,
-    paddingVertical: 4,
-  },
-  loadingWrap: {
-    padding: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  errorWrap: {
-    alignItems: 'center',
-    padding: 24,
-    gap: 12,
-  },
-  errorTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  errorSubtitle: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    textAlign: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   emptyWrap: {
     flex: 1,
     justifyContent: 'center',
   },
   groupBlock: {
-    gap: 4,
-    marginBottom: 4,
+    gap: spacing.sm,
+  },
+  groupHeader: {
+    gap: spacing.xs,
+    paddingHorizontal: spacing.xs,
   },
   groupTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 4,
+    letterSpacing: -0.5,
+  },
+  skeletonGroup: {
+    gap: spacing.md,
+  },
+  skeletonCard: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    backgroundColor: colors.surfaceElevated,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    ...withShadow('sm'),
+  },
+  skeletonBody: {
+    flex: 1,
+    gap: spacing.sm,
+    justifyContent: 'center',
   },
 });
