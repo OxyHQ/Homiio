@@ -1,7 +1,8 @@
 import React, { useCallback } from 'react';
 import { View, Image, StyleSheet, TouchableOpacity, ViewStyle, Platform } from 'react-native';
 import { colors } from '@/styles/colors';
-import { IconButton } from './IconButton';
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 import { Property, PriceUnit } from '@homiio/shared-types';
 import { getPropertyTitle, getPropertyImageSource } from '@/utils/propertyUtils';
 
@@ -248,13 +249,7 @@ export function PropertyCard({
         {finalShowRating && propertyData.rating && (
           <View style={styles.ratingBadge}>
             <ThemedText style={styles.ratingBadgeText}>{propertyData.rating.toFixed(1)}</ThemedText>
-            <IconButton
-              style={{ width: 10, height: 10 }}
-              name="star"
-              size={12}
-              color="#FFD700"
-              backgroundColor="transparent"
-            />
+            <Ionicons name="star" size={12} color="#FFD700" />
           </View>
         )}
 
@@ -275,31 +270,25 @@ export function PropertyCard({
 
         {/* Eco Badge */}
         {isEco && (
-          <View style={styles.ecoBadge}>
-            <IconButton name="leaf-outline" color="#4CAF50" backgroundColor="#e8f5e9" size={16} />
+          <View style={[styles.ecoBadge, styles.statusChip, { backgroundColor: '#e8f5e9' }]}>
+            <Ionicons name="leaf-outline" size={16} color="#4CAF50" />
           </View>
         )}
 
         {/* Verified Badge */}
         {showVerifiedBadge && propertyData.isVerified && (
-          <View style={styles.verifiedBadge}>
-            <IconButton
-              name="shield-checkmark"
-              color="#fff"
-              backgroundColor={colors.primaryColor}
-              size={14}
-            />
+          <View style={[styles.verifiedBadge, styles.statusChip, { backgroundColor: colors.primaryColor }]}>
+            <Ionicons name="shield-checkmark" size={14} color="#fff" />
           </View>
         )}
 
         {/* Type Icon */}
         {finalShowTypeIcon && propertyData.type && (
-          <View style={styles.typeIcon}>
-            <IconButton
-              name={propertyData.type === 'house' ? 'home-outline' : 'business-outline'}
-              color="#fff"
-              backgroundColor="rgba(0, 0, 0, 0.6)"
+          <View style={[styles.typeIcon, styles.statusChip, { backgroundColor: 'rgba(0, 0, 0, 0.6)' }]}>
+            <Ionicons
+              name={(propertyData.type === 'house' ? 'home-outline' : 'business-outline') as IoniconName}
               size={16}
+              color="#fff"
             />
           </View>
         )}
@@ -533,14 +522,18 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 8,
   },
+  statusChip: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   ecoBadge: {
     position: 'absolute',
     top: 8,
     left: 8,
     zIndex: 2,
-    backgroundColor: '#e8f5e9',
-    borderRadius: 14,
-    padding: 3,
   },
   verifiedBadge: {
     position: 'absolute',

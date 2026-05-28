@@ -13,7 +13,7 @@ import {
 import { colors } from '@/styles/colors';
 import { useRouter, usePathname } from 'expo-router';
 import React, { useMemo, useCallback } from 'react';
-import Avatar from './Avatar';
+import { Avatar } from '@oxyhq/bloom/avatar';
 import { showSignInModal } from '@oxyhq/services';
 import { useHasRentalProperties } from '@/hooks/useLeaseQueries';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

@@ -2,7 +2,8 @@ import React, { ReactNode } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
-import { IconButton } from './IconButton';
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 type ListItemProps = {
   title: string;
@@ -26,7 +27,11 @@ export function ListItem({
   return (
     <TouchableOpacity style={[styles.container, style]} onPress={onPress} disabled={!onPress}>
       <View style={styles.leftContent}>
-        {icon && <IconButton name={icon} style={styles.icon} />}
+        {icon && (
+          <View style={[styles.iconChip, styles.icon]}>
+            <Ionicons name={icon as IoniconName} size={24} color={colors.primaryColor} />
+          </View>
+        )}
         <View style={styles.textContainer}>
           <Text style={styles.title}>{title}</Text>
           {description && <Text style={styles.description}>{description}</Text>}
@@ -64,6 +69,14 @@ const styles = StyleSheet.create({
   },
   icon: {
     marginRight: 12,
+  },
+  iconChip: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryLight_1,
   },
   textContainer: {
     flex: 1,

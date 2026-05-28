@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
-import { IconButton } from './IconButton';
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 type NotificationItemProps = {
   type: 'message' | 'contract' | 'payment' | string;
@@ -40,11 +42,9 @@ export function NotificationItem({
       style={[styles.container, !read && styles.unreadContainer, style]}
       onPress={onPress}
     >
-      <IconButton
-        name={getIcon(type)}
-        style={styles.icon}
-        backgroundColor={colors.primaryLight_2}
-      />
+      <View style={[styles.iconChip, styles.icon]}>
+        <Ionicons name={getIcon(type) as IoniconName} size={24} color={colors.primaryColor} />
+      </View>
       <View style={styles.content}>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.description}>{description}</Text>
@@ -74,6 +74,14 @@ const styles = StyleSheet.create({
   },
   icon: {
     marginRight: 12,
+  },
+  iconChip: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryLight_2,
   },
   content: {
     flex: 1,

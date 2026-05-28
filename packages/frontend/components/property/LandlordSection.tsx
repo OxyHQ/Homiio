@@ -3,7 +3,7 @@ import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { SectionCard } from '@/components/ui/SectionCard';
 import ProfileAvatar from '@/components/ProfileAvatar';
-import Avatar from '@/components/Avatar';
+import { Avatar } from '@oxyhq/bloom/avatar';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { ActionButton } from '@/components/ui/ActionButton';
@@ -83,7 +83,7 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
 
         return (
             <Avatar
-                id={avatarSource}
+                source={avatarSource}
                 size={52}
                 style={styles.landlordAvatar}
             />

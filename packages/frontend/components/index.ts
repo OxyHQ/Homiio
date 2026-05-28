@@ -12,8 +12,6 @@ export { TrustScore } from './TrustScore';
 export { TrustScoreCompact } from './TrustScoreCompact';
 export { NotificationItem } from './NotificationItem';
 export { ThemedText } from './ThemedText';
-
-export { default as Avatar } from './Avatar';
 export { ContractCard } from './ContractCard';
 export { PaymentCard } from './PaymentCard';
 export { EcoCertification } from './EcoCertification';
@@ -21,7 +19,6 @@ export { VerificationBadge } from './VerificationBadge';
 export { RoommateMatch } from './RoommateMatch';
 export { PropertyMonitoring } from './PropertyMonitoring';
 export { ListItem } from './ListItem';
-export { IconButton } from './IconButton';
 export { Logo } from './Logo';
 export { default as ErrorBoundary } from './ErrorBoundary';
 export { default as NotFoundScreen } from './NotFoundScreen';
