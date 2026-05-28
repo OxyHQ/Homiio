@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
-import Button from '../Button';
+import { Button } from '@oxyhq/bloom/button';
 
 // Type assertion for Ionicons compatibility
 const IconComponent = Ionicons as any;
@@ -98,11 +98,14 @@ export function QuickFiltersWidget() {
         </View>
 
         {selectedFilters.length > 0 && (
-          <Button style={styles.applyButton} onPress={handleApplyFilters}>
-            <IconComponent name="search" size={16} color="white" />
-            <Text style={styles.applyButtonText}>
-              {`${t('Search with')} ${selectedFilters.length} ${t('filters')}`}
-            </Text>
+          <Button
+            style={styles.applyButton}
+            textStyle={styles.applyButtonText}
+            onPress={handleApplyFilters}
+            icon={<IconComponent name="search" size={16} color="white" />}
+            iconPosition="left"
+          >
+            {`${t('Search with')} ${selectedFilters.length} ${t('filters')}`}
           </Button>
         )}
 

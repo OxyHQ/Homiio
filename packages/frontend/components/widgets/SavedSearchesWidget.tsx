@@ -19,7 +19,7 @@ import { webAlert } from '@/utils/api';
 import { emitApplySavedSearch } from '@/utils/searchEvents';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SavedSearchActionsBottomSheet } from '@/components/SavedSearchActionsBottomSheet';
-import Button from '../Button';
+import { Button } from '@oxyhq/bloom/button';
 
 // Define SavedSearch type locally since we're no longer using Redux
 interface SavedSearch {

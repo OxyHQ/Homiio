@@ -7,7 +7,7 @@ import { colors } from '@/styles/colors';
 import { useProfile } from '@/context/ProfileContext';
 import { roommateService } from '@/services/roommateService';
 import { useProfileStore } from '@/store/profileStore';
-import Button from '@/components/Button';
+import { Button } from '@oxyhq/bloom/button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 

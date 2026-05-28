@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Animated } from 'react-native';
 import { LogoIcon } from '@/assets/logo';
-import LoadingSpinner from './LoadingSpinner';
+import { Loading } from '@oxyhq/bloom/loading';
 import { colors } from '@/styles/colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import { cssInterop } from 'nativewind';
@@ -77,7 +77,7 @@ const AppSplashScreen: React.FC<AppSplashScreenProps> = ({ onFadeComplete, start
         <View style={logoContainerStyle}>
           <LogoIcon size={100} color={colors.secondaryColor} />
           <View style={spinnerContainerStyle}>
-            <LoadingSpinner size={28} color={colors.secondaryColor} showText={false} />
+            <Loading iconSize={28} color={colors.secondaryColor} showText={false} />
           </View>
         </View>
       </LinearGradient>

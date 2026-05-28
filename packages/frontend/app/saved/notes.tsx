@@ -14,7 +14,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { Header } from '@/components/Header';
-import Button from '@/components/Button';
+import { Button } from '@oxyhq/bloom/button';
 import { colors } from '@/styles/colors';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import {

@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
-import LoadingSpinner from '../LoadingSpinner';
+import { Loading } from '@oxyhq/bloom/loading';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
@@ -126,7 +126,7 @@ export function RecentlyViewedWidget() {
         >
           {isLoading ? (
             <View style={styles.loadingContainer}>
-              <LoadingSpinner size={16} showText={false} />
+              <Loading iconSize={16} showText={false} />
             </View>
           ) : recentProperties.length === 0 ? (
             <View style={styles.emptyContainer}>

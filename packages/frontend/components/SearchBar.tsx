@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, TextInput, ViewStyle, Text, TouchableOpacity } from 'react-native';
-import LoadingSpinner from './LoadingSpinner';
+import { Loading } from '@oxyhq/bloom/loading';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../styles/colors';
 import { useRouter } from 'expo-router';
@@ -75,7 +75,7 @@ export const SearchBar = ({ hideFilterIcon = false }: SearchBarProps) => {
         }}
       >
         {isLoading ? (
-          <LoadingSpinner size={16} color={colors.COLOR_BLACK_LIGHT_4} showText={false} />
+          <Loading iconSize={16} color={colors.COLOR_BLACK_LIGHT_4} showText={false} />
         ) : (
           <Ionicons name="search" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
         )}

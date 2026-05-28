@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons as IoniconsRaw } from '@expo/vector-icons';
 import { useOxy } from '@oxyhq/services';
 import { sindiApi } from '@/utils/api';
-import Button from '@/components/Button';
+import { Button } from '@oxyhq/bloom/button';
 
 const Ionicons = IoniconsRaw as any;
 

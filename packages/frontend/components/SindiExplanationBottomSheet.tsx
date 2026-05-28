@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Dimensions, Animated, Easing, Layou
 import AnimatedRe, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
-import Button from '@/components/Button';
+import { Button } from '@oxyhq/bloom/button';
 
 const IconComponent = Ionicons as any;
 
@@ -400,7 +400,12 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
                 <Button onPress={handleStart}>
                   Start with Sindi
                 </Button>
-                <Button onPress={handlePrevious} backgroundColor="transparent" textColor={APPLE_TEXT_SECONDARY}>
+                <Button
+                  onPress={handlePrevious}
+                  variant="ghost"
+                  style={{ backgroundColor: 'transparent' }}
+                  textStyle={{ color: APPLE_TEXT_SECONDARY }}
+                >
                   Previous
                 </Button>
               </View>
@@ -421,17 +426,16 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
       >
         <Button
           onPress={currentStep === 0 ? handleSkip : handlePrevious}
-          backgroundColor={APPLE_CARD_BACKGROUND}
-          textColor={APPLE_TEXT_PRIMARY}
-          style={{ flex: 1 }}
+          variant="secondary"
+          style={{ flex: 1, backgroundColor: APPLE_CARD_BACKGROUND }}
+          textStyle={{ color: APPLE_TEXT_PRIMARY }}
         >
           {currentStep === 0 ? 'Skip' : 'Previous'}
         </Button>
         <Button
           onPress={handleNext}
-          backgroundColor={colors.primaryColor}
-          textColor={'#fff'}
-          style={{ flex: 1 }}
+          style={{ flex: 1, backgroundColor: colors.primaryColor }}
+          textStyle={{ color: '#fff' }}
         >
           {currentStep === TOTAL_STEPS - 1 ? 'Start' : 'Next'}
         </Button>

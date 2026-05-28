@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import LoadingSpinner from '../LoadingSpinner';
+import { Loading } from '@oxyhq/bloom/loading';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { useOxy } from '@oxyhq/services';
@@ -59,7 +59,7 @@ export const TrustScoreWidget = React.memo(function TrustScoreWidget() {
   // Memoize loading content
   const loadingContent = useMemo(() => (
     <View style={styles.loadingContainer}>
-      <LoadingSpinner size={16} showText={false} />
+      <Loading iconSize={16} showText={false} />
       <ThemedText style={styles.loadingText}>
         {profileType === 'agency'
           ? t('trust.loadingVerification', 'Loading verification status...')

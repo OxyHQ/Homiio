@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
-import LoadingSpinner from '../LoadingSpinner';
+import { Loading } from '@oxyhq/bloom/loading';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';
@@ -8,7 +8,7 @@ import { BaseWidget } from './BaseWidget';
 import { useProperties } from '@/hooks';
 import { PropertyCard } from '../PropertyCard';
 import { ThemedText } from '../ThemedText';
-import Button from '../Button';
+import { Button } from '@oxyhq/bloom/button';
 
 export function FeaturedPropertiesWidget() {
   const { t } = useTranslation();
@@ -48,7 +48,7 @@ export function FeaturedPropertiesWidget() {
       <View>
         {loading ? (
           <View style={styles.loadingContainer}>
-            <LoadingSpinner size={16} showText={false} />
+            <Loading iconSize={16} showText={false} />
             <ThemedText style={styles.loadingText}>{t('state.loading')}</ThemedText>
           </View>
         ) : (

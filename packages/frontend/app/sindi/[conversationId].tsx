@@ -22,7 +22,6 @@ import { PropertyCard } from '@/components/PropertyCard';
 import { propertyService } from '@/services/propertyService';
 import { useQuery } from '@tanstack/react-query';
 import { SindiIcon } from '@/assets/icons';
-import { ThemedView } from '@/components/ThemedView';
 import { Header } from '@/components/Header';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -231,7 +230,7 @@ export default function ConversationDetail() {
   // Early return for unauthenticated users
   if (!isAuthenticated) {
     return (
-      <ThemedView style={styles.container} lightColor="transparent" darkColor="transparent">
+      <View style={[styles.container, { backgroundColor: 'transparent' }]}>
         <Header
           options={{
             title: t('sindi.conversation.title'),
@@ -257,13 +256,13 @@ export default function ConversationDetail() {
           onAction={() => showSignInModal()}
           iconColor={colors.primaryColor}
         />
-      </ThemedView>
+      </View>
     );
   }
 
   if (loading) {
     return (
-      <ThemedView style={styles.container} lightColor="transparent" darkColor="transparent">
+      <View style={[styles.container, { backgroundColor: 'transparent' }]}>
         <Header
           options={{
             title: t('sindi.conversation.loading'),
@@ -274,7 +273,7 @@ export default function ConversationDetail() {
           <IconComponent name="hourglass" size={48} color={colors.primaryColor} />
           <Text style={styles.loadingText}>{t('sindi.conversation.loadingMessage')}</Text>
         </View>
-      </ThemedView>
+      </View>
     );
   }
 

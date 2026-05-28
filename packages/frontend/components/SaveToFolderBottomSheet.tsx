@@ -16,7 +16,7 @@ import { ThemedText } from './ThemedText';
 import { colors } from '@/styles/colors';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import savedPropertyFolderService, { SavedPropertyFolder } from '@/services/savedPropertyFolderService';
-import Button from './Button';
+import { Button } from '@oxyhq/bloom/button';
 import { Property } from '@homiio/shared-types';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { useMutation, useQueryClient } from '@tanstack/react-query';

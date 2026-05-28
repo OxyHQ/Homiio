@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { colors } from '@/styles/colors';
 import { ThemedText } from '@/components/ThemedText';
-import Button from '@/components/Button';
+import { Button } from '@oxyhq/bloom/button';
 import { SindiIcon } from '@/assets/icons';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SindiChatBottomSheet } from './SindiChatBottomSheet';
@@ -53,8 +53,8 @@ export function SindiSection({ property }: SindiSectionProps) {
                 <View style={styles.rightSection}>
                     <Button
                         onPress={handleChatNowPress}
-                        backgroundColor="#fff"
-                        textColor={colors.primaryColor}
+                        variant="inverse"
+                        textStyle={{ color: colors.primaryColor }}
                         accessibilityLabel="Start conversation with Sindi AI assistant"
                     >
                         Chat Now

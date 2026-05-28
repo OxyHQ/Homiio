@@ -48,7 +48,7 @@ import { SaveButton } from '@/components/SaveButton';
 import * as Linking from 'expo-linking';
 import { propertyService } from '@/services/propertyService';
 import ViewingService from '@/services/viewingService';
-import Button from '@/components/Button';
+import { Button } from '@oxyhq/bloom/button';
 import { PropertyDetailSkeleton } from '@/components/ui/skeletons/PropertyDetailSkeleton';
 import type { Profile } from '@/services/profileService';
 import profileService from '@/services/profileService';

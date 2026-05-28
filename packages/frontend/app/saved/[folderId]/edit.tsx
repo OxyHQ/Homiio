@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useOxy } from '@oxyhq/services';
 
 import { Header } from '@/components/Header';
-import Button from '@/components/Button';
+import { Button } from '@oxyhq/bloom/button';
 import { colors } from '@/styles/colors';
 import savedPropertyFolderService from '@/services/savedPropertyFolderService';
 import { toast } from 'sonner';

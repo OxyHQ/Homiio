@@ -14,7 +14,7 @@ import { Header } from '@/components/Header';
 import { PropertyList } from '@/components/PropertyList';
 import { useProperties } from '@/hooks';
 import { SearchBar } from '@/components/SearchBar';
-import Button from '@/components/Button';
+import { Button } from '@oxyhq/bloom/button';
 import { Property } from '@homiio/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { useSavedProperties } from '@/hooks/useSavedProperties';

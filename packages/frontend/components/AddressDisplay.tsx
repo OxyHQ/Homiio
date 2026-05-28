@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Platform, Linking } from 'react-native';
 import { ThemedText } from './ThemedText';
-import { ThemedView } from './ThemedView';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { useTranslation } from 'react-i18next';
@@ -102,7 +101,7 @@ export function AddressDisplay({
 
   if (variant === 'card') {
     return (
-      <ThemedView style={[styles.cardContainer, style]}>
+      <View style={[styles.cardContainer, style]}>
         <View style={styles.cardHeader}>
           <View style={styles.addressInfo}>
             <IconComponent name="location" size={20} color={colors.primaryColor} />
@@ -130,13 +129,13 @@ export function AddressDisplay({
             <ThemedText style={styles.mapPlaceholderText}>{t('Map view available')}</ThemedText>
           </View>
         )}
-      </ThemedView>
+      </View>
     );
   }
 
   // Detailed variant (default)
   return (
-    <ThemedView style={[styles.detailedContainer, style]}>
+    <View style={[styles.detailedContainer, style]}>
       <View style={styles.detailedHeader}>
         <IconComponent name="location" size={24} color={colors.primaryColor} />
         <View style={styles.detailedAddressInfo}>
@@ -163,7 +162,7 @@ export function AddressDisplay({
           </TouchableOpacity>
         </View>
       )}
-    </ThemedView>
+    </View>
   );
 }
 

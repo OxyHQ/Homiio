@@ -12,7 +12,7 @@ import { ThemedText } from './ThemedText';
 import { colors } from '@/styles/colors';
 import { Property } from '@homiio/shared-types';
 import { PropertyCard } from './PropertyCard';
-import Button from './Button';
+import { Button } from '@oxyhq/bloom/button';
 
 const IconComponent = Ionicons as any;
 

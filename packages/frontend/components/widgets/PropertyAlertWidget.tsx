@@ -7,7 +7,7 @@ import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
 import { toast } from 'sonner';
-import Button from '../Button';
+import { Button } from '@oxyhq/bloom/button';
 
 // Type assertion for Ionicons compatibility
 const IconComponent = Ionicons as any;

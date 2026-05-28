@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { BaseWidget } from './BaseWidget';
-import Button from '../Button';
+import { Button } from '@oxyhq/bloom/button';
 
 export function EcoCertificationWidget() {
   const { t } = useTranslation();

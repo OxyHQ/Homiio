@@ -19,7 +19,7 @@ import { AmenitiesSelector } from '@/components/AmenitiesSelector';
 import Map from '@/components/Map';
 import { PropertyPreviewWidget } from '@/components/widgets/PropertyPreviewWidget';
 import { ImageUpload } from '@/components/ImageUpload';
-import Button from '@/components/button';
+import { Button } from '@oxyhq/bloom/button';
 import { StepsContainer } from '@/components/StepsContainer';
 import { NumberSelector } from '@/components/NumberSelector';
 import {

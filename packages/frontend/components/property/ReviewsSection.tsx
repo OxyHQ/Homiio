@@ -14,7 +14,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '../ThemedText';
 import { ReviewCard, ReviewData } from '../ReviewCard';
-import Button from '../Button';
+import { Button } from '@oxyhq/bloom/button';
 import { colors } from '@/styles/colors';
 import { useOxy } from '@oxyhq/services';
 import { api } from '@/utils/api';

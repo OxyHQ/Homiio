@@ -36,7 +36,7 @@ import React, { useState, useContext } from 'react';
 import { TouchableOpacity, StyleSheet, ViewStyle, View, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
-import LoadingSpinner from './LoadingSpinner';
+import { Loading } from '@oxyhq/bloom/loading';
 import { SaveToFolderBottomSheet } from './SaveToFolderBottomSheet';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { Property } from '@homiio/shared-types';
@@ -285,7 +285,7 @@ export function SaveButton({
         }}
       >
         {showLoading && (isLoading || (propertyId && isPropertySaving(propertyId))) ? (
-          <LoadingSpinner size={sizeAll} color={getIconColor()} showText={false} />
+          <Loading iconSize={sizeAll} color={getIconColor()} showText={false} />
         ) : (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: sizeAll / 4 }}>
             <IconComponent name={getIconName()} size={sizeAll} color={getIconColor()} />

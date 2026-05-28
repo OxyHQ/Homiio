@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { BaseWidget } from './BaseWidget';
 import { ThemedText } from '../ThemedText';
-import Button from '../Button';
+import { Button } from '@oxyhq/bloom/button';
 
 export function HorizonInitiativeWidget() {
   const { t } = useTranslation();

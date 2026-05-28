@@ -6,8 +6,8 @@ import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
 import { useNeighborhood } from '@/hooks/useNeighborhood';
 import { useOxy } from '@oxyhq/services';
-import LoadingSpinner from '../LoadingSpinner';
-import Button from '../Button';
+import { Loading } from '@oxyhq/bloom/loading';
+import { Button } from '@oxyhq/bloom/button';
 
 // Type assertion for Ionicons compatibility with React 19
 const IconComponent = Ionicons as any;
@@ -117,7 +117,7 @@ export function NeighborhoodRatingWidget({
         icon={<IconComponent name="location" size={22} color={colors.primaryColor} />}
       >
         <View style={styles.loadingContainer}>
-          <LoadingSpinner size={16} showText={false} />
+          <Loading iconSize={16} showText={false} />
           <Text style={styles.loadingText}>{t('Loading neighborhood data...')}</Text>
         </View>
       </BaseWidget>

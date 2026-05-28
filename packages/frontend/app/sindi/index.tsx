@@ -12,10 +12,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOxy, showSignInModal } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
 import { SindiIcon } from '@/assets/icons';
-import Button from '@/components/button';
+import { Button } from '@oxyhq/bloom/button';
 import { colors } from '@/styles/colors';
 import { useRouter } from 'expo-router';
-import { ThemedView } from '@/components/ThemedView';
 import { Header } from '@/components/Header';
 import { useTranslation } from 'react-i18next';
 import React, { useEffect, useCallback, useState, useMemo, memo, useContext } from 'react';
@@ -248,7 +247,7 @@ export default function Sindi() {
 
   if (!isAuthenticated) {
     return (
-      <ThemedView style={styles.container} lightColor="transparent" darkColor="transparent">
+      <View style={[styles.container, { backgroundColor: 'transparent' }]}>
         <Header options={{ title: t('sindi.title'), showBackButton: true }} />
         <EmptyState
           icon="lock-closed"
@@ -259,7 +258,7 @@ export default function Sindi() {
           onAction={() => showSignInModal()}
           iconColor={colors.primaryColor}
         />
-      </ThemedView>
+      </View>
     );
   }
 

@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/colors';
 import { useProfile } from '@/context/ProfileContext';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import { Loading } from '@oxyhq/bloom/loading';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { RoommateMatch } from '@/components/RoommateMatch';
 import { RoommateRequestComponent } from '@/components/RoommateRequest';
@@ -173,7 +173,7 @@ export default function RoommatesPage() {
 
     // While fetching, prefer showing a spinner over the enable CTA
     if (isLoading) {
-      return <LoadingSpinner />;
+      return <Loading />;
     }
 
     if (!hasRoommateMatching && profiles.length === 0) {
@@ -234,7 +234,7 @@ export default function RoommatesPage() {
     }
 
     if (isLoading) {
-      return <LoadingSpinner />;
+      return <Loading />;
     }
 
     if (requests.sent.length === 0 && requests.received.length === 0) {
@@ -292,7 +292,7 @@ export default function RoommatesPage() {
     }
 
     if (isLoading) {
-      return <LoadingSpinner />;
+      return <Loading />;
     }
 
     if (relationships.length === 0) {
