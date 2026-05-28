@@ -206,6 +206,7 @@ export default function RootLayout() {
             >
               <QueryClientProvider client={queryClient}>
                 <BottomSheetModalProvider>
+                <RentalModeProvider>
                 <OxyProvider baseURL={OXY_BASE_URL}>
                   <ProfileProvider>
                     <SavedPropertiesProvider>
@@ -216,7 +217,6 @@ export default function RootLayout() {
                               <ErrorBoundary>
                                 <MapStateProvider>
                                   <SearchModeProvider>
-                                    <RentalModeProvider>
                                     <LayoutScrollProvider value={{ scrollY: layoutScrollY }}>
                                       <Animated.ScrollView
                                         contentContainerStyle={styles.container}
@@ -236,7 +236,6 @@ export default function RootLayout() {
                                         </View>
                                       </Animated.ScrollView>
                                     </LayoutScrollProvider>
-                                    </RentalModeProvider>
                                   </SearchModeProvider>
                                 </MapStateProvider>
                                 <StatusBar style="auto" />
@@ -254,6 +253,7 @@ export default function RootLayout() {
                     </SavedPropertiesProvider>
                   </ProfileProvider>
                 </OxyProvider>
+                </RentalModeProvider>
                 </BottomSheetModalProvider>
               </QueryClientProvider>
             </PostHogProvider>
