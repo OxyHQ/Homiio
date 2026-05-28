@@ -1,41 +1,109 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+/**
+ * Roommate preferences — toggle matching and review preference summary.
+ *
+ * Stream Q polish:
+ *   - Bloom Switch replaces RN Switch, Bloom Typography for every text,
+ *     Bloom Button for navigation.
+ *   - withShadow('sm') cards with radius.lg, no border-only separators.
+ *   - Shared EmptyState component, SectionEyebrow for hierarchy.
+ *   - No more "as any" Ionicons alias.
+ */
+import React, { useEffect, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '@/styles/colors';
+import { useRouter } from 'expo-router';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
+import { Button } from '@oxyhq/bloom/button';
+import { Switch } from '@oxyhq/bloom/switch';
+import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
+import { Header } from '@/components/Header';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useProfile } from '@/context/ProfileContext';
 import { roommateService } from '@/services/roommateService';
 import { useProfileStore } from '@/store/profileStore';
-import { Button } from '@oxyhq/bloom/button';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { radius, spacing, withShadow } from '@/constants/styles';
+import { colors } from '@/styles/colors';
 
-// Type assertion for Ionicons compatibility
-const IconComponent = Ionicons as any;
+type Cleanliness = 'very_clean' | 'clean' | 'average' | 'relaxed';
+type NoiseLevel = 'quiet' | 'moderate' | 'lively';
+type StudyHabits = 'early_bird' | 'night_owl' | 'flexible';
+type SocialLevel = 'introvert' | 'ambivert' | 'extrovert';
+
+interface PreferencesState {
+  maxRent: number;
+  moveInDate: string;
+  leaseLength: number;
+  smoking: boolean;
+  pets: boolean;
+  cleanliness: Cleanliness;
+  noiseLevel: NoiseLevel;
+  studyHabits: StudyHabits;
+  socialLevel: SocialLevel;
+  interests: string[];
+}
+
+const INITIAL_PREFERENCES: PreferencesState = {
+  maxRent: 1500,
+  moveInDate: '2024-09-01',
+  leaseLength: 12,
+  smoking: false,
+  pets: false,
+  cleanliness: 'clean',
+  noiseLevel: 'moderate',
+  studyHabits: 'flexible',
+  socialLevel: 'ambivert',
+  interests: [],
+};
+
+interface PreferenceRowProps {
+  title: string;
+  value: string;
+  onPress?: () => void;
+}
+
+const PreferenceRow: React.FC<PreferenceRowProps> = ({
+  title,
+  value,
+  onPress,
+}) => (
+  <Pressable
+    onPress={onPress}
+    disabled={!onPress}
+    style={({ pressed }) => [
+      styles.preferenceRow,
+      pressed && onPress ? styles.preferenceRowPressed : null,
+    ]}
+    accessibilityRole={onPress ? 'button' : undefined}
+  >
+    <BloomText style={styles.preferenceTitle}>{title}</BloomText>
+    <View style={styles.preferenceValueWrap}>
+      <BloomText style={styles.preferenceValueText}>{value}</BloomText>
+      {onPress ? (
+        <Ionicons
+          name="chevron-forward"
+          size={18}
+          color={colors.muted}
+        />
+      ) : null}
+    </View>
+  </Pressable>
+);
 
 export default function RoommatePreferencesPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
   const [roommateEnabled, setRoommateEnabled] = useState(false);
-  const [preferences, setPreferences] = useState({
-    maxRent: 1500,
-    moveInDate: '2024-09-01',
-    leaseLength: 12,
-    smoking: false,
-    pets: false,
-    cleanliness: 'clean' as 'very_clean' | 'clean' | 'average' | 'relaxed',
-    noiseLevel: 'moderate' as 'quiet' | 'moderate' | 'lively',
-    studyHabits: 'flexible' as 'early_bird' | 'night_owl' | 'flexible',
-    socialLevel: 'ambivert' as 'introvert' | 'ambivert' | 'extrovert',
-    interests: [] as string[],
-  });
-
+  const [preferences, setPreferences] =
+    useState<PreferencesState>(INITIAL_PREFERENCES);
   const { primaryProfile, isPersonalProfile, hasPersonalProfile } = useProfile();
 
   useEffect(() => {
     if (primaryProfile && isPersonalProfile) {
-      const roommateSettings = primaryProfile.personalProfile?.settings?.roommate;
+      const roommateSettings =
+        primaryProfile.personalProfile?.settings?.roommate;
       if (roommateSettings) {
         setRoommateEnabled(Boolean(roommateSettings.enabled));
         if (roommateSettings.preferences) {
@@ -48,18 +116,19 @@ export default function RoommatePreferencesPage() {
     }
   }, [primaryProfile, isPersonalProfile]);
 
-  const queryClient = useQueryClient();
-
-  // Keep toggle in sync with backend status to avoid stale UI state
   useEffect(() => {
-    (async () => {
+    let cancelled = false;
+    const sync = async () => {
       const status = await roommateService.getMyRoommateStatus();
+      if (cancelled) return;
       if (status && typeof status.hasRoommateMatching === 'boolean') {
         setRoommateEnabled(Boolean(status.hasRoommateMatching));
       }
-    })();
-    // Only on mount/auth change
-
+    };
+    sync();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const preferencesQuery = useQuery({
@@ -69,7 +138,6 @@ export default function RoommatePreferencesPage() {
     gcTime: 1000 * 60 * 10,
   });
 
-  // Update preferences when query data changes
   useEffect(() => {
     if (preferencesQuery.data) {
       setPreferences((prev) => ({ ...prev, ...preferencesQuery.data }));
@@ -78,33 +146,40 @@ export default function RoommatePreferencesPage() {
 
   const toggleMutation = useMutation({
     mutationKey: ['roommates', 'toggle'],
-    mutationFn: async (enabled: boolean) => {
-      return roommateService.toggleRoommateMatching(enabled);
-    },
+    mutationFn: async (enabled: boolean) =>
+      roommateService.toggleRoommateMatching(enabled),
     onMutate: async (enabled: boolean) => {
       const previous = roommateEnabled;
       setRoommateEnabled(enabled);
       return { previous };
     },
     onSuccess: async (data) => {
-      // Refresh profile, then set switch from authoritative store value
       await useProfileStore.getState().fetchPrimaryProfile();
       const storeEnabled = Boolean(
-        useProfileStore.getState().primaryProfile?.personalProfile?.settings?.roommate?.enabled,
+        useProfileStore.getState().primaryProfile?.personalProfile?.settings
+          ?.roommate?.enabled,
       );
-      const nextEnabled = typeof data?.enabled === 'boolean' ? data.enabled : storeEnabled;
+      const nextEnabled =
+        typeof data?.enabled === 'boolean' ? data.enabled : storeEnabled;
       setRoommateEnabled(nextEnabled);
-      Alert.alert('Success', data?.message || `Roommate matching ${nextEnabled ? 'enabled' : 'disabled'}`);
+      Alert.alert(
+        'Success',
+        data?.message ||
+          `Roommate matching ${nextEnabled ? 'enabled' : 'disabled'}`,
+      );
     },
     onError: (_err, _enabled, context) => {
-      if (context?.previous !== undefined) setRoommateEnabled(context.previous);
+      if (context?.previous !== undefined) {
+        setRoommateEnabled(context.previous);
+      }
       Alert.alert('Error', 'Failed to update roommate matching settings');
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['roommates', 'preferences'] });
+      await queryClient.invalidateQueries({
+        queryKey: ['roommates', 'preferences'],
+      });
     },
   });
-
 
   const handleToggleRoommateMatching = async (enabled: boolean) => {
     setIsSaving(true);
@@ -115,236 +190,254 @@ export default function RoommatePreferencesPage() {
     }
   };
 
-  // Save preferences removed; editing is handled in the profile edit screen
-
-  const renderPreferenceItem = (title: string, value: any, onPress?: () => void) => (
-    <TouchableOpacity style={styles.preferenceItem} onPress={onPress} disabled={!onPress}>
-      <Text style={styles.preferenceTitle}>{title}</Text>
-      <View style={styles.preferenceValue}>
-        <Text style={styles.preferenceValueText}>{String(value)}</Text>
-        {onPress && <IconComponent name="chevron-forward" size={20} color={colors.primaryDark_1} />}
-      </View>
-    </TouchableOpacity>
-  );
-
-  // Check if user is on a personal profile
   if (!isPersonalProfile || !hasPersonalProfile) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <IconComponent name="arrow-back" size={24} color={colors.primaryDark} />
-          </TouchableOpacity>
-          <Text style={styles.title}>Roommate Preferences</Text>
-          <View style={styles.placeholder} />
-        </View>
-        <View style={styles.emptyStateContainer}>
-          <EmptyState
-            icon="person-outline"
-            title="Personal Profile Required"
-            description="Roommate preferences are only available for personal profiles. Please switch to your personal profile to manage your roommate settings."
-            actionText="Switch to Personal Profile"
-            actionIcon="person-circle"
-            onAction={() => router.push('/profile')}
-          />
-        </View>
-      </SafeAreaView>
+      <View style={styles.root}>
+        <Header
+          options={{
+            title: 'Roommate preferences',
+            showBackButton: true,
+            titlePosition: 'center',
+          }}
+        />
+        <SafeAreaView edges={['bottom']} style={styles.safeArea}>
+          <View style={styles.emptyWrap}>
+            <EmptyState
+              icon="person-outline"
+              title="Personal profile required"
+              description="Roommate preferences are only available for personal profiles. Please switch to your personal profile to manage your roommate settings."
+              actionText="Switch to personal profile"
+              actionIcon="person-circle"
+              onAction={() => router.push('/profile')}
+            />
+          </View>
+        </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <IconComponent name="arrow-back" size={24} color={colors.primaryDark} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Roommate Preferences</Text>
-        <View style={styles.placeholder} />
-      </View>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Roommate Matching Toggle */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Roommate Matching</Text>
-          <View style={styles.toggleContainer}>
-            <View style={styles.toggleInfo}>
-              <Text style={styles.toggleTitle}>Enable Roommate Matching</Text>
-              <Text style={styles.toggleDescription}>
-                Allow other users to discover your profile for roommate matching
-              </Text>
-            </View>
-            <Switch
-              value={roommateEnabled}
-              onValueChange={handleToggleRoommateMatching}
-              trackColor={{ false: colors.COLOR_BLACK_LIGHT_6, true: colors.primaryColor }}
-              thumbColor={colors.primaryLight}
-              disabled={isSaving || toggleMutation.isPending}
-            />
+    <View style={styles.root}>
+      <Header
+        options={{
+          title: 'Roommate preferences',
+          showBackButton: true,
+          titlePosition: 'center',
+        }}
+      />
+      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
+        <ScrollView contentContainerStyle={styles.content}>
+          <View style={styles.titleBlock}>
+            <SectionEyebrow>Sharing a place</SectionEyebrow>
+            <H2 style={styles.title}>Roommate matching</H2>
+            <BloomText style={styles.subtitle}>
+              Let other Homiio users find you when their preferences and yours
+              line up.
+            </BloomText>
           </View>
-        </View>
 
-        {roommateEnabled && (
-          <>
-            {/* Budget Preferences */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Budget & Timeline</Text>
-              {renderPreferenceItem('Maximum Rent', `$${preferences.maxRent}/month`)}
-              {renderPreferenceItem('Move-in Date', preferences.moveInDate)}
-              {renderPreferenceItem('Lease Length', `${preferences.leaseLength} months`)}
-            </View>
-
-            {/* Lifestyle Preferences */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Lifestyle</Text>
-              {renderPreferenceItem('Smoking', preferences.smoking ? 'Yes' : 'No')}
-              {renderPreferenceItem('Pets', preferences.pets ? 'Yes' : 'No')}
-              {renderPreferenceItem('Cleanliness', preferences.cleanliness)}
-              {renderPreferenceItem('Noise Level', preferences.noiseLevel)}
-              {renderPreferenceItem('Study Habits', preferences.studyHabits)}
-              {renderPreferenceItem('Social Level', preferences.socialLevel)}
-            </View>
-
-            {/* Interests */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Interests</Text>
-              <View style={styles.interestsContainer}>
-                {preferences.interests.length > 0 ? (
-                  preferences.interests.map((interest, index) => (
-                    <View key={index} style={styles.interestTag}>
-                      <Text style={styles.interestText}>{interest}</Text>
-                    </View>
-                  ))
-                ) : (
-                  <Text style={styles.noInterestsText}>No interests added yet</Text>
-                )}
+          <View style={styles.card}>
+            <View style={styles.toggleHeader}>
+              <View style={styles.toggleHeaderText}>
+                <BloomText style={styles.toggleTitle}>
+                  Enable roommate matching
+                </BloomText>
+                <BloomText style={styles.toggleDescription}>
+                  Allow other users to discover your profile for matching.
+                </BloomText>
               </View>
+              <Switch
+                value={roommateEnabled}
+                onValueChange={handleToggleRoommateMatching}
+                disabled={isSaving || toggleMutation.isPending}
+              />
             </View>
+          </View>
 
-            {/* Edit Profile Button */}
-            <View style={styles.saveSection}>
-              <Button onPress={() => router.push('/profile/edit')} style={styles.saveButton}>
-                Edit Profile
+          {roommateEnabled ? (
+            <>
+              <View style={styles.card}>
+                <H3 style={styles.cardTitle}>Budget & timeline</H3>
+                <PreferenceRow
+                  title="Maximum rent"
+                  value={`€${preferences.maxRent} / month`}
+                />
+                <PreferenceRow
+                  title="Move-in date"
+                  value={preferences.moveInDate}
+                />
+                <PreferenceRow
+                  title="Lease length"
+                  value={`${preferences.leaseLength} months`}
+                />
+              </View>
+
+              <View style={styles.card}>
+                <H3 style={styles.cardTitle}>Lifestyle</H3>
+                <PreferenceRow
+                  title="Smoking"
+                  value={preferences.smoking ? 'Yes' : 'No'}
+                />
+                <PreferenceRow
+                  title="Pets"
+                  value={preferences.pets ? 'Yes' : 'No'}
+                />
+                <PreferenceRow
+                  title="Cleanliness"
+                  value={preferences.cleanliness}
+                />
+                <PreferenceRow
+                  title="Noise level"
+                  value={preferences.noiseLevel}
+                />
+                <PreferenceRow
+                  title="Study habits"
+                  value={preferences.studyHabits}
+                />
+                <PreferenceRow
+                  title="Social level"
+                  value={preferences.socialLevel}
+                />
+              </View>
+
+              <View style={styles.card}>
+                <H3 style={styles.cardTitle}>Interests</H3>
+                <View style={styles.interestsWrap}>
+                  {preferences.interests.length > 0 ? (
+                    preferences.interests.map((interest) => (
+                      <View key={interest} style={styles.interestTag}>
+                        <BloomText style={styles.interestText}>
+                          {interest}
+                        </BloomText>
+                      </View>
+                    ))
+                  ) : (
+                    <BloomText style={styles.emptyHint}>
+                      No interests added yet.
+                    </BloomText>
+                  )}
+                </View>
+              </View>
+
+              <Button
+                variant="primary"
+                size="large"
+                onPress={() => router.push('/profile/edit')}
+                style={styles.editButton}
+              >
+                Edit profile
               </Button>
-            </View>
-          </>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+            </>
+          ) : null}
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.surface,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
-  },
-  backButton: {
-    padding: 8,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: colors.primaryDark,
-  },
-  placeholder: {
-    width: 40,
+  safeArea: {
+    flex: 1,
   },
   content: {
+    padding: spacing.lg,
+    gap: spacing.lg,
+    paddingBottom: spacing['4xl'],
+  },
+  emptyWrap: {
     flex: 1,
-    paddingHorizontal: 16,
+    justifyContent: 'center',
   },
-  emptyStateContainer: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 32,
+  titleBlock: {
+    gap: spacing.xs,
   },
-  section: {
-    marginTop: 24,
+  title: {
+    letterSpacing: -0.5,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.primaryDark,
-    marginBottom: 16,
+  subtitle: {
+    fontSize: 14,
+    color: colors.muted,
   },
-  toggleContainer: {
+  card: {
+    backgroundColor: colors.surfaceElevated,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    gap: spacing.sm,
+    ...withShadow('sm'),
+  },
+  cardTitle: {
+    letterSpacing: -0.3,
+    marginBottom: spacing.xs,
+  },
+  toggleHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
+    gap: spacing.lg,
   },
-  toggleInfo: {
+  toggleHeaderText: {
     flex: 1,
-    marginRight: 16,
+    gap: 2,
   },
   toggleTitle: {
     fontSize: 16,
-    fontWeight: '500',
-    color: colors.primaryDark,
-    marginBottom: 4,
+    fontWeight: '700',
+    color: colors.COLOR_BLACK,
   },
   toggleDescription: {
-    fontSize: 14,
-    color: colors.primaryDark_1,
-    lineHeight: 20,
+    fontSize: 13,
+    color: colors.muted,
+    lineHeight: 18,
   },
-  preferenceItem: {
+  preferenceRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 0,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  preferenceRowPressed: {
+    opacity: 0.6,
   },
   preferenceTitle: {
-    fontSize: 16,
-    color: colors.primaryDark,
+    fontSize: 14,
+    color: colors.COLOR_BLACK_LIGHT_2,
   },
-  preferenceValue: {
+  preferenceValueWrap: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.xs,
   },
   preferenceValueText: {
-    fontSize: 16,
-    color: colors.primaryDark_1,
-    marginRight: 8,
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.COLOR_BLACK,
   },
-  interestsContainer: {
+  interestsWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: spacing.sm,
   },
   interestTag: {
-    backgroundColor: colors.primaryLight_2,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    backgroundColor: colors.infoSubtle,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.pill,
   },
   interestText: {
-    fontSize: 14,
-    color: colors.primaryColor,
-    fontWeight: '500',
+    fontSize: 12,
+    color: colors.info,
+    fontWeight: '600',
   },
-  noInterestsText: {
-    fontSize: 14,
-    color: colors.primaryDark_1,
-    fontStyle: 'italic',
+  emptyHint: {
+    fontSize: 13,
+    color: colors.muted,
   },
-  saveSection: {
-    marginTop: 32,
-    marginBottom: 32,
-  },
-  saveButton: {
-    width: '100%',
+  editButton: {
+    alignSelf: 'stretch',
   },
 });

@@ -353,7 +353,7 @@ export default function HostCalendarScreen() {
               <View style={styles.calendarCard}>
                 {availabilityQuery.isLoading ? (
                   <View style={styles.loadingWrap}>
-                    <Loading variant="default" />
+                    <Loading variant="spinner" />
                   </View>
                 ) : availabilityQuery.isError ? (
                   <ErrorState
