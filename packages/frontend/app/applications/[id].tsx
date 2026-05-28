@@ -8,10 +8,14 @@
  *    screen so this stays focused on the applicant flow.
  *
  * Documents are linked via signed S3 URLs returned by the API.
+ *
+ * Stream P polish: each block is a `CardSurface` with `withShadow('sm')` and
+ * no border. Status is rendered with the existing Bloom Badge wrapper.
+ * Spinner and ad-hoc error text were replaced with Bloom Loading +
+ * the shared ErrorState component.
  */
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Image,
   Linking,
   Platform,
@@ -25,13 +29,16 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { Ionicons } from '@expo/vector-icons';
+
 import { Button } from '@oxyhq/bloom/button';
-import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
+import { Loading } from '@oxyhq/bloom/loading';
+import { Text as BloomText, H2 } from '@oxyhq/bloom/typography';
 import {
   TenantApplication,
   TenantApplicationDocument,
   TenantApplicationStatus,
 } from '@homiio/shared-types';
+
 import { Header } from '@/components/Header';
 import { ApplicationStatusBadge } from '@/components/ApplicationStatusBadge';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -46,13 +53,11 @@ import {
   getPropertyTitle,
 } from '@/utils/propertyUtils';
 import { colors } from '@/styles/colors';
+import { CardSurface } from '@/components/ui/CardSurface';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { radius, spacing, tracker } from '@/constants/styles';
 
-const IconComponent = Ionicons as unknown as React.ComponentType<{
-  name: string;
-  size?: number;
-  color?: string;
-  style?: object;
-}>;
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 const formatEmployment = (status: string): string =>
   status
@@ -80,7 +85,7 @@ const formatDate = (raw: string): string => {
   return format(date, 'EEE, MMM d, yyyy');
 };
 
-const docIcon = (type: string): string => {
+const docIcon = (type: string): IoniconName => {
   switch (type) {
     case 'id':
       return 'card-outline';
@@ -93,7 +98,7 @@ const docIcon = (type: string): string => {
   }
 };
 
-const openDocument = (url: string) => {
+const openDocument = (url: string): void => {
   if (Platform.OS === 'web') {
     window.open(url, '_blank', 'noopener,noreferrer');
     return;
@@ -114,7 +119,7 @@ const DocumentRow: React.FC<DocumentRowProps> = ({ document }) => (
     accessibilityRole="link"
     accessibilityLabel={`Open document ${document.filename}`}
   >
-    <IconComponent
+    <Ionicons
       name={docIcon(document.type)}
       size={20}
       color={colors.primaryDark}
@@ -127,10 +132,10 @@ const DocumentRow: React.FC<DocumentRowProps> = ({ document }) => (
         {formatRelationship(document.type)}
       </BloomText>
     </View>
-    <IconComponent
+    <Ionicons
       name="open-outline"
       size={18}
-      color={colors.COLOR_BLACK_LIGHT_3}
+      color={colors.muted}
     />
   </Pressable>
 );
@@ -197,32 +202,58 @@ export default function ApplicationDetailScreen() {
     });
   }, [id, router]);
 
+  const header = (
+    <Header
+      options={{
+        showBackButton: true,
+        title: 'Application',
+        titlePosition: 'center',
+      }}
+    />
+  );
+
   if (!id) {
     return (
-      <View style={styles.errorView}>
-        <BloomText>Invalid application id.</BloomText>
+      <View style={styles.root}>
+        {header}
+        <View style={styles.centerWrap}>
+          <ErrorState
+            icon="warning-outline"
+            title="Invalid application id"
+            description="The link you followed is missing the application reference."
+            retryLabel="Go back"
+            onRetry={() => router.back()}
+          />
+        </View>
       </View>
     );
   }
 
   if (applicationQuery.isPending) {
     return (
-      <View style={styles.loadingView}>
-        <ActivityIndicator color={colors.primaryColor} />
+      <View style={styles.root}>
+        {header}
+        <View style={styles.centerWrap}>
+          <Loading variant="spinner" size="medium" />
+        </View>
       </View>
     );
   }
 
   if (applicationQuery.isError || !application) {
     return (
-      <View style={styles.errorView}>
-        <BloomText style={styles.errorTitle}>Application unavailable</BloomText>
-        <BloomText style={styles.errorSubtitle}>
-          {applicationQuery.error?.message ?? 'This application could not be loaded.'}
-        </BloomText>
-        <Button variant="primary" size="medium" onPress={() => router.back()}>
-          Go back
-        </Button>
+      <View style={styles.root}>
+        {header}
+        <View style={styles.centerWrap}>
+          <ErrorState
+            title="Application unavailable"
+            description={
+              applicationQuery.error?.message ?? 'This application could not be loaded.'
+            }
+            retryLabel="Go back"
+            onRetry={() => router.back()}
+          />
+        </View>
       </View>
     );
   }
@@ -232,13 +263,7 @@ export default function ApplicationDetailScreen() {
 
   return (
     <View style={styles.root}>
-      <Header
-        options={{
-          showBackButton: true,
-          title: 'Application',
-          titlePosition: 'center',
-        }}
-      />
+      {header}
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.thumbWrap}>
@@ -249,9 +274,9 @@ export default function ApplicationDetailScreen() {
             )}
           </View>
 
-          <View style={styles.section}>
+          <CardSurface>
             <View style={styles.headerRow}>
-              <H3 style={styles.title}>{propertyTitle}</H3>
+              <H2 style={styles.title}>{propertyTitle}</H2>
               <ApplicationStatusBadge status={application.status} />
             </View>
             {property?.address ? (
@@ -261,9 +286,9 @@ export default function ApplicationDetailScreen() {
                   .join(', ')}
               </BloomText>
             ) : null}
-          </View>
+          </CardSurface>
 
-          <View style={styles.section}>
+          <CardSurface>
             <BloomText style={styles.sectionLabel}>Tenancy</BloomText>
             <DetailRow label="Move-in" value={formatDate(application.moveInDate)} />
             <DetailRow
@@ -280,9 +305,9 @@ export default function ApplicationDetailScreen() {
                 value={formatDate(application.decidedAt)}
               />
             ) : null}
-          </View>
+          </CardSurface>
 
-          <View style={styles.section}>
+          <CardSurface>
             <BloomText style={styles.sectionLabel}>Finances</BloomText>
             <DetailRow
               label="Monthly income"
@@ -292,9 +317,9 @@ export default function ApplicationDetailScreen() {
               label="Employment"
               value={formatEmployment(application.employmentStatus)}
             />
-          </View>
+          </CardSurface>
 
-          <View style={styles.section}>
+          <CardSurface>
             <BloomText style={styles.sectionLabel}>References</BloomText>
             {application.referenceContacts.length === 0 ? (
               <BloomText style={styles.emptyHint}>
@@ -316,9 +341,9 @@ export default function ApplicationDetailScreen() {
                 </View>
               ))
             )}
-          </View>
+          </CardSurface>
 
-          <View style={styles.section}>
+          <CardSurface>
             <BloomText style={styles.sectionLabel}>Documents</BloomText>
             {application.documents.length === 0 ? (
               <BloomText style={styles.emptyHint}>No documents attached.</BloomText>
@@ -327,38 +352,40 @@ export default function ApplicationDetailScreen() {
                 <DocumentRow key={document.url} document={document} />
               ))
             )}
-          </View>
+          </CardSurface>
 
           {application.notes ? (
-            <View style={styles.section}>
+            <CardSurface>
               <BloomText style={styles.sectionLabel}>Notes</BloomText>
               <BloomText style={styles.notesBody}>{application.notes}</BloomText>
-            </View>
+            </CardSurface>
           ) : null}
 
-          <View style={styles.actionRow}>
-            {showSignLease ? (
-              <Button
-                variant="primary"
-                size="medium"
-                onPress={handleSignLease}
-                style={styles.actionButton}
-              >
-                Sign lease
-              </Button>
-            ) : null}
-            {canWithdraw ? (
-              <Button
-                variant="ghost"
-                size="medium"
-                onPress={() => setConfirmWithdraw(true)}
-                disabled={updateMutation.isPending}
-                style={styles.actionButton}
-              >
-                Withdraw application
-              </Button>
-            ) : null}
-          </View>
+          {(showSignLease || canWithdraw) ? (
+            <View style={styles.actionRow}>
+              {showSignLease ? (
+                <Button
+                  variant="primary"
+                  size="medium"
+                  onPress={handleSignLease}
+                  style={styles.actionButton}
+                >
+                  Sign lease
+                </Button>
+              ) : null}
+              {canWithdraw ? (
+                <Button
+                  variant="ghost"
+                  size="medium"
+                  onPress={() => setConfirmWithdraw(true)}
+                  disabled={updateMutation.isPending}
+                  style={styles.actionButton}
+                >
+                  Withdraw application
+                </Button>
+              ) : null}
+            </View>
+          ) : null}
         </ScrollView>
 
         <ConfirmDialog
@@ -391,87 +418,69 @@ const DetailRow: React.FC<DetailRowProps> = ({ label, value }) => (
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.surface,
   },
   safeArea: {
     flex: 1,
   },
   content: {
-    padding: 16,
-    gap: 16,
+    padding: spacing.lg,
+    gap: spacing.lg,
   },
-  loadingView: {
+  centerWrap: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  errorView: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    gap: 12,
-  },
-  errorTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  errorSubtitle: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    textAlign: 'center',
+    padding: spacing['2xl'],
   },
   thumbWrap: {
     width: '100%',
     aspectRatio: 16 / 9,
-    borderRadius: 12,
+    borderRadius: radius.photo,
     overflow: 'hidden',
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
+    backgroundColor: colors.mutedSubtle,
   },
   thumb: {
     width: '100%',
     height: '100%',
   },
   thumbPlaceholder: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-  },
-  section: {
-    gap: 8,
-    paddingVertical: 8,
+    backgroundColor: colors.mutedSubtle,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: spacing.md,
+    marginBottom: spacing.xs,
   },
   title: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     flex: 1,
   },
   subtitle: {
     fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
+    color: colors.muted,
   },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
-    color: colors.COLOR_BLACK_LIGHT_3,
-    letterSpacing: 0.5,
-    marginBottom: 4,
+    color: colors.muted,
+    letterSpacing: tracker.eyebrow,
+    marginBottom: spacing.sm,
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 6,
+    paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
   },
   detailLabel: {
     fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_4,
+    color: colors.muted,
   },
   detailValue: {
     fontSize: 13,
@@ -480,11 +489,11 @@ const styles = StyleSheet.create({
   },
   emptyHint: {
     fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_4,
+    color: colors.muted,
     fontStyle: 'italic',
   },
   referenceCard: {
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
   },
@@ -495,13 +504,13 @@ const styles = StyleSheet.create({
   },
   referenceMeta: {
     fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_3,
+    color: colors.muted,
   },
   documentRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 10,
+    gap: spacing.md,
+    paddingVertical: spacing.md - 2,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
   },
@@ -516,7 +525,7 @@ const styles = StyleSheet.create({
   },
   documentType: {
     fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_3,
+    color: colors.muted,
   },
   notesBody: {
     fontSize: 14,
@@ -526,7 +535,7 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: spacing.sm,
   },
   actionButton: {
     flex: 1,

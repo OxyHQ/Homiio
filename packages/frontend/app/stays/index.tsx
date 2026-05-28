@@ -1,19 +1,47 @@
-import React, { useMemo } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+/**
+ * Stays — applicant-side list of vacation/short-term bookings.
+ *
+ * Polished to the Stream P personal-surface language:
+ * - Bloom Chip filter (All / Upcoming / Past / Cancelled)
+ * - Bloom Skeleton.Box list while loading (no spinner)
+ * - Shared EmptyState / ErrorState components
+ * - Bloom typography for every label
+ */
+import React, { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
-import { Button } from '@oxyhq/bloom/button';
+
+import { Chip } from '@oxyhq/bloom/chip';
+import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { useOxy, showSignInModal } from '@oxyhq/services';
 import {
   Reservation,
   ReservationStatus,
 } from '@homiio/shared-types';
+
 import { Header } from '@/components/Header';
 import { ReservationCard } from '@/components/ReservationCard';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { useReservationsQuery } from '@/hooks/useReservationQueries';
 import { colors } from '@/styles/colors';
+import { spacing, tracker } from '@/constants/styles';
+
+type Filter = 'all' | 'upcoming' | 'past' | 'cancelled';
+
+interface FilterOption {
+  value: Filter;
+  label: string;
+}
+
+const FILTERS: FilterOption[] = [
+  { value: 'all', label: 'All' },
+  { value: 'upcoming', label: 'Upcoming' },
+  { value: 'past', label: 'Past' },
+  { value: 'cancelled', label: 'Cancelled' },
+];
 
 interface Buckets {
   upcoming: Reservation[];
@@ -59,26 +87,54 @@ export default function StaysScreen() {
     { limit: 50 },
     { enabled: isAuthed },
   );
+  const [filter, setFilter] = useState<Filter>('all');
 
   const buckets = useMemo(
     () => bucketReservations(reservationsQuery.data?.items ?? []),
     [reservationsQuery.data?.items],
   );
 
+  const filteredGroups = useMemo<{ label: string; items: Reservation[] }[]>(() => {
+    if (filter === 'all') {
+      return [
+        { label: 'Upcoming', items: buckets.upcoming },
+        { label: 'Past', items: buckets.past },
+        { label: 'Cancelled', items: buckets.cancelled },
+      ].filter((group) => group.items.length > 0);
+    }
+    if (filter === 'upcoming') {
+      return buckets.upcoming.length > 0
+        ? [{ label: 'Upcoming', items: buckets.upcoming }]
+        : [];
+    }
+    if (filter === 'past') {
+      return buckets.past.length > 0
+        ? [{ label: 'Past', items: buckets.past }]
+        : [];
+    }
+    return buckets.cancelled.length > 0
+      ? [{ label: 'Cancelled', items: buckets.cancelled }]
+      : [];
+  }, [filter, buckets]);
+
+  const header = (
+    <Header
+      options={{
+        showBackButton: true,
+        title: 'Stays',
+        titlePosition: 'center',
+      }}
+    />
+  );
+
   if (!isAuthed) {
     return (
       <View style={styles.root}>
-        <Header
-          options={{
-            showBackButton: true,
-            title: 'Stays',
-            titlePosition: 'center',
-          }}
-        />
+        {header}
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-          <View style={styles.emptyWrapper}>
+          <View style={styles.centerWrap}>
             <EmptyState
-              icon="airplane-outline"
+              icon="bed-outline"
               title="Sign in to see your stays"
               description="Bookings across hosts and dates live here."
               actionText="Sign in"
@@ -94,16 +150,13 @@ export default function StaysScreen() {
   if (reservationsQuery.isPending) {
     return (
       <View style={styles.root}>
-        <Header
-          options={{
-            showBackButton: true,
-            title: 'Stays',
-            titlePosition: 'center',
-          }}
-        />
-        <View style={styles.loadingWrapper}>
-          <ActivityIndicator color={colors.primaryColor} />
-        </View>
+        {header}
+        <SafeAreaView edges={['bottom']} style={styles.safeArea}>
+          <View style={styles.content}>
+            <FilterRow value={filter} onChange={setFilter} />
+            <ListSkeleton rows={4} rowHeight={140} />
+          </View>
+        </SafeAreaView>
       </View>
     );
   }
@@ -111,130 +164,126 @@ export default function StaysScreen() {
   if (reservationsQuery.isError) {
     return (
       <View style={styles.root}>
-        <Header
-          options={{
-            showBackButton: true,
-            title: 'Stays',
-            titlePosition: 'center',
-          }}
-        />
+        {header}
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-          <View style={styles.errorWrap}>
-            <BloomText style={styles.errorTitle}>
-              Couldn&apos;t load your stays
-            </BloomText>
-            <BloomText style={styles.errorSubtitle}>
-              {reservationsQuery.error?.message ?? 'Please try again.'}
-            </BloomText>
-            <Button
-              variant="primary"
-              size="medium"
-              onPress={() => reservationsQuery.refetch()}
-            >
-              Retry
-            </Button>
+          <View style={styles.centerWrap}>
+            <ErrorState
+              title="Couldn't load your stays"
+              description={reservationsQuery.error?.message ?? 'Please try again.'}
+              retryLabel="Retry"
+              onRetry={() => reservationsQuery.refetch()}
+            />
           </View>
         </SafeAreaView>
       </View>
     );
   }
 
-  const hasItems =
-    buckets.upcoming.length + buckets.past.length + buckets.cancelled.length > 0;
-
   return (
     <View style={styles.root}>
-      <Header
-        options={{
-          showBackButton: true,
-          title: 'Stays',
-          titlePosition: 'center',
-        }}
-      />
+      {header}
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
-          {!hasItems ? (
-            <EmptyState
-              icon="bed-outline"
-              title="No stays yet"
-              description="Once you book a place it will show up here."
-              actionText="Explore places"
-              actionIcon="search-outline"
-              onAction={() => router.push('/search')}
-            />
-          ) : null}
-          {buckets.upcoming.length > 0 ? (
-            <Section title="Upcoming" items={buckets.upcoming} />
-          ) : null}
-          {buckets.past.length > 0 ? (
-            <Section title="Past" items={buckets.past} />
-          ) : null}
-          {buckets.cancelled.length > 0 ? (
-            <Section title="Cancelled" items={buckets.cancelled} />
-          ) : null}
+          <FilterRow value={filter} onChange={setFilter} />
+
+          {filteredGroups.length === 0 ? (
+            <View style={styles.emptyWrap}>
+              <EmptyState
+                icon="bed-outline"
+                title={filter === 'all' ? 'No stays yet' : 'Nothing in this view.'}
+                description={
+                  filter === 'all'
+                    ? 'Once you book a place it will show up here.'
+                    : 'Try a different filter or explore new stays.'
+                }
+                actionText={filter === 'all' ? 'Explore stays' : 'Explore stays'}
+                actionIcon="search-outline"
+                onAction={() => router.push('/search?rentMode=vacation')}
+              />
+            </View>
+          ) : (
+            filteredGroups.map((group) => (
+              <View key={group.label} style={styles.section}>
+                <BloomText style={styles.sectionEyebrow}>{group.label}</BloomText>
+                <View style={styles.cards}>
+                  {group.items.map((reservation) => (
+                    <ReservationCard
+                      key={reservation.id}
+                      reservation={reservation}
+                    />
+                  ))}
+                </View>
+              </View>
+            ))
+          )}
         </ScrollView>
       </SafeAreaView>
     </View>
   );
 }
 
-interface SectionProps {
-  title: string;
-  items: Reservation[];
+interface FilterRowProps {
+  value: Filter;
+  onChange: (next: Filter) => void;
 }
 
-const Section: React.FC<SectionProps> = ({ title, items }) => (
-  <View style={styles.section}>
-    <H3 style={styles.sectionTitle}>{title}</H3>
-    {items.map((reservation) => (
-      <ReservationCard key={reservation.id} reservation={reservation} />
+const FilterRow: React.FC<FilterRowProps> = ({ value, onChange }) => (
+  <ScrollView
+    horizontal
+    showsHorizontalScrollIndicator={false}
+    contentContainerStyle={styles.filterRow}
+  >
+    {FILTERS.map((option) => (
+      <Chip
+        key={option.value}
+        variant={value === option.value ? 'solid' : 'outlined'}
+        color={value === option.value ? 'primary' : 'default'}
+        size="medium"
+        selected={value === option.value}
+        onPress={() => onChange(option.value)}
+      >
+        {option.label}
+      </Chip>
     ))}
-  </View>
+  </ScrollView>
 );
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.surface,
   },
   safeArea: {
     flex: 1,
   },
   content: {
-    padding: 16,
-    gap: 12,
+    padding: spacing.lg,
+    gap: spacing['2xl'],
   },
-  emptyWrapper: {
+  centerWrap: {
     flex: 1,
     justifyContent: 'center',
   },
-  loadingWrapper: {
-    flex: 1,
+  emptyWrap: {
+    paddingVertical: spacing['3xl'],
+  },
+  filterRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  errorWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    gap: 12,
-  },
-  errorTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  errorSubtitle: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    textAlign: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   section: {
-    marginBottom: 8,
+    gap: spacing.md,
   },
-  sectionTitle: {
-    fontSize: 18,
+  sectionEyebrow: {
+    fontSize: 11,
     fontWeight: '700',
-    marginBottom: 8,
+    color: colors.muted,
+    textTransform: 'uppercase',
+    letterSpacing: tracker.eyebrow,
+  },
+  cards: {
+    gap: spacing.md,
   },
 });

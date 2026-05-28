@@ -1,8 +1,17 @@
+/**
+ * Reservation detail (guest + host view).
+ *
+ * Stream P polish:
+ * - Each section becomes a `CardSurface` with `withShadow('sm')`, no border.
+ * - Bloom Loading + ErrorState replace the ad-hoc spinner/error views.
+ * - Bloom Button for every CTA; the inline modal was replaced by the
+ *   shared `ConfirmDialog` (Modal + Bloom Button).
+ * - Bloom typography across the board, semantic color tokens (`colors.surface`,
+ *   `colors.muted`) — no more raw hex literals.
+ */
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Image,
-  Modal,
   ScrollView,
   StyleSheet,
   View,
@@ -11,13 +20,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+
 import { Button } from '@oxyhq/bloom/button';
-import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
+import { Loading } from '@oxyhq/bloom/loading';
+import { Text as BloomText, H2 } from '@oxyhq/bloom/typography';
 import {
   CancellationPolicy,
   Reservation,
   ReservationStatus,
 } from '@homiio/shared-types';
+
 import { Header } from '@/components/Header';
 import { useProperty } from '@/hooks';
 import { useProfile } from '@/context/ProfileContext';
@@ -27,11 +39,15 @@ import {
 } from '@/hooks/useReservationQueries';
 import { PriceBreakdown } from '@/components/PriceBreakdown';
 import { ReservationStatusBadge } from '@/components/ReservationStatusBadge';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { CardSurface } from '@/components/ui/CardSurface';
+import { ErrorState } from '@/components/ui/ErrorState';
 import {
   getPropertyImageSource,
   getPropertyTitle,
 } from '@/utils/propertyUtils';
 import { colors } from '@/styles/colors';
+import { radius, spacing, tracker } from '@/constants/styles';
 
 const hoursUntil = (when: Date): number => {
   const now = Date.now();
@@ -59,57 +75,6 @@ const canGuestCancelPreview = (reservation: Reservation): boolean => {
       return remaining > 0;
   }
 };
-
-interface ConfirmDialogProps {
-  visible: boolean;
-  title: string;
-  message: string;
-  confirmLabel: string;
-  confirmDestructive?: boolean;
-  loading?: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
-}
-
-const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
-  visible,
-  title,
-  message,
-  confirmLabel,
-  confirmDestructive,
-  loading,
-  onConfirm,
-  onCancel,
-}) => (
-  <Modal
-    visible={visible}
-    transparent
-    animationType="fade"
-    onRequestClose={onCancel}
-  >
-    <View style={styles.modalBackdrop}>
-      <View style={styles.modalCard}>
-        <H3 style={styles.modalTitle}>{title}</H3>
-        <BloomText style={styles.modalBody}>{message}</BloomText>
-        <View style={styles.modalActions}>
-          <Button variant="ghost" size="medium" onPress={onCancel} disabled={loading}>
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            size="medium"
-            onPress={onConfirm}
-            loading={loading}
-            disabled={loading}
-            style={confirmDestructive ? styles.destructiveButton : undefined}
-          >
-            {confirmLabel}
-          </Button>
-        </View>
-      </View>
-    </View>
-  </Modal>
-);
 
 export default function ReservationDetailScreen() {
   const params = useLocalSearchParams<{ id: string }>();
@@ -157,32 +122,58 @@ export default function ReservationDetailScreen() {
     [id, updateMutation],
   );
 
+  const header = (
+    <Header
+      options={{
+        showBackButton: true,
+        title: 'Reservation',
+        titlePosition: 'center',
+      }}
+    />
+  );
+
   if (!id) {
     return (
-      <View style={styles.errorView}>
-        <BloomText>Invalid reservation id.</BloomText>
+      <View style={styles.root}>
+        {header}
+        <View style={styles.centerWrap}>
+          <ErrorState
+            icon="warning-outline"
+            title="Invalid reservation id"
+            description="The link is missing the reservation reference."
+            retryLabel="Go back"
+            onRetry={() => router.back()}
+          />
+        </View>
       </View>
     );
   }
 
   if (reservationQuery.isPending) {
     return (
-      <View style={styles.loadingView}>
-        <ActivityIndicator color={colors.primaryColor} />
+      <View style={styles.root}>
+        {header}
+        <View style={styles.centerWrap}>
+          <Loading variant="spinner" size="medium" />
+        </View>
       </View>
     );
   }
 
   if (reservationQuery.isError || !reservation) {
     return (
-      <View style={styles.errorView}>
-        <BloomText style={styles.errorTitle}>Reservation unavailable</BloomText>
-        <BloomText style={styles.errorSubtitle}>
-          {reservationQuery.error?.message ?? 'This reservation could not be loaded.'}
-        </BloomText>
-        <Button variant="primary" size="medium" onPress={() => router.back()}>
-          Go back
-        </Button>
+      <View style={styles.root}>
+        {header}
+        <View style={styles.centerWrap}>
+          <ErrorState
+            title="Reservation unavailable"
+            description={
+              reservationQuery.error?.message ?? 'This reservation could not be loaded.'
+            }
+            retryLabel="Go back"
+            onRetry={() => router.back()}
+          />
+        </View>
       </View>
     );
   }
@@ -203,13 +194,7 @@ export default function ReservationDetailScreen() {
 
   return (
     <View style={styles.root}>
-      <Header
-        options={{
-          showBackButton: true,
-          title: 'Reservation',
-          titlePosition: 'center',
-        }}
-      />
+      {header}
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.thumbWrap}>
@@ -219,9 +204,10 @@ export default function ReservationDetailScreen() {
               <View style={[styles.thumb, styles.thumbPlaceholder]} />
             )}
           </View>
-          <View style={styles.section}>
+
+          <CardSurface>
             <View style={styles.headerRow}>
-              <H3 style={styles.title}>{propertyTitle}</H3>
+              <H2 style={styles.title}>{propertyTitle}</H2>
               <ReservationStatusBadge status={reservation.status} />
             </View>
             {property?.address ? (
@@ -231,36 +217,28 @@ export default function ReservationDetailScreen() {
                   .join(', ')}
               </BloomText>
             ) : null}
-          </View>
+          </CardSurface>
 
-          <View style={styles.section}>
+          <CardSurface>
             <BloomText style={styles.sectionLabel}>Trip details</BloomText>
-            <View style={styles.detailRow}>
-              <BloomText style={styles.detailLabel}>Check-in</BloomText>
-              <BloomText style={styles.detailValue}>
-                {format(new Date(reservation.checkIn), 'EEE, MMM d, yyyy')}
-              </BloomText>
-            </View>
-            <View style={styles.detailRow}>
-              <BloomText style={styles.detailLabel}>Check-out</BloomText>
-              <BloomText style={styles.detailValue}>
-                {format(new Date(reservation.checkOut), 'EEE, MMM d, yyyy')}
-              </BloomText>
-            </View>
-            <View style={styles.detailRow}>
-              <BloomText style={styles.detailLabel}>Guests</BloomText>
-              <BloomText style={styles.detailValue}>
-                {reservation.guestCount}{' '}
-                {reservation.guestCount === 1 ? 'guest' : 'guests'}
-              </BloomText>
-            </View>
-            <View style={styles.detailRow}>
-              <BloomText style={styles.detailLabel}>Nights</BloomText>
-              <BloomText style={styles.detailValue}>{reservation.nights}</BloomText>
-            </View>
-          </View>
+            <DetailRow
+              label="Check-in"
+              value={format(new Date(reservation.checkIn), 'EEE, MMM d, yyyy')}
+            />
+            <DetailRow
+              label="Check-out"
+              value={format(new Date(reservation.checkOut), 'EEE, MMM d, yyyy')}
+            />
+            <DetailRow
+              label="Guests"
+              value={`${reservation.guestCount} ${
+                reservation.guestCount === 1 ? 'guest' : 'guests'
+              }`}
+            />
+            <DetailRow label="Nights" value={String(reservation.nights)} />
+          </CardSurface>
 
-          <View style={styles.section}>
+          <CardSurface>
             <BloomText style={styles.sectionLabel}>Price</BloomText>
             <PriceBreakdown
               nights={reservation.nights}
@@ -280,53 +258,53 @@ export default function ReservationDetailScreen() {
               }
               currency={reservation.currency}
             />
-          </View>
+          </CardSurface>
 
-          <View style={styles.actionRow}>
-            {showHostApproveDecline ? (
-              <>
+          {(showHostApproveDecline || showGuestCancel || showHostCancel) ? (
+            <View style={styles.actionRow}>
+              {showHostApproveDecline ? (
+                <>
+                  <Button
+                    variant="primary"
+                    size="medium"
+                    onPress={() => setPendingAction('confirm')}
+                    disabled={updateMutation.isPending}
+                    style={styles.actionButton}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="medium"
+                    onPress={() => setPendingAction('decline')}
+                    disabled={updateMutation.isPending}
+                    style={styles.actionButton}
+                  >
+                    Decline
+                  </Button>
+                </>
+              ) : null}
+              {showGuestCancel || showHostCancel ? (
                 <Button
-                  variant="primary"
+                  variant="ghost"
                   size="medium"
-                  onPress={() => setPendingAction('confirm')}
+                  onPress={() => setPendingAction('cancel')}
                   disabled={updateMutation.isPending}
                   style={styles.actionButton}
                 >
-                  Approve
+                  Cancel reservation
                 </Button>
-                <Button
-                  variant="secondary"
-                  size="medium"
-                  onPress={() => setPendingAction('decline')}
-                  disabled={updateMutation.isPending}
-                  style={styles.actionButton}
-                >
-                  Decline
-                </Button>
-              </>
-            ) : null}
-            {showGuestCancel || showHostCancel ? (
-              <Button
-                variant="ghost"
-                size="medium"
-                onPress={() => setPendingAction('cancel')}
-                disabled={updateMutation.isPending}
-                style={styles.actionButton}
-              >
-                Cancel reservation
-              </Button>
-            ) : null}
-          </View>
+              ) : null}
+            </View>
+          ) : null}
 
           {role === 'guest' &&
           reservation.status === ReservationStatus.CONFIRMED &&
           !showGuestCancel ? (
             <BloomText style={styles.policyNote}>
-              Cancellation is no longer possible under the
-              {' '}
-              {reservation.cancellationPolicy.replace('_', ' ')}
-              {' '}
-              policy. Contact your host if you need to make changes.
+              Cancellation is no longer possible under the{' '}
+              {reservation.cancellationPolicy.replace('_', ' ')} policy. Contact your
+              host if you need to make changes.
             </BloomText>
           ) : null}
         </ScrollView>
@@ -365,90 +343,84 @@ export default function ReservationDetailScreen() {
   );
 }
 
+interface DetailRowProps {
+  label: string;
+  value: string;
+}
+
+const DetailRow: React.FC<DetailRowProps> = ({ label, value }) => (
+  <View style={styles.detailRow}>
+    <BloomText style={styles.detailLabel}>{label}</BloomText>
+    <BloomText style={styles.detailValue}>{value}</BloomText>
+  </View>
+);
+
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.surface,
   },
   safeArea: {
     flex: 1,
   },
   content: {
-    padding: 16,
-    gap: 16,
+    padding: spacing.lg,
+    gap: spacing.lg,
   },
-  loadingView: {
+  centerWrap: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  errorView: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    gap: 12,
-  },
-  errorTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  errorSubtitle: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    textAlign: 'center',
+    padding: spacing['2xl'],
   },
   thumbWrap: {
     width: '100%',
     aspectRatio: 16 / 9,
-    borderRadius: 12,
+    borderRadius: radius.photo,
     overflow: 'hidden',
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
+    backgroundColor: colors.mutedSubtle,
   },
   thumb: {
     width: '100%',
     height: '100%',
   },
   thumbPlaceholder: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-  },
-  section: {
-    gap: 8,
-    paddingVertical: 8,
+    backgroundColor: colors.mutedSubtle,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: spacing.md,
+    marginBottom: spacing.xs,
   },
   title: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     flex: 1,
   },
   subtitle: {
     fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
+    color: colors.muted,
   },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
-    color: colors.COLOR_BLACK_LIGHT_3,
-    letterSpacing: 0.5,
-    marginBottom: 4,
+    color: colors.muted,
+    letterSpacing: tracker.eyebrow,
+    marginBottom: spacing.sm,
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 6,
+    paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
   },
   detailLabel: {
     fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_4,
+    color: colors.muted,
   },
   detailValue: {
     fontSize: 13,
@@ -458,7 +430,7 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: spacing.sm,
   },
   actionButton: {
     flex: 1,
@@ -466,40 +438,7 @@ const styles = StyleSheet.create({
   },
   policyNote: {
     fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_4,
+    color: colors.muted,
     fontStyle: 'italic',
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 420,
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    gap: 12,
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  modalBody: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    lineHeight: 20,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-    marginTop: 8,
-  },
-  destructiveButton: {
-    backgroundColor: '#dc2626',
   },
 });
