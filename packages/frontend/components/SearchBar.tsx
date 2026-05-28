@@ -1,197 +1,192 @@
-import React, { useState, useCallback } from 'react';
-import { View, TextInput, ViewStyle, Text, TouchableOpacity } from 'react-native';
-import { Loading } from '@oxyhq/bloom/loading';
-import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../styles/colors';
+import React, { useCallback, useContext, useMemo, useState } from 'react';
+import { Platform, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { AnimatedSearchPlaceholder } from './AnimatedSearchPlaceholder';
+import { Ionicons } from '@expo/vector-icons';
 
-const _debounce = (func: Function, wait: number) => {
-  let timeout: NodeJS.Timeout;
-  return function executedFunction(...args: any[]) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-};
+import { SearchInput } from '@oxyhq/bloom/search-input';
+import * as SegmentedControl from '@oxyhq/bloom/segmented-control';
+import { Chip } from '@oxyhq/bloom/chip';
+
+import { useRentalMode, type RentalMode } from '@/context/RentalModeContext';
+import { BottomSheetContext } from '@/context/BottomSheetContext';
+import { SearchFiltersBottomSheet } from '@/components/SearchFiltersBottomSheet';
+import { colors } from '@/styles/colors';
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+interface SecondaryChip {
+  id: string;
+  label: string;
+  icon: IoniconName;
+}
 
 interface SearchBarProps {
   hideFilterIcon?: boolean;
+  /** When true the secondary "Where / When / Who" pill row is hidden. */
+  hideSecondaryRow?: boolean;
 }
 
-export const SearchBar = ({ hideFilterIcon = false }: SearchBarProps) => {
+const LONG_TERM_CHIPS: SecondaryChip[] = [
+  { id: 'where', label: 'searchBar.long.where', icon: 'location-outline' },
+  { id: 'moveIn', label: 'searchBar.long.moveIn', icon: 'calendar-outline' },
+  { id: 'propertyType', label: 'searchBar.long.propertyType', icon: 'home-outline' },
+];
+
+const VACATION_CHIPS: SecondaryChip[] = [
+  { id: 'where', label: 'searchBar.vacation.where', icon: 'location-outline' },
+  { id: 'when', label: 'searchBar.vacation.when', icon: 'calendar-outline' },
+  { id: 'who', label: 'searchBar.vacation.who', icon: 'people-outline' },
+];
+
+const FILTER_FALLBACK = {
+  minPrice: 0,
+  maxPrice: 5000,
+  bedrooms: 1,
+  bathrooms: 1,
+  type: undefined,
+  amenities: [] as string[],
+};
+
+export const SearchBar = ({
+  hideFilterIcon = false,
+  hideSecondaryRow = false,
+}: SearchBarProps) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
   const router = useRouter();
   const { t } = useTranslation();
+  const { mode, setMode } = useRentalMode();
+  const bottomSheet = useContext(BottomSheetContext);
 
-  const handleSubmit = useCallback(async () => {
+  const secondaryChips = useMemo(
+    () => (mode === 'vacation' ? VACATION_CHIPS : LONG_TERM_CHIPS),
+    [mode],
+  );
+
+  const submitSearch = useCallback(() => {
     const q = searchQuery.trim();
     if (!q) return;
-    setIsLoading(true);
-    try {
-      await router.push(`/search/${encodeURIComponent(q)}`);
-    } finally {
-      setIsLoading(false);
-    }
+    router.push(`/search/${encodeURIComponent(q)}`);
   }, [router, searchQuery]);
 
-  const handleSearchChange = (query: string) => {
-    setSearchQuery(query);
-  };
+  const openFilters = useCallback(() => {
+    bottomSheet.openBottomSheet(
+      <SearchFiltersBottomSheet
+        filters={FILTER_FALLBACK}
+        onFilterChange={() => {
+          // SearchBar is a launching pad — actual filter wiring lives on the
+          // search screen. The user can still tweak values here and they will
+          // re-open with persisted state once they navigate to /search.
+        }}
+        onApply={() => {
+          bottomSheet.closeBottomSheet();
+          router.push('/search');
+        }}
+        onClear={() => bottomSheet.closeBottomSheet()}
+      />,
+    );
+  }, [bottomSheet, router]);
+
+  const handleModeChange = useCallback(
+    (next: RentalMode) => {
+      setMode(next);
+    },
+    [setMode],
+  );
+
+  const isWeb = Platform.OS === 'web';
 
   return (
-    <View
-      style={
-        {
-          backgroundColor: colors.COLOR_BACKGROUND,
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          top: 0,
-          zIndex: 1000,
-          paddingVertical: 4,
-          width: '100%',
-          gap: 10,
-        } as ViewStyle
-      }
-    >
+    <View className="w-full flex-col gap-2 py-1 z-50">
       <View
-        style={{
-          backgroundColor: colors.primaryLight,
-          borderRadius: 100,
-          height: 45,
-          flexDirection: 'row',
-          justifyContent: 'flex-start',
-          alignItems: 'center',
-          paddingStart: 15,
-          flex: 1,
-          width: '100%',
-        }}
+        className={
+          isWeb
+            ? 'w-full flex-col gap-2 lg:flex-row lg:items-center lg:gap-3'
+            : 'w-full flex-col gap-2'
+        }
       >
-        {isLoading ? (
-          <Loading iconSize={16} color={colors.COLOR_BLACK_LIGHT_4} showText={false} />
-        ) : (
-          <Ionicons name="search" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
-        )}
-        <View style={{ flex: 1, marginHorizontal: 17 }}>
-          <TextInput
-            style={{
-              fontSize: 16,
-              color: colors.COLOR_BLACK_LIGHT_4,
-              width: '100%',
-              height: '100%',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-            }}
-            placeholder=""
-            value={searchQuery}
-            onChangeText={handleSearchChange}
-            returnKeyType="search"
-            onSubmitEditing={handleSubmit}
-          />
-          {!searchQuery && (
-            <AnimatedSearchPlaceholder
-              style={{
-                fontSize: 16,
-                color: colors.COLOR_BLACK_LIGHT_4,
-                opacity: 0.6,
-              }}
-            />
-          )}
-        </View>
-        {hideFilterIcon ? (
-          <View
-            style={{
-              padding: 10,
-              marginRight: 5,
-            }}
-          />
-        ) : (
-          <TouchableOpacity
-            onPress={() => setShowFilters(!showFilters)}
-            style={{
-              padding: 10,
-              marginRight: 5,
-            }}
+        <View className={isWeb ? 'w-full lg:w-64' : 'w-full'}>
+          <SegmentedControl.Root<RentalMode>
+            label={t('searchBar.mode.label', 'Rental mode')}
+            type="tabs"
+            size="small"
+            value={mode}
+            onChange={handleModeChange}
+            accessibilityHint={t(
+              'searchBar.mode.hint',
+              'Switch between long-term rentals and vacation stays',
+            )}
           >
-            <Ionicons name="options-outline" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
-          </TouchableOpacity>
-        )}
-      </View>
+            <SegmentedControl.Item value="long_term">
+              <SegmentedControl.ItemText>
+                {t('searchBar.mode.longTerm', 'Long-term')}
+              </SegmentedControl.ItemText>
+            </SegmentedControl.Item>
+            <SegmentedControl.Item value="vacation">
+              <SegmentedControl.ItemText>
+                {t('searchBar.mode.vacation', 'Vacation')}
+              </SegmentedControl.ItemText>
+            </SegmentedControl.Item>
+          </SegmentedControl.Root>
+        </View>
 
-      {showFilters && (
-        <View
-          style={{
-            backgroundColor: colors.primaryLight,
-            width: '100%',
-            padding: 15,
-            borderRadius: 15,
-            marginTop: 5,
-          }}
-        >
-          <Text style={{ fontWeight: 'bold', marginBottom: 10 }}>{t('Quick Filters')}</Text>
-
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            <FilterPill label="Eco-friendly" />
-            <FilterPill label="Co-living" />
-            <FilterPill label="Furnished" />
-            <FilterPill label="Pets Allowed" />
-            <FilterPill label="< ⊜1000" />
-            <FilterPill label="Verified" />
+        <View className="w-full flex-row items-center gap-2 flex-1">
+          <View className="flex-1">
+            <SearchInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onClearText={() => setSearchQuery('')}
+              onSubmitEditing={submitSearch}
+              label={
+                mode === 'vacation'
+                  ? t('searchBar.placeholder.vacation', 'Search stays, beach, city...')
+                  : t('searchBar.placeholder.longTerm', 'Search by city, neighborhood...')
+              }
+            />
           </View>
 
-          <TouchableOpacity
-            style={{
-              backgroundColor: colors.primaryColor,
-              padding: 10,
-              borderRadius: 20,
-              alignItems: 'center',
-              marginTop: 15,
-            }}
-            onPress={() => {
-              setShowFilters(false);
-              router.push('/properties/filter');
-            }}
-          >
-            <Text style={{ color: 'white', fontWeight: '600' }}>{t('Advanced Filters')}</Text>
-          </TouchableOpacity>
+          {!hideFilterIcon && (
+            <Chip
+              variant="outlined"
+              size="medium"
+              onPress={openFilters}
+              accessibilityLabel={t('searchBar.openFilters', 'Open filters')}
+              startIcon={
+                <Ionicons
+                  name="options-outline"
+                  size={16}
+                  color={colors.COLOR_BLACK_LIGHT_3}
+                />
+              }
+            >
+              {t('searchBar.filters', 'Filters')}
+            </Chip>
+          )}
+        </View>
+      </View>
+
+      {!hideSecondaryRow && (
+        <View className="w-full flex-row flex-wrap gap-2">
+          {secondaryChips.map((chip) => (
+            <Chip
+              key={chip.id}
+              variant="soft"
+              size="medium"
+              onPress={openFilters}
+              accessibilityLabel={t(chip.label, chip.id)}
+              startIcon={
+                <Ionicons
+                  name={chip.icon}
+                  size={14}
+                  color={colors.COLOR_BLACK_LIGHT_3}
+                />
+              }
+            >
+              {t(chip.label, chip.id)}
+            </Chip>
+          ))}
         </View>
       )}
     </View>
-  );
-};
-
-const FilterPill = ({ label }: { label: string }) => {
-  const [isSelected, setIsSelected] = useState(false);
-
-  return (
-    <TouchableOpacity
-      style={{
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 20,
-        backgroundColor: isSelected ? colors.primaryColor : '#f0f0f0',
-        borderWidth: isSelected ? 0 : 1,
-        borderColor: '#e0e0e0',
-      }}
-      onPress={() => setIsSelected(!isSelected)}
-    >
-      <Text
-        style={{
-          color: isSelected ? 'white' : colors.COLOR_BLACK_LIGHT_4,
-          fontSize: 14,
-          fontWeight: isSelected ? '600' : 'normal',
-        }}
-      >
-        {label}
-      </Text>
-    </TouchableOpacity>
   );
 };
