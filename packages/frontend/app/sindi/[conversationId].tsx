@@ -1319,17 +1319,22 @@ export function ChatContent({
                   Platform.OS !== 'web' ? handleSubmitWithFile : undefined
                 }
                 onKeyPress={(e) => {
-                  const evt = e as React.KeyboardEvent &
-                    React.NativeSyntheticEvent<{
-                      key: string;
+                  const native = (
+                    e as unknown as {
+                      nativeEvent?: { key?: string; shiftKey?: boolean };
+                      key?: string;
                       shiftKey?: boolean;
-                    }>;
-                  const key = evt?.nativeEvent?.key || evt?.key;
-                  const shift = evt?.nativeEvent?.shiftKey || evt?.shiftKey;
+                      preventDefault?: () => void;
+                      stopPropagation?: () => void;
+                    }
+                  );
+                  const key = native.nativeEvent?.key ?? native.key;
+                  const shift =
+                    native.nativeEvent?.shiftKey ?? native.shiftKey;
                   if (key === 'Enter' && !shift) {
                     if (Platform.OS === 'web') {
-                      evt.preventDefault?.();
-                      evt.stopPropagation?.();
+                      native.preventDefault?.();
+                      native.stopPropagation?.();
                     }
                     if (
                       !isLoading &&

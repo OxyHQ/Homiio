@@ -216,10 +216,17 @@ export default function Sindi() {
     }
   }, [isAuthenticated, loadConversations, conversationFetch]);
 
+  // Web container CSS uses viewport units that RN's StyleSheet types reject
+  // outright. Casting to ViewStyle here is the standard escape hatch for
+  // platform-specific web overrides used elsewhere in the app.
   const webContainerStyle =
     Platform.OS === 'web'
-      ? ({ height: '100vh', display: 'flex', flexDirection: 'column' } as const)
-      : null;
+      ? ({
+          height: '100vh' as unknown as number,
+          display: 'flex' as const,
+          flexDirection: 'column' as const,
+        })
+      : undefined;
 
   if (!isAuthenticated) {
     return (

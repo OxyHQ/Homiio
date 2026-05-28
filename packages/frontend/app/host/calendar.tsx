@@ -225,7 +225,7 @@ export default function HostCalendarScreen() {
     );
   }
 
-  if (propertiesQuery.isError) {
+  if (propertiesQuery.error) {
     return (
       <View style={styles.root}>
         <Header
@@ -239,7 +239,11 @@ export default function HostCalendarScreen() {
           <ErrorState
             icon="cloud-offline-outline"
             title="Couldn't load your properties"
-            description={propertiesQuery.error?.message ?? 'Please try again.'}
+            description={
+              typeof propertiesQuery.error === 'string'
+                ? propertiesQuery.error
+                : 'Please try again.'
+            }
             onRetry={() => propertiesQuery.refetch()}
           />
         </SafeAreaView>

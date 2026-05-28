@@ -27,7 +27,7 @@ import * as TextField from '@oxyhq/bloom/text-field';
 import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
 import { useOxy } from '@oxyhq/services';
 import { Header } from '@/components/Header';
-import Map from '@/components/Map';
+import Map, { type MapApi } from '@/components/Map';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import reviewService from '@/services/reviewService';
@@ -92,10 +92,6 @@ interface AddressLookupResult {
   postalCode?: string;
 }
 
-interface MapHandle {
-  navigateToLocation: (coords: [number, number], zoom: number) => void;
-}
-
 const WriteReviewSkeleton: React.FC = () => (
   <View style={styles.content}>
     {Array.from({ length: 3 }).map((_, idx) => (
@@ -114,7 +110,7 @@ export default function WriteReviewPage() {
   const router = useRouter();
   const { t } = useTranslation();
   const { oxyServices, activeSessionId } = useOxy();
-  const mapRef = useRef<MapHandle | null>(null);
+  const mapRef = useRef<MapApi | null>(null);
 
   const [formData, setFormData] = useState<ReviewFormData>(INITIAL_FORM);
   const [loading, setLoading] = useState(false);
@@ -427,7 +423,7 @@ export default function WriteReviewPage() {
 
             <View style={styles.mapWrapper}>
               <Map
-                ref={mapRef as React.Ref<MapHandle>}
+                ref={mapRef}
                 style={styles.mapInner}
                 enableAddressLookup
                 showAddressInstructions

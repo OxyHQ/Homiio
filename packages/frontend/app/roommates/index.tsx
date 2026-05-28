@@ -36,7 +36,7 @@ import { RoomList } from '@/components/RoomList';
 import { useProfile } from '@/context/ProfileContext';
 import { useRoommate } from '@/hooks/useRoommate';
 import { roommateService } from '@/services/roommateService';
-import { type RoomFilters as RoomFiltersType } from '@/services/roomService';
+import { type PropertyFilters } from '@/services/propertyService';
 import { useProfileStore } from '@/store/profileStore';
 import { radius, spacing, withShadow } from '@/constants/styles';
 import { colors } from '@/styles/colors';
@@ -165,9 +165,7 @@ export default function RoommatesPage() {
   useEffect(() => {
     if (!oxyServices || !activeSessionId) return;
     if (!isPersonalProfile || !hasPersonalProfile) return;
-    useProfileStore
-      .getState()
-      .fetchPrimaryProfile(oxyServices, activeSessionId);
+    useProfileStore.getState().fetchPrimaryProfile();
     if (activeTab === 'discover') fetchProfiles();
     if (activeTab === 'requests') fetchRequests();
     if (activeTab === 'relationships') fetchRelationships();
@@ -206,9 +204,7 @@ export default function RoommatesPage() {
         oxyServices,
         activeSessionId,
       );
-      await useProfileStore
-        .getState()
-        .fetchPrimaryProfile(oxyServices, activeSessionId);
+      await useProfileStore.getState().fetchPrimaryProfile();
       queryClient.setQueryData(['roommates', 'status'], {
         hasRoommateMatching: result.enabled,
       });
@@ -250,23 +246,15 @@ export default function RoommatesPage() {
     gcTime: 1000 * 60 * 10,
   });
 
-  const [roomFilters, setRoomFilters] = useState<RoomFiltersType>({
-    sortBy: 'matchScore',
-    sortOrder: 'desc',
-  });
+  const [roomFilters, setRoomFilters] = useState<PropertyFilters>({});
 
   useEffect(() => {
-    if (preferencesQuery.data) {
-      const prefs = preferencesQuery.data;
-      setRoomFilters((prev) => ({
+    if (preferencesQuery.data?.preferences) {
+      const prefs = preferencesQuery.data.preferences;
+      setRoomFilters((prev: PropertyFilters) => ({
         ...prev,
-        minRent: prefs.budget?.min,
-        maxRent: prefs.budget?.max,
-        pets: prefs.lifestyle?.pets,
-        smoking: prefs.lifestyle?.smoking,
-        genderPreference: prefs.genderPreference,
-        minAge: prefs.ageRange?.min,
-        maxAge: prefs.ageRange?.max,
+        minPrice: prefs.budget?.min,
+        maxPrice: prefs.budget?.max,
       }));
     }
   }, [preferencesQuery.data]);
