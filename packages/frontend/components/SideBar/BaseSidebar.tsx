@@ -49,7 +49,7 @@ export const BaseSidebar = React.memo(function BaseSidebar({
       </ScrollView>
 
       <View
-        className="mt-auto w-full min-w-0 border-t border-border flex-col items-center justify-center"
+        className="mt-auto w-full min-w-0 border-t border-border/50 flex-col items-center justify-center"
         style={{ paddingBottom: insets.bottom }}
       >
         {footer}

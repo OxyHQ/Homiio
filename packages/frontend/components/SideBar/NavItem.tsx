@@ -26,7 +26,9 @@ interface NavItemProps {
  *   - collapsed: 40x40 rounded square with the icon centered
  *   - expanded: full-width row with icon + label + optional keyboard shortcut
  *
- * Active state uses the muted background; hover/press states match Clarity.
+ * Mirrors Clarity's nav-item structure exactly: `group/menu-item` for the
+ * hover-revealed shortcut, `border border-transparent` for the active-ring
+ * placeholder, and a 36px row height with rounded-xl corners.
  */
 export const NavItem = React.memo(function NavItem({
   icon,
@@ -46,7 +48,7 @@ export const NavItem = React.memo(function NavItem({
         onPress={onPress}
         accessibilityLabel={label}
         accessibilityRole="button"
-        className={`w-10 h-10 rounded-xl items-center justify-center ${
+        className={`group/nav-icon w-10 h-10 rounded-xl items-center justify-center ${
           isActive ? 'bg-muted' : 'hover:bg-muted active:bg-muted/80'
         }`}
       >
@@ -63,14 +65,15 @@ export const NavItem = React.memo(function NavItem({
             onPress={onPress}
             accessibilityRole="button"
             accessibilityLabel={label}
-            className={`flex-row items-center gap-2 overflow-hidden rounded-xl text-left h-[36px] border border-transparent w-full p-1.5 ${
+            className={`flex-row items-center gap-2 overflow-hidden rounded-xl text-left h-[36px] border border-transparent w-full gap-1 p-1.5 ${
               isActive ? 'bg-muted' : 'hover:bg-muted active:bg-muted/80'
             }`}
           >
-            <View className="w-6 h-6 items-center justify-center shrink-0">
+            <View className="w-6 h-6 flex items-center justify-center shrink-0">
               <Ionicons name={iconName} size={18} color={iconColor} />
             </View>
             <Text
+              className="select-none"
               style={{
                 fontSize: 14,
                 fontWeight: '600',
@@ -82,14 +85,13 @@ export const NavItem = React.memo(function NavItem({
               {label}
             </Text>
             {shortcut && Platform.OS === 'web' && (
-              <View
-                className="opacity-0 group-hover/menu-item:opacity-100"
-                style={{ marginRight: 4 }}
-              >
+              <View className="absolute top-1/2 right-1.5 -translate-y-1/2 opacity-0 group-hover/menu-item:opacity-100">
                 <Text
+                  className="select-none"
                   style={{
                     fontSize: 11,
                     color: colors.primaryDark_2,
+                    marginRight: 8,
                   }}
                 >
                   {shortcut}

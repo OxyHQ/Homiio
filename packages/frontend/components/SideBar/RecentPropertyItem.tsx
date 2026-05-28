@@ -26,9 +26,13 @@ interface RecentPropertyItemProps {
 }
 
 /**
- * A single recently-viewed property row in the sidebar. Mirrors the Clarity
- * history-item pattern: a wide pressable on the left, a hover-revealed
- * three-dot menu on the right that opens a "Remove from recent" action.
+ * A single recently-viewed property row in the sidebar. Mirrors Clarity's
+ * history-item pattern: a wide pressable on the left with a 36px row
+ * height and rounded-xl corners, and a hover-revealed three-dot menu on
+ * the right (hidden by default, flex on `group/menu-item:hover`).
+ *
+ * Adds Homiio-specific richness — a 32px thumbnail and an optional
+ * subtitle line — while keeping the same outer layout as Clarity.
  */
 export const RecentPropertyItem = React.memo(function RecentPropertyItem({
   id,
@@ -52,18 +56,20 @@ export const RecentPropertyItem = React.memo(function RecentPropertyItem({
   }, [id, onRemove]);
 
   return (
-    <View className="group/recent-item relative whitespace-nowrap mx-1">
+    <View className="group/menu-item relative whitespace-nowrap mx-1">
       <View className="flex-row items-center">
         <Pressable
           onPress={handlePress}
-          className={`flex-1 flex-row items-center gap-2 overflow-hidden rounded-xl w-full px-2 py-1.5 ${
+          className={`flex-1 flex-row items-center gap-1.5 overflow-hidden rounded-xl text-left h-[36px] w-full px-3 py-1.5 ${
             isActive ? 'bg-muted' : 'hover:bg-muted active:bg-muted/80'
           }`}
+          accessibilityRole="button"
+          accessibilityLabel={title}
         >
           <View
             style={{
-              width: 32,
-              height: 32,
+              width: 24,
+              height: 24,
               borderRadius: 6,
               overflow: 'hidden',
               backgroundColor: colors.COLOR_BLACK_LIGHT_7,
@@ -80,17 +86,18 @@ export const RecentPropertyItem = React.memo(function RecentPropertyItem({
             ) : (
               <Ionicons
                 name="home-outline"
-                size={14}
+                size={12}
                 color={colors.primaryDark_2}
               />
             )}
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text
+              className="select-none"
               style={{
                 fontSize: 13,
                 color: colors.primaryDark,
-                fontWeight: isActive ? '600' : '500',
+                fontWeight: isActive ? '600' : '400',
               }}
               numberOfLines={1}
             >
@@ -98,10 +105,10 @@ export const RecentPropertyItem = React.memo(function RecentPropertyItem({
             </Text>
             {subtitle ? (
               <Text
+                className="select-none"
                 style={{
                   fontSize: 11,
                   color: colors.primaryDark_2,
-                  marginTop: 1,
                 }}
                 numberOfLines={1}
               >
@@ -110,13 +117,16 @@ export const RecentPropertyItem = React.memo(function RecentPropertyItem({
             ) : null}
           </View>
         </Pressable>
-        <Menu renderer={renderers.Popover} rendererProps={{ placement: 'bottom' }}>
+        <Menu
+          renderer={renderers.Popover}
+          rendererProps={{ placement: 'bottom' }}
+        >
           <MenuTrigger>
             <View
               className={
                 Platform.OS === 'web'
-                  ? 'h-7 w-7 items-center justify-center rounded-md opacity-0 group-hover/recent-item:opacity-100'
-                  : 'h-7 w-7 items-center justify-center rounded-md'
+                  ? 'h-6 w-6 hidden group-hover/menu-item:flex items-center justify-center rounded-md shrink-0'
+                  : 'h-6 w-6 items-center justify-center rounded-md shrink-0'
               }
             >
               <Ionicons

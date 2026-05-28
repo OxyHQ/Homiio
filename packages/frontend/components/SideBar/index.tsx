@@ -512,7 +512,7 @@ export function SideBar() {
           ))}
         </View>
 
-        <View className="mx-2 border-t border-border w-8 my-1" />
+        <View className="mx-2 border-t border-border/30 w-8 my-1" />
 
         <View className="flex flex-col items-center gap-1 py-1 shrink-0">
           <NavItem
@@ -559,11 +559,18 @@ export function SideBar() {
               className="h-10 w-10 rounded-full items-center justify-center"
               style={{ backgroundColor: `${colors.primaryColor}1A` }}
             >
-              <Ionicons
-                name="log-in-outline"
-                size={18}
-                color={colors.primaryColor}
-              />
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: '700',
+                  color: colors.primaryColor,
+                }}
+              >
+                {(
+                  t('sidebar.actions.signIn', { defaultValue: 'Sign in' })[0] ??
+                  'S'
+                ).toUpperCase()}
+              </Text>
             </Pressable>
           )}
         </View>
@@ -616,7 +623,7 @@ export function SideBar() {
         ))}
       </View>
 
-      <View className="mx-2 border-t border-border my-1" />
+      <View className="mx-2 border-t border-border/30 my-1" />
     </View>
   );
 
@@ -724,36 +731,12 @@ export function SideBar() {
           rendererProps={{ placement: 'top' }}
         >
           <MenuTrigger>
-            <View className="flex-row items-center gap-2 rounded-xl p-1.5 hover:bg-muted">
+            <View
+              accessibilityLabel="Account menu"
+              accessibilityRole="button"
+              className="rounded-full h-10 w-10 p-1 items-center justify-center"
+            >
               <Avatar source={avatarSource} name={displayName} size={32} />
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: '600',
-                    color: colors.primaryDark,
-                  }}
-                  numberOfLines={1}
-                >
-                  {displayName}
-                </Text>
-                {user?.username ? (
-                  <Text
-                    style={{
-                      fontSize: 11,
-                      color: colors.primaryDark_2,
-                    }}
-                    numberOfLines={1}
-                  >
-                    @{user.username}
-                  </Text>
-                ) : null}
-              </View>
-              <Ionicons
-                name="ellipsis-horizontal"
-                size={16}
-                color={colors.primaryDark_2}
-              />
             </View>
           </MenuTrigger>
           <MenuOptions
@@ -765,6 +748,41 @@ export function SideBar() {
               },
             }}
           >
+            {Platform.OS === 'web' && (
+              <View className="flex-row items-center gap-2.5 px-2 py-2">
+                <Avatar
+                  source={avatarSource}
+                  name={displayName}
+                  size={36}
+                />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: '600',
+                      color: colors.primaryDark,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {displayName}
+                  </Text>
+                  {user?.username ? (
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: colors.primaryDark_2,
+                      }}
+                      numberOfLines={1}
+                    >
+                      @{user.username}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            )}
+            {Platform.OS === 'web' && (
+              <View className="h-px bg-border my-1 mx-1" />
+            )}
             <MenuOption onSelect={handleAddProperty}>
               <View className="flex-row items-center gap-2 py-1.5 px-2">
                 <Ionicons
@@ -780,7 +798,7 @@ export function SideBar() {
             <MenuOption onSelect={handleProfile}>
               <View className="flex-row items-center gap-2 py-1.5 px-2">
                 <Ionicons
-                  name="person-outline"
+                  name="person-circle-outline"
                   size={16}
                   color={colors.primaryDark}
                 />

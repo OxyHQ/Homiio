@@ -18,8 +18,9 @@ interface FolderRowProps {
 }
 
 /**
- * A single saved-folder row in the sidebar. Matches Clarity's folder pattern
- * (rounded-xl row with icon, name, count) styled with Homiio's brand palette.
+ * A single saved-folder row in the sidebar. Matches Clarity's folder
+ * pattern: rounded-xl row, gap-1.5, 36px height, px-3 horizontal padding,
+ * with a 24px icon square on the left and a count + chevron on the right.
  */
 export const FolderRow = React.memo(function FolderRow({
   id,
@@ -39,17 +40,17 @@ export const FolderRow = React.memo(function FolderRow({
   const tint = folderColor || colors.primaryColor;
 
   return (
-    <View className="mx-1">
+    <View className="group/menu-item relative whitespace-nowrap mx-1">
       <Pressable
         onPress={handlePress}
-        className="flex-row items-center gap-2 overflow-hidden rounded-xl px-2 py-1.5 hover:bg-muted active:bg-muted/80"
+        className="flex-row items-center gap-1.5 overflow-hidden rounded-xl text-left h-[36px] w-full px-3 py-1.5 hover:bg-muted active:bg-muted/80"
         accessibilityRole="button"
         accessibilityLabel={name}
       >
         <View
           style={{
-            width: 32,
-            height: 32,
+            width: 24,
+            height: 24,
             borderRadius: 6,
             overflow: 'hidden',
             backgroundColor: `${tint}20`,
@@ -58,7 +59,13 @@ export const FolderRow = React.memo(function FolderRow({
           }}
         >
           {hasThumbs ? (
-            <View style={{ flexDirection: 'row', width: '100%', height: '100%' }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                width: '100%',
+                height: '100%',
+              }}
+            >
               {latestImages.slice(0, 2).map((url, index) => (
                 <View
                   key={`${url}-${index}`}
@@ -79,23 +86,28 @@ export const FolderRow = React.memo(function FolderRow({
               ))}
             </View>
           ) : (
-            <Text style={{ fontSize: 14, color: tint, fontWeight: '600' }}>
+            <Text
+              className="select-none"
+              style={{ fontSize: 12, color: tint, fontWeight: '600' }}
+            >
               {icon}
             </Text>
           )}
         </View>
         <Text
+          className="select-none"
           style={{
             flex: 1,
             fontSize: 13,
             color: colors.primaryDark,
-            fontWeight: '500',
+            fontWeight: '400',
           }}
           numberOfLines={1}
         >
           {name}
         </Text>
         <Text
+          className="select-none"
           style={{
             fontSize: 11,
             color: colors.primaryDark_2,
