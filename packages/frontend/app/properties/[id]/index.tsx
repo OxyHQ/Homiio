@@ -20,7 +20,7 @@ import { toast } from 'sonner';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
-import { PropertyType, PropertyImage, Property } from '@homiio/shared-types';
+import { PropertyType, PropertyImage, Property, RentMode } from '@homiio/shared-types';
 // getPropertyImageSource handled inside components
 import { HeaderSection } from '../../../components/property/HeaderSection';
 import { PhotoGallery } from '../../../components/property/PhotoGallery';
@@ -50,6 +50,8 @@ import { propertyService } from '@/services/propertyService';
 import ViewingService from '@/services/viewingService';
 import { Button } from '@oxyhq/bloom/button';
 import { PropertyDetailSkeleton } from '@/components/ui/skeletons/PropertyDetailSkeleton';
+import { BookingWidget } from '@/components/BookingWidget';
+import { useRentalMode } from '@/context/RentalModeContext';
 import type { Profile } from '@/services/profileService';
 import profileService from '@/services/profileService';
 // Removed LinearGradient for Sindi banner simplification
@@ -73,6 +75,7 @@ export default function PropertyDetailPage() {
   const { id } = useLocalSearchParams();
   const { oxyServices, activeSessionId } = useOxy();
   const layoutScrollContext = useLayoutScroll();
+  const { mode: rentalMode } = useRentalMode();
 
 
   const {
@@ -452,6 +455,12 @@ export default function PropertyDetailPage() {
         />
         <View style={styles.infoContainer}>
           <BasicInfoSection property={apiProperty as any} hasActiveViewing={hasActiveViewing} onViewingsPress={() => router.push('/viewings')} />
+          {apiProperty &&
+          rentalMode === 'vacation' &&
+          (apiProperty.rentMode === RentMode.VACATION ||
+            apiProperty.rentMode === RentMode.BOTH) ? (
+            <BookingWidget property={apiProperty} />
+          ) : null}
           <PropertyDetailsCard property={apiProperty as any} />
           <PropertyFeatures property={apiProperty as any} />
           <PricingDetails property={apiProperty as any} />
