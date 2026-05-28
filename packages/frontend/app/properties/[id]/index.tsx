@@ -51,6 +51,7 @@ import ViewingService from '@/services/viewingService';
 import { Button } from '@oxyhq/bloom/button';
 import { PropertyDetailSkeleton } from '@/components/ui/skeletons/PropertyDetailSkeleton';
 import { BookingWidget } from '@/components/BookingWidget';
+import { ApplyToRentCTA } from '@/components/property/ApplyToRentCTA';
 import { useRentalMode } from '@/context/RentalModeContext';
 import type { Profile } from '@/services/profileService';
 import profileService from '@/services/profileService';
@@ -460,6 +461,11 @@ export default function PropertyDetailPage() {
           (apiProperty.rentMode === RentMode.VACATION ||
             apiProperty.rentMode === RentMode.BOTH) ? (
             <BookingWidget property={apiProperty} />
+          ) : null}
+          {apiProperty &&
+          rentalMode === 'long_term' &&
+          apiProperty.rentMode !== RentMode.VACATION ? (
+            <ApplyToRentCTA propertyId={String(apiProperty._id ?? apiProperty.id)} />
           ) : null}
           <PropertyDetailsCard property={apiProperty as any} />
           <PropertyFeatures property={apiProperty as any} />
