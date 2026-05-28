@@ -1,16 +1,14 @@
 import React from 'react';
 import { View, Pressable, Platform } from 'react-native';
 import { Text } from '@oxyhq/bloom/typography';
-import { Ionicons } from '@expo/vector-icons';
+import type { LucideIcon } from 'lucide-react-native';
 import { colors } from '@/styles/colors';
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
 interface NavItemProps {
-  /** Ionicons name for the inactive state. */
-  icon: IoniconName;
-  /** Optional Ionicons name for the active state — falls back to `icon`. */
-  iconActive?: IoniconName;
+  /** Lucide icon component for the inactive state. */
+  icon: LucideIcon;
+  /** Optional Lucide icon component for the active state — falls back to `icon`. */
+  iconActive?: LucideIcon;
   /** Item label (also used as accessibility label when collapsed). */
   label: string;
   onPress: () => void;
@@ -39,7 +37,7 @@ export const NavItem = React.memo(function NavItem({
   isActive,
   collapsed,
 }: NavItemProps) {
-  const iconName = isActive ? (iconActive ?? icon) : icon;
+  const Icon = isActive ? (iconActive ?? icon) : icon;
   const iconColor = isActive ? colors.primaryColor : colors.primaryDark;
 
   if (collapsed) {
@@ -52,7 +50,7 @@ export const NavItem = React.memo(function NavItem({
           isActive ? 'bg-muted' : 'hover:bg-muted active:bg-muted/80'
         }`}
       >
-        <Ionicons name={iconName} size={20} color={iconColor} />
+        <Icon size={20} color={iconColor} />
       </Pressable>
     );
   }
@@ -70,7 +68,7 @@ export const NavItem = React.memo(function NavItem({
             }`}
           >
             <View className="w-6 h-6 flex items-center justify-center shrink-0">
-              <Ionicons name={iconName} size={18} color={iconColor} />
+              <Icon size={18} color={iconColor} />
             </View>
             <Text
               className="select-none"

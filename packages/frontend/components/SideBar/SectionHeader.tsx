@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Pressable } from 'react-native';
 import { Text } from '@oxyhq/bloom/typography';
-import { Ionicons } from '@expo/vector-icons';
+import { ChevronDown } from 'lucide-react-native';
 import { colors } from '@/styles/colors';
 
 interface SectionHeaderProps {
@@ -33,14 +33,13 @@ export const SectionHeader = React.memo(function SectionHeader({
           accessibilityLabel={`Toggle ${label}`}
         >
           <View className="inline-flex flex-row items-center gap-2">
-            <Ionicons
-              name="chevron-down"
-              size={12}
-              color={colors.primaryDark}
+            <View
               style={{
                 transform: [{ rotate: isOpen ? '0deg' : '-90deg' }],
               }}
-            />
+            >
+              <ChevronDown size={12} color={colors.primaryDark} />
+            </View>
             <Text
               className="select-none"
               style={{
@@ -66,14 +65,13 @@ export const SectionHeader = React.memo(function SectionHeader({
       accessibilityLabel={`Toggle ${label}`}
     >
       <View className="inline-flex flex-row items-center gap-2">
-        <Ionicons
-          name="chevron-down"
-          size={12}
-          color={colors.primaryDark}
+        <View
           style={{
             transform: [{ rotate: isOpen ? '0deg' : '-90deg' }],
           }}
-        />
+        >
+          <ChevronDown size={12} color={colors.primaryDark} />
+        </View>
         <Text
           className="select-none"
           style={{

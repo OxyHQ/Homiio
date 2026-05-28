@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Pressable, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Text } from '@oxyhq/bloom/typography';
-import { Ionicons } from '@expo/vector-icons';
+import { ChevronRight } from 'lucide-react-native';
 import { colors } from '@/styles/colors';
 
 interface FolderRowProps {
@@ -116,11 +116,7 @@ export const FolderRow = React.memo(function FolderRow({
         >
           {propertyCount}
         </Text>
-        <Ionicons
-          name="chevron-forward"
-          size={12}
-          color={colors.primaryDark_2}
-        />
+        <ChevronRight size={12} color={colors.primaryDark_2} />
       </Pressable>
     </View>
   );

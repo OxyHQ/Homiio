@@ -8,7 +8,29 @@ import {
 } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  Home,
+  Search,
+  FileText,
+  BedDouble,
+  User,
+  Lightbulb,
+  Users,
+  CalendarClock,
+  Bookmark,
+  ChevronsLeft,
+  ChevronsRight,
+  ChevronRight,
+  PlusCircle,
+  UserCircle,
+  Bell,
+  Settings,
+  ShieldCheck,
+  LogOut,
+  LogIn,
+  UserPlus,
+} from 'lucide-react-native';
+import type { LucideIcon } from 'lucide-react-native';
 import { Text } from '@oxyhq/bloom/typography';
 import { Button } from '@oxyhq/bloom/button';
 import { Avatar } from '@oxyhq/bloom/avatar';
@@ -50,12 +72,10 @@ const COLLAPSED_WIDTH = 48;
 /** Width of the expanded sidebar. */
 const EXPANDED_WIDTH = 240;
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
 interface NavEntry {
   key: string;
-  icon: IoniconName;
-  iconActive: IoniconName;
+  icon: LucideIcon;
+  iconActive: LucideIcon;
   label: string;
   route: string;
   shortcut?: string;
@@ -194,15 +214,15 @@ export function SideBar() {
     const entries: NavEntry[] = [
       {
         key: 'home',
-        icon: 'home-outline',
-        iconActive: 'home',
+        icon: Home,
+        iconActive: Home,
         label: t('sidebar.navigation.home'),
         route: '/',
       },
       {
         key: 'search',
-        icon: 'search-outline',
-        iconActive: 'search',
+        icon: Search,
+        iconActive: Search,
         label: t('sidebar.navigation.search'),
         route: '/search',
       },
@@ -214,8 +234,8 @@ export function SideBar() {
       if (mode === 'long_term') {
         entries.push({
           key: 'applications',
-          icon: 'document-text-outline',
-          iconActive: 'document-text',
+          icon: FileText,
+          iconActive: FileText,
           label: t('sidebar.navigation.applications', {
             defaultValue: 'My applications',
           }),
@@ -224,8 +244,8 @@ export function SideBar() {
       } else {
         entries.push({
           key: 'stays',
-          icon: 'bed-outline',
-          iconActive: 'bed',
+          icon: BedDouble,
+          iconActive: BedDouble,
           label: t('sidebar.navigation.stays', { defaultValue: 'Stays' }),
           route: '/stays',
         });
@@ -234,16 +254,16 @@ export function SideBar() {
 
     entries.push({
       key: 'profile',
-      icon: 'person-outline',
-      iconActive: 'person',
+      icon: User,
+      iconActive: User,
       label: t('sidebar.navigation.profile'),
       route: '/profile',
     });
 
     entries.push({
       key: 'tips',
-      icon: 'bulb-outline',
-      iconActive: 'bulb',
+      icon: Lightbulb,
+      iconActive: Lightbulb,
       label: t('sidebar.navigation.tips', { defaultValue: 'Tips' }),
       route: '/tips',
     });
@@ -251,8 +271,8 @@ export function SideBar() {
     if (canAccessRoommates) {
       entries.push({
         key: 'roommates',
-        icon: 'people-outline',
-        iconActive: 'people',
+        icon: Users,
+        iconActive: Users,
         label: t('sidebar.navigation.roommates'),
         route: '/roommates',
       });
@@ -261,8 +281,8 @@ export function SideBar() {
     if (isHost) {
       entries.push({
         key: 'host-calendar',
-        icon: 'calendar-clear-outline',
-        iconActive: 'calendar-clear',
+        icon: CalendarClock,
+        iconActive: CalendarClock,
         label: t('sidebar.navigation.hostCalendar', {
           defaultValue: 'Host calendar',
         }),
@@ -516,8 +536,8 @@ export function SideBar() {
 
         <View className="flex flex-col items-center gap-1 py-1 shrink-0">
           <NavItem
-            icon="bookmark-outline"
-            iconActive="bookmark"
+            icon={Bookmark}
+            iconActive={Bookmark}
             label={t('sidebar.navigation.saved')}
             onPress={handleSaved}
             isActive={pathname.startsWith('/saved')}
@@ -536,11 +556,7 @@ export function SideBar() {
             })}
             className="h-10 w-10 rounded-xl items-center justify-center hover:bg-muted active:bg-muted/80"
           >
-            <Ionicons
-              name="chevron-forward"
-              size={18}
-              color={colors.primaryDark_2}
-            />
+            <ChevronsRight size={18} color={colors.primaryDark_2} />
           </Pressable>
           {isAuthenticated ? (
             <Pressable
@@ -595,11 +611,7 @@ export function SideBar() {
               })}
               className="h-10 w-10 rounded-xl items-center justify-center hover:bg-muted active:bg-muted/80"
             >
-              <Ionicons
-                name="chevron-back"
-                size={18}
-                color={colors.primaryDark_2}
-              />
+              <ChevronsLeft size={18} color={colors.primaryDark_2} />
             </Pressable>
           </View>
         )}
@@ -644,11 +656,7 @@ export function SideBar() {
             })}
             className="h-6 w-6 items-center justify-center rounded-md hover:bg-muted"
           >
-            <Ionicons
-              name="chevron-forward"
-              size={14}
-              color={colors.primaryDark_2}
-            />
+            <ChevronRight size={14} color={colors.primaryDark_2} />
           </Pressable>
         }
       />
@@ -785,11 +793,7 @@ export function SideBar() {
             )}
             <MenuOption onSelect={handleAddProperty}>
               <View className="flex-row items-center gap-2 py-1.5 px-2">
-                <Ionicons
-                  name="add-circle-outline"
-                  size={16}
-                  color={colors.primaryDark}
-                />
+                <PlusCircle size={16} color={colors.primaryDark} />
                 <Text style={{ fontSize: 13, color: colors.primaryDark }}>
                   {t('sidebar.actions.addProperty')}
                 </Text>
@@ -797,11 +801,7 @@ export function SideBar() {
             </MenuOption>
             <MenuOption onSelect={handleProfile}>
               <View className="flex-row items-center gap-2 py-1.5 px-2">
-                <Ionicons
-                  name="person-circle-outline"
-                  size={16}
-                  color={colors.primaryDark}
-                />
+                <UserCircle size={16} color={colors.primaryDark} />
                 <Text style={{ fontSize: 13, color: colors.primaryDark }}>
                   {t('sidebar.menu.account', { defaultValue: 'Account' })}
                 </Text>
@@ -809,11 +809,7 @@ export function SideBar() {
             </MenuOption>
             <MenuOption onSelect={handleNotifications}>
               <View className="flex-row items-center gap-2 py-1.5 px-2">
-                <Ionicons
-                  name="notifications-outline"
-                  size={16}
-                  color={colors.primaryDark}
-                />
+                <Bell size={16} color={colors.primaryDark} />
                 <Text style={{ fontSize: 13, color: colors.primaryDark }}>
                   {t('sidebar.menu.notifications', {
                     defaultValue: 'Notifications',
@@ -823,11 +819,7 @@ export function SideBar() {
             </MenuOption>
             <MenuOption onSelect={handleSettings}>
               <View className="flex-row items-center gap-2 py-1.5 px-2">
-                <Ionicons
-                  name="settings-outline"
-                  size={16}
-                  color={colors.primaryDark}
-                />
+                <Settings size={16} color={colors.primaryDark} />
                 <Text style={{ fontSize: 13, color: colors.primaryDark }}>
                   {t('sidebar.navigation.settings')}
                 </Text>
@@ -836,11 +828,7 @@ export function SideBar() {
             <View className="h-px bg-border my-1 mx-1" />
             <MenuOption onSelect={handleOpenTerms}>
               <View className="flex-row items-center gap-2 py-1.5 px-2">
-                <Ionicons
-                  name="document-text-outline"
-                  size={16}
-                  color={colors.primaryDark_2}
-                />
+                <FileText size={16} color={colors.primaryDark_2} />
                 <Text style={{ fontSize: 13, color: colors.primaryDark_2 }}>
                   {t('sidebar.menu.terms', {
                     defaultValue: 'Terms of service',
@@ -850,11 +838,7 @@ export function SideBar() {
             </MenuOption>
             <MenuOption onSelect={handleOpenPrivacy}>
               <View className="flex-row items-center gap-2 py-1.5 px-2">
-                <Ionicons
-                  name="shield-checkmark-outline"
-                  size={16}
-                  color={colors.primaryDark_2}
-                />
+                <ShieldCheck size={16} color={colors.primaryDark_2} />
                 <Text style={{ fontSize: 13, color: colors.primaryDark_2 }}>
                   {t('sidebar.menu.privacy', {
                     defaultValue: 'Privacy policy',
@@ -865,11 +849,7 @@ export function SideBar() {
             <View className="h-px bg-border my-1 mx-1" />
             <MenuOption onSelect={handleSignOut}>
               <View className="flex-row items-center gap-2 py-1.5 px-2">
-                <Ionicons
-                  name="log-out-outline"
-                  size={16}
-                  color={colors.busy}
-                />
+                <LogOut size={16} color={colors.busy} />
                 <Text style={{ fontSize: 13, color: colors.busy }}>
                   {t('settings.signOut')}
                 </Text>
@@ -884,13 +864,7 @@ export function SideBar() {
             variant="primary"
             size="medium"
             style={{ borderRadius: 999, width: '100%' }}
-            icon={
-              <Ionicons
-                name="log-in-outline"
-                size={16}
-                color={colors.primaryLight}
-              />
-            }
+            icon={<LogIn size={16} color={colors.primaryLight} />}
             iconPosition="left"
           >
             <Text
@@ -908,13 +882,7 @@ export function SideBar() {
             variant="secondary"
             size="medium"
             style={{ borderRadius: 999, width: '100%' }}
-            icon={
-              <Ionicons
-                name="person-add-outline"
-                size={16}
-                color={colors.primaryDark}
-              />
-            }
+            icon={<UserPlus size={16} color={colors.primaryDark} />}
             iconPosition="left"
           >
             <Text

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Pressable, Platform } from 'react-native';
 import { Text } from '@oxyhq/bloom/typography';
-import { Ionicons } from '@expo/vector-icons';
+import { Home, CalendarDays } from 'lucide-react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -90,9 +90,8 @@ export const ModeToggle = React.memo(function ModeToggle() {
             className="items-center justify-center shrink-0"
             style={{ width: ROW_HEIGHT }}
           >
-            <Ionicons
-              name="business-outline"
-              size={16}
+            <Home
+              size={18}
               color={isLongTerm ? colors.primaryDark : colors.primaryDark_2}
             />
           </View>
@@ -134,9 +133,8 @@ export const ModeToggle = React.memo(function ModeToggle() {
             className="items-center justify-center shrink-0"
             style={{ width: ROW_HEIGHT }}
           >
-            <Ionicons
-              name="bed-outline"
-              size={16}
+            <CalendarDays
+              size={18}
               color={isLongTerm ? colors.primaryDark_2 : colors.primaryDark}
             />
           </View>
