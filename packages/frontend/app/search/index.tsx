@@ -21,18 +21,27 @@ import { onApplySavedSearch } from '@/utils/searchEvents';
 import * as Location from 'expo-location';
 import { useSearchMode } from '@/context/SearchModeContext';
 import { useRentalMode } from '@/context/RentalModeContext';
-import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
 import { colors } from '@/styles/colors';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
+  withSpring,
+  withTiming,
   interpolate,
-  Extrapolation
+  Extrapolation,
 } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useQueryClient } from '@tanstack/react-query';
 import { useMapSearchStore } from '@/store/mapSearchStore';
+
+const SHEET_SPRING = { damping: 25, stiffness: 300, mass: 0.8 };
+// Sheet vertical positions, expressed as the height (in px / vh on web) occupied
+// from the bottom of the screen.
+const SHEET_COLLAPSED_RATIO = 0.30; // 30% — collapsed list peek
+const SHEET_PEEK_RATIO = 0.25;      // 25% — minimum peek when search focused initially
+const SHEET_EXPANDED_RATIO = 1.0;   // 100% — full screen list / results
 
 // Small helper to apply platform-appropriate shadows (uses boxShadow on web)
 const _shadow = (level: 'sm' | 'md' = 'md') => Platform.select({
@@ -185,6 +194,38 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
+  // Persistent property-list panel anchored to the bottom of the screen.
+  // Replaces the prior @gorhom/bottom-sheet snap-points implementation. We
+  // expose three positions: peek (search focused, initial), collapsed (default
+  // resting), and expanded (full screen). Drag handle + grab area to toggle.
+  panel: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+    maxWidth: 600,
+    alignSelf: 'center',
+    marginHorizontal: screenWidth >= 600 ? 32 : 0,
+    ..._shadow('md'),
+  },
+  panelHandleArea: {
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  panelHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#000',
+  },
+  panelBody: {
+    flex: 1,
+  },
 });
 
 interface SearchResult {
@@ -213,14 +254,19 @@ export default function SearchScreen() {
   const bottomSheet = useContext(BottomSheetContext);
   const screenId = 'search-screen';
 
-  // Bottom sheet state
-  const bottomSheetRef = useRef<BottomSheet>(null);
-  const snapPoints = useMemo(() => {
-    return ['25%', '30%', '100%'];
-  }, []);
-
-  // Animated values for bottom sheet padding transition
-  const animatedIndex = useSharedValue(0);
+  // Persistent property-list panel. Replaces @gorhom/bottom-sheet snap points
+  // with a simple `withSpring`-driven height shared value. Three resting
+  // positions (peek/collapsed/expanded) are computed from screen height. Drag
+  // gestures on the handle allow free resizing between peek and expanded.
+  const { height: screenHeight } = Dimensions.get('window');
+  const peekHeight = useMemo(() => screenHeight * SHEET_PEEK_RATIO, [screenHeight]);
+  const collapsedHeight = useMemo(() => screenHeight * SHEET_COLLAPSED_RATIO, [screenHeight]);
+  const expandedHeight = useMemo(() => screenHeight * SHEET_EXPANDED_RATIO, [screenHeight]);
+  const panelHeight = useSharedValue(collapsedHeight);
+  const panelStartHeight = useSharedValue(collapsedHeight);
+  // Normalized progress 0 → 1 across peek↔expanded, used to drive child
+  // animations (search-bar padding, handle opacity) the same way the previous
+  // `animatedIndex` did.
   const searchBarHeight = 80; // Height of search bar + padding
 
   // Restore saved state on mount
@@ -237,52 +283,31 @@ export default function SearchScreen() {
   const [showResults, setShowResults] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  // Memoize gesture enable states to prevent infinite loops
-  const enableHandlePanning = useMemo(() => {
-    console.log('Gesture state update - isSearchFocused:', isSearchFocused, 'enableHandlePanning:', !isSearchFocused);
-    return !isSearchFocused;
-  }, [isSearchFocused]);
-  const enableContentPanning = useMemo(() => {
-    console.log('Gesture state update - isSearchFocused:', isSearchFocused, 'enableContentPanning:', !isSearchFocused);
-    return !isSearchFocused;
-  }, [isSearchFocused]);
-
   // Simple search query setter
   const setSearchQuerySafely = useCallback((query: string) => {
     setSearchQuery(query);
   }, []);
 
+  // Animate the panel to a target height with a smooth spring (consistent
+  // with the rest of the bottom-sheet motion in the app).
+  const animateTo = useCallback((target: number) => {
+    panelHeight.value = withSpring(target, SHEET_SPRING);
+  }, [panelHeight]);
+
+  const expandPanel = useCallback(() => {
+    animateTo(expandedHeight);
+  }, [animateTo, expandedHeight]);
+
+  const collapsePanel = useCallback(() => {
+    animateTo(collapsedHeight);
+  }, [animateTo, collapsedHeight]);
+
   // Handle search focus/blur
   const handleSearchFocus = useCallback(() => {
     setIsSearchFocused(true);
-    console.log('Search focused - attempting to reach 100% snap point');
-    // Move bottom sheet to 100% when search is focused
-    // Use snapToIndex(3) directly to ensure we reach 100%
-    if (bottomSheetRef.current) {
-      // Use a delay to ensure the bottom sheet is ready and try multiple approaches
-      setTimeout(() => {
-        if (bottomSheetRef.current) {
-          // First try snapToIndex(3)
-          bottomSheetRef.current.snapToIndex(3);
-          console.log('snapToIndex(3) called - should reach 100%');
-
-          // Also try expand() as backup
-          setTimeout(() => {
-            if (bottomSheetRef.current) {
-              try {
-                bottomSheetRef.current.expand();
-                console.log('expand() called as backup');
-              } catch (error) {
-                console.log('expand() backup failed:', error);
-              }
-            }
-          }, 200);
-        }
-      }, 100);
-    } else {
-      console.log('bottomSheetRef.current is null');
-    }
-  }, []);
+    // Expand panel to full screen so search results have room to render.
+    expandPanel();
+  }, [expandPanel]);
 
   const handleSearchBlur = useCallback(() => {
     // Don't unfocus immediately - let the user interact with results
@@ -455,25 +480,10 @@ export default function SearchScreen() {
     setSearchQuery(result.place_name);
     lastSelectedLocationRef.current = result.place_name;
 
-    // Unfocus search and move bottom sheet back to default position
+    // Unfocus search and animate the panel back to the collapsed peek
+    // position so the user can see the map again.
     setIsSearchFocused(false);
-
-    // Use a small delay to ensure state is updated before moving bottom sheet
-    setTimeout(() => {
-      if (Platform.OS === 'web') {
-        bottomSheetRef.current?.collapse();
-      } else {
-        bottomSheetRef.current?.snapToIndex(0);
-      }
-
-      // Force a re-render to ensure gesture states are updated
-      setTimeout(() => {
-        if (bottomSheetRef.current) {
-          // Force the bottom sheet to refresh its gesture states
-          bottomSheetRef.current.snapToIndex(0);
-        }
-      }, 50);
-    }, 100);
+    collapsePanel();
 
     // Navigate map and fetch properties immediately
     mapRef.current?.navigateToLocation(result.center, 14);
@@ -484,7 +494,7 @@ export default function SearchScreen() {
     const bounds = result.bbox ? { west: result.bbox[0], south: result.bbox[1], east: result.bbox[2], north: result.bbox[3] }
       : { west: lng - radius, south: lat - radius, east: lng + radius, north: lat + radius };
     fetchProperties(bounds);
-  }, [fetchProperties]);
+  }, [fetchProperties, collapsePanel]);
 
   // Apply saved search without navigation (no map reload)
   useEffect(() => {
@@ -666,24 +676,20 @@ export default function SearchScreen() {
 
   // Auto-focus search input when screen opens (only if coming from home screen)
   useEffect(() => {
-    console.log('Search screen mounted - urlQuery:', urlQuery, 'params:', params);
     // Only auto-focus if coming from home screen (fromHome=true parameter)
-    if (params.fromHome === 'true') {
-      console.log('Auto-focusing search input and expanding bottom sheet');
-      const timer = setTimeout(() => {
-        searchInputRef.current?.focus();
-        // Expand bottom sheet to 100% when coming from home screen search
-        handleSearchFocus();
-        // Re-enable gestures after a short delay to allow dragging
-        setTimeout(() => {
-          setIsSearchFocused(false);
-        }, 500);
-      }, 300);
-      return () => clearTimeout(timer);
-    } else {
-      console.log('Not coming from home - not auto-focusing');
-    }
-  }, [handleSearchFocus, params, urlQuery]);
+    if (params.fromHome !== 'true') return;
+    const timer = setTimeout(() => {
+      searchInputRef.current?.focus();
+      // Expand panel to full height when coming from home screen search
+      handleSearchFocus();
+      // Clear the auto-focused state after the panel finishes opening so the
+      // user can collapse it again via the drag handle.
+      setTimeout(() => {
+        setIsSearchFocused(false);
+      }, 500);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [handleSearchFocus, params.fromHome]);
 
   // Handle URL query changes
   useEffect(() => {
@@ -787,50 +793,90 @@ export default function SearchScreen() {
     );
   }, [isAuthenticated, router, bottomSheet, searchQuery, filters]);
 
-  // Animated style for bottom sheet top padding
+  // Animated style for the panel height (drives the slide-up / pull-down).
+  const animatedPanelStyle = useAnimatedStyle(() => ({
+    height: panelHeight.value,
+  }));
+
+  // Body padding compensation: once the panel approaches full height, push
+  // content down so the floating search bar at the top doesn't overlap it.
   const animatedBottomSheetPaddingStyle = useAnimatedStyle(() => {
     const paddingTop = interpolate(
-      animatedIndex.value,
-      [0, 1, 2], // snap points indices
-      [0, 0, searchBarHeight], // padding values
-      Extrapolation.CLAMP
+      panelHeight.value,
+      [collapsedHeight, expandedHeight],
+      [0, searchBarHeight],
+      Extrapolation.CLAMP,
     );
-
-    return {
-      paddingTop,
-    };
+    return { paddingTop };
   });
 
-  // Animated style for bottom sheet handle opacity
+  // Fade the drag handle out as the panel approaches full height (matches
+  // the previous Gorhom behavior — visible at peek/collapsed, hidden when
+  // expanded so the content has the full height to itself).
   const animatedHandleStyle = useAnimatedStyle(() => {
     const opacity = interpolate(
-      animatedIndex.value,
-      [0, 1, 2, 3], // snap points indices
-      [1, 0.3, 0, 0], // opacity values - hide when at top
-      Extrapolation.CLAMP
+      panelHeight.value,
+      [collapsedHeight, expandedHeight * 0.6, expandedHeight],
+      [1, 0.3, 0],
+      Extrapolation.CLAMP,
     );
+    return { opacity };
+  });
 
-    console.log('Animated opacity:', opacity, 'for index:', animatedIndex.value);
+  // Pan gesture on the drag handle: lets the user freely resize the panel
+  // between peek and expanded. On release, springs to whichever resting
+  // position is closer (or expanded if the user flicked upward fast).
+  const handleDragGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .onStart(() => {
+          'worklet';
+          panelStartHeight.value = panelHeight.value;
+        })
+        .onUpdate((event) => {
+          'worklet';
+          // Dragging the handle upward (negative translationY) grows the
+          // panel; downward shrinks it. Clamp to [peek, expanded].
+          const next = panelStartHeight.value - event.translationY;
+          if (next < peekHeight) {
+            panelHeight.value = peekHeight;
+          } else if (next > expandedHeight) {
+            panelHeight.value = expandedHeight;
+          } else {
+            panelHeight.value = next;
+          }
+        })
+        .onEnd((event) => {
+          'worklet';
+          const velocity = event.velocityY;
+          const current = panelHeight.value;
+          const midpoint = (collapsedHeight + expandedHeight) / 2;
+          // Flick up fast → expand; flick down fast → collapse;
+          // otherwise snap to the closest resting position.
+          let target: number;
+          if (velocity < -900) {
+            target = expandedHeight;
+          } else if (velocity > 900) {
+            target = collapsedHeight;
+          } else if (current > midpoint) {
+            target = expandedHeight;
+          } else {
+            target = collapsedHeight;
+          }
+          panelHeight.value = withSpring(target, SHEET_SPRING);
+        }),
+    [panelHeight, panelStartHeight, peekHeight, collapsedHeight, expandedHeight],
+  );
 
-    return {
-      opacity,
-    };
-  }, []);
-
-  // Custom handle component with animated opacity
-  const CustomHandle = useCallback(() => {
-    return (
-      <Animated.View style={[{
-        width: 40,
-        height: 4,
-        backgroundColor: '#000',
-        borderRadius: 2,
-        alignSelf: 'center',
-        marginTop: 8,
-        marginBottom: 8,
-      }, animatedHandleStyle]} />
-    );
-  }, [animatedHandleStyle]);
+  // Tap on the handle area toggles between collapsed and expanded — useful
+  // on web where the drag affordance is less obvious than on touch devices.
+  const toggleHandlePress = useCallback(() => {
+    if (panelHeight.value > (collapsedHeight + expandedHeight) / 2) {
+      panelHeight.value = withTiming(collapsedHeight, { duration: 250 });
+    } else {
+      panelHeight.value = withTiming(expandedHeight, { duration: 250 });
+    }
+  }, [panelHeight, collapsedHeight, expandedHeight]);
 
   // Render search result item
   const renderSearchResult = useCallback((result: SearchResult) => {
@@ -909,83 +955,73 @@ export default function SearchScreen() {
 
 
 
-      {/* Property List Bottom Sheet */}
-      <BottomSheet
-        ref={bottomSheetRef}
-        index={0}
-        snapPoints={snapPoints}
-        enablePanDownToClose={false}
-        enableOverDrag={false}
-        enableHandlePanningGesture={enableHandlePanning}
-        enableContentPanningGesture={enableContentPanning}
-        backgroundStyle={{ backgroundColor: '#fff', }}
-        style={{
-          minHeight: 200,
-          maxWidth: 600,
-          alignSelf: 'center',
-          marginHorizontal: screenWidth >= 600 ? 32 : 0,
-        }}
-        animatedIndex={animatedIndex}
-        onAnimate={(fromIndex, toIndex) => {
-          // Update animated index for handle opacity
-          animatedIndex.value = toIndex;
-          console.log('Bottom sheet animation - from:', fromIndex, 'to:', toIndex, 'snapPoints:', snapPoints);
-        }}
-        handleComponent={CustomHandle}
-      >
-        <BottomSheetView style={{ flex: 1 }}>
-          <Animated.View style={[{ flex: 1 }, animatedBottomSheetPaddingStyle]}>
-            {isSearchFocused ? (
-              // Show search results in bottom sheet when search is focused
-              <View style={styles.bottomSheetSearchContainer}>
-                <View style={styles.bottomSheetSearchHeader}>
-                  <ThemedText style={styles.bottomSheetSearchTitle}>
-                    Search Results
-                  </ThemedText>
-                  <ThemedText style={styles.bottomSheetSearchSubtitle}>
-                    {searchResults.length > 0
-                      ? `${searchResults.length} results found`
-                      : 'No results found'}
-                  </ThemedText>
-                </View>
-                <ScrollView
-                  style={styles.bottomSheetSearchResults}
-                  showsVerticalScrollIndicator={true}
-                  keyboardShouldPersistTaps="handled"
-                >
-                  {searchResults.length > 0 ? (
-                    searchResults.map(renderSearchResult)
-                  ) : (
-                    <View style={styles.bottomSheetNoResults}>
-                      <Ionicons name="search-outline" size={48} color="#ccc" />
-                      <ThemedText style={styles.bottomSheetNoResultsText}>
-                        No results found
-                      </ThemedText>
-                      <ThemedText style={styles.bottomSheetNoResultsSubtext}>
-                        Try searching for a different location
-                      </ThemedText>
-                    </View>
-                  )}
-                </ScrollView>
+      {/* Persistent property-list panel anchored to the bottom of the screen.
+          Pan the handle to resize between peek and full-height; tap it on
+          web to toggle. */}
+      <Animated.View style={[styles.panel, animatedPanelStyle]}>
+        <GestureDetector gesture={handleDragGesture}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={toggleHandlePress}
+            style={styles.panelHandleArea}
+            accessibilityRole="button"
+            accessibilityLabel="Toggle property list height"
+          >
+            <Animated.View style={[styles.panelHandle, animatedHandleStyle]} />
+          </TouchableOpacity>
+        </GestureDetector>
+
+        <Animated.View style={[styles.panelBody, animatedBottomSheetPaddingStyle]}>
+          {isSearchFocused ? (
+            // Show search results when the search field is focused.
+            <View style={styles.bottomSheetSearchContainer}>
+              <View style={styles.bottomSheetSearchHeader}>
+                <ThemedText style={styles.bottomSheetSearchTitle}>
+                  Search Results
+                </ThemedText>
+                <ThemedText style={styles.bottomSheetSearchSubtitle}>
+                  {searchResults.length > 0
+                    ? `${searchResults.length} results found`
+                    : 'No results found'}
+                </ThemedText>
               </View>
-            ) : (
-              // Show property list when search is not focused
-              <PropertyListBottomSheet
-                properties={visibleProperties}
-                highlightedPropertyId={highlightedPropertyId}
-                onPropertyPress={handlePropertyPress}
-                isLoading={isLoadingProperties}
-                onViewableItemsChanged={onViewableItemsChanged}
-                _mapBounds={currentBounds || null}
-                totalCount={undefined} // We can add this later if backend returns total count
-                onOpenFilters={handleOpenFilters}
-                onSaveSearch={handleOpenSaveModal}
-                onRefreshLocation={handleRefreshLocation}
-              />
-            )}
-          </Animated.View>
-        </BottomSheetView>
-      </BottomSheet>
+              <ScrollView
+                style={styles.bottomSheetSearchResults}
+                showsVerticalScrollIndicator
+                keyboardShouldPersistTaps="handled"
+              >
+                {searchResults.length > 0 ? (
+                  searchResults.map(renderSearchResult)
+                ) : (
+                  <View style={styles.bottomSheetNoResults}>
+                    <Ionicons name="search-outline" size={48} color="#ccc" />
+                    <ThemedText style={styles.bottomSheetNoResultsText}>
+                      No results found
+                    </ThemedText>
+                    <ThemedText style={styles.bottomSheetNoResultsSubtext}>
+                      Try searching for a different location
+                    </ThemedText>
+                  </View>
+                )}
+              </ScrollView>
+            </View>
+          ) : (
+            // Show property list when search is not focused.
+            <PropertyListBottomSheet
+              properties={visibleProperties}
+              highlightedPropertyId={highlightedPropertyId}
+              onPropertyPress={handlePropertyPress}
+              isLoading={isLoadingProperties}
+              onViewableItemsChanged={onViewableItemsChanged}
+              _mapBounds={currentBounds || null}
+              totalCount={undefined}
+              onOpenFilters={handleOpenFilters}
+              onSaveSearch={handleOpenSaveModal}
+              onRefreshLocation={handleRefreshLocation}
+            />
+          )}
+        </Animated.View>
+      </Animated.View>
     </View>
   );
 }

@@ -39,7 +39,6 @@ import { SearchModeProvider } from '@/context/SearchModeContext';
 import { RentalModeProvider } from '@/context/RentalModeContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { OxyProvider } from '@oxyhq/services';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { BloomThemeProvider } from '@oxyhq/bloom';
 import { PostHogProvider } from 'posthog-react-native';
 import '../styles/global.css';
@@ -189,7 +188,6 @@ export default function RootLayout() {
             >
               <QueryClientProvider client={queryClient}>
                 <RentalModeProvider>
-                <BottomSheetModalProvider>
                 <OxyProvider baseURL={OXY_BASE_URL}>
                   <ProfileProvider>
                     <SavedPropertiesProvider>
@@ -236,7 +234,6 @@ export default function RootLayout() {
                     </SavedPropertiesProvider>
                   </ProfileProvider>
                 </OxyProvider>
-                </BottomSheetModalProvider>
                 </RentalModeProvider>
               </QueryClientProvider>
             </PostHogProvider>
