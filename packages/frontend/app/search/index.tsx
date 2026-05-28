@@ -1,242 +1,107 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo, useContext } from 'react';
+/**
+ * Search screen — Airbnb-2026 inspired split layout.
+ *
+ * Web architecture:
+ *  - Sticky top bar: SearchBar pill + view-mode SegmentedControl + filter
+ *    Chip row.
+ *  - Three view modes: `split` (default), `list`, `map`.
+ *  - `split`: left column = PropertyResultsGrid (2 columns), right column
+ *    = map. Map stays fixed while the list scrolls.
+ *  - `list`: full-width 3-column grid, no map.
+ *  - `map`: full-width map with floating PropertyResultsGrid in a
+ *    Bloom-driven bottom panel.
+ *
+ * Mobile architecture:
+ *  - SearchBar pill at top, results grid below (1 column), floating
+ *    "Show map" Bloom button at the bottom that opens a full-screen map
+ *    sheet.
+ *
+ * Reused shared primitives:
+ *  - `PropertyCard`, `PropertyResultsGrid`, `PropertyResultsGridSkeleton`
+ *  - `FilterChipRow`, `MapMarkerPopover`, `MapFab`
+ *  - `EmptyState`, `ErrorState`
+ *  - Bloom SegmentedControl, Chip, Button, SearchInput, BottomSheet,
+ *    Typography
+ */
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
-  View, StyleSheet,
-  Platform,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
   Dimensions,
+  Platform,
+  Pressable,
+  StyleSheet,
+  View,
+  type ViewStyle,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import MapView, { MapApi } from '@/components/Map';
-import { PropertyListBottomSheet } from '@/components/PropertyListBottomSheet';
-import { Property, RentMode } from '@homiio/shared-types';
-import { propertyService } from '@/services/propertyService';
-import { useMapState } from '@/context/MapStateContext';
-import { BottomSheetContext } from '@/context/BottomSheetContext';
-import { SaveSearchBottomSheet } from '@/components/SaveSearchBottomSheet';
-import { SearchFiltersBottomSheet, SearchFilters } from '@/components/SearchFiltersBottomSheet';
-import { useSavedSearches } from '@/hooks/useSavedSearches';
-import { onApplySavedSearch } from '@/utils/searchEvents';
-import * as Location from 'expo-location';
-import { useSearchMode } from '@/context/SearchModeContext';
-import { useRentalMode } from '@/context/RentalModeContext';
-import { Ionicons } from '@expo/vector-icons';
-import { ThemedText } from '@/components/ThemedText';
-import { colors } from '@/styles/colors';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-  interpolate,
-  Extrapolation,
-} from 'react-native-reanimated';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
+import * as Location from 'expo-location';
+import { Ionicons } from '@expo/vector-icons';
+
+import * as SegmentedControl from '@oxyhq/bloom/segmented-control';
+import { Button } from '@oxyhq/bloom/button';
+import { SearchInput } from '@oxyhq/bloom/search-input';
+import { H3, Text as BloomText } from '@oxyhq/bloom/typography';
+
+import MapView, { type MapApi } from '@/components/Map';
+import { SaveSearchBottomSheet } from '@/components/SaveSearchBottomSheet';
+import {
+  SearchFiltersBottomSheet,
+  type SearchFilters,
+} from '@/components/SearchFiltersBottomSheet';
+import { SortBottomSheet, type SortKey } from '@/components/SortBottomSheet';
+import {
+  FilterChipRow,
+  type FilterChipDef,
+  type FilterChipKey,
+} from '@/components/ui/FilterChipRow';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { MapFab } from '@/components/ui/MapFab';
+import { MapMarkerPopover } from '@/components/ui/MapMarkerPopover';
+import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
+import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
+
+import { BottomSheetContext } from '@/context/BottomSheetContext';
+import { useMapState } from '@/context/MapStateContext';
+import { useRentalMode } from '@/context/RentalModeContext';
+import { useSearchMode } from '@/context/SearchModeContext';
+import { useSavedSearches } from '@/hooks/useSavedSearches';
+import { useIsDesktop } from '@/hooks/useOptimizedMediaQuery';
+import { propertyService } from '@/services/propertyService';
 import { useMapSearchStore } from '@/store/mapSearchStore';
+import { onApplySavedSearch } from '@/utils/searchEvents';
+import { colors } from '@/styles/colors';
+import {
+  cardShadow,
+  hairline,
+  radius,
+  spacing,
+  withShadow,
+} from '@/constants/styles';
+import { Property, RentMode } from '@homiio/shared-types';
 
-const SHEET_SPRING = { damping: 25, stiffness: 300, mass: 0.8 };
-// Sheet vertical positions, expressed as the height (in px / vh on web) occupied
-// from the bottom of the screen.
-const SHEET_COLLAPSED_RATIO = 0.30; // 30% — collapsed list peek
-const SHEET_PEEK_RATIO = 0.25;      // 25% — minimum peek when search focused initially
-const SHEET_EXPANDED_RATIO = 1.0;   // 100% — full screen list / results
+/** Distinct view modes the search screen can render in. */
+type ViewMode = 'split' | 'list' | 'map';
 
-// Small helper to apply platform-appropriate shadows (uses boxShadow on web)
-const _shadow = (level: 'sm' | 'md' = 'md') => Platform.select({
-  web: {
-    boxShadow: level === 'md'
-      ? '0 2px 4px rgba(0,0,0,0.1)'
-      : '0 1px 3px rgba(0,0,0,0.08)',
-  },
-  default: level === 'md'
-    ? {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
-    }
-    : {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.08,
-      shadowRadius: 3,
-      elevation: 2,
-    },
-});
-
-const { width: screenWidth } = Dimensions.get('window');
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  map: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  // Google Maps-style search bar
-  searchBarContainer: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 60 : 40,
-    left: 16,
-    right: 16,
-    zIndex: 1000,
-    maxWidth: 600,
-    alignSelf: 'center',
-    marginHorizontal: screenWidth >= 600 ? 32 : 0,
-  },
-  searchBar: {
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    ..._shadow('md'),
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-  },
-  searchIcon: {
-    marginRight: 12,
-    color: '#666',
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#333',
-    paddingVertical: 4,
-  },
-  searchClearButton: {
-    padding: 4,
-  },
-
-  searchResultItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  searchResultIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f8f9fa',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  searchResultText: {
-    flex: 1,
-  },
-  searchResultTitle: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  searchResultSubtitle: {
-    fontSize: 14,
-    color: '#666',
-  },
-  // Animated search bar container
-  animatedSearchBarContainer: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    zIndex: 1000,
-  },
-  // Bottom sheet search styles
-  bottomSheetSearchContainer: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  bottomSheetSearchHeader: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  bottomSheetSearchTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  bottomSheetSearchSubtitle: {
-    fontSize: 14,
-    color: '#666',
-  },
-  bottomSheetSearchResults: {
-    flex: 1,
-  },
-  bottomSheetNoResults: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 32,
-  },
-  bottomSheetNoResultsText: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: '#333',
-    marginTop: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  bottomSheetNoResultsSubtext: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  // Persistent property-list panel anchored to the bottom of the screen.
-  // Replaces the prior @gorhom/bottom-sheet snap-points implementation. We
-  // expose three positions: peek (search focused, initial), collapsed (default
-  // resting), and expanded (full screen). Drag handle + grab area to toggle.
-  panel: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    overflow: 'hidden',
-    maxWidth: 600,
-    alignSelf: 'center',
-    marginHorizontal: screenWidth >= 600 ? 32 : 0,
-    ..._shadow('md'),
-  },
-  panelHandleArea: {
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  panelHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#000',
-  },
-  panelBody: {
-    flex: 1,
-  },
-});
-
-interface SearchResult {
-  id: string; place_name: string; center: [number, number]; text: string;
-  context?: { text: string }[]; bbox?: [number, number, number, number];
+interface MapboxSearchResult {
+  id: string;
+  place_name: string;
+  center: [number, number];
+  text: string;
+  context?: { text: string }[];
+  bbox?: [number, number, number, number];
   place_type?: string[];
 }
 
-type Filters = SearchFilters;
-
-const defaultFilters: Filters = {
+const DEFAULT_FILTERS: SearchFilters = {
   minPrice: 0,
   maxPrice: 5000,
   bedrooms: 1,
@@ -245,783 +110,1093 @@ const defaultFilters: Filters = {
   amenities: [],
 };
 
+const DEFAULT_BARCELONA_BOUNDS = {
+  west: 2.0,
+  south: 41.3,
+  east: 2.3,
+  north: 41.5,
+} as const;
+
+const SEARCH_DEBOUNCE_MS = 300;
+const MIN_MOVE_DISTANCE_METERS = 500;
+const MIN_ZOOM_DELTA = 0.8;
+
+// Filter-chip definitions are derived from the active filters so the
+// chip can reflect "Set" vs "Default" state visually.
+function buildChipDefs(
+  t: ReturnType<typeof useTranslation>['t'],
+  filters: SearchFilters,
+  mode: 'long_term' | 'vacation',
+): FilterChipDef[] {
+  const priceLabel = mode === 'vacation'
+    ? t('search.chips.nightlyPrice', 'Nightly price') || 'Nightly price'
+    : t('search.chips.monthlyPrice', 'Monthly price') || 'Monthly price';
+  const priceActive =
+    filters.minPrice !== DEFAULT_FILTERS.minPrice ||
+    filters.maxPrice !== DEFAULT_FILTERS.maxPrice;
+  const bedsActive = Number(filters.bedrooms) !== Number(DEFAULT_FILTERS.bedrooms);
+  const bathsActive = Number(filters.bathrooms) !== Number(DEFAULT_FILTERS.bathrooms);
+  const typeActive = Boolean(filters.type);
+  const amenitiesActive = (filters.amenities?.length ?? 0) > 0;
+
+  return [
+    {
+      key: 'price',
+      icon: 'pricetag-outline',
+      label: priceLabel,
+      active: priceActive,
+    },
+    {
+      key: 'type',
+      icon: 'home-outline',
+      label: t('search.chips.type', 'Type') || 'Type',
+      active: typeActive,
+    },
+    {
+      key: 'bedrooms',
+      icon: 'bed-outline',
+      label: t('search.chips.beds', 'Beds') || 'Beds',
+      active: bedsActive,
+    },
+    {
+      key: 'bathrooms',
+      icon: 'water-outline',
+      label: t('search.chips.baths', 'Baths') || 'Baths',
+      active: bathsActive,
+    },
+    {
+      key: 'amenities',
+      icon: 'sparkles-outline',
+      label: t('search.chips.amenities', 'Amenities') || 'Amenities',
+      active: amenitiesActive,
+    },
+    {
+      key: 'more',
+      icon: 'options-outline',
+      label: t('search.chips.more', 'More filters') || 'More filters',
+    },
+  ];
+}
+
+// Sort key → comparator. Pure functions so it's easy to unit-test
+// independently if we extract this later.
+const SORT_FUNCTIONS: Record<SortKey, (a: Property, b: Property) => number> = {
+  recommended: () => 0,
+  price_asc: (a, b) => (a.rent?.amount ?? 0) - (b.rent?.amount ?? 0),
+  price_desc: (a, b) => (b.rent?.amount ?? 0) - (a.rent?.amount ?? 0),
+  newest: (a, b) => {
+    const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return bDate - aDate;
+  },
+  rating: () => 0,
+};
+
 export default function SearchScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
+  const isDesktop = useIsDesktop();
   const { getMapState, setMapState } = useMapState();
   const { isAuthenticated } = useSavedSearches();
-  const bottomSheet = useContext(BottomSheetContext);
-  const screenId = 'search-screen';
-
-  // Persistent property-list panel. Replaces @gorhom/bottom-sheet snap points
-  // with a simple `withSpring`-driven height shared value. Three resting
-  // positions (peek/collapsed/expanded) are computed from screen height. Drag
-  // gestures on the handle allow free resizing between peek and expanded.
-  const { height: screenHeight } = Dimensions.get('window');
-  const peekHeight = useMemo(() => screenHeight * SHEET_PEEK_RATIO, [screenHeight]);
-  const collapsedHeight = useMemo(() => screenHeight * SHEET_COLLAPSED_RATIO, [screenHeight]);
-  const expandedHeight = useMemo(() => screenHeight * SHEET_EXPANDED_RATIO, [screenHeight]);
-  const panelHeight = useSharedValue(collapsedHeight);
-  const panelStartHeight = useSharedValue(collapsedHeight);
-  // Normalized progress 0 → 1 across peek↔expanded, used to drive child
-  // animations (search-bar padding, handle opacity) the same way the previous
-  // `animatedIndex` did.
-  const searchBarHeight = 80; // Height of search bar + padding
-
-  // Restore saved state on mount
-  const savedState = getMapState(screenId);
-
-  // Get search query from URL params
-  const urlQuery = params.query as string;
-
-  const mapRef = useRef<MapApi>(null);
-  const searchInputRef = useRef<TextInput>(null);
-  const [searchQuery, setSearchQuery] = useState(urlQuery || savedState?.searchQuery || '');
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [showResults, setShowResults] = useState(false);
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
-
-  // Simple search query setter
-  const setSearchQuerySafely = useCallback((query: string) => {
-    setSearchQuery(query);
-  }, []);
-
-  // Animate the panel to a target height with a smooth spring (consistent
-  // with the rest of the bottom-sheet motion in the app).
-  const animateTo = useCallback((target: number) => {
-    panelHeight.value = withSpring(target, SHEET_SPRING);
-  }, [panelHeight]);
-
-  const expandPanel = useCallback(() => {
-    animateTo(expandedHeight);
-  }, [animateTo, expandedHeight]);
-
-  const collapsePanel = useCallback(() => {
-    animateTo(collapsedHeight);
-  }, [animateTo, collapsedHeight]);
-
-  // Handle search focus/blur
-  const handleSearchFocus = useCallback(() => {
-    setIsSearchFocused(true);
-    // Expand panel to full screen so search results have room to render.
-    expandPanel();
-  }, [expandPanel]);
-
-  const handleSearchBlur = useCallback(() => {
-    // Don't unfocus immediately - let the user interact with results
-    // We'll handle unfocusing when they actually select a result
-  }, []);
   const { setIsMapMode } = useSearchMode();
   const { mode: rentalMode } = useRentalMode();
+  const bottomSheet = useContext(BottomSheetContext);
 
-  // Set to map mode since we're always showing the map now
-  React.useEffect(() => {
-    setIsMapMode(true);
-  }, [setIsMapMode]);
-  const [filters, setFilters] = useState<Filters>({
-    minPrice: savedState?.filters?.minPrice || defaultFilters.minPrice,
-    maxPrice: savedState?.filters?.maxPrice || defaultFilters.maxPrice,
-    bedrooms: savedState?.filters?.bedrooms || defaultFilters.bedrooms,
-    bathrooms: savedState?.filters?.bathrooms || defaultFilters.bathrooms,
-    type: (savedState?.filters as any)?.type || defaultFilters.type,
-    amenities: (savedState?.filters as any)?.amenities || defaultFilters.amenities,
+  const screenId = 'search-screen';
+  const savedState = getMapState(screenId);
+  const urlQuery = typeof params.query === 'string' ? params.query : '';
+
+  // --- core search state ---
+  const mapRef = useRef<MapApi>(null);
+  const [searchQuery, setSearchQuery] = useState(
+    urlQuery || savedState?.searchQuery || '',
+  );
+  const [isSearching, setIsSearching] = useState(false);
+  const [mapboxResults, setMapboxResults] = useState<MapboxSearchResult[]>([]);
+  const [showMapboxResults, setShowMapboxResults] = useState(false);
+  const [filters, setFilters] = useState<SearchFilters>({
+    ...DEFAULT_FILTERS,
+    ...(savedState?.filters ?? {}),
   });
-  // Global accumulated properties for the map session
+  const [sortKey, setSortKey] = useState<SortKey>('recommended');
+  const [viewMode, setViewMode] = useState<ViewMode>('split');
+  const [showMobileMap, setShowMobileMap] = useState(false);
+  const [highlightedPropertyId, setHighlightedPropertyId] = useState<
+    string | null
+  >(savedState?.highlightedMarkerId || null);
+  const [currentBounds, setCurrentBounds] = useState<{
+    west: number;
+    south: number;
+    east: number;
+    north: number;
+  } | null>(savedState?.bounds || null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // The map screen sits inside a "map mode" context flag used by the
+  // outer layout to suppress shell chrome.
+  useEffect(() => {
+    setIsMapMode(true);
+    return () => setIsMapMode(false);
+  }, [setIsMapMode]);
+
+  // Default view mode follows screen size: mobile defaults to list,
+  // desktop to split. Once the user picks a mode we persist their
+  // choice for the rest of the session.
+  useEffect(() => {
+    setViewMode(isDesktop ? 'split' : 'list');
+  }, [isDesktop]);
+
+  // --- accumulated properties live in the map store, shared with home ---
   const accumulatedProperties = useMapSearchStore((s) => s.properties);
   const mergeMapProperties = useMapSearchStore((s) => s.mergeProperties);
-  const [isLoadingProperties, setIsLoadingProperties] = useState(false);
-  const [highlightedPropertyId, setHighlightedPropertyId] = useState<string | null>(savedState?.highlightedMarkerId || null);
-  // Keep track of last fetch center to trigger updates by distance moved
-  const lastFetchCenterRef = useRef<[number, number] | null>(savedState?.center || null);
+
+  const lastFetchCenterRef = useRef<[number, number] | null>(
+    savedState?.center || null,
+  );
   const lastFetchZoomRef = useRef<number | null>(savedState?.zoom ?? null);
-  const MIN_MOVE_DISTANCE_METERS = 500; // Minimum distance user must move to refetch
-  const MIN_ZOOM_DELTA = 0.8; // Minimum zoom change to refetch
   const lastSelectedLocationRef = useRef<string>('');
-  const [currentBounds, setCurrentBounds] = useState<{ west: number; south: number; east: number; north: number } | null>(savedState?.bounds || null);
 
-  // Memoize markers to prevent unnecessary re-renders
+  // --- derived data ---
   const mapMarkers = useMemo(() => {
-    if (!accumulatedProperties || accumulatedProperties.length === 0) {
-      return [];
-    }
-
-    const validProperties = accumulatedProperties.filter(p => {
-      // Check both new structure (address.coordinates) and old structure (location)
-      const hasNewCoordinates = p?.address?.coordinates?.coordinates?.length === 2;
-      const hasOldCoordinates = p?.location?.coordinates?.length === 2;
-      return hasNewCoordinates || hasOldCoordinates;
-    });
-
-    const markers = validProperties.map(p => {
-      // Use new structure if available, otherwise fall back to old structure
-      const coordinates = p.address?.coordinates?.coordinates || p.location?.coordinates;
-
-      // Ensure coordinates are valid numbers
-      if (!coordinates || coordinates.length !== 2 ||
-        typeof coordinates[0] !== 'number' || typeof coordinates[1] !== 'number') {
-        return null;
-      }
-
-      return {
-        id: p._id,
-        coordinates: coordinates as [number, number],
-        priceLabel: `€${p.rent?.amount?.toLocaleString() || 0}`,
-      };
-    }).filter((marker): marker is { id: string; coordinates: [number, number]; priceLabel: string } => marker !== null); // Remove any null markers
-
-    return markers;
+    if (!accumulatedProperties || accumulatedProperties.length === 0) return [];
+    return accumulatedProperties
+      .map((p) => {
+        const coords =
+          p?.address?.coordinates?.coordinates || p?.location?.coordinates;
+        if (
+          !coords ||
+          coords.length !== 2 ||
+          typeof coords[0] !== 'number' ||
+          typeof coords[1] !== 'number'
+        ) {
+          return null;
+        }
+        return {
+          id: p._id,
+          coordinates: coords as [number, number],
+          priceLabel: `€${p.rent?.amount?.toLocaleString() || 0}`,
+        };
+      })
+      .filter(
+        (m): m is { id: string; coordinates: [number, number]; priceLabel: string } =>
+          m !== null,
+      );
   }, [accumulatedProperties]);
 
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
-      setShowResults(false);
-      return;
-    }
-
-    // Don't search if the query matches the last selected location
-    if (searchQuery === lastSelectedLocationRef.current) {
-      return;
-    }
-
-    const searchPlaces = async () => {
-      setIsSearching(true);
-
-      // Check if Mapbox token is available
-      const mapboxToken = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
-      if (!mapboxToken) {
-        setIsSearching(false);
-        return;
-      }
-
-      try {
-        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchQuery)}.json?access_token=${mapboxToken}`;
-        const response = await fetch(url);
-        const data = await response.json();
-        if (data.features) {
-          setSearchResults(data.features);
-          setShowResults(true);
-        } else {
-          setSearchResults([]);
-          setShowResults(false);
-        }
-      } catch {
-        setSearchResults([]);
-        setShowResults(false);
-      }
-      finally {
-        setIsSearching(false);
-      }
-    };
-
-    const timeoutId = setTimeout(searchPlaces, 300); // Increased debounce to 300ms
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
-
-  const fetchProperties = useCallback(async (bounds: { west: number; south: number; east: number; north: number }) => {
-    setIsLoadingProperties(true);
-    setHighlightedPropertyId(null);
-    try {
-      // Quantize bounds to reduce cache key churn and leverage caching
-      const round = (n: number, d = 3) => Math.round(n * Math.pow(10, d)) / Math.pow(10, d);
-      const qb = { west: round(bounds.west), south: round(bounds.south), east: round(bounds.east), north: round(bounds.north) };
-      const rentModeFilter = rentalMode === 'vacation' ? RentMode.VACATION : RentMode.LONG_TERM;
-      const baseFilters = {
-        minRent: filters.minPrice,
-        maxRent: filters.maxPrice,
-        bedrooms: typeof filters.bedrooms === 'string' ? 5 : filters.bedrooms,
-        bathrooms: typeof filters.bathrooms === 'string' ? 4 : filters.bathrooms,
-        type: filters.type,
-        amenities: filters.amenities,
-        rentMode: rentModeFilter,
-        ...(rentalMode === 'vacation'
-          ? {
-              checkIn: filters.checkIn,
-              checkOut: filters.checkOut,
-              guests: filters.guests,
-              instantBook: filters.instantBook,
-            }
-          : {
-              furnished: filters.furnished,
-            }),
-      };
-      const key = ['propertiesInBounds', qb, baseFilters];
-
-      const response = await queryClient.ensureQueryData({
-        queryKey: key,
-        queryFn: async () => propertyService.findPropertiesInBounds(bounds, baseFilters),
-        staleTime: 1000 * 60, // 1 min fresh
-        gcTime: 1000 * 60 * 10,
-      });
-
-      // Merge fetched properties into the global map store
-      mergeMapProperties(response.properties || []);
-    } catch {
-      // Keep existing properties on fetch error
-    } finally {
-      setIsLoadingProperties(false);
-    }
-  }, [filters, queryClient, mergeMapProperties, rentalMode]);
-
-  useEffect(() => {
-    mapRef.current?.highlightMarker(highlightedPropertyId);
-  }, [highlightedPropertyId]);
-
-  const handleSelectLocation = useCallback((result: SearchResult) => {
-    const [lng, lat] = result.center;
-
-    // Clear search results and hide results immediately
-    setSearchResults([]);
-    setShowResults(false);
-
-    // Set the search query to the selected location name
-    setSearchQuery(result.place_name);
-    lastSelectedLocationRef.current = result.place_name;
-
-    // Unfocus search and animate the panel back to the collapsed peek
-    // position so the user can see the map again.
-    setIsSearchFocused(false);
-    collapsePanel();
-
-    // Navigate map and fetch properties immediately
-    mapRef.current?.navigateToLocation(result.center, 14);
-    // Update last fetch baseline to avoid duplicate fetch on region end
-    lastFetchCenterRef.current = result.center as [number, number];
-    lastFetchZoomRef.current = 14;
-    const radius = 0.05;
-    const bounds = result.bbox ? { west: result.bbox[0], south: result.bbox[1], east: result.bbox[2], north: result.bbox[3] }
-      : { west: lng - radius, south: lat - radius, east: lng + radius, north: lat + radius };
-    fetchProperties(bounds);
-  }, [fetchProperties, collapsePanel]);
-
-  // Apply saved search without navigation (no map reload)
-  useEffect(() => {
-    const unsubscribe = onApplySavedSearch(async (saved) => {
-      try {
-        // Update text field and filters first
-        setSearchQuery(saved.query || '');
-        lastSelectedLocationRef.current = saved.query || '';
-        setFilters((prev) => ({
-          minPrice: (saved.filters?.minPrice ?? prev.minPrice) as number,
-          maxPrice: (saved.filters?.maxPrice ?? prev.maxPrice) as number,
-          bedrooms: (saved.filters?.bedrooms ?? prev.bedrooms) as any,
-          bathrooms: (saved.filters?.bathrooms ?? prev.bathrooms) as any,
-          type: (saved.filters as any)?.type ?? prev.type,
-          amenities: (saved.filters as any)?.amenities ?? prev.amenities,
-        }));
-
-        // Geocode query and move map, then fetch properties
-        const mapboxToken = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
-        if (!mapboxToken || !saved.query) return;
-
-        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(saved.query)}.json?access_token=${mapboxToken}`;
-        const resp = await fetch(url);
-        const data = await resp.json();
-        const feature = data?.features?.[0];
-        if (feature) {
-          handleSelectLocation(feature);
-        }
-      } catch {
-        // Silent fail; UI remains unchanged
-      }
-    });
-    return unsubscribe;
-  }, [handleSelectLocation]);
-
-  const handleMarkerPress = ({ id }: { id: string; lngLat: [number, number] }) => {
-    const index = accumulatedProperties.findIndex(p => p._id === id);
-    if (index !== -1) {
-      setHighlightedPropertyId(id);
-
-      // Save highlighted marker to state
-      setMapState(screenId, { highlightedMarkerId: id });
-    }
-  };
-
-  const handleRegionChange = useCallback(({ center, bounds, zoom, isFinal }: { center: [number, number]; bounds: { west: number; south: number; east: number; north: number }; zoom: number; isFinal?: boolean }) => {
-    if (!bounds || !center) return;
-    // Always update current bounds for bottom sheet filtering
-    setCurrentBounds(bounds);
-    // Only react when the gesture ends to avoid rapid updates while panning
-    if (!isFinal) return;
-
-    // Haversine distance in meters between two [lng, lat] points
-    const distanceMeters = (a: [number, number], b: [number, number]) => {
-      const toRad = (x: number) => (x * Math.PI) / 180;
-      const R = 6371000; // meters
-      const dLat = toRad(b[1] - a[1]);
-      const dLon = toRad(b[0] - a[0]);
-      const lat1 = toRad(a[1]);
-      const lat2 = toRad(b[1]);
-      const sinDLat = Math.sin(dLat / 2);
-      const sinDLon = Math.sin(dLon / 2);
-      const h = sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon;
-      return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
-    };
-
-    // Compute viewport diagonal in meters and adapt threshold to zoom level
-    const diagonalMeters = distanceMeters([bounds.west, bounds.north], [bounds.east, bounds.south]);
-    const adaptiveThreshold = Math.max(MIN_MOVE_DISTANCE_METERS, diagonalMeters * 0.3); // 30% of viewport diagonal
-
-    // If first time, fetch immediately and set baseline
-    if (!lastFetchCenterRef.current || lastFetchZoomRef.current === null) {
-      lastFetchCenterRef.current = center;
-      lastFetchZoomRef.current = zoom;
-      fetchProperties(bounds);
-      return;
-    }
-
-    const moved = distanceMeters(lastFetchCenterRef.current, center);
-    const zoomChanged = Math.abs((lastFetchZoomRef.current ?? zoom) - zoom);
-
-    if (moved >= adaptiveThreshold || zoomChanged >= MIN_ZOOM_DELTA) {
-      lastFetchCenterRef.current = center;
-      lastFetchZoomRef.current = zoom;
-      fetchProperties(bounds);
-    }
-  }, [fetchProperties]);
-
-  const onViewableItemsChanged = useMemo(() => {
-    return (viewableItems: { item: Property }[]) => {
-      if (viewableItems.length > 0) {
-        const visibleId = viewableItems[0].item._id;
-        setHighlightedPropertyId(visibleId);
-      }
-    };
-  }, []);
-
-  // Only show properties visible on screen in the list
+  // Visible-on-screen filter so the list mirrors the current map viewport.
   const visibleProperties = useMemo(() => {
     if (!currentBounds) return accumulatedProperties;
-    const within = (lng: number, lat: number) => (
-      lng >= currentBounds.west && lng <= currentBounds.east &&
-      lat >= currentBounds.south && lat <= currentBounds.north
-    );
-    return accumulatedProperties.filter(p => {
-      const coords = (p.address?.coordinates?.coordinates || p.location?.coordinates) as [number, number] | undefined;
+    const within = (lng: number, lat: number) =>
+      lng >= currentBounds.west &&
+      lng <= currentBounds.east &&
+      lat >= currentBounds.south &&
+      lat <= currentBounds.north;
+    return accumulatedProperties.filter((p) => {
+      const coords = (p.address?.coordinates?.coordinates ||
+        p.location?.coordinates) as [number, number] | undefined;
       if (!coords || coords.length !== 2) return false;
       const [lng, lat] = coords;
       return typeof lng === 'number' && typeof lat === 'number' && within(lng, lat);
     });
   }, [accumulatedProperties, currentBounds]);
 
-  const handlePropertyPress = useCallback((property: Property) => {
-    router.push(`/properties/${property._id}`);
-  }, [router]);
+  // Sorted view of the visible properties.
+  const sortedProperties = useMemo(() => {
+    const cmp = SORT_FUNCTIONS[sortKey];
+    if (!cmp) return visibleProperties;
+    return [...visibleProperties].sort(cmp);
+  }, [visibleProperties, sortKey]);
 
-  const _handleResetMap = useCallback(() => {
-    // Clear saved map state and reset to current location
-    setMapState(screenId, {
-      center: undefined,
-      zoom: undefined,
-      bounds: undefined,
-      markers: undefined,
-      highlightedMarkerId: undefined,
-      searchQuery: '',
-      filters: undefined,
+  // --- map marker / popover state ---
+  const selectedProperty = useMemo(() => {
+    if (!highlightedPropertyId) return null;
+    return (
+      accumulatedProperties.find((p) => p._id === highlightedPropertyId) ?? null
+    );
+  }, [accumulatedProperties, highlightedPropertyId]);
+
+  // --- data fetching ---
+  const fetchProperties = useCallback(
+    async (bounds: {
+      west: number;
+      south: number;
+      east: number;
+      north: number;
+    }) => {
+      setIsLoading(true);
+      setFetchError(null);
+      setHighlightedPropertyId(null);
+      try {
+        const round = (n: number, d = 3) =>
+          Math.round(n * Math.pow(10, d)) / Math.pow(10, d);
+        const qb = {
+          west: round(bounds.west),
+          south: round(bounds.south),
+          east: round(bounds.east),
+          north: round(bounds.north),
+        };
+        const rentModeFilter =
+          rentalMode === 'vacation' ? RentMode.VACATION : RentMode.LONG_TERM;
+        const baseFilters = {
+          minRent: filters.minPrice,
+          maxRent: filters.maxPrice,
+          bedrooms:
+            typeof filters.bedrooms === 'string' ? 5 : filters.bedrooms,
+          bathrooms:
+            typeof filters.bathrooms === 'string' ? 4 : filters.bathrooms,
+          type: filters.type,
+          amenities: filters.amenities,
+          rentMode: rentModeFilter,
+          ...(rentalMode === 'vacation'
+            ? {
+                checkIn: filters.checkIn,
+                checkOut: filters.checkOut,
+                guests: filters.guests,
+                instantBook: filters.instantBook,
+              }
+            : { furnished: filters.furnished }),
+        };
+        const key = ['propertiesInBounds', qb, baseFilters];
+        const response = await queryClient.ensureQueryData({
+          queryKey: key,
+          queryFn: async () =>
+            propertyService.findPropertiesInBounds(bounds, baseFilters),
+          staleTime: 1000 * 60,
+          gcTime: 1000 * 60 * 10,
+        });
+        mergeMapProperties(response.properties || []);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Unable to load properties';
+        setFetchError(message);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [filters, queryClient, mergeMapProperties, rentalMode],
+  );
+
+  // Initial fetch when nothing cached.
+  useEffect(() => {
+    if (accumulatedProperties.length === 0 && !savedState) {
+      fetchProperties({ ...DEFAULT_BARCELONA_BOUNDS });
+    }
+    // Intentionally NOT depending on `accumulatedProperties.length` after
+    // mount — we only want this to happen on first mount, not every time
+    // the cache populates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Re-run the fetch when the rental mode flips so the user sees the
+  // correct subset of listings immediately.
+  useEffect(() => {
+    if (currentBounds) {
+      fetchProperties(currentBounds);
+    } else if (accumulatedProperties.length > 0) {
+      fetchProperties({ ...DEFAULT_BARCELONA_BOUNDS });
+    }
+    // We only want to re-fetch when the mode flips, not on every bound change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rentalMode]);
+
+  // --- search-as-you-type via Mapbox geocoding ---
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setMapboxResults([]);
+      setShowMapboxResults(false);
+      return;
+    }
+    if (searchQuery === lastSelectedLocationRef.current) return;
+
+    const token = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
+    if (!token) return;
+
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+          searchQuery,
+        )}.json?access_token=${token}`;
+        const response = await fetch(url);
+        const data: { features?: MapboxSearchResult[] } = await response.json();
+        if (data.features) {
+          setMapboxResults(data.features);
+          setShowMapboxResults(true);
+        } else {
+          setMapboxResults([]);
+          setShowMapboxResults(false);
+        }
+      } catch {
+        setMapboxResults([]);
+        setShowMapboxResults(false);
+      } finally {
+        setIsSearching(false);
+      }
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const handleSelectLocation = useCallback(
+    (result: MapboxSearchResult) => {
+      const [lng, lat] = result.center;
+      setMapboxResults([]);
+      setShowMapboxResults(false);
+      setSearchQuery(result.place_name);
+      lastSelectedLocationRef.current = result.place_name;
+      mapRef.current?.navigateToLocation(result.center, 14);
+      lastFetchCenterRef.current = result.center;
+      lastFetchZoomRef.current = 14;
+      const radiusDelta = 0.05;
+      const bounds = result.bbox
+        ? {
+            west: result.bbox[0],
+            south: result.bbox[1],
+            east: result.bbox[2],
+            north: result.bbox[3],
+          }
+        : {
+            west: lng - radiusDelta,
+            south: lat - radiusDelta,
+            east: lng + radiusDelta,
+            north: lat + radiusDelta,
+          };
+      fetchProperties(bounds);
+    },
+    [fetchProperties],
+  );
+
+  // Saved-search bus subscription.
+  useEffect(() => {
+    const unsubscribe = onApplySavedSearch(async (saved) => {
+      try {
+        setSearchQuery(saved.query || '');
+        lastSelectedLocationRef.current = saved.query || '';
+        setFilters((prev) => ({
+          ...prev,
+          ...(saved.filters as Partial<SearchFilters>),
+        }));
+        const token = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
+        if (!token || !saved.query) return;
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+          saved.query,
+        )}.json?access_token=${token}`;
+        const response = await fetch(url);
+        const data: { features?: MapboxSearchResult[] } = await response.json();
+        const feature = data?.features?.[0];
+        if (feature) handleSelectLocation(feature);
+      } catch {
+        /* silent — UI stays in last state */
+      }
     });
-    // Force reload by updating a state
-    setSearchQuery('');
-  }, [setMapState, screenId]);
+    return () => {
+      unsubscribe();
+    };
+  }, [handleSelectLocation]);
+
+  // --- map gesture handlers ---
+  const handleRegionChange = useCallback(
+    ({
+      center,
+      bounds,
+      zoom,
+      isFinal,
+    }: {
+      center: [number, number];
+      bounds: { west: number; south: number; east: number; north: number };
+      zoom: number;
+      isFinal?: boolean;
+    }) => {
+      if (!bounds || !center) return;
+      setCurrentBounds(bounds);
+      if (!isFinal) return;
+
+      const distanceMeters = (
+        a: [number, number],
+        b: [number, number],
+      ): number => {
+        const toRad = (x: number) => (x * Math.PI) / 180;
+        const R = 6371000;
+        const dLat = toRad(b[1] - a[1]);
+        const dLon = toRad(b[0] - a[0]);
+        const lat1 = toRad(a[1]);
+        const lat2 = toRad(b[1]);
+        const sinDLat = Math.sin(dLat / 2);
+        const sinDLon = Math.sin(dLon / 2);
+        const h =
+          sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon;
+        return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+      };
+      const diagonalMeters = distanceMeters(
+        [bounds.west, bounds.north],
+        [bounds.east, bounds.south],
+      );
+      const threshold = Math.max(MIN_MOVE_DISTANCE_METERS, diagonalMeters * 0.3);
+
+      if (
+        !lastFetchCenterRef.current ||
+        lastFetchZoomRef.current === null
+      ) {
+        lastFetchCenterRef.current = center;
+        lastFetchZoomRef.current = zoom;
+        fetchProperties(bounds);
+        return;
+      }
+      const moved = distanceMeters(lastFetchCenterRef.current, center);
+      const zoomChanged = Math.abs(
+        (lastFetchZoomRef.current ?? zoom) - zoom,
+      );
+      if (moved >= threshold || zoomChanged >= MIN_ZOOM_DELTA) {
+        lastFetchCenterRef.current = center;
+        lastFetchZoomRef.current = zoom;
+        fetchProperties(bounds);
+      }
+    },
+    [fetchProperties],
+  );
+
+  const handleMarkerPress = useCallback(
+    ({ id }: { id: string; lngLat: [number, number] }) => {
+      setHighlightedPropertyId(id);
+      setMapState(screenId, { highlightedMarkerId: id });
+    },
+    [setMapState],
+  );
+
+  useEffect(() => {
+    mapRef.current?.highlightMarker(highlightedPropertyId);
+  }, [highlightedPropertyId]);
+
+  const handlePropertyPress = useCallback(
+    (property: Property) => {
+      router.push(`/properties/${property._id}`);
+    },
+    [router],
+  );
+
+  // --- top-bar actions ---
+  const handleFilterChange = useCallback(
+    (sectionId: string, value: unknown) => {
+      setFilters((prev) => {
+        switch (sectionId) {
+          case 'price':
+            if (Array.isArray(value)) {
+              const [min, max] = value;
+              return {
+                ...prev,
+                minPrice: typeof min === 'number' ? min : prev.minPrice,
+                maxPrice: typeof max === 'number' ? max : prev.maxPrice,
+              };
+            }
+            return prev;
+          case 'type':
+            return {
+              ...prev,
+              type: typeof value === 'string' ? value : undefined,
+            };
+          case 'bedrooms':
+            return {
+              ...prev,
+              bedrooms:
+                typeof value === 'string' || typeof value === 'number'
+                  ? Number(value)
+                  : prev.bedrooms,
+            };
+          case 'bathrooms':
+            return {
+              ...prev,
+              bathrooms:
+                typeof value === 'string' || typeof value === 'number'
+                  ? Number(value)
+                  : prev.bathrooms,
+            };
+          case 'amenities': {
+            const current = prev.amenities || [];
+            if (typeof value !== 'string') return prev;
+            const next = current.includes(value)
+              ? current.filter((a) => a !== value)
+              : [...current, value];
+            return { ...prev, amenities: next };
+          }
+          case 'checkIn':
+            return {
+              ...prev,
+              checkIn: typeof value === 'string' ? value : undefined,
+            };
+          case 'checkOut':
+            return {
+              ...prev,
+              checkOut: typeof value === 'string' ? value : undefined,
+            };
+          case 'guests':
+            return {
+              ...prev,
+              guests: typeof value === 'number' ? value : prev.guests,
+            };
+          case 'instantBook':
+            return { ...prev, instantBook: Boolean(value) };
+          case 'cancellationPolicy':
+            return {
+              ...prev,
+              cancellationPolicy:
+                typeof value === 'string'
+                  ? (value as SearchFilters['cancellationPolicy'])
+                  : undefined,
+            };
+          case 'moveIn':
+            return {
+              ...prev,
+              moveIn: typeof value === 'string' ? value : undefined,
+            };
+          case 'leaseDuration':
+            return {
+              ...prev,
+              leaseDuration: typeof value === 'string' ? value : undefined,
+            };
+          case 'maxDeposit':
+            if (Array.isArray(value)) {
+              const [, max] = value;
+              return {
+                ...prev,
+                maxDeposit:
+                  typeof max === 'number' ? max : prev.maxDeposit,
+              };
+            }
+            return prev;
+          case 'furnished':
+            return { ...prev, furnished: Boolean(value) };
+          default:
+            return prev;
+        }
+      });
+    },
+    [],
+  );
+
+  const openFilters = useCallback(() => {
+    bottomSheet.openBottomSheet(
+      <SearchFiltersBottomSheet
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onApply={() => {
+          bottomSheet.closeBottomSheet();
+          if (currentBounds) fetchProperties(currentBounds);
+        }}
+        onClear={() => {
+          setFilters(DEFAULT_FILTERS);
+          bottomSheet.closeBottomSheet();
+        }}
+      />,
+    );
+  }, [bottomSheet, filters, handleFilterChange, currentBounds, fetchProperties]);
+
+  const handleChipPress = useCallback(
+    (key: FilterChipKey) => {
+      // All chips route through the same filter sheet; the sheet's
+      // section order is controlled and the user lands on the relevant
+      // group anyway.
+      openFilters();
+      void key;
+    },
+    [openFilters],
+  );
+
+  const handleSortPress = useCallback(() => {
+    bottomSheet.openBottomSheet(
+      <SortBottomSheet
+        value={sortKey}
+        onChange={setSortKey}
+        onClose={() => bottomSheet.closeBottomSheet()}
+      />,
+    );
+  }, [bottomSheet, sortKey]);
+
+  const handleSaveSearch = useCallback(() => {
+    if (!isAuthenticated) {
+      router.push('/profile');
+      return;
+    }
+    bottomSheet.openBottomSheet(
+      <SaveSearchBottomSheet
+        defaultName={searchQuery || 'My Search'}
+        query={searchQuery}
+        filters={{ ...filters }}
+        onClose={() => bottomSheet.closeBottomSheet()}
+        onSaved={() => bottomSheet.closeBottomSheet()}
+      />,
+    );
+  }, [bottomSheet, isAuthenticated, router, searchQuery, filters]);
+
+  const handleClearFilters = useCallback(() => {
+    setFilters(DEFAULT_FILTERS);
+    if (currentBounds) fetchProperties(currentBounds);
+  }, [currentBounds, fetchProperties]);
 
   const handleRefreshLocation = useCallback(async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        return;
-      }
-
+      if (status !== 'granted') return;
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
         timeInterval: 10000,
         distanceInterval: 10,
       });
-
-      const coordinates: [number, number] = [location.coords.longitude, location.coords.latitude];
-
-      // Navigate to the new location
-      mapRef.current?.navigateToLocation(coordinates, 14);
-      // Update last fetch baseline to avoid duplicate fetch on region end
-      lastFetchCenterRef.current = coordinates;
+      const coords: [number, number] = [
+        location.coords.longitude,
+        location.coords.latitude,
+      ];
+      mapRef.current?.navigateToLocation(coords, 14);
+      lastFetchCenterRef.current = coords;
       lastFetchZoomRef.current = 14;
-
-      // Clear saved state to force fresh location
-      setMapState(screenId, {
-        center: coordinates,
-        zoom: 14,
-        bounds: undefined,
-      });
-
+      setMapState(screenId, { center: coords, zoom: 14, bounds: undefined });
     } catch {
-      // Handle location error silently
+      /* permission denied or location unavailable — no-op */
     }
-  }, [mapRef, setMapState, screenId]);
+  }, [setMapState]);
 
-  // Initial fetch of properties when component mounts
-  useEffect(() => {
-    // Only fetch if we don't have properties and no saved state
-    if (accumulatedProperties.length === 0 && !savedState) {
-      // Fetch properties for a default area (Barcelona)
-      const defaultBounds = {
-        west: 2.0,
-        south: 41.3,
-        east: 2.3,
-        north: 41.5,
-      };
-      fetchProperties(defaultBounds);
-    }
-  }, [accumulatedProperties.length, savedState, fetchProperties]);
-
-  // Auto-focus search input when screen opens (only if coming from home screen)
-  useEffect(() => {
-    // Only auto-focus if coming from home screen (fromHome=true parameter)
-    if (params.fromHome !== 'true') return;
-    const timer = setTimeout(() => {
-      searchInputRef.current?.focus();
-      // Expand panel to full height when coming from home screen search
-      handleSearchFocus();
-      // Clear the auto-focused state after the panel finishes opening so the
-      // user can collapse it again via the drag handle.
-      setTimeout(() => {
-        setIsSearchFocused(false);
-      }, 500);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [handleSearchFocus, params.fromHome]);
-
-  // Handle URL query changes
-  useEffect(() => {
-    if (urlQuery && urlQuery !== searchQuery) {
-      setSearchQuery(urlQuery);
-      setShowResults(true);
-    }
-  }, [urlQuery, searchQuery]);
-
-  const handleFilterChange = useCallback((sectionId: string, value: unknown) => {
-    setFilters(prev => {
-      switch (sectionId) {
-        case 'price': {
-          if (Array.isArray(value)) {
-            const [min, max] = value;
-            return {
-              ...prev,
-              minPrice: typeof min === 'number' ? min : prev.minPrice,
-              maxPrice: typeof max === 'number' ? max : prev.maxPrice,
-            };
-          }
-          return prev;
-        }
-        case 'type':
-          return { ...prev, type: typeof value === 'string' ? value : undefined };
-        case 'bedrooms':
-          return { ...prev, bedrooms: typeof value === 'string' || typeof value === 'number' ? Number(value) : prev.bedrooms };
-        case 'bathrooms':
-          return { ...prev, bathrooms: typeof value === 'string' || typeof value === 'number' ? Number(value) : prev.bathrooms };
-        case 'amenities': {
-          const currentAmenities = prev.amenities || [];
-          if (typeof value !== 'string') return prev;
-          const newAmenities = currentAmenities.includes(value)
-            ? currentAmenities.filter(a => a !== value)
-            : [...currentAmenities, value];
-          return { ...prev, amenities: newAmenities };
-        }
-        // Vacation-mode sections
-        case 'checkIn':
-          return { ...prev, checkIn: typeof value === 'string' ? value : undefined };
-        case 'checkOut':
-          return { ...prev, checkOut: typeof value === 'string' ? value : undefined };
-        case 'guests':
-          return { ...prev, guests: typeof value === 'number' ? value : prev.guests };
-        case 'instantBook':
-          return { ...prev, instantBook: Boolean(value) };
-        case 'cancellationPolicy':
-          return { ...prev, cancellationPolicy: typeof value === 'string' ? value as Filters['cancellationPolicy'] : undefined };
-        // Long-term-mode sections
-        case 'moveIn':
-          return { ...prev, moveIn: typeof value === 'string' ? value : undefined };
-        case 'leaseDuration':
-          return { ...prev, leaseDuration: typeof value === 'string' ? value : undefined };
-        case 'maxDeposit': {
-          if (Array.isArray(value)) {
-            const [, max] = value;
-            return { ...prev, maxDeposit: typeof max === 'number' ? max : prev.maxDeposit };
-          }
-          return prev;
-        }
-        case 'furnished':
-          return { ...prev, furnished: Boolean(value) };
-        default:
-          return prev;
-      }
-    });
-  }, []);
-
-  const handleOpenFilters = useCallback(() => {
-    bottomSheet.openBottomSheet(
-      <SearchFiltersBottomSheet
-        filters={filters}
-        onFilterChange={handleFilterChange}
-        onApply={bottomSheet.closeBottomSheet}
-        onClear={() => {
-          setFilters(defaultFilters);
-          bottomSheet.closeBottomSheet();
-        }}
-      />
-    );
-  }, [bottomSheet, filters, handleFilterChange]);
-
-  const handleOpenSaveModal = useCallback(() => {
-    if (!isAuthenticated) {
-      router.push('/profile');
-      return;
-    }
-    const currentFilters = {
-      ...filters
-    };
-    bottomSheet.openBottomSheet(
-      <SaveSearchBottomSheet
-        defaultName={searchQuery || 'My Search'}
-        query={searchQuery}
-        filters={currentFilters}
-        onClose={() => bottomSheet.closeBottomSheet()}
-        onSaved={() => {
-          // Handle successful save
-        }}
-      />,
-    );
-  }, [isAuthenticated, router, bottomSheet, searchQuery, filters]);
-
-  // Animated style for the panel height (drives the slide-up / pull-down).
-  const animatedPanelStyle = useAnimatedStyle(() => ({
-    height: panelHeight.value,
-  }));
-
-  // Body padding compensation: once the panel approaches full height, push
-  // content down so the floating search bar at the top doesn't overlap it.
-  const animatedBottomSheetPaddingStyle = useAnimatedStyle(() => {
-    const paddingTop = interpolate(
-      panelHeight.value,
-      [collapsedHeight, expandedHeight],
-      [0, searchBarHeight],
-      Extrapolation.CLAMP,
-    );
-    return { paddingTop };
-  });
-
-  // Fade the drag handle out as the panel approaches full height (matches
-  // the previous Gorhom behavior — visible at peek/collapsed, hidden when
-  // expanded so the content has the full height to itself).
-  const animatedHandleStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(
-      panelHeight.value,
-      [collapsedHeight, expandedHeight * 0.6, expandedHeight],
-      [1, 0.3, 0],
-      Extrapolation.CLAMP,
-    );
-    return { opacity };
-  });
-
-  // Pan gesture on the drag handle: lets the user freely resize the panel
-  // between peek and expanded. On release, springs to whichever resting
-  // position is closer (or expanded if the user flicked upward fast).
-  const handleDragGesture = useMemo(
-    () =>
-      Gesture.Pan()
-        .onStart(() => {
-          'worklet';
-          panelStartHeight.value = panelHeight.value;
-        })
-        .onUpdate((event) => {
-          'worklet';
-          // Dragging the handle upward (negative translationY) grows the
-          // panel; downward shrinks it. Clamp to [peek, expanded].
-          const next = panelStartHeight.value - event.translationY;
-          if (next < peekHeight) {
-            panelHeight.value = peekHeight;
-          } else if (next > expandedHeight) {
-            panelHeight.value = expandedHeight;
-          } else {
-            panelHeight.value = next;
-          }
-        })
-        .onEnd((event) => {
-          'worklet';
-          const velocity = event.velocityY;
-          const current = panelHeight.value;
-          const midpoint = (collapsedHeight + expandedHeight) / 2;
-          // Flick up fast → expand; flick down fast → collapse;
-          // otherwise snap to the closest resting position.
-          let target: number;
-          if (velocity < -900) {
-            target = expandedHeight;
-          } else if (velocity > 900) {
-            target = collapsedHeight;
-          } else if (current > midpoint) {
-            target = expandedHeight;
-          } else {
-            target = collapsedHeight;
-          }
-          panelHeight.value = withSpring(target, SHEET_SPRING);
-        }),
-    [panelHeight, panelStartHeight, peekHeight, collapsedHeight, expandedHeight],
+  const chipDefs = useMemo(
+    () => buildChipDefs(t, filters, rentalMode),
+    [t, filters, rentalMode],
   );
 
-  // Tap on the handle area toggles between collapsed and expanded — useful
-  // on web where the drag affordance is less obvious than on touch devices.
-  const toggleHandlePress = useCallback(() => {
-    if (panelHeight.value > (collapsedHeight + expandedHeight) / 2) {
-      panelHeight.value = withTiming(collapsedHeight, { duration: 250 });
-    } else {
-      panelHeight.value = withTiming(expandedHeight, { duration: 250 });
+  const resultsHeader = useMemo(() => {
+    if (isLoading) {
+      return t('search.header.loading', 'Searching homes...') || 'Searching homes...';
     }
-  }, [panelHeight, collapsedHeight, expandedHeight]);
+    if (sortedProperties.length === 0) {
+      return t('search.header.noResults', 'No homes match this area') ||
+        'No homes match this area';
+    }
+    return t(
+      'search.header.countWithCity',
+      `${sortedProperties.length} homes in this area`,
+    ) || `${sortedProperties.length} homes in this area`;
+  }, [t, isLoading, sortedProperties.length]);
 
-  // Render search result item
-  const renderSearchResult = useCallback((result: SearchResult) => {
-    const getIcon = () => {
-      const placeTypes = result.place_type || [];
-      if (placeTypes.includes('place') || placeTypes.includes('city')) {
-        return 'business';
-      } else if (placeTypes.includes('neighborhood') || placeTypes.includes('locality')) {
-        return 'location';
-      } else if (placeTypes.includes('address') || placeTypes.includes('street')) {
-        return 'map';
-      } else if (placeTypes.includes('poi')) {
-        return 'home';
-      }
-      return 'location-outline';
-    };
+  // -------------------------------------------------------------------
+  // RENDER
+  // -------------------------------------------------------------------
+  const renderTopBar = () => (
+    <View style={[styles.topBar, cardShadow.sm]}>
+      <View style={styles.topBarContent}>
+        <View style={styles.searchInputWrap}>
+          <SearchInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onClearText={() => setSearchQuery('')}
+            label={
+              t(
+                'search.input.placeholder',
+                'Search cities, neighborhoods, or addresses',
+              ) || 'Search cities, neighborhoods, or addresses'
+            }
+          />
+        </View>
+        {isDesktop ? (
+          <View style={styles.viewModeWrap}>
+            <SegmentedControl.Root<ViewMode>
+              label={t('search.viewMode.label', 'View mode') || 'View mode'}
+              type="tabs"
+              size="small"
+              value={viewMode}
+              onChange={setViewMode}
+            >
+              <SegmentedControl.Item value="split">
+                <SegmentedControl.ItemText>
+                  {t('search.viewMode.split', 'Split') || 'Split'}
+                </SegmentedControl.ItemText>
+              </SegmentedControl.Item>
+              <SegmentedControl.Item value="list">
+                <SegmentedControl.ItemText>
+                  {t('search.viewMode.list', 'List') || 'List'}
+                </SegmentedControl.ItemText>
+              </SegmentedControl.Item>
+              <SegmentedControl.Item value="map">
+                <SegmentedControl.ItemText>
+                  {t('search.viewMode.map', 'Map') || 'Map'}
+                </SegmentedControl.ItemText>
+              </SegmentedControl.Item>
+            </SegmentedControl.Root>
+          </View>
+        ) : null}
+      </View>
+      <FilterChipRow chips={chipDefs} onChipPress={handleChipPress} />
+    </View>
+  );
 
+  const renderResultsHeader = () => (
+    <View style={styles.resultsHeader}>
+      <View style={styles.resultsHeaderText}>
+        <H3 style={styles.resultsTitle}>{resultsHeader}</H3>
+        {isSearching ? (
+          <BloomText style={styles.resultsSubtitle}>
+            {t('search.header.geocoding', 'Looking up location...') ||
+              'Looking up location...'}
+          </BloomText>
+        ) : null}
+      </View>
+      <View style={styles.resultsHeaderActions}>
+        <Button
+          onPress={handleSortPress}
+          variant="ghost"
+          size="small"
+          icon={<Ionicons name="swap-vertical" size={16} color={colors.COLOR_BLACK} />}
+          iconPosition="left"
+          accessibilityLabel={t('search.actions.sort', 'Sort') || 'Sort'}
+        >
+          {t('search.actions.sort', 'Sort') || 'Sort'}
+        </Button>
+        <Button
+          onPress={handleSaveSearch}
+          variant="ghost"
+          size="small"
+          icon={<Ionicons name="bookmark-outline" size={16} color={colors.COLOR_BLACK} />}
+          iconPosition="left"
+          accessibilityLabel={t('search.actions.save', 'Save') || 'Save'}
+        >
+          {t('search.actions.save', 'Save') || 'Save'}
+        </Button>
+        <Button
+          onPress={handleRefreshLocation}
+          variant="ghost"
+          size="small"
+          icon={<Ionicons name="locate-outline" size={16} color={colors.COLOR_BLACK} />}
+          iconPosition="left"
+          accessibilityLabel={t('search.actions.locate', 'Locate') || 'Locate'}
+        >
+          {t('search.actions.locate', 'Locate') || 'Locate'}
+        </Button>
+      </View>
+    </View>
+  );
+
+  const renderMapboxOverlay = () => {
+    if (!showMapboxResults || mapboxResults.length === 0) return null;
     return (
-      <TouchableOpacity
-        key={result.id}
-        style={styles.searchResultItem}
-        onPress={() => handleSelectLocation(result)}
-        activeOpacity={0.7}
-      >
-        <View style={styles.searchResultIcon}>
-          <Ionicons name={getIcon()} size={20} color={colors.primaryColor} />
-        </View>
-        <View style={styles.searchResultText}>
-          <ThemedText style={styles.searchResultTitle}>{result.text}</ThemedText>
-          <ThemedText style={styles.searchResultSubtitle}>
-            {result.place_name.replace(`${result.text}, `, '')}
-          </ThemedText>
-        </View>
-        <Ionicons name="chevron-forward" size={16} color="#ccc" />
-      </TouchableOpacity>
+      <View style={[styles.mapboxOverlay, withShadow('md')]}>
+        {mapboxResults.slice(0, 6).map((result) => (
+          <Pressable
+            key={result.id}
+            onPress={() => handleSelectLocation(result)}
+            style={({ pressed }) => [
+              styles.mapboxRow,
+              pressed ? styles.mapboxRowPressed : null,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={result.place_name}
+          >
+            <Ionicons
+              name="location-outline"
+              size={18}
+              color={colors.COLOR_BLACK_LIGHT_3}
+            />
+            <View style={styles.mapboxText}>
+              <BloomText style={styles.mapboxTitle}>{result.text}</BloomText>
+              <BloomText style={styles.mapboxSubtitle}>
+                {result.place_name.replace(`${result.text}, `, '')}
+              </BloomText>
+            </View>
+          </Pressable>
+        ))}
+      </View>
     );
-  }, [handleSelectLocation]);
+  };
 
-  return (
-    <View style={styles.container}>
+  const renderResultsBody = (gridColumns?: Partial<{ sm: number; md: number; lg: number; xl: number }>) => {
+    if (isLoading && sortedProperties.length === 0) {
+      return (
+        <PropertyResultsGridSkeleton
+          count={6}
+          columns={gridColumns}
+          style={styles.gridPadding}
+        />
+      );
+    }
+    if (fetchError) {
+      return (
+        <ErrorState
+          title={t('search.error.title', 'Could not load homes') || 'Could not load homes'}
+          description={fetchError}
+          retryLabel={t('common.tryAgain', 'Try again') || 'Try again'}
+          onRetry={() => currentBounds && fetchProperties(currentBounds)}
+        />
+      );
+    }
+    if (sortedProperties.length === 0) {
+      const hasFilters =
+        filters.minPrice !== DEFAULT_FILTERS.minPrice ||
+        filters.maxPrice !== DEFAULT_FILTERS.maxPrice ||
+        filters.type ||
+        (filters.amenities?.length ?? 0) > 0;
+      return (
+        <EmptyState
+          icon="home-outline"
+          title={
+            t('search.empty.title', 'No homes match this area') ||
+            'No homes match this area'
+          }
+          description={
+            t(
+              'search.empty.description',
+              'Try moving the map or relaxing your filters.',
+            ) || 'Try moving the map or relaxing your filters.'
+          }
+          actionText={
+            hasFilters
+              ? t('search.empty.action', 'Reset filters') || 'Reset filters'
+              : undefined
+          }
+          actionIcon={hasFilters ? 'refresh' : undefined}
+          onAction={hasFilters ? handleClearFilters : undefined}
+        />
+      );
+    }
+    return (
+      <PropertyResultsGrid
+        properties={sortedProperties}
+        onPropertyPress={handlePropertyPress}
+        highlightedPropertyId={highlightedPropertyId}
+        columns={gridColumns}
+        style={styles.gridPadding}
+      />
+    );
+  };
+
+  const renderResultsScroll = (gridColumns?: Partial<{ sm: number; md: number; lg: number; xl: number }>) => (
+    <View style={styles.resultsScroll}>
+      {renderResultsHeader()}
+      {renderResultsBody(gridColumns)}
+    </View>
+  );
+
+  const renderMapPanel = () => (
+    <View style={styles.mapPanel}>
       <MapView
         key="search-map"
         ref={mapRef}
         style={styles.map}
         screenId={screenId}
-        startFromCurrentLocation={!savedState} // Use current location if no saved state
+        startFromCurrentLocation={!savedState}
         initialZoom={savedState?.zoom || 12}
         markers={mapMarkers}
         onRegionChange={handleRegionChange}
         onMarkerPress={handleMarkerPress}
       />
-
-      <View style={styles.searchBarContainer}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} style={styles.searchIcon} />
-          <TextInput
-            ref={searchInputRef}
-            style={styles.searchInput}
-            placeholder="Search cities, neighborhoods, streets, or addresses..."
-            value={searchQuery}
-            onChangeText={setSearchQuerySafely}
-            onFocus={handleSearchFocus}
-            onBlur={handleSearchBlur}
-            returnKeyType="search"
-            autoCorrect={false}
-            autoCapitalize="none"
-            clearButtonMode="while-editing"
+      {selectedProperty ? (
+        <View
+          style={[
+            styles.popoverWrap,
+            Platform.OS === 'web' ? styles.popoverWrapWeb : null,
+          ]}
+        >
+          <MapMarkerPopover
+            property={selectedProperty}
+            onPress={() => handlePropertyPress(selectedProperty)}
+            onDismiss={() => setHighlightedPropertyId(null)}
           />
-          {isSearching && (
-            <View style={{ width: 20, height: 20, justifyContent: 'center', alignItems: 'center' }}>
-              <View style={{ width: 16, height: 16, borderWidth: 2, borderColor: '#666', borderTopColor: 'transparent', borderRadius: 8 }} />
-            </View>
-          )}
         </View>
-      </View>
+      ) : null}
+    </View>
+  );
 
-
-
-      {/* Persistent property-list panel anchored to the bottom of the screen.
-          Pan the handle to resize between peek and full-height; tap it on
-          web to toggle. */}
-      <Animated.View style={[styles.panel, animatedPanelStyle]}>
-        <GestureDetector gesture={handleDragGesture}>
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={toggleHandlePress}
-            style={styles.panelHandleArea}
-            accessibilityRole="button"
-            accessibilityLabel="Toggle property list height"
-          >
-            <Animated.View style={[styles.panelHandle, animatedHandleStyle]} />
-          </TouchableOpacity>
-        </GestureDetector>
-
-        <Animated.View style={[styles.panelBody, animatedBottomSheetPaddingStyle]}>
-          {isSearchFocused ? (
-            // Show search results when the search field is focused.
-            <View style={styles.bottomSheetSearchContainer}>
-              <View style={styles.bottomSheetSearchHeader}>
-                <ThemedText style={styles.bottomSheetSearchTitle}>
-                  Search Results
-                </ThemedText>
-                <ThemedText style={styles.bottomSheetSearchSubtitle}>
-                  {searchResults.length > 0
-                    ? `${searchResults.length} results found`
-                    : 'No results found'}
-                </ThemedText>
-              </View>
-              <ScrollView
-                style={styles.bottomSheetSearchResults}
-                showsVerticalScrollIndicator
-                keyboardShouldPersistTaps="handled"
-              >
-                {searchResults.length > 0 ? (
-                  searchResults.map(renderSearchResult)
-                ) : (
-                  <View style={styles.bottomSheetNoResults}>
-                    <Ionicons name="search-outline" size={48} color="#ccc" />
-                    <ThemedText style={styles.bottomSheetNoResultsText}>
-                      No results found
-                    </ThemedText>
-                    <ThemedText style={styles.bottomSheetNoResultsSubtext}>
-                      Try searching for a different location
-                    </ThemedText>
-                  </View>
-                )}
-              </ScrollView>
+  // Desktop split / list / map.
+  if (isDesktop) {
+    return (
+      <View style={styles.container}>
+        {renderTopBar()}
+        {renderMapboxOverlay()}
+        {viewMode === 'split' ? (
+          <View style={styles.splitRow}>
+            <View style={styles.splitListColumn}>
+              {renderResultsScroll({ sm: 1, md: 2, lg: 2, xl: 2 })}
             </View>
-          ) : (
-            // Show property list when search is not focused.
-            <PropertyListBottomSheet
-              properties={visibleProperties}
-              highlightedPropertyId={highlightedPropertyId}
-              onPropertyPress={handlePropertyPress}
-              isLoading={isLoadingProperties}
-              onViewableItemsChanged={onViewableItemsChanged}
-              _mapBounds={currentBounds || null}
-              totalCount={undefined}
-              onOpenFilters={handleOpenFilters}
-              onSaveSearch={handleOpenSaveModal}
-              onRefreshLocation={handleRefreshLocation}
-            />
-          )}
-        </Animated.View>
-      </Animated.View>
+            <View style={styles.splitMapColumn}>{renderMapPanel()}</View>
+          </View>
+        ) : null}
+        {viewMode === 'list' ? (
+          <View style={styles.fullColumn}>
+            {renderResultsScroll({ sm: 1, md: 2, lg: 3, xl: 4 })}
+          </View>
+        ) : null}
+        {viewMode === 'map' ? (
+          <View style={styles.fullColumn}>{renderMapPanel()}</View>
+        ) : null}
+      </View>
+    );
+  }
+
+  // Mobile: list + floating Map button → full-screen map sheet.
+  return (
+    <View style={styles.container}>
+      {renderTopBar()}
+      {renderMapboxOverlay()}
+      {showMobileMap ? (
+        <View style={styles.fullColumn}>{renderMapPanel()}</View>
+      ) : (
+        <View style={styles.fullColumn}>
+          {renderResultsScroll({ sm: 1, md: 2, lg: 2, xl: 2 })}
+        </View>
+      )}
+      <MapFab
+        onPress={() => setShowMobileMap((prev) => !prev)}
+        label={
+          showMobileMap
+            ? t('search.fab.list', 'List') || 'List'
+            : t('search.fab.map', 'Map') || 'Map'
+        }
+        icon={showMobileMap ? 'list' : 'map'}
+      />
     </View>
   );
 }
+
+const { width: screenWidth } = Dimensions.get('window');
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.surface,
+  },
+  topBar: Platform.select<ViewStyle>({
+    web: {
+      position: 'sticky',
+      top: 0,
+      zIndex: 100,
+      backgroundColor: colors.surfaceElevated,
+      borderBottomWidth: hairline.width,
+      borderBottomColor: hairline.color,
+    } as unknown as ViewStyle,
+    default: {
+      backgroundColor: colors.surfaceElevated,
+      borderBottomWidth: hairline.width,
+      borderBottomColor: hairline.color,
+    },
+  }) as ViewStyle,
+  topBarContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    maxWidth: 1440,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  searchInputWrap: {
+    flex: 1,
+    maxWidth: 640,
+  },
+  viewModeWrap: {
+    width: 280,
+  },
+  mapboxOverlay: {
+    position: 'absolute',
+    top: 88,
+    left: 16,
+    right: 16,
+    maxWidth: 640,
+    alignSelf: 'center',
+    zIndex: 200,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  mapboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: spacing.md,
+  },
+  mapboxRowPressed: {
+    backgroundColor: colors.mutedSubtle,
+  },
+  mapboxText: {
+    flex: 1,
+    gap: 2,
+  },
+  mapboxTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.COLOR_BLACK,
+  },
+  mapboxSubtitle: {
+    fontSize: 13,
+    color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  splitRow: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  splitListColumn: {
+    flex: 1,
+    minWidth: 0,
+  },
+  splitMapColumn: {
+    flex: 1,
+    minWidth: 0,
+    borderLeftWidth: hairline.width,
+    borderLeftColor: hairline.color,
+  },
+  fullColumn: {
+    flex: 1,
+  },
+  resultsScroll: Platform.select<ViewStyle>({
+    web: {
+      flex: 1,
+      overflow: 'auto',
+    } as unknown as ViewStyle,
+    default: { flex: 1 },
+  }) as ViewStyle,
+  resultsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    gap: spacing.md,
+    flexWrap: 'wrap',
+  },
+  resultsHeaderText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  resultsTitle: {
+    fontSize: screenWidth >= 768 ? 24 : 20,
+    fontWeight: '700',
+    color: colors.COLOR_BLACK,
+  },
+  resultsSubtitle: {
+    fontSize: 13,
+    color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  resultsHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  gridPadding: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing['4xl'],
+  },
+  mapPanel: {
+    flex: 1,
+    position: 'relative',
+  },
+  map: {
+    ...StyleSheet.absoluteFill,
+  },
+  popoverWrap: {
+    position: 'absolute',
+    bottom: 24,
+    left: 0,
+    right: 0,
+  },
+  popoverWrapWeb: {
+    maxWidth: 420,
+    alignSelf: 'center',
+  },
+});

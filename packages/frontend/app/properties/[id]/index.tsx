@@ -1,69 +1,90 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+/**
+ * Property detail screen — Airbnb-2026 inspired layout.
+ *
+ * Architecture:
+ *  - Hero PhotoGrid (1+4 on web/tablet, carousel on phone).
+ *  - Two-column layout on desktop: left = sections, right = sticky
+ *    booking/apply card.
+ *  - On scroll past the photo grid, a slim sticky breadcrumb header
+ *    (StickyPropertyHeader) appears with title + price + CTA.
+ *  - Sections use shared Bloom Typography, consistent section spacing
+ *    (`sectionSpacing.web/mobile`), and hairline dividers between
+ *    blocks.
+ *  - Action bar (footer): existing PropertyActionBar reused.
+ */
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  Platform,
-  Share,
   Animated,
+  Platform,
+  Pressable,
+  Share,
+  StyleSheet,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { colors } from '@/styles/colors';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Header } from '@/components/Header';
-import { ThemedText } from '@/components/ThemedText';
-import { useProperty } from '@/hooks';
-import { useOxy, showSignInModal } from '@oxyhq/services';
-import { Ionicons } from '@expo/vector-icons';
 import { toast } from 'sonner';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
-import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
-import { PropertyType, PropertyImage, Property, RentMode } from '@homiio/shared-types';
-// getPropertyImageSource handled inside components
-import { HeaderSection } from '../../../components/property/HeaderSection';
-import { PhotoGrid } from '../../../components/property/PhotoGrid';
-import { HostStatsCard } from '../../../components/property/HostStatsCard';
-import { SleepArrangement } from '../../../components/property/SleepArrangement';
-import { StickyBookingCard } from '../../../components/property/StickyBookingCard';
-import { LandlordSection } from '../../../components/property/LandlordSection';
-import { SindiSection } from '../../../components/property/SindiSection';
-import { SindiAnalysis } from '../../../components/property/SindiAnalysis';
-import { FraudWarning } from '../../../components/property/FraudWarning';
-import { BasicInfoSection } from '../../../components/property/BasicInfoSection';
-import { PropertyDetailsCard } from '../../../components/property/PropertyDetailsCard';
-import { PropertyFeatures } from '../../../components/property/PropertyFeatures';
-import { PricingDetails } from '../../../components/property/PricingDetails';
-import { HouseRules } from '../../../components/property/HouseRules';
-import { LocationSection } from '../../../components/property/LocationSection';
-import { PropertyOverview } from '../../../components/property/PropertyOverview';
-import { NeighborhoodInfo } from '../../../components/property/NeighborhoodInfo';
-import { AvailabilitySection } from '../../../components/property/AvailabilitySection';
-import { AmenitiesSection } from '../../../components/property/AmenitiesSection';
-import { ReviewsSection } from '../../../components/property/ReviewsSection';
-import { PropertyActionBar } from '../../../components/property/PropertyActionBar';
+import * as Linking from 'expo-linking';
+import { Ionicons } from '@expo/vector-icons';
 
-import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
-import { useLayoutScroll } from '@/context/LayoutScrollContext';
-import { useIsDesktop } from '@/hooks/useOptimizedMediaQuery';
+import { useOxy, showSignInModal } from '@oxyhq/services';
 
+import { Header } from '@/components/Header';
 import { SaveButton } from '@/components/SaveButton';
 import { ErrorState } from '@/components/ui/ErrorState';
-import * as Linking from 'expo-linking';
+import { useIsDesktop } from '@/hooks/useOptimizedMediaQuery';
+import { useLayoutScroll } from '@/context/LayoutScrollContext';
+import { useProperty } from '@/hooks';
+import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
+import { useRentalMode } from '@/context/RentalModeContext';
+import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { propertyService } from '@/services/propertyService';
+import profileService, { type Profile } from '@/services/profileService';
 import ViewingService from '@/services/viewingService';
-import { Button } from '@oxyhq/bloom/button';
+import { PropertyType, RentMode, type Property, type PropertyImage } from '@homiio/shared-types';
+
 import { PropertyDetailSkeleton } from '@/components/ui/skeletons/PropertyDetailSkeleton';
 import { BookingWidget } from '@/components/BookingWidget';
-import { ApplyToRentCTA } from '@/components/property/ApplyToRentCTA';
-import { useRentalMode } from '@/context/RentalModeContext';
-import type { Profile } from '@/services/profileService';
-import profileService from '@/services/profileService';
-// Removed LinearGradient for Sindi banner simplification
 
-// Slim internal view model for share/details (avoid passing through to children)
-type PropertyDetail = {
+import { PhotoGrid } from '@/components/property/PhotoGrid';
+import { HeaderSection } from '@/components/property/HeaderSection';
+import { HostStatsCard } from '@/components/property/HostStatsCard';
+import { SleepArrangement } from '@/components/property/SleepArrangement';
+import { StickyBookingCard } from '@/components/property/StickyBookingCard';
+import { LandlordSection } from '@/components/property/LandlordSection';
+import { SindiSection } from '@/components/property/SindiSection';
+import { SindiAnalysis } from '@/components/property/SindiAnalysis';
+import { FraudWarning } from '@/components/property/FraudWarning';
+import { BasicInfoSection } from '@/components/property/BasicInfoSection';
+import { PropertyDetailsCard } from '@/components/property/PropertyDetailsCard';
+import { PropertyFeatures } from '@/components/property/PropertyFeatures';
+import { PricingDetails } from '@/components/property/PricingDetails';
+import { HouseRules } from '@/components/property/HouseRules';
+import { LocationDisplay } from '@/components/property/LocationDisplay';
+import { PropertyOverview } from '@/components/property/PropertyOverview';
+import { NeighborhoodInfo } from '@/components/property/NeighborhoodInfo';
+import { AvailabilitySection } from '@/components/property/AvailabilitySection';
+import { AmenitiesSection } from '@/components/property/AmenitiesSection';
+import { ReviewsSection } from '@/components/property/ReviewsSection';
+import { PropertyActionBar } from '@/components/property/PropertyActionBar';
+import { StickyPropertyHeader } from '@/components/property/StickyPropertyHeader';
+import { ApplyToRentCTA } from '@/components/property/ApplyToRentCTA';
+
+import { colors } from '@/styles/colors';
+import { hairline, resolveSectionSpacing, sectionSpacing, spacing } from '@/constants/styles';
+
+interface PropertyDetailViewModel {
   id: string;
   title: string;
   location: string;
@@ -73,7 +94,9 @@ type PropertyDetail = {
   bathrooms: number;
   size: number;
   images: string[] | PropertyImage[];
-};
+}
+
+const STICKY_HEADER_THRESHOLD = 480;
 
 export default function PropertyDetailPage() {
   const { t } = useTranslation();
@@ -83,129 +106,113 @@ export default function PropertyDetailPage() {
   const layoutScrollContext = useLayoutScroll();
   const { mode: rentalMode } = useRentalMode();
   const isDesktop = useIsDesktop();
+  const { addProperty } = useRecentlyViewed();
 
+  const propertyIdParam = typeof id === 'string' ? id : '';
 
   const {
     property: apiProperty,
     loading: isLoading,
     error,
     loadProperty,
-  } = useProperty(id as string);
+  } = useProperty(propertyIdParam);
+
   const hasViewedRef = useRef(false);
   const [hasActiveViewing, setHasActiveViewing] = useState(false);
-  // Recently viewed tracking
-  const { addProperty } = useRecentlyViewed();
-  // Landlord data (fetch external)
   const [landlordProfile, setLandlordProfile] = useState<Profile | null>(null);
   const [ownerProperties, setOwnerProperties] = useState<Property[]>([]);
+  const [stickyHeaderVisible, setStickyHeaderVisible] = useState(false);
 
-  // Normalize landlordProfileId to string if it's an object (MongoDB $oid)
-  let normalizedLandlordProfileId: string | undefined = undefined;
-  if (apiProperty?.profileId) {
+  // Normalize landlord id (handles legacy MongoDB $oid envelopes).
+  const landlordProfileId = useMemo<string | undefined>(() => {
+    const profileId = apiProperty?.profileId;
+    if (!profileId) return undefined;
     if (
-      typeof apiProperty.profileId === 'object' &&
-      apiProperty.profileId &&
-      '$oid' in apiProperty.profileId
+      typeof profileId === 'object' &&
+      profileId !== null &&
+      '$oid' in profileId &&
+      typeof (profileId as { $oid?: unknown }).$oid === 'string'
     ) {
-      normalizedLandlordProfileId = (apiProperty.profileId as any).$oid;
-    } else if (typeof apiProperty.profileId === 'string') {
-      normalizedLandlordProfileId = apiProperty.profileId;
+      return (profileId as { $oid: string }).$oid;
     }
-  }
+    if (typeof profileId === 'string') return profileId;
+    return undefined;
+  }, [apiProperty?.profileId]);
 
-  // Fetch landlord profile and their properties
+  // Fetch landlord profile + their other listings.
   useEffect(() => {
     const fetchLandlordData = async () => {
-      if (normalizedLandlordProfileId && oxyServices && activeSessionId) {
-        try {
-          // Fetch landlord profile
-          const profile = await profileService.getProfileById(
-            normalizedLandlordProfileId
-          );
-          setLandlordProfile(profile);
-
-          // Fetch owner's other properties
-          const { properties } = await propertyService.getOwnerProperties(
-            normalizedLandlordProfileId,
-            id as string, // Exclude current property
-          );
-          setOwnerProperties(properties);
-        } catch (error) {
-          console.error('Error fetching landlord data:', error);
-          setLandlordProfile(null);
-          setOwnerProperties([]);
-        }
+      if (!landlordProfileId || !oxyServices || !activeSessionId) return;
+      try {
+        const profile = await profileService.getProfileById(landlordProfileId);
+        setLandlordProfile(profile);
+        const { properties } = await propertyService.getOwnerProperties(
+          landlordProfileId,
+          typeof id === 'string' ? id : '',
+        );
+        setOwnerProperties(properties);
+      } catch {
+        setLandlordProfile(null);
+        setOwnerProperties([]);
       }
     };
-
     fetchLandlordData();
-  }, [normalizedLandlordProfileId, oxyServices, activeSessionId, id]);
+  }, [landlordProfileId, oxyServices, activeSessionId, id]);
 
-  // LandlordSection derives display & trust score internally
+  // Property view-model derived from the API payload.
+  const property = useMemo<PropertyDetailViewModel | null>(() => {
+    if (!apiProperty) return null;
+    const propertyId = apiProperty._id || apiProperty.id || '';
+    const currency = apiProperty.rent?.currency || '⊜';
 
-  const property = useMemo<PropertyDetail | null>(() => {
-    try {
-      if (!apiProperty) return null;
-
-      // Defensive ID
-      const id = apiProperty._id || apiProperty.id || '';
-
-      const currency = apiProperty.rent?.currency || '⊜';
-
-      // Map legacy paymentFrequency to new priceUnit format
-      let priceUnit: 'day' | 'night' | 'week' | 'month' | 'year' = 'month';
-      if (apiProperty.priceUnit) {
-        priceUnit = apiProperty.priceUnit;
-      } else if (apiProperty.rent?.paymentFrequency) {
-        switch (apiProperty.rent.paymentFrequency) {
-          case 'daily':
-            priceUnit = 'day';
-            break;
-          case 'weekly':
-            priceUnit = 'week';
-            break;
-          case 'monthly':
-            priceUnit = 'month';
-            break;
-          default:
-            priceUnit = 'month';
-        }
+    let priceUnit: PropertyDetailViewModel['priceUnit'] = 'month';
+    if (apiProperty.priceUnit) {
+      priceUnit = apiProperty.priceUnit;
+    } else if (apiProperty.rent?.paymentFrequency) {
+      switch (apiProperty.rent.paymentFrequency) {
+        case 'daily':
+          priceUnit = 'day';
+          break;
+        case 'weekly':
+          priceUnit = 'week';
+          break;
+        case 'monthly':
+          priceUnit = 'month';
+          break;
+        default:
+          priceUnit = 'month';
       }
-
-      const price = apiProperty.rent ? `${currency}${apiProperty.rent.amount}/${priceUnit}` : '';
-
-      // Generate title dynamically from property data
-      const generatedTitle = generatePropertyTitle({
-        type: Object.values(PropertyType).includes(apiProperty.type)
-          ? (apiProperty.type as PropertyType)
-          : PropertyType.APARTMENT,
-        address: apiProperty.address,
-        bedrooms: apiProperty.bedrooms,
-        bathrooms: apiProperty.bathrooms,
-      });
-
-      return {
-        id,
-        title: generatedTitle,
-        location: `${apiProperty.address?.city || ''}, ${apiProperty.address?.country || ''}`,
-        price,
-        priceUnit,
-        bedrooms: apiProperty.bedrooms || 0,
-        bathrooms: apiProperty.bathrooms || 0,
-        size: apiProperty.squareFootage || 0,
-        images: apiProperty.images || [],
-      };
-    } catch (err) {
-      console.error('Error creating property object:', err);
-      return null;
     }
+    const price = apiProperty.rent
+      ? `${currency}${apiProperty.rent.amount}/${priceUnit}`
+      : '';
+
+    const generatedTitle = generatePropertyTitle({
+      type: Object.values(PropertyType).includes(apiProperty.type as PropertyType)
+        ? (apiProperty.type as PropertyType)
+        : PropertyType.APARTMENT,
+      address: apiProperty.address,
+      bedrooms: apiProperty.bedrooms,
+      bathrooms: apiProperty.bathrooms,
+    });
+    return {
+      id: propertyId,
+      title: generatedTitle,
+      location: `${apiProperty.address?.city || ''}, ${apiProperty.address?.country || ''}`,
+      price,
+      priceUnit,
+      bedrooms: apiProperty.bedrooms || 0,
+      bathrooms: apiProperty.bathrooms || 0,
+      size: apiProperty.squareFootage || 0,
+      images: apiProperty.images || [],
+    };
   }, [apiProperty]);
-  // Track property view once per load
+
+  // Track property view once per page load.
   useEffect(() => {
     if (apiProperty && !hasViewedRef.current) {
       const propertyId = apiProperty._id || apiProperty.id;
       const currentId = typeof id === 'string' ? id : undefined;
-
       if (propertyId && currentId && propertyId === currentId) {
         hasViewedRef.current = true;
         addProperty(apiProperty);
@@ -213,149 +220,182 @@ export default function PropertyDetailPage() {
     }
   }, [apiProperty, id, addProperty]);
 
+  // Reset view tracker on id change.
   useEffect(() => {
     hasViewedRef.current = false;
   }, [id]);
 
-  // Load property on component mount
-  React.useEffect(() => {
-    if (id) {
-      loadProperty();
-    }
+  // Trigger property fetch on id change.
+  useEffect(() => {
+    if (id) loadProperty();
   }, [id, loadProperty]);
 
-  React.useEffect(() => {
+  // Check whether the user already booked a viewing.
+  useEffect(() => {
     const checkActiveViewing = async () => {
       if (!id || !oxyServices || !activeSessionId) return;
-
       try {
-        const response = await ViewingService.listMyViewingRequests(
-          { page: 1, limit: 50 }
-        );
-
+        const response = await ViewingService.listMyViewingRequests({
+          page: 1,
+          limit: 50,
+        });
         const viewings = Array.isArray(response?.data) ? response.data : [];
         const hasActive = viewings.some(
-          v => v.propertyId === id && ['pending', 'approved'].includes(v.status)
+          (v) =>
+            v.propertyId === id &&
+            ['pending', 'approved'].includes(v.status),
         );
         setHasActiveViewing(hasActive);
-      } catch (error) {
-        console.error('Failed to check active viewings:', error);
+      } catch {
+        /* swallow — banner just stays off */
       }
     };
-
     checkActiveViewing();
   }, [id, oxyServices, activeSessionId]);
 
-  const handleContact = () => {
+  const handleContact = useCallback(() => {
     if (apiProperty?.isExternal) {
-      // For external properties, open the source website
       if (!apiProperty.sourceUrl) {
-        toast.error(t('error.source.noUrl', 'Source website URL not available'));
+        toast.error(
+          t('error.source.noUrl', 'Source website URL not available') ||
+            'Source website URL not available',
+        );
         return;
       }
       router.push(`/browser?url=${encodeURIComponent(apiProperty.sourceUrl)}`);
       return;
     }
-
     if (!oxyServices || !activeSessionId) {
-      toast.error(t('error.auth.required', 'Please sign in to contact the owner'));
+      toast.error(
+        t('error.auth.required', 'Please sign in to contact the owner') ||
+          'Please sign in to contact the owner',
+      );
       showSignInModal();
       return;
     }
     router.push(`/chat/${property?.id}`);
-  };
+  }, [apiProperty, oxyServices, activeSessionId, t, router, property?.id]);
 
-  const handleCall = async () => {
+  const handleCall = useCallback(async () => {
     if (!oxyServices || !activeSessionId) {
-      toast.error(t('error.auth.required', 'Please sign in to call the owner'));
+      toast.error(
+        t('error.auth.required', 'Please sign in to call the owner') ||
+          'Please sign in to call the owner',
+      );
       showSignInModal();
       return;
     }
-
     if (!landlordProfile) {
-      toast.error(t('error.profile.notFound', 'Owner profile not found'));
+      toast.error(
+        t('error.profile.notFound', 'Owner profile not found') ||
+          'Owner profile not found',
+      );
       return;
     }
-
-    // Get phone number based on profile type
     let phoneNumber: string | undefined;
     let allowCalls = false;
-
     if (landlordProfile.personalProfile) {
-      // For personal profiles, check contact info in rental history or references
       const latestRental = landlordProfile.personalProfile.rentalHistory?.[0];
       phoneNumber = latestRental?.landlordContact?.phone;
-      allowCalls = landlordProfile.personalProfile.settings?.privacy?.showContactInfo ?? false;
+      allowCalls =
+        landlordProfile.personalProfile.settings?.privacy?.showContactInfo ??
+        false;
     } else if (landlordProfile.agencyProfile) {
-      // For agencies, check business details
-      phoneNumber = landlordProfile.agencyProfile.businessDetails?.licenseNumber; // Using licenseNumber as a placeholder
-      allowCalls = true; // Agencies typically allow calls
+      phoneNumber = landlordProfile.agencyProfile.businessDetails?.licenseNumber;
+      allowCalls = true;
     } else if (landlordProfile.businessProfile) {
-      // For businesses, check business details
-      phoneNumber = landlordProfile.businessProfile.businessDetails?.licenseNumber; // Using licenseNumber as a placeholder
-      allowCalls = true; // Businesses typically allow calls
+      phoneNumber = landlordProfile.businessProfile.businessDetails?.licenseNumber;
+      allowCalls = true;
     } else if (landlordProfile.cooperativeProfile) {
-      // For cooperatives, use legal name as identifier
-      phoneNumber = landlordProfile.cooperativeProfile.legalName; // Using legalName as a placeholder
-      allowCalls = true; // Cooperatives typically allow calls
+      phoneNumber = landlordProfile.cooperativeProfile.legalName;
+      allowCalls = true;
     }
-
     if (!allowCalls) {
-      toast.error(t('error.call.notAllowed', 'Owner does not accept calls'));
+      toast.error(
+        t('error.call.notAllowed', 'Owner does not accept calls') ||
+          'Owner does not accept calls',
+      );
       return;
     }
-
     if (!phoneNumber) {
-      toast.error(t('error.call.noPhone', 'No phone number available'));
+      toast.error(
+        t('error.call.noPhone', 'No phone number available') ||
+          'No phone number available',
+      );
       return;
     }
-
-    // Open phone dialer using Expo Linking
     try {
       await Linking.openURL(`tel:${phoneNumber}`);
-    } catch (error) {
-      console.error('Error opening phone dialer:', error);
-      toast.error(t('error.call.failed', 'Could not open phone dialer'));
+    } catch {
+      toast.error(
+        t('error.call.failed', 'Could not open phone dialer') ||
+          'Could not open phone dialer',
+      );
     }
-  };
+  }, [oxyServices, activeSessionId, landlordProfile, t]);
 
-  const handlePublicHousingApply = () => {
-    // Get state from property address to redirect to appropriate website
+  const handlePublicHousingApply = useCallback(() => {
     const state = (apiProperty?.address?.state || '').toLowerCase();
-
-    // State-specific public housing websites (examples)
-    const stateWebsites: { [key: string]: string } = {
+    const stateWebsites: Record<string, string> = {
       california:
         'https://www.hcd.ca.gov/grants-funding/active-funding/multifamily-housing-program',
       'new york': 'https://www.nyshcr.org/',
       texas: 'https://www.tdhca.state.tx.us/',
       florida: 'https://www.floridahousing.org/',
-      // Add more states as needed
     };
-
     const websiteUrl =
       stateWebsites[state] || 'https://www.hud.gov/topics/rental_assistance/phprog';
-
-    // Open external browser
     router.push(`/browser?url=${encodeURIComponent(websiteUrl)}`);
-  };
+  }, [apiProperty?.address?.state, router]);
 
-  const handleShare = async () => {
+  const handleShare = useCallback(async () => {
     if (!property) return;
     const propertyUrl = `https://homiio.com/properties/${property.id}`;
-    const details = `🏠 ${property.title}\n\n📍 ${property.location}\n💰 ${property.price}\n🛏️ ${property.bedrooms} Bedrooms\n🚿 ${property.bathrooms} Bathrooms\n📏 ${property.size}m²\n\n${propertyUrl}`;
+    const details = `${property.title}\n\n${property.location}\n${property.price}\n${property.bedrooms} Bedrooms\n${property.bathrooms} Bathrooms\n${property.size}m²\n\n${propertyUrl}`;
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      await Share.share({ message: details, url: propertyUrl, title: 'Share Property' });
+      await Share.share({
+        message: details,
+        url: propertyUrl,
+        title: 'Share Property',
+      });
     } catch {
       try {
         await Clipboard.setStringAsync(details);
-        toast.success('Property details copied to clipboard!');
+        toast.success('Property details copied to clipboard');
       } catch {
         toast.error('Failed to share property');
       }
     }
-  };
+  }, [property]);
+
+  const handleCtaPress = useCallback(() => {
+    if (apiProperty?.housingType === 'public') {
+      handlePublicHousingApply();
+      return;
+    }
+    if (rentalMode === 'vacation') {
+      handleContact();
+      return;
+    }
+    if (apiProperty?._id || apiProperty?.id) {
+      router.push(`/properties/${apiProperty._id ?? apiProperty.id}/apply`);
+    }
+  }, [apiProperty, rentalMode, router, handleContact, handlePublicHousingApply]);
+
+  // Sticky header trigger driven by scrollY. Uses RN Animated to avoid
+  // re-rendering the whole page on every scroll tick.
+  const localScrollY = useRef(new Animated.Value(0)).current;
+  const scrollY = layoutScrollContext?.scrollY ?? localScrollY;
+
+  const handleScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const y = e.nativeEvent.contentOffset.y;
+      scrollY.setValue(y);
+      setStickyHeaderVisible(y > STICKY_HEADER_THRESHOLD);
+    },
+    [scrollY],
+  );
 
   if (isLoading) {
     return <PropertyDetailSkeleton />;
@@ -363,23 +403,25 @@ export default function PropertyDetailPage() {
 
   if (error || !property) {
     return (
-      <View style={{ flex: 1 }}>
+      <View style={styles.errorRoot}>
         <Header
           options={{
             showBackButton: true,
-            title: t('property.error') || 'Error',
+            title: t('property.error', 'Error') || 'Error',
             titlePosition: 'center',
           }}
         />
-        <SafeAreaView style={styles.contentArea} edges={['top']}>
+        <SafeAreaView style={styles.errorBody} edges={['top']}>
           <ErrorState
             icon="home-outline"
-            title={t('property.notFound') || 'Property not found'}
+            title={t('property.notFound', 'Property not found') || 'Property not found'}
             description={
-              t('property.notFoundHelp') ||
-              'It may have been removed or the link is broken.'
+              t(
+                'property.notFoundHelp',
+                'It may have been removed or the link is broken.',
+              ) || 'It may have been removed or the link is broken.'
             }
-            retryLabel={t('goBack') || 'Go back'}
+            retryLabel={t('goBack', 'Go back') || 'Go back'}
             onRetry={() => router.back()}
           />
         </SafeAreaView>
@@ -387,11 +429,36 @@ export default function PropertyDetailPage() {
     );
   }
 
+  const showBookingWidgetMobile =
+    !isDesktop &&
+    apiProperty &&
+    rentalMode === 'vacation' &&
+    (apiProperty.rentMode === RentMode.VACATION ||
+      apiProperty.rentMode === RentMode.BOTH);
+
+  const showApplyCTAMobile =
+    !isDesktop &&
+    apiProperty &&
+    rentalMode === 'long_term' &&
+    apiProperty.rentMode !== RentMode.VACATION;
+
+  const showSleepArrangement =
+    apiProperty &&
+    rentalMode === 'vacation' &&
+    (apiProperty.rentMode === RentMode.VACATION ||
+      apiProperty.rentMode === RentMode.BOTH);
+
+  const sectionGap = resolveSectionSpacing(isDesktop);
+
   return (
-    <View
-      style={styles.scrollContainer}
-    >
-      <View style={Platform.OS === 'web' ? styles.webHeaderWrapper : styles.nativeHeaderWrapper}>
+    <View style={styles.scrollContainer}>
+      <View
+        style={
+          Platform.OS === 'web'
+            ? styles.webHeaderWrapper
+            : styles.nativeHeaderWrapper
+        }
+      >
         <Header
           options={{
             showBackButton: true,
@@ -400,40 +467,51 @@ export default function PropertyDetailPage() {
             transparent: true,
             scrollThreshold: 100,
             rightComponents: [
-              normalizedLandlordProfileId ? (
-                <TouchableOpacity
+              landlordProfileId ? (
+                <Pressable
                   key="profile"
                   style={styles.headerButton}
-                  onPress={() => router.push(`/profile/${normalizedLandlordProfileId}`)}
+                  onPress={() => router.push(`/profile/${landlordProfileId}`)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open host profile"
                 >
-                  <Ionicons name="person-circle-outline" size={24} color="#222" />
-                </TouchableOpacity>
+                  <Ionicons name="person-circle-outline" size={24} color={colors.COLOR_BLACK} />
+                </Pressable>
               ) : null,
-              <TouchableOpacity key="share" style={styles.headerButton} onPress={handleShare}>
-                <Ionicons name="share-outline" size={24} color="#222" />
-              </TouchableOpacity>,
-              <TouchableOpacity
+              <Pressable
+                key="share"
+                style={styles.headerButton}
+                onPress={handleShare}
+                accessibilityRole="button"
+                accessibilityLabel="Share property"
+              >
+                <Ionicons name="share-outline" size={24} color={colors.COLOR_BLACK} />
+              </Pressable>,
+              <Pressable
                 key="viewings"
                 style={styles.headerButton}
                 onPress={() => router.push('/viewings')}
+                accessibilityRole="button"
+                accessibilityLabel="View bookings"
               >
                 <View style={styles.viewingIconContainer}>
-                  <Ionicons name="calendar-outline" size={24} color="#222" />
-                  {hasActiveViewing && (
+                  <Ionicons
+                    name="calendar-outline"
+                    size={24}
+                    color={colors.COLOR_BLACK}
+                  />
+                  {hasActiveViewing ? (
                     <View style={styles.viewingBadge}>
                       <Ionicons name="checkmark" size={12} color="#fff" />
                     </View>
-                  )}
+                  ) : null}
                 </View>
-              </TouchableOpacity>,
-              <View
-                key="save-with-count"
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-              >
+              </Pressable>,
+              <View key="save" style={styles.headerSaveWrap}>
                 <SaveButton
-                  property={apiProperty as any}
+                  property={apiProperty as Property}
                   variant="heart"
-                  color="#222"
+                  color={colors.COLOR_BLACK}
                   activeColor="#EF4444"
                   showCount
                   countDisplayMode="inline"
@@ -443,75 +521,160 @@ export default function PropertyDetailPage() {
           }}
         />
       </View>
+
+      <StickyPropertyHeader
+        title={property.title}
+        priceLabel={property.price}
+        property={apiProperty ?? null}
+        rentalMode={rentalMode}
+        visible={stickyHeaderVisible}
+        onShare={handleShare}
+        onCtaPress={handleCtaPress}
+      />
+
       <Animated.ScrollView
-        style={{ flex: 1 }}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: layoutScrollContext?.scrollY || new Animated.Value(0) } } }],
-          { useNativeDriver: false }
-        )}
-        scrollEventThrottle={16}>
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: spacing['7xl'] },
+        ]}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
         <HeaderSection
           title={property.title}
           location={property.location}
           bedrooms={property.bedrooms}
           bathrooms={property.bathrooms}
           size={property.size}
-          images={property.images as any}
+          images={property.images as PropertyImage[]}
         />
         <PhotoGrid
-          images={property.images as any}
-          t={t as any}
+          images={property.images as PropertyImage[]}
+          t={(key) => t(key) || key}
         />
-        <View style={isDesktop ? styles.twoColumnContainer : styles.infoContainer}>
+
+        <View
+          style={isDesktop ? styles.twoColumnContainer : styles.infoContainer}
+        >
           <View style={isDesktop ? styles.mainColumn : undefined}>
             {apiProperty ? (
               <HostStatsCard
-                property={apiProperty as any}
+                property={apiProperty}
                 landlordProfile={landlordProfile}
               />
             ) : null}
-            <BasicInfoSection property={apiProperty as any} hasActiveViewing={hasActiveViewing} onViewingsPress={() => router.push('/viewings')} />
-            {!isDesktop && apiProperty &&
-            rentalMode === 'vacation' &&
-            (apiProperty.rentMode === RentMode.VACATION ||
-              apiProperty.rentMode === RentMode.BOTH) ? (
-              <BookingWidget property={apiProperty} />
+
+            <View style={[styles.section, { marginBottom: sectionGap }]}>
+              <BasicInfoSection
+                property={apiProperty}
+                hasActiveViewing={hasActiveViewing}
+                onViewingsPress={() => router.push('/viewings')}
+              />
+            </View>
+
+            {showBookingWidgetMobile ? (
+              <View style={[styles.section, styles.divider]}>
+                <BookingWidget property={apiProperty as Property} />
+              </View>
             ) : null}
-            {!isDesktop && apiProperty &&
-            rentalMode === 'long_term' &&
-            apiProperty.rentMode !== RentMode.VACATION ? (
-              <ApplyToRentCTA propertyId={String(apiProperty._id ?? apiProperty.id)} />
+
+            {showApplyCTAMobile ? (
+              <View style={[styles.section, styles.divider]}>
+                <ApplyToRentCTA
+                  propertyId={String(apiProperty?._id ?? apiProperty?.id ?? '')}
+                />
+              </View>
             ) : null}
-            <PropertyDetailsCard property={apiProperty as any} />
-            <PropertyFeatures property={apiProperty as any} />
-            {apiProperty && rentalMode === 'vacation' &&
-            (apiProperty.rentMode === RentMode.VACATION ||
-              apiProperty.rentMode === RentMode.BOTH) ? (
-              <SleepArrangement property={apiProperty as any} />
+
+            <View style={[styles.section, styles.divider]}>
+              <PropertyDetailsCard property={apiProperty} />
+            </View>
+
+            <View style={[styles.section, styles.divider]}>
+              <PropertyFeatures property={apiProperty} />
+            </View>
+
+            {showSleepArrangement ? (
+              <View style={[styles.section, styles.divider]}>
+                <SleepArrangement property={apiProperty as Property} />
+              </View>
             ) : null}
-            <PricingDetails property={apiProperty as any} />
-            <HouseRules property={apiProperty as any} />
-            <LocationSection property={apiProperty as any} />
-            <PropertyOverview property={apiProperty as any} />
-            <NeighborhoodInfo property={apiProperty as any} />
-            <AvailabilitySection property={apiProperty as any} />
-            <AmenitiesSection property={apiProperty as any} />
-            <ReviewsSection property={apiProperty as any} variant="preview" />
-            <LandlordSection
-              property={apiProperty as any}
-              landlordProfile={landlordProfile as any}
-              ownerProperties={ownerProperties as any}
-              onApplyPublic={handlePublicHousingApply}
-              t={t as any}
-            />
-            <SindiSection property={apiProperty as any} />
-            <SindiAnalysis property={apiProperty as any} />
-            <FraudWarning text={t('Never pay or transfer funds outside the Homio platform') || 'Never pay or transfer funds outside the Homio platform'} />
+
+            <View style={[styles.section, styles.divider]}>
+              <PricingDetails property={apiProperty} />
+            </View>
+
+            <View style={[styles.section, styles.divider]}>
+              <HouseRules property={apiProperty} />
+            </View>
+
+            <View style={[styles.section, styles.divider]}>
+              <LocationDisplay property={apiProperty as Property} />
+            </View>
+
+            <View style={[styles.section, styles.divider]}>
+              <PropertyOverview property={apiProperty} />
+            </View>
+
+            <View style={[styles.section, styles.divider]}>
+              <NeighborhoodInfo property={apiProperty} />
+            </View>
+
+            <View style={[styles.section, styles.divider]}>
+              <AvailabilitySection property={apiProperty} />
+            </View>
+
+            <View style={[styles.section, styles.divider]}>
+              <AmenitiesSection
+                property={apiProperty as { amenities?: string[] | null }}
+              />
+            </View>
+
+            <View style={[styles.section, styles.divider]}>
+              <ReviewsSection
+                property={apiProperty as Property}
+                variant="preview"
+              />
+            </View>
+
+            {apiProperty ? (
+              <View style={[styles.section, styles.divider]}>
+                <LandlordSection
+                  property={apiProperty}
+                  landlordProfile={landlordProfile}
+                  ownerProperties={ownerProperties}
+                  onApplyPublic={handlePublicHousingApply}
+                  t={(k, d) => t(k, d ?? '') || (d ?? k)}
+                />
+              </View>
+            ) : null}
+
+            {apiProperty ? (
+              <View style={[styles.section, styles.divider]}>
+                <SindiSection property={apiProperty} />
+              </View>
+            ) : null}
+            {apiProperty ? (
+              <View style={[styles.section, styles.divider]}>
+                <SindiAnalysis property={apiProperty} />
+              </View>
+            ) : null}
+            <View style={[styles.section, styles.divider]}>
+              <FraudWarning
+                text={
+                  t(
+                    'Never pay or transfer funds outside the Homio platform',
+                    'Never pay or transfer funds outside the Homio platform',
+                  ) || 'Never pay or transfer funds outside the Homio platform'
+                }
+              />
+            </View>
           </View>
           {isDesktop && apiProperty ? (
             <View style={styles.sideColumn}>
               <StickyBookingCard
-                property={apiProperty as any}
+                property={apiProperty as Property}
                 priceLabel={property.price}
                 priceSubtitle={property.location}
               />
@@ -519,11 +682,12 @@ export default function PropertyDetailPage() {
           ) : null}
         </View>
       </Animated.ScrollView>
+
       <PropertyActionBar
-        property={apiProperty as any}
+        property={apiProperty}
         landlordProfile={landlordProfile}
-        canContact={!!(oxyServices && activeSessionId)}
-        canCall={!!(oxyServices && activeSessionId && landlordProfile)}
+        canContact={Boolean(oxyServices && activeSessionId)}
+        canCall={Boolean(oxyServices && activeSessionId && landlordProfile)}
         onContact={handleContact}
         onCall={handleCall}
         onApplyPublic={handlePublicHousingApply}
@@ -533,20 +697,21 @@ export default function PropertyDetailPage() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, position: 'relative' },
-  contentArea: {},
-  scrollContainer: { flexGrow: 1 },
-  headerButton: { padding: 8 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  loadingText: { marginTop: 10, fontSize: 16, color: colors.COLOR_BLACK_LIGHT_3 },
-  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  errorText: { marginTop: 10, marginBottom: 20, fontSize: 18, color: colors.COLOR_BLACK_LIGHT_3 },
-  goBackButton: { backgroundColor: colors.primaryColor, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 25 },
-  infoContainer: { padding: 20 },
+  scrollContainer: { flex: 1, backgroundColor: colors.surface },
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: spacing['6xl'] },
+  errorRoot: { flex: 1 },
+  errorBody: { flex: 1 },
+  headerButton: { padding: spacing.sm },
+  headerSaveWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   twoColumnContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
     gap: 48,
     maxWidth: 1280,
     alignSelf: 'center',
@@ -558,10 +723,44 @@ const styles = StyleSheet.create({
   },
   sideColumn: {
     width: 380,
-    paddingTop: 12,
+    paddingTop: spacing.md,
   },
-  webHeaderWrapper: { position: 'sticky' as any, top: 0, left: 0, right: 0, zIndex: 1000 },
-  nativeHeaderWrapper: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000 },
+  infoContainer: {
+    paddingHorizontal: spacing.xl,
+  },
+  section: {
+    paddingTop: spacing.xl,
+  },
+  divider: {
+    borderTopWidth: hairline.width,
+    borderTopColor: hairline.color,
+    marginTop: sectionSpacing.mobile / 2,
+  },
+  webHeaderWrapper: Platform.select({
+    web: { position: 'sticky', top: 0, left: 0, right: 0, zIndex: 1000 },
+    default: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000 },
+  }) as ViewStyleSticky,
+  nativeHeaderWrapper: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+  },
   viewingIconContainer: { position: 'relative' },
-  viewingBadge: { position: 'absolute', top: -4, right: -4, width: 16, height: 16, borderRadius: 8, backgroundColor: colors.primaryColor, justifyContent: 'center', alignItems: 'center' },
+  viewingBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: colors.primaryColor,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
+
+// RN-Web supports `position: 'sticky'` even though the type doesn't.
+// Wrap as a type alias so we can pass through `Platform.select` cleanly.
+type ViewStyleSticky = ReturnType<typeof StyleSheet.create>['x'];

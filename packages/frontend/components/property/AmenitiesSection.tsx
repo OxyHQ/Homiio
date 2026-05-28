@@ -1,30 +1,19 @@
+/**
+ * AmenitiesSection — thin wrapper around the shared `AmenitiesGrid` so
+ * existing callers on `/properties/[id]` keep working while the visual
+ * implementation now matches the Airbnb-2026 "What this place offers"
+ * grid pattern.
+ */
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
-import { SectionCard } from '@/components/ui/SectionCard';
-import { useTranslation } from 'react-i18next';
 
-interface Props { property: any }
+import { AmenitiesGrid } from './AmenitiesGrid';
+
+interface Props {
+  property: { amenities?: string[] | null };
+}
 
 export const AmenitiesSection: React.FC<Props> = ({ property }) => {
-    const { t } = useTranslation();
-    const amenities = property?.amenities;
-    if (!amenities || amenities.length === 0) return null;
-    return (
-        <SectionCard title={t('Amenities')}>
-            <View style={styles.badges}>
-                {amenities.map((a: string, idx: number) => (
-                    <View key={idx} style={styles.badge}><ThemedText style={styles.badgeText}>{a}</ThemedText></View>
-                ))}
-            </View>
-        </SectionCard>
-    );
+  return <AmenitiesGrid property={property} />;
 };
-
-const styles = StyleSheet.create({
-    badges: { flexDirection: 'row', flexWrap: 'wrap' },
-    badge: { backgroundColor: '#f1f3f5', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, margin: 4 },
-    badgeText: { fontSize: 12 },
-});
 
 export default AmenitiesSection;

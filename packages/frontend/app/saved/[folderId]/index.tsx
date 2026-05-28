@@ -1,127 +1,219 @@
-import React, { useMemo, useCallback, useContext } from 'react';
-import { View, FlatList, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+/**
+ * Saved → Folder detail. Grid of property cards inside the folder.
+ *
+ * Stream P polish: Bloom Button for the header edit action (no more
+ * tinted TouchableOpacity), shared EmptyState / ErrorState / ListSkeleton
+ * states, and surface tokens for the page background.
+ */
+import React, { useCallback, useContext, useMemo } from 'react';
+import {
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  View,
+  type ListRenderItem,
+} from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useOxy } from '@oxyhq/services';
 
+import { Button } from '@oxyhq/bloom/button';
+
 import { Header } from '@/components/Header';
 import { PropertyCard } from '@/components/PropertyCard';
-import { colors } from '@/styles/colors';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import savedPropertyService from '@/services/savedPropertyService';
 import savedPropertyFolderService from '@/services/savedPropertyFolderService';
+import { colors } from '@/styles/colors';
+import { spacing } from '@/constants/styles';
+import type { SavedProperty } from '@homiio/shared-types';
 
 export default function SavedFolderScreen() {
   const { t } = useTranslation();
   const { folderId } = useLocalSearchParams<{ folderId: string }>();
   const { oxyServices, activeSessionId } = useOxy();
   const queryClient = useQueryClient();
-  const bottomSheetContext = useContext(BottomSheetContext);
+  useContext(BottomSheetContext);
 
-  // Use React Query directly for instant updates
-  const { data: savedPropertiesData, isLoading: savedLoading } = useQuery({
+  const isAuthed = Boolean(oxyServices && activeSessionId);
+
+  const savedQuery = useQuery({
     queryKey: ['savedProperties'],
     queryFn: () => savedPropertyService.getSavedProperties(),
+    enabled: isAuthed,
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,
   });
 
-  const { data: foldersData, isLoading: foldersLoading } = useQuery({
+  const foldersQuery = useQuery({
     queryKey: ['savedFolders'],
     queryFn: () => savedPropertyFolderService.getSavedPropertyFolders(),
-    enabled: !!oxyServices && !!activeSessionId,
+    enabled: isAuthed,
     staleTime: 1000 * 60,
     gcTime: 1000 * 60 * 10,
   });
 
-  const savedProperties = savedPropertiesData?.properties || [];
-  const folders = foldersData?.folders || [];
+  const savedProperties = savedQuery.data?.properties ?? [];
+  const folders = foldersQuery.data?.folders ?? [];
 
-  const folder = useMemo(() => folders.find((f: any) => f._id === folderId), [folders, folderId]);
+  const folder = useMemo(
+    () => folders.find((f) => f._id === folderId),
+    [folders, folderId],
+  );
   const propertiesInFolder = useMemo(
-    () => savedProperties.filter((p: any) => (p as any).folderId === folderId),
+    () =>
+      savedProperties.filter(
+        (property) =>
+          (property as SavedProperty & { folderId?: string }).folderId === folderId,
+      ),
     [savedProperties, folderId],
   );
 
   const handleRefresh = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
-    await queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['savedProperties'] }),
+      queryClient.invalidateQueries({ queryKey: ['savedFolders'] }),
+    ]);
   }, [queryClient]);
 
-  const renderItem = useCallback(({ item }: { item: any }) => {
+  const renderItem: ListRenderItem<SavedProperty> = useCallback(({ item }) => {
     return (
-      <View style={styles.gridItemContainer}>
+      <View style={styles.gridItem}>
         <PropertyCard
-          property={item}
+          property={item as any}
           variant="compact"
+          orientation="vertical"
           onPress={() => {
             const id = (item._id || item.id) as string;
             if (id) router.push(`/properties/${id}`);
           }}
           noteText={item.notes || ''}
-          onPressNote={() => { }}
         />
       </View>
     );
   }, []);
 
+  const isLoading = savedQuery.isPending || foldersQuery.isPending;
+  const isError = savedQuery.isError || foldersQuery.isError;
+  const isRefreshing = savedQuery.isFetching || foldersQuery.isFetching;
+
+  if (isLoading) {
+    return (
+      <View style={styles.root}>
+        <Header
+          options={{
+            title: t('saved.title', 'Folder'),
+            showBackButton: true,
+          }}
+        />
+        <View style={styles.skeletonWrap}>
+          <ListSkeleton rows={4} rowHeight={160} />
+        </View>
+      </View>
+    );
+  }
+
+  if (isError) {
+    return (
+      <View style={styles.root}>
+        <Header
+          options={{
+            title: t('saved.title', 'Folder'),
+            showBackButton: true,
+          }}
+        />
+        <View style={styles.centerWrap}>
+          <ErrorState
+            title={t('saved.loadFailed', "We couldn't load this folder")}
+            retryLabel={t('common.retry', 'Retry')}
+            onRetry={handleRefresh}
+          />
+        </View>
+      </View>
+    );
+  }
+
   if (!folder) {
     return (
-      <View style={styles.container}>
-        <Header options={{ title: t('saved.title'), showBackButton: true }} />
-        <EmptyState
-          icon="folder-open-outline"
-          title={t('saved.noFolder')}
-          description={t('saved.noFolderDescription')}
+      <View style={styles.root}>
+        <Header
+          options={{
+            title: t('saved.title', 'Folder'),
+            showBackButton: true,
+          }}
         />
+        <View style={styles.centerWrap}>
+          <EmptyState
+            icon="folder-open-outline"
+            title={t('saved.noFolder', 'Folder not found')}
+            description={t(
+              'saved.noFolderDescription',
+              'This folder might have been removed.',
+            )}
+          />
+        </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.root}>
       <Header
         options={{
           title: `${folder.icon || '📁'} ${folder.name}`,
-          titlePosition: 'left',
           showBackButton: true,
           rightComponents: folder.isDefault
             ? []
             : [
-              <TouchableOpacity
-                key="editFolder"
-                style={styles.headerButton}
-                onPress={() => router.push(`/saved/${folderId}/edit`)}
-              >
-                <Ionicons name="create-outline" size={20} color={colors.COLOR_BLACK} />
-              </TouchableOpacity>,
-            ],
+                <Button
+                  key="editFolder"
+                  variant="ghost"
+                  size="small"
+                  onPress={() => router.push(`/saved/${folderId}/edit`)}
+                  icon={
+                    <Ionicons
+                      name="create-outline"
+                      size={18}
+                      color={colors.COLOR_BLACK}
+                    />
+                  }
+                >
+                  {t('common.edit', 'Edit')}
+                </Button>,
+              ],
         }}
       />
 
       <FlatList
         data={propertiesInFolder}
-        renderItem={renderItem}
         keyExtractor={(item) => (item._id || item.id) as string}
         numColumns={2}
         columnWrapperStyle={styles.gridRow}
-        contentContainerStyle={StyleSheet.flatten([
-          styles.listContent,
-          propertiesInFolder.length === 0 && styles.emptyListContent,
-        ])}
-        ListEmptyComponent={() => (
-          <EmptyState
-            icon="folder-outline"
-            title={t('saved.noFolderItems')}
-            description={t('saved.noFolderItemsDescription')}
-          />
-        )}
+        contentContainerStyle={styles.gridContent}
+        renderItem={renderItem}
+        ListEmptyComponent={
+          <View style={styles.emptyInner}>
+            <EmptyState
+              icon="folder-outline"
+              title={t('saved.noFolderItems', 'This folder is empty')}
+              description={t(
+                'saved.noFolderItemsDescription',
+                'Save properties to add them to this folder.',
+              )}
+              actionText={t('saved.exploreCta', 'Explore properties')}
+              actionIcon="search"
+              onAction={() => router.push('/search')}
+            />
+          </View>
+        }
         refreshControl={
           <RefreshControl
-            refreshing={savedLoading || foldersLoading}
+            refreshing={isRefreshing}
             onRefresh={handleRefresh}
             colors={[colors.primaryColor]}
             tintColor={colors.primaryColor}
@@ -133,29 +225,33 @@ export default function SavedFolderScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    backgroundColor: '#fafbfc',
+    backgroundColor: colors.surface,
   },
-  headerButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-  },
-  listContent: {
-    paddingTop: 16,
-  },
-  emptyListContent: {
-    flexGrow: 1,
+  centerWrap: {
+    flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing['2xl'],
+  },
+  skeletonWrap: {
+    padding: spacing.lg,
+    gap: spacing.lg,
+  },
+  gridContent: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing['4xl'],
+    gap: spacing.lg,
   },
   gridRow: {
-    justifyContent: 'space-between',
-    gap: 16,
-    paddingHorizontal: 16,
+    gap: spacing.lg,
   },
-  gridItemContainer: {
+  gridItem: {
     flex: 1,
-    marginBottom: 16,
+  },
+  emptyInner: {
+    paddingVertical: spacing['4xl'],
   },
 });
