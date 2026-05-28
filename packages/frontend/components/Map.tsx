@@ -55,8 +55,18 @@ export interface ClusterOptions {
 }
 
 export interface MarkerStyle {
+    /**
+     * @deprecated The Airbnb-style price pill uses a fixed light-on-dark
+     * palette baked into the marker stylesheet. Kept on the interface
+     * so existing callers don't fail typecheck, but the values are no
+     * longer applied. Restyle the pill in `Map.tsx` directly instead.
+     */
     chipBg?: string;
+    /**
+     * @deprecated See `chipBg`.
+     */
     chipText?: string;
+    /** Zoom level the camera eases to when a marker is selected. */
     onMarkerZoom?: number;
 }
 
@@ -128,6 +138,33 @@ const buildHTML = (
 <style>
   html,body,#map{height:100%;margin:0;padding:0}
   #map{position:absolute;inset:0}
+  /* Airbnb-style price bubble markers — rendered as real DOM nodes
+     anchored by mapbox-gl Marker so we get proper rounded-pill shape,
+     soft shadow, and crisp typography that the GL circle/symbol layers
+     can't produce. */
+  .homiio-price-pill {
+    background: #ffffff;
+    color: #1a1a1a;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 9999px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.06);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: transform 120ms ease-out, background 120ms ease-out, color 120ms ease-out;
+    user-select: none;
+    line-height: 18px;
+  }
+  .homiio-price-pill:hover {
+    transform: scale(1.05);
+  }
+  .homiio-price-pill.is-selected {
+    background: #1a1a1a;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28), 0 0 0 2px #ffffff;
+  }
 </style>
 </head><body>
   <div id="map"></div>
@@ -146,15 +183,69 @@ const buildHTML = (
   const srcId='markers';
   const cluster=${String(clusterOpts.enabled)}, cRad=${clusterOpts.radius}, cMax=${clusterOpts.maxZoom};
   const cColor=${JSON.stringify(clusterOpts.color)}, cText=${JSON.stringify(clusterOpts.textColor)};
-  const chipBg=${JSON.stringify(markerStyle.chipBg)}, chipText=${JSON.stringify(markerStyle.chipText)};
   let highlightedFeatureId = null;
   let selectedMarker = null;
-  
+
+  // Track DOM Marker instances keyed by feature id so we can:
+  // (a) remove the ones that no longer exist after a setData,
+  // (b) update existing ones in place rather than churning markers.
+  const pillMarkers = new Map();
+
+  const renderPillMarkers = (featureCollection) => {
+    const seenIds = new Set();
+    (featureCollection.features || []).forEach((feature) => {
+      const id = feature.properties.id;
+      seenIds.add(id);
+
+      const existing = pillMarkers.get(id);
+      if (existing) {
+        existing.setLngLat(feature.geometry.coordinates);
+        const label = existing.getElement().firstChild;
+        if (label && label.textContent !== feature.properties.price) {
+          label.textContent = feature.properties.price;
+        }
+        return;
+      }
+
+      const wrapper = document.createElement('div');
+      const pill = document.createElement('div');
+      pill.className = 'homiio-price-pill';
+      pill.textContent = feature.properties.price || '';
+      pill.addEventListener('click', (event) => {
+        event.stopPropagation();
+        post({ type: 'markerClick', id: id, lngLat: feature.geometry.coordinates });
+      });
+      wrapper.appendChild(pill);
+
+      const marker = new mapboxgl.Marker({ element: wrapper, anchor: 'center' })
+        .setLngLat(feature.geometry.coordinates)
+        .addTo(map);
+      pillMarkers.set(id, marker);
+    });
+
+    // Reap markers that are no longer in the source.
+    pillMarkers.forEach((marker, id) => {
+      if (!seenIds.has(id)) {
+        marker.remove();
+        pillMarkers.delete(id);
+      }
+    });
+
+    // Re-apply highlight after re-render in case the highlighted id
+    // was removed and added back in the same setData call.
+    if (highlightedFeatureId) {
+      const target = pillMarkers.get(String(highlightedFeatureId));
+      if (target) {
+        target.getElement().firstChild.classList.add('is-selected');
+      }
+    }
+  };
+
   map.on('load', () => {
     map.addSource(srcId, {
         type:'geojson', data:toGeoJSON([]), cluster:cluster, clusterRadius:cRad, clusterMaxZoom:cMax, promoteId: 'id'
     });
-    
+
     if(cluster){
       map.addLayer({id:'clusters',type:'circle',source:srcId,filter:['has','point_count'],paint:{
         'circle-color':cColor,'circle-radius':['step',['get','point_count'],16,20,18,50,22],
@@ -163,21 +254,6 @@ const buildHTML = (
         'text-field':['get','point_count_abbreviated'],'text-font':['Open Sans Bold'],'text-size':12},paint:{'text-color':cText}});
     }
 
-    map.addLayer({
-        id: 'unclustered-point-bg', type: 'circle', source: srcId, filter: ['!', ['has', 'point_count']],
-        paint: {
-            'circle-color': chipBg, 'circle-radius': 18,
-            'circle-stroke-width': ['case', ['boolean', ['feature-state', 'highlighted'], false], 3, 1],
-            'circle-stroke-color': ['case', ['boolean', ['feature-state', 'highlighted'], false], '#007AFF', '#FFFFFF']
-        }
-    });
-
-    map.addLayer({
-        id: 'unclustered-point-text', type: 'symbol', source: srcId, filter: ['!', ['has', 'point_count']],
-        layout: { 'text-field': ['get', 'price'], 'text-font': ['Open Sans Bold'], 'text-size': 11, 'text-allow-overlap': true },
-        paint: { 'text-color': chipText }
-    });
-
     map.on('click','clusters',(e)=>{
       const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
       if (!features.length) return;
@@ -185,15 +261,8 @@ const buildHTML = (
       map.getSource(srcId).getClusterExpansionZoom(clusterId,(err,z)=>{ if(err) return; map.easeTo({center: features[0].geometry.coordinates, zoom:z}); });
     });
 
-    map.on('click', 'unclustered-point-bg', (e) => {
-        if (!e.features || !e.features.length) return;
-        post({ type: 'markerClick', id: e.features[0].properties.id, lngLat: e.features[0].geometry.coordinates });
-    });
-
     map.on('mouseenter', 'clusters', () => { map.getCanvas().style.cursor = 'pointer'; });
     map.on('mouseleave', 'clusters', () => { map.getCanvas().style.cursor = ''; });
-    map.on('mouseenter', 'unclustered-point-bg', () => { map.getCanvas().style.cursor = 'pointer'; });
-    map.on('mouseleave', 'unclustered-point-bg', () => { map.getCanvas().style.cursor = ''; });
 
     post({ type:'ready' });
   });
@@ -240,19 +309,28 @@ const buildHTML = (
         map.easeTo({ center: m.center, zoom: m.zoom, duration: m.duration || 500 }); 
       }
     }
-    if(m.type==='setData'){ 
-      const s = map.getSource(srcId); 
+    if(m.type==='setData'){
+      const s = map.getSource(srcId);
       if (s) {
         const geoJSON = toGeoJSON(m.features || []);
         s.setData(geoJSON);
+        // Mapbox renders the clustered points as circles via the layer
+        // above, but the unclustered ones are bubble DOM markers — keep
+        // those in sync with the new feature set on every update.
+        renderPillMarkers({ features: (m.features || []).map(p => ({
+          properties: { id: String(p.id), price: String(p.priceLabel || '') },
+          geometry: { coordinates: p.coordinates }
+        })) });
       }
     }
     if(m.type==='highlightMarker'){
         if (highlightedFeatureId) {
-            map.setFeatureState({ source: srcId, id: highlightedFeatureId }, { highlighted: false });
+            const prev = pillMarkers.get(String(highlightedFeatureId));
+            if (prev) prev.getElement().firstChild.classList.remove('is-selected');
         }
         if (m.id) {
-            map.setFeatureState({ source: srcId, id: m.id }, { highlighted: true });
+            const next = pillMarkers.get(String(m.id));
+            if (next) next.getElement().firstChild.classList.add('is-selected');
             highlightedFeatureId = m.id;
         } else {
             highlightedFeatureId = null;
