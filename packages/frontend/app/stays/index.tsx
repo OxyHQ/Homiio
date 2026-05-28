@@ -51,7 +51,7 @@ const bucketReservations = (items: Reservation[]): Buckets => {
   return buckets;
 };
 
-export default function TripsScreen() {
+export default function StaysScreen() {
   const router = useRouter();
   const { oxyServices, activeSessionId } = useOxy();
   const isAuthed = Boolean(oxyServices && activeSessionId);
@@ -71,7 +71,7 @@ export default function TripsScreen() {
         <Header
           options={{
             showBackButton: true,
-            title: 'Trips',
+            title: 'Stays',
             titlePosition: 'center',
           }}
         />
@@ -79,8 +79,8 @@ export default function TripsScreen() {
           <View style={styles.emptyWrapper}>
             <EmptyState
               icon="airplane-outline"
-              title="Sign in to see your trips"
-              description="Reservations across hosts and dates live here."
+              title="Sign in to see your stays"
+              description="Bookings across hosts and dates live here."
               actionText="Sign in"
               actionIcon="log-in-outline"
               onAction={() => showSignInModal()}
@@ -97,7 +97,7 @@ export default function TripsScreen() {
         <Header
           options={{
             showBackButton: true,
-            title: 'Trips',
+            title: 'Stays',
             titlePosition: 'center',
           }}
         />
@@ -114,14 +114,14 @@ export default function TripsScreen() {
         <Header
           options={{
             showBackButton: true,
-            title: 'Trips',
+            title: 'Stays',
             titlePosition: 'center',
           }}
         />
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <View style={styles.errorWrap}>
             <BloomText style={styles.errorTitle}>
-              Couldn't load your trips
+              Couldn&apos;t load your stays
             </BloomText>
             <BloomText style={styles.errorSubtitle}>
               {reservationsQuery.error?.message ?? 'Please try again.'}
@@ -147,7 +147,7 @@ export default function TripsScreen() {
       <Header
         options={{
           showBackButton: true,
-          title: 'Trips',
+          title: 'Stays',
           titlePosition: 'center',
         }}
       />
@@ -156,9 +156,9 @@ export default function TripsScreen() {
           {!hasItems ? (
             <EmptyState
               icon="bed-outline"
-              title="No trips yet"
-              description="Once you book a stay it will show up here."
-              actionText="Explore stays"
+              title="No stays yet"
+              description="Once you book a place it will show up here."
+              actionText="Explore places"
               actionIcon="search-outline"
               onAction={() => router.push('/search')}
             />

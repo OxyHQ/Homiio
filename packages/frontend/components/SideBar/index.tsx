@@ -181,10 +181,16 @@ export function SideBar() {
         route: '/saved',
       },
       {
-        title: t('sidebar.navigation.trips', { defaultValue: 'Trips' }) as string,
-        icon: <IconComponent name="airplane-outline" size={20} color={colors.COLOR_BLACK} />,
-        iconActive: <IconComponent name="airplane" size={20} color={colors.primaryColor} />,
-        route: '/trips',
+        title: t('sidebar.navigation.applications', { defaultValue: 'My applications' }) as string,
+        icon: <IconComponent name="document-text-outline" size={20} color={colors.COLOR_BLACK} />,
+        iconActive: <IconComponent name="document-text" size={20} color={colors.primaryColor} />,
+        route: '/applications',
+      },
+      {
+        title: t('sidebar.navigation.stays', { defaultValue: 'Stays' }) as string,
+        icon: <IconComponent name="bed-outline" size={20} color={colors.COLOR_BLACK} />,
+        iconActive: <IconComponent name="bed" size={20} color={colors.primaryColor} />,
+        route: '/stays',
       },
       {
         title: t('sidebar.navigation.sindi'),
@@ -237,6 +243,14 @@ export function SideBar() {
               icon: <IconComponent name="mail-outline" size={20} color={colors.COLOR_BLACK} />,
               iconActive: <IconComponent name="mail" size={20} color={colors.primaryColor} />,
               route: '/host/reservations',
+            },
+            {
+              title: t('sidebar.navigation.landlordApplications', {
+                defaultValue: 'Applicant inbox',
+              }) as string,
+              icon: <IconComponent name="people-outline" size={20} color={colors.COLOR_BLACK} />,
+              iconActive: <IconComponent name="people" size={20} color={colors.primaryColor} />,
+              route: '/landlord/applications',
             },
           ]
         : []),

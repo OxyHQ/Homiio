@@ -7,8 +7,6 @@ import {
   Bookmark,
   BookmarkActive,
   SindiIcon,
-  Gear,
-  GearActive,
 } from '@/assets/icons';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
@@ -16,7 +14,6 @@ import { useRouter, usePathname } from 'expo-router';
 import React, { useMemo, useCallback } from 'react';
 import { Avatar } from '@oxyhq/bloom/avatar';
 import { showSignInModal, useOxy } from '@oxyhq/services';
-import { useHasRentalProperties } from '@/hooks/useLeaseQueries';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SindiIconActive } from '@/assets/icons/sindi-icon';
 import { useRentalMode } from '@/context/RentalModeContext';
@@ -24,27 +21,26 @@ import { useRentalMode } from '@/context/RentalModeContext';
 export const BottomBar = () => {
   const router = useRouter();
   const pathname = usePathname() || '/';
-  const { hasRentalProperties } = useHasRentalProperties();
   const { isAuthenticated } = useOxy();
   const { mode: rentalMode } = useRentalMode();
   const insets = useSafeAreaInsets();
 
-  // Trips is the secondary destination in vacation mode (Airbnb-style trips
-  // tab); in long-term mode we keep the existing contracts tab. Both can
-  // coexist when the user is a tenant with rental properties.
-  const showTripsTab = isAuthenticated && rentalMode === 'vacation';
-  const showContractsTab = hasRentalProperties && !showTripsTab;
+  // Mode-specific secondary tab. Homiio is primarily a long-term flat rental
+  // platform (Idealista/Fotocasa), so the default mode surfaces the user's
+  // pipeline of tenant applications. Vacation mode surfaces bookings (Stays).
+  const showApplicationsTab = isAuthenticated && rentalMode === 'long_term';
+  const showStaysTab = isAuthenticated && rentalMode === 'vacation';
 
   // Normalize current pathname to one of our tab routes
   const activeRoute = useMemo<
-    '/' | '/search' | '/saved' | '/sindi' | '/contracts' | '/trips'
+    '/' | '/search' | '/saved' | '/sindi' | '/applications' | '/stays'
   >(() => {
     if (pathname === '/' || pathname === '') return '/';
     if (pathname.startsWith('/search') || pathname.startsWith('/properties')) return '/search';
     if (pathname.startsWith('/saved')) return '/saved';
     if (pathname.startsWith('/sindi')) return '/sindi';
-    if (pathname.startsWith('/contracts')) return '/contracts';
-    if (pathname.startsWith('/trips') || pathname.startsWith('/reservations')) return '/trips';
+    if (pathname.startsWith('/applications')) return '/applications';
+    if (pathname.startsWith('/stays') || pathname.startsWith('/reservations')) return '/stays';
     return '/';
   }, [pathname]);
 
@@ -127,32 +123,32 @@ export const BottomBar = () => {
           <Bookmark size={28} color={colors.COLOR_BLACK} />
         )}
       </Pressable>
-      {/* Trips tab — primary destination in vacation mode */}
-      {showTripsTab && (
+      {/* Applications tab — applicant pipeline in long-term mode (default). */}
+      {showApplicationsTab && (
         <Pressable
-          onPress={() => handlePress('/trips')}
-          style={[styles.tab, activeRoute === '/trips' && styles.active]}
-          accessibilityLabel="Trips"
+          onPress={() => handlePress('/applications')}
+          style={[styles.tab, activeRoute === '/applications' && styles.active]}
+          accessibilityLabel="Applications"
         >
           <Ionicons
-            name={activeRoute === '/trips' ? 'airplane' : 'airplane-outline'}
+            name={activeRoute === '/applications' ? 'document-text' : 'document-text-outline'}
             size={28}
-            color={activeRoute === '/trips' ? colors.primaryColor : colors.COLOR_BLACK}
+            color={activeRoute === '/applications' ? colors.primaryColor : colors.COLOR_BLACK}
           />
         </Pressable>
       )}
-      {/* Only show contracts tab if user has rental properties */}
-      {showContractsTab && (
+      {/* Stays tab — booking dashboard in vacation mode. */}
+      {showStaysTab && (
         <Pressable
-          onPress={() => handlePress('/contracts')}
-          style={[styles.tab, activeRoute === '/contracts' && styles.active]}
+          onPress={() => handlePress('/stays')}
+          style={[styles.tab, activeRoute === '/stays' && styles.active]}
+          accessibilityLabel="Stays"
         >
-          {/* No custom contract icon found, fallback to Gear/GearActive for demo */}
-          {activeRoute === '/contracts' ? (
-            <GearActive size={28} color={colors.primaryColor} />
-          ) : (
-            <Gear size={28} color={colors.COLOR_BLACK} />
-          )}
+          <Ionicons
+            name={activeRoute === '/stays' ? 'bed' : 'bed-outline'}
+            size={28}
+            color={activeRoute === '/stays' ? colors.primaryColor : colors.COLOR_BLACK}
+          />
         </Pressable>
       )}
       <View style={styles.tab}>
