@@ -4,7 +4,16 @@
  */
 
 import { Schema, model, Document, Types } from 'mongoose';
-import { PropertyType, PropertyStatus, HousingType, LayoutType, LeaseDuration } from '@homiio/shared-types';
+import {
+  PropertyType,
+  PropertyStatus,
+  HousingType,
+  LayoutType,
+  LeaseDuration,
+  RentMode,
+  AvailabilityWindowStatus,
+  CancellationPolicy
+} from '@homiio/shared-types';
 
 // Define the Property interface
 export interface IProperty extends Document {
@@ -57,6 +66,22 @@ export interface IProperty extends Document {
   smokingAllowed?: boolean;
   partiesAllowed?: boolean;
   guestsAllowed?: boolean;
+  // Hybrid rental fields
+  rentMode?: RentMode;
+  availabilityWindows?: Array<{
+    start: Date;
+    end: Date;
+    status: AvailabilityWindowStatus;
+  }>;
+  minStay?: number;
+  maxStay?: number;
+  cancellationPolicy?: CancellationPolicy;
+  instantBook?: boolean;
+  priceBreakdown?: {
+    cleaningFee?: number;
+    serviceFee?: number;
+    taxesPercent?: number;
+  };
   isVerified?: boolean;
   isEcoFriendly?: boolean;
   views?: number;
@@ -273,6 +298,47 @@ const PropertySchema = new Schema({
     min: [1, 'Maximum guests must be at least 1'],
     default: 1
   },
+  rentMode: {
+    type: String,
+    enum: Object.values(RentMode),
+    default: RentMode.LONG_TERM,
+    index: true
+  },
+  availabilityWindows: {
+    type: [{
+      start: { type: Date, required: true },
+      end: { type: Date, required: true },
+      status: {
+        type: String,
+        enum: Object.values(AvailabilityWindowStatus),
+        default: AvailabilityWindowStatus.AVAILABLE,
+        required: true
+      },
+      _id: false
+    }],
+    default: []
+  },
+  minStay: {
+    type: Number,
+    min: [1, 'Minimum stay must be at least 1 night']
+  },
+  maxStay: {
+    type: Number,
+    min: [1, 'Maximum stay must be at least 1 night']
+  },
+  cancellationPolicy: {
+    type: String,
+    enum: Object.values(CancellationPolicy)
+  },
+  instantBook: {
+    type: Boolean,
+    default: false
+  },
+  priceBreakdown: {
+    cleaningFee: { type: Number, min: 0 },
+    serviceFee: { type: Number, min: 0 },
+    taxesPercent: { type: Number, min: 0, max: 100 }
+  },
   isVerified: {
     type: Boolean,
     default: false
@@ -342,6 +408,11 @@ PropertySchema.index({ bedrooms: 1, bathrooms: 1 });
 PropertySchema.index({ amenities: 1 });
 PropertySchema.index({ createdAt: -1 });
 PropertySchema.index({ source: 1, sourceId: 1 }, { unique: true, partialFilterExpression: { sourceId: { $type: 'string' } } });
+// Hybrid rental indexes
+PropertySchema.index({ rentMode: 1, status: 1, type: 1 });
+PropertySchema.index({ 'availabilityWindows.start': 1 });
+PropertySchema.index({ 'availabilityWindows.end': 1 });
+PropertySchema.index({ rentMode: 1, instantBook: 1, status: 1 });
 
 // Pre-save hook to update lastSaved
 PropertySchema.pre('save', function(this: IProperty) {

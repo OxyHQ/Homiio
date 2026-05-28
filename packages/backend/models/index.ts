@@ -11,6 +11,8 @@ const ConversationModel = require('./schemas/ConversationSchema');
 const CityModel = require('./schemas/CitySchema');
 const SavedModel = require('./schemas/SavedSchema');
 const BillingModel = require('./schemas/BillingSchema');
+const ReservationModel = require('./schemas/ReservationSchema');
+const TenantApplicationModel = require('./schemas/TenantApplicationSchema');
 
 // Import the Review model as TypeScript model
 const ReviewModel = require('./Review').Review;
@@ -29,5 +31,7 @@ module.exports = {
   Conversation: ConversationModel,
   City: CityModel,
   Saved: SavedModel,
-  Billing: BillingModel
+  Billing: BillingModel,
+  Reservation: ReservationModel,
+  TenantApplication: TenantApplicationModel
 };

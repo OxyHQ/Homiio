@@ -13,6 +13,7 @@
     "migrate": "ts-node --transpile-only scripts/migrate.ts",
     "migrate:dev": "NODE_ENV=development ts-node --transpile-only scripts/migrate.ts",
     "migrate:billing": "node scripts/migrate-billing-field.js",
+    "migrate:hybrid": "ts-node --transpile-only scripts/migrate-hybrid-rental.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "test:images": "ts-node --transpile-only scripts/test-image-upload.ts",
     "test:webhook": "node scripts/test-stripe-webhook.js",
