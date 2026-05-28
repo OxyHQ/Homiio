@@ -1,20 +1,44 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Image, StyleSheet, TouchableOpacity, ViewStyle, Platform } from 'react-native';
 import { colors } from '@/styles/colors';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-import { Property, PriceUnit } from '@homiio/shared-types';
+import { Property, PriceUnit, RentMode } from '@homiio/shared-types';
 import { getPropertyTitle, getPropertyImageSource } from '@/utils/propertyUtils';
 
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
+import { useRentalMode } from '@/context/RentalModeContext';
 
 import { SaveButton } from './SaveButton';
 import { CurrencyFormatter } from './CurrencyFormatter';
 import { ThemedText } from '@/components/ThemedText';
+import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { prefetchProperty, prefetchPropertyStats } from '@/utils/queryPrefetch';
 import { PropertyCardSkeleton } from './ui/skeletons/PropertyCardSkeleton';
+
+/**
+ * Derive the displayed price unit for a property based on the user's
+ * currently-selected rental mode. Listings tagged `RentMode.VACATION` or
+ * `RentMode.BOTH` displayed in vacation mode always show per-night pricing
+ * regardless of how the host stored the unit. Long-term mode falls back to
+ * the stored unit (typically MONTH).
+ */
+function resolvePriceUnit(property: Property, mode: 'long_term' | 'vacation'): PriceUnit {
+  if (mode === 'vacation') return PriceUnit.NIGHT;
+  if (property.priceUnit) return property.priceUnit;
+  return PriceUnit.MONTH;
+}
+
+function shouldShowInstantBook(
+  property: Property,
+  mode: 'long_term' | 'vacation',
+): boolean {
+  if (mode !== 'vacation') return false;
+  if (!property.instantBook) return false;
+  return property.rentMode === RentMode.VACATION || property.rentMode === RentMode.BOTH;
+}
 
 export type PropertyCardVariant = 'default' | 'compact' | 'featured' | 'saved';
 export type PropertyCardOrientation = 'vertical' | 'horizontal';
@@ -147,6 +171,7 @@ export function PropertyCard({
 }: PropertyCardProps) {
   // Use saved properties context to check if property is saved
   const { isPropertySaved, isInitialized } = useSavedPropertiesContext();
+  const { mode } = useRentalMode();
   const queryClient = useQueryClient();
 
   // Define the callback function (using property parameter directly)
@@ -187,7 +212,7 @@ export function PropertyCard({
     location: `${property.address?.city || ''}, ${property.address?.state || ''}`,
     price: property.rent.amount,
     currency: property.rent.currency,
-    priceUnit: property.priceUnit || PriceUnit.MONTH,
+    priceUnit: resolvePriceUnit(property, mode),
     type: property.type === 'room' ? 'apartment' : property.type === 'studio' ? 'apartment' : property.type,
     imageSource: getPropertyImageSource(property),
     bedrooms: property.bedrooms || 0,
@@ -198,6 +223,8 @@ export function PropertyCard({
     rating: undefined,
     reviewCount: undefined,
   };
+
+  const showInstantBook = useMemo(() => shouldShowInstantBook(property, mode), [property, mode]);
 
   const isEco = Boolean(property.isEcoFriendly);
   const isFeatured = variant === 'featured';
@@ -279,6 +306,14 @@ export function PropertyCard({
         {showVerifiedBadge && propertyData.isVerified && (
           <View style={[styles.verifiedBadge, styles.statusChip, { backgroundColor: colors.primaryColor }]}>
             <Ionicons name="shield-checkmark" size={14} color="#fff" />
+          </View>
+        )}
+
+        {/* Instant Book badge (vacation mode only) */}
+        {showInstantBook && (
+          <View style={styles.instantBookBadge}>
+            <Ionicons name="flash" size={12} color="#fff" />
+            <ThemedText style={styles.instantBookBadgeText}>Instant book</ThemedText>
           </View>
         )}
 
@@ -376,10 +411,10 @@ export function PropertyCard({
         {/* Price */}
         {finalShowPrice && propertyData.price && (
           <View style={styles.priceContainer}>
-            <ThemedText
+            <BloomText
               style={[
                 styles.price,
-                  isFeatured ? styles.featuredPrice : null,
+                isFeatured ? styles.featuredPrice : null,
               ]}
             >
               <CurrencyFormatter
@@ -387,8 +422,8 @@ export function PropertyCard({
                 originalCurrency={propertyData.currency}
                 showConversion={false}
               />
-              <ThemedText style={styles.priceUnit}> / {propertyData.priceUnit}</ThemedText>
-            </ThemedText>
+              <BloomText style={styles.priceUnit}> / {propertyData.priceUnit}</BloomText>
+            </BloomText>
           </View>
         )}
       </View>
@@ -556,6 +591,25 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
+  },
+  instantBookBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    zIndex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.78)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  instantBookBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#ffffff',
+    letterSpacing: 0.2,
   },
   sourceBadgeText: {
     fontSize: 10,
