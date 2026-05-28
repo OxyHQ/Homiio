@@ -33,7 +33,6 @@
         "node": "22.x"
     },
     "dependencies": {
-        "@gorhom/bottom-sheet": "^5.2.14",
         "@oxyhq/core": "1.11.16",
         "@oxyhq/services": "6.10.2",
         "expo": "~56.0.5",
