@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Platform,
   View,
   ScrollView,
   NativeSyntheticEvent,
@@ -31,7 +32,20 @@ export const BaseSidebar = React.memo(function BaseSidebar({
   const insets = useSafeAreaInsets();
 
   return (
-    <View className="relative w-full overflow-hidden flex-1 flex-col bg-background">
+    <View
+      className="relative w-full overflow-hidden flex-col bg-background"
+      style={
+        Platform.OS === 'web'
+          ? ({
+              position: 'sticky',
+              top: 0,
+              alignSelf: 'flex-start',
+              height: '100vh',
+              maxHeight: '100vh',
+            } as object)
+          : { flex: 1, height: '100%' }
+      }
+    >
       <View
         className="flex flex-none flex-col"
         style={{ paddingTop: insets.top }}
