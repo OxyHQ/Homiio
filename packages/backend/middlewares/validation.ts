@@ -203,3 +203,65 @@ const validateViewingRequest = [
 ];
 
 export { validateViewingRequest };
+
+/**
+ * Reservation (vacation booking) validation rules
+ */
+const validateReservation = [
+  body('propertyId').isString().notEmpty().withMessage('Property ID is required'),
+  body('checkIn').isISO8601().withMessage('Valid check-in date is required'),
+  body('checkOut').isISO8601().withMessage('Valid check-out date is required'),
+  body('checkOut').custom((value, { req }) => {
+    if (value && req.body?.checkIn && new Date(value) <= new Date(req.body.checkIn)) {
+      throw new Error('Check-out must be after check-in');
+    }
+    return true;
+  }),
+  body('guestCount').isInt({ min: 1 }).withMessage('Guest count must be a positive integer'),
+  body('specialRequests').optional().isString().isLength({ max: 2000 }).withMessage('Special requests max length is 2000'),
+  handleValidationErrors
+];
+
+/**
+ * Reservation status update validation rules (PATCH)
+ */
+const validateReservationUpdate = [
+  param('id').isString().notEmpty().withMessage('Reservation ID is required'),
+  body('status').isIn(['confirmed', 'declined', 'cancelled']).withMessage('Invalid status transition'),
+  handleValidationErrors
+];
+
+/**
+ * Tenant application validation rules (POST)
+ *
+ * Documents may arrive either as a JSON array (when application/json) or as
+ * uploaded files under the `documents[]` multipart field. The controller
+ * normalises both shapes, so this validator only enforces the structural
+ * primary-key fields.
+ */
+const validateTenantApplication = [
+  body('propertyId').isString().notEmpty().withMessage('Property ID is required'),
+  body('moveInDate').isISO8601().withMessage('Valid move-in date is required'),
+  body('leaseTermMonths').isInt({ min: 1 }).withMessage('Lease term (months) must be a positive integer'),
+  body('monthlyIncome').isFloat({ min: 0 }).withMessage('Monthly income must be non-negative'),
+  body('employmentStatus').isIn(['employed', 'self_employed', 'student', 'retired', 'unemployed', 'other']).withMessage('Invalid employment status'),
+  body('notes').optional().isString().isLength({ max: 4000 }).withMessage('Notes max length is 4000'),
+  handleValidationErrors
+];
+
+/**
+ * Tenant application status update validation rules (PATCH)
+ */
+const validateTenantApplicationUpdate = [
+  param('id').isString().notEmpty().withMessage('Application ID is required'),
+  body('status').isIn(['reviewing', 'approved', 'rejected', 'withdrawn']).withMessage('Invalid status transition'),
+  body('notes').optional().isString().isLength({ max: 4000 }).withMessage('Notes max length is 4000'),
+  handleValidationErrors
+];
+
+export {
+  validateReservation,
+  validateReservationUpdate,
+  validateTenantApplication,
+  validateTenantApplicationUpdate,
+};
