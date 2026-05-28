@@ -1,361 +1,318 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+/**
+ * Tip detail — markdown article reader.
+ *
+ * Stream Q polish:
+ *   - Bloom Typography (H1/H2/H3/Text) replaces raw <Text>.
+ *   - Hero card uses radius.xl with withShadow('sm') and a category pill.
+ *   - Loading uses Skeleton.Box; ErrorState shared with the rest of the app.
+ */
+import React, { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useLocalSearchParams } from 'expo-router';
-import { colors } from '@/styles/colors';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { tipsService, TipArticle } from '@/services/tipsService';
+import * as Skeleton from '@oxyhq/bloom/skeleton';
+import {
+  H1,
+  H2,
+  H3,
+  Text as BloomText,
+} from '@oxyhq/bloom/typography';
 import { Header } from '@/components/Header';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
+import { tipsService, TipArticle } from '@/services/tipsService';
+import { radius, spacing, withShadow } from '@/constants/styles';
+import { colors } from '@/styles/colors';
 
-const IconComponent = Ionicons as any;
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+const renderMarkdown = (content: string): React.ReactNode[] => {
+  if (!content) return [];
+  const lines = content.split('\n');
+  const elements: React.ReactNode[] = [];
+
+  lines.forEach((line, i) => {
+    const key = `line-${i}`;
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      elements.push(<View key={key} style={{ height: spacing.md }} />);
+      return;
+    }
+
+    if (trimmed.startsWith('# ')) {
+      elements.push(
+        <H1 key={key} style={styles.heading1}>
+          {trimmed.substring(2)}
+        </H1>,
+      );
+    } else if (trimmed.startsWith('## ')) {
+      elements.push(
+        <H2 key={key} style={styles.heading2}>
+          {trimmed.substring(3)}
+        </H2>,
+      );
+    } else if (trimmed.startsWith('### ')) {
+      elements.push(
+        <H3 key={key} style={styles.heading3}>
+          {trimmed.substring(4)}
+        </H3>,
+      );
+    } else if (trimmed.startsWith('* ') || trimmed.startsWith('- ')) {
+      elements.push(
+        <BloomText key={key} style={styles.listItem}>
+          • {trimmed.substring(2)}
+        </BloomText>,
+      );
+    } else if (trimmed.startsWith('> ')) {
+      elements.push(
+        <View key={key} style={styles.blockquote}>
+          <BloomText style={styles.blockquoteText}>
+            {trimmed.substring(2)}
+          </BloomText>
+        </View>,
+      );
+    } else {
+      elements.push(
+        <BloomText key={key} style={styles.paragraph}>
+          {trimmed}
+        </BloomText>,
+      );
+    }
+  });
+
+  return elements;
+};
+
+const ArticleSkeleton: React.FC = () => (
+  <View style={styles.content}>
+    <Skeleton.Box width="100%" height={240} borderRadius={radius.xl} />
+    <View style={styles.skeletonBody}>
+      <Skeleton.Text style={{ width: '90%', lineHeight: 32 }} />
+      <Skeleton.Text style={{ width: '70%', lineHeight: 24 }} />
+      <Skeleton.Text style={{ width: '95%', lineHeight: 20 }} />
+      <Skeleton.Text style={{ width: '88%', lineHeight: 20 }} />
+      <Skeleton.Text style={{ width: '70%', lineHeight: 20 }} />
+    </View>
+  </View>
+);
 
 export default function TipArticleScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [tip, setTip] = useState<TipArticle | null>(null);
   const [loading, setLoading] = useState(true);
-  const [headerHeight, setHeaderHeight] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load tip article from API
   useEffect(() => {
-    const loadTip = async () => {
-      if (!id) return;
-
-      try {
-        setLoading(true);
-        // Temporarily use fallback data while debugging API
-        const fallbackTips = tipsService.getFallbackTips();
-        const foundTip = fallbackTips.find((t: TipArticle) => t.id === id);
-
-        if (foundTip) {
-          setTip(foundTip);
-        } else {
-          console.warn('Tip not found:', id);
-          setTip(null);
-        }
-      } catch (error) {
-        console.error('Failed to load tip:', error);
-        setTip(null);
-      } finally {
-        setLoading(false);
+    if (!id) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const fallbackTips = tipsService.getFallbackTips();
+      const foundTip = fallbackTips.find((entry) => entry.id === id) ?? null;
+      setTip(foundTip);
+      if (!foundTip) {
+        setError('Article not found');
       }
-    };
-
-    loadTip();
-  }, [id]);
-
-  // Ultra-simplified markdown renderer - Hermes compatible
-  const renderMarkdown = (content: string) => {
-    if (!content) return [];
-
-    const lines = content.split('\n');
-    const elements: React.ReactNode[] = [];
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const key = `line-${i}`;
-
-      if (!line || line.trim() === '') {
-        elements.push(<View key={key} style={{ height: 16 }} />);
-        continue;
-      }
-
-      const trimmedLine = line.trim();
-
-      if (trimmedLine.startsWith('# ')) {
-        const text = trimmedLine.substring(2);
-        elements.push(
-          <Text key={key} style={markdownStyles.heading1}>
-            {text}
-          </Text>,
-        );
-      } else if (trimmedLine.startsWith('## ')) {
-        const text = trimmedLine.substring(3);
-        elements.push(
-          <Text key={key} style={markdownStyles.heading2}>
-            {text}
-          </Text>,
-        );
-      } else if (trimmedLine.startsWith('### ')) {
-        const text = trimmedLine.substring(4);
-        elements.push(
-          <Text key={key} style={markdownStyles.heading3}>
-            {text}
-          </Text>,
-        );
-      } else if (trimmedLine.startsWith('* ') || trimmedLine.startsWith('- ')) {
-        const text = trimmedLine.substring(2);
-        elements.push(
-          <Text key={key} style={markdownStyles.list_item}>
-            • {text}
-          </Text>,
-        );
-      } else if (trimmedLine.startsWith('> ')) {
-        const text = trimmedLine.substring(2);
-        elements.push(
-          <Text key={key} style={markdownStyles.blockquote}>
-            {text}
-          </Text>,
-        );
-      } else {
-        elements.push(
-          <Text key={key} style={markdownStyles.paragraph}>
-            {trimmedLine}
-          </Text>,
-        );
-      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load tip');
+    } finally {
+      setLoading(false);
     }
-
-    return elements;
-  };
+  }, [id]);
 
   if (loading) {
     return (
-      <View style={{ flex: 1 }}>
-        <View
-          style={styles.stickyHeaderWrapper}
-          onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
-        >
-          <Header
-            options={{
-              title: t('tips.article'),
-              showBackButton: true,
-            }}
-          />
-        </View>
-        <View style={{ paddingTop: headerHeight, flex: 1 }}>
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading article...</Text>
-          </View>
-        </View>
+      <View style={styles.root}>
+        <Header
+          options={{ title: t('tips.article'), showBackButton: true }}
+        />
+        <ScrollView contentContainerStyle={styles.content}>
+          <ArticleSkeleton />
+        </ScrollView>
       </View>
     );
   }
 
-  if (!tip) {
+  if (!tip || error) {
     return (
-      <View style={{ flex: 1 }}>
-        <View
-          style={styles.stickyHeaderWrapper}
-          onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
-        >
-          <Header
-            options={{
-              title: t('tips.article'),
-              showBackButton: true,
-            }}
-          />
-        </View>
-        <View style={{ paddingTop: headerHeight, flex: 1 }}>
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>Article not found</Text>
-          </View>
-        </View>
+      <View style={styles.root}>
+        <Header
+          options={{ title: t('tips.article'), showBackButton: true }}
+        />
+        <ErrorState
+          icon="document-text-outline"
+          title="Article unavailable"
+          description={error ?? 'This tip could not be loaded.'}
+          retryLabel="Go back"
+          onRetry={() => router.back()}
+        />
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      <View
-        style={styles.stickyHeaderWrapper}
-        onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
-      >
-        <Header
-          options={{
-            title: t('tips.article'),
-            showBackButton: true,
-          }}
-        />
-      </View>
-      <ScrollView style={[styles.container, { paddingTop: headerHeight }]}>
-        {/* Article Content */}
-        <View style={styles.articleContainer}>
-          {/* Article Header */}
-          <View style={styles.articleImageContainer}>
-            <LinearGradient
-              colors={tip.gradientColors as [string, string]}
-              style={styles.articleImage}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <IconComponent name={tip.icon} size={48} color="white" />
-            </LinearGradient>
-            <View style={styles.articleCategoryBadge}>
-              <Text style={styles.articleCategoryText}>{tip.category}</Text>
-            </View>
-          </View>
-
-          <View style={styles.articleContent}>
-            <Text style={styles.articleTitle}>{tip.title}</Text>
-
-            <View style={styles.articleMeta}>
-              <View style={styles.articleMetaItem}>
-                <IconComponent name="time-outline" size={16} color={colors.COLOR_BLACK_LIGHT_4} />
-                <Text style={styles.articleMetaText}>{tip.readTime}</Text>
-              </View>
-              <View style={styles.articleMetaItem}>
-                <IconComponent
-                  name="calendar-outline"
-                  size={16}
-                  color={colors.COLOR_BLACK_LIGHT_4}
-                />
-                <Text style={styles.articleMetaText}>{tip.publishDate}</Text>
-              </View>
-            </View>
-
-            <Text style={styles.articleDescription}>{tip.description}</Text>
-
-            {/* Article Body */}
-            <View style={styles.articleBody}>{renderMarkdown(tip.content)}</View>
+    <View style={styles.root}>
+      <Header
+        options={{ title: t('tips.article'), showBackButton: true }}
+      />
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.hero}>
+          <LinearGradient
+            colors={tip.gradientColors as [string, string]}
+            style={styles.heroImage}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Ionicons
+              name={tip.icon as IoniconName}
+              size={56}
+              color="#ffffff"
+            />
+          </LinearGradient>
+          <View style={styles.heroBadge}>
+            <BloomText style={styles.heroBadgeText}>{tip.category}</BloomText>
           </View>
         </View>
+
+        <View style={styles.articleBlock}>
+          <SectionEyebrow>{tip.category}</SectionEyebrow>
+          <H1 style={styles.articleTitle}>{tip.title}</H1>
+          <View style={styles.metaRow}>
+            <View style={styles.metaItem}>
+              <Ionicons name="time-outline" size={14} color={colors.muted} />
+              <BloomText style={styles.metaText}>{tip.readTime}</BloomText>
+            </View>
+            <View style={styles.metaItem}>
+              <Ionicons
+                name="calendar-outline"
+                size={14}
+                color={colors.muted}
+              />
+              <BloomText style={styles.metaText}>{tip.publishDate}</BloomText>
+            </View>
+          </View>
+          <BloomText style={styles.description}>{tip.description}</BloomText>
+        </View>
+
+        <View style={styles.articleBody}>{renderMarkdown(tip.content)}</View>
       </ScrollView>
     </View>
   );
 }
 
-const markdownStyles = StyleSheet.create({
-  heading1: {
-    fontSize: 24,
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: colors.surface,
+  },
+  content: {
+    padding: spacing.lg,
+    gap: spacing['2xl'],
+    paddingBottom: spacing['4xl'],
+  },
+  skeletonBody: {
+    gap: spacing.md,
+  },
+  hero: {
+    position: 'relative',
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceElevated,
+    ...withShadow('sm'),
+  },
+  heroImage: {
+    width: '100%',
+    height: 220,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  heroBadge: {
+    position: 'absolute',
+    top: spacing.lg,
+    left: spacing.lg,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  heroBadgeText: {
+    fontSize: 11,
     fontWeight: '700',
     color: colors.COLOR_BLACK,
-    marginBottom: 16,
-    marginTop: 24,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  articleBlock: {
+    gap: spacing.sm,
+  },
+  articleTitle: {
+    letterSpacing: -1,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    gap: spacing.lg,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  metaText: {
+    fontSize: 13,
+    color: colors.muted,
+  },
+  description: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: colors.muted,
+    fontStyle: 'italic',
+  },
+  articleBody: {
+    gap: spacing.xs,
+  },
+  heading1: {
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
   },
   heading2: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-    marginBottom: 12,
-    marginTop: 20,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
   },
   heading3: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-    marginBottom: 8,
-    marginTop: 16,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
   },
   paragraph: {
     fontSize: 16,
     color: colors.COLOR_BLACK,
-    lineHeight: 24,
-    marginBottom: 12,
+    lineHeight: 26,
+    marginBottom: spacing.sm,
   },
-  list_item: {
+  listItem: {
     fontSize: 16,
     color: colors.COLOR_BLACK,
-    lineHeight: 24,
-    marginBottom: 8,
-    marginLeft: 16,
+    lineHeight: 26,
+    marginBottom: spacing.xs,
+    marginLeft: spacing.md,
   },
   blockquote: {
-    borderLeftWidth: 4,
+    borderLeftWidth: 3,
     borderLeftColor: colors.primaryColor,
-    paddingLeft: 16,
-    marginVertical: 12,
+    paddingLeft: spacing.md,
+    paddingVertical: spacing.sm,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.infoSubtle,
+    borderRadius: radius.md,
+  },
+  blockquoteText: {
+    fontSize: 16,
     fontStyle: 'italic',
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-});
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorText: {
-    fontSize: 16,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  articleContainer: {
-    flex: 1,
-  },
-  articleImageContainer: {
-    height: 200,
-    position: 'relative',
-  },
-  articleImage: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  articleCategoryBadge: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  articleCategoryText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  articleContent: {
-    padding: 16,
-  },
-  articleTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-    marginBottom: 12,
-    lineHeight: 32,
-  },
-  articleMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.COLOR_BLACK_LIGHT_4,
-  },
-  articleMetaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  articleMetaText: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    marginLeft: 6,
-  },
-  articleDescription: {
-    fontSize: 16,
-    color: colors.COLOR_BLACK_LIGHT_3,
+    color: colors.COLOR_BLACK_LIGHT_2,
     lineHeight: 24,
-    marginBottom: 24,
-    fontStyle: 'italic',
-  },
-  articleBody: {
-    marginBottom: 32,
-  },
-  stickyHeaderWrapper: {
-    zIndex: 100,
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.primaryLight,
   },
 });

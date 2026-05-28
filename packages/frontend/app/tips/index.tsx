@@ -1,145 +1,188 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+/**
+ * Tips index — editorial cards covering rental tips, guides, and rights.
+ *
+ * Stream Q polish:
+ *   - Bloom Typography (H2/H3/Text) throughout, no raw RN <Text>.
+ *   - Hand-rolled TouchableOpacity card swapped for Pressable + Bloom-styled
+ *     hero block. Each card sits on a withShadow('sm') white surface with
+ *     radius.xl image and radius.lg outer shell.
+ *   - Skeleton via existing TipsSkeleton on load.
+ *   - Adds a SectionEyebrow + H2 hero so the index reads like editorial.
+ */
+import React, { useEffect, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
-import { colors } from '@/styles/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { tipsService, TipArticle } from '@/services/tipsService';
+import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
 import { Header } from '@/components/Header';
+import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { TipsSkeleton } from '@/components/ui/skeletons/TipsSkeleton';
+import { tipsService, TipArticle } from '@/services/tipsService';
+import { radius, spacing, withShadow } from '@/constants/styles';
+import { colors } from '@/styles/colors';
 
-const IconComponent = Ionicons as any;
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+const TipCard: React.FC<{ tip: TipArticle; onPress: () => void }> = ({
+  tip,
+  onPress,
+}) => (
+  <Pressable
+    onPress={onPress}
+    style={({ pressed }) => [styles.tipCard, pressed && styles.tipCardPressed]}
+    accessibilityRole="button"
+    accessibilityLabel={tip.title}
+  >
+    <View style={styles.tipImageContainer}>
+      <LinearGradient
+        colors={tip.gradientColors as [string, string]}
+        style={styles.tipImage}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <Ionicons name={tip.icon as IoniconName} size={36} color="#ffffff" />
+      </LinearGradient>
+      <View style={styles.tipCategoryBadge}>
+        <BloomText style={styles.tipCategoryText}>{tip.category}</BloomText>
+      </View>
+    </View>
+
+    <View style={styles.tipContent}>
+      <H3 style={styles.tipTitle}>{tip.title}</H3>
+      <BloomText style={styles.tipDescription} numberOfLines={2}>
+        {tip.description}
+      </BloomText>
+
+      <View style={styles.tipMeta}>
+        <View style={styles.tipMetaItem}>
+          <Ionicons name="time-outline" size={14} color={colors.muted} />
+          <BloomText style={styles.tipMetaText}>{tip.readTime}</BloomText>
+        </View>
+        <View style={styles.tipMetaItem}>
+          <Ionicons name="calendar-outline" size={14} color={colors.muted} />
+          <BloomText style={styles.tipMetaText}>{tip.publishDate}</BloomText>
+        </View>
+      </View>
+    </View>
+  </Pressable>
+);
 
 export default function TipsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const [tipsData, setTipsData] = useState<TipArticle[]>([]);
   const [loading, setLoading] = useState(true);
-  const [headerHeight, setHeaderHeight] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load tips from API
   useEffect(() => {
+    let cancelled = false;
     const loadTips = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        // Temporarily use fallback data while debugging API
         const fallbackTips = tipsService.getFallbackTips();
-        if (fallbackTips && Array.isArray(fallbackTips)) {
+        if (cancelled) return;
+        if (Array.isArray(fallbackTips)) {
           setTipsData(fallbackTips);
         } else {
-          console.warn('Fallback tips not in expected format:', fallbackTips);
           setTipsData([]);
         }
-      } catch (error) {
-        console.error('Failed to load tips:', error);
-        setTipsData([]);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Failed to load tips');
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
-
     loadTips();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const handleTipPress = (tip: TipArticle) => {
-    // Navigate to the individual tip article using Expo Router
-    router.push(`/tips/${tip.id}`);
-  };
-
   return (
-    <View style={{ flex: 1 }}>
-      <View
-        style={styles.stickyHeaderWrapper}
-        onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
-      >
-        <Header
-          options={{
-            title: t('home.tips.title'),
-            showBackButton: true,
-          }}
-        />
-      </View>
-      <ScrollView style={[styles.container, { paddingTop: headerHeight }]}>
-        {/* Tips Grid */}
-        <View style={styles.tipsGrid}>
-          {loading
-            ? <TipsSkeleton itemCount={4} />
-            : tipsData.map((tip) => (
-              <TouchableOpacity
-                key={tip.id}
-                style={styles.tipCard}
-                onPress={() => handleTipPress(tip)}
-                activeOpacity={0.8}
-              >
-                <View style={styles.tipImageContainer}>
-                  <LinearGradient
-                    colors={tip.gradientColors as [string, string]}
-                    style={styles.tipImage}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <IconComponent name={tip.icon} size={32} color="white" />
-                  </LinearGradient>
-                  <View style={styles.tipCategoryBadge}>
-                    <Text style={styles.tipCategoryText}>{tip.category}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.tipContent}>
-                  <Text style={styles.tipTitle}>{tip.title}</Text>
-                  <Text style={styles.tipDescription}>{tip.description}</Text>
-
-                  <View style={styles.tipMeta}>
-                    <View style={styles.tipMetaItem}>
-                      <IconComponent
-                        name="time-outline"
-                        size={14}
-                        color={colors.COLOR_BLACK_LIGHT_4}
-                      />
-                      <Text style={styles.tipMetaText}>{tip.readTime}</Text>
-                    </View>
-                    <View style={styles.tipMetaItem}>
-                      <IconComponent
-                        name="calendar-outline"
-                        size={14}
-                        color={colors.COLOR_BLACK_LIGHT_4}
-                      />
-                      <Text style={styles.tipMetaText}>{tip.publishDate}</Text>
-                    </View>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
+    <View style={styles.root}>
+      <Header
+        options={{
+          title: t('home.tips.title'),
+          showBackButton: true,
+        }}
+      />
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.titleBlock}>
+          <SectionEyebrow>{t('home.tips.eyebrow', 'Renting smarter')}</SectionEyebrow>
+          <H2 style={styles.title}>{t('home.tips.title', 'Rental tips')}</H2>
+          <BloomText style={styles.subtitle}>
+            {t(
+              'home.tips.subtitle',
+              'Practical guides from local tenants, legal experts, and the Homiio editorial team.',
+            )}
+          </BloomText>
         </View>
+
+        {loading ? (
+          <TipsSkeleton itemCount={4} />
+        ) : error ? (
+          <ErrorState
+            icon="cloud-offline-outline"
+            title="Couldn't load tips"
+            description={error}
+            onRetry={() => setError(null)}
+          />
+        ) : (
+          <View style={styles.grid}>
+            {tipsData.map((tip) => (
+              <TipCard
+                key={tip.id}
+                tip={tip}
+                onPress={() => router.push(`/tips/${tip.id}`)}
+              />
+            ))}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
+    backgroundColor: colors.surface,
   },
-
-  // Tips Grid Styles
-  tipsGrid: {
-    padding: 16,
+  content: {
+    padding: spacing.lg,
+    gap: spacing.lg,
+    paddingBottom: spacing['4xl'],
+  },
+  titleBlock: {
+    gap: spacing.xs,
+  },
+  title: {
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: colors.muted,
+  },
+  grid: {
+    gap: spacing.lg,
   },
   tipCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.lg,
     overflow: 'hidden',
+    ...withShadow('sm'),
+  },
+  tipCardPressed: {
+    opacity: 0.92,
   },
   tipImageContainer: {
-    height: 160,
     position: 'relative',
+    height: 180,
   },
   tipImage: {
     width: '100%',
@@ -149,56 +192,44 @@ const styles = StyleSheet.create({
   },
   tipCategoryBadge: {
     position: 'absolute',
-    top: 12,
-    left: 12,
+    top: spacing.md,
+    left: spacing.md,
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
   },
   tipCategoryText: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.COLOR_BLACK,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
   tipContent: {
-    padding: 16,
+    padding: spacing.lg,
+    gap: spacing.sm,
   },
   tipTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-    marginBottom: 8,
-    lineHeight: 24,
+    letterSpacing: -0.3,
   },
   tipDescription: {
     fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
+    color: colors.muted,
     lineHeight: 20,
-    marginBottom: 12,
   },
   tipMeta: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    gap: spacing.lg,
+    marginTop: spacing.xs,
   },
   tipMetaItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.xs,
   },
   tipMetaText: {
     fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    marginLeft: 4,
-  },
-  stickyHeaderWrapper: {
-    zIndex: 100,
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.primaryLight,
+    color: colors.muted,
   },
 });
