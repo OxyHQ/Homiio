@@ -32,6 +32,7 @@ import { useSavedProperties } from '@/hooks/useSavedProperties';
 // Import components
 import { PropertyCard } from '@/components/PropertyCard';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';
+import { HomeCategoryStrip } from '@/components/HomeCategoryStrip';
 import { ThemedText } from '@/components/ThemedText';
 import { useMediaQuery } from 'react-responsive';
 import { useLayoutScroll } from '@/context/LayoutScrollContext';
@@ -342,6 +343,9 @@ export default function HomePage() {
             </View>
           </View>
         </View>
+
+        {/* Airbnb-style category strip (driven by RentalModeContext) */}
+        <HomeCategoryStrip />
 
         {/* Trust Features */}
         <View style={styles.trustSection}>
