@@ -1,296 +1,461 @@
-import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+/**
+ * Viewings list — upcoming property visits the user has scheduled.
+ *
+ * Stream Q polish:
+ *   - Bloom Button for modify/cancel, Bloom Chip filter row, Bloom Skeleton
+ *     while loading, Bloom Typography throughout.
+ *   - withShadow('sm') cards with radius.lg, no borders.
+ *   - Shared EmptyState / ErrorState components.
+ *   - Confirm cancel via ConfirmDialog (Bloom Modal-based).
+ */
+import React, { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Header } from '@/components/Header';
-import { ThemedText } from '@/components/ThemedText';
-import { colors } from '@/styles/colors';
-import { useOxy } from '@oxyhq/services';
-import { viewingService, ViewingRequest } from '@/services/viewingService';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Button } from '@oxyhq/bloom/button';
+import { Chip } from '@oxyhq/bloom/chip';
+import * as Skeleton from '@oxyhq/bloom/skeleton';
+import { Text as BloomText, H2, H3 } from '@oxyhq/bloom/typography';
+import { useOxy, showSignInModal } from '@oxyhq/services';
+import { Header } from '@/components/Header';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
+import { viewingService, ViewingRequest } from '@/services/viewingService';
 import { ApiError } from '@/utils/api';
-import { router } from 'expo-router';
+import { radius, spacing, withShadow } from '@/constants/styles';
+import { colors } from '@/styles/colors';
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+type ViewingStatus = 'pending' | 'approved' | 'declined' | 'cancelled';
+
+interface StatusToken {
+  bg: string;
+  fg: string;
+  label: string;
+  icon: IoniconName;
+}
+
+const STATUS_TOKENS: Record<ViewingStatus, StatusToken> = {
+  pending: {
+    bg: colors.warningSubtle,
+    fg: colors.warning,
+    label: 'Pending',
+    icon: 'time-outline',
+  },
+  approved: {
+    bg: colors.successSubtle,
+    fg: colors.success,
+    label: 'Approved',
+    icon: 'checkmark-circle-outline',
+  },
+  declined: {
+    bg: colors.dangerSubtle,
+    fg: colors.danger,
+    label: 'Declined',
+    icon: 'close-circle-outline',
+  },
+  cancelled: {
+    bg: colors.mutedSubtle,
+    fg: colors.muted,
+    label: 'Cancelled',
+    icon: 'remove-circle-outline',
+  },
+};
+
+const FILTERS: { id: 'all' | ViewingStatus; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'pending', label: 'Pending' },
+  { id: 'approved', label: 'Approved' },
+  { id: 'declined', label: 'Declined' },
+  { id: 'cancelled', label: 'Cancelled' },
+];
+
+const formatDateTime = (scheduledAt: string) => {
+  try {
+    const date = new Date(scheduledAt);
+    const dateFormatted = date.toLocaleDateString();
+    const timeFormatted = date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    return `${dateFormatted} at ${timeFormatted}`;
+  } catch {
+    return scheduledAt;
+  }
+};
+
+const ViewingsSkeleton: React.FC = () => (
+  <View style={styles.listWrap}>
+    {Array.from({ length: 3 }).map((_, idx) => (
+      <View key={idx} style={styles.skeletonCard}>
+        <View style={styles.skeletonHeader}>
+          <Skeleton.Text style={{ width: 160, lineHeight: 18 }} />
+          <Skeleton.Pill size={20} />
+        </View>
+        <Skeleton.Text style={{ width: 220, lineHeight: 14 }} />
+        <Skeleton.Text style={{ width: 180, lineHeight: 14 }} />
+      </View>
+    ))}
+  </View>
+);
+
+interface ViewingCardProps {
+  viewing: ViewingRequest;
+  onCancel: () => void;
+  onModify: () => void;
+  cancelling: boolean;
+}
+
+const ViewingCard: React.FC<ViewingCardProps> = ({
+  viewing,
+  onCancel,
+  onModify,
+  cancelling,
+}) => {
+  const status = viewing.status as ViewingStatus;
+  const token = STATUS_TOKENS[status] ?? STATUS_TOKENS.pending;
+  const isActionable = status === 'pending' || status === 'approved';
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.headerRow}>
+        <H3 style={styles.cardTitle}>{formatDateTime(viewing.scheduledAt)}</H3>
+        <View style={[styles.statusBadge, { backgroundColor: token.bg }]}>
+          <Ionicons name={token.icon} size={14} color={token.fg} />
+          <BloomText style={[styles.statusLabel, { color: token.fg }]}>
+            {token.label}
+          </BloomText>
+        </View>
+      </View>
+      {viewing.propertyTitle ? (
+        <BloomText style={styles.propertyTitle}>
+          {viewing.propertyTitle}
+        </BloomText>
+      ) : null}
+      {viewing.message ? (
+        <BloomText style={styles.message}>{viewing.message}</BloomText>
+      ) : null}
+
+      {isActionable ? (
+        <View style={styles.actionRow}>
+          {status === 'pending' ? (
+            <Button
+              variant="primary"
+              size="medium"
+              onPress={onModify}
+              style={styles.actionButton}
+            >
+              Reschedule
+            </Button>
+          ) : null}
+          <Button
+            variant="ghost"
+            size="medium"
+            onPress={onCancel}
+            loading={cancelling}
+            disabled={cancelling}
+            style={styles.actionButton}
+          >
+            Cancel
+          </Button>
+        </View>
+      ) : null}
+    </View>
+  );
+};
 
 export default function ViewingsPage() {
-    const { t } = useTranslation();
-    const { oxyServices, activeSessionId } = useOxy();
-    const queryClient = useQueryClient();
+  const { t } = useTranslation();
+  const router = useRouter();
+  const { oxyServices, activeSessionId } = useOxy();
+  const queryClient = useQueryClient();
+  const isAuthed = Boolean(oxyServices && activeSessionId);
 
-    const { data, isLoading, isError, _refetch } = useQuery({
-        queryKey: ['viewings', 'me'],
-        queryFn: async () => {
-            const res = await viewingService.listMyViewingRequests(
-                { page: 1, limit: 50 },
-                oxyServices!,
-                activeSessionId!,
-            );
-            return Array.isArray(res?.data) ? (res.data as ViewingRequest[]) : [];
-        },
-        enabled: Boolean(oxyServices && activeSessionId),
+  const [filter, setFilter] = useState<'all' | ViewingStatus>('all');
+  const [cancelTarget, setCancelTarget] = useState<ViewingRequest | null>(null);
+
+  const viewingsQuery = useQuery({
+    queryKey: ['viewings', 'me'],
+    queryFn: async () => {
+      const res = await viewingService.listMyViewingRequests(
+        { page: 1, limit: 50 },
+        oxyServices!,
+        activeSessionId!,
+      );
+      return Array.isArray(res?.data) ? (res.data as ViewingRequest[]) : [];
+    },
+    enabled: isAuthed,
+  });
+
+  const extractErrorMessage = (error: unknown): string => {
+    if (error instanceof ApiError) {
+      const response: { error?: { code?: string }; code?: string } | undefined =
+        error.response;
+      const errorCode = response?.error?.code ?? response?.code;
+      switch (errorCode) {
+        case 'VIEWING_NOT_FOUND':
+          return t('viewings.error.notFound');
+        case 'CANNOT_CANCEL':
+          return t('viewings.error.cannotCancel');
+        case 'AUTHENTICATION_REQUIRED':
+          return t('viewings.error.authRequired');
+        default:
+          return t('viewings.error.generic');
+      }
+    }
+    return t('viewings.error.generic');
+  };
+
+  const cancelMutation = useMutation({
+    mutationFn: async (viewingId: string) =>
+      viewingService.cancel(viewingId, oxyServices!, activeSessionId!),
+    onSuccess: () => {
+      toast.success(t('viewings.success.cancelled'));
+      queryClient.invalidateQueries({ queryKey: ['viewings', 'me'] });
+      setCancelTarget(null);
+    },
+    onError: (error: unknown) => {
+      toast.error(extractErrorMessage(error));
+    },
+  });
+
+  const handleModify = (viewing: ViewingRequest) => {
+    router.push({
+      pathname: `/properties/${viewing.propertyId}/book-viewing`,
+      params: { modifyViewingId: viewing._id },
     });
+  };
 
-    const cancelMutation = useMutation({
-        mutationFn: async (viewingId: string) => {
-            return await viewingService.cancel(viewingId, oxyServices!, activeSessionId!);
-        },
-        onSuccess: () => {
-            toast.success(t('viewings.success.cancelled'));
-            queryClient.invalidateQueries({ queryKey: ['viewings', 'me'] });
-        },
-        onError: (error: any) => {
-            const errorMessage = extractErrorMessage(error);
-            toast.error(errorMessage);
-        },
-    });
+  const filteredViewings = useMemo(() => {
+    const list = viewingsQuery.data ?? [];
+    if (filter === 'all') return list;
+    return list.filter((v) => v.status === filter);
+  }, [filter, viewingsQuery.data]);
 
-    const extractErrorMessage = (error: any): string => {
-        if (error instanceof ApiError) {
-            // Check for specific error codes
-            const errorCode = error.response?.error?.code || error.response?.code;
-            switch (errorCode) {
-                case 'VIEWING_NOT_FOUND':
-                    return t('viewings.error.notFound');
-                case 'CANNOT_CANCEL':
-                    return t('viewings.error.cannotCancel');
-                case 'AUTHENTICATION_REQUIRED':
-                    return t('viewings.error.authRequired');
-                default:
-                    return t('viewings.error.generic');
-            }
-        }
-        return t('viewings.error.generic');
-    };
-
-    const handleCancel = (viewing: ViewingRequest) => {
-        Alert.alert(
-            t('viewings.actions.cancel'),
-            t('viewings.cancel.confirmMessage'),
-            [
-                {
-                    text: t('common.cancel'),
-                    style: 'cancel',
-                },
-                {
-                    text: t('viewings.actions.cancel'),
-                    style: 'destructive',
-                    onPress: () => cancelMutation.mutate(viewing._id),
-                },
-            ]
-        );
-    };
-
-    const handleModify = (viewing: ViewingRequest) => {
-        // Navigate to book-viewing screen with the property ID and indication that this is a modification
-        router.push({
-            pathname: `/properties/${viewing.propertyId}/book-viewing`,
-            params: { modifyViewingId: viewing._id }
-        });
-    };
-
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'pending':
-                return '#f59e0b';
-            case 'approved':
-                return '#10b981';
-            case 'declined':
-                return '#ef4444';
-            case 'cancelled':
-                return colors.COLOR_BLACK_LIGHT_3;
-            default:
-                return colors.COLOR_BLACK_LIGHT_3;
-        }
-    };
-
-    const formatDateTime = (scheduledAt: string) => {
-        try {
-            const date = new Date(scheduledAt);
-            const dateFormatted = date.toLocaleDateString();
-            const timeFormatted = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-            return `${dateFormatted} at ${timeFormatted}`;
-        } catch {
-            return scheduledAt;
-        }
-    };
-
+  if (!isAuthed) {
     return (
-        <View style={{ flex: 1 }}>
-            <Header
-                options={{
-                    showBackButton: true,
-                    title: t('viewings.title') || 'Viewings',
-                    titlePosition: 'center',
-                }}
+      <View style={styles.root}>
+        <Header
+          options={{
+            showBackButton: true,
+            title: t('viewings.title') || 'Viewings',
+            titlePosition: 'center',
+          }}
+        />
+        <SafeAreaView edges={['bottom']} style={styles.safeArea}>
+          <View style={styles.emptyWrap}>
+            <EmptyState
+              icon="calendar-outline"
+              title="Sign in to see your viewings"
+              description="Schedule property visits and track host responses."
+              actionText="Sign in"
+              actionIcon="log-in-outline"
+              onAction={() => showSignInModal()}
             />
-            <SafeAreaView style={styles.container} edges={['top']}>
-                <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
-                    {isLoading ? (
-                        <ThemedText style={styles.muted}>{t('state.loading')}</ThemedText>
-                    ) : isError ? (
-                        <ThemedText style={styles.muted}>{t('viewings.error.generic')}</ThemedText>
-                    ) : !data || data.length === 0 ? (
-                        <View style={styles.emptyState}>
-                            <ThemedText style={styles.emptyTitle}>{t('viewings.empty.title')}</ThemedText>
-                            <ThemedText style={styles.emptyDescription}>{t('viewings.empty.description')}</ThemedText>
-                        </View>
-                    ) : (
-                        data.map((viewing: ViewingRequest) => (
-                            <View key={viewing._id} style={styles.card}>
-                                <View style={styles.cardHeader}>
-                                    <View style={styles.cardTitleRow}>
-                                        <ThemedText style={styles.cardTitle}>
-                                            {formatDateTime(viewing.scheduledAt)}
-                                        </ThemedText>
-                                        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(viewing.status) }]}>
-                                            <ThemedText style={styles.statusText}>
-                                                {t(`viewings.status.${viewing.status}`) || viewing.status}
-                                            </ThemedText>
-                                        </View>
-                                    </View>
-                                    {viewing.propertyTitle && (
-                                        <ThemedText style={styles.propertyTitle}>{viewing.propertyTitle}</ThemedText>
-                                    )}
-                                    {viewing.message && (
-                                        <ThemedText style={styles.message}>{viewing.message}</ThemedText>
-                                    )}
-                                </View>
-
-                                {(viewing.status === 'pending' || viewing.status === 'approved') && (
-                                    <View style={styles.cardActions}>
-                                        {viewing.status === 'pending' && (
-                                            <TouchableOpacity
-                                                style={[styles.actionButton, styles.modifyButton]}
-                                                onPress={() => handleModify(viewing)}
-                                            >
-                                                <ThemedText style={styles.modifyButtonText}>{t('viewings.actions.modify')}</ThemedText>
-                                            </TouchableOpacity>
-                                        )}
-                                        <TouchableOpacity
-                                            style={[styles.actionButton, styles.cancelButton]}
-                                            onPress={() => handleCancel(viewing)}
-                                            disabled={cancelMutation.isPending}
-                                        >
-                                            <ThemedText style={styles.cancelButtonText}>
-                                                {cancelMutation.isPending ? t('state.loading') : t('viewings.actions.cancel')}
-                                            </ThemedText>
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
-                            </View>
-                        ))
-                    )}
-                </ScrollView>
-            </SafeAreaView>
-        </View>
+          </View>
+        </SafeAreaView>
+      </View>
     );
+  }
+
+  return (
+    <View style={styles.root}>
+      <Header
+        options={{
+          showBackButton: true,
+          title: t('viewings.title') || 'Viewings',
+          titlePosition: 'center',
+        }}
+      />
+      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
+        <ScrollView contentContainerStyle={styles.content}>
+          <View style={styles.titleBlock}>
+            <SectionEyebrow>Upcoming visits</SectionEyebrow>
+            <H2 style={styles.title}>Your viewings</H2>
+            <BloomText style={styles.subtitle}>
+              Track every visit you have requested and reschedule or cancel
+              with one tap.
+            </BloomText>
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterRow}
+          >
+            {FILTERS.map((entry) => {
+              const isActive = filter === entry.id;
+              return (
+                <Chip
+                  key={entry.id}
+                  onPress={() => setFilter(entry.id)}
+                  variant={isActive ? 'solid' : 'outlined'}
+                  color={isActive ? 'primary' : 'default'}
+                  selected={isActive}
+                >
+                  {entry.label}
+                </Chip>
+              );
+            })}
+          </ScrollView>
+
+          {viewingsQuery.isLoading ? <ViewingsSkeleton /> : null}
+
+          {viewingsQuery.isError ? (
+            <ErrorState
+              icon="cloud-offline-outline"
+              title={t('viewings.error.generic')}
+              description={viewingsQuery.error?.message ?? 'Please try again.'}
+              onRetry={() => viewingsQuery.refetch()}
+            />
+          ) : null}
+
+          {!viewingsQuery.isLoading &&
+          !viewingsQuery.isError &&
+          filteredViewings.length === 0 ? (
+            <View style={styles.emptyWrap}>
+              <EmptyState
+                icon="calendar-outline"
+                title={t('viewings.empty.title')}
+                description={t('viewings.empty.description')}
+              />
+            </View>
+          ) : null}
+
+          {filteredViewings.length > 0 ? (
+            <View style={styles.listWrap}>
+              {filteredViewings.map((viewing) => (
+                <ViewingCard
+                  key={viewing._id}
+                  viewing={viewing}
+                  cancelling={
+                    cancelMutation.isPending &&
+                    cancelTarget?._id === viewing._id
+                  }
+                  onCancel={() => setCancelTarget(viewing)}
+                  onModify={() => handleModify(viewing)}
+                />
+              ))}
+            </View>
+          ) : null}
+        </ScrollView>
+
+        <ConfirmDialog
+          visible={cancelTarget !== null}
+          title={t('viewings.actions.cancel')}
+          message={t('viewings.cancel.confirmMessage')}
+          confirmLabel={t('viewings.actions.cancel')}
+          cancelLabel={t('common.cancel')}
+          confirmDestructive
+          loading={cancelMutation.isPending}
+          onCancel={() => setCancelTarget(null)}
+          onConfirm={() => {
+            if (cancelTarget) cancelMutation.mutate(cancelTarget._id);
+          }}
+        />
+      </SafeAreaView>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: colors.COLOR_BACKGROUND,
-    },
-    muted: {
-        color: colors.COLOR_BLACK_LIGHT_3,
-    },
-    emptyState: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 50,
-        paddingHorizontal: 20,
-    },
-    emptyTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: colors.COLOR_BLACK,
-        marginBottom: 8,
-        textAlign: 'center',
-    },
-    emptyDescription: {
-        fontSize: 14,
-        color: colors.COLOR_BLACK_LIGHT_3,
-        textAlign: 'center',
-        lineHeight: 20,
-    },
-    card: {
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: '#eee',
-        overflow: 'hidden',
-    },
-    cardHeader: {
-        padding: 16,
-    },
-    cardTitleRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: 8,
-    },
-    cardTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: colors.COLOR_BLACK,
-        flex: 1,
-        marginRight: 12,
-    },
-    statusBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 6,
-    },
-    statusText: {
-        fontSize: 12,
-        fontWeight: '500',
-        color: '#fff',
-        textTransform: 'capitalize',
-    },
-    propertyTitle: {
-        fontSize: 14,
-        color: colors.COLOR_BLACK_LIGHT_2,
-        marginBottom: 4,
-    },
-    message: {
-        fontSize: 14,
-        color: colors.COLOR_BLACK_LIGHT_3,
-        fontStyle: 'italic',
-    },
-    cardActions: {
-        flexDirection: 'row',
-        borderTopWidth: 1,
-        borderTopColor: '#f1f1f1',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        gap: 8,
-    },
-    actionButton: {
-        flex: 1,
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    modifyButton: {
-        backgroundColor: colors.primaryColor || '#2563eb',
-    },
-    modifyButtonText: {
-        color: '#fff',
-        fontSize: 14,
-        fontWeight: '500',
-    },
-    cancelButton: {
-        backgroundColor: '#f3f4f6',
-        borderWidth: 1,
-        borderColor: '#d1d5db',
-    },
-    cancelButtonText: {
-        color: '#374151',
-        fontSize: 14,
-        fontWeight: '500',
-    },
+  root: {
+    flex: 1,
+    backgroundColor: colors.surface,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  content: {
+    padding: spacing.lg,
+    gap: spacing.lg,
+  },
+  titleBlock: {
+    gap: spacing.xs,
+  },
+  title: {
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: colors.muted,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  emptyWrap: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  listWrap: {
+    gap: spacing.md,
+  },
+  card: {
+    backgroundColor: colors.surfaceElevated,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    gap: spacing.sm,
+    ...withShadow('sm'),
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  cardTitle: {
+    flex: 1,
+    fontSize: 16,
+    letterSpacing: -0.2,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.pill,
+  },
+  statusLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  propertyTitle: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK_LIGHT_2,
+  },
+  message: {
+    fontSize: 14,
+    color: colors.muted,
+    fontStyle: 'italic',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  actionButton: {
+    flex: 1,
+  },
+  skeletonCard: {
+    backgroundColor: colors.surfaceElevated,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    gap: spacing.sm,
+    ...withShadow('sm'),
+  },
+  skeletonHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
 });
-
-

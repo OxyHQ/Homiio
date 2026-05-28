@@ -1,16 +1,29 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+/**
+ * ContractCard — lease summary used by `/contracts` and shared list views.
+ *
+ * Stream Q polish:
+ *   - Pressable card surface with withShadow('sm') and radius.lg.
+ *   - Bloom Typography for every label / value, no raw <Text>.
+ *   - Inline Bloom Button actions for share / download (when provided).
+ */
+import React, { useMemo } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Button } from '@oxyhq/bloom/button';
+import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
 import { colors } from '@/styles/colors';
 import { radius, spacing, withShadow } from '@/constants/styles';
 import { StatusBadge, type StatusType } from './ui/StatusBadge';
 
-// Type assertion for Ionicons compatibility
-const IconComponent = Ionicons as any;
+export type ContractStatus =
+  | 'draft'
+  | 'pending'
+  | 'pending_signature'
+  | 'active'
+  | 'expired'
+  | 'terminated';
 
-export type ContractStatus = 'draft' | 'pending' | 'active' | 'expired' | 'terminated';
-
-type ContractCardProps = {
+interface ContractCardProps {
   id: string;
   title: string;
   propertyId: string;
@@ -25,9 +38,19 @@ type ContractCardProps = {
   onPress?: () => void;
   onSharePress?: () => void;
   onDownloadPress?: () => void;
+}
+
+const formatDate = (raw: string): string => {
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw;
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
 };
 
-export function ContractCard({
+export const ContractCard: React.FC<ContractCardProps> = ({
   title,
   propertyName,
   startDate,
@@ -36,195 +59,217 @@ export function ContractCard({
   landlordName,
   tenantName,
   monthlyRent,
-  currency = '⊜',
+  currency = '€',
   onPress,
   onSharePress,
   onDownloadPress,
-}: ContractCardProps) {
-  // Formatting the dates in a readable format
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
+}) => {
+  const formattedRent = useMemo(
+    () => `${currency}${monthlyRent.toLocaleString()}`,
+    [currency, monthlyRent],
+  );
 
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.container,
+        pressed && styles.containerPressed,
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={`Contract ${title}`}
+    >
       <View style={styles.header}>
         <View style={styles.titleContainer}>
-          <Text style={styles.title} numberOfLines={1}>
+          <H3 style={styles.title} numberOfLines={1}>
             {title}
-          </Text>
+          </H3>
           <StatusBadge status={status as StatusType} size="small" />
         </View>
-        <Text style={styles.rent}>
-          {currency}
-          {monthlyRent.toLocaleString()}
-          <Text style={styles.rentPeriod}>/month</Text>
-        </Text>
+        <View style={styles.rentBlock}>
+          <BloomText style={styles.rentAmount}>{formattedRent}</BloomText>
+          <BloomText style={styles.rentPeriod}> / month</BloomText>
+        </View>
       </View>
 
       <View style={styles.propertyRow}>
-        <IconComponent name="home-outline" size={16} color={colors.primaryDark_1} />
-        <Text style={styles.propertyName} numberOfLines={1}>
+        <Ionicons
+          name="home-outline"
+          size={16}
+          color={colors.COLOR_BLACK_LIGHT_2}
+        />
+        <BloomText style={styles.propertyName} numberOfLines={1}>
           {propertyName}
-        </Text>
+        </BloomText>
       </View>
 
       <View style={styles.datesContainer}>
         <View style={styles.dateRow}>
-          <Text style={styles.dateLabel}>Start Date:</Text>
-          <Text style={styles.dateValue}>{formatDate(startDate)}</Text>
+          <BloomText style={styles.dateLabel}>Start</BloomText>
+          <BloomText style={styles.dateValue}>{formatDate(startDate)}</BloomText>
         </View>
         <View style={styles.dateRow}>
-          <Text style={styles.dateLabel}>End Date:</Text>
-          <Text style={styles.dateValue}>{formatDate(endDate)}</Text>
+          <BloomText style={styles.dateLabel}>End</BloomText>
+          <BloomText style={styles.dateValue}>{formatDate(endDate)}</BloomText>
         </View>
       </View>
 
       <View style={styles.partiesContainer}>
         <View style={styles.partyRow}>
-          <IconComponent name="business-outline" size={16} color={colors.primaryDark_1} />
-          <Text style={styles.partyLabel}>Landlord:</Text>
-          <Text style={styles.partyName} numberOfLines={1}>
+          <Ionicons
+            name="business-outline"
+            size={16}
+            color={colors.COLOR_BLACK_LIGHT_2}
+          />
+          <BloomText style={styles.partyLabel}>Landlord</BloomText>
+          <BloomText style={styles.partyName} numberOfLines={1}>
             {landlordName}
-          </Text>
+          </BloomText>
         </View>
         <View style={styles.partyRow}>
-          <IconComponent name="person-outline" size={16} color={colors.primaryDark_1} />
-          <Text style={styles.partyLabel}>Tenant:</Text>
-          <Text style={styles.partyName} numberOfLines={1}>
+          <Ionicons
+            name="person-outline"
+            size={16}
+            color={colors.COLOR_BLACK_LIGHT_2}
+          />
+          <BloomText style={styles.partyLabel}>Tenant</BloomText>
+          <BloomText style={styles.partyName} numberOfLines={1}>
             {tenantName}
-          </Text>
+          </BloomText>
         </View>
       </View>
 
-      <View style={styles.actionsContainer}>
-        <TouchableOpacity style={styles.actionButton} onPress={onSharePress}>
-          <IconComponent name="share-outline" size={18} color={colors.primaryColor} />
-          <Text style={styles.actionText}>Share</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton} onPress={onDownloadPress}>
-          <IconComponent name="download-outline" size={18} color={colors.primaryColor} />
-          <Text style={styles.actionText}>Download</Text>
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
+      {(onSharePress || onDownloadPress) && (
+        <View style={styles.actionsContainer}>
+          {onSharePress ? (
+            <Button
+              variant="secondary"
+              size="small"
+              onPress={onSharePress}
+              icon={
+                <Ionicons
+                  name="share-outline"
+                  size={16}
+                  color={colors.COLOR_BLACK}
+                />
+              }
+            >
+              Share
+            </Button>
+          ) : null}
+          {onDownloadPress ? (
+            <Button
+              variant="secondary"
+              size="small"
+              onPress={onDownloadPress}
+              icon={
+                <Ionicons
+                  name="download-outline"
+                  size={16}
+                  color={colors.COLOR_BLACK}
+                />
+              }
+            >
+              Download
+            </Button>
+          ) : null}
+        </View>
+      )}
+    </Pressable>
   );
-}
+};
+
+export default ContractCard;
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.surfaceElevated,
     borderRadius: radius.lg,
     padding: spacing.lg,
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.lg,
+    gap: spacing.sm,
     ...withShadow('sm'),
+  },
+  containerPressed: {
+    opacity: 0.8,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    gap: spacing.md,
   },
   titleContainer: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
+    gap: spacing.xs,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.primaryDark,
-    marginRight: 8,
+    fontSize: 17,
+    letterSpacing: -0.2,
   },
-  rent: {
-    fontSize: 18,
-    fontWeight: '600',
+  rentBlock: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  rentAmount: {
+    fontSize: 17,
+    fontWeight: '700',
     color: colors.primaryColor,
   },
   rentPeriod: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: colors.primaryDark_1,
+    fontSize: 13,
+    color: colors.muted,
   },
   propertyRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    gap: spacing.sm,
   },
   propertyName: {
+    flex: 1,
     fontSize: 14,
-    color: colors.primaryDark_1,
-    marginLeft: 8,
+    color: colors.COLOR_BLACK_LIGHT_2,
   },
   datesContainer: {
-    marginBottom: 12,
-    backgroundColor: colors.primaryLight,
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_5,
+    backgroundColor: colors.mutedSubtle,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    gap: spacing.xs,
   },
   dateRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
   },
   dateLabel: {
     fontSize: 12,
-    color: colors.primaryDark_1,
+    color: colors.muted,
   },
   dateValue: {
     fontSize: 12,
-    fontWeight: '500',
-    color: colors.primaryDark,
+    fontWeight: '600',
+    color: colors.COLOR_BLACK,
   },
   partiesContainer: {
-    marginBottom: 12,
+    gap: spacing.xs,
   },
   partyRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    gap: spacing.sm,
   },
   partyLabel: {
-    fontSize: 14,
-    color: colors.primaryDark_1,
-    marginLeft: 8,
-    marginRight: 4,
+    fontSize: 13,
+    color: colors.muted,
+    minWidth: 64,
   },
   partyName: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.primaryDark,
     flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.COLOR_BLACK,
   },
   actionsContainer: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
-    marginTop: 4,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primaryLight,
-    borderWidth: 1,
-    borderColor: colors.primaryColor,
-    borderRadius: 25,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    marginRight: 12,
-  },
-  actionText: {
-    color: colors.primaryColor,
-    fontSize: 12,
-    fontWeight: '500',
-    marginLeft: 6,
+    gap: spacing.sm,
+    marginTop: spacing.xs,
   },
 });
