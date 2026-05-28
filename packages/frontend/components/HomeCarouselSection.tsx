@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { phuduFontWeights } from '@/styles/fonts';
+import { cardShadow } from '@/constants/styles';
 import { ThemedText } from './ThemedText';
 
 interface HomeCarouselSectionProps<T> {
@@ -283,18 +284,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   arrowButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
+    ...cardShadow.sm,
   },
 });
 
