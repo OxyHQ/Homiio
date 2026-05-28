@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
     View,
     Modal,
@@ -9,16 +9,21 @@ import {
     Text,
     StatusBar,
     useWindowDimensions,
+    NativeSyntheticEvent,
+    NativeScrollEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PinchGestureHandler, State, PanGestureHandler, TapGestureHandler, GestureHandlerRootView } from 'react-native-gesture-handler';
+import {
+    Gesture,
+    GestureDetector,
+    GestureHandlerRootView,
+} from 'react-native-gesture-handler';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
     withSpring,
     runOnJS,
-    useAnimatedGestureHandler,
 } from 'react-native-reanimated';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 import type { PropertyImage } from '@homiio/shared-types';
@@ -29,6 +34,11 @@ interface ImageGalleryModalProps {
     initialIndex: number;
     onClose: () => void;
 }
+
+const MAX_SCALE = 3;
+const MIN_SCALE = 1;
+const DAMPING_FACTOR = 0.8;
+const ZOOM_THRESHOLD = 1.1;
 
 export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
     visible,
@@ -55,8 +65,9 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
     const savedTranslateX = useSharedValue(0);
     const savedTranslateY = useSharedValue(0);
 
-    const resetZoom = () => {
-        scale.value = 1; // Reset immediately without animation for better UX when changing images
+    const resetZoom = useCallback(() => {
+        // Reset immediately without animation for better UX when changing images.
+        scale.value = 1;
         translateX.value = 0;
         translateY.value = 0;
         savedTranslateX.value = 0;
@@ -64,18 +75,18 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
         baseScale.value = 1;
         lastScale.value = 1;
         setIsZoomed(false);
-    };
+    }, [scale, translateX, translateY, savedTranslateX, savedTranslateY, baseScale, lastScale]);
 
-    const zoomIn = () => {
-        const newScale = Math.min(scale.value * 1.5, 3);
+    const zoomIn = useCallback(() => {
+        const newScale = Math.min(scale.value * 1.5, MAX_SCALE);
         scale.value = withSpring(newScale);
         baseScale.value = newScale;
         lastScale.value = newScale;
         setIsZoomed(newScale > 1);
-    };
+    }, [scale, baseScale, lastScale]);
 
-    const zoomOut = () => {
-        const newScale = Math.max(scale.value / 1.5, 1);
+    const zoomOut = useCallback(() => {
+        const newScale = Math.max(scale.value / 1.5, MIN_SCALE);
         scale.value = withSpring(newScale);
         baseScale.value = newScale;
         lastScale.value = newScale;
@@ -88,152 +99,173 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
         } else {
             setIsZoomed(true);
         }
-    };
+    }, [scale, baseScale, lastScale, translateX, translateY, savedTranslateX, savedTranslateY]);
 
-    const zoomToPoint = (x: number, y: number) => {
+    const zoomToPoint = useCallback((x: number, y: number) => {
         if (scale.value > 1) {
-            // If zoomed, reset to normal
             resetZoom();
-        } else {
-            // If normal, zoom to 2x at the tapped point
-            const newScale = 2;
-
-            // Use existing screenWidth from useWindowDimensions
-            const centerX = screenWidth / 2;
-            const centerY = screenWidth * 0.75; // Approximate aspect ratio center
-
-            // Calculate offset to move the tapped point to center
-            // Simplified formula for more natural behavior
-            const offsetX = (centerX - x) * 0.5;
-            const offsetY = (centerY - y) * 0.5;
-
-            // Apply reasonable constraints
-            const maxOffset = screenWidth * 0.2;
-            const constrainedOffsetX = Math.max(-maxOffset, Math.min(maxOffset, offsetX));
-            const constrainedOffsetY = Math.max(-maxOffset, Math.min(maxOffset, offsetY));
-
-            scale.value = withSpring(newScale);
-            translateX.value = withSpring(constrainedOffsetX);
-            translateY.value = withSpring(constrainedOffsetY);
-            savedTranslateX.value = constrainedOffsetX;
-            savedTranslateY.value = constrainedOffsetY;
-            baseScale.value = newScale;
-            lastScale.value = newScale;
-            setIsZoomed(true);
+            return;
         }
-    };
+        // Zoom to 2x at the tapped point.
+        const newScale = 2;
+        const centerX = screenWidth / 2;
+        const centerY = screenWidth * 0.75; // Approximate aspect ratio center
+        const offsetX = (centerX - x) * 0.5;
+        const offsetY = (centerY - y) * 0.5;
 
-    const doubleTapHandler = useAnimatedGestureHandler({
-        onEnd: (event: any) => {
-            runOnJS(zoomToPoint)(event.x, event.y);
-        },
-    });
+        const maxOffset = screenWidth * 0.2;
+        const constrainedOffsetX = Math.max(-maxOffset, Math.min(maxOffset, offsetX));
+        const constrainedOffsetY = Math.max(-maxOffset, Math.min(maxOffset, offsetY));
 
-    const pinchHandler = useAnimatedGestureHandler({
-        onStart: (_event: any) => {
-            baseScale.value = lastScale.value;
-            runOnJS(setIsZoomed)(true);
-        },
-        onActive: (event: any) => {
-            const newScale = Math.max(1, Math.min(3, baseScale.value * (event.scale || 1)));
-            scale.value = newScale;
-        },
-        onEnd: () => {
-            lastScale.value = scale.value;
-            if (scale.value < 1.1) {
-                scale.value = withSpring(1);
-                translateX.value = withSpring(0);
-                translateY.value = withSpring(0);
-                savedTranslateX.value = 0;
-                savedTranslateY.value = 0;
-                baseScale.value = 1;
-                lastScale.value = 1;
-                runOnJS(setIsZoomed)(false);
-            } else {
-                runOnJS(setIsZoomed)(true);
-            }
-        },
-    });
+        scale.value = withSpring(newScale);
+        translateX.value = withSpring(constrainedOffsetX);
+        translateY.value = withSpring(constrainedOffsetY);
+        savedTranslateX.value = constrainedOffsetX;
+        savedTranslateY.value = constrainedOffsetY;
+        baseScale.value = newScale;
+        lastScale.value = newScale;
+        setIsZoomed(true);
+    }, [scale, translateX, translateY, savedTranslateX, savedTranslateY, baseScale, lastScale, screenWidth, resetZoom]);
 
-    const panHandler = useAnimatedGestureHandler({
-        onStart: () => {
-            if (scale.value <= 1) return; // Only allow pan when zoomed
-            // Save current translation when pan starts
-            savedTranslateX.value = translateX.value;
-            savedTranslateY.value = translateY.value;
-        },
-        onActive: (event: any) => {
-            if (scale.value > 1) {
-                // Apply pan translation with damping for smoother feel
-                const dampingFactor = 0.8; // Reduces movement speed for better control
-                translateX.value = savedTranslateX.value + (event.translationX || 0) * dampingFactor;
-                translateY.value = savedTranslateY.value + (event.translationY || 0) * dampingFactor;
+    // Modern Gesture API replaces deprecated useAnimatedGestureHandler.
+    // The deprecated hook breaks on Reanimated 4 + New Architecture because
+    // its onActive callback is wired through addListener on the UI thread.
+    const doubleTap = useMemo(
+        () =>
+            Gesture.Tap()
+                .numberOfTaps(2)
+                .onEnd((event) => {
+                    'worklet';
+                    runOnJS(zoomToPoint)(event.x, event.y);
+                }),
+        [zoomToPoint],
+    );
 
-                // Optional: Add boundary constraints based on zoom level
-                const maxTranslation = 100 * scale.value;
-                translateX.value = Math.max(-maxTranslation, Math.min(maxTranslation, translateX.value));
-                translateY.value = Math.max(-maxTranslation, Math.min(maxTranslation, translateY.value));
-            }
-        },
-        onEnd: () => {
-            if (scale.value <= 1) return; // Only save state when zoomed
-            // Save the final position for next pan gesture
-            savedTranslateX.value = translateX.value;
-            savedTranslateY.value = translateY.value;
-        },
-    });
+    const pinch = useMemo(
+        () =>
+            Gesture.Pinch()
+                .onStart(() => {
+                    'worklet';
+                    baseScale.value = lastScale.value;
+                    runOnJS(setIsZoomed)(true);
+                })
+                .onUpdate((event) => {
+                    'worklet';
+                    const newScale = Math.max(
+                        MIN_SCALE,
+                        Math.min(MAX_SCALE, baseScale.value * (event.scale || 1)),
+                    );
+                    scale.value = newScale;
+                })
+                .onEnd(() => {
+                    'worklet';
+                    lastScale.value = scale.value;
+                    if (scale.value < ZOOM_THRESHOLD) {
+                        scale.value = withSpring(1);
+                        translateX.value = withSpring(0);
+                        translateY.value = withSpring(0);
+                        savedTranslateX.value = 0;
+                        savedTranslateY.value = 0;
+                        baseScale.value = 1;
+                        lastScale.value = 1;
+                        runOnJS(setIsZoomed)(false);
+                    } else {
+                        runOnJS(setIsZoomed)(true);
+                    }
+                }),
+        [scale, baseScale, lastScale, translateX, translateY, savedTranslateX, savedTranslateY],
+    );
 
-    const animatedStyle = useAnimatedStyle(() => {
-        return {
-            transform: [
-                { scale: scale.value },
-                { translateX: translateX.value },
-                { translateY: translateY.value },
-            ],
-        };
-    });
+    const pan = useMemo(
+        () =>
+            Gesture.Pan()
+                .enabled(isZoomed)
+                .minPointers(1)
+                .maxPointers(1)
+                .activeOffsetX([-5, 5])
+                .activeOffsetY([-5, 5])
+                .onStart(() => {
+                    'worklet';
+                    if (scale.value <= 1) return;
+                    savedTranslateX.value = translateX.value;
+                    savedTranslateY.value = translateY.value;
+                })
+                .onUpdate((event) => {
+                    'worklet';
+                    if (scale.value <= 1) return;
+                    const nextX = savedTranslateX.value + event.translationX * DAMPING_FACTOR;
+                    const nextY = savedTranslateY.value + event.translationY * DAMPING_FACTOR;
+                    const maxTranslation = 100 * scale.value;
+                    translateX.value = Math.max(-maxTranslation, Math.min(maxTranslation, nextX));
+                    translateY.value = Math.max(-maxTranslation, Math.min(maxTranslation, nextY));
+                })
+                .onEnd(() => {
+                    'worklet';
+                    if (scale.value <= 1) return;
+                    savedTranslateX.value = translateX.value;
+                    savedTranslateY.value = translateY.value;
+                }),
+        [isZoomed, scale, translateX, translateY, savedTranslateX, savedTranslateY],
+    );
 
-    const goToNext = () => {
+    const composedGesture = useMemo(
+        () => Gesture.Simultaneous(doubleTap, pinch, pan),
+        [doubleTap, pinch, pan],
+    );
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [
+            { scale: scale.value },
+            { translateX: translateX.value },
+            { translateY: translateY.value },
+        ],
+    }));
+
+    const goToNext = useCallback(() => {
         if (currentIndex < images.length - 1) {
             const nextIndex = currentIndex + 1;
             setCurrentIndex(nextIndex);
             resetZoom();
             scrollViewRef.current?.scrollTo({
                 x: nextIndex * screenWidth,
-                animated: true
+                animated: true,
             });
         }
-    };
+    }, [currentIndex, images.length, screenWidth, resetZoom]);
 
-    const goToPrevious = () => {
+    const goToPrevious = useCallback(() => {
         if (currentIndex > 0) {
             const prevIndex = currentIndex - 1;
             setCurrentIndex(prevIndex);
             resetZoom();
             scrollViewRef.current?.scrollTo({
                 x: prevIndex * screenWidth,
-                animated: true
+                animated: true,
             });
         }
-    };
+    }, [currentIndex, screenWidth, resetZoom]);
 
-    const onScroll = (event: any) => {
-        const offsetX = event.nativeEvent.contentOffset.x;
-        const index = Math.round(offsetX / screenWidth);
-        if (index !== currentIndex) {
+    const onScroll = useCallback(
+        (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+            const offsetX = event.nativeEvent.contentOffset.x;
+            const index = Math.round(offsetX / screenWidth);
+            if (index !== currentIndex) {
+                setCurrentIndex(index);
+                resetZoom();
+            }
+        },
+        [currentIndex, screenWidth, resetZoom],
+    );
+
+    const onMomentumScrollEnd = useCallback(
+        (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+            const offsetX = event.nativeEvent.contentOffset.x;
+            const index = Math.round(offsetX / screenWidth);
             setCurrentIndex(index);
-            // Reset zoom when changing images
             resetZoom();
-        }
-    };
-
-    const onMomentumScrollEnd = (event: any) => {
-        const offsetX = event.nativeEvent.contentOffset.x;
-        const index = Math.round(offsetX / screenWidth);
-        setCurrentIndex(index);
-        // Reset zoom when changing images
-        resetZoom();
-    };
+        },
+        [screenWidth, resetZoom],
+    );
 
     return (
         <Modal
@@ -260,42 +292,20 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
                         decelerationRate="fast"
                     >
                         {images.map((item, index) => (
-                            <View key={`${index}-${currentIndex}`} style={[styles.imageContainer, { width: screenWidth }]}>
+                            <View
+                                key={`${index}-${currentIndex}`}
+                                style={[styles.imageContainer, { width: screenWidth }]}
+                            >
                                 {index === currentIndex ? (
-                                    <TapGestureHandler
-                                        onGestureEvent={doubleTapHandler}
-                                        numberOfTaps={2}
-                                    >
+                                    <GestureDetector gesture={composedGesture}>
                                         <Animated.View style={styles.imageWrapper}>
-                                            <PinchGestureHandler
-                                                onGestureEvent={pinchHandler}
-                                                onHandlerStateChange={(e) => {
-                                                    if (e.nativeEvent.state === State.BEGAN) {
-                                                        console.log('Pinch started');
-                                                    }
-                                                }}
-                                            >
-                                                <Animated.View style={styles.imageWrapper}>
-                                                    <PanGestureHandler
-                                                        onGestureEvent={panHandler}
-                                                        enabled={isZoomed}
-                                                        minPointers={1}
-                                                        maxPointers={1}
-                                                        activeOffsetX={isZoomed ? [-5, 5] : undefined}
-                                                        activeOffsetY={isZoomed ? [-5, 5] : undefined}
-                                                    >
-                                                        <Animated.View style={styles.imageWrapper}>
-                                                            <Animated.Image
-                                                                source={getPropertyImageSource(item)}
-                                                                style={[styles.image, animatedStyle]}
-                                                                resizeMode="contain"
-                                                            />
-                                                        </Animated.View>
-                                                    </PanGestureHandler>
-                                                </Animated.View>
-                                            </PinchGestureHandler>
+                                            <Animated.Image
+                                                source={getPropertyImageSource(item)}
+                                                style={[styles.image, animatedStyle]}
+                                                resizeMode="contain"
+                                            />
                                         </Animated.View>
-                                    </TapGestureHandler>
+                                    </GestureDetector>
                                 ) : (
                                     <View style={styles.imageWrapper}>
                                         <Image
@@ -369,7 +379,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
                                     resetZoom();
                                     scrollViewRef.current?.scrollTo({
                                         x: index * screenWidth,
-                                        animated: true
+                                        animated: true,
                                     });
                                 }}
                             >
