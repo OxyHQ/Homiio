@@ -859,7 +859,13 @@
       "profile": "Perfil",
       "payments": "Pagaments",
       "roommates": "Companys de Pis",
-      "settings": "Configuració"
+      "settings": "Configuració",
+      "applications": "Les meves sol·licituds",
+      "stays": "Estades",
+      "tips": "Consells",
+      "hostCalendar": "Calendari d'amfitrió",
+      "hostReservations": "Reserves d'amfitrió",
+      "landlordApplications": "Safata de sol·licituds"
     },
     "actions": {
       "addProperty": "Afegir Propietat",
@@ -871,7 +877,32 @@
     },
     "footer": {
       "brandName": "Homiio - Plataforma d'Habitatge Ètic"
-    }
+    },
+    "mode": {
+      "longTerm": "Llarga estada",
+      "vacation": "Vacances"
+    },
+    "savedProperties": {
+      "title": "Carpetes desades",
+      "empty": "Encara no hi ha carpetes desades",
+      "viewAll": "Veure-ho tot"
+    },
+    "recent": {
+      "title": "Vistes recentment",
+      "today": "Avui",
+      "yesterday": "Ahir",
+      "earlier": "Abans",
+      "empty": "Les propietats que vegeu apareixeran aquí",
+      "remove": "Treure de recents"
+    },
+    "menu": {
+      "account": "Compte",
+      "notifications": "Notificacions",
+      "terms": "Termes del servei",
+      "privacy": "Política de privacitat"
+    },
+    "collapse": "Contraure barra lateral",
+    "expand": "Expandir barra lateral"
   },
   "saved": {
     "header": "Desats",

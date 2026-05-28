@@ -840,7 +840,13 @@
       "profile": "Perfil",
       "payments": "Pagos",
       "roommates": "Compañeros de Cuarto",
-      "settings": "Configuración"
+      "settings": "Configuración",
+      "applications": "Mis solicitudes",
+      "stays": "Estancias",
+      "tips": "Consejos",
+      "hostCalendar": "Calendario de anfitrión",
+      "hostReservations": "Reservas de anfitrión",
+      "landlordApplications": "Bandeja de solicitudes"
     },
     "actions": {
       "addProperty": "Agregar Propiedad",
@@ -852,7 +858,32 @@
     },
     "footer": {
       "brandName": "Homiio - Plataforma de Vivienda Ética"
-    }
+    },
+    "mode": {
+      "longTerm": "Larga estancia",
+      "vacation": "Vacaciones"
+    },
+    "savedProperties": {
+      "title": "Carpetas guardadas",
+      "empty": "Aún no hay carpetas guardadas",
+      "viewAll": "Ver todo"
+    },
+    "recent": {
+      "title": "Vistas recientemente",
+      "today": "Hoy",
+      "yesterday": "Ayer",
+      "earlier": "Antes",
+      "empty": "Las propiedades que veas aparecerán aquí",
+      "remove": "Quitar de recientes"
+    },
+    "menu": {
+      "account": "Cuenta",
+      "notifications": "Notificaciones",
+      "terms": "Términos del servicio",
+      "privacy": "Política de privacidad"
+    },
+    "collapse": "Contraer barra lateral",
+    "expand": "Expandir barra lateral"
   },
   "saved": {
     "header": "Guardados",

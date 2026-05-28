@@ -718,7 +718,13 @@
       "profile": "Profilo",
       "payments": "Pagamenti",
       "roommates": "Coinquilini",
-      "settings": "Impostazioni"
+      "settings": "Impostazioni",
+      "applications": "Le mie candidature",
+      "stays": "Soggiorni",
+      "tips": "Consigli",
+      "hostCalendar": "Calendario host",
+      "hostReservations": "Prenotazioni host",
+      "landlordApplications": "Casella candidature"
     },
     "actions": {
       "addProperty": "Aggiungi Proprietà",
@@ -730,7 +736,32 @@
     },
     "footer": {
       "brandName": "Homiio - Piattaforma Abitativa Etica"
-    }
+    },
+    "mode": {
+      "longTerm": "Lunga durata",
+      "vacation": "Vacanza"
+    },
+    "savedProperties": {
+      "title": "Cartelle salvate",
+      "empty": "Nessuna cartella salvata",
+      "viewAll": "Visualizza tutto"
+    },
+    "recent": {
+      "title": "Visti di recente",
+      "today": "Oggi",
+      "yesterday": "Ieri",
+      "earlier": "Prima",
+      "empty": "Le proprietà che visualizzi appariranno qui",
+      "remove": "Rimuovi dai recenti"
+    },
+    "menu": {
+      "account": "Account",
+      "notifications": "Notifiche",
+      "terms": "Termini del servizio",
+      "privacy": "Politica sulla privacy"
+    },
+    "collapse": "Comprimi barra laterale",
+    "expand": "Espandi barra laterale"
   },
   "saved": {
     "title": "Proprietà Salvate",

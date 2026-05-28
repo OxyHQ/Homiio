@@ -894,7 +894,13 @@
       "profile": "Profile",
       "payments": "Payments",
       "roommates": "Roommates",
-      "settings": "Settings"
+      "settings": "Settings",
+      "applications": "My applications",
+      "stays": "Stays",
+      "tips": "Tips",
+      "hostCalendar": "Host calendar",
+      "hostReservations": "Host reservations",
+      "landlordApplications": "Applicant inbox"
     },
     "actions": {
       "addProperty": "Add Property",
@@ -906,7 +912,32 @@
     },
     "footer": {
       "brandName": "Homiio - Ethical Housing Platform"
-    }
+    },
+    "mode": {
+      "longTerm": "Long-term",
+      "vacation": "Vacation"
+    },
+    "savedProperties": {
+      "title": "Saved folders",
+      "empty": "No saved folders yet",
+      "viewAll": "View all"
+    },
+    "recent": {
+      "title": "Recently viewed",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "earlier": "Earlier",
+      "empty": "Properties you view will appear here",
+      "remove": "Remove from recent"
+    },
+    "menu": {
+      "account": "Account",
+      "notifications": "Notifications",
+      "terms": "Terms of service",
+      "privacy": "Privacy policy"
+    },
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar"
   },
   "saved": {
     "header": "Saved",
