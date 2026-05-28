@@ -1,194 +1,172 @@
-import { fetch as expoFetch } from 'expo/fetch';
+/**
+ * Sindi conversation index — chat sidebar with conversation history + start
+ * new chat affordance.
+ *
+ * Stream Q polish:
+ *   - Bloom Typography (H1/H2/H3/Text) everywhere, no raw <Text>.
+ *   - Bloom Button replaces every TouchableOpacity CTA.
+ *   - Bloom SearchInput replaces hand-rolled search bar.
+ *   - withShadow('sm') cards with radius.lg, no borders, semantic tokens.
+ *   - Skeleton.Box rows during load; EmptyState shared.
+ */
+import React, {
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import {
-  View,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
   Platform,
-  TextInput,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useOxy, showSignInModal } from '@oxyhq/services';
-import { Ionicons } from '@expo/vector-icons';
-import { SindiIcon } from '@/assets/icons';
-import { Button } from '@oxyhq/bloom/button';
-import { colors } from '@/styles/colors';
+import { fetch as expoFetch } from 'expo/fetch';
 import { useRouter } from 'expo-router';
-import { Header } from '@/components/Header';
 import { useTranslation } from 'react-i18next';
-import React, { useEffect, useCallback, useState, useMemo, memo, useContext } from 'react';
-import { useConversationStore } from '@/store/conversationStore';
+import { Ionicons } from '@expo/vector-icons';
+import { Button } from '@oxyhq/bloom/button';
+import { SearchInput } from '@oxyhq/bloom/search-input';
+import * as Skeleton from '@oxyhq/bloom/skeleton';
+import { H1, H3, Text as BloomText } from '@oxyhq/bloom/typography';
+import { useOxy, showSignInModal } from '@oxyhq/services';
+import { SindiIcon } from '@/assets/icons';
+import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SindiExplanationBottomSheet } from '@/components/SindiExplanationBottomSheet';
+import {
+  useConversationStore,
+  type Conversation,
+} from '@/store/conversationStore';
+import { radius, spacing, withShadow } from '@/constants/styles';
+import { colors } from '@/styles/colors';
 
-const IconComponent = Ionicons as any;
+const formatTimestamp = (date: Date): string => {
+  const now = new Date();
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  });
+};
 
-// (Removed) Entitlements interface (unused)
-
-// Memoized components for better performance
-
-const ConversationItem = memo(({
-  conversation,
-  isLast,
-  onPress
-}: {
-  conversation: any;
+interface ConversationItemProps {
+  conversation: Conversation;
   isLast: boolean;
   onPress: () => void;
-}) => {
-  const last = conversation.messages[conversation.messages.length - 1];
-  const formatTimestamp = useCallback((d: Date) => {
-    const now = new Date();
-    if (d.toDateString() === now.toDateString()) {
-      return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-    }
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  }, []);
+}
 
-  return (
-    <TouchableOpacity
-      style={[styles.conversationItem, isLast && styles.conversationItemLast]}
-      onPress={onPress}
-      activeOpacity={0.6}
-    >
-      <View style={styles.conversationCard}>
-        {/* Icon removed for a cleaner conversation list */}
-        <View style={{ flex: 1, paddingRight: 4 }}>
-          <View style={styles.conversationHeader}>
-            <Text style={styles.conversationTitle} numberOfLines={1}>
-              {conversation.title}
-            </Text>
-            <Text style={styles.conversationDate}>
-              {formatTimestamp(new Date(conversation.updatedAt))}
-            </Text>
-          </View>
-          <Text style={styles.conversationPreview} numberOfLines={1}>
-            {last ? last.content : 'No messages yet'}
-          </Text>
-          {/* Meta removed for WhatsApp-style simplification */}
+const ConversationItem = memo<ConversationItemProps>(
+  ({ conversation, isLast, onPress }) => {
+    const last =
+      conversation.messages[conversation.messages.length - 1];
+    return (
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.conversationItem,
+          isLast && styles.conversationItemLast,
+          pressed && styles.conversationItemPressed,
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={conversation.title}
+      >
+        <View style={styles.conversationAvatar}>
+          <Ionicons name="chatbubble" size={18} color={colors.info} />
         </View>
-      </View>
-    </TouchableOpacity>
-  );
-});
+        <View style={styles.conversationBody}>
+          <View style={styles.conversationHeader}>
+            <BloomText style={styles.conversationTitle} numberOfLines={1}>
+              {conversation.title}
+            </BloomText>
+            <BloomText style={styles.conversationDate}>
+              {formatTimestamp(new Date(conversation.updatedAt))}
+            </BloomText>
+          </View>
+          <BloomText style={styles.conversationPreview} numberOfLines={1}>
+            {last ? last.content : 'No messages yet'}
+          </BloomText>
+        </View>
+      </Pressable>
+    );
+  },
+);
 ConversationItem.displayName = 'ConversationItem';
 
-const SearchBar = memo(({
-  searchQuery,
-  onSearchChange,
-  onClear
-}: {
-  searchQuery: string;
-  onSearchChange: (text: string) => void;
-  onClear: () => void;
-}) => (
-  <View style={styles.searchBarWrapper}>
-    <Ionicons name="search" size={16} color={colors.COLOR_BLACK_LIGHT_5} />
-    <TextInput
-      style={styles.searchInputChats}
-      placeholder="Search conversations"
-      placeholderTextColor={colors.COLOR_BLACK_LIGHT_5}
-      value={searchQuery}
-      onChangeText={onSearchChange}
-    />
-    {searchQuery.length > 0 && (
-      <TouchableOpacity onPress={onClear} style={styles.clearSearchBtn}>
-        <Ionicons name="close" size={14} color={colors.COLOR_BLACK_LIGHT_5} />
-      </TouchableOpacity>
-    )}
+const SindiSkeleton: React.FC = () => (
+  <View style={styles.skeletonList}>
+    {Array.from({ length: 4 }).map((_, idx) => (
+      <View key={idx} style={styles.skeletonRow}>
+        <Skeleton.Circle size={36} />
+        <View style={styles.skeletonBody}>
+          <Skeleton.Text style={{ width: 180, lineHeight: 16 }} />
+          <Skeleton.Text style={{ width: 240, lineHeight: 13 }} />
+        </View>
+      </View>
+    ))}
   </View>
-));
-SearchBar.displayName = 'SearchBar';
-
-const NewConversationButton = memo(({ onPress }: { onPress: () => void }) => (
-  <Button
-    onPress={onPress}
-    accessibilityLabel="Start new conversation"
-    style={{
-      marginHorizontal: 16,
-      marginBottom: 24,
-      borderRadius: 35,
-      backgroundColor: '#ffffff',
-      borderWidth: 1,
-      borderColor: '#e5e7eb',
-      paddingVertical: 16,
-      paddingHorizontal: 16,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.05,
-      shadowRadius: 8,
-      elevation: 2,
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-      gap: 8
-    }}
-  >
-    <IconComponent name="add-circle" size={24} color={colors.primaryColor} />
-    <View style={{ flex: 1, gap: 2 }}>
-      <Text style={{ fontSize: 16, fontWeight: '600', color: '#1f2937' }}>Start New Conversation</Text>
-      <Text style={{ fontSize: 13, color: '#6b7280', fontWeight: '400' }}>
-        Get instant help with housing questions
-      </Text>
-    </View>
-    <IconComponent name="chevron-forward" size={16} color={colors.primaryDark_1} />
-  </Button>
-));
-NewConversationButton.displayName = 'NewConversationButton';
+);
 
 export default function Sindi() {
   const { oxyServices, activeSessionId } = useOxy();
   const router = useRouter();
   const { t } = useTranslation();
-  const { conversations, loading, loadConversations, createConversation } = useConversationStore();
+  const {
+    conversations,
+    loading,
+    loadConversations,
+    createConversation,
+  } = useConversationStore();
   const [searchQuery, setSearchQuery] = useState('');
   const bottomSheetContext = useContext(BottomSheetContext);
 
-  // Memoized authentication status
-  const isAuthenticated = useMemo(() => !!oxyServices && !!activeSessionId, [oxyServices, activeSessionId]);
+  const isAuthenticated = useMemo(
+    () => Boolean(oxyServices) && Boolean(activeSessionId),
+    [oxyServices, activeSessionId],
+  );
 
-  // Memoized authenticated fetch function
   const authenticatedFetch = useCallback(
     async (url: string, options: RequestInit = {}) => {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         ...((options.headers as Record<string, string>) || {}),
       };
-
       if (oxyServices && activeSessionId) {
         try {
           const tokenData = await oxyServices.getTokenBySession(activeSessionId);
           if (tokenData) {
             headers['Authorization'] = `Bearer ${tokenData.accessToken}`;
           }
-        } catch (error) {
-          console.error('Failed to get authentication token:', error);
+        } catch {
+          // best-effort: leave unauthenticated header set
         }
       }
-
       const { body, ...otherOptions } = options;
       const fetchOptions = {
         ...otherOptions,
         headers,
-        ...(body !== null && { body }),
+        ...(body !== null && body !== undefined ? { body } : null),
       };
-
-      return expoFetch(url, fetchOptions as any);
+      return expoFetch(url, fetchOptions as Parameters<typeof expoFetch>[1]);
     },
     [oxyServices, activeSessionId],
   );
 
-  const conversationFetch = authenticatedFetch as unknown as (
-    url: string,
-    options?: RequestInit,
-  ) => Promise<Response>;
+  const conversationFetch = authenticatedFetch as unknown as typeof globalThis.fetch;
 
-  // Entitlements-related logic removed (previously unused)
-
-  // Memoized conversation creation handler
   const createNewConversation = useCallback(async () => {
     if (!isAuthenticated) return;
-
     try {
       const newConversation = await createConversation(
         'New Conversation',
@@ -197,63 +175,63 @@ export default function Sindi() {
       );
       router.push(`/sindi/${newConversation.id}`);
       loadConversations(conversationFetch);
-    } catch (error) {
-      console.error('Failed to create conversation:', error);
-      const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    } catch {
+      const conversationId = `conv_${Date.now()}_${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
       router.push(`/sindi/${conversationId}`);
     }
-  }, [isAuthenticated, conversationFetch, router, createConversation, loadConversations]);
+  }, [
+    isAuthenticated,
+    conversationFetch,
+    router,
+    createConversation,
+    loadConversations,
+  ]);
 
-  // Conversation action handler removed (legacy common questions feature)
-
-
-
-  // Memoized filtered conversations
   const filteredConversations = useMemo(() => {
     if (!searchQuery.trim()) return conversations;
     const q = searchQuery.toLowerCase();
     return conversations.filter(
       (c) =>
         c.title.toLowerCase().includes(q) ||
-        (c.messages[c.messages.length - 1]?.content || '').toLowerCase().includes(q),
+        (c.messages[c.messages.length - 1]?.content || '')
+          .toLowerCase()
+          .includes(q),
     );
   }, [conversations, searchQuery]);
 
-  // Flat, newest-first conversation list (WhatsApp style)
   const sortedConversations = useMemo(
-    () => [...filteredConversations].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
-    [filteredConversations]
+    () =>
+      [...filteredConversations].sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      ),
+    [filteredConversations],
   );
 
-  // Load conversations on mount
   useEffect(() => {
     if (isAuthenticated) {
       loadConversations(conversationFetch);
     }
   }, [isAuthenticated, loadConversations, conversationFetch]);
 
-  // Web-specific styles
-  const webStyles = useMemo(() =>
+  const webContainerStyle =
     Platform.OS === 'web'
-      ? {
-        container: { height: '100vh', display: 'flex', flexDirection: 'column' } as any,
-        stickyHeader: { position: 'sticky', top: 0 } as any,
-        messagesContainer: { marginTop: 0, marginBottom: 0, flex: 1, overflow: 'auto' } as any,
-        stickyInput: { position: 'sticky', bottom: 0 } as any,
-        messagesContent: { paddingBottom: 100 },
-      }
-      : {}, []
-  );
+      ? ({ height: '100vh', display: 'flex', flexDirection: 'column' } as const)
+      : null;
 
   if (!isAuthenticated) {
     return (
-      <View style={[styles.container, { backgroundColor: 'transparent' }]}>
-        <Header options={{ title: t('sindi.title'), showBackButton: true }} />
+      <View style={styles.root}>
+        <Header
+          options={{ title: t('sindi.title'), showBackButton: true }}
+        />
         <EmptyState
           icon="lock-closed"
           title={t('sindi.auth.required')}
           description={t('sindi.auth.message')}
-          actionText="Sign In"
+          actionText={t('Sign in')}
           actionIcon="log-in"
           onAction={() => showSignInModal()}
           iconColor={colors.primaryColor}
@@ -263,7 +241,7 @@ export default function Sindi() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, webStyles.container]}>
+    <SafeAreaView style={[styles.root, webContainerStyle]}>
       <Header
         options={{
           title: t('sindi.title'),
@@ -272,95 +250,106 @@ export default function Sindi() {
         }}
       />
 
-      <ScrollView
-        style={[styles.messagesContainer, webStyles.messagesContainer]}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.messagesContent, webStyles.messagesContent]}
-      >
-        <View style={styles.welcomeContainer}>
-          {/* What is Sindi Section */}
-          <View style={styles.sindiExplanationContainer}>
-            <View style={styles.sindiIconContainer}>
-              <SindiIcon size={48} color={colors.primaryColor} />
-            </View>
-            <Text style={styles.sindiTitle}>Meet Sindi</Text>
-            <Text style={styles.sindiDescription}>
-              Your AI-powered housing rights assistant. Get instant help with tenant issues, understand your rights, and navigate housing challenges with confidence.
-            </Text>
-            <Button
-              onPress={() => {
-                if (bottomSheetContext) {
-                  bottomSheetContext.openBottomSheet(
-                    <SindiExplanationBottomSheet onClose={() => bottomSheetContext.closeBottomSheet()} />,
-                    { hideHandle: true }
-                  );
-                }
-              }}
-              accessibilityLabel="Learn how Sindi works"
-            >
-              Learn How It Works
-            </Button>
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.heroCard}>
+          <View style={styles.heroIcon}>
+            <SindiIcon size={56} color={colors.primaryColor} />
           </View>
+          <SectionEyebrow>Meet Sindi</SectionEyebrow>
+          <H1 style={styles.heroTitle}>{t('sindi.title')}</H1>
+          <BloomText style={styles.heroDescription}>
+            Your AI-powered housing rights assistant. Get instant help with
+            tenant issues, understand your rights, and navigate housing
+            challenges with confidence.
+          </BloomText>
+          <Button
+            variant="secondary"
+            size="medium"
+            onPress={() => {
+              if (bottomSheetContext) {
+                bottomSheetContext.openBottomSheet(
+                  <SindiExplanationBottomSheet
+                    onClose={() => bottomSheetContext.closeBottomSheet()}
+                  />,
+                  { hideHandle: true },
+                );
+              }
+            }}
+            accessibilityLabel="Learn how Sindi works"
+          >
+            Learn how it works
+          </Button>
+        </View>
 
-          <View style={styles.sindiFeaturesDetached}>
-            <View style={styles.sindiFeatures}>
-              <View style={styles.sindiFeature}>
-                <IconComponent name="shield-checkmark" size={16} color={colors.primaryColor} />
-                <Text style={styles.sindiFeatureText}>Know your rights</Text>
-              </View>
-              <View style={styles.sindiFeature}>
-                <IconComponent name="document-text" size={16} color={colors.primaryColor} />
-                <Text style={styles.sindiFeatureText}>Legal guidance</Text>
-              </View>
-              <View style={styles.sindiFeature}>
-                <IconComponent name="people" size={16} color={colors.primaryColor} />
-                <Text style={styles.sindiFeatureText}>Community support</Text>
-              </View>
-            </View>
-          </View>
-
-          <NewConversationButton onPress={createNewConversation} />
-
-          <View style={styles.conversationHistoryContainer}>
-            <Text style={styles.conversationHistoryTitle}>Chats</Text>
-            <SearchBar
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              onClear={() => setSearchQuery('')}
+        <View style={styles.featuresRow}>
+          <View style={styles.featureCell}>
+            <Ionicons
+              name="shield-checkmark"
+              size={20}
+              color={colors.primaryColor}
             />
-
-            {loading ? (
-              <View style={{ paddingHorizontal: 16 }}>
-                {[...Array(4)].map((_, i) => (
-                  <View key={i} style={styles.skeletonRow} />
-                ))}
-              </View>
-            ) : filteredConversations.length === 0 ? (
-              <EmptyState
-                icon="chatbubbles-outline"
-                title={searchQuery ? 'No matches' : 'No conversations yet'}
-                description={
-                  searchQuery ? 'Try another search term' : 'Start a new conversation to get help'
-                }
-                actionText={searchQuery ? undefined : 'Start First Chat'}
-                actionIcon={searchQuery ? undefined : 'add-circle'}
-                onAction={searchQuery ? undefined : createNewConversation}
-              />
-            ) : (
-              <View style={styles.conversationsList}>
-                {sortedConversations.map((conversation, idx) => (
-                  <ConversationItem
-                    key={conversation.id}
-                    conversation={conversation}
-                    isLast={idx === sortedConversations.length - 1}
-                    onPress={() => router.push(`/sindi/${conversation.id}`)}
-                  />
-                ))}
-              </View>
-            )}
+            <BloomText style={styles.featureLabel}>Know your rights</BloomText>
           </View>
+          <View style={styles.featureCell}>
+            <Ionicons
+              name="document-text"
+              size={20}
+              color={colors.primaryColor}
+            />
+            <BloomText style={styles.featureLabel}>Legal guidance</BloomText>
+          </View>
+          <View style={styles.featureCell}>
+            <Ionicons name="people" size={20} color={colors.primaryColor} />
+            <BloomText style={styles.featureLabel}>Community support</BloomText>
+          </View>
+        </View>
 
-          {/* Common Questions section intentionally removed */}
+        <Button
+          variant="primary"
+          size="large"
+          onPress={createNewConversation}
+          icon={<Ionicons name="add" size={20} color="#ffffff" />}
+          style={styles.newButton}
+        >
+          Start new conversation
+        </Button>
+
+        <View style={styles.historyBlock}>
+          <H3 style={styles.historyTitle}>Chats</H3>
+          <SearchInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onClearText={() => setSearchQuery('')}
+            label="Search conversations"
+          />
+
+          {loading ? (
+            <SindiSkeleton />
+          ) : filteredConversations.length === 0 ? (
+            <EmptyState
+              icon="chatbubbles-outline"
+              title={searchQuery ? 'No matches' : 'No conversations yet'}
+              description={
+                searchQuery
+                  ? 'Try a different keyword.'
+                  : 'Start a new conversation to get help.'
+              }
+              actionText={searchQuery ? undefined : 'Start first chat'}
+              actionIcon={searchQuery ? undefined : 'add-circle'}
+              onAction={searchQuery ? undefined : createNewConversation}
+            />
+          ) : (
+            <View style={styles.conversationsList}>
+              {sortedConversations.map((conversation, idx) => (
+                <ConversationItem
+                  key={conversation.id}
+                  conversation={conversation}
+                  isLast={idx === sortedConversations.length - 1}
+                  onPress={() => router.push(`/sindi/${conversation.id}`)}
+                />
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -368,253 +357,138 @@ export default function Sindi() {
 }
 
 const styles = StyleSheet.create({
-  // New hero styles aligned with main screen
-  container: {
+  root: {
     flex: 1,
+    backgroundColor: colors.surface,
   },
-  messagesContainer: {
-    flex: 1,
+  content: {
+    padding: spacing.lg,
+    gap: spacing.lg,
+    paddingBottom: spacing['4xl'],
   },
-  messagesContent: {
-  },
-  welcomeContainer: {
-    paddingVertical: 8,
-  },
-  sindiExplanationContainer: {
-    borderRadius: 16,
-    padding: 16,
+  heroCard: {
+    backgroundColor: colors.surfaceElevated,
+    padding: spacing['2xl'],
+    borderRadius: radius.xl,
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.sm,
+    ...withShadow('sm'),
   },
-  sindiIconContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: `${colors.primaryColor}12`,
+  heroIcon: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: colors.infoSubtle,
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
+    marginBottom: spacing.xs,
   },
-  sindiTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.primaryDark,
+  heroTitle: {
     letterSpacing: -0.5,
-  },
-  sindiDescription: {
-    fontSize: 16,
-    color: colors.primaryDark_1,
     textAlign: 'center',
-    lineHeight: 24,
   },
-  sindiFeatures: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-  },
-  sindiFeaturesDetached: {
-    marginTop: 12,
-    marginBottom: 12,
-    paddingHorizontal: 16,
-  },
-  sindiFeature: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  sindiFeatureText: {
-    fontSize: 12,
-    color: colors.primaryDark_1,
-    marginTop: 6,
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-
-  stickyInput: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1000,
-    backgroundColor: 'white',
-    borderTopWidth: 1,
-    borderTopColor: colors.primaryDark_1,
-  },
-  inputGradient: {
-    margin: 12,
-    marginBottom: 4,
-    borderRadius: 30,
-    borderWidth: 1,
-    borderColor: colors.primaryDark_1,
-  },
-  inputContainer: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 28,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 16,
-    maxHeight: 100,
-    paddingVertical: 6,
-    color: 'white',
-  },
-  sendButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8,
-  },
-  sendButtonDisabled: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  disclaimer: {
-    fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.7)',
-    textAlign: 'center',
-    marginTop: 6,
-    fontStyle: 'italic',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-    margin: 16,
-    borderRadius: 30,
-    borderWidth: 1,
-    borderColor: colors.primaryDark_1,
-  },
-  errorContent: {
-    alignItems: 'center',
-  },
-  errorText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  errorSubtext: {
+  heroDescription: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: colors.muted,
+    textAlign: 'center',
+    lineHeight: 22,
+    maxWidth: 420,
+    marginBottom: spacing.sm,
+  },
+  featuresRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  featureCell: {
+    flex: 1,
+    backgroundColor: colors.surfaceElevated,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    gap: spacing.xs,
+    ...withShadow('sm'),
+  },
+  featureLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.COLOR_BLACK_LIGHT_2,
     textAlign: 'center',
   },
-
-  conversationHistoryContainer: {
-    marginBottom: 32,
+  newButton: {
+    alignSelf: 'stretch',
   },
-  searchBarWrapper: {
+  historyBlock: {
+    gap: spacing.md,
+  },
+  historyTitle: {
+    letterSpacing: -0.3,
+  },
+  conversationsList: {
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    ...withShadow('sm'),
+  },
+  conversationItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.primaryDark_1,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 44,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    gap: spacing.md,
+    padding: spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
-  searchInputChats: {
-    flex: 1,
-    fontSize: 16,
-    marginLeft: 8,
-    color: colors.COLOR_BLACK_LIGHT_5,
-  },
-  clearSearchBtn: {
-    padding: 4,
-    borderRadius: 12,
-  },
-  skeletonRow: {
-    height: 64,
-    borderRadius: 12,
-    backgroundColor: '#f3f4f6',
-    marginBottom: 8,
-    overflow: 'hidden',
-  },
-  // groupHeader removed
   conversationItemLast: {
     borderBottomWidth: 0,
   },
-
-  conversationHistoryTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.primaryDark,
-    marginBottom: 20,
-    paddingHorizontal: 16,
-    letterSpacing: -0.5,
+  conversationItemPressed: {
+    backgroundColor: colors.mutedSubtle,
   },
-  loadingContainer: {
-    padding: 20,
+  conversationAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.infoSubtle,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  loadingText: {
-    fontSize: 16,
-    color: colors.primaryDark_1,
+  conversationBody: {
+    flex: 1,
+    gap: 2,
   },
-
-  conversationsList: {
-    backgroundColor: '#f0f2f5',
-  },
-  conversationItem: {
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ececec',
-  },
-  conversationCard: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  conversationTitleContainer: { flex: 1 },
   conversationHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.sm,
   },
   conversationTitle: {
     flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111b21',
-    marginBottom: 2,
-    paddingRight: 8,
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.COLOR_BLACK,
   },
   conversationDate: {
     fontSize: 12,
-    color: '#667781',
-    fontWeight: '400',
-    marginLeft: 8,
+    color: colors.muted,
   },
   conversationPreview: {
     fontSize: 13,
-    color: '#667781',
+    color: colors.muted,
     lineHeight: 18,
-    marginTop: 2,
   },
-  conversationMeta: {},
-  conversationStats: {},
-  conversationStatsText: {},
-  conversationArrow: {
-    display: 'none',
+  skeletonList: {
+    gap: spacing.md,
   },
-  conversationMessageCount: {
-    fontSize: 12,
-    color: colors.primaryDark_1,
+  skeletonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surfaceElevated,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    ...withShadow('sm'),
+  },
+  skeletonBody: {
+    flex: 1,
+    gap: spacing.sm,
   },
 });

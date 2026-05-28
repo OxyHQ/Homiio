@@ -1,43 +1,49 @@
-import { API_URL } from '@/config';
-import { useChat } from '@ai-sdk/react';
-import { fetch as expoFetch } from 'expo/fetch';
+import React, { useCallback, useEffect } from 'react';
 import {
-  View,
-  TextInput,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Platform,
   Alert,
   Linking,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useOxy, showSignInModal } from '@oxyhq/services';
-import { Ionicons } from '@expo/vector-icons';
-import { colors } from '@/styles/colors';
-
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { PropertyCard } from '@/components/PropertyCard';
-import { propertyService } from '@/services/propertyService';
-import { useQuery } from '@tanstack/react-query';
-import { SindiIcon } from '@/assets/icons';
-import { Header } from '@/components/Header';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
+import { useChat } from '@ai-sdk/react';
+import { fetch as expoFetch } from 'expo/fetch';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as DocumentPicker from 'expo-document-picker';
-import React, { useEffect, useCallback } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { Button } from '@oxyhq/bloom/button';
 import {
-  useConversationStore,
-  type ConversationMessage,
-  type Conversation,
-} from '@/store/conversationStore';
+  H3,
+  Text as BloomText,
+} from '@oxyhq/bloom/typography';
+import { useOxy, showSignInModal } from '@oxyhq/services';
+import { SindiIcon } from '@/assets/icons';
+import { Header } from '@/components/Header';
+import { PropertyCard } from '@/components/PropertyCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
-import { getData, storeData } from '@/utils/storage';
+import { propertyService } from '@/services/propertyService';
+import {
+  useConversationStore,
+  type Conversation,
+  type ConversationMessage,
+} from '@/store/conversationStore';
 import { api } from '@/utils/api';
+import { getData, storeData } from '@/utils/storage';
+import { API_URL } from '@/config';
+import { radius, spacing } from '@/constants/styles';
+import { colors } from '@/styles/colors';
 
-const IconComponent = Ionicons as any;
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 const FILE_UPSELL_KEY = 'sindi:fileUpsellShown';
 
@@ -49,49 +55,64 @@ interface Entitlements {
   lastPaymentAt?: string;
 }
 
-// Simple bottom sheet content for premium upsell
-const FilePremiumInfoSheet: React.FC<{ onClose: () => void; onUpgrade: () => void }> = ({ onClose, onUpgrade }) => {
-  return (
-    <View style={{ padding: 20 }}>
-      <View style={{ alignItems: 'center', marginBottom: 12 }}>
-        <IconComponent name="lock-closed-outline" size={36} color={colors.primaryColor} />
-      </View>
-      <Text style={{ fontSize: 18, fontWeight: '700', textAlign: 'center', color: '#111b21' }}>
-        File analysis is a premium feature
-      </Text>
-      <Text style={{ fontSize: 14, marginTop: 8, textAlign: 'center', color: '#344053' }}>
-        Upload rental contracts and legal documents for instant analysis. Get help understanding your rights and identifying potential issues.
-      </Text>
-      <View style={{ marginTop: 14, backgroundColor: '#f7f8f9', borderWidth: 1, borderColor: '#e9edef', borderRadius: 12, padding: 12 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-          <IconComponent name="checkmark-circle" size={18} color={colors.primaryColor} />
-          <Text style={{ marginLeft: 8, fontSize: 14, color: '#111b21' }}>Pay per contract: 5 € per review</Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <IconComponent name="star-outline" size={18} color={colors.primaryColor} />
-          <Text style={{ marginLeft: 8, fontSize: 14, color: '#111b21' }}>Homiio+ Subscription: 9.99 €/month</Text>
-        </View>
-        <Text style={{ marginLeft: 26, fontSize: 12, color: '#6b7280', marginTop: 4 }}>
-          Includes up to 10 contracts per month free
-        </Text>
-      </View>
-      <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
-        <TouchableOpacity
-          onPress={onClose}
-          style={{ flex: 1, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: '#e9edef', alignItems: 'center', backgroundColor: '#fff' }}
-        >
-          <Text style={{ color: '#111b21', fontWeight: '600' }}>Maybe later</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={onUpgrade}
-          style={{ flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center', backgroundColor: colors.primaryColor }}
-        >
-          <Text style={{ color: '#fff', fontWeight: '700' }}>Upgrade to Homiio+</Text>
-        </TouchableOpacity>
-      </View>
+const FilePremiumInfoSheet: React.FC<{
+  onClose: () => void;
+  onUpgrade: () => void;
+}> = ({ onClose, onUpgrade }) => (
+  <View style={styles.premiumSheet}>
+    <View style={styles.premiumIconWrap}>
+      <Ionicons
+        name="lock-closed-outline"
+        size={36}
+        color={colors.primaryColor}
+      />
     </View>
-  );
-};
+    <H3 style={styles.premiumTitle}>File analysis is premium</H3>
+    <BloomText style={styles.premiumBody}>
+      Upload rental contracts and legal documents for instant analysis.
+      Understand your rights and spot risky clauses in seconds.
+    </BloomText>
+    <View style={styles.premiumPriceCard}>
+      <View style={styles.premiumPriceRow}>
+        <Ionicons
+          name="checkmark-circle"
+          size={18}
+          color={colors.primaryColor}
+        />
+        <BloomText style={styles.premiumPriceLabel}>
+          Pay per contract — 5 € per review
+        </BloomText>
+      </View>
+      <View style={styles.premiumPriceRow}>
+        <Ionicons name="star-outline" size={18} color={colors.primaryColor} />
+        <BloomText style={styles.premiumPriceLabel}>
+          Homiio+ subscription — 9.99 €/mo
+        </BloomText>
+      </View>
+      <BloomText style={styles.premiumPriceCaption}>
+        Includes up to 10 contracts per month, free.
+      </BloomText>
+    </View>
+    <View style={styles.premiumActionRow}>
+      <Button
+        variant="secondary"
+        size="medium"
+        onPress={onClose}
+        style={styles.premiumActionButton}
+      >
+        Maybe later
+      </Button>
+      <Button
+        variant="primary"
+        size="medium"
+        onPress={onUpgrade}
+        style={styles.premiumActionButton}
+      >
+        Upgrade to Homiio+
+      </Button>
+    </View>
+  </View>
+);
 
 // Normalize and sanitize property IDs coming from model output
 function normalizePropertyIds(raw: unknown, max = 5): string[] {
@@ -242,7 +263,7 @@ export default function ConversationDetail() {
                   /* TODO: Implement share */
                 }}
               >
-                <IconComponent name="share-outline" size={24} color={colors.COLOR_BLACK} />
+                <Ionicons name="share-outline" size={24} color={colors.COLOR_BLACK} />
               </TouchableOpacity>,
             ],
           }}
@@ -270,7 +291,7 @@ export default function ConversationDetail() {
           }}
         />
         <View style={styles.loadingContainer}>
-          <IconComponent name="hourglass" size={48} color={colors.primaryColor} />
+          <Ionicons name="hourglass" size={48} color={colors.primaryColor} />
           <Text style={styles.loadingText}>{t('sindi.conversation.loadingMessage')}</Text>
         </View>
       </View>
@@ -362,7 +383,7 @@ export default function ConversationDetail() {
                 }
               }}
             >
-              <IconComponent name="share-outline" size={24} color={colors.COLOR_BLACK} />
+              <Ionicons name="share-outline" size={24} color={colors.COLOR_BLACK} />
             </TouchableOpacity>,
           ],
         }}
@@ -985,7 +1006,7 @@ export function ChatContent({
           end={{ x: 1, y: 1 }}
         >
           <View style={styles.errorContent}>
-            <IconComponent name="alert-circle" size={48} color="white" />
+            <Ionicons name="alert-circle" size={48} color="white" />
             <Text style={styles.errorText}>{t('sindi.errors.connection')}</Text>
             <Text style={styles.errorSubtext}>{t('sindi.errors.connectionMessage')}</Text>
           </View>
@@ -1005,39 +1026,53 @@ export function ChatContent({
               <View style={styles.emptyIconContainer}>
                 <SindiIcon size={56} color={colors.primaryColor} />
               </View>
-              <Text style={styles.emptyTitle}>Start your conversation</Text>
-              <Text style={styles.emptySubtitle}>
-                Ask about tenant rights, explore housing options, or get a quick lease review.
-              </Text>
+              <H3 style={styles.emptyTitle}>Start your conversation</H3>
+              <BloomText style={styles.emptySubtitle}>
+                Ask about tenant rights, explore housing options, or get a
+                quick lease review.
+              </BloomText>
               <View style={styles.suggestionsWrap}>
-                <TouchableOpacity
-                  style={styles.suggestionChip}
-                  onPress={() => handleSuggestionPress('What are my rights if my rent increases by 20%?')}
-                >
-                  <IconComponent name="help-circle-outline" size={16} color={colors.primaryColor} />
-                  <Text style={styles.suggestionText}>Tenant rights</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.suggestionChip}
-                  onPress={() => handleSuggestionPress('Find 2-bedroom apartments under $2000 in Seattle')}
-                >
-                  <IconComponent name="search-outline" size={16} color={colors.primaryColor} />
-                  <Text style={styles.suggestionText}>Find housing</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.suggestionChip}
-                  onPress={() => handleSuggestionPress('Can you review my lease for red flags?')}
-                >
-                  <IconComponent name="document-text-outline" size={16} color={colors.primaryColor} />
-                  <Text style={styles.suggestionText}>Lease review</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.suggestionChip}
-                  onPress={() => handleSuggestionPress('How should I respond to an eviction notice?')}
-                >
-                  <IconComponent name="alert-circle-outline" size={16} color={colors.primaryColor} />
-                  <Text style={styles.suggestionText}>Eviction help</Text>
-                </TouchableOpacity>
+                {[
+                  {
+                    icon: 'help-circle-outline' as IoniconName,
+                    label: 'Tenant rights',
+                    prompt:
+                      'What are my rights if my rent increases by 20%?',
+                  },
+                  {
+                    icon: 'search-outline' as IoniconName,
+                    label: 'Find housing',
+                    prompt:
+                      'Find 2-bedroom apartments under $2000 in Seattle',
+                  },
+                  {
+                    icon: 'document-text-outline' as IoniconName,
+                    label: 'Lease review',
+                    prompt: 'Can you review my lease for red flags?',
+                  },
+                  {
+                    icon: 'alert-circle-outline' as IoniconName,
+                    label: 'Eviction help',
+                    prompt:
+                      'How should I respond to an eviction notice?',
+                  },
+                ].map((suggestion) => (
+                  <Button
+                    key={suggestion.label}
+                    variant="secondary"
+                    size="small"
+                    onPress={() => handleSuggestionPress(suggestion.prompt)}
+                    icon={
+                      <Ionicons
+                        name={suggestion.icon}
+                        size={14}
+                        color={colors.primaryColor}
+                      />
+                    }
+                  >
+                    {suggestion.label}
+                  </Button>
+                ))}
               </View>
             </View>
           </View>
@@ -1235,38 +1270,72 @@ export function ChatContent({
         )}
       </ScrollView>
 
-      {/* Sticky Input */}
       <View style={[styles.stickyInput, webStyles.stickyInput]}>
         <View style={styles.inputBar}>
           <View style={styles.inputContainer}>
             {attachedFile && (
               <View style={styles.filePreviewContainer}>
-                <Text style={styles.filePreviewText}>{attachedFile.name}</Text>
-                <TouchableOpacity onPress={handleRemoveFile} style={styles.removeFileButton}>
-                  <IconComponent name="close-circle" size={18} color="#e74c3c" />
-                </TouchableOpacity>
+                <BloomText style={styles.filePreviewText} numberOfLines={1}>
+                  {attachedFile.name}
+                </BloomText>
+                <Pressable
+                  onPress={handleRemoveFile}
+                  style={styles.removeFileButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="Remove file"
+                >
+                  <Ionicons
+                    name="close-circle"
+                    size={18}
+                    color={colors.danger}
+                  />
+                </Pressable>
               </View>
             )}
             <View style={styles.inputWrapper}>
-              <TouchableOpacity onPress={handleAttachFile} style={styles.attachButton}>
-                <IconComponent name="attach" size={20} color="#54656f" />
-              </TouchableOpacity>
+              <Pressable
+                onPress={handleAttachFile}
+                style={styles.attachButton}
+                accessibilityRole="button"
+                accessibilityLabel="Attach file"
+              >
+                <Ionicons
+                  name="attach"
+                  size={20}
+                  color={colors.muted}
+                />
+              </Pressable>
               <TextInput
                 style={styles.textInput}
                 placeholder={t('sindi.chat.placeholder')}
-                placeholderTextColor="#667781"
+                placeholderTextColor={colors.muted}
                 value={input}
-                onChangeText={(text) => handleInputChange({ target: { value: text } } as any)}
-                onSubmitEditing={Platform.OS !== 'web' ? handleSubmitWithFile : undefined}
-                onKeyPress={(e: any) => {
-                  const key = e?.nativeEvent?.key || e?.key;
-                  const shift = e?.nativeEvent?.shiftKey || e?.shiftKey;
+                onChangeText={(text) =>
+                  handleInputChange({
+                    target: { value: text },
+                  } as React.ChangeEvent<HTMLInputElement>)
+                }
+                onSubmitEditing={
+                  Platform.OS !== 'web' ? handleSubmitWithFile : undefined
+                }
+                onKeyPress={(e) => {
+                  const evt = e as React.KeyboardEvent &
+                    React.NativeSyntheticEvent<{
+                      key: string;
+                      shiftKey?: boolean;
+                    }>;
+                  const key = evt?.nativeEvent?.key || evt?.key;
+                  const shift = evt?.nativeEvent?.shiftKey || evt?.shiftKey;
                   if (key === 'Enter' && !shift) {
                     if (Platform.OS === 'web') {
-                      e.preventDefault?.();
-                      e.stopPropagation?.();
+                      evt.preventDefault?.();
+                      evt.stopPropagation?.();
                     }
-                    if (!isLoading && !isUploading && (input.trim() || attachedFile)) {
+                    if (
+                      !isLoading &&
+                      !isUploading &&
+                      (input.trim() || attachedFile)
+                    ) {
                       handleSubmitWithFile();
                     }
                   }
@@ -1276,20 +1345,32 @@ export function ChatContent({
                 returnKeyType={Platform.OS === 'ios' ? 'send' : 'done'}
                 maxLength={1000}
               />
-              <TouchableOpacity
-                style={[
+              <Pressable
+                style={({ pressed }) => [
                   styles.sendButtonPlain,
-                  ((!input.trim() && !attachedFile) || isUploading) && styles.sendButtonDisabledPlain,
+                  ((!input.trim() && !attachedFile) || isUploading) &&
+                    styles.sendButtonDisabledPlain,
+                  pressed && styles.sendButtonPressed,
                 ]}
                 onPress={handleSubmitWithFile}
-                disabled={(!input.trim() && !attachedFile) || isLoading || isUploading}
+                disabled={
+                  (!input.trim() && !attachedFile) ||
+                  isLoading ||
+                  isUploading
+                }
+                accessibilityRole="button"
+                accessibilityLabel="Send message"
               >
-                <IconComponent
-                  name={(isLoading || isUploading) ? 'hourglass' : 'send'}
+                <Ionicons
+                  name={isLoading || isUploading ? 'hourglass' : 'send'}
                   size={20}
-                  color={(input.trim() || attachedFile) ? colors.primaryColor : '#99a2a7'}
+                  color={
+                    input.trim() || attachedFile
+                      ? colors.primaryColor
+                      : colors.muted
+                  }
                 />
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -1617,5 +1698,59 @@ const styles = StyleSheet.create({
   },
   messageTimeAssistant: {
     alignSelf: 'flex-start',
+  },
+  sendButtonPressed: {
+    opacity: 0.8,
+  },
+  premiumSheet: {
+    padding: spacing.xl,
+    gap: spacing.md,
+  },
+  premiumIconWrap: {
+    alignSelf: 'center',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.infoSubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  premiumTitle: {
+    letterSpacing: -0.3,
+    textAlign: 'center',
+  },
+  premiumBody: {
+    fontSize: 14,
+    color: colors.muted,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  premiumPriceCard: {
+    backgroundColor: colors.mutedSubtle,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  premiumPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  premiumPriceLabel: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK,
+  },
+  premiumPriceCaption: {
+    fontSize: 12,
+    color: colors.muted,
+    marginLeft: 26,
+  },
+  premiumActionRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  premiumActionButton: {
+    flex: 1,
   },
 });
