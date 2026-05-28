@@ -3,7 +3,7 @@
  * SettingsList primitives with a row per currency and an active-state
  * checkmark on the right.
  */
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
@@ -25,14 +25,8 @@ export default function CurrencySettingsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { currentCurrency, changeCurrency } = useCurrency();
-  const [selectedCurrency, setSelectedCurrency] = useState(currentCurrency);
-
-  useEffect(() => {
-    setSelectedCurrency(currentCurrency);
-  }, [currentCurrency]);
 
   const handleCurrencySelect = async (currencyCode: string): Promise<void> => {
-    setSelectedCurrency(currencyCode);
     try {
       await changeCurrency(currencyCode);
       toast.success(
@@ -64,7 +58,7 @@ export default function CurrencySettingsScreen() {
           )}
         >
           {CURRENCIES.map((currency) => {
-            const isActive = selectedCurrency === currency.code;
+            const isActive = currentCurrency === currency.code;
             const exchangeRate =
               currency.code === currentCurrency
                 ? undefined

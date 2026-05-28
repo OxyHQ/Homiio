@@ -16,7 +16,7 @@ import { useRouter } from 'expo-router';
 import { isThisWeek, isToday } from 'date-fns';
 
 import { Chip } from '@oxyhq/bloom/chip';
-import { H2, Text as BloomText } from '@oxyhq/bloom/typography';
+import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { useOxy, showSignInModal } from '@oxyhq/services';
 import {
   TenantApplication,
@@ -266,10 +266,6 @@ const FilterRow: React.FC<FilterRowProps> = ({ value, onChange }) => (
   </ScrollView>
 );
 
-const _SectionTitle: React.FC<{ title: string }> = ({ title }) => (
-  <H2 style={styles.sectionTitle}>{title}</H2>
-);
-
 const styles = StyleSheet.create({
   root: {
     flex: 1,
@@ -304,10 +300,6 @@ const styles = StyleSheet.create({
     color: colors.muted,
     textTransform: 'uppercase',
     letterSpacing: tracker.eyebrow,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
   },
   cards: {
     gap: spacing.md,

@@ -11,7 +11,6 @@
  */
 import React, {
   useCallback,
-  useEffect,
   useMemo,
   useState,
 } from 'react';
@@ -21,7 +20,6 @@ import {
   StyleSheet,
   View,
   Pressable,
-  Image,
   type ListRenderItem,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -45,7 +43,7 @@ import savedPropertyService from '@/services/savedPropertyService';
 import savedPropertyFolderService, {
   type SavedPropertyFolder,
 } from '@/services/savedPropertyFolderService';
-import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
+import { getPropertyTitle } from '@/utils/propertyUtils';
 import { colors } from '@/styles/colors';
 import { radius, spacing, tracker } from '@/constants/styles';
 
@@ -66,18 +64,20 @@ export default function SavedPropertiesScreen() {
   const queryClient = useQueryClient();
   const params = useLocalSearchParams<{ tab?: string }>();
 
-  const initialTab: Tab =
+  // URL is the source of truth for the active tab so external navigations
+  // (e.g. /saved?tab=folders) flip the view without an effect.
+  const tab: Tab =
     params.tab === 'folders' || params.tab === 'recent' ? params.tab : 'recent';
+  const setTab = useCallback((next: Tab) => {
+    try {
+      router.setParams?.({ tab: next });
+    } catch {
+      // Best-effort URL sync; ignore failures on native.
+    }
+  }, []);
 
-  const [tab, setTab] = useState<Tab>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [recency, setRecency] = useState<RecencyFilter>('all');
-
-  useEffect(() => {
-    if (params.tab === 'folders' || params.tab === 'recent') {
-      setTab(params.tab);
-    }
-  }, [params.tab]);
 
   const isAuthed = Boolean(oxyServices && activeSessionId);
 
@@ -216,14 +216,7 @@ export default function SavedPropertiesScreen() {
             label={t('saved.tabs.label', 'Saved view')}
             type="tabs"
             value={tab}
-            onChange={(next) => {
-              setTab(next);
-              try {
-                router.setParams?.({ tab: next });
-              } catch {
-                // Best-effort URL sync; ignore failures on native.
-              }
-            }}
+            onChange={setTab}
           >
             <SegmentedControl.Item value="folders">
               <SegmentedControl.ItemText>
@@ -400,13 +393,6 @@ const FolderTile: React.FC<FolderTileProps> = ({ folder }) => {
   );
 };
 
-const _RecentCard: React.FC<{ property: SavedProperty }> = ({ property }) => {
-  const imageSource = getPropertyImageSource(property as any);
-  return imageSource ? (
-    <Image source={imageSource} style={styles.recentImage} resizeMode="cover" />
-  ) : null;
-};
-
 const styles = StyleSheet.create({
   root: {
     flex: 1,
@@ -482,9 +468,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.muted,
     letterSpacing: tracker.normal,
-  },
-  recentImage: {
-    width: '100%',
-    height: 160,
   },
 });

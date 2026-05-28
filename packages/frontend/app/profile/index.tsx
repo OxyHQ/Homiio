@@ -7,7 +7,7 @@
  * with big H2 numerals. Below that: SettingsList-style sections (Profile
  * switcher, Trust score, Subscriptions, Sign out).
  */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -183,10 +183,6 @@ export default function ProfileScreen() {
       setPendingLogout(false);
     }
   }, [logout, router, t]);
-
-  useEffect(() => {
-    // Touch the active session so the queries refetch on focus.
-  }, [primaryProfileQuery.dataUpdatedAt]);
 
   const header = (
     <Header
