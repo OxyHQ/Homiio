@@ -64,14 +64,14 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({ className 
   );
 
   return (
-    <View className={className ?? 'w-full py-3'}>
+    <View className={className ?? 'w-full py-4'}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={
           Platform.OS === 'web'
-            ? { paddingHorizontal: 16, gap: 24 }
-            : { paddingHorizontal: 16, gap: 18 }
+            ? { paddingHorizontal: 24, gap: 32 }
+            : { paddingHorizontal: 16, gap: 22 }
         }
       >
         {items.map((item) => {
@@ -85,21 +85,23 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({ className 
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
               accessibilityLabel={t(item.labelKey, item.fallback)}
+              style={{ opacity: active ? 1 : 0.7 }}
             >
-              <View className="items-center justify-center pb-1.5">
-                <Ionicons name={item.icon} size={22} color={tint} />
+              <View className="items-center justify-center pb-2">
+                <Ionicons name={item.icon} size={26} color={tint} />
               </View>
               <Text
                 style={{
                   fontSize: 12,
-                  fontWeight: active ? '600' : '500',
+                  fontWeight: active ? '700' : '500',
                   color: tint,
+                  letterSpacing: 0.2,
                 }}
               >
                 {t(item.labelKey, item.fallback)}
               </Text>
               <View
-                className="mt-1.5 h-0.5 w-8 rounded-full"
+                className="mt-2 h-[2px] w-full rounded-full"
                 style={{ backgroundColor: active ? colors.COLOR_BLACK : 'transparent' }}
               />
             </Pressable>

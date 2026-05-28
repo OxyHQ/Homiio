@@ -19,7 +19,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import { Home } from '@/assets/icons';
-import { AnimatedSearchPlaceholder } from '@/components/AnimatedSearchPlaceholder';
 
 // Import real data hooks
 import { useProperties } from '@/hooks';
@@ -33,9 +32,11 @@ import { useSavedProperties } from '@/hooks/useSavedProperties';
 import { PropertyCard } from '@/components/PropertyCard';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';
 import { HomeCategoryStrip } from '@/components/HomeCategoryStrip';
+import { SearchBar } from '@/components/SearchBar';
 import { ThemedText } from '@/components/ThemedText';
 import { useMediaQuery } from 'react-responsive';
 import { useLayoutScroll } from '@/context/LayoutScrollContext';
+import { resolveSectionSpacing } from '@/constants/styles';
 
 // Type assertion for Ionicons compatibility with React 19
 const IconComponent = Ionicons as any;
@@ -221,11 +222,6 @@ export default function HomePage() {
       }));
   }, [cities]);
 
-  const handleSearchPress = useCallback(() => {
-    // Navigate to search screen with a flag to indicate coming from home
-    router.push('/search?fromHome=true');
-  }, [router]);
-
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -303,21 +299,8 @@ export default function HomePage() {
             <ThemedText style={styles.heroTitle}>{t('home.hero.title')}</ThemedText>
             <ThemedText style={styles.heroSubtitle}>{t('home.hero.subtitle')}</ThemedText>
 
-            <View style={styles.searchContainer}>
-              <TouchableOpacity
-                style={styles.searchBar}
-                onPress={handleSearchPress}
-                activeOpacity={0.8}
-              >
-                <View style={styles.searchInput}>
-                  <AnimatedSearchPlaceholder
-                    style={styles.searchPlaceholderText}
-                  />
-                </View>
-                <View style={styles.searchButton}>
-                  <IconComponent name="search" size={20} color={colors.COLOR_BLACK} />
-                </View>
-              </TouchableOpacity>
+            <View style={styles.searchPillContainer}>
+              <SearchBar />
             </View>
 
             {/* Property Types */}
@@ -906,57 +889,10 @@ const createStyles = (isScreenNotMobile: boolean, windowHeight: number) => Style
     }),
     maxWidth: 400,
   },
-  searchContainer: {
+  searchPillContainer: {
     width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  searchBar: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 30,
-    padding: 8,
-    paddingLeft: 20,
-    height: 52,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 10,
-    fontSize: 16,
-    height: 52,
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  searchPlaceholderText: {
-    fontSize: 16,
-    color: '#999',
-    textAlign: 'left',
-    paddingVertical: 8,
-  },
-  searchButton: {
-    backgroundColor: colors.secondaryColor,
-    borderRadius: 30,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  searchButtonText: {
-    color: colors.COLOR_BLACK,
-    fontWeight: 'bold',
+    marginTop: 24,
+    marginBottom: 12,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -977,7 +913,7 @@ const createStyles = (isScreenNotMobile: boolean, windowHeight: number) => Style
     fontSize: 16,
   },
   trustSection: {
-    paddingVertical: 12,
+    paddingVertical: resolveSectionSpacing(isScreenNotMobile) / 2,
   },
   trustFeatures: {
     flexDirection: 'row',
@@ -1086,7 +1022,7 @@ const createStyles = (isScreenNotMobile: boolean, windowHeight: number) => Style
     backgroundColor: '#d0d0d0',
   },
   citiesSection: {
-    paddingVertical: 24,
+    paddingVertical: resolveSectionSpacing(isScreenNotMobile) / 2,
     marginTop: 16,
   },
   cityCard: {
@@ -1397,7 +1333,7 @@ const createStyles = (isScreenNotMobile: boolean, windowHeight: number) => Style
   },
   // Tips Section Styles
   tipsSection: {
-    paddingVertical: 24,
+    paddingVertical: resolveSectionSpacing(isScreenNotMobile) / 2,
     marginTop: 16,
   },
   tipCardContainer: {
@@ -1475,7 +1411,7 @@ const createStyles = (isScreenNotMobile: boolean, windowHeight: number) => Style
   },
   // FAQ Section Styles
   faqSection: {
-    paddingVertical: 24,
+    paddingVertical: resolveSectionSpacing(isScreenNotMobile) / 2,
     marginTop: 16,
   },
   faqContainer: {
