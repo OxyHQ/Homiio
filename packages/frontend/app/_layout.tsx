@@ -109,6 +109,10 @@ export default function RootLayout() {
       layoutScrollY.value = event.contentOffset.y;
     },
   });
+  const layoutScrollContextValue = useMemo(
+    () => ({ scrollY: layoutScrollY }),
+    [layoutScrollY],
+  );
   const queryClient = useMemo(() => new QueryClient({
     defaultOptions: {
       queries: {
@@ -196,7 +200,7 @@ export default function RootLayout() {
                               <ErrorBoundary>
                                 <MapStateProvider>
                                   <SearchModeProvider>
-                                    <LayoutScrollProvider value={{ scrollY: layoutScrollY }}>
+                                    <LayoutScrollProvider value={layoutScrollContextValue}>
                                       <Animated.ScrollView
                                         contentContainerStyle={styles.container}
                                         style={{ flex: 1 }}
