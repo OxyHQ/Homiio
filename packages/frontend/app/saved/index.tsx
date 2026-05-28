@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/Header';
 import { PropertyCard } from '@/components/PropertyCard';
-import { ListItem } from '@/components/ListItem';
+import { SettingsListDivider, SettingsListItem } from '@oxyhq/bloom/settings-list';
 import { colors } from '@/styles/colors';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { useSavedProperties } from '@/hooks/useSavedProperties';
@@ -852,7 +852,7 @@ export default function SavedPropertiesScreen() {
             data={filteredFolders}
             keyExtractor={(item) => item._id}
             renderItem={({ item }) => (
-              <ListItem
+              <SettingsListItem
                 title={`${item.icon || '📁'} ${item.name}`}
                 description={item.description}
                 onPress={() => router.push(`/saved/${item._id}`)}
@@ -863,6 +863,7 @@ export default function SavedPropertiesScreen() {
               styles.listContent,
               filteredFolders.length === 0 && styles.emptyListContent,
             ])}
+            ItemSeparatorComponent={SettingsListDivider}
             ListEmptyComponent={renderEmptyState}
             refreshControl={
               <RefreshControl
@@ -883,7 +884,7 @@ export default function SavedPropertiesScreen() {
             data={savedProfiles}
             keyExtractor={(item) => String(item._id)}
             renderItem={({ item }) => (
-              <ListItem
+              <SettingsListItem
                 title={
                   item.agencyProfile?.legalCompanyName ||
                   item.businessProfile?.legalCompanyName ||
@@ -901,6 +902,7 @@ export default function SavedPropertiesScreen() {
               styles.listContent,
               savedProfiles.length === 0 && styles.emptyListContent,
             ])}
+            ItemSeparatorComponent={SettingsListDivider}
             ListEmptyComponent={
               <EmptyState
                 icon="person-circle-outline"
@@ -927,7 +929,7 @@ export default function SavedPropertiesScreen() {
             data={savedSearches as any}
             keyExtractor={(item: any) => item.id}
             renderItem={({ item }: any) => (
-              <ListItem
+              <SettingsListItem
                 title={item.name}
                 description={item.query}
                 onPress={() => router.push(`/search/${encodeURIComponent(item.query)}`)}
@@ -957,6 +959,7 @@ export default function SavedPropertiesScreen() {
               styles.listContent,
               (savedSearches as any).length === 0 && styles.emptyListContent,
             ])}
+            ItemSeparatorComponent={SettingsListDivider}
             ListEmptyComponent={renderEmptyState}
             refreshControl={
               <RefreshControl
