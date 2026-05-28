@@ -31,6 +31,7 @@ import { webAlert } from '@/utils/api';
 import { phuduFontWeights } from '@/styles/fonts';
 import { useProfile } from '@/context/ProfileContext';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
+import { useHostStatus } from '@/hooks/useHostStatus';
 
 const IconComponent = Ionicons as any;
 
@@ -41,6 +42,7 @@ export function SideBar() {
   const router = useRouter();
   const { canAccessRoommates } = useProfile();
   const { isAuthenticated: _isAuthenticated, user, logout } = useOxy();
+  const { isHost } = useHostStatus();
 
   // Use SavedPropertiesContext for consistent state with SaveButton
   const { savedProperties, folders, isLoading: savedLoading } = useSavedPropertiesContext();
@@ -179,6 +181,12 @@ export function SideBar() {
         route: '/saved',
       },
       {
+        title: t('sidebar.navigation.trips', { defaultValue: 'Trips' }) as string,
+        icon: <IconComponent name="airplane-outline" size={20} color={colors.COLOR_BLACK} />,
+        iconActive: <IconComponent name="airplane" size={20} color={colors.primaryColor} />,
+        route: '/trips',
+      },
+      {
         title: t('sidebar.navigation.sindi'),
         icon: <SindiIcon size={20} color={colors.COLOR_BLACK} />,
         iconActive: <SindiIconActive size={20} color={colors.primaryColor} />,
@@ -210,6 +218,27 @@ export function SideBar() {
             route: '/roommates',
           },
         ]
+        : []),
+      // Host-only entries
+      ...(isHost
+        ? [
+            {
+              title: t('sidebar.navigation.hostCalendar', {
+                defaultValue: 'Host calendar',
+              }) as string,
+              icon: <IconComponent name="calendar-clear-outline" size={20} color={colors.COLOR_BLACK} />,
+              iconActive: <IconComponent name="calendar-clear" size={20} color={colors.primaryColor} />,
+              route: '/host/calendar',
+            },
+            {
+              title: t('sidebar.navigation.hostReservations', {
+                defaultValue: 'Host reservations',
+              }) as string,
+              icon: <IconComponent name="mail-outline" size={20} color={colors.COLOR_BLACK} />,
+              iconActive: <IconComponent name="mail" size={20} color={colors.primaryColor} />,
+              route: '/host/reservations',
+            },
+          ]
         : []),
       {
         title: t('sidebar.navigation.settings'),

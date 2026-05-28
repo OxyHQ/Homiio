@@ -10,30 +10,41 @@ import {
   Gear,
   GearActive,
 } from '@/assets/icons';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { useRouter, usePathname } from 'expo-router';
 import React, { useMemo, useCallback } from 'react';
 import { Avatar } from '@oxyhq/bloom/avatar';
-import { showSignInModal } from '@oxyhq/services';
+import { showSignInModal, useOxy } from '@oxyhq/services';
 import { useHasRentalProperties } from '@/hooks/useLeaseQueries';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SindiIconActive } from '@/assets/icons/sindi-icon';
+import { useRentalMode } from '@/context/RentalModeContext';
 
 export const BottomBar = () => {
   const router = useRouter();
   const pathname = usePathname() || '/';
   const { hasRentalProperties } = useHasRentalProperties();
+  const { isAuthenticated } = useOxy();
+  const { mode: rentalMode } = useRentalMode();
   const insets = useSafeAreaInsets();
+
+  // Trips is the secondary destination in vacation mode (Airbnb-style trips
+  // tab); in long-term mode we keep the existing contracts tab. Both can
+  // coexist when the user is a tenant with rental properties.
+  const showTripsTab = isAuthenticated && rentalMode === 'vacation';
+  const showContractsTab = hasRentalProperties && !showTripsTab;
 
   // Normalize current pathname to one of our tab routes
   const activeRoute = useMemo<
-    '/' | '/search' | '/saved' | '/sindi' | '/contracts'
+    '/' | '/search' | '/saved' | '/sindi' | '/contracts' | '/trips'
   >(() => {
     if (pathname === '/' || pathname === '') return '/';
     if (pathname.startsWith('/search') || pathname.startsWith('/properties')) return '/search';
     if (pathname.startsWith('/saved')) return '/saved';
     if (pathname.startsWith('/sindi')) return '/sindi';
     if (pathname.startsWith('/contracts')) return '/contracts';
+    if (pathname.startsWith('/trips') || pathname.startsWith('/reservations')) return '/trips';
     return '/';
   }, [pathname]);
 
@@ -116,8 +127,22 @@ export const BottomBar = () => {
           <Bookmark size={28} color={colors.COLOR_BLACK} />
         )}
       </Pressable>
+      {/* Trips tab — primary destination in vacation mode */}
+      {showTripsTab && (
+        <Pressable
+          onPress={() => handlePress('/trips')}
+          style={[styles.tab, activeRoute === '/trips' && styles.active]}
+          accessibilityLabel="Trips"
+        >
+          <Ionicons
+            name={activeRoute === '/trips' ? 'airplane' : 'airplane-outline'}
+            size={28}
+            color={activeRoute === '/trips' ? colors.primaryColor : colors.COLOR_BLACK}
+          />
+        </Pressable>
+      )}
       {/* Only show contracts tab if user has rental properties */}
-      {hasRentalProperties && (
+      {showContractsTab && (
         <Pressable
           onPress={() => handlePress('/contracts')}
           style={[styles.tab, activeRoute === '/contracts' && styles.active]}
