@@ -1,0 +1,129 @@
+---
+title: Auth
+description: How Homiio integrates with Oxy on React Native and on the server, the automatic profile bootstrap, and the per-request flow.
+order: 6
+---
+
+# Auth
+
+Homiio does not have its own login form. Identity, sessions, account switching, and avatars are all owned by **Oxy**:
+
+- The Expo / React Native app uses `@oxyhq/services` — `OxyProvider`, `useOxy`, and the Oxy bottom-sheet flows for sign-in and account switching.
+- The Express API uses `@oxyhq/core` — `oxy.auth()` is the only request-gating middleware on the authenticated route tree.
+
+There is no password storage, no session table, and no JWT minting on Homiio's side.
+
+## Frontend wiring
+
+`packages/frontend/app/_layout.tsx` mounts `OxyProvider` inside `BloomThemeProvider`, `QueryClientProvider`, and `RentalModeProvider`:
+
+```tsx
+<BloomThemeProvider fonts>
+  <QueryClientProvider client={queryClient}>
+    <RentalModeProvider>
+      <OxyProvider baseURL={OXY_BASE_URL}>
+        <ProfileProvider>
+          <SavedPropertiesProvider>
+            {/* ... */}
+          </SavedPropertiesProvider>
+        </ProfileProvider>
+      </OxyProvider>
+    </RentalModeProvider>
+  </QueryClientProvider>
+</BloomThemeProvider>
+```
+
+`OXY_BASE_URL` comes from `packages/frontend/config.ts`:
+
+```ts
+export const OXY_BASE_URL =
+  process.env.EXPO_PUBLIC_OXY_BASE_URL ||
+  (process.env.NODE_ENV === 'production' ? 'https://api.oxy.so' : 'http://192.168.86.44:3001');
+```
+
+Set `EXPO_PUBLIC_OXY_BASE_URL` in your `.env` to point at the Oxy API you want — production uses `https://api.oxy.so`. The dev fallback assumes a LAN-bound `oxy-api` and should be overridden per developer machine.
+
+## Consuming `useOxy()`
+
+The components and contexts that need identity import the hook directly:
+
+```tsx
+import { useOxy } from '@oxyhq/services';
+
+const { oxyServices, activeSessionId, isAuthenticated, user } = useOxy();
+```
+
+- `isAuthenticated` toggles when the user signs in or signs out.
+- `activeSessionId` changes when the user picks a different account via the Oxy account switcher (Homiio supports multi-account out of the box because of this).
+- `oxyServices` is a fully-configured `OxyServices` instance — call `.auth.getAccessToken()` to fetch the current bearer token when making custom requests, but normally the SDK's API client already attaches it.
+
+## Profile bootstrap
+
+`packages/frontend/context/ProfileContext.tsx` listens to `useOxy()` and, on every `isAuthenticated` or `activeSessionId` transition, calls into `useProfileStore` to load the Homiio-side profile:
+
+```tsx
+const { oxyServices, activeSessionId, isAuthenticated } = useOxy();
+
+useEffect(() => {
+  if (!isAuthenticated) return;
+  loadProfiles();   // fetches primary + all profiles concurrently
+}, [isAuthenticated, activeSessionId]);
+```
+
+On the backend, `getOrCreateActiveProfile` auto-creates a default Personal profile the first time it sees an `oxyUserId`. That means there is no "complete your account" step in the Homiio UI — the moment the user finishes Oxy sign-in, the Homiio profile exists.
+
+Profile types are an enum from `@homiio/shared-types`:
+
+```ts
+enum ProfileType {
+  PERSONAL = 'personal',
+  AGENCY = 'agency',
+  BUSINESS = 'business',
+  COOPERATIVE = 'cooperative',
+}
+```
+
+A user can hold multiple profiles; the active one is selected via `activateProfile(profileId)` on `ProfileContext` and persisted server-side.
+
+## Backend wiring
+
+`packages/backend/server.ts` instantiates a single `OxyServices` client and uses its `auth()` middleware to gate the authenticated route tree:
+
+```ts
+import { OxyServices } from '@oxyhq/core';
+
+const oxy = new OxyServices({ baseURL: '<oxy api>' });
+
+// Public routes — no auth
+app.use('/api', publicRoutes());
+
+// Authenticated routes — every /api/* below this line is gated
+app.use('/api', oxy.auth(), routes());
+```
+
+The middleware:
+
+1. Reads `Authorization: Bearer <token>` from the incoming request.
+2. Validates the token against the Oxy API.
+3. On success, attaches `req.userId` (the Oxy user id) and continues.
+4. On failure, returns `401`.
+
+Controllers read `req.userId` directly — that id is the link to every `Billing`, `Profile`, `Saved`, and `RecentlyViewed` document in MongoDB. Public routes (browsing properties, geocoding, public stats) never see `req.userId`.
+
+## Multi-account behaviour
+
+Because the active session can switch at any time, `ProfileContext` invalidates its loaded profile on `activeSessionId` change and TanStack Query keys on profile-scoped requests include the active profile id. The UI re-renders with the new context without a full page reload.
+
+The Oxy account switcher is provided by `@oxyhq/services` and rendered from a bottom sheet — Homiio does not build its own.
+
+## Where to look
+
+| Concern | File |
+|---------|------|
+| Frontend provider mount | `packages/frontend/app/_layout.tsx` |
+| Profile context | `packages/frontend/context/ProfileContext.tsx` |
+| Profile store | `packages/frontend/store/profileStore.ts` |
+| Profile service client | `packages/frontend/services/profileService.ts` |
+| Backend gating | `packages/backend/server.ts` (the `oxy.auth()` line) |
+| Profile controller | `packages/backend/controllers/profileController.ts` |
+| `OXY_BASE_URL` resolution | `packages/frontend/config.ts` |

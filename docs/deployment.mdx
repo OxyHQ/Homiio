@@ -1,0 +1,144 @@
+---
+title: Deployment
+description: Vercel builds for frontend and backend, the shared-types-first build orchestration, and serverless concerns (Mongo, cron).
+order: 7
+---
+
+# Deployment
+
+Both packages deploy to Vercel from the same repository. The trick is that `@homiio/shared-types` has to be built and copied into each package's `node_modules` **before** the frontend or backend tries to import it. `scripts/build-for-vercel.js` does that.
+
+## Frontend (Vercel — static export)
+
+Configured by the repo-root `vercel.json`:
+
+```json
+{
+  "name": "homiio-monorepo",
+  "buildCommand": "VERCEL_TARGET=frontend node scripts/build-for-vercel.js",
+  "outputDirectory": "packages/frontend/dist",
+  "installCommand": "npm install",
+  "framework": null,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
+```
+
+The build script (`scripts/build-for-vercel.js`):
+
+1. `npm run build:shared-types` — builds the types package.
+2. Copies `packages/shared-types/dist/` into both `packages/frontend/node_modules/@homiio/shared-types/` and `packages/backend/node_modules/@homiio/shared-types/`.
+3. With `VERCEL_TARGET=frontend`, runs `expo export --platform web --output-dir dist` against `packages/frontend`.
+
+The rewrites send every unknown path to `/index.html` so Expo Router's client-side routing handles deep links.
+
+Local equivalent:
+
+```sh
+./scripts/deploy-frontend.sh    # sets VERCEL_TARGET=frontend and runs `vercel --prod`
+```
+
+## Backend (Vercel — serverless functions)
+
+The backend uses a separate, scripted `vercel.json` because the layout is different:
+
+```json
+{
+  "name": "homiio-backend",
+  "buildCommand": "VERCEL_TARGET=backend node scripts/build-for-vercel.js",
+  "outputDirectory": "packages/backend/dist",
+  "installCommand": "npm install",
+  "framework": null,
+  "functions": {
+    "packages/backend/dist/server.js": { "runtime": "nodejs18.x" }
+  }
+}
+```
+
+`scripts/deploy-backend.sh` writes that config to `vercel.json`, runs `vercel --prod`, then restores the original repo-root `vercel.json` from git:
+
+```sh
+./scripts/deploy-backend.sh
+```
+
+Because the backend deploys as a single Node serverless function, `server.ts` is written to be re-entrant — see the `ensureDatabaseConnection` middleware that re-checks the Mongo connection on every request when running under Vercel or AWS Lambda.
+
+## Serverless considerations
+
+`packages/backend/config.ts` switches Mongoose's connection pool sizing automatically:
+
+```ts
+maxPoolSize: process.env.VERCEL ? 1 : 10,
+serverSelectionTimeoutMS: process.env.VERCEL ? 30000 : 5000,
+socketTimeoutMS: process.env.VERCEL ? 60000 : 45000,
+bufferCommands: false,
+```
+
+A pool of 1 on Vercel avoids hitting Atlas connection limits when many serverless instances spin up in parallel.
+
+`services/cron.ts` is **only** initialised in persistent environments:
+
+```ts
+if (!process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  initCronJobs();
+}
+```
+
+Scheduled work (scraper refreshes, external-listing expiration) needs to run on a long-lived process, not a per-request lambda — deploy those workers elsewhere (a dedicated VM or a separate Render/Fly service) when the production environment is Vercel-only.
+
+## Environment
+
+Set these on the Vercel project (Settings → Environment Variables):
+
+**Frontend project:**
+
+```
+EXPO_PUBLIC_OXY_BASE_URL=https://api.oxy.so
+API_URL=https://api.homiio.com
+EXPO_PUBLIC_STRIPE_LINK_PLUS=https://buy.stripe.com/...   # optional
+EXPO_PUBLIC_STRIPE_LINK_FILE=https://buy.stripe.com/...   # optional
+```
+
+`EXPO_PUBLIC_*` variables are inlined into the bundle at build time. Anything not prefixed will not be visible at runtime.
+
+**Backend project:**
+
+```
+NODE_ENV=production
+MONGODB_URI=mongodb+srv://...
+OXY_API_URL=https://api.oxy.so
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRICE_PLUS=price_...
+STRIPE_PRICE_FILE=price_...
+STRIPE_SUCCESS_URL=https://homiio.com/profile/subscriptions?session_id={CHECKOUT_SESSION_ID}
+STRIPE_CANCEL_URL=https://homiio.com/profile/subscriptions
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_REGION=eu-west-1
+AWS_S3_BUCKET=homiio-images
+```
+
+## CORS
+
+`server.ts` allow-lists `https://homiio.com`, every `*.vercel.app` preview, and (in dev) `localhost` plus private LAN IPs (RFC 1918). Anything else is rejected. Change the allow-list in `server.ts` if production lands on a custom domain.
+
+## Stripe webhook
+
+After deploying the backend, register the webhook endpoint with Stripe pointing at `https://<backend-host>/api/billing/webhook` and subscribe to:
+
+- `checkout.session.completed`
+- `customer.subscription.updated`
+- `invoice.payment_succeeded`
+- `invoice.payment_failed`
+- `customer.subscription.deleted`
+
+Copy the signing secret into `STRIPE_WEBHOOK_SECRET`. Verify the wiring with `GET /api/billing/webhook-test` — it reports which env vars are present and the resolved webhook URL.
+
+## Health checks
+
+- `GET /health` — public, returns `status`, `version`, `environment`, and the Mongo `database` status.
+- `GET /api/health` — same shape, mounted under the authenticated tree. Use for smoke-test monitors.

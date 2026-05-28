@@ -1,0 +1,178 @@
+---
+title: Architecture
+description: Workspace layout, tech stack, request lifecycle, and the data model that anchors the rest of the system.
+order: 2
+---
+
+# Architecture
+
+Homiio is a Bun-workspaces monorepo (root `package.json` is `homiio-monorepo@2.0.0`). The build order is:
+
+```
+@homiio/shared-types  →  @homiio/backend  +  @homiio/frontend
+```
+
+`shared-types` is the contract between the other two. It is built first by the root `postinstall` so subsequent installs have `dist/` available.
+
+## Workspace layout
+
+```
+packages/
+  frontend/       @homiio/frontend       Expo 56 / React Native 0.85 / React 19
+  backend/        @homiio/backend        Express 4.21 / Mongoose 8.18 / Stripe 16.11
+  shared-types/   @homiio/shared-types   Pure TS types — built first via postinstall
+scripts/
+  build-for-vercel.js                    Copies shared-types/dist into both node_modules trees
+  deploy-frontend.sh / deploy-backend.sh Vercel-targeted deploys
+```
+
+## Frontend stack
+
+`packages/frontend` is an Expo Router app targeting iOS, Android, and Web from a single codebase.
+
+| Layer | Library |
+|-------|---------|
+| Runtime | React Native 0.85, React 19.2 |
+| Router | `expo-router` (v56) with typed routes |
+| Styling | NativeWind 4 + Tailwind 3 + `global.css` |
+| State (local) | Zustand 5 + per-domain stores in `packages/frontend/store/` |
+| State (server) | TanStack Query 5 — `staleTime: 5min`, `gcTime: 30min`, `refetchOnReconnect: true` |
+| Identity | `@oxyhq/services` (`OxyProvider`, `useOxy`) — see [Auth](./auth) |
+| Theme + typography | `@oxyhq/bloom` — `BloomThemeProvider`, `Typography.H1/H2/P` |
+| Maps + geolocation | `expo-location`, `react-native-svg`, custom `Map.tsx` |
+| Charts | `react-native-chart-kit` over `react-native-svg` |
+| AI streaming | `@ai-sdk/react` — wires the Sindi chat surface to the backend streaming endpoint |
+| Notifications | `expo-notifications` + custom `NotificationProvider` |
+| i18n | `i18next` + `react-i18next`, locales in `packages/frontend/locales/` (en, es, ca, it) |
+
+The root `_layout.tsx` wires (top-down):
+
+```tsx
+<SafeAreaProvider>
+  <GestureHandlerRootView>
+    <BloomThemeProvider fonts>
+      <QueryClientProvider>
+        <RentalModeProvider>
+          <OxyProvider baseURL={OXY_BASE_URL}>
+            <ProfileProvider>
+              <SavedPropertiesProvider>
+                <NotificationProvider>
+                  <I18nextProvider>
+                    <BottomSheetProvider>
+                      <MenuProvider>
+                        <ErrorBoundary>
+                          {/* MapStateProvider, SearchModeProvider, LayoutScrollProvider, then <Slot /> */}
+                        </ErrorBoundary>
+```
+
+`NetInfo` drives `onlineManager` and `AppState` drives `focusManager` so React Query refetches on reconnect and foreground.
+
+## Backend stack
+
+`packages/backend` is a CommonJS Express 4 server (entry `server.ts`, run with `ts-node --transpile-only`).
+
+| Layer | Library |
+|-------|---------|
+| Runtime | Node 22, Express 4.21 |
+| ORM | Mongoose 8.18 against MongoDB |
+| Identity | `@oxyhq/core` — `oxy.auth()` middleware gates `/api/*` |
+| Billing | `stripe@16.11` — Checkout, webhooks, customer portal |
+| Image pipeline | `sharp` 0.34 + `@aws-sdk/client-s3` |
+| AI | `ai@4.3` + `@ai-sdk/openai` — streams Sindi responses |
+| Messaging integrations | `node-telegram-bot-api`, `telegraf`, `whatsapp-web.js` |
+| Document parsing | `pdf-parse` (contract uploads) |
+| Cron | `node-cron`, initialised in `services/cron.ts` (skipped on Vercel) |
+| Validation | `express-validator` + a custom `middlewares/validation.ts` |
+
+CORS is locked to known origins (`homiio.com`, `vercel.app` preview deployments, `localhost`, LAN IPs in dev). The check is an O(1) `Set` lookup plus a single combined regex — see `server.ts` line 37 onward.
+
+`server.ts` mounts middleware in a deliberate order:
+
+1. CORS.
+2. **Stripe webhook first** — `bodyParser.raw()` mounted before any JSON parser so signatures verify. The `confirm` endpoint sits next with `bodyParser.json()`.
+3. Content-type-aware body parser (`multipart`, `json`, `urlencoded`, or pass-through).
+4. Request logger.
+5. Serverless-only DB-connection guard (when `process.env.VERCEL` or `AWS_LAMBDA_FUNCTION_NAME` is set).
+6. `GET /` (welcome JSON) and `GET /health` (DB status).
+7. **Public routes** (`routes/public.ts`) under `/api`.
+8. **Authenticated routes** under `/api`, gated by `oxy.auth()`.
+9. Error logger, 404, error handler.
+
+## Shared types
+
+`packages/shared-types/src/` is a pure TS package. Every file is exported through `index.ts`:
+
+```ts
+export * from './common';      // PropertyType, PropertyStatus, ProfileType, RentMode, ...
+export * from './address';     // Address, AddressDetail, AddressSuggestion
+export * from './property';    // Property, PropertyRent, AccommodationDetails, PropertyFilters
+export * from './profile';     // Profile, PersonalProfile, AgencyProfile, TrustScore
+export * from './city';        // City, NeighborhoodData
+export * from './lease';       // Lease, LeaseStatus, LeaseTerms
+export * from './review';      // Review
+export * from './reservation'; // Vacation-rental reservations
+export * from './application'; // Long-term tenant applications
+```
+
+Both `@homiio/frontend` and `@homiio/backend` import directly: `import type { Property, ProfileType } from '@homiio/shared-types'`. There is no compatibility shim — when a type changes the build catches every callsite.
+
+## Data model
+
+The Mongoose schemas live under `packages/backend/models/schemas/`. Roughly grouped:
+
+- **Marketplace**: `PropertySchema`, `AddressSchema`, `CitySchema`, `RecentlyViewedSchema`, `SavedSchema`, `SavedPropertyFolderSchema`, `SavedSearchSchema`.
+- **Identity (Homiio-side)**: `ProfileSchema` (Personal / Agency / Business / Cooperative). Linked to the Oxy user via `oxyUserId`.
+- **Billing**: `BillingSchema` — one per `oxyUserId`, unique-indexed. See [Payments](./payments).
+- **Tenancy flows**: `LeaseSchema`, `TenantApplicationSchema`, `ViewingRequestSchema`, `ReservationSchema` (vacation rentals).
+- **Trust / social**: `ReviewSchema`.
+- **AI**: `ConversationSchema` — persisted Sindi chats.
+
+`Property` references `Address` by `addressId`. That separation lets multiple historical listings share the same physical address, useful for rent-history transparency.
+
+## Request lifecycle
+
+```
+Client (Expo / web)
+   │  Authorization: Bearer <Oxy token>
+   ▼
+Express CORS → bodyParser → requestLogger
+   │
+   ▼
+oxy.auth()  ───── 401 ── no/invalid token
+   │
+   │ req.userId = <Oxy user id>
+   ▼
+Route handler (controllers/)
+   │
+   ▼
+Mongoose model  →  MongoDB
+   │
+   ▼
+errorHandler.successResponse(data)  →  { success, message, data, meta }
+```
+
+Public routes (browsing properties, public stats, geocoding) skip `oxy.auth()` and are mounted in `routes/public.ts`.
+
+## Frontend ↔ backend protocol
+
+Every response is shaped by `middlewares/errorHandler.ts`:
+
+```json
+{
+  "success": true,
+  "message": "Operation successful",
+  "data": { /* ... */ },
+  "meta": { "timestamp": "2026-05-28T12:34:56.000Z" }
+}
+```
+
+Paginated lists add a `pagination` block (`page`, `limit`, `total`, `totalPages`, `hasNext`, `hasPrev`). Errors mirror the shape:
+
+```json
+{
+  "success": false,
+  "error": { "message": "...", "code": "...", "statusCode": 400 }
+}
+```
+
+The frontend's TanStack Query layer unwraps `.data` consistently — when the network or server fails, every service has a fallback shape so UI never hard-crashes on missing data.

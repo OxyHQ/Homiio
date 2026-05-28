@@ -1,6 +1,6 @@
 ---
 title: Homiio
-description: Real estate platform with ethical pricing, AI tenant-rights assistant, Stripe billing, and PostHog analytics — Expo/RN + Node + Oxy.
+description: Real estate platform with ethical pricing, AI tenant-rights assistant, Stripe billing, and marketplace analytics — Expo/RN + Node + Oxy.
 order: 0
 ---
 
@@ -39,11 +39,11 @@ Inside the repo:
             ▼                                          ▼
      @oxyhq/services                           Stripe + S3 + OpenAI
      (auth, account switcher)                  + Oxy API (identity)
-            │                                          │
-            ▼                                          ▼
-        PostHog                                  MongoDB
-   (analytics + session replay)        (Property, Profile, Billing, Lease,
-                                        City, Address, Review, Conversation)
+                                                       │
+                                                       ▼
+                                                  MongoDB
+                                        (Property, Profile, Billing, Lease,
+                                         City, Address, Review, Conversation)
 ```
 
 Build order matters: `@homiio/shared-types` is built ahead of the others via a root `postinstall`, then `frontend` and `backend` can build in parallel.
@@ -96,10 +96,10 @@ AWS_S3_BUCKET=homiio-images
 `packages/frontend/.env`:
 
 ```env
-EXPO_PUBLIC_API_URL=http://localhost:3000
 EXPO_PUBLIC_OXY_BASE_URL=https://api.oxy.so
-EXPO_PUBLIC_POSTHOG_KEY=phc_...
-EXPO_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
+API_URL=http://localhost:4000
+EXPO_PUBLIC_STRIPE_LINK_PLUS=https://buy.stripe.com/...   # optional Payment Link fallback
+EXPO_PUBLIC_STRIPE_LINK_FILE=https://buy.stripe.com/...   # optional
 ```
 
 ## Quick start
@@ -171,31 +171,40 @@ Three products are wired through Stripe Checkout:
 
 Webhook handling is idempotent via a per-billing-record `processedSessions` array, so duplicate webhook deliveries can never double-credit. See [Payments](./payments) for the full lifecycle, customer-portal flow, and the manual-activation fallback for when webhooks fail.
 
-### PostHog analytics + session replay
+### Marketplace analytics
 
-`PostHogProvider` wraps the entire app tree under `_layout.tsx` with `autocapture` and `enableSessionReplay: true`. Pages, taps, and form submissions are captured automatically; session replay captures the rendered DOM for web and the screen state on native. The provider sits *outside* the `QueryClientProvider` so analytics keep working even if the query client tears down.
+The backend exposes two analytics endpoints that power the in-app Insights screen and the public homepage stats widget:
 
-See [Analytics](./analytics) for the event taxonomy, the privacy controls, and how Homiio's backend analytics aggregator (`GET /api/analytics`, `GET /api/analytics/stats`) complements the client capture.
+- `GET /api/analytics` — per-user insights (interaction summary, cross-app actions, trends). Delegates to the Oxy ecosystem `horizonService` when available, otherwise returns a sensible fallback so the screen always renders.
+- `GET /api/analytics/stats` — public marketplace aggregates: total properties, cities, saves, average/min/max rent, top cities, and a price-bucket histogram.
+
+See [Analytics](./analytics) for the aggregation pipelines, the Insights screen wiring, and the fallback behaviour.
 
 ### Identity via Oxy
 
-`OxyProvider` from `@oxyhq/services` owns the auth context, account switcher, and the bottom-sheet system. The frontend wires it inside `BottomSheetModalProvider` (from `@gorhom/bottom-sheet`) so Homiio's own sheets coexist with Oxy's.
+`OxyProvider` from `@oxyhq/services` owns the auth context, account switcher, and the bottom-sheet system. The frontend wires it inside `BloomThemeProvider` (from `@oxyhq/bloom`) and a TanStack `QueryClientProvider` so Homiio's own contexts coexist with Oxy's.
 
 ```tsx
-<PostHogProvider apiKey={posthogApiKey} options={{ host: posthogHost, enableSessionReplay: true }} autocapture>
+<BloomThemeProvider fonts>
   <QueryClientProvider client={queryClient}>
-    <BottomSheetModalProvider>
+    <RentalModeProvider>
       <OxyProvider baseURL={OXY_BASE_URL}>
         <ProfileProvider>
           <SavedPropertiesProvider>
-            {/* ... */}
+            <NotificationProvider>
+              <BottomSheetProvider>
+                {/* ... */}
+              </BottomSheetProvider>
+            </NotificationProvider>
           </SavedPropertiesProvider>
         </ProfileProvider>
       </OxyProvider>
-    </BottomSheetModalProvider>
+    </RentalModeProvider>
   </QueryClientProvider>
-</PostHogProvider>
+</BloomThemeProvider>
 ```
+
+See [Auth](./auth) for the full sign-in lifecycle, profile bootstrap, and the backend `oxy.auth()` middleware.
 
 ## Routes at a glance
 
@@ -205,6 +214,11 @@ See [Analytics](./analytics) for the event taxonomy, the privacy controls, and h
 
 ## Documentation map
 
+- [Getting started](./getting-started) — Clone, install, env vars, first dev run.
+- [Architecture](./architecture) — Tech stack, key modules, request and data flow.
 - [Listings](./listings) — Property schema, search filters, accommodation types, external sourcing.
 - [Payments](./payments) — Stripe Checkout, webhook idempotency, customer portal, file credits.
-- [Analytics](./analytics) — PostHog wiring, session replay, backend stats aggregator.
+- [Analytics](./analytics) — Insights endpoint, public stats aggregator, fallback behaviour.
+- [Auth](./auth) — Oxy integration on RN and the server, profile bootstrap, request flow.
+- [Deployment](./deployment) — Vercel build, environment, cron, and the bundled image pipeline.
+- [Contributing](./contributing) — Repo layout, code conventions, the agent-first workflow.

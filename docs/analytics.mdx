@@ -1,82 +1,23 @@
 ---
 title: Analytics
-description: PostHog autocapture and session replay on the client, plus the backend stats aggregator used by the Insights screen.
-order: 3
+description: The /api/analytics insights endpoint, the public marketplace stats aggregator, and how the Insights screen consumes both.
+order: 5
 ---
 
 # Analytics
 
-Homiio has two complementary analytics layers:
+Homiio ships two analytics surfaces, both server-side:
 
-1. **Client capture** — `posthog-react-native` with autocapture and session replay, wired at the root of the Expo app.
-2. **Backend aggregator** — `/api/analytics` and `/api/analytics/stats` endpoints that aggregate property, city, and savings data straight from MongoDB. These power the in-app Insights screen.
+1. **Per-user insights** — `GET /api/analytics` returns the calling user's interaction summary, cross-app actions, and trend deltas. When the optional `horizonService` is available it delegates to the Oxy ecosystem cross-app analytics layer; otherwise it returns a deterministic fallback so the Insights screen never has to render an error state.
+2. **Public marketplace stats** — `GET /api/analytics/stats` runs four MongoDB aggregations in parallel and powers the homepage's "market at a glance" widgets.
 
-The two layers stay distinct on purpose: PostHog handles behaviour (taps, screens, sessions); the backend aggregator handles platform health and marketplace metrics.
+The corresponding controller lives at `packages/backend/controllers/analyticsController.ts`. The Insights screen at `packages/frontend/app/insights/index.tsx` consumes both endpoints through `packages/frontend/services/analyticsService.ts` over TanStack Query, with charts rendered via `react-native-chart-kit` over `react-native-svg`.
 
-## Client: PostHog provider
+There is currently no client-side product-analytics SDK (PostHog, Amplitude, Mixpanel) wired into the frontend tree. All analytics in production are server-aggregated from MongoDB.
 
-`PostHogProvider` wraps the entire app tree under `packages/frontend/app/_layout.tsx`. It sits *outside* the React Query client and the Oxy provider, so analytics keep running even when those tear down:
+## `GET /api/analytics`
 
-```tsx
-<PostHogProvider
-  apiKey={posthogApiKey}
-  options={{
-    host: posthogHost,
-    enableSessionReplay: true,
-  }}
-  autocapture
->
-  <QueryClientProvider client={queryClient}>
-    <BottomSheetModalProvider>
-      <OxyProvider baseURL={OXY_BASE_URL}>
-        {/* ... */}
-      </OxyProvider>
-    </BottomSheetModalProvider>
-  </QueryClientProvider>
-</PostHogProvider>
-```
-
-### Configuration
-
-The provider reads two env vars at app start:
-
-```ts
-const posthogApiKey = process.env.EXPO_PUBLIC_POSTHOG_KEY;
-const posthogHost = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
-```
-
-`EXPO_PUBLIC_` prefixed vars are inlined into the bundle at build time. Use a project-specific key in production; the dev key in the codebase is a fallback for local builds and should not be relied on.
-
-### Autocapture
-
-With `autocapture` enabled, PostHog automatically records:
-
-- **Screen views** — every Expo Router navigation fires a `$screen` event with the route name.
-- **Taps and gestures** — `Pressable` / `TouchableOpacity` interactions emit `$autocapture` events with the element's accessibility label.
-- **Form submissions** — `TextInput` change events on web; submission events on native.
-- **App lifecycle** — install, open, foreground, background.
-
-Manual `posthog.capture('event_name', properties)` calls are reserved for domain events (e.g. `property_saved`, `viewing_requested`, `checkout_started`). Always pass the active `profileId` as a property so events can be sliced by profile type.
-
-### Session replay
-
-`enableSessionReplay: true` activates `posthog-react-native-session-replay`. On web, it records the rendered DOM and CSS. On native iOS and Android, it captures the rendered view hierarchy frame-by-frame, with text masked by default for privacy.
-
-Replays are stored on PostHog Cloud (US region by default) and linked to the captured events. For pages that show sensitive data — payment screens, identity flows handed off to Oxy — wrap the sensitive subtree in `posthog-react-native-session-replay`'s `<PHRMask>` to redact it from replays.
-
-### Identifying users
-
-After `useOxy()` reports authentication, the app calls `posthog.identify(user.id, { /* traits */ })` to associate the anonymous session with the Oxy user id. This is the same id used as `oxyUserId` on the `Billing` document, which means PostHog cohorts can be joined back to entitlement state in BI tools.
-
-Do **not** pass PII (email, full name) as PostHog traits. Use opaque Oxy ids and let downstream analytics joins resolve them.
-
-## Backend: stats aggregator
-
-`controllers/analyticsController.ts` exposes two endpoints, both fully cached at the controller level:
-
-### `GET /api/analytics`
-
-Per-user insights endpoint. Returns the user's interaction summary, cross-app actions, and trend deltas:
+Authenticated. Returns the user's interaction summary, cross-app actions, and trend deltas:
 
 ```ts
 interface AnalyticsInsights {
@@ -92,23 +33,24 @@ interface AnalyticsInsights {
 }
 ```
 
-The controller first tries to delegate to the `horizonService` (the Oxy-ecosystem cross-app analytics service). When that is unavailable it returns a sensible fallback payload so the Insights screen always renders. The `period` query param accepts `7d`, `30d`, or `90d` and defaults to `30d`.
+The controller first tries to delegate to the `horizonService` (`packages/backend/services`). When that service is missing — common in standalone dev — it returns a fallback payload tagged `'Analytics retrieved successfully (fallback data)'`. The `period` query param accepts `7d`, `30d`, or `90d` and defaults to `30d`.
 
-### `GET /api/analytics/stats`
+## `GET /api/analytics/stats`
 
-Public marketplace stats. Runs four Mongo aggregations in parallel:
+Public — mounted under `routes/public.ts`. Runs four parallel Mongo aggregations:
 
 ```ts
 const [totalProperties, totalCities, totalSaves, uniqueSavers] = await Promise.all([
   Property.countDocuments({}).catch(() => 0),
   City.countDocuments({}).catch(() => 0),
-  Saved.countDocuments({ targetType: 'property' }).catch(() => 0),
-  Saved.distinct('profileId', { targetType: 'property' })
-    .then(arr => arr.length).catch(() => 0),
+  Saved ? Saved.countDocuments({ targetType: 'property' }).catch(() => 0) : 0,
+  Saved
+    ? Saved.distinct('profileId', { targetType: 'property' }).then(arr => arr.length).catch(() => 0)
+    : 0,
 ]);
 ```
 
-Then a pricing aggregate (`averageRent`, `minRent`, `maxRent`), a top-cities aggregate (joining `addresses` via `$lookup`), and a price-bucket histogram with preset boundaries:
+Followed by a pricing aggregate (`averageRent`, `minRent`, `maxRent`), a top-cities aggregate joining `addresses` via `$lookup`, and a price-bucket histogram with preset boundaries:
 
 ```ts
 $bucket: {
@@ -119,7 +61,7 @@ $bucket: {
 }
 ```
 
-The response feeds the public homepage's "market at a glance" widgets:
+The response feeds the public homepage widgets:
 
 ```ts
 interface AppStats {
@@ -130,11 +72,11 @@ interface AppStats {
 }
 ```
 
-Each aggregate is wrapped in `.catch(() => 0)` (or `[]`) so a single failing pipeline never breaks the response — partial data is always better than a 500 here.
+Every aggregate is wrapped in `.catch(() => 0)` (or `[]`) and the entire handler has a top-level fallback so a single failing pipeline never produces a 500 — partial data is always preferable to an outage on a public marketing page.
 
 ## Frontend service wrapper
 
-`packages/frontend/services/analyticsService.ts` calls the two endpoints and provides identical fallback shapes so the Insights screen never has to render an error state for analytics:
+`packages/frontend/services/analyticsService.ts` calls both endpoints and provides identical fallback shapes:
 
 ```ts
 async getAnalytics(period: '7d' | '30d' | '90d' = '30d'): Promise<AnalyticsInsights> {
@@ -150,21 +92,20 @@ async getAnalytics(period: '7d' | '30d' | '90d' = '30d'): Promise<AnalyticsInsig
 }
 ```
 
-The Insights screen (`packages/frontend/app/insights/index.tsx`) consumes both methods via TanStack Query, with charts rendered through `react-native-chart-kit` over `react-native-svg`.
+The Insights screen consumes both methods via TanStack Query so they participate in the global query cache, optimistic refetch on focus, and offline-first replay.
 
-## Privacy controls
+## Privacy posture
 
-- PostHog respects the device's "Limit Ad Tracking" / GDPR consent state — when the user opts out via Settings, the provider calls `posthog.optOut()` and subsequent events are dropped client-side.
-- Backend `GET /api/analytics` returns only the calling user's data; it never reveals other users' interactions.
-- `GET /api/analytics/stats` is intentionally public — it returns marketplace aggregates with no per-user information.
+- `GET /api/analytics` returns only the calling user's data. The controller scopes off `req.userId` (set by the `oxy.auth()` middleware) and accepts a `userID` query override only for delegated admin calls.
+- `GET /api/analytics/stats` is intentionally public and returns only marketplace-level aggregates — no per-user information leaves the server.
+- No third-party analytics SDK is loaded on web or native, so there is no client-side IP, fingerprint, or session replay leaving the device.
 
 ## Where to look
 
 | Concern | File |
 |---------|------|
-| PostHog provider wiring | `packages/frontend/app/_layout.tsx` |
-| Frontend analytics service | `packages/frontend/services/analyticsService.ts` |
-| Insights screen | `packages/frontend/app/insights/index.tsx` |
 | Backend controller | `packages/backend/controllers/analyticsController.ts` |
-| Backend route | `packages/backend/routes/analytics.ts` |
+| Authenticated route | `packages/backend/routes/analytics.ts` |
 | Public stats route | `packages/backend/routes/public.ts` (`GET /analytics/stats`) |
+| Frontend service | `packages/frontend/services/analyticsService.ts` |
+| Insights screen | `packages/frontend/app/insights/index.tsx` |
