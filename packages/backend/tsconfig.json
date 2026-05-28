@@ -11,7 +11,6 @@
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "composite": true,
-    "baseUrl": ".",
     "paths": {
       "@homiio/shared-types": [
         "../shared-types/src"

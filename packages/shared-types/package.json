@@ -23,14 +23,15 @@
     "license": "UNLICENSED",
     "dependencies": {
         "mongoose": "^8.18.0",
-        "typescript": "^5.0.0"
+        "typescript": "^6.0.3"
     },
     "devDependencies": {
-        "@eslint/js": "^9.0.0",
-        "@types/node": "^20.0.0",
-        "@typescript-eslint/eslint-plugin": "^7.0.0",
-        "@typescript-eslint/parser": "^7.0.0",
-        "eslint": "^9.0.0"
+        "@eslint/js": "^9.39.0",
+        "@types/node": "^22.10.0",
+        "@typescript-eslint/eslint-plugin": "^8.60.0",
+        "@typescript-eslint/parser": "^8.60.0",
+        "eslint": "^9.39.0",
+        "globals": "^17.6.0"
     },
     "files": [
         "dist/**/*"
