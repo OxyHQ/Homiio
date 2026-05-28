@@ -200,3 +200,33 @@ export const hairline = {
   width: Platform.OS === 'web' ? 1 : 0.5,
   color: 'rgba(0, 0, 0, 0.08)',
 } as const;
+
+/**
+ * Container clamp — Airbnb-2026 sections never run edge-to-edge on ultra-
+ * wide displays. We cap content at 1280px and let the page background
+ * breathe on either side. Sub-clamps for narrower hero/copy blocks.
+ */
+export const contentClamp = {
+  /** Default page content max width on web. */
+  page: 1280,
+  /** Narrower max width for centered copy blocks (hero subtitles, banners). */
+  copy: 720,
+} as const;
+
+/**
+ * Responsive horizontal page padding. Phones get 16px, tablets 24px, large
+ * desktops 32px. Use this everywhere instead of inline numbers so sections
+ * align to the same vertical gutter.
+ */
+export const pagePadding = {
+  mobile: spacing.lg,
+  tablet: spacing['2xl'],
+  desktop: spacing['3xl'],
+} as const;
+
+/**
+ * Resolve the platform-appropriate horizontal page padding. Pass the
+ * `isWide` boolean derived from your media query hook.
+ */
+export const resolvePagePadding = (isWide: boolean): number =>
+  isWide ? pagePadding.desktop : pagePadding.mobile;

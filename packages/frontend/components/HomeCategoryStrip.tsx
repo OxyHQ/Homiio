@@ -58,6 +58,12 @@ const VACATION_CATEGORIES: CategoryDef[] = [
 interface HomeCategoryStripProps {
   /** Optional class applied to the outer wrapper for custom spacing/background. */
   className?: string;
+  /**
+   * When true, on web breakpoints the strip becomes a sticky sub-header
+   * pinned just below the layout top bar (top: 0). Mobile keeps native
+   * scroll behavior — sticky reads as broken on touch.
+   */
+  sticky?: boolean;
 }
 
 interface CategoryItemProps {
@@ -70,6 +76,12 @@ interface CategoryItemProps {
 const CategoryItem: React.FC<CategoryItemProps> = ({ item, active, label, onPress }) => {
   const [hovered, setHovered] = useState(false);
 
+  /**
+   * Active items pop in the primary color (icon + label + 2px bar);
+   * inactive items mute to neutral gray at 70% opacity. Hover on web
+   * nudges scale slightly but never re-tints — that keeps the active
+   * state unambiguous.
+   */
   const tint = active ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3;
   const scale = hovered && Platform.OS === 'web' ? 1.04 : 1;
 
@@ -83,12 +95,12 @@ const CategoryItem: React.FC<CategoryItemProps> = ({ item, active, label, onPres
       accessibilityState={{ selected: active }}
       accessibilityLabel={label}
       style={{
-        opacity: active ? 1 : 0.78,
+        opacity: active ? 1 : 0.7,
         transform: [{ scale }],
       }}
     >
       <View className="items-center justify-center" style={{ paddingBottom: spacing.sm }}>
-        <Ionicons name={item.icon} size={30} color={tint} />
+        <Ionicons name={item.icon} size={28} color={tint} />
       </View>
       <Text
         style={{
@@ -96,6 +108,7 @@ const CategoryItem: React.FC<CategoryItemProps> = ({ item, active, label, onPres
           fontWeight: active ? '700' : '500',
           color: tint,
           letterSpacing: tracker.wide,
+          textAlign: 'center',
         }}
       >
         {label}
@@ -105,7 +118,7 @@ const CategoryItem: React.FC<CategoryItemProps> = ({ item, active, label, onPres
         style={{
           marginTop: spacing.sm,
           height: 2,
-          width: '100%',
+          alignSelf: 'stretch',
           backgroundColor: active ? colors.primaryColor : 'transparent',
         }}
       />
@@ -113,7 +126,10 @@ const CategoryItem: React.FC<CategoryItemProps> = ({ item, active, label, onPres
   );
 };
 
-export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({ className }) => {
+export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({
+  className,
+  sticky = false,
+}) => {
   const { t } = useTranslation();
   const { mode } = useRentalMode();
   const category = useHomeCategoryStore((s) => s.category);
@@ -133,8 +149,25 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({ className 
 
   const isWeb = Platform.OS === 'web';
 
+  /**
+   * Web-only `position: sticky` lives outside the RN style system. We
+   * inject it via the style object and rely on react-native-web to
+   * pass it through to the underlying div. On native, this is a no-op.
+   */
+  const stickyStyle =
+    sticky && isWeb
+      ? ({
+          position: 'sticky',
+          top: 0,
+          zIndex: 30,
+          backgroundColor: '#ffffff',
+          borderBottomWidth: 1,
+          borderBottomColor: 'rgba(0, 0, 0, 0.06)',
+        } as unknown as object)
+      : null;
+
   return (
-    <View className={className ?? 'w-full py-4'}>
+    <View className={className ?? 'w-full py-4'} style={stickyStyle}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}

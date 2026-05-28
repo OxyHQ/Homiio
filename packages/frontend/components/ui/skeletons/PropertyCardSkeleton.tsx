@@ -49,6 +49,13 @@ export function PropertyCardSkeleton({
         titleLines: 2,
         locationLines: 1,
       },
+      grid: {
+        imageHeight: 0,
+        showFeatures: false,
+        showPrice: true,
+        titleLines: 1,
+        locationLines: 1,
+      },
       default: {
         imageHeight: 120,
         showFeatures: true,

@@ -2,7 +2,8 @@
  * Horizontal carousel used across the home page for properties, cities,
  * and tips. Renders an optional eyebrow label, an H1-sized title, an
  * optional "View all" link, and a snap-to-card horizontal scroller with
- * left/right arrow controls that only appear when the content overflows.
+ * left/right arrow controls that only appear when the content overflows
+ * on wide breakpoints (hidden on mobile — touch swipe is enough there).
  *
  * Section rhythm is owned by the parent — this component renders the
  * scroller and only adds a small bottom margin so consecutive sections
@@ -18,11 +19,12 @@ import {
   NativeScrollEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useMediaQuery } from 'react-responsive';
 
 import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { colors } from '@/styles/colors';
-import { cardShadow, spacing, tracker } from '@/constants/styles';
+import { cardShadow, gridGap, spacing, tracker } from '@/constants/styles';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 
 interface HomeCarouselSectionProps<T> {
@@ -38,8 +40,8 @@ interface HomeCarouselSectionProps<T> {
   maxCardWidth?: number;
 }
 
-const CARD_GAP = 16;
-const HORIZONTAL_PADDING = 32;
+const CARD_GAP = gridGap.normal;
+const HORIZONTAL_PADDING = spacing['2xl'] * 2;
 
 export function HomeCarouselSection<T>({
   eyebrow,
@@ -57,6 +59,7 @@ export function HomeCarouselSection<T>({
   const [containerWidth, setContainerWidth] = useState(0);
   const [scrollX, setScrollX] = useState(0);
   const [_isDragging, setIsDragging] = useState(false);
+  const isWide = useMediaQuery({ minWidth: 768 });
 
   let calculatedCardWidth = maxCardWidth;
 
@@ -197,7 +200,7 @@ export function HomeCarouselSection<T>({
               <BloomText style={styles.viewAllText}>{viewAllText}</BloomText>
             </TouchableOpacity>
           )}
-          {disableLeftArrow && disableRightArrow ? null : (
+          {isWide && !(disableLeftArrow && disableRightArrow) ? (
             <View style={styles.arrowGroup}>
               <TouchableOpacity
                 onPress={handleScrollLeft}
@@ -206,7 +209,7 @@ export function HomeCarouselSection<T>({
                 accessibilityRole="button"
                 accessibilityLabel="Scroll left"
               >
-                <Ionicons name="chevron-back" size={18} color={colors.COLOR_BLACK} />
+                <Ionicons name="chevron-back" size={16} color={colors.primaryColor} />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleScrollRight}
@@ -215,10 +218,10 @@ export function HomeCarouselSection<T>({
                 accessibilityRole="button"
                 accessibilityLabel="Scroll right"
               >
-                <Ionicons name="chevron-forward" size={18} color={colors.COLOR_BLACK} />
+                <Ionicons name="chevron-forward" size={16} color={colors.primaryColor} />
               </TouchableOpacity>
             </View>
-          )}
+          ) : null}
         </View>
       </View>
       <View
@@ -327,9 +330,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   arrowButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
