@@ -40,7 +40,6 @@ import { RentalModeProvider } from '@/context/RentalModeContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { OxyProvider } from '@oxyhq/services';
 import { BloomThemeProvider } from '@oxyhq/bloom';
-import { PostHogProvider } from 'posthog-react-native';
 import '../styles/global.css';
 import { OXY_BASE_URL } from '@/config';
 import { QueryClient, QueryClientProvider, onlineManager, focusManager } from '@tanstack/react-query';
@@ -100,8 +99,6 @@ export default function RootLayout() {
       backgroundColor: colors.primaryLight,
     },
   }), [isScreenNotMobile]);
-  const posthogApiKey = process.env.EXPO_PUBLIC_POSTHOG_KEY || 'phc_wRxFcPEaeeRHAKoMi4gzleLdNE9Ny4JEwYe8Z5h3soO';
-  const posthogHost = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
   const layoutScrollY = useMemo(() => new Animated.Value(0), []);
   const queryClient = useMemo(() => new QueryClient({
     defaultOptions: {
@@ -178,14 +175,6 @@ export default function RootLayout() {
               onFadeComplete={handleSplashFadeComplete}
             />
           ) : (
-            <PostHogProvider
-              apiKey={posthogApiKey}
-              options={{
-                host: posthogHost,
-                enableSessionReplay: true,
-              }}
-              autocapture
-            >
               <QueryClientProvider client={queryClient}>
                 <RentalModeProvider>
                 <OxyProvider baseURL={OXY_BASE_URL}>
@@ -236,7 +225,6 @@ export default function RootLayout() {
                 </OxyProvider>
                 </RentalModeProvider>
               </QueryClientProvider>
-            </PostHogProvider>
           )}
           </BloomThemeProvider>
         </GestureHandlerRootView>
