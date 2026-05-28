@@ -326,11 +326,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#666',
-    fontFamily: 'Phudu',
   },
   selectorButtonTextActive: {
     color: '#fff',
-    fontFamily: 'Phudu',
   },
   section: {
     backgroundColor: '#fff',
@@ -366,7 +364,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '500',
-    fontFamily: 'Phudu',
   },
   profileDetails: {
     marginTop: 8,

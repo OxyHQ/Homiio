@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
-import { phuduFontWeights } from '@/styles/fonts';
 import { cardShadow } from '@/constants/styles';
 import { ThemedText } from './ThemedText';
 
@@ -271,7 +270,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 24,
     color: colors.COLOR_BLACK,
-    fontFamily: phuduFontWeights.bold,
     fontWeight: 'bold',
   },
   viewAllText: {

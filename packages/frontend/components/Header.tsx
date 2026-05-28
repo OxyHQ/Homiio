@@ -3,7 +3,6 @@ import { StyleSheet, View, ViewStyle, Platform, Animated, Pressable } from 'reac
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { useRouter } from 'expo-router';
-import { phuduFontWeights } from '@/styles/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from './ThemedText';
 import { useLayoutScroll } from '@/context/LayoutScrollContext';
@@ -117,7 +116,6 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
                 <ThemedText
                   style={[
                     styles.topRowText,
-                    { fontFamily: phuduFontWeights.bold },
                     options?.subtitle && { fontSize: 14 },
                   ]}
                 >
@@ -136,7 +134,6 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
               <ThemedText
                 style={[
                   styles.topRowText,
-                  { fontFamily: phuduFontWeights.bold },
                   options?.subtitle && { fontSize: 14 },
                 ]}
               >

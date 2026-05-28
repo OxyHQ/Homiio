@@ -408,7 +408,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: colors.COLOR_BLACK_LIGHT_3,
-    fontFamily: 'Phudu',
   },
   propertyCard: {
     backgroundColor: 'white',
@@ -452,7 +451,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: colors.primaryColor,
-    fontFamily: 'Phudu',
   },
   landlordDetails: {
     flex: 1,
@@ -462,7 +460,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.COLOR_BLACK,
     marginBottom: 3,
-    fontFamily: 'Phudu',
   },
   ratingContainer: {
     flexDirection: 'row',
@@ -481,7 +478,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.COLOR_BLACK,
     marginBottom: 15,
-    fontFamily: 'Phudu',
   },
   datesContainer: {
     flexDirection: 'row',
@@ -513,7 +509,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.COLOR_BLACK,
     marginBottom: 5,
-    fontFamily: 'Phudu',
   },
   dateMonth: {
     fontSize: 12,
@@ -552,7 +547,6 @@ const styles = StyleSheet.create({
   selectedSlotText: {
     color: 'white',
     fontWeight: '600',
-    fontFamily: 'Phudu',
   },
   notesInput: {
     backgroundColor: 'white',

@@ -6,7 +6,6 @@ import {
 } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
-import { useFonts } from 'expo-font';
 import { Slot, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
@@ -117,40 +116,24 @@ export default function RootLayout() {
     },
   }), []);
 
-  // --- Font Loading (reduced from 22 to 10 — only essential weights) ---
-  const [loaded] = useFonts({
-    'Roboto-Regular': require('@/assets/fonts/Roboto/Roboto-Regular.ttf'),
-    'Roboto-Medium': require('@/assets/fonts/Roboto/Roboto-Medium.ttf'),
-    'Roboto-Bold': require('@/assets/fonts/Roboto/Roboto-Bold.ttf'),
-    'Inter-Regular': require('@/assets/fonts/inter/Inter-Regular.otf'),
-    'Inter-Medium': require('@/assets/fonts/inter/Inter-Medium.otf'),
-    'Inter-SemiBold': require('@/assets/fonts/inter/Inter-SemiBold.otf'),
-    'Inter-Bold': require('@/assets/fonts/inter/Inter-Bold.otf'),
-    // Phudu is a variable font — one file covers all weights
-    'Phudu-Regular': require('@/assets/fonts/Phudu-VariableFont_wght.ttf'),
-    'Phudu-Bold': require('@/assets/fonts/Phudu-VariableFont_wght.ttf'),
-  });
-
   // --- Keyboard State ---
   const keyboardVisible = useKeyboardVisibility();
 
   const initializeApp = useCallback(async () => {
     try {
-      if (loaded) {
-        if (Platform.OS !== 'web') {
-          await setupNotifications();
-          const hasPermission = await requestNotificationPermissions();
-          if (hasPermission && __DEV__) {
-            await scheduleDemoNotification();
-          }
+      if (Platform.OS !== 'web') {
+        await setupNotifications();
+        const hasPermission = await requestNotificationPermissions();
+        if (hasPermission && __DEV__) {
+          await scheduleDemoNotification();
         }
-        setSplashState((prev) => ({ ...prev, initializationComplete: true }));
-        await SplashScreen.hideAsync();
       }
+      setSplashState((prev) => ({ ...prev, initializationComplete: true }));
+      await SplashScreen.hideAsync();
     } catch (error) {
       console.warn('Failed to set up notifications:', error);
     }
-  }, [loaded]);
+  }, []);
 
   // --- Splash Fade Handler ---
   const handleSplashFadeComplete = useCallback(() => {
@@ -180,10 +163,10 @@ export default function RootLayout() {
   }, [initializeApp]);
 
   useEffect(() => {
-    if (loaded && splashState.initializationComplete && !splashState.startFade) {
+    if (splashState.initializationComplete && !splashState.startFade) {
       setSplashState((prev) => ({ ...prev, startFade: true }));
     }
-  }, [loaded, splashState.initializationComplete, splashState.startFade]);
+  }, [splashState.initializationComplete, splashState.startFade]);
 
   return (
     <View style={{ flex: 1 }}>

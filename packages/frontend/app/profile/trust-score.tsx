@@ -73,7 +73,6 @@ const styles = StyleSheet.create({
     color: colors.primaryLight,
     fontSize: 14,
     fontWeight: '600',
-    fontFamily: 'Phudu',
   },
   subtitle: {
     fontSize: 16,

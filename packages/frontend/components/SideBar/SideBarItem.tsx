@@ -92,7 +92,6 @@ export function SideBarItem({
               ...(Platform.select({
                 web: {
                   transition: 'color 200ms cubic-bezier(0.2, 0, 0, 1)',
-                  fontFamily: 'Phudu',
                   whiteSpace: 'nowrap',
                 },
               }) as any),

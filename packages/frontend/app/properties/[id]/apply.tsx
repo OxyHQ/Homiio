@@ -43,7 +43,6 @@ import { useOxy, showSignInModal } from '@oxyhq/services';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { PropertyType } from '@homiio/shared-types';
 import { ApiError } from '@/utils/api';
-import { phuduFontWeights } from '@/styles/fonts';
 
 const MAX_DOCUMENTS = 10;
 const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -677,7 +676,7 @@ const styles = StyleSheet.create({
     borderColor: colors.COLOR_BLACK_LIGHT_6,
   },
   propertyTitle: {
-    fontFamily: phuduFontWeights.bold,
+    fontWeight: '700',
     fontSize: 18,
     color: colors.COLOR_BLACK,
   },
@@ -700,7 +699,7 @@ const styles = StyleSheet.create({
     borderColor: colors.COLOR_BLACK_LIGHT_6,
   },
   sectionTitle: {
-    fontFamily: phuduFontWeights.bold,
+    fontWeight: '700',
     fontSize: 16,
     color: colors.COLOR_BLACK,
   },
@@ -752,7 +751,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   referenceTitle: {
-    fontFamily: phuduFontWeights.bold,
+    fontWeight: '700',
     fontSize: 14,
     color: colors.COLOR_BLACK,
   },

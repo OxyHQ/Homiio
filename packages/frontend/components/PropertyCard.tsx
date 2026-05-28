@@ -638,7 +638,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#222222',
     marginRight: 1,
-    fontFamily: 'Phudu',
   },
 
   // Note styles (shared)

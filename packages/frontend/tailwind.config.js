@@ -27,10 +27,6 @@ module.exports = {
           900: '#1e3a8a',
         },
       },
-      fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        'phudu': ['Phudu', 'sans-serif'],
-      },
     },
   },
   plugins: [],

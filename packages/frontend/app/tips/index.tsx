@@ -171,7 +171,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.COLOR_BLACK,
     marginBottom: 8,
-    fontFamily: 'Phudu',
     lineHeight: 24,
   },
   tipDescription: {

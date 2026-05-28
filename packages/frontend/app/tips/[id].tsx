@@ -223,7 +223,6 @@ const markdownStyles = StyleSheet.create({
     color: colors.COLOR_BLACK,
     marginBottom: 16,
     marginTop: 24,
-    fontFamily: 'Phudu',
   },
   heading2: {
     fontSize: 20,
@@ -231,7 +230,6 @@ const markdownStyles = StyleSheet.create({
     color: colors.COLOR_BLACK,
     marginBottom: 12,
     marginTop: 20,
-    fontFamily: 'Phudu',
   },
   heading3: {
     fontSize: 18,
@@ -239,7 +237,6 @@ const markdownStyles = StyleSheet.create({
     color: colors.COLOR_BLACK,
     marginBottom: 8,
     marginTop: 16,
-    fontFamily: 'Phudu',
   },
   paragraph: {
     fontSize: 16,
@@ -323,7 +320,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.COLOR_BLACK,
     marginBottom: 12,
-    fontFamily: 'Phudu',
     lineHeight: 32,
   },
   articleMeta: {

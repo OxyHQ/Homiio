@@ -6,7 +6,6 @@ import { useProperties } from '@/hooks';
 import { PropertyCard } from '@/components/PropertyCard';
 import { ThemedText } from '@/components/ThemedText';
 import { colors } from '@/styles/colors';
-import { phuduFontWeights } from '@/styles/fonts';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { FiltersBar } from '@/components/FiltersBar';
 import { FiltersBottomSheet, FilterSection, FilterValue } from '@/components/FiltersBar/FiltersBottomSheet';
@@ -290,7 +289,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 28,
         color: colors.COLOR_BLACK,
-        fontFamily: phuduFontWeights.bold,
+        fontWeight: '700',
         marginBottom: 8,
     },
     subtitle: {

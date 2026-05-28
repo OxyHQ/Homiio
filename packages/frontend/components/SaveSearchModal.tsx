@@ -286,7 +286,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: colors.COLOR_BLACK_LIGHT_3,
-    fontFamily: 'Phudu',
   },
   saveButton: {
     flex: 1,
@@ -306,7 +305,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: 'white',
-    fontFamily: 'Phudu',
   },
   loadingIcon: {
     marginRight: 4,

@@ -458,7 +458,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'white',
     marginBottom: 4,
-    fontFamily: 'Phudu',
   },
   heroSubtitle: {
     fontSize: 18,
@@ -495,7 +494,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.COLOR_BLACK,
     marginBottom: 4,
-    fontFamily: 'Phudu',
   },
   statLabel: {
     fontSize: 14,
@@ -513,7 +511,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.COLOR_BLACK,
     marginBottom: 16,
-    fontFamily: 'Phudu',
   },
   neighborhoodScroll: {
     paddingRight: 20,

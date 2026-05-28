@@ -218,7 +218,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 12,
     fontWeight: '600',
-    fontFamily: 'Phudu',
   },
   factorsContainer: {
     maxHeight: 300,

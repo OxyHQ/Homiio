@@ -377,7 +377,6 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 18,
-        fontFamily: 'Cereal-Bold',
         color: colors.primaryDark,
     },
     headerActions: {
@@ -410,7 +409,6 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 16,
         color: colors.primaryDark,
-        fontFamily: 'Inter-Regular',
     },
     clearButton: {
         padding: 4,
@@ -435,7 +433,6 @@ const styles = StyleSheet.create({
     },
     filterButtonText: {
         fontSize: 14,
-        fontFamily: 'Inter-Medium',
         color: colors.COLOR_BLACK_LIGHT_5,
     },
     filterButtonTextActive: {
@@ -451,13 +448,11 @@ const styles = StyleSheet.create({
     },
     permissionTitle: {
         fontSize: 16,
-        fontFamily: 'Cereal-Bold',
         color: colors.text,
         marginBottom: 8,
     },
     permissionMessage: {
         fontSize: 14,
-        fontFamily: 'Inter-Regular',
         color: colors.textSecondary,
         marginBottom: 12,
         lineHeight: 20,
@@ -471,7 +466,6 @@ const styles = StyleSheet.create({
     },
     permissionButtonText: {
         fontSize: 14,
-        fontFamily: 'Inter-Medium',
         color: colors.white,
     },
     scheduledSection: {
@@ -486,7 +480,6 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         fontSize: 16,
-        fontFamily: 'Cereal-Bold',
         color: colors.text,
     },
     clearAllButton: {
@@ -494,7 +487,6 @@ const styles = StyleSheet.create({
     },
     clearAllButtonText: {
         fontSize: 14,
-        fontFamily: 'Inter-Medium',
         color: colors.primary,
     },
     scheduledNotificationItem: {
@@ -513,7 +505,6 @@ const styles = StyleSheet.create({
     scheduledNotificationTitle: {
         flex: 1,
         fontSize: 14,
-        fontFamily: 'Cereal-Medium',
         color: colors.text,
         marginLeft: 8,
     },
@@ -522,13 +513,11 @@ const styles = StyleSheet.create({
     },
     scheduledNotificationBody: {
         fontSize: 13,
-        fontFamily: 'Inter-Regular',
         color: colors.textSecondary,
         marginBottom: 4,
     },
     scheduledNotificationTime: {
         fontSize: 12,
-        fontFamily: 'Inter-Regular',
         color: colors.textTertiary,
     },
     listContainer: {
@@ -543,14 +532,12 @@ const styles = StyleSheet.create({
     },
     emptyStateTitle: {
         fontSize: 18,
-        fontFamily: 'Cereal-Bold',
         color: colors.text,
         marginTop: 16,
         marginBottom: 8,
     },
     emptyStateMessage: {
         fontSize: 14,
-        fontFamily: 'Inter-Regular',
         color: colors.COLOR_BLACK_LIGHT_5,
         textAlign: 'center',
         paddingHorizontal: 32,
@@ -562,7 +549,6 @@ const styles = StyleSheet.create({
     },
     errorText: {
         fontSize: 14,
-        fontFamily: 'Inter-Regular',
         color: colors.error,
         textAlign: 'center',
         marginBottom: 12,
@@ -575,7 +561,6 @@ const styles = StyleSheet.create({
     },
     retryButtonText: {
         fontSize: 14,
-        fontFamily: 'Inter-Medium',
         color: colors.white,
     },
 });

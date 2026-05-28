@@ -1489,7 +1489,6 @@ const styles = StyleSheet.create({
     color: 'white',
     marginTop: 16,
     marginBottom: 8,
-    fontFamily: 'Phudu',
   },
   errorSubtext: {
     fontSize: 14,

@@ -13,7 +13,6 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
-import { phuduFontWeights } from '@/styles/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -793,7 +792,6 @@ const tipCardStyles = StyleSheet.create({
     color: colors.COLOR_BLACK,
     textTransform: 'uppercase' as const,
     letterSpacing: 0.3,
-    fontFamily: phuduFontWeights.medium,
   },
   content: {
     padding: 12,
@@ -803,7 +801,6 @@ const tipCardStyles = StyleSheet.create({
     fontWeight: '600' as any,
     color: colors.COLOR_BLACK,
     marginBottom: 6,
-    fontFamily: phuduFontWeights.medium,
     lineHeight: 20,
   },
   description: {
@@ -874,7 +871,6 @@ const createStyles = (isScreenNotMobile: boolean, windowHeight: number) => Style
     color: 'white',
     textAlign: 'center',
     marginBottom: 10,
-    fontFamily: phuduFontWeights.bold,
     fontWeight: 'bold',
   },
   heroSubtitle: {
@@ -904,7 +900,6 @@ const createStyles = (isScreenNotMobile: boolean, windowHeight: number) => Style
   sectionTitle: {
     fontSize: 24,
     color: colors.COLOR_BLACK,
-    fontFamily: phuduFontWeights.bold,
     fontWeight: 'bold',
   },
   viewAllText: {
@@ -938,7 +933,6 @@ const createStyles = (isScreenNotMobile: boolean, windowHeight: number) => Style
   featureTitle: {
     marginBottom: 4,
     textAlign: 'center',
-    fontFamily: phuduFontWeights.bold,
     fontWeight: 'bold',
   },
   featureDescription: {
@@ -1067,7 +1061,7 @@ const createStyles = (isScreenNotMobile: boolean, windowHeight: number) => Style
     fontSize: 11,
     color: colors.COLOR_BLACK,
     marginLeft: 4,
-    fontFamily: phuduFontWeights.medium,
+    fontWeight: '500',
   },
   cityIconContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.25)',
@@ -1084,7 +1078,7 @@ const createStyles = (isScreenNotMobile: boolean, windowHeight: number) => Style
     elevation: 2,
   },
   cityName: {
-    fontFamily: phuduFontWeights.semiBold,
+    fontWeight: '600',
     fontSize: 22,
     color: 'white',
     textAlign: 'left',
@@ -1095,7 +1089,6 @@ const createStyles = (isScreenNotMobile: boolean, windowHeight: number) => Style
     marginBottom: 4,
   },
   cityLocation: {
-    fontFamily: phuduFontWeights.regular,
     fontSize: 14,
     color: 'white',
     textAlign: 'left',
@@ -1179,7 +1172,6 @@ const createStyles = (isScreenNotMobile: boolean, windowHeight: number) => Style
     right: 16,
   },
   statChipNumber: {
-    fontFamily: 'Phudu',
     fontSize: 28,
     color: colors.COLOR_BLACK,
     marginBottom: 8,
@@ -1386,7 +1378,7 @@ const createStyles = (isScreenNotMobile: boolean, windowHeight: number) => Style
     fontSize: 16,
     color: colors.COLOR_BLACK,
     marginBottom: 6,
-    fontFamily: phuduFontWeights.medium,
+    fontWeight: '500',
     lineHeight: 20,
   },
   tipCardDescription: {
@@ -1444,7 +1436,7 @@ const createStyles = (isScreenNotMobile: boolean, windowHeight: number) => Style
     color: colors.COLOR_BLACK,
     flex: 1,
     marginRight: 12,
-    fontFamily: phuduFontWeights.medium,
+    fontWeight: '500',
   },
   faqAnswer: {
     paddingHorizontal: 12,

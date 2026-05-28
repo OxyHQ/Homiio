@@ -111,7 +111,6 @@ export function SavedPropertyItem({
                         style={{
                             fontSize: 14,
                             fontWeight: '500',
-                            fontFamily: 'Phudu',
                             color: colors.COLOR_BLACK,
                             ...(Platform.select({
                                 web: {

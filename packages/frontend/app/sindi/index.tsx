@@ -398,7 +398,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: colors.primaryDark,
-    fontFamily: 'Phudu',
     letterSpacing: -0.5,
   },
   sindiDescription: {
@@ -503,7 +502,6 @@ const styles = StyleSheet.create({
     color: 'white',
     marginTop: 16,
     marginBottom: 8,
-    fontFamily: 'Phudu',
   },
   errorSubtext: {
     fontSize: 14,
@@ -557,7 +555,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.primaryDark,
     marginBottom: 20,
-    fontFamily: 'Phudu',
     paddingHorizontal: 16,
     letterSpacing: -0.5,
   },

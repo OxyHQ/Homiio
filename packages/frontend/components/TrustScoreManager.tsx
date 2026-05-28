@@ -373,7 +373,6 @@ const styles = StyleSheet.create({
     color: colors.primaryLight,
     fontSize: 16,
     fontWeight: 'bold',
-    fontFamily: 'Phudu',
   },
   tipCard: {
     backgroundColor: colors.primaryLight_1,

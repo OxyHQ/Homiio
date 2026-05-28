@@ -229,6 +229,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     marginLeft: 6,
-    fontFamily: 'Phudu',
   },
 });

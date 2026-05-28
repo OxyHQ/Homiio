@@ -479,7 +479,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: APPLE_TEXT_PRIMARY,
     textAlign: 'center',
-    fontFamily: 'Phudu',
   },
   stepDescription: {
     fontSize: 16,
@@ -524,7 +523,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: APPLE_TEXT_PRIMARY,
     textAlign: 'center',
-    fontFamily: 'Phudu',
   },
   inviteButtons: {
     width: '100%',

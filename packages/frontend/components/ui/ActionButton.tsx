@@ -175,7 +175,6 @@ const styles = StyleSheet.create({
   },
   text: {
     fontWeight: '500',
-    fontFamily: 'Phudu',
   },
   disabled: {
     opacity: 0.5,

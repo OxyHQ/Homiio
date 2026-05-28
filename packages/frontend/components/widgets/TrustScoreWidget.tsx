@@ -254,7 +254,6 @@ const styles = StyleSheet.create({
     color: colors.primaryLight,
     fontSize: 14,
     fontWeight: '600',
-    fontFamily: 'Phudu',
   },
   noProfileContainer: {
     alignItems: 'center',
@@ -276,7 +275,6 @@ const styles = StyleSheet.create({
     color: colors.primaryLight,
     fontSize: 14,
     fontWeight: '600',
-    fontFamily: 'Phudu',
   },
   trustScoreText: {
     fontSize: 18,
@@ -345,7 +343,6 @@ const styles = StyleSheet.create({
     color: colors.primaryLight,
     fontSize: 13,
     fontWeight: 'bold',
-    fontFamily: 'Phudu',
   },
   improveButton: {
     backgroundColor: colors.primaryLight_1,
@@ -358,7 +355,6 @@ const styles = StyleSheet.create({
     color: colors.primaryLight,
     fontSize: 14,
     fontWeight: 'bold',
-    fontFamily: 'Phudu',
   },
   iconContainer: {
     width: 24,
@@ -381,7 +377,6 @@ const styles = StyleSheet.create({
   verificationPercentage: {
     fontSize: 20,
     fontWeight: 'bold',
-    fontFamily: 'Phudu',
   },
   verificationLabel: {
     fontSize: 12,

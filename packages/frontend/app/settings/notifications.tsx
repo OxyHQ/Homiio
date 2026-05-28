@@ -415,7 +415,6 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 18,
-        fontFamily: 'Cereal-Bold',
         color: colors.text,
     },
     headerSpacer: {
@@ -429,14 +428,12 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         fontSize: 16,
-        fontFamily: 'Cereal-Bold',
         color: colors.text,
         marginHorizontal: 16,
         marginBottom: 12,
     },
     sectionDescription: {
         fontSize: 14,
-        fontFamily: 'Inter-Regular',
         color: colors.textSecondary,
         marginHorizontal: 16,
         marginBottom: 16,
@@ -461,13 +458,11 @@ const styles = StyleSheet.create({
     },
     permissionTitle: {
         fontSize: 16,
-        fontFamily: 'Cereal-Medium',
         color: colors.text,
         marginBottom: 4,
     },
     permissionDescription: {
         fontSize: 14,
-        fontFamily: 'Inter-Regular',
         color: colors.textSecondary,
         lineHeight: 20,
     },
@@ -480,7 +475,6 @@ const styles = StyleSheet.create({
     },
     enableButtonText: {
         fontSize: 14,
-        fontFamily: 'Inter-Medium',
         color: colors.white,
     },
     preferenceItem: {
@@ -510,13 +504,11 @@ const styles = StyleSheet.create({
     },
     preferenceTitle: {
         fontSize: 16,
-        fontFamily: 'Cereal-Medium',
         color: colors.text,
         marginBottom: 4,
     },
     preferenceDescription: {
         fontSize: 14,
-        fontFamily: 'Inter-Regular',
         color: colors.textSecondary,
         lineHeight: 18,
     },
@@ -538,7 +530,6 @@ const styles = StyleSheet.create({
     },
     testButtonText: {
         fontSize: 14,
-        fontFamily: 'Inter-Medium',
         color: colors.primary,
         marginLeft: 6,
     },
@@ -554,7 +545,6 @@ const styles = StyleSheet.create({
     },
     clearAllButtonText: {
         fontSize: 16,
-        fontFamily: 'Inter-Medium',
         color: colors.error,
         marginLeft: 8,
     },
@@ -570,7 +560,6 @@ const styles = StyleSheet.create({
     iosInfoText: {
         flex: 1,
         fontSize: 14,
-        fontFamily: 'Inter-Regular',
         color: colors.textSecondary,
         marginLeft: 8,
         lineHeight: 20,
@@ -587,7 +576,6 @@ const styles = StyleSheet.create({
     androidInfoText: {
         flex: 1,
         fontSize: 14,
-        fontFamily: 'Inter-Regular',
         color: colors.textSecondary,
         marginLeft: 8,
         lineHeight: 20,

@@ -28,7 +28,6 @@ import { useOxy, showSignInModal } from '@oxyhq/services';
 import { SindiIcon, SindiIconActive } from '@/assets/icons';
 import { ProfileIcon, ProfileIconActive } from '@/assets/icons/profile-icon';
 import { webAlert } from '@/utils/api';
-import { phuduFontWeights } from '@/styles/fonts';
 import { useProfile } from '@/context/ProfileContext';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { useHostStatus } from '@/hooks/useHostStatus';
@@ -511,7 +510,6 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK,
     fontSize: 20,
     fontWeight: 'bold',
-    fontFamily: 'Phudu',
     flexWrap: 'wrap',
     textAlign: 'left',
     maxWidth: 200,
@@ -535,7 +533,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 13,
     fontWeight: 'bold',
-    fontFamily: 'Phudu',
   },
   signInButton: {
     justifyContent: 'center',
@@ -549,7 +546,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 13,
     fontWeight: 'bold',
-    fontFamily: 'Phudu',
   },
   navigationSection: {
     justifyContent: 'flex-start',
@@ -581,7 +577,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     margin: 0,
-    fontFamily: 'Phudu',
   },
   footer: {
     flexDirection: 'column',
@@ -607,7 +602,6 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     marginBottom: 4,
     paddingHorizontal: 8,
-    fontFamily: 'Phudu',
     ...(Platform.select({
       web: {
         whiteSpace: 'nowrap',
@@ -632,24 +626,22 @@ const styles = StyleSheet.create({
   emptyRecentlySavedText: {
     fontSize: 12,
     color: colors.primaryDark_2,
-    fontFamily: 'Phudu',
     textAlign: 'center',
   },
   title: {
     fontSize: 24,
-    fontFamily: phuduFontWeights.bold,
+    fontWeight: '700',
     color: colors.primaryDark,
     marginBottom: 16,
   },
   menuItemText: {
     fontSize: 16,
-    fontFamily: phuduFontWeights.medium,
+    fontWeight: '500',
     color: colors.primaryDark,
     marginLeft: 12,
   },
   footerText: {
     fontSize: 14,
-    fontFamily: phuduFontWeights.regular,
     color: colors.primaryDark_2,
     textAlign: 'center',
   },

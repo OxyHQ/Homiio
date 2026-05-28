@@ -1,15 +1,3 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/*
- * Override Bloom Typography font tokens with Homiio's brand fonts on
- * web. Bloom defaults to BlomusModernus for both display and sans, but
- * Homiio uses Phudu for headings and Roboto for body across the app.
- * Native picks these up via the explicit `fontFamily` in ThemedText
- * and component-level styles; the variables below only affect web.
- */
-:root {
-  --bloom-font-display: 'Phudu-Bold', Phudu, 'Roboto-Bold', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --bloom-font-sans: 'Roboto-Regular', Roboto, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-}

@@ -146,7 +146,6 @@ export function SavedFolderItem({
                             fontSize: 10,
                             fontWeight: 'bold',
                             color: 'white',
-                            fontFamily: 'Phudu',
                             textAlign: 'center',
                             lineHeight: 16,
                         }}>
@@ -171,7 +170,6 @@ export function SavedFolderItem({
                         style={{
                             fontSize: 14,
                             fontWeight: '500',
-                            fontFamily: 'Phudu',
                             color: colors.COLOR_BLACK,
                             ...(Platform.select({
                                 web: {

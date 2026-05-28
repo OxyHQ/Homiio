@@ -168,7 +168,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: '600',
     fontSize: 14,
-    fontFamily: 'Phudu',
   },
   advancedButton: {
     backgroundColor: colors.primaryColor + '10',
@@ -182,6 +181,5 @@ const styles = StyleSheet.create({
     color: colors.primaryColor,
     fontWeight: '600',
     fontSize: 14,
-    fontFamily: 'Phudu',
   },
 });
