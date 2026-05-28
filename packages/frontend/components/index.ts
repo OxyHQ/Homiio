@@ -15,7 +15,6 @@ export { ThemedText } from './ThemedText';
 export { ContractCard } from './ContractCard';
 export { PaymentCard } from './PaymentCard';
 export { EcoCertification } from './EcoCertification';
-export { VerificationBadge } from './VerificationBadge';
 export { RoommateMatch } from './RoommateMatch';
 export { PropertyMonitoring } from './PropertyMonitoring';
 export { ListItem } from './ListItem';

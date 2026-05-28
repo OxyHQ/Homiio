@@ -15,7 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Header } from '@/components/Header';
 import { ThemedText } from '@/components/ThemedText';
 import { ActionButton } from '@/components/ui/ActionButton';
-import { FilterChip } from '@/components/ui/FilterChip';
+import { Chip } from '@oxyhq/bloom/chip';
 import { colors } from '@/styles/colors';
 import { useOxy } from '@oxyhq/services';
 import { api } from '@/utils/api';
@@ -157,14 +157,15 @@ export default function DonatePage() {
     const renderDonationTier = (tier: DonationTier) => (
         <View key={tier.id} style={[styles.tierCard, tier.popular && styles.popularTier]}>
             {tier.popular && (
-                <FilterChip
-                    label="Most Popular"
-                    selected={true}
-                    onPress={() => { }}
-                    disabled={true}
-                    style={styles.popularBadge}
+                <Chip
+                    selected
+                    disabled
+                    variant="solid"
                     size="small"
-                />
+                    style={styles.popularBadge}
+                >
+                    Most Popular
+                </Chip>
             )}
 
             <View style={styles.tierHeader}>

@@ -1,7 +1,6 @@
 // Reusable UI Components
 export { StatusBadge, type StatusType } from './StatusBadge';
 export { ActionButton, type ActionButtonVariant } from './ActionButton';
-export { FilterChip } from './FilterChip';
 export { EmptyState } from './EmptyState';
 export { ProgressBar } from './ProgressBar';
 export { SectionCard } from './SectionCard';
