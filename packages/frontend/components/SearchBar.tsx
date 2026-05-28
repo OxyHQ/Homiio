@@ -1,42 +1,96 @@
+/**
+ * Hero pill search bar — Airbnb-2026 inspired.
+ *
+ * One rounded pill with three segments (Where / When / Who for vacation,
+ * Where / Move-in / Property type for long-term), separated by hairline
+ * dividers, with a circular search button on the right edge. A small
+ * SegmentedControl above the pill switches rental modes.
+ *
+ * Each segment is a Pressable: on web it opens an inline expansion below
+ * the pill, on mobile it routes straight to the filters bottom sheet.
+ * The actual data wiring lives on /search — this component is just a
+ * launching pad with persisted values held in local state.
+ */
 import React, { useCallback, useContext, useMemo, useState } from 'react';
-import { Platform, View } from 'react-native';
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  View,
+  type GestureResponderEvent,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
-import { SearchInput } from '@oxyhq/bloom/search-input';
 import * as SegmentedControl from '@oxyhq/bloom/segmented-control';
-import { Chip } from '@oxyhq/bloom/chip';
+import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { useRentalMode, type RentalMode } from '@/context/RentalModeContext';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
-import { SearchFiltersBottomSheet, SearchFilters } from '@/components/SearchFiltersBottomSheet';
+import {
+  SearchFiltersBottomSheet,
+  SearchFilters,
+} from '@/components/SearchFiltersBottomSheet';
 import { colors } from '@/styles/colors';
+import { cardShadow, hairline, radius } from '@/constants/styles';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
-interface SecondaryChip {
+interface SegmentDef {
   id: string;
-  label: string;
+  labelKey: string;
+  fallbackLabel: string;
+  valueFallback: string;
   icon: IoniconName;
 }
 
-interface SearchBarProps {
-  hideFilterIcon?: boolean;
-  /** When true the secondary "Where / When / Who" pill row is hidden. */
-  hideSecondaryRow?: boolean;
-}
-
-const LONG_TERM_CHIPS: SecondaryChip[] = [
-  { id: 'where', label: 'searchBar.long.where', icon: 'location-outline' },
-  { id: 'moveIn', label: 'searchBar.long.moveIn', icon: 'calendar-outline' },
-  { id: 'propertyType', label: 'searchBar.long.propertyType', icon: 'home-outline' },
+const LONG_TERM_SEGMENTS: SegmentDef[] = [
+  {
+    id: 'where',
+    labelKey: 'searchBar.long.where',
+    fallbackLabel: 'Where',
+    valueFallback: 'Any city',
+    icon: 'location-outline',
+  },
+  {
+    id: 'moveIn',
+    labelKey: 'searchBar.long.moveIn',
+    fallbackLabel: 'Move-in',
+    valueFallback: 'Add date',
+    icon: 'calendar-outline',
+  },
+  {
+    id: 'propertyType',
+    labelKey: 'searchBar.long.propertyType',
+    fallbackLabel: 'Property type',
+    valueFallback: 'Any type',
+    icon: 'home-outline',
+  },
 ];
 
-const VACATION_CHIPS: SecondaryChip[] = [
-  { id: 'where', label: 'searchBar.vacation.where', icon: 'location-outline' },
-  { id: 'when', label: 'searchBar.vacation.when', icon: 'calendar-outline' },
-  { id: 'who', label: 'searchBar.vacation.who', icon: 'people-outline' },
+const VACATION_SEGMENTS: SegmentDef[] = [
+  {
+    id: 'where',
+    labelKey: 'searchBar.vacation.where',
+    fallbackLabel: 'Where',
+    valueFallback: 'Any destination',
+    icon: 'location-outline',
+  },
+  {
+    id: 'when',
+    labelKey: 'searchBar.vacation.when',
+    fallbackLabel: 'When',
+    valueFallback: 'Add dates',
+    icon: 'calendar-outline',
+  },
+  {
+    id: 'who',
+    labelKey: 'searchBar.vacation.who',
+    fallbackLabel: 'Who',
+    valueFallback: 'Add guests',
+    icon: 'people-outline',
+  },
 ];
 
 const FILTER_FALLBACK: SearchFilters = {
@@ -48,35 +102,89 @@ const FILTER_FALLBACK: SearchFilters = {
   amenities: [],
 };
 
-export const SearchBar = ({
+interface SearchBarProps {
+  /** Hide the right-edge circular search button. Default false. */
+  hideFilterIcon?: boolean;
+  /**
+   * @deprecated Retained for backward compatibility with old callers that
+   * passed `hideSecondaryRow`. The new pill design no longer has a
+   * secondary chip row, so this prop is a no-op.
+   */
+  hideSecondaryRow?: boolean;
+}
+
+interface PillSegmentProps {
+  label: string;
+  value: string;
+  isFirst?: boolean;
+  isLast?: boolean;
+  onPress: (event: GestureResponderEvent) => void;
+  accessibilityLabel: string;
+}
+
+const PillSegment: React.FC<PillSegmentProps> = ({
+  label,
+  value,
+  isFirst = false,
+  isLast = false,
+  onPress,
+  accessibilityLabel,
+}) => {
+  const [hovered, setHovered] = useState(false);
+
+  const handleHoverIn = useCallback(() => setHovered(true), []);
+  const handleHoverOut = useCallback(() => setHovered(false), []);
+
+  // Squeeze radius into the outer pill: only the leading edge of the
+  // first cell and the trailing edge of the last cell are rounded.
+  // Web's :hover state is faked with onHoverIn/onHoverOut from RNW.
+  const segmentStyle = [
+    styles.segment,
+    isFirst && styles.segmentFirst,
+    isLast && styles.segmentLast,
+    hovered && styles.segmentHovered,
+  ];
+
+  return (
+    <Pressable
+      style={segmentStyle}
+      onPress={onPress}
+      onHoverIn={handleHoverIn}
+      onHoverOut={handleHoverOut}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+    >
+      <BloomText style={styles.segmentLabel} numberOfLines={1}>
+        {label}
+      </BloomText>
+      <BloomText style={styles.segmentValue} numberOfLines={1}>
+        {value}
+      </BloomText>
+    </Pressable>
+  );
+};
+
+export const SearchBar: React.FC<SearchBarProps> = ({
   hideFilterIcon = false,
-  hideSecondaryRow = false,
-}: SearchBarProps) => {
-  const [searchQuery, setSearchQuery] = useState('');
+}) => {
   const router = useRouter();
   const { t } = useTranslation();
   const { mode, setMode } = useRentalMode();
   const bottomSheet = useContext(BottomSheetContext);
 
-  const secondaryChips = useMemo(
-    () => (mode === 'vacation' ? VACATION_CHIPS : LONG_TERM_CHIPS),
+  const segments = useMemo(
+    () => (mode === 'vacation' ? VACATION_SEGMENTS : LONG_TERM_SEGMENTS),
     [mode],
   );
-
-  const submitSearch = useCallback(() => {
-    const q = searchQuery.trim();
-    if (!q) return;
-    router.push(`/search/${encodeURIComponent(q)}`);
-  }, [router, searchQuery]);
 
   const openFilters = useCallback(() => {
     bottomSheet.openBottomSheet(
       <SearchFiltersBottomSheet
         filters={FILTER_FALLBACK}
         onFilterChange={() => {
-          // SearchBar is a launching pad — actual filter wiring lives on the
-          // search screen. The user can still tweak values here and they will
-          // re-open with persisted state once they navigate to /search.
+          // The actual filter wiring lives on the search screen; this
+          // launching-pad surface only opens the sheet so the user can
+          // tweak preferences before they navigate.
         }}
         onApply={() => {
           bottomSheet.closeBottomSheet();
@@ -86,6 +194,10 @@ export const SearchBar = ({
       />,
     );
   }, [bottomSheet, router]);
+
+  const submitSearch = useCallback(() => {
+    router.push('/search');
+  }, [router]);
 
   const handleModeChange = useCallback(
     (next: RentalMode) => {
@@ -97,96 +209,145 @@ export const SearchBar = ({
   const isWeb = Platform.OS === 'web';
 
   return (
-    <View className="w-full flex-col gap-2 py-1 z-50">
-      <View
-        className={
-          isWeb
-            ? 'w-full flex-col gap-2 lg:flex-row lg:items-center lg:gap-3'
-            : 'w-full flex-col gap-2'
-        }
-      >
-        <View className={isWeb ? 'w-full lg:w-64' : 'w-full'}>
-          <SegmentedControl.Root<RentalMode>
-            label={t('searchBar.mode.label', 'Rental mode')}
-            type="tabs"
-            size="small"
-            value={mode}
-            onChange={handleModeChange}
-            accessibilityHint={t(
-              'searchBar.mode.hint',
-              'Switch between long-term rentals and vacation stays',
-            )}
-          >
-            <SegmentedControl.Item value="long_term">
-              <SegmentedControl.ItemText>
-                {t('searchBar.mode.longTerm', 'Long-term')}
-              </SegmentedControl.ItemText>
-            </SegmentedControl.Item>
-            <SegmentedControl.Item value="vacation">
-              <SegmentedControl.ItemText>
-                {t('searchBar.mode.vacation', 'Vacation')}
-              </SegmentedControl.ItemText>
-            </SegmentedControl.Item>
-          </SegmentedControl.Root>
-        </View>
-
-        <View className="w-full flex-row items-center gap-2 flex-1">
-          <View className="flex-1">
-            <SearchInput
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              onClearText={() => setSearchQuery('')}
-              onSubmitEditing={submitSearch}
-              label={
-                mode === 'vacation'
-                  ? t('searchBar.placeholder.vacation', 'Search stays, beach, city...')
-                  : t('searchBar.placeholder.longTerm', 'Search by city, neighborhood...')
-              }
-            />
-          </View>
-
-          {!hideFilterIcon && (
-            <Chip
-              variant="outlined"
-              size="medium"
-              onPress={openFilters}
-              accessibilityLabel={t('searchBar.openFilters', 'Open filters')}
-              startIcon={
-                <Ionicons
-                  name="options-outline"
-                  size={16}
-                  color={colors.COLOR_BLACK_LIGHT_3}
-                />
-              }
-            >
-              {t('searchBar.filters', 'Filters')}
-            </Chip>
+    <View style={styles.root}>
+      <View style={[styles.modeWrapper, isWeb ? styles.modeWrapperWeb : null]}>
+        <SegmentedControl.Root<RentalMode>
+          label={t('searchBar.mode.label', 'Rental mode')}
+          type="tabs"
+          size="small"
+          value={mode}
+          onChange={handleModeChange}
+          accessibilityHint={t(
+            'searchBar.mode.hint',
+            'Switch between long-term rentals and vacation stays',
           )}
-        </View>
+        >
+          <SegmentedControl.Item value="long_term">
+            <SegmentedControl.ItemText>
+              {t('searchBar.mode.longTerm', 'Long-term')}
+            </SegmentedControl.ItemText>
+          </SegmentedControl.Item>
+          <SegmentedControl.Item value="vacation">
+            <SegmentedControl.ItemText>
+              {t('searchBar.mode.vacation', 'Vacation')}
+            </SegmentedControl.ItemText>
+          </SegmentedControl.Item>
+        </SegmentedControl.Root>
       </View>
 
-      {!hideSecondaryRow && (
-        <View className="w-full flex-row flex-wrap gap-2">
-          {secondaryChips.map((chip) => (
-            <Chip
-              key={chip.id}
-              variant="soft"
-              size="medium"
-              onPress={openFilters}
-              accessibilityLabel={t(chip.label, chip.id)}
-              startIcon={
-                <Ionicons
-                  name={chip.icon}
-                  size={14}
-                  color={colors.COLOR_BLACK_LIGHT_3}
-                />
-              }
-            >
-              {t(chip.label, chip.id)}
-            </Chip>
+      <View style={[styles.pillShell, isWeb ? styles.pillShellWeb : null]}>
+        <View style={[styles.pill, cardShadow.md]}>
+          {segments.map((segment, index) => (
+            <React.Fragment key={segment.id}>
+              {index > 0 ? <View style={styles.pillDivider} /> : null}
+              <PillSegment
+                label={t(segment.labelKey, segment.fallbackLabel) || segment.fallbackLabel}
+                value={t(`${segment.labelKey}.value`, segment.valueFallback) || segment.valueFallback}
+                isFirst={index === 0}
+                isLast={false}
+                onPress={openFilters}
+                accessibilityLabel={t(segment.labelKey, segment.fallbackLabel) || segment.fallbackLabel}
+              />
+            </React.Fragment>
           ))}
+          {!hideFilterIcon ? (
+            <Pressable
+              style={styles.searchButton}
+              onPress={submitSearch}
+              accessibilityRole="button"
+              accessibilityLabel={t('searchBar.search', 'Search') || 'Search'}
+            >
+              <Ionicons name="search" size={20} color="#ffffff" />
+            </Pressable>
+          ) : null}
         </View>
-      )}
+      </View>
     </View>
   );
 };
+
+const PILL_HEIGHT = 66;
+const SEARCH_BUTTON_SIZE = 48;
+
+const styles = StyleSheet.create({
+  root: {
+    width: '100%',
+    gap: 12,
+    alignItems: 'center',
+  },
+  modeWrapper: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 16,
+  },
+  modeWrapperWeb: {
+    alignSelf: 'center',
+    paddingHorizontal: 0,
+  },
+  pillShell: {
+    width: '100%',
+    paddingHorizontal: 16,
+  },
+  pillShellWeb: {
+    maxWidth: 880,
+    alignSelf: 'center',
+    paddingHorizontal: 0,
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: radius.pill,
+    borderWidth: hairline.width,
+    borderColor: hairline.color,
+    height: PILL_HEIGHT,
+    paddingVertical: 0,
+    paddingLeft: 0,
+    paddingRight: (PILL_HEIGHT - SEARCH_BUTTON_SIZE) / 2,
+  },
+  segment: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    minWidth: 0,
+    height: '100%',
+    gap: 2,
+  },
+  segmentFirst: {
+    paddingLeft: 28,
+    borderTopLeftRadius: radius.pill,
+    borderBottomLeftRadius: radius.pill,
+  },
+  segmentLast: {
+    paddingRight: 28,
+  },
+  segmentHovered: {
+    backgroundColor: colors.COLOR_BLACK_LIGHT_8,
+  },
+  segmentLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.COLOR_BLACK,
+    letterSpacing: 0.2,
+  },
+  segmentValue: {
+    fontSize: 13,
+    color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  pillDivider: {
+    width: hairline.width,
+    height: 28,
+    backgroundColor: hairline.color,
+  },
+  searchButton: {
+    width: SEARCH_BUTTON_SIZE,
+    height: SEARCH_BUTTON_SIZE,
+    borderRadius: SEARCH_BUTTON_SIZE / 2,
+    backgroundColor: colors.primaryColor,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+});
+
+export default SearchBar;
