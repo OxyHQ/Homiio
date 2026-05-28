@@ -23,7 +23,10 @@ import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { PropertyType, PropertyImage, Property, RentMode } from '@homiio/shared-types';
 // getPropertyImageSource handled inside components
 import { HeaderSection } from '../../../components/property/HeaderSection';
-import { PhotoGallery } from '../../../components/property/PhotoGallery';
+import { PhotoGrid } from '../../../components/property/PhotoGrid';
+import { HostStatsCard } from '../../../components/property/HostStatsCard';
+import { SleepArrangement } from '../../../components/property/SleepArrangement';
+import { StickyBookingCard } from '../../../components/property/StickyBookingCard';
 import { LandlordSection } from '../../../components/property/LandlordSection';
 import { SindiSection } from '../../../components/property/SindiSection';
 import { SindiAnalysis } from '../../../components/property/SindiAnalysis';
@@ -43,6 +46,7 @@ import { PropertyActionBar } from '../../../components/property/PropertyActionBa
 
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useLayoutScroll } from '@/context/LayoutScrollContext';
+import { useIsDesktop } from '@/hooks/useOptimizedMediaQuery';
 
 import { SaveButton } from '@/components/SaveButton';
 import * as Linking from 'expo-linking';
@@ -77,6 +81,7 @@ export default function PropertyDetailPage() {
   const { oxyServices, activeSessionId } = useOxy();
   const layoutScrollContext = useLayoutScroll();
   const { mode: rentalMode } = useRentalMode();
+  const isDesktop = useIsDesktop();
 
 
   const {
@@ -450,43 +455,65 @@ export default function PropertyDetailPage() {
           size={property.size}
           images={property.images as any}
         />
-        <PhotoGallery
+        <PhotoGrid
           images={property.images as any}
           t={t as any}
         />
-        <View style={styles.infoContainer}>
-          <BasicInfoSection property={apiProperty as any} hasActiveViewing={hasActiveViewing} onViewingsPress={() => router.push('/viewings')} />
-          {apiProperty &&
-          rentalMode === 'vacation' &&
-          (apiProperty.rentMode === RentMode.VACATION ||
-            apiProperty.rentMode === RentMode.BOTH) ? (
-            <BookingWidget property={apiProperty} />
+        <View style={isDesktop ? styles.twoColumnContainer : styles.infoContainer}>
+          <View style={isDesktop ? styles.mainColumn : undefined}>
+            {apiProperty ? (
+              <HostStatsCard
+                property={apiProperty as any}
+                landlordProfile={landlordProfile}
+              />
+            ) : null}
+            <BasicInfoSection property={apiProperty as any} hasActiveViewing={hasActiveViewing} onViewingsPress={() => router.push('/viewings')} />
+            {!isDesktop && apiProperty &&
+            rentalMode === 'vacation' &&
+            (apiProperty.rentMode === RentMode.VACATION ||
+              apiProperty.rentMode === RentMode.BOTH) ? (
+              <BookingWidget property={apiProperty} />
+            ) : null}
+            {!isDesktop && apiProperty &&
+            rentalMode === 'long_term' &&
+            apiProperty.rentMode !== RentMode.VACATION ? (
+              <ApplyToRentCTA propertyId={String(apiProperty._id ?? apiProperty.id)} />
+            ) : null}
+            <PropertyDetailsCard property={apiProperty as any} />
+            <PropertyFeatures property={apiProperty as any} />
+            {apiProperty && rentalMode === 'vacation' &&
+            (apiProperty.rentMode === RentMode.VACATION ||
+              apiProperty.rentMode === RentMode.BOTH) ? (
+              <SleepArrangement property={apiProperty as any} />
+            ) : null}
+            <PricingDetails property={apiProperty as any} />
+            <HouseRules property={apiProperty as any} />
+            <LocationSection property={apiProperty as any} />
+            <PropertyOverview property={apiProperty as any} />
+            <NeighborhoodInfo property={apiProperty as any} />
+            <AvailabilitySection property={apiProperty as any} />
+            <AmenitiesSection property={apiProperty as any} />
+            <ReviewsSection property={apiProperty as any} variant="preview" />
+            <LandlordSection
+              property={apiProperty as any}
+              landlordProfile={landlordProfile as any}
+              ownerProperties={ownerProperties as any}
+              onApplyPublic={handlePublicHousingApply}
+              t={t as any}
+            />
+            <SindiSection property={apiProperty as any} />
+            <SindiAnalysis property={apiProperty as any} />
+            <FraudWarning text={t('Never pay or transfer funds outside the Homio platform') || 'Never pay or transfer funds outside the Homio platform'} />
+          </View>
+          {isDesktop && apiProperty ? (
+            <View style={styles.sideColumn}>
+              <StickyBookingCard
+                property={apiProperty as any}
+                priceLabel={property.price}
+                priceSubtitle={property.location}
+              />
+            </View>
           ) : null}
-          {apiProperty &&
-          rentalMode === 'long_term' &&
-          apiProperty.rentMode !== RentMode.VACATION ? (
-            <ApplyToRentCTA propertyId={String(apiProperty._id ?? apiProperty.id)} />
-          ) : null}
-          <PropertyDetailsCard property={apiProperty as any} />
-          <PropertyFeatures property={apiProperty as any} />
-          <PricingDetails property={apiProperty as any} />
-          <HouseRules property={apiProperty as any} />
-          <LocationSection property={apiProperty as any} />
-          <PropertyOverview property={apiProperty as any} />
-          <NeighborhoodInfo property={apiProperty as any} />
-          <AvailabilitySection property={apiProperty as any} />
-          <AmenitiesSection property={apiProperty as any} />
-          <ReviewsSection property={apiProperty as any} variant="preview" />
-          <LandlordSection
-            property={apiProperty as any}
-            landlordProfile={landlordProfile as any}
-            ownerProperties={ownerProperties as any}
-            onApplyPublic={handlePublicHousingApply}
-            t={t as any}
-          />
-          <SindiSection property={apiProperty as any} />
-          <SindiAnalysis property={apiProperty as any} />
-          <FraudWarning text={t('Never pay or transfer funds outside the Homio platform') || 'Never pay or transfer funds outside the Homio platform'} />
         </View>
       </Animated.ScrollView>
       <PropertyActionBar
@@ -513,6 +540,23 @@ const styles = StyleSheet.create({
   errorText: { marginTop: 10, marginBottom: 20, fontSize: 18, color: colors.COLOR_BLACK_LIGHT_3 },
   goBackButton: { backgroundColor: colors.primaryColor, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 25 },
   infoContainer: { padding: 20 },
+  twoColumnContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    gap: 48,
+    maxWidth: 1280,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  mainColumn: {
+    flex: 1,
+    minWidth: 0,
+  },
+  sideColumn: {
+    width: 380,
+    paddingTop: 12,
+  },
   webHeaderWrapper: { position: 'sticky' as any, top: 0, left: 0, right: 0, zIndex: 1000 },
   nativeHeaderWrapper: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000 },
   viewingIconContainer: { position: 'relative' },
