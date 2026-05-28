@@ -9,7 +9,6 @@ import {
   Alert,
   Image,
 } from 'react-native';
-import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { ThemedText } from './ThemedText';
@@ -211,7 +210,7 @@ export function SaveToFolderBottomSheet({
   );
 
   return (
-    <BottomSheetView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <ThemedText style={styles.title}>Save to Folder</ThemedText>
         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -261,7 +260,7 @@ export function SaveToFolderBottomSheet({
           </>
         )}
       </ScrollView>
-    </BottomSheetView>
+    </View>
   );
 }
 
