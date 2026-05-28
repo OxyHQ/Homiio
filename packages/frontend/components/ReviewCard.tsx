@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from './ThemedText';
 import { colors } from '@/styles/colors';
+import { radius, spacing, withShadow } from '@/constants/styles';
 
 export interface ReviewData {
     _id: string;
@@ -335,24 +336,15 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
 const styles = StyleSheet.create({
     reviewCard: {
         backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: '#e9ecef',
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 3,
+        borderRadius: radius.lg,
+        padding: spacing.xl,
+        marginBottom: spacing.lg,
+        ...withShadow('sm'),
     },
     compactCard: {
-        padding: 16,
-        marginBottom: 12,
-        borderRadius: 14,
+        padding: spacing.lg,
+        marginBottom: spacing.md,
+        borderRadius: radius.md,
     },
     reviewHeader: {
         flexDirection: 'row',

@@ -25,7 +25,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text as BloomText, H2 } from '@oxyhq/bloom/typography';
 
 import { colors } from '@/styles/colors';
-import { cardShadow, radius } from '@/constants/styles';
+import { radius, spacing, withShadow } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
 
 interface SleepArrangementProps {
@@ -71,7 +71,7 @@ export const SleepArrangement: React.FC<SleepArrangementProps> = ({ property }) 
         {bedrooms.map((bedroom) => (
           <View
             key={bedroom.id}
-            style={[styles.bedroomCard, cardShadow.sm]}
+            style={[styles.bedroomCard, withShadow('sm')]}
           >
             <Ionicons name="bed-outline" size={26} color={colors.COLOR_BLACK} />
             <BloomText style={styles.bedroomTitle}>{bedroom.title}</BloomText>
@@ -87,29 +87,27 @@ export const SleepArrangement: React.FC<SleepArrangementProps> = ({ property }) 
 
 const styles = StyleSheet.create({
   section: {
-    paddingTop: 12,
-    paddingBottom: 24,
+    paddingTop: spacing.md,
+    paddingBottom: spacing['2xl'],
   },
   title: {
     fontSize: 22,
     fontWeight: '700',
     color: colors.COLOR_BLACK,
-    marginHorizontal: 16,
-    marginBottom: 16,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
   },
   scrollContent: {
-    gap: 12,
-    paddingHorizontal: 16,
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
   bedroomCard: {
     width: 200,
     height: 140,
     backgroundColor: '#ffffff',
     borderRadius: radius.lg,
-    padding: 20,
+    padding: spacing.xl,
     justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
   },
   bedroomTitle: {
     fontSize: 16,

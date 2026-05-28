@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
+import { radius, spacing, withShadow } from '@/constants/styles';
 import { StatusBadge, type StatusType } from './ui/StatusBadge';
 
 // Type assertion for Ionicons compatibility
@@ -153,15 +154,11 @@ export function PaymentCard({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.primaryLight,
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 12,
-    marginBottom: 16,
-    shadowColor: colors.primaryDark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.lg,
+    ...withShadow('sm'),
   },
   header: {
     flexDirection: 'row',

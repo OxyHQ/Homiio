@@ -8,6 +8,7 @@ import { ReservationStatusBadge } from '@/components/ReservationStatusBadge';
 import { useProperty } from '@/hooks';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { colors } from '@/styles/colors';
+import { radius, spacing, withShadow } from '@/constants/styles';
 
 export interface ReservationCardProps {
   reservation: Reservation;
@@ -100,11 +101,10 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     backgroundColor: '#ffffff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
+    borderRadius: radius.lg,
     overflow: 'hidden',
-    marginBottom: 12,
+    marginBottom: spacing.md,
+    ...withShadow('sm'),
   },
   thumbWrapper: {
     width: 96,
@@ -119,14 +119,14 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
-    padding: 12,
+    padding: spacing.md,
     justifyContent: 'space-between',
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
+    gap: spacing.sm,
   },
   title: {
     fontSize: 15,
@@ -142,9 +142,9 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_4,
   },
   actions: {
-    marginTop: 8,
+    marginTop: spacing.sm,
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
   },
 });
 

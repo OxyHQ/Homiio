@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, Image, StyleSheet, TouchableOpacity, ViewStyle, Platform } from 'react-native';
 import { colors } from '@/styles/colors';
+import { radius, spacing } from '@/constants/styles';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 import { Property, PriceUnit, RentMode } from '@homiio/shared-types';
@@ -286,8 +287,8 @@ export function PropertyCard({
             isSaved={isPropertySavedState}
             size={variant === 'compact' ? 5 : 24}
             variant="heart"
-            color="#222"
-            activeColor="#EF4444"
+            color={colors.COLOR_BLACK}
+            activeColor={colors.busy}
             style={styles.saveButton}
             property={property}
             showCount={showSaveCount}
@@ -469,17 +470,17 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     height: 'auto',
-    gap: 8,
+    gap: spacing.sm,
   },
   horizontalContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: spacing.sm,
   },
   imageContainer: {
     position: 'relative',
-    backgroundColor: '#f8f8f8',
-    borderRadius: 16,
+    backgroundColor: colors.COLOR_BLACK_LIGHT_8,
+    borderRadius: radius.lg,
     overflow: 'hidden',
   },
   horizontalImageContainer: {
@@ -501,24 +502,24 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#222222',
+    color: colors.COLOR_BLACK,
     lineHeight: 20,
   },
   location: {
     fontSize: 12,
-    color: '#717171',
+    color: colors.COLOR_BLACK_LIGHT_4,
     lineHeight: 18,
   },
   horizontalLocation: {
     fontSize: 14,
-    color: '#717171',
+    color: colors.COLOR_BLACK_LIGHT_4,
     lineHeight: 18,
   },
   features: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 4,
+    gap: spacing.xs,
   },
   feature: {
     flexDirection: 'row',
@@ -526,12 +527,12 @@ const styles = StyleSheet.create({
   },
   featureText: {
     fontSize: 12,
-    color: '#717171',
+    color: colors.COLOR_BLACK_LIGHT_4,
   },
   featureSeparator: {
     fontSize: 12,
-    color: '#717171',
-    marginHorizontal: 4,
+    color: colors.COLOR_BLACK_LIGHT_4,
+    marginHorizontal: spacing.xs,
   },
   priceContainer: {
     marginTop: 'auto',
@@ -539,23 +540,23 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#222222',
+    color: colors.COLOR_BLACK,
   },
   priceUnit: {
     fontSize: 12,
     fontWeight: '400',
-    color: '#717171',
+    color: colors.COLOR_BLACK_LIGHT_4,
   },
 
   // Badge and overlay styles (shared)
   saveButton: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: spacing.sm,
+    right: spacing.sm,
     zIndex: 2,
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 20,
-    padding: 8,
+    padding: spacing.sm,
   },
   statusChip: {
     width: 24,
@@ -566,44 +567,44 @@ const styles = StyleSheet.create({
   },
   ecoBadge: {
     position: 'absolute',
-    top: 8,
-    left: 8,
+    top: spacing.sm,
+    left: spacing.sm,
     zIndex: 2,
   },
   verifiedBadge: {
     position: 'absolute',
-    top: 8,
+    top: spacing.sm,
     left: 36,
     zIndex: 2,
   },
   typeIcon: {
     position: 'absolute',
-    bottom: 8,
-    left: 8,
+    bottom: spacing.sm,
+    left: spacing.sm,
     zIndex: 2,
   },
   sourceBadge: {
     position: 'absolute',
-    bottom: 8,
-    right: 8,
+    bottom: spacing.sm,
+    right: spacing.sm,
     zIndex: 2,
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
     borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   instantBookBadge: {
     position: 'absolute',
-    bottom: 8,
-    left: 8,
+    bottom: spacing.sm,
+    left: spacing.sm,
     zIndex: 2,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xs,
     backgroundColor: 'rgba(0, 0, 0, 0.78)',
     borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   instantBookBadgeText: {
     fontSize: 11,
@@ -619,8 +620,8 @@ const styles = StyleSheet.create({
   },
   ratingBadge: {
     position: 'absolute',
-    top: 8,
-    left: 8,
+    top: spacing.sm,
+    left: spacing.sm,
     zIndex: 2,
     flexDirection: 'row',
     alignItems: 'center',
@@ -636,32 +637,32 @@ const styles = StyleSheet.create({
   ratingBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#222222',
+    color: colors.COLOR_BLACK,
     marginRight: 1,
   },
 
   // Note styles (shared)
   noteContainer: {
-    marginTop: 8,
+    marginTop: spacing.sm,
     backgroundColor: '#ffffff',
     borderRadius: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.md,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#efefef',
+    borderColor: colors.COLOR_BLACK_LIGHT_6,
     ...(Platform.OS === 'web'
       ? { boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }
       : { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 }),
   },
   noteEmpty: {
-    backgroundColor: '#fafafa',
+    backgroundColor: colors.COLOR_BLACK_LIGHT_8,
     borderStyle: 'dashed',
   },
   noteRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
+    gap: spacing.sm,
   },
   noteIconWrap: {
     width: 22,
@@ -673,20 +674,20 @@ const styles = StyleSheet.create({
   },
   noteText: {
     fontSize: 13,
-    color: '#444444',
+    color: colors.COLOR_BLACK_LIGHT_3,
     lineHeight: 18,
   },
   notePlaceholder: {
-    color: '#999999',
+    color: colors.COLOR_BLACK_LIGHT_5,
     fontStyle: 'italic',
   },
 
   // Footer and overlay styles (shared)
   footer: {
-    marginTop: 8,
-    paddingTop: 8,
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: colors.COLOR_BLACK_LIGHT_6,
   },
   selectedImage: {
     borderWidth: 2,
