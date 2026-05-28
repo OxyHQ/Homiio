@@ -1,5 +1,9 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Platform, View, StyleSheet, Animated, AppState, AppStateStatus } from 'react-native';
+import { Platform, View, StyleSheet, AppState, AppStateStatus } from 'react-native';
+import Animated, {
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from 'react-native-reanimated';
 import {
   SafeAreaProvider,
   initialWindowMetrics,
@@ -99,7 +103,12 @@ export default function RootLayout() {
       backgroundColor: colors.primaryLight,
     },
   }), [isScreenNotMobile]);
-  const layoutScrollY = useMemo(() => new Animated.Value(0), []);
+  const layoutScrollY = useSharedValue(0);
+  const layoutScrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      layoutScrollY.value = event.contentOffset.y;
+    },
+  });
   const queryClient = useMemo(() => new QueryClient({
     defaultOptions: {
       queries: {
@@ -191,10 +200,7 @@ export default function RootLayout() {
                                       <Animated.ScrollView
                                         contentContainerStyle={styles.container}
                                         style={{ flex: 1 }}
-                                        onScroll={Animated.event(
-                                          [{ nativeEvent: { contentOffset: { y: layoutScrollY } } }],
-                                          { useNativeDriver: false }
-                                        )}
+                                        onScroll={layoutScrollHandler}
                                         scrollEventThrottle={16}
                                       >
                                         <SideBar />

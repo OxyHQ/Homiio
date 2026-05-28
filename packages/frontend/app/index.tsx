@@ -29,10 +29,14 @@ import {
   StyleSheet,
   RefreshControl,
   Image,
-  Animated,
-  ScrollView,
   useWindowDimensions,
 } from 'react-native';
+import Animated, {
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -279,18 +283,32 @@ export default function HomePage() {
   }, [loadProperties]);
 
   const layoutScroll = useLayoutScroll();
-  const scrollY = layoutScroll?.scrollY || new Animated.Value(0);
+  const localScrollY = useSharedValue(0);
+  const scrollY = layoutScroll?.scrollY ?? localScrollY;
   const { height: windowHeight } = useWindowDimensions();
   const styles = useMemo(
     () => createStyles(isWide, isXL, windowHeight),
     [isWide, isXL, windowHeight],
   );
 
-  const heroParallax = scrollY.interpolate({
-    inputRange: [-300, 0, 800],
-    outputRange: [-120, 0, 240],
-    extrapolate: 'clamp',
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
   });
+
+  const heroParallaxStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateY: interpolate(
+          scrollY.value,
+          [-300, 0, 800],
+          [-120, 0, 240],
+          'clamp',
+        ),
+      },
+    ],
+  }));
 
   const sectionGap = resolveSectionSpacing(isWide);
 
@@ -329,20 +347,17 @@ export default function HomePage() {
 
   return (
     <View style={styles.root}>
-      <ScrollView
+      <Animated.ScrollView
         style={styles.container}
         contentContainerStyle={{ paddingBottom: spacing['5xl'] }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false },
-        )}
+        onScroll={scrollHandler}
         scrollEventThrottle={16}
       >
         {/* === Hero canvas === */}
         <View style={[styles.heroSection, { paddingTop: insets.top + (isWide ? 32 : 56) }]}>
-          <Animated.View style={[styles.heroImageWrap, { transform: [{ translateY: heroParallax }] }]}>
+          <Animated.View style={[styles.heroImageWrap, heroParallaxStyle]}>
             <Image
               source={require('@/assets/images/hero.jpg')}
               style={styles.heroImage}
@@ -509,7 +524,7 @@ export default function HomePage() {
         <View style={{ marginTop: spacing['3xl'] }}>
           <HomeFooterStrip chunks={footerChunks} />
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }

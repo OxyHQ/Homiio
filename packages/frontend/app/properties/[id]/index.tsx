@@ -20,15 +20,17 @@ import React, {
   useState,
 } from 'react';
 import {
-  Animated,
   Platform,
   Pressable,
   Share,
   StyleSheet,
   View,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
 } from 'react-native';
+import Animated, {
+  runOnJS,
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -383,19 +385,18 @@ export default function PropertyDetailPage() {
     }
   }, [apiProperty, rentalMode, router, handleContact, handlePublicHousingApply]);
 
-  // Sticky header trigger driven by scrollY. Uses RN Animated to avoid
-  // re-rendering the whole page on every scroll tick.
-  const localScrollY = useRef(new Animated.Value(0)).current;
+  // Sticky header trigger driven by scrollY. Uses Reanimated SharedValue
+  // so the value stays UI-thread native; React state is toggled via runOnJS
+  // only when crossing the threshold.
+  const localScrollY = useSharedValue(0);
   const scrollY = layoutScrollContext?.scrollY ?? localScrollY;
 
-  const handleScroll = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const y = e.nativeEvent.contentOffset.y;
-      scrollY.setValue(y);
-      setStickyHeaderVisible(y > STICKY_HEADER_THRESHOLD);
+  const handleScroll = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+      runOnJS(setStickyHeaderVisible)(event.contentOffset.y > STICKY_HEADER_THRESHOLD);
     },
-    [scrollY],
-  );
+  });
 
   if (isLoading) {
     return <PropertyDetailSkeleton />;
