@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { type ErrorInfo, type ReactNode, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -9,11 +9,12 @@ import {
   Platform,
 } from 'react-native';
 import { colors } from '@/styles/colors';
-import { withTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import { ThemedText } from './ThemedText';
 import { Ionicons } from '@expo/vector-icons';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
+import { ErrorBoundary as BloomErrorBoundary } from '@oxyhq/bloom';
 
 interface Props {
   children: ReactNode;
@@ -21,137 +22,239 @@ interface Props {
   onError?: (error: Error, errorInfo: ErrorInfo) => void;
   showErrorDetails?: boolean;
   maxRetries?: number;
-  t: (key: string) => string;
 }
 
-interface State {
-  hasError: boolean;
-  error: Error | null;
-  errorInfo: ErrorInfo | null;
-  retryCount: number;
-  showDetails: boolean;
-  errorId: string;
-}
-
-class ErrorBoundaryBase extends Component<Props, State> {
-  public state: State = {
-    hasError: false,
-    error: null,
-    errorInfo: null,
-    retryCount: 0,
-    showDetails: false,
-    errorId: '',
-  };
-
-  static getDerivedStateFromError(error: Error): State {
-    const errorId = `ERR_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    return {
-      hasError: true,
-      error,
-      errorInfo: null,
-      retryCount: 0,
-      showDetails: false,
-      errorId,
-    };
-  }
-
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Error caught by boundary:', error, errorInfo);
-
-    // Update state with error info
-    this.setState({ errorInfo });
-
-    // Call custom error handler if provided
-    this.props.onError?.(error, errorInfo);
-
-    // Log error details for debugging
-    this.logErrorDetails(error, errorInfo);
-  }
-
-  private logErrorDetails = (error: Error, errorInfo: ErrorInfo) => {
-    // Only log detailed errors in development
+/**
+ * App-wide error boundary. Delegates the catching mechanics to Bloom's
+ * `ErrorBoundary` (so the React class semantics stay battle-tested upstream)
+ * and renders Homiio's rich fallback via the render-prop API added in
+ * `@oxyhq/bloom@0.6.0`.
+ */
+const ErrorBoundary = ({
+  children,
+  fallback,
+  onError,
+  showErrorDetails = true,
+  maxRetries = 3,
+}: Props) => {
+  const handleError = (error: Error, errorInfo: ErrorInfo) => {
+    // Log in development; production reporting (PostHog/Sentry) lives in onError.
     if (__DEV__) {
-      const errorDetails = {
-        errorId: this.state.errorId,
+      console.error('ErrorBoundary:', {
         message: error.message,
         name: error.name,
         componentStack: errorInfo.componentStack,
         platform: Platform.OS,
-      };
-      console.error('ErrorBoundary:', errorDetails);
+      });
     }
-    // In production, send to error reporting service (PostHog, Sentry, etc.)
+    onError?.(error, errorInfo);
   };
 
-  private handleRetry = () => {
-    const { maxRetries = 3 } = this.props;
-    const newRetryCount = this.state.retryCount + 1;
+  return (
+    <BloomErrorBoundary
+      onError={handleError}
+      fallback={
+        fallback !== undefined
+          ? fallback
+          : ({ error, errorInfo, retry, retryCount }) => (
+              <ErrorFallback
+                error={error}
+                errorInfo={errorInfo}
+                retry={retry}
+                retryCount={retryCount}
+                maxRetries={maxRetries}
+                showErrorDetails={showErrorDetails}
+              />
+            )
+      }>
+      {children}
+    </BloomErrorBoundary>
+  );
+};
 
-    if (newRetryCount > maxRetries) {
+interface ErrorFallbackProps {
+  error: Error;
+  errorInfo: ErrorInfo | null;
+  retry: () => void;
+  retryCount: number;
+  maxRetries: number;
+  showErrorDetails: boolean;
+}
+
+/**
+ * Rich fallback UI rendered when an error is caught. Co-located with the
+ * boundary because it is intimately tied to the error context shape.
+ *
+ * Uses local state for the per-mount details-disclosure toggle and a derived
+ * `errorId` so each crash gets a stable identifier for the report.
+ */
+function ErrorFallback({
+  error,
+  errorInfo,
+  retry,
+  retryCount,
+  maxRetries,
+  showErrorDetails,
+}: ErrorFallbackProps) {
+  const { t } = useTranslation();
+  const [showDetails, setShowDetails] = useState(false);
+  // Stable id per error instance — `error` identity changes when the boundary
+  // catches a fresh throw, so this re-derives correctly without effects.
+  const errorId = React.useMemo(
+    () => `ERR_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+    [error],
+  );
+
+  const handleRetry = () => {
+    if (retryCount >= maxRetries) {
       Alert.alert(
-        this.props.t('error.boundary.maxRetriesTitle'),
-        this.props.t('error.boundary.maxRetriesMessage'),
+        t('error.boundary.maxRetriesTitle'),
+        t('error.boundary.maxRetriesMessage'),
         [
-          {
-            text: this.props.t('error.boundary.reportIssue'),
-            onPress: this.handleReportIssue,
-          },
-          {
-            text: this.props.t('error.boundary.forceRetry'),
-            onPress: this.handleForceRetry,
-          },
+          { text: t('error.boundary.reportIssue'), onPress: handleReportIssue },
+          { text: t('error.boundary.forceRetry'), onPress: retry },
         ],
       );
       return;
     }
-
-    this.setState({
-      hasError: false,
-      error: null,
-      errorInfo: null,
-      retryCount: newRetryCount,
-      showDetails: false,
-    });
+    retry();
   };
 
-  private handleForceRetry = () => {
-    this.setState({
-      hasError: false,
-      error: null,
-      errorInfo: null,
-      retryCount: 0,
-      showDetails: false,
-      errorId: '',
-    });
-  };
-
-  private handleToggleDetails = () => {
-    this.setState({ showDetails: !this.state.showDetails });
-  };
-
-  private handleReportIssue = async () => {
-    const errorReport = this.generateErrorReport();
+  const handleReportIssue = async () => {
+    const errorReport = generateErrorReport({ error, errorInfo, errorId });
 
     try {
       await Clipboard.setString(errorReport);
       Alert.alert(
-        this.props.t('error.boundary.reportCopiedTitle'),
-        this.props.t('error.boundary.reportCopiedMessage'),
+        t('error.boundary.reportCopiedTitle'),
+        t('error.boundary.reportCopiedMessage'),
       );
     } catch {
       Alert.alert(
-        this.props.t('error.boundary.reportFailedTitle'),
-        this.props.t('error.boundary.reportFailedMessage'),
+        t('error.boundary.reportFailedTitle'),
+        t('error.boundary.reportFailedMessage'),
       );
     }
   };
 
-  private generateErrorReport = (): string => {
-    const { error, errorInfo, errorId } = this.state;
+  return (
+    <ScrollView contentContainerStyle={styles.container}>
+      <View style={styles.iconContainer}>
+        <Ionicons name="warning" size={64} color="#ff4444" />
+      </View>
 
-    return `
-🚨 Error Report
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      <ThemedText style={styles.title}>{t('error.boundary.title')}</ThemedText>
+      <ThemedText style={styles.message}>{t('error.boundary.message')}</ThemedText>
+
+      <View style={styles.errorIdContainer}>
+        <ThemedText style={styles.errorIdLabel}>{t('error.boundary.errorId')}:</ThemedText>
+        <ThemedText style={styles.errorIdText}>{errorId}</ThemedText>
+      </View>
+
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity style={[styles.button, styles.retryButton]} onPress={handleRetry}>
+          <Ionicons name="refresh" size={20} color="white" style={styles.buttonIcon} />
+          <ThemedText style={styles.retryText}>
+            {t('error.boundary.retry')}
+            {retryCount > 0 && ` (${retryCount}/${maxRetries})`}
+          </ThemedText>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.button, styles.reportButton]} onPress={handleReportIssue}>
+          <Ionicons
+            name="bug"
+            size={20}
+            color={colors.primaryColor}
+            style={styles.buttonIcon}
+          />
+          <ThemedText style={styles.reportText}>{t('error.boundary.reportIssue')}</ThemedText>
+        </TouchableOpacity>
+      </View>
+
+      {showErrorDetails && (
+        <TouchableOpacity
+          style={styles.detailsToggle}
+          onPress={() => setShowDetails((prev) => !prev)}>
+          <ThemedText style={styles.detailsToggleText}>
+            {showDetails
+              ? t('error.boundary.hideDetails')
+              : t('error.boundary.showDetails')}
+          </ThemedText>
+          <Ionicons
+            name={showDetails ? 'chevron-up' : 'chevron-down'}
+            size={16}
+            color={colors.COLOR_BLACK_LIGHT_3}
+          />
+        </TouchableOpacity>
+      )}
+
+      {showDetails && (
+        <View style={styles.errorDetails}>
+          <ThemedText style={styles.errorDetailsTitle}>
+            {t('error.boundary.technicalDetails')}
+          </ThemedText>
+
+          <View style={styles.errorSection}>
+            <ThemedText style={styles.errorSectionTitle}>Error Message:</ThemedText>
+            <ThemedText style={styles.errorText}>{error.message || 'Unknown error'}</ThemedText>
+          </View>
+
+          <View style={styles.errorSection}>
+            <ThemedText style={styles.errorSectionTitle}>Error Type:</ThemedText>
+            <ThemedText style={styles.errorText}>{error.name || 'Unknown'}</ThemedText>
+          </View>
+
+          {error.stack && (
+            <View style={styles.errorSection}>
+              <ThemedText style={styles.errorSectionTitle}>Stack Trace:</ThemedText>
+              <ScrollView style={styles.stackContainer} nestedScrollEnabled>
+                <ThemedText style={styles.stackText}>{error.stack}</ThemedText>
+              </ScrollView>
+            </View>
+          )}
+
+          {errorInfo?.componentStack && (
+            <View style={styles.errorSection}>
+              <ThemedText style={styles.errorSectionTitle}>Component Stack:</ThemedText>
+              <ScrollView style={styles.stackContainer} nestedScrollEnabled>
+                <ThemedText style={styles.stackText}>{errorInfo.componentStack}</ThemedText>
+              </ScrollView>
+            </View>
+          )}
+
+          <View style={styles.deviceInfo}>
+            <ThemedText style={styles.errorSectionTitle}>Device Information:</ThemedText>
+            <ThemedText style={styles.deviceInfoText}>
+              Platform: {Platform.OS} {Platform.Version || ''}
+            </ThemedText>
+            <ThemedText style={styles.deviceInfoText}>
+              Device: {Device.brand || 'unknown'} {Device.modelName || ''}
+            </ThemedText>
+            <ThemedText style={styles.deviceInfoText}>
+              OS: {Device.osName || 'unknown'} {Device.osVersion || ''}
+            </ThemedText>
+            <ThemedText style={styles.deviceInfoText}>
+              App Version: {Constants.expoConfig?.version || 'unknown'}
+            </ThemedText>
+          </View>
+        </View>
+      )}
+    </ScrollView>
+  );
+}
+
+function generateErrorReport({
+  error,
+  errorInfo,
+  errorId,
+}: {
+  error: Error;
+  errorInfo: ErrorInfo | null;
+  errorId: string;
+}): string {
+  return `
+Error Report
+============================================================
 
 Error ID: ${errorId}
 Timestamp: ${new Date().toISOString()}
@@ -159,159 +262,24 @@ App Version: ${Constants.expoConfig?.version || 'unknown'}
 Platform: ${Platform.OS} ${Platform.Version || ''}
 
 Device Information:
-• Brand: ${Device.brand || 'unknown'}
-• Model: ${Device.modelName || 'unknown'}
-• OS: ${Device.osName || 'unknown'} ${Device.osVersion || ''}
+- Brand: ${Device.brand || 'unknown'}
+- Model: ${Device.modelName || 'unknown'}
+- OS: ${Device.osName || 'unknown'} ${Device.osVersion || ''}
 
 Error Details:
-• Name: ${error?.name || 'Unknown'}
-• Message: ${error?.message || 'No message'}
+- Name: ${error.name || 'Unknown'}
+- Message: ${error.message || 'No message'}
 
 Stack Trace:
-${error?.stack || 'No stack trace available'}
+${error.stack || 'No stack trace available'}
 
 Component Stack:
 ${errorInfo?.componentStack || 'No component stack available'}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+============================================================
 Please share this report with the development team.
-        `.trim();
-  };
-
-  render() {
-    if (this.state.hasError) {
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
-
-      const { error, errorInfo, showDetails, retryCount, errorId } = this.state;
-      const { maxRetries = 3, showErrorDetails = true } = this.props;
-
-      return (
-        <ScrollView contentContainerStyle={styles.container}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="warning" size={64} color="#ff4444" />
-          </View>
-
-          <ThemedText style={styles.title}>{this.props.t('error.boundary.title')}</ThemedText>
-
-          <ThemedText style={styles.message}>{this.props.t('error.boundary.message')}</ThemedText>
-
-          {errorId && (
-            <View style={styles.errorIdContainer}>
-              <ThemedText style={styles.errorIdLabel}>
-                {this.props.t('error.boundary.errorId')}:
-              </ThemedText>
-              <ThemedText style={styles.errorIdText}>{errorId}</ThemedText>
-            </View>
-          )}
-
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, styles.retryButton]}
-              onPress={this.handleRetry}
-            >
-              <Ionicons name="refresh" size={20} color="white" style={styles.buttonIcon} />
-              <ThemedText style={styles.retryText}>
-                {this.props.t('error.boundary.retry')}
-                {retryCount > 0 && ` (${retryCount}/${maxRetries})`}
-              </ThemedText>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.button, styles.reportButton]}
-              onPress={this.handleReportIssue}
-            >
-              <Ionicons
-                name="bug"
-                size={20}
-                color={colors.primaryColor}
-                style={styles.buttonIcon}
-              />
-              <ThemedText style={styles.reportText}>
-                {this.props.t('error.boundary.reportIssue')}
-              </ThemedText>
-            </TouchableOpacity>
-          </View>
-
-          {showErrorDetails && (
-            <TouchableOpacity style={styles.detailsToggle} onPress={this.handleToggleDetails}>
-              <ThemedText style={styles.detailsToggleText}>
-                {showDetails
-                  ? this.props.t('error.boundary.hideDetails')
-                  : this.props.t('error.boundary.showDetails')}
-              </ThemedText>
-              <Ionicons
-                name={showDetails ? 'chevron-up' : 'chevron-down'}
-                size={16}
-                color={colors.COLOR_BLACK_LIGHT_3}
-              />
-            </TouchableOpacity>
-          )}
-
-          {showDetails && (
-            <View style={styles.errorDetails}>
-              <ThemedText style={styles.errorDetailsTitle}>
-                {this.props.t('error.boundary.technicalDetails')}
-              </ThemedText>
-
-              <View style={styles.errorSection}>
-                <ThemedText style={styles.errorSectionTitle}>Error Message:</ThemedText>
-                <ThemedText style={styles.errorText}>
-                  {error?.message || 'Unknown error'}
-                </ThemedText>
-              </View>
-
-              <View style={styles.errorSection}>
-                <ThemedText style={styles.errorSectionTitle}>Error Type:</ThemedText>
-                <ThemedText style={styles.errorText}>{error?.name || 'Unknown'}</ThemedText>
-              </View>
-
-              {error?.stack && (
-                <View style={styles.errorSection}>
-                  <ThemedText style={styles.errorSectionTitle}>Stack Trace:</ThemedText>
-                  <ScrollView style={styles.stackContainer} nestedScrollEnabled>
-                    <ThemedText style={styles.stackText}>{error.stack}</ThemedText>
-                  </ScrollView>
-                </View>
-              )}
-
-              {errorInfo?.componentStack && (
-                <View style={styles.errorSection}>
-                  <ThemedText style={styles.errorSectionTitle}>Component Stack:</ThemedText>
-                  <ScrollView style={styles.stackContainer} nestedScrollEnabled>
-                    <ThemedText style={styles.stackText}>{errorInfo.componentStack}</ThemedText>
-                  </ScrollView>
-                </View>
-              )}
-
-              <View style={styles.deviceInfo}>
-                <ThemedText style={styles.errorSectionTitle}>Device Information:</ThemedText>
-                <ThemedText style={styles.deviceInfoText}>
-                  Platform: {Platform.OS} {Platform.Version || ''}
-                </ThemedText>
-                <ThemedText style={styles.deviceInfoText}>
-                  Device: {Device.brand || 'unknown'} {Device.modelName || ''}
-                </ThemedText>
-                <ThemedText style={styles.deviceInfoText}>
-                  OS: {Device.osName || 'unknown'} {Device.osVersion || ''}
-                </ThemedText>
-                <ThemedText style={styles.deviceInfoText}>
-                  App Version: {Constants.expoConfig?.version || 'unknown'}
-                </ThemedText>
-              </View>
-            </View>
-          )}
-        </ScrollView>
-      );
-    }
-
-    return this.props.children;
-  }
+  `.trim();
 }
-
-// Wrap the component with translation HOC
-const ErrorBoundary = withTranslation()(ErrorBoundaryBase);
 
 const styles = StyleSheet.create({
   container: {

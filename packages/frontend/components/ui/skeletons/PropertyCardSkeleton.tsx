@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Skeleton, SkeletonText } from './Skeleton';
+import { Skeleton } from '@oxyhq/bloom';
+import { TextLines } from './TextLines';
 import { PropertyCardVariant, PropertyCardOrientation } from '../../PropertyCard';
 
 export interface PropertyCardSkeletonProps {
@@ -83,28 +84,47 @@ export function PropertyCardSkeleton({
             : { width: '100%', aspectRatio: 1 },
         ]}
       >
-        <Skeleton
-          style={StyleSheet.flatten([
-            styles.image,
-            { height: finalImageHeight },
-          ])}
+        <Skeleton.Box
+          width="100%"
+          height={finalImageHeight}
+          borderRadius={16}
         />
 
         {/* Save Button Skeleton */}
         {showSaveButton && (
-          <Skeleton style={styles.saveButtonSkeleton} />
+          <Skeleton.Box
+            width={32}
+            height={32}
+            borderRadius={16}
+            style={styles.saveButtonSkeleton}
+          />
         )}
 
         {/* Rating Badge Skeleton */}
         {showRating && (
-          <Skeleton style={styles.ratingBadgeSkeleton} />
+          <Skeleton.Box
+            width={50}
+            height={24}
+            borderRadius={12}
+            style={styles.ratingBadgeSkeleton}
+          />
         )}
 
         {/* Type Icon Skeleton */}
-        <Skeleton style={styles.typeIconSkeleton} />
+        <Skeleton.Box
+          width={32}
+          height={32}
+          borderRadius={16}
+          style={styles.typeIconSkeleton}
+        />
 
         {/* Verified Badge Skeleton */}
-        <Skeleton style={styles.verifiedBadgeSkeleton} />
+        <Skeleton.Box
+          width={24}
+          height={24}
+          borderRadius={12}
+          style={styles.verifiedBadgeSkeleton}
+        />
       </View>
 
       {/* Content */}
@@ -115,7 +135,7 @@ export function PropertyCardSkeleton({
         ]}
       >
         {/* Title */}
-        <SkeletonText
+        <TextLines
           style={StyleSheet.flatten([
             styles.title,
             variant === 'compact' ? styles.compactTitle : null,
@@ -127,7 +147,7 @@ export function PropertyCardSkeleton({
 
         {/* Location */}
         {showLocation && (
-          <SkeletonText
+          <TextLines
             style={StyleSheet.flatten([
               styles.location,
               variant === 'compact' ? styles.compactLocation : null,
@@ -141,21 +161,22 @@ export function PropertyCardSkeleton({
         {/* Features */}
         {showFeatures && (
           <View style={styles.features}>
-            <SkeletonText style={StyleSheet.flatten([styles.featureText, { width: 60 }])} />
-            <SkeletonText style={StyleSheet.flatten([styles.featureText, { width: 70 }])} />
-            <SkeletonText style={StyleSheet.flatten([styles.featureText, { width: 50 }])} />
+            <Skeleton.Box width={60} height={14} />
+            <Skeleton.Box width={70} height={14} />
+            <Skeleton.Box width={50} height={14} />
           </View>
         )}
 
         {/* Price */}
         {showPrice && (
           <View style={styles.priceContainer}>
-            <SkeletonText
+            <Skeleton.Box
+              width={120}
+              height={18}
               style={StyleSheet.flatten([
                 styles.price,
                 variant === 'compact' ? styles.compactPrice : null,
                 variant === 'featured' ? styles.featuredPrice : null,
-                { width: 120 },
               ])}
             />
           </View>
@@ -188,11 +209,6 @@ const styles = StyleSheet.create({
   horizontalImageContainer: {
     flexShrink: 0,
   },
-  image: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 16,
-  },
 
   // Content
   content: {
@@ -207,11 +223,9 @@ const styles = StyleSheet.create({
 
   // Text elements
   title: {
-    height: 20,
     marginBottom: 4,
   },
   location: {
-    height: 16,
     marginBottom: 4,
   },
   features: {
@@ -220,14 +234,10 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 4,
   },
-  featureText: {
-    height: 14,
-  },
   priceContainer: {
     marginTop: 'auto',
   },
   price: {
-    height: 18,
     marginTop: 4,
   },
 
@@ -236,36 +246,24 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
     zIndex: 2,
   },
   ratingBadgeSkeleton: {
     position: 'absolute',
     top: 8,
     left: 8,
-    width: 50,
-    height: 24,
-    borderRadius: 12,
     zIndex: 2,
   },
   typeIconSkeleton: {
     position: 'absolute',
     top: 8,
     left: 8,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
     zIndex: 1,
   },
   verifiedBadgeSkeleton: {
     position: 'absolute',
     top: 40,
     right: 8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
     zIndex: 2,
   },
 
@@ -284,28 +282,12 @@ const styles = StyleSheet.create({
   },
 
   // Variant text styles
-  compactTitle: {
-    height: 16,
-  },
-  featuredTitle: {
-    height: 22,
-  },
-  horizontalTitle: {
-    height: 18,
-  },
-  compactLocation: {
-    height: 14,
-  },
-  featuredLocation: {
-    height: 16,
-  },
-  horizontalLocation: {
-    height: 16,
-  },
-  compactPrice: {
-    height: 16,
-  },
-  featuredPrice: {
-    height: 20,
-  },
+  compactTitle: {},
+  featuredTitle: {},
+  horizontalTitle: {},
+  compactLocation: {},
+  featuredLocation: {},
+  horizontalLocation: {},
+  compactPrice: {},
+  featuredPrice: {},
 });
