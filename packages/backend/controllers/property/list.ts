@@ -205,12 +205,12 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       } catch { }
     }
 
-    // Exclude draft properties by default unless explicitly requested
+    // Exclude draft properties by default unless explicitly requested.
+    // When a `status` param is provided it has already been mapped to the
+    // canonical PropertyStatus enum above (e.g. `available` -> `published`),
+    // so we must NOT overwrite that mapping with the raw query value here.
     if (!req.query.includeDrafts && !req.query.status) {
       filters.status = { $ne: 'draft' };
-    } else if (req.query.status && req.query.status !== 'draft') {
-      // If status is specified and it's not 'draft', ensure it's not a draft
-      filters.status = req.query.status;
     }
 
     // ---- Hybrid rental-mode filters ----
