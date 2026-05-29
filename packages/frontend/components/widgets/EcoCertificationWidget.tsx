@@ -22,7 +22,7 @@ export function EcoCertificationWidget() {
         </Text>
         <Button
           style={styles.learnMoreButton}
-          textColor="green"
+          textStyle={styles.learnMoreButtonText}
         >
           {t('home.horizon.learnMore', 'Learn More')}
         </Button>
@@ -43,5 +43,8 @@ const styles = StyleSheet.create({
   },
   learnMoreButton: {
     backgroundColor: '#e7f4e4',
+  },
+  learnMoreButtonText: {
+    color: 'green',
   },
 });

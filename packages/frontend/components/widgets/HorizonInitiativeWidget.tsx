@@ -22,7 +22,7 @@ export function HorizonInitiativeWidget() {
       </ThemedText>
       <Button
         style={styles.joinButton}
-        textColor="#002646"
+        textStyle={styles.joinButtonText}
         onPress={() => {
           const url = 'https://oxy.so/horizon';
           window.open(url, '_blank');
@@ -41,5 +41,8 @@ const styles = StyleSheet.create({
   },
   joinButton: {
     backgroundColor: '#c2e3ff',
+  },
+  joinButtonText: {
+    color: '#002646',
   },
 });

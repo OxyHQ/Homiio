@@ -59,9 +59,6 @@ export function useSindiSuggestions({ property, conversationContext }: UseSindiS
                     propertyId,
                     propertyContext,
                     conversationContext,
-                }, {
-                    oxyServices,
-                    activeSessionId,
                 });
 
                 const data = response.data;

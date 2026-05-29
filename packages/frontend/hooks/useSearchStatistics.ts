@@ -21,10 +21,7 @@ export const useSearchStatistics = () => {
       try {
         // For authenticated users, get their personal search statistics
         if (oxyServices && activeSessionId) {
-          const response = await api.get<SearchStatistics>('/api/search/statistics', {
-            oxyServices,
-            activeSessionId,
-          });
+          const response = await api.get<SearchStatistics>('/api/search/statistics');
           // Set data in Zustand store
           setStatistics({
             totalSearches: 0,

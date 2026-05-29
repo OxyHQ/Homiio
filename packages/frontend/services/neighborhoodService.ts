@@ -1,5 +1,4 @@
 import { api } from '@/utils/api';
-import { OxyServices } from '@oxyhq/core';
 
 export interface NeighborhoodRating {
   category: string;
@@ -52,14 +51,10 @@ class NeighborhoodService {
   async getNeighborhoodByLocation(
     latitude: number,
     longitude: number,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
   ): Promise<NeighborhoodData> {
     try {
       const response = await api.get<NeighborhoodData>('/api/neighborhoods/by-location', {
         params: { latitude, longitude },
-        oxyServices,
-        activeSessionId,
       });
       return response.data;
     } catch (error) {
@@ -75,14 +70,10 @@ class NeighborhoodService {
     name: string,
     city?: string,
     state?: string,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
   ): Promise<NeighborhoodData> {
     try {
       const response = await api.get<NeighborhoodData>('/api/neighborhoods/by-name', {
         params: { name, city, state },
-        oxyServices,
-        activeSessionId,
       });
       return response.data;
     } catch (error) {
@@ -94,18 +85,10 @@ class NeighborhoodService {
   /**
    * Get neighborhood data by property ID
    */
-  async getNeighborhoodByProperty(
-    propertyId: string,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ): Promise<NeighborhoodData> {
+  async getNeighborhoodByProperty(propertyId: string): Promise<NeighborhoodData> {
     try {
       const response = await api.get<NeighborhoodData>(
         `/api/neighborhoods/by-property/${propertyId}`,
-        {
-          oxyServices,
-          activeSessionId,
-        },
       );
       return response.data;
     } catch (error) {
@@ -117,16 +100,10 @@ class NeighborhoodService {
   /**
    * Search neighborhoods
    */
-  async searchNeighborhoods(
-    filters: NeighborhoodFilters,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
-  ): Promise<NeighborhoodData[]> {
+  async searchNeighborhoods(filters: NeighborhoodFilters): Promise<NeighborhoodData[]> {
     try {
       const response = await api.get<NeighborhoodData[]>('/api/neighborhoods/search', {
         params: filters,
-        oxyServices,
-        activeSessionId,
       });
       return response.data;
     } catch (error) {
@@ -142,14 +119,10 @@ class NeighborhoodService {
     city: string,
     state?: string,
     limit: number = 10,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
   ): Promise<NeighborhoodData[]> {
     try {
       const response = await api.get<NeighborhoodData[]>('/api/neighborhoods/popular', {
         params: { city, state, limit },
-        oxyServices,
-        activeSessionId,
       });
       return response.data;
     } catch (error) {

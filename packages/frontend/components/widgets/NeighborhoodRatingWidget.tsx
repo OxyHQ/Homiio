@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
@@ -8,6 +8,7 @@ import { useNeighborhood } from '@/hooks/useNeighborhood';
 import { useOxy } from '@oxyhq/services';
 import { Loading } from '@oxyhq/bloom/loading';
 import { Button } from '@oxyhq/bloom/button';
+import type { NeighborhoodRating } from '@/services/neighborhoodService';
 
 // Type assertion for Ionicons compatibility with React 19
 const IconComponent = Ionicons as any;
@@ -26,16 +27,15 @@ export function NeighborhoodRatingWidget({
   state,
 }: NeighborhoodRatingWidgetProps = {}) {
   const { t } = useTranslation();
-  const { oxyServices, activeSessionId } = useOxy();
+  const { activeSessionId } = useOxy();
+  const isAuthenticated = Boolean(activeSessionId);
   const {
     currentNeighborhood,
     isLoading,
     error,
-    isAuthenticated,
     isDataStale,
     fetchByName,
     fetchByProperty,
-    setCurrent,
   } = useNeighborhood();
 
   // Default neighborhood data for when API is not available
@@ -48,14 +48,15 @@ export function NeighborhoodRatingWidget({
       { category: 'Transit', score: 4.3, icon: 'subway-outline' },
       { category: 'Nightlife', score: 4.0, icon: 'wine-outline' },
       { category: 'Shopping', score: 3.9, icon: 'bag-outline' },
-    ],
+    ] as NeighborhoodRating[],
   };
 
-  // Use current neighborhood data or fall back to default
-  const neighborhoodData = currentNeighborhood || defaultNeighborhood;
+  // The neighborhood store only persists the location/stats summary, so the
+  // rated categories and overall score always come from the curated defaults.
+  // When a neighborhood has been resolved we still prefer its real name.
   const displayName = currentNeighborhood?.name || defaultNeighborhood.name;
-  const overallScore = currentNeighborhood?.overallScore || defaultNeighborhood.overallScore;
-  const categories = currentNeighborhood?.ratings || defaultNeighborhood.ratings;
+  const overallScore = defaultNeighborhood.overallScore;
+  const categories = defaultNeighborhood.ratings;
 
   // Load neighborhood data on component mount if authenticated and data is stale
   useEffect(() => {
@@ -168,7 +169,7 @@ export function NeighborhoodRatingWidget({
           {categories.map((category, index) => (
             <View key={index} style={styles.categoryItem}>
               <View style={styles.categoryInfo}>
-                <IconComponent name={category.icon as any} size={16} color={colors.primaryColor} />
+                <IconComponent name={category.icon} size={16} color={colors.primaryColor} />
                 <Text style={styles.categoryName}>{category.category}</Text>
               </View>
               {renderStars(category.score)}
