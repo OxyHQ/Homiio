@@ -153,11 +153,16 @@ export function SavedSearchesWidget() {
   };
 
   const renderSearchItem = ({ item }: { item: SavedSearch }) => (
-    <TouchableOpacity style={styles.searchItem} onPress={() => navigateToSearch(item)}>
-      <View style={styles.searchInfo}>
+    <View style={styles.searchItem}>
+      <TouchableOpacity
+        style={styles.searchInfo}
+        onPress={() => navigateToSearch(item)}
+        accessibilityRole="button"
+        accessibilityLabel={item.name}
+      >
         <Text style={styles.searchName}>{item.name}</Text>
         <Text style={styles.searchCriteria}>{item.query}</Text>
-      </View>
+      </TouchableOpacity>
       <View style={styles.searchActions}>
         {item.notificationsEnabled && (
           <View style={styles.notificationBadge}>
@@ -172,7 +177,7 @@ export function SavedSearchesWidget() {
           <IconComponent name="ellipsis-vertical" size={16} color={colors.COLOR_BLACK_LIGHT_4} />
         </TouchableOpacity>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 
   if (!isAuthenticated) {
@@ -240,11 +245,15 @@ export function SavedSearchesWidget() {
         animationType="fade"
         onRequestClose={() => setShowActionsModal(false)}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowActionsModal(false)}
-        >
+        <View style={styles.modalOverlay}>
+          {/* Dismiss backdrop is a sibling absolute layer, not a parent of the
+              action buttons — a TouchableOpacity wrapping the buttons would
+              nest <button> inside <button> on web. */}
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowActionsModal(false)}
+          />
           <View style={styles.actionsContainer}>
             {selectedSearch && (
               <>
@@ -286,7 +295,7 @@ export function SavedSearchesWidget() {
               </>
             )}
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
 
       {/* Edit Search Modal */}
@@ -434,9 +443,16 @@ const styles = StyleSheet.create({
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   actionsContainer: {
     backgroundColor: 'white',

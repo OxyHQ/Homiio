@@ -8,7 +8,7 @@
  * switcher, Trust score, Subscriptions, Sign out).
  */
 import React, { useCallback, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -467,34 +467,46 @@ interface StatTileProps {
   onPress?: () => void;
 }
 
-const StatTile: React.FC<StatTileProps> = ({ label, value, description, onPress }) => (
-  <View style={styles.statTile}>
-    <CardSurface padding={spacing.lg}>
-      <View
-        accessibilityRole={onPress ? 'button' : undefined}
-        accessibilityLabel={`${label}: ${value}`}
-      >
-        <H2 style={styles.statValue}>{value}</H2>
-        <BloomText style={styles.statLabel}>{label}</BloomText>
-        {description ? (
-          <BloomText style={styles.statDescription}>{description}</BloomText>
-        ) : null}
-        {onPress ? (
-          <View style={styles.statButton}>
-            <Button
-              variant="ghost"
-              size="small"
-              onPress={onPress}
-              accessibilityLabel={`Open ${label}`}
-            >
-              {`View ${label.toLowerCase()}`}
-            </Button>
-          </View>
-        ) : null}
-      </View>
-    </CardSurface>
-  </View>
-);
+const StatTile: React.FC<StatTileProps> = ({ label, value, description, onPress }) => {
+  const body = (
+    <>
+      <H2 style={styles.statValue}>{value}</H2>
+      <BloomText style={styles.statLabel}>{label}</BloomText>
+      {description ? (
+        <BloomText style={styles.statDescription}>{description}</BloomText>
+      ) : null}
+      {onPress ? (
+        <View style={styles.statLink}>
+          <BloomText style={styles.statLinkText}>
+            {`View ${label.toLowerCase()}`}
+          </BloomText>
+          <Ionicons
+            name="chevron-forward"
+            size={14}
+            color={colors.primaryColor}
+          />
+        </View>
+      ) : null}
+    </>
+  );
+
+  return (
+    <View style={styles.statTile}>
+      {onPress ? (
+        <Pressable
+          onPress={onPress}
+          accessibilityRole="button"
+          accessibilityLabel={`${label}: ${value}. Open ${label.toLowerCase()}`}
+          style={({ pressed }) => [pressed ? styles.statTilePressed : null]}
+        >
+          <CardSurface padding={spacing.lg}>{body}</CardSurface>
+        </Pressable>
+      ) : (
+        <CardSurface padding={spacing.lg}>{body}</CardSurface>
+      )}
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   root: {
@@ -581,9 +593,19 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginTop: spacing.xs,
   },
-  statButton: {
+  statLink: {
     marginTop: spacing.sm,
-    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  statLinkText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primaryColor,
+  },
+  statTilePressed: {
+    opacity: 0.85,
   },
   bottomPadding: {
     height: spacing['4xl'],
