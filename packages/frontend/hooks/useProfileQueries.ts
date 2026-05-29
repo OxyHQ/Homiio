@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useProfileStore } from '@/store/profileStore';
 import { useOxy } from '@oxyhq/services';
 import { toast } from 'sonner';
-import type { UserProfile } from '@/utils/api';
+import { ProfileType, type UpdateProfileData } from '@homiio/shared-types';
 
 // Profile Zustand Hook
 export const useProfileRedux = () => {
@@ -20,9 +20,7 @@ export const useProfileRedux = () => {
 
     try {
       // Use the profile store's async action
-      const profile = await useProfileStore
-        .getState()
-        .fetchPrimaryProfile(oxyServices, activeSessionId);
+      await useProfileStore.getState().fetchPrimaryProfile();
     } catch (error: any) {
       setError(error.message || 'Failed to fetch profile');
     } finally {
@@ -31,16 +29,21 @@ export const useProfileRedux = () => {
   }, [oxyServices, activeSessionId, setPrimaryProfile, setAllProfiles, setLoading, setError]);
 
   const updateProfile = useCallback(
-    async (profileData: Partial<UserProfile>) => {
+    async (profileData: UpdateProfileData) => {
       if (!oxyServices || !activeSessionId) {
         throw new Error('OxyServices not available');
       }
 
+      const profileId = primaryProfile?.id || primaryProfile?._id;
+      if (!profileId) {
+        throw new Error('No primary profile to update');
+      }
+
       try {
-        // Use the profile store's async action for primary profile
+        // Use the profile store's async action for the primary profile
         const updatedProfile = await useProfileStore
           .getState()
-          .updatePrimaryProfile(profileData as any, oxyServices, activeSessionId);
+          .updateProfile(profileId, profileData);
 
         toast.success('Profile updated successfully');
         return updatedProfile;
@@ -49,7 +52,7 @@ export const useProfileRedux = () => {
         throw error;
       }
     },
-    [oxyServices, activeSessionId],
+    [oxyServices, activeSessionId, primaryProfile],
   );
 
   const createProfile = useCallback(async () => {
@@ -61,7 +64,7 @@ export const useProfileRedux = () => {
       // Use the profile store's async action
       const profile = await useProfileStore
         .getState()
-        .createProfile({ profileType: 'personal' }, oxyServices, activeSessionId);
+        .createProfile({ profileType: ProfileType.PERSONAL });
 
       toast.success('Profile created successfully');
       return profile;

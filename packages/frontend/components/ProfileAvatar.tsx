@@ -15,13 +15,12 @@ const getAvatarUrl = (profile: Profile | null): string | undefined => {
     if (profile.avatar) return profile.avatar;
     switch (profile.profileType) {
         case 'personal':
-            return profile.personalProfile?.avatar || profile.personalProfile?.personalInfo?.avatar;
+            return profile.personalProfile?.personalInfo?.avatar;
         case 'agency':
-            return profile.agencyProfile?.avatar || profile.agencyProfile?.businessDetails?.logo;
+            return profile.agencyProfile?.businessDetails?.logo;
         case 'business':
-            return profile.businessProfile?.avatar || profile.businessProfile?.businessDetails?.logo;
+            return profile.businessProfile?.businessDetails?.logo;
         case 'cooperative':
-            return profile.cooperativeProfile?.avatar || profile.cooperativeProfile?.logo;
         default:
             return undefined;
     }

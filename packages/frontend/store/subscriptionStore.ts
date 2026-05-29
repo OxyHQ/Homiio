@@ -64,7 +64,6 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
       
       const { data } = await api.get<{ success: boolean; entitlements: Entitlements }>(
         '/api/profiles/me/entitlements',
-        { oxyServices, activeSessionId }
       );
 
       if (!data?.success) {
@@ -104,7 +103,6 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
       const { data } = await api.post<{ success: boolean; url: string }>(
         '/api/billing/checkout',
         { product },
-        { oxyServices, activeSessionId }
       );
 
       if (!data?.success) {
@@ -143,7 +141,6 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
       const { data } = await api.post<{ success: boolean; url: string; error?: { code: string; message: string } }>(
         '/api/billing/customer-portal',
         { subscriptionId: entitlements.plusStripeSubscriptionId },
-        { oxyServices, activeSessionId }
       );
 
       if (!data?.success) {
@@ -177,7 +174,6 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
       const { data } = await api.post<{ success: boolean; entitlements: Entitlements }>(
         '/api/billing/sync-subscription',
         {},
-        { oxyServices, activeSessionId }
       );
 
       if (!data?.success) {
@@ -208,7 +204,6 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
       const { data } = await api.post<{ success: boolean; entitlements: Entitlements }>(
         '/api/billing/cancel-subscription',
         { immediate },
-        { oxyServices, activeSessionId }
       );
 
       if (!data?.success) {
@@ -239,7 +234,6 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
       const { data } = await api.post<{ success: boolean; entitlements: Entitlements }>(
         '/api/billing/reactivate-subscription',
         {},
-        { oxyServices, activeSessionId }
       );
 
       if (!data?.success) {

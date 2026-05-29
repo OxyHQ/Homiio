@@ -318,7 +318,7 @@ export default function SubscriptionsScreen() {
                             style={[styles.primaryBtn, { marginTop: 8, backgroundColor: '#8b5cf6' }]}
                             onPress={async () => {
                                 try {
-                                    const response = await api.get('/api/billing/debug-subscription', { oxyServices, activeSessionId: activeSessionId || undefined });
+                                    const response = await api.get('/api/billing/debug-subscription');
                                     if (response.data.success) {
                                             Alert.alert(
                                             'Debug Info',

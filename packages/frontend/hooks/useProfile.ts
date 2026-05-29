@@ -18,8 +18,8 @@ export const useProfile = () => {
       setError(null);
 
       const [primaryProfile, allProfiles] = await Promise.all([
-        profileService.getOrCreatePrimaryProfile(oxyServices, activeSessionId),
-        profileService.getUserProfiles(oxyServices, activeSessionId),
+        profileService.getOrCreatePrimaryProfile(),
+        profileService.getUserProfiles(),
       ]);
 
       setPrimaryProfile(primaryProfile);
@@ -40,11 +40,7 @@ export const useProfile = () => {
         setLoading(true);
         setError(null);
 
-        const newProfile = await profileService.createProfile(
-          profileData,
-          oxyServices,
-          activeSessionId,
-        );
+        const newProfile = await profileService.createProfile(profileData);
 
         setAllProfiles([...allProfiles, newProfile]);
         if (newProfile.isPrimary) {
@@ -80,12 +76,7 @@ export const useProfile = () => {
         setLoading(true);
         setError(null);
 
-        const updatedProfile = await profileService.updateProfile(
-          profileId,
-          updateData,
-          oxyServices,
-          activeSessionId,
-        );
+        const updatedProfile = await profileService.updateProfile(profileId, updateData);
 
         const updatedProfiles = allProfiles.map((p: Profile) =>
           p.id === profileId || p._id === profileId ? updatedProfile : p,
@@ -124,7 +115,7 @@ export const useProfile = () => {
         setLoading(true);
         setError(null);
 
-        await profileService.deleteProfile(profileId, oxyServices, activeSessionId);
+        await profileService.deleteProfile(profileId);
 
         const filteredProfiles = allProfiles.filter(
           (p: Profile) => p.id !== profileId && p._id !== profileId,
@@ -163,11 +154,7 @@ export const useProfile = () => {
         setLoading(true);
         setError(null);
 
-        const activatedProfile = await profileService.activateProfile(
-          profileId,
-          oxyServices,
-          activeSessionId,
-        );
+        const activatedProfile = await profileService.activateProfile(profileId);
 
         // Update all profiles - deactivate others and activate the selected one
         const updatedProfiles = allProfiles.map((p: Profile) => ({

@@ -17,7 +17,6 @@ import { ThemedText } from '@/components/ThemedText';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { Chip } from '@oxyhq/bloom/chip';
 import { colors } from '@/styles/colors';
-import { useOxy } from '@oxyhq/services';
 import { api } from '@/utils/api';
 
 // Type assertion for Ionicons compatibility
@@ -38,7 +37,6 @@ type DonationTier = {
 export default function DonatePage() {
     const { t } = useTranslation();
     const _router = useRouter();
-    const { oxyServices, activeSessionId } = useOxy();
     const [loading, setLoading] = useState(false);
 
     const donationTiers: DonationTier[] = [
@@ -133,9 +131,6 @@ export default function DonatePage() {
 
             const response = await api.post('/api/billing/create-checkout-session', {
                 product,
-            }, {
-                oxyServices,
-                activeSessionId: activeSessionId || undefined,
             });
 
             if (response.data.success && response.data.url) {

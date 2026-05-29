@@ -17,42 +17,48 @@ export const useRecentlyViewedProperties = () => {
       if (!oxyServices || !activeSessionId) {
         throw new Error('Authentication required');
       }
-      
-                     const response = await recentlyViewedService.getRecentlyViewedProperties(oxyServices, activeSessionId);
-               
-               if (!response.success) {
-                 throw new Error(response.error || 'Failed to fetch recently viewed properties');
-               }
-               
-               // Only update store if it's empty (initial load)
-               const currentItems = useRecentlyViewedStore.getState().items;
-               if (currentItems.length === 0) {
-                 // Transform database response to store format
-                 const items = (response.data || []).map((property: any) => ({
-                   id: property._id || property.id,
-                   type: RecentlyViewedType.PROPERTY,
-                   data: property,
-                   viewedAt: property.viewedAt || new Date().toISOString(),
-                 }));
-                 
-                 // Update store with fetched data
-                 useRecentlyViewedStore.setState({
-                   items,
-                   isInitialized: true,
-                   isLoading: false,
-                   error: null,
-                 });
-               }
-      
-      return response.data || [];
+
+      try {
+        const response = await recentlyViewedService.getRecentlyViewedProperties();
+
+        if (!response.success) {
+          throw new Error(response.error || 'Failed to fetch recently viewed properties');
+        }
+
+        // Only update store if it's empty (initial load)
+        const currentItems = useRecentlyViewedStore.getState().items;
+        if (currentItems.length === 0) {
+          // Transform database response to store format. The backend augments
+          // each property with a `viewedAt` timestamp that is not part of the
+          // base Property type.
+          const items = (response.data || []).map((property: Property & { viewedAt?: string }) => ({
+            id: property._id || property.id || '',
+            type: RecentlyViewedType.PROPERTY,
+            data: property,
+            viewedAt: property.viewedAt || new Date().toISOString(),
+          }));
+
+          // Update store with fetched data
+          useRecentlyViewedStore.setState({
+            items,
+            isInitialized: true,
+            isLoading: false,
+            error: null,
+          });
+        }
+
+        return response.data || [];
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to load recently viewed properties';
+        useRecentlyViewedStore.getState().setError(message);
+        throw error;
+      }
     },
     enabled: Boolean(oxyServices && activeSessionId),
     staleTime: 1000 * 30, // 30 seconds
     gcTime: 1000 * 60 * 10, // 10 minutes
     retry: 2,
-    onError: (error: any) => {
-      useRecentlyViewedStore.getState().setError(error.message || 'Failed to load recently viewed properties');
-    },
   });
 };
 
@@ -70,7 +76,7 @@ export const useTrackPropertyView = () => {
         throw new Error('Authentication required');
       }
       
-      const response = await recentlyViewedService.trackPropertyView(propertyId, oxyServices, activeSessionId);
+      const response = await recentlyViewedService.trackPropertyView(propertyId);
       
       if (!response.success) {
         throw new Error(response.error || 'Failed to track property view');
@@ -100,7 +106,7 @@ export const useClearRecentlyViewed = () => {
         throw new Error('Authentication required');
       }
       
-      const response = await recentlyViewedService.clearRecentlyViewedProperties(oxyServices, activeSessionId);
+      const response = await recentlyViewedService.clearRecentlyViewedProperties();
       
       if (!response.success) {
         throw new Error(response.error || 'Failed to clear recently viewed properties');
