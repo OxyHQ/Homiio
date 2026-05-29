@@ -69,16 +69,8 @@ export const ContractCard: React.FC<ContractCardProps> = ({
     [currency, monthlyRent],
   );
 
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.container,
-        pressed && styles.containerPressed,
-      ]}
-      accessibilityRole="button"
-      accessibilityLabel={`Contract ${title}`}
-    >
+  const body = (
+    <>
       <View style={styles.header}>
         <View style={styles.titleContainer}>
           <H3 style={styles.title} numberOfLines={1}>
@@ -138,6 +130,26 @@ export const ContractCard: React.FC<ContractCardProps> = ({
           </BloomText>
         </View>
       </View>
+    </>
+  );
+
+  return (
+    <View style={styles.container}>
+      {onPress ? (
+        <Pressable
+          onPress={onPress}
+          style={({ pressed }) => [
+            styles.bodyPressable,
+            pressed && styles.containerPressed,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={`Contract ${title}`}
+        >
+          {body}
+        </Pressable>
+      ) : (
+        <View style={styles.bodyPressable}>{body}</View>
+      )}
 
       {(onSharePress || onDownloadPress) && (
         <View style={styles.actionsContainer}>
@@ -175,7 +187,7 @@ export const ContractCard: React.FC<ContractCardProps> = ({
           ) : null}
         </View>
       )}
-    </Pressable>
+    </View>
   );
 };
 
@@ -188,6 +200,9 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.sm,
     ...withShadow('sm'),
+  },
+  bodyPressable: {
+    gap: spacing.sm,
   },
   containerPressed: {
     opacity: 0.8,

@@ -62,49 +62,53 @@ export const ReservationCard: React.FC<ReservationCardProps> = ({
   const guestLabel = reservation.guestCount === 1 ? 'guest' : 'guests';
 
   return (
-    <Pressable
-      style={styles.card}
-      onPress={handlePress}
-      accessibilityRole="button"
-      accessibilityLabel={`Reservation ${reservation.id}`}
-    >
-      <View style={styles.thumbWrapper}>
-        {imageSource ? (
-          <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
-        ) : (
-          <View style={[styles.thumb, styles.thumbPlaceholder]} />
-        )}
-      </View>
-      <View style={styles.body}>
-        <View style={styles.headerRow}>
-          <BloomText style={styles.title} numberOfLines={1}>
-            {title}
-          </BloomText>
-          <ReservationStatusBadge status={reservation.status} />
+    <View style={styles.card}>
+      <Pressable
+        style={styles.body}
+        onPress={handlePress}
+        accessibilityRole="button"
+        accessibilityLabel={`Reservation ${reservation.id}`}
+      >
+        <View style={styles.thumbWrapper}>
+          {imageSource ? (
+            <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
+          ) : (
+            <View style={[styles.thumb, styles.thumbPlaceholder]} />
+          )}
         </View>
-        <BloomText style={styles.dates} numberOfLines={1}>
-          {formatRange(reservation.checkIn, reservation.checkOut)}
-        </BloomText>
-        <BloomText style={styles.meta} numberOfLines={1}>
-          {reservation.nights} {reservation.nights === 1 ? 'night' : 'nights'} ·{' '}
-          {reservation.guestCount} {guestLabel}
-          {variant === 'host' ? ' (guest)' : ''} ·{' '}
-          {formatTotal(reservation.total, reservation.currency)}
-        </BloomText>
-        {actions ? <View style={styles.actions}>{actions}</View> : null}
-      </View>
-    </Pressable>
+        <View style={styles.bodyText}>
+          <View style={styles.headerRow}>
+            <BloomText style={styles.title} numberOfLines={1}>
+              {title}
+            </BloomText>
+            <ReservationStatusBadge status={reservation.status} />
+          </View>
+          <BloomText style={styles.dates} numberOfLines={1}>
+            {formatRange(reservation.checkIn, reservation.checkOut)}
+          </BloomText>
+          <BloomText style={styles.meta} numberOfLines={1}>
+            {reservation.nights} {reservation.nights === 1 ? 'night' : 'nights'} ·{' '}
+            {reservation.guestCount} {guestLabel}
+            {variant === 'host' ? ' (guest)' : ''} ·{' '}
+            {formatTotal(reservation.total, reservation.currency)}
+          </BloomText>
+        </View>
+      </Pressable>
+      {actions ? <View style={styles.actions}>{actions}</View> : null}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: 'row',
     backgroundColor: '#ffffff',
     borderRadius: radius.lg,
     overflow: 'hidden',
     marginBottom: spacing.md,
     ...withShadow('sm'),
+  },
+  body: {
+    flexDirection: 'row',
   },
   thumbWrapper: {
     width: 96,
@@ -117,7 +121,7 @@ const styles = StyleSheet.create({
   thumbPlaceholder: {
     backgroundColor: colors.COLOR_BLACK_LIGHT_7,
   },
-  body: {
+  bodyText: {
     flex: 1,
     padding: spacing.md,
     justifyContent: 'space-between',
@@ -142,9 +146,10 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_4,
   },
   actions: {
-    marginTop: spacing.sm,
     flexDirection: 'row',
     gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
   },
 });
 

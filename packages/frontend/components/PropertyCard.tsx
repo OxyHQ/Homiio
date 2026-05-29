@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, Image, StyleSheet, TouchableOpacity, ViewStyle, Platform } from 'react-native';
+import { View, Image, StyleSheet, Pressable, TouchableOpacity, ViewStyle, Platform } from 'react-native';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 
@@ -279,55 +279,46 @@ export function PropertyCard({
   const finalLocationLines = locationLines !== undefined ? locationLines : variantStyles.locationLines;
 
   return (
-    <TouchableOpacity
+    <View
       style={[
         styles.container,
-        orientation === 'horizontal' ? styles.horizontalContainer : null,
         style as ViewStyle,
         isProcessing ? { opacity: 0.7 } : null,
       ]}
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onLongPress={onLongPress}
-      activeOpacity={0.9}
     >
-      <View
+      <Pressable
         style={[
-          styles.imageContainer,
-          isGrid ? styles.gridImageContainer : null,
-          orientation === 'horizontal' ? styles.horizontalImageContainer : null,
-          isSelected ? styles.selectedImage : null,
-          orientation === 'horizontal'
-            ? { height: finalImageHeight, width: finalImageHeight }
-            : isGrid
-              ? { width: '100%', aspectRatio: gridAspectRatio }
-              : { width: '100%', aspectRatio: 1 },
+          styles.body,
+          orientation === 'horizontal' ? styles.horizontalBody : null,
         ]}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onLongPress={onLongPress}
+        accessibilityRole="button"
+        accessibilityLabel={propertyData.title}
       >
-        <Image source={propertyData.imageSource} style={styles.image} resizeMode="cover" />
+        <View
+          style={[
+            styles.imageContainer,
+            isGrid ? styles.gridImageContainer : null,
+            orientation === 'horizontal' ? styles.horizontalImageContainer : null,
+            isSelected ? styles.selectedImage : null,
+            orientation === 'horizontal'
+              ? { height: finalImageHeight, width: finalImageHeight }
+              : isGrid
+                ? { width: '100%', aspectRatio: gridAspectRatio }
+                : { width: '100%', aspectRatio: 1 },
+          ]}
+        >
+          <Image source={propertyData.imageSource} style={styles.image} resizeMode="cover" />
 
-        {/* Rating - moved to top-left (hidden in grid variant for photo-first feel) */}
-        {finalShowRating && propertyData.rating && !isGrid && (
-          <View style={styles.ratingBadge}>
-            <ThemedText style={styles.ratingBadgeText}>{propertyData.rating.toFixed(1)}</ThemedText>
-            <Ionicons name="star" size={12} color="#FFD700" />
-          </View>
-        )}
-
-        {/* Save Button - top-right with translucent backdrop */}
-        {showSaveButton && (
-          <SaveButton
-            isSaved={isPropertySavedState}
-            size={variant === 'compact' ? 5 : 24}
-            variant="heart"
-            color={colors.COLOR_BLACK}
-            activeColor={colors.busy}
-            style={styles.saveButton}
-            property={property}
-            showCount={showSaveCount}
-            countDisplayMode={saveCountDisplayMode}
-          />
-        )}
+          {/* Rating - moved to top-left (hidden in grid variant for photo-first feel) */}
+          {finalShowRating && propertyData.rating && !isGrid && (
+            <View style={styles.ratingBadge}>
+              <ThemedText style={styles.ratingBadgeText}>{propertyData.rating.toFixed(1)}</ThemedText>
+              <Ionicons name="star" size={12} color="#FFD700" />
+            </View>
+          )}
 
         {/* Status badges — suppressed in grid variant to keep cards photo-first */}
         {!isGrid && (
@@ -471,9 +462,40 @@ export function PropertyCard({
             </BloomText>
           </View>
         )}
-      </View>
+        </View>
+      </Pressable>
 
-      {/* Inline Note (inside card content area) */}
+      {/* Save Button — lives in an absolutely-positioned overlay that mirrors
+          the photo box, as a SIBLING of the body Pressable. This keeps the
+          heart its own tap target without nesting a <button> inside the card
+          button (invalid HTML + hydration error on web). The overlay matches
+          the image geometry per orientation so the heart stays pinned to the
+          photo's top-right corner. */}
+      {showSaveButton && (
+        <View
+          pointerEvents="box-none"
+          style={[
+            styles.mediaOverlay,
+            orientation === 'horizontal'
+              ? { width: finalImageHeight, height: finalImageHeight }
+              : { left: 0, right: 0, aspectRatio: isGrid ? gridAspectRatio : 1 },
+          ]}
+        >
+          <SaveButton
+            isSaved={isPropertySavedState}
+            size={variant === 'compact' ? 5 : 24}
+            variant="heart"
+            color={colors.COLOR_BLACK}
+            activeColor={colors.busy}
+            style={styles.saveButton}
+            property={property}
+            showCount={showSaveCount}
+            countDisplayMode={saveCountDisplayMode}
+          />
+        </View>
+      )}
+
+      {/* Inline Note — sibling of the body Pressable, its own tap target. */}
       {(onPressNote || (noteText && noteText.trim().length > 0)) && (
         <TouchableOpacity
           activeOpacity={0.7}
@@ -505,7 +527,7 @@ export function PropertyCard({
 
       {/* Footer Content */}
       {footerContent && <View style={styles.footer}>{footerContent as React.ReactNode}</View>}
-    </TouchableOpacity>
+    </View>
   );
 }
 
@@ -514,9 +536,14 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     height: 'auto',
+    position: 'relative',
     gap: spacing.sm,
   },
-  horizontalContainer: {
+  body: {
+    width: '100%',
+    gap: spacing.sm,
+  },
+  horizontalBody: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
@@ -600,6 +627,15 @@ const styles = StyleSheet.create({
   },
 
   // Badge and overlay styles (shared)
+  // Absolute layer pinned to the top-left of the card that mirrors the photo
+  // box; hosts the SaveButton as a sibling of the body Pressable so the heart
+  // never nests inside the card's button element.
+  mediaOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    zIndex: 2,
+  },
   saveButton: {
     position: 'absolute',
     top: spacing.sm,
