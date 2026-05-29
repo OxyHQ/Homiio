@@ -98,4 +98,19 @@ export const colors = {
   ratingStar: '#F2B400',
   /** Mid-strength border color for hairlines on cards. */
   border: '#ECECEC',
+  // --- Semantic aliases (stable names used across screens) ---
+  /** Primary brand color alias (= primaryColor). */
+  primary: '#0070e9',
+  /** Default body text color (= COLOR_BLACK). */
+  text: '#000000',
+  /** Secondary/muted text. */
+  textSecondary: '#717171',
+  /** Tertiary/faint text. */
+  textTertiary: '#9CA3AF',
+  /** App background surface. */
+  background: '#ffffff',
+  /** Pure white (icon/text on colored fills). */
+  white: '#ffffff',
+  /** Error color alias (= danger). */
+  error: '#C13515',
 } as const;
