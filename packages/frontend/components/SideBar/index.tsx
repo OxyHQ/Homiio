@@ -4,10 +4,18 @@ import {
   Pressable,
   Platform,
   Linking,
-  Modal,
+  StyleSheet,
   useWindowDimensions,
 } from 'react-native';
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeOut,
+  SlideInLeft,
+  SlideOutLeft,
+} from 'react-native-reanimated';
 import { useRouter, usePathname } from 'expo-router';
+import { Portal } from '@oxyhq/bloom/portal';
 import { useTranslation } from 'react-i18next';
 import {
   Home,
@@ -75,13 +83,33 @@ const COLLAPSED_WIDTH = 48;
 const EXPANDED_WIDTH = 240;
 
 /**
- * Sliver of backdrop kept to the right of the mobile overlay drawer so the
- * underlying screen peeks through and there's always a tap-to-dismiss zone.
+ * Sliver of viewport kept to the right of the mobile overlay drawer so the
+ * panel never spans the full width on the narrowest phones and the underlying
+ * screen always peeks through behind the dimming scrim.
  */
-const MOBILE_DRAWER_BACKDROP_GAP = 56;
+const MOBILE_DRAWER_EDGE_GAP = 56;
 
-/** Dimming scrim behind the mobile overlay drawer. */
-const MOBILE_DRAWER_SCRIM = 'rgba(0, 0, 0, 0.45)';
+/**
+ * Dimming scrim painted over the whole viewport behind the mobile overlay
+ * drawer. Matches the `overlayColor` of the inbox app's `front`-type
+ * `expo-router/drawer` (`@react-navigation/drawer`) so the two apps share the
+ * same slide-in-over-content feel.
+ */
+const MOBILE_DRAWER_SCRIM = 'rgba(0, 0, 0, 0.3)';
+
+/**
+ * Slide / fade duration (ms) for the mobile overlay drawer. Mirrors the
+ * default transition timing of `@react-navigation/drawer`'s `front` drawer
+ * that the inbox app relies on.
+ */
+const MOBILE_DRAWER_DURATION = 250;
+
+/**
+ * Pressable that participates in Reanimated layout (entering/exiting)
+ * transitions — used for the fade-in scrim behind the mobile overlay drawer.
+ * Created once at module scope to keep the animated wrapper stable.
+ */
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 interface NavEntry {
   key: string;
@@ -519,9 +547,10 @@ export function SideBar() {
 
   /* --------------------------------------------------------------
      Below the sidebar breakpoint the BottomBar takes over and the
-     sidebar becomes an on-demand overlay drawer. When that drawer is
-     closed we render nothing inline (the expanded content is rendered
-     inside a Modal at the bottom of this component).
+     sidebar becomes an on-demand slide-in overlay drawer. Nothing is
+     rendered inline at this breakpoint — the expanded content is rendered
+     through Bloom's root Portal at the bottom of this component so it
+     overlays the whole viewport.
      -------------------------------------------------------------- */
   const isMobile = !isSidebarVisible;
 
@@ -979,39 +1008,66 @@ export function SideBar() {
 
   /* ==============================================================
      MOBILE OVERLAY DRAWER (small screens)
-     A dimmed, tap-to-dismiss backdrop with the expanded sidebar
-     panel sliding in from the left. Works on native + web via Modal.
+     Mirrors the inbox app's `front`-type `expo-router/drawer`: the panel
+     slides in from the left over the current screen and a full-viewport
+     dimming scrim sits behind it as a tap-to-dismiss target. Mounted only
+     while open so it occupies no layout when closed (the BottomBar drives
+     navigation at this breakpoint). One responsive component — the same nav
+     content is reused; only the chrome differs from the persistent rail.
      ============================================================== */
   if (isMobile) {
     // Cap the panel width to the viewport so it never overflows on the
-    // narrowest phones, leaving a tap-target sliver of backdrop on the right.
-    const drawerWidth = Math.min(EXPANDED_WIDTH, width - MOBILE_DRAWER_BACKDROP_GAP);
+    // narrowest phones, leaving a tap-target sliver of scrim on the right.
+    const drawerWidth = Math.min(EXPANDED_WIDTH, width - MOBILE_DRAWER_EDGE_GAP);
+    const slideIn = SlideInLeft.duration(MOBILE_DRAWER_DURATION).easing(
+      Easing.out(Easing.cubic),
+    );
+    const slideOut = SlideOutLeft.duration(MOBILE_DRAWER_DURATION).easing(
+      Easing.in(Easing.cubic),
+    );
+
+    // Rendered through Bloom's root Portal so the overlay escapes the layout
+    // scroll container and covers the whole viewport — the same way the inbox
+    // app's `front` drawer overlays the entire screen. The Portal host stays
+    // mounted while on mobile so Reanimated can play the exit (slide-out +
+    // fade) when `mobileDrawerOpen` flips to false; only the scrim + panel
+    // mount/unmount. `box-none` lets touches pass through when closed.
     return (
-      <Modal
-        visible={mobileDrawerOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={closeMobileDrawer}
-        statusBarTranslucent
-      >
-        <View className="flex-1 flex-row">
-          <View
-            style={{ width: drawerWidth }}
-            className="h-full bg-background border-r border-border"
-          >
-            <BaseSidebar header={header} footer={footer}>
-              {middle}
-            </BaseSidebar>
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('sidebar.close', { defaultValue: 'Close menu' })}
-            onPress={closeMobileDrawer}
-            className="flex-1 h-full"
-            style={{ backgroundColor: MOBILE_DRAWER_SCRIM }}
-          />
+      <Portal>
+        <View
+          className="flex-row"
+          style={StyleSheet.absoluteFill}
+          pointerEvents="box-none"
+        >
+          {mobileDrawerOpen && (
+            <>
+              <AnimatedPressable
+                entering={FadeIn.duration(MOBILE_DRAWER_DURATION)}
+                exiting={FadeOut.duration(MOBILE_DRAWER_DURATION)}
+                accessibilityRole="button"
+                accessibilityLabel={t('sidebar.close', {
+                  defaultValue: 'Close menu',
+                })}
+                onPress={closeMobileDrawer}
+                style={[
+                  StyleSheet.absoluteFill,
+                  { backgroundColor: MOBILE_DRAWER_SCRIM },
+                ]}
+              />
+              <Animated.View
+                entering={slideIn}
+                exiting={slideOut}
+                style={{ width: drawerWidth }}
+                className="h-full bg-background border-r border-border"
+              >
+                <BaseSidebar header={header} footer={footer}>
+                  {middle}
+                </BaseSidebar>
+              </Animated.View>
+            </>
+          )}
         </View>
-      </Modal>
+      </Portal>
     );
   }
 

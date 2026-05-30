@@ -44,6 +44,10 @@ import { RentalModeProvider } from '@/context/RentalModeContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { OxyProvider } from '@oxyhq/services';
 import { BloomThemeProvider } from '@oxyhq/bloom';
+import {
+  Provider as PortalProvider,
+  Outlet as PortalOutlet,
+} from '@oxyhq/bloom/portal';
 import '../styles/global.css';
 import { OXY_BASE_URL } from '@/config';
 import { QueryClient, QueryClientProvider, onlineManager, focusManager } from '@tanstack/react-query';
@@ -198,35 +202,47 @@ export default function RootLayout() {
                         <I18nextProvider i18n={i18n}>
                           <BottomSheetProvider>
                             <MenuProvider>
-                              <ErrorBoundary>
-                                <MapStateProvider>
-                                  <SearchModeProvider>
-                                    <LayoutScrollProvider value={layoutScrollContextValue}>
-                                      <Animated.ScrollView
-                                        contentContainerStyle={styles.container}
-                                        style={{ flex: 1 }}
-                                        onScroll={layoutScrollHandler}
-                                        scrollEventThrottle={16}
-                                      >
-                                        <SideBar />
-                                        <View style={styles.mainContent}>
-                                          <View style={styles.mainContentWrapper}>
-                                            <Slot />
+                              <PortalProvider>
+                                <ErrorBoundary>
+                                  <MapStateProvider>
+                                    <SearchModeProvider>
+                                      <LayoutScrollProvider value={layoutScrollContextValue}>
+                                        <Animated.ScrollView
+                                          contentContainerStyle={styles.container}
+                                          style={{ flex: 1 }}
+                                          onScroll={layoutScrollHandler}
+                                          scrollEventThrottle={16}
+                                        >
+                                          <SideBar />
+                                          <View style={styles.mainContent}>
+                                            <View style={styles.mainContentWrapper}>
+                                              <Slot />
+                                            </View>
+                                            <RightBar />
                                           </View>
-                                          <RightBar />
-                                        </View>
-                                      </Animated.ScrollView>
-                                    </LayoutScrollProvider>
-                                  </SearchModeProvider>
-                                </MapStateProvider>
-                                <StatusBar style="auto" />
-                                <Toaster
-                                  position="bottom-center"
-                                  swipeToDismissDirection="left"
-                                  offset={15}
-                                />
-                                {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
-                              </ErrorBoundary>
+                                        </Animated.ScrollView>
+                                      </LayoutScrollProvider>
+                                    </SearchModeProvider>
+                                  </MapStateProvider>
+                                  <StatusBar style="auto" />
+                                  <Toaster
+                                    position="bottom-center"
+                                    swipeToDismissDirection="left"
+                                    offset={15}
+                                  />
+                                  {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
+                                </ErrorBoundary>
+                                {/*
+                                  Root overlay outlet. The mobile navigation
+                                  drawer (SideBar's small-screen branch) renders
+                                  here via Bloom's Portal so its slide-in panel
+                                  and dimming scrim cover the whole viewport —
+                                  mirroring the inbox app's `front` drawer that
+                                  overlays the entire screen. Placed last so it
+                                  sits above all app chrome.
+                                */}
+                                <PortalOutlet />
+                              </PortalProvider>
                             </MenuProvider>
                           </BottomSheetProvider>
                         </I18nextProvider>

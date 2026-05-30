@@ -1,12 +1,8 @@
 /**
  * LocationDisplay — refined "Where you'll be" section for the property
  * detail. Embeds the shared Map at a fixed height with a rounded
- * surface, then a Bloom-typography neighborhood blurb below.
- *
- * Replaces the older LocationSection which mixed embedded map +
- * fragmented address strings + nearby amenities. This file owns the
- * Airbnb-2026 visual; the older NearbyAmenities can still be rendered
- * separately by the caller if needed.
+ * surface, then a Bloom-typography neighborhood blurb below. Owns the
+ * Airbnb-2026 visual for the property location block.
  */
 import React, { useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
