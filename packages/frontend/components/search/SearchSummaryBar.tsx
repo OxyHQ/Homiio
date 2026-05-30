@@ -7,10 +7,13 @@
  *    (Where | Move-in/When | Property type) with hairline dividers and a
  *    circular Bloom-primary search button on the right. Each column and the
  *    button is pressable and opens the expanding `SearchPanel`, seeded to the
- *    relevant step. On narrow phones the same pill scales down — tighter
- *    paddings/gaps, smaller label/value type, a smaller button/divider — and
- *    every column truncates so the three columns plus the button fit a typical
- *    phone width without wrapping or overflow.
+ *    relevant step. Native and web render the IDENTICAL pill — same height,
+ *    same hairline dividers between all three columns, same Bloom-primary
+ *    circular button, same bold-label/lighter-value typography. To fit a
+ *    narrow phone the columns simply flex and truncate (one line, tail
+ *    ellipsis) and their horizontal padding tightens slightly; nothing else
+ *    scales down, so the phone pill reads as a narrower web pill, not a
+ *    squished one.
  *  - `compact` mode (results top bar): a single "Where · Type · Price" summary
  *    line inside the same rounded, elevated pill.
  *
@@ -49,25 +52,34 @@ const TYPE_LABELS: Record<PropertyType, string> = {
 };
 
 /**
- * 3-column pill geometry. Two size sets so the same layout works on a wide
- * web hero and a narrow phone: the narrow set tightens the pill height, the
- * circular search button, and the hairline divider so all three columns plus
- * the button fit a typical phone width.
+ * 3-column pill geometry. A SINGLE size set drives every width: the pill
+ * height, the circular Bloom-primary search button, the hairline dividers, the
+ * search icon, and the label/value type are identical on web and on a narrow
+ * phone. The only width-dependent value is the per-column horizontal padding
+ * (see `COLUMN_PAD_*` below): on a phone the columns sit a little tighter so
+ * the three roomy columns plus the full-size button still fit ~360dp without
+ * wrapping or pushing the button off-screen. Columns flex and truncate, so the
+ * native pill reads as a narrower version of the web pill — same structure,
+ * same emphasis — not a shrunken one.
  */
-const PILL_HEIGHT_WIDE = 66;
-const PILL_HEIGHT_NARROW = 58;
-const SEARCH_BUTTON_SIZE_WIDE = 48;
-const SEARCH_BUTTON_SIZE_NARROW = 40;
-const DIVIDER_HEIGHT_WIDE = 28;
-const DIVIDER_HEIGHT_NARROW = 24;
-const SEARCH_ICON_SIZE_WIDE = 20;
-const SEARCH_ICON_SIZE_NARROW = 18;
+const PILL_HEIGHT = 66;
+const SEARCH_BUTTON_SIZE = 48;
+const DIVIDER_HEIGHT = 28;
+const SEARCH_ICON_SIZE = 20;
 
-/** Column label/value type sizes per width. */
-const COLUMN_LABEL_FONT_WIDE = 12;
-const COLUMN_LABEL_FONT_NARROW = 11;
-const COLUMN_VALUE_FONT_WIDE = 13;
-const COLUMN_VALUE_FONT_NARROW = 12;
+/** Column label/value type sizes — identical on every width. */
+const COLUMN_LABEL_FONT = 12;
+const COLUMN_VALUE_FONT = 13;
+
+/**
+ * Per-column horizontal padding. The button keeps its full
+ * `SEARCH_BUTTON_SIZE`; only this padding tightens on a phone so the three
+ * columns shrink to make room. Web/tablet keep the roomy Airbnb spacing.
+ */
+const COLUMN_PAD_X_WIDE = spacing.xl;
+const COLUMN_PAD_X_NARROW = spacing.md;
+const COLUMN_FIRST_PAD_LEFT_WIDE = spacing['2xl'];
+const COLUMN_FIRST_PAD_LEFT_NARROW = spacing.lg;
 
 /** Single-line (compact) pill leading search-icon size. */
 const COMPACT_ICON_SIZE = 16;
@@ -102,7 +114,11 @@ interface PillColumnProps {
   label: string;
   value: string;
   isFirst?: boolean;
-  /** Apply the narrow-phone size set (tighter padding, smaller type). */
+  /**
+   * Tighten only this column's horizontal padding for a narrow phone so the
+   * three columns shrink to make room for the full-size button. Type sizes,
+   * height, and the divider are unaffected.
+   */
   isNarrow?: boolean;
   onPress: () => void;
   accessibilityLabel: string;
@@ -133,18 +149,10 @@ const PillColumn: React.FC<PillColumnProps> = ({
       pressed ? styles.columnPressed : null,
     ]}
   >
-    <BloomText
-      style={[styles.columnLabel, isNarrow ? styles.columnLabelNarrow : null]}
-      numberOfLines={1}
-      ellipsizeMode="tail"
-    >
+    <BloomText style={styles.columnLabel} numberOfLines={1} ellipsizeMode="tail">
       {label}
     </BloomText>
-    <BloomText
-      style={[styles.columnValue, isNarrow ? styles.columnValueNarrow : null]}
-      numberOfLines={1}
-      ellipsizeMode="tail"
-    >
+    <BloomText style={styles.columnValue} numberOfLines={1} ellipsizeMode="tail">
       {value}
     </BloomText>
   </Pressable>
@@ -239,7 +247,9 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
 
   // --- Full mode (every width): Airbnb-style 3-column pill ---
   if (!compact) {
-    // Narrow phones get the tighter size set; web/tablet keep the roomy one.
+    // The pill, dividers, button, and type are identical on every width. The
+    // only phone adjustment is tighter per-column horizontal padding so the
+    // three columns flex down and leave room for the full-size button.
     const isNarrow = !isWide;
     const whereColLabel =
       t('searchBar.long.where', 'Where') || 'Where';
@@ -250,7 +260,7 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
       t('searchBar.long.propertyType', 'Property type') || 'Property type';
 
     return (
-      <View style={[styles.pill3col, isNarrow ? styles.pill3colNarrow : null, cardShadow.md]}>
+      <View style={[styles.pill3col, cardShadow.md]}>
         <PillColumn
           isFirst
           isNarrow={isNarrow}
@@ -259,7 +269,7 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
           onPress={() => openColumn('where')}
           accessibilityLabel={`${whereColLabel}: ${whereLabel}`}
         />
-        <View style={[styles.divider, isNarrow ? styles.dividerNarrow : null]} />
+        <View style={styles.divider} />
         <PillColumn
           isNarrow={isNarrow}
           label={middleColLabel}
@@ -267,7 +277,7 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
           onPress={() => openColumn(isVacation ? 'dates' : 'where')}
           accessibilityLabel={`${middleColLabel}: ${datesLabel}`}
         />
-        <View style={[styles.divider, isNarrow ? styles.dividerNarrow : null]} />
+        <View style={styles.divider} />
         <PillColumn
           isNarrow={isNarrow}
           label={typeColLabel}
@@ -281,15 +291,10 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
           accessibilityLabel={t('searchBar.search', 'Search') || 'Search'}
           style={({ pressed }) => [
             styles.searchButton,
-            isNarrow ? styles.searchButtonNarrow : null,
             pressed ? styles.searchButtonPressed : null,
           ]}
         >
-          <Ionicons
-            name="search"
-            size={isNarrow ? SEARCH_ICON_SIZE_NARROW : SEARCH_ICON_SIZE_WIDE}
-            color={colors.white}
-          />
+          <Ionicons name="search" size={SEARCH_ICON_SIZE} color={colors.white} />
         </Pressable>
       </View>
     );
@@ -331,86 +336,70 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
 };
 
 const styles = StyleSheet.create({
-  // --- 3-column (full) pill: wide base + narrow overrides ---
+  // --- 3-column (full) pill: one size set for every width ---
   pill3col: {
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
-    height: PILL_HEIGHT_WIDE,
+    height: PILL_HEIGHT,
     backgroundColor: colors.surfaceElevated,
     borderRadius: radius.pill,
     borderWidth: hairline.width,
     borderColor: hairline.color,
     // Centre the circular button vertically inside the pill.
-    paddingRight: (PILL_HEIGHT_WIDE - SEARCH_BUTTON_SIZE_WIDE) / 2,
-  },
-  pill3colNarrow: {
-    height: PILL_HEIGHT_NARROW,
-    paddingRight: (PILL_HEIGHT_NARROW - SEARCH_BUTTON_SIZE_NARROW) / 2,
+    paddingRight: (PILL_HEIGHT - SEARCH_BUTTON_SIZE) / 2,
   },
   column: {
     flex: 1,
     minWidth: 0,
     height: '100%',
     justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: COLUMN_PAD_X_WIDE,
     paddingVertical: spacing.md,
     gap: spacing.xs,
   },
   columnNarrow: {
-    // Tighter horizontal padding so three columns + the button fit a phone.
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    // Tighter horizontal padding so the three columns shrink to leave room for
+    // the full-size button on a phone. Height/type/divider are unchanged.
+    paddingHorizontal: COLUMN_PAD_X_NARROW,
   },
   columnFirst: {
-    paddingLeft: spacing['2xl'],
+    paddingLeft: COLUMN_FIRST_PAD_LEFT_WIDE,
     borderTopLeftRadius: radius.pill,
     borderBottomLeftRadius: radius.pill,
   },
   columnFirstNarrow: {
-    paddingLeft: spacing.lg,
+    paddingLeft: COLUMN_FIRST_PAD_LEFT_NARROW,
   },
   columnPressed: {
     backgroundColor: colors.COLOR_BLACK_LIGHT_8,
   },
   columnLabel: {
-    fontSize: COLUMN_LABEL_FONT_WIDE,
+    fontSize: COLUMN_LABEL_FONT,
     fontWeight: '700',
     color: colors.COLOR_BLACK,
     letterSpacing: tracker.wide,
   },
-  columnLabelNarrow: {
-    fontSize: COLUMN_LABEL_FONT_NARROW,
-  },
   columnValue: {
-    fontSize: COLUMN_VALUE_FONT_WIDE,
+    fontSize: COLUMN_VALUE_FONT,
     color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  columnValueNarrow: {
-    fontSize: COLUMN_VALUE_FONT_NARROW,
   },
   divider: {
     width: hairline.width,
-    height: DIVIDER_HEIGHT_WIDE,
+    height: DIVIDER_HEIGHT,
     backgroundColor: hairline.color,
   },
-  dividerNarrow: {
-    height: DIVIDER_HEIGHT_NARROW,
-  },
   searchButton: {
-    width: SEARCH_BUTTON_SIZE_WIDE,
-    height: SEARCH_BUTTON_SIZE_WIDE,
-    borderRadius: SEARCH_BUTTON_SIZE_WIDE / 2,
+    // Reserve the button's full width — it never shrinks, so the flexing
+    // columns give up space first and the button stays on-screen.
+    flexShrink: 0,
+    width: SEARCH_BUTTON_SIZE,
+    height: SEARCH_BUTTON_SIZE,
+    borderRadius: SEARCH_BUTTON_SIZE / 2,
     backgroundColor: colors.primaryColor,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: spacing.sm,
-  },
-  searchButtonNarrow: {
-    width: SEARCH_BUTTON_SIZE_NARROW,
-    height: SEARCH_BUTTON_SIZE_NARROW,
-    borderRadius: SEARCH_BUTTON_SIZE_NARROW / 2,
-    marginLeft: spacing.xs,
   },
   searchButtonPressed: {
     opacity: 0.85,
