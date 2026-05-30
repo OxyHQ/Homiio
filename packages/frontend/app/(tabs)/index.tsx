@@ -3,8 +3,8 @@
  * strongly-spaced, image-heavy merchandising beats:
  *
  *   1. Hero canvas (Barcelona-flavored full-bleed photo, gradient
- *      overlay, collapsed SearchSummaryBar pill floats centered on web /
- *      sits below on mobile and opens the expanding SearchPanel).
+ *      overlay, collapsed SearchSummaryBar pill floats centered ON the
+ *      image at every width and opens the expanding SearchPanel).
  *   2. Sticky category strip (web only) with primary-colored active
  *      state.
  *   3. Property carousel — recommended for you.
@@ -448,48 +448,30 @@ export default function HomePage() {
             <H1 style={styles.heroTitle}>{t('home.hero.title')}</H1>
             <P style={styles.heroSubtitle}>{t('home.hero.subtitle')}</P>
 
-            {isWide ? (
-              <View style={styles.searchPillSlotWeb}>
-                <SearchSummaryBar
-                  query={activeQuery}
-                  onPress={handleOpenSearchPanel}
-                  onPressColumn={handleOpenSearchPanelAt}
-                />
-                {searchPanelOpen ? (
-                  <View style={styles.searchPanelAnchor}>
-                    <SearchPanel
-                      open={searchPanelOpen}
-                      onClose={handleCloseSearchPanel}
-                      initialQuery={heroSearchSeed}
-                      initialStep={searchPanelStep}
-                      onSubmit={handleSubmitSearch}
-                    />
-                  </View>
-                ) : null}
-              </View>
-            ) : null}
+            {/* Collapsed search pill — centered ON the hero image at every
+                width. The expanding panel is breakpoint-driven inside
+                SearchPanel (inline anchored card on wide, full-screen modal on
+                narrow), so this single on-hero mount covers the whole flow. */}
+            <View style={styles.searchPillSlot}>
+              <SearchSummaryBar
+                query={activeQuery}
+                onPress={handleOpenSearchPanel}
+                onPressColumn={handleOpenSearchPanelAt}
+              />
+              {searchPanelOpen ? (
+                <View style={styles.searchPanelAnchor}>
+                  <SearchPanel
+                    open={searchPanelOpen}
+                    onClose={handleCloseSearchPanel}
+                    initialQuery={heroSearchSeed}
+                    initialStep={searchPanelStep}
+                    onSubmit={handleSubmitSearch}
+                  />
+                </View>
+              ) : null}
+            </View>
           </View>
         </View>
-
-        {/* Mobile-only search pill. The panel itself renders as a full-screen
-            modal on narrow screens (breakpoint-driven inside SearchPanel), so a
-            single mount here covers the whole mobile flow. */}
-        {!isWide ? (
-          <View style={styles.searchPillSlotMobile}>
-            <SearchSummaryBar
-              query={activeQuery}
-              onPress={handleOpenSearchPanel}
-              onPressColumn={handleOpenSearchPanelAt}
-            />
-            <SearchPanel
-              open={searchPanelOpen}
-              onClose={handleCloseSearchPanel}
-              initialQuery={heroSearchSeed}
-              initialStep={searchPanelStep}
-              onSubmit={handleSubmitSearch}
-            />
-          </View>
-        ) : null}
 
         {/* === Category strip (sticky on web) === */}
         <View style={[styles.categoryStripWrap, { marginTop: isWide ? spacing['3xl'] : spacing.lg }]}>
@@ -700,9 +682,13 @@ const createStyles = (
       marginBottom: spacing['2xl'],
       maxWidth: 520,
     },
-    searchPillSlotWeb: {
+    // Single on-hero pill slot for every width. Centered with a sensible
+    // max width so the pill never runs edge-to-edge on a phone and the
+    // circular search button on the right stays fully on-screen.
+    searchPillSlot: {
       width: '100%',
-      maxWidth: 880,
+      maxWidth: isWide ? 880 : 520,
+      alignSelf: 'center',
       marginTop: spacing.lg,
       position: 'relative',
       zIndex: 20,
@@ -714,13 +700,6 @@ const createStyles = (
       right: 0,
       marginTop: spacing.md,
       zIndex: 30,
-    },
-    searchPillSlotMobile: {
-      width: '100%',
-      paddingHorizontal: 0,
-      paddingTop: spacing.lg,
-      marginTop: -spacing['3xl'],
-      zIndex: 5,
     },
 
     // Category strip
