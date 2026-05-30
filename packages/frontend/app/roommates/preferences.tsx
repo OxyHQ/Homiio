@@ -67,11 +67,15 @@ const PreferenceRow: React.FC<PreferenceRowProps> = ({
   title,
   value,
   onPress,
-}) => (
+}) => {
+  const [pressed, setPressed] = useState(false);
+  return (
   <Pressable
     onPress={onPress}
     disabled={!onPress}
-    style={({ pressed }) => [
+    onPressIn={() => setPressed(true)}
+    onPressOut={() => setPressed(false)}
+    style={[
       styles.preferenceRow,
       pressed && onPress ? styles.preferenceRowPressed : null,
     ]}
@@ -89,7 +93,8 @@ const PreferenceRow: React.FC<PreferenceRowProps> = ({
       ) : null}
     </View>
   </Pressable>
-);
+  );
+};
 
 export default function RoommatePreferencesPage() {
   const router = useRouter();

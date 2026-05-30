@@ -276,6 +276,47 @@ interface ContentTabSwitcherProps {
   onChange: (value: ContentTab) => void;
 }
 
+interface ContentTabButtonProps {
+  label: string;
+  icon: IoniconName;
+  active: boolean;
+  onPress: () => void;
+}
+
+const ContentTabButton: React.FC<ContentTabButtonProps> = ({
+  label,
+  icon,
+  active,
+  onPress,
+}) => {
+  const [pressed, setPressed] = useState(false);
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      style={[
+        styles.tabPill,
+        active && styles.tabPillActive,
+        pressed && styles.tabPillPressed,
+      ]}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: active }}
+    >
+      <Ionicons
+        name={icon}
+        size={16}
+        color={active ? colors.white : colors.COLOR_BLACK_LIGHT_2}
+      />
+      <BloomText
+        style={[styles.tabPillLabel, active && styles.tabPillLabelActive]}
+      >
+        {label}
+      </BloomText>
+    </Pressable>
+  );
+};
+
 const ContentTabSwitcher: React.FC<ContentTabSwitcherProps> = ({
   selected,
   propertyCount,
@@ -286,33 +327,15 @@ const ContentTabSwitcher: React.FC<ContentTabSwitcherProps> = ({
     {[
       { id: 'properties' as const, label: `Properties (${propertyCount})`, icon: 'home-outline' as IoniconName },
       { id: 'reviews' as const, label: `Reviews (${reviewCount})`, icon: 'chatbubbles-outline' as IoniconName },
-    ].map((tab) => {
-      const active = selected === tab.id;
-      return (
-        <Pressable
-          key={tab.id}
-          onPress={() => onChange(tab.id)}
-          style={({ pressed }) => [
-            styles.tabPill,
-            active && styles.tabPillActive,
-            pressed && styles.tabPillPressed,
-          ]}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: active }}
-        >
-          <Ionicons
-            name={tab.icon}
-            size={16}
-            color={active ? colors.white : colors.COLOR_BLACK_LIGHT_2}
-          />
-          <BloomText
-            style={[styles.tabPillLabel, active && styles.tabPillLabelActive]}
-          >
-            {tab.label}
-          </BloomText>
-        </Pressable>
-      );
-    })}
+    ].map((tab) => (
+      <ContentTabButton
+        key={tab.id}
+        label={tab.label}
+        icon={tab.icon}
+        active={selected === tab.id}
+        onPress={() => onChange(tab.id)}
+      />
+    ))}
   </View>
 );
 

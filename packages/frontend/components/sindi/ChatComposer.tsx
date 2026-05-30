@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Platform,
   Pressable,
@@ -69,6 +69,7 @@ export const ChatComposer = React.memo<ChatComposerProps>(
     stickyStyle,
   }) => {
     const { t } = useTranslation();
+    const [sendPressed, setSendPressed] = useState(false);
 
     const hasContent = Boolean(input.trim() || attachedFile);
     // The button is non-interactive while streaming, but only dimmed when there
@@ -137,12 +138,14 @@ export const ChatComposer = React.memo<ChatComposerProps>(
               />
 
               <Pressable
-                style={({ pressed }) => [
+                style={[
                   sindiStyles.sendButtonPlain,
                   sendDimmed && sindiStyles.sendButtonDisabledPlain,
-                  pressed && sindiStyles.sendButtonPressed,
+                  sendPressed && sindiStyles.sendButtonPressed,
                 ]}
                 onPress={onSubmit}
+                onPressIn={() => setSendPressed(true)}
+                onPressOut={() => setSendPressed(false)}
                 disabled={sendDisabled}
                 accessibilityRole="button"
                 accessibilityLabel="Send message"

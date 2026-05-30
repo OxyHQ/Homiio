@@ -29,10 +29,14 @@ type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 const TipCard: React.FC<{ tip: TipArticle; onPress: () => void }> = ({
   tip,
   onPress,
-}) => (
+}) => {
+  const [pressed, setPressed] = useState(false);
+  return (
   <Pressable
     onPress={onPress}
-    style={({ pressed }) => [styles.tipCard, pressed && styles.tipCardPressed]}
+    onPressIn={() => setPressed(true)}
+    onPressOut={() => setPressed(false)}
+    style={[styles.tipCard, pressed && styles.tipCardPressed]}
     accessibilityRole="button"
     accessibilityLabel={tip.title}
   >
@@ -68,7 +72,8 @@ const TipCard: React.FC<{ tip: TipArticle; onPress: () => void }> = ({
       </View>
     </View>
   </Pressable>
-);
+  );
+};
 
 export default function TipsScreen() {
   const { t } = useTranslation();

@@ -471,6 +471,7 @@ interface StatTileProps {
 }
 
 const StatTile: React.FC<StatTileProps> = ({ label, value, description, onPress }) => {
+  const [pressed, setPressed] = useState(false);
   const body = (
     <>
       <H2 style={styles.statValue}>{value}</H2>
@@ -498,9 +499,11 @@ const StatTile: React.FC<StatTileProps> = ({ label, value, description, onPress 
       {onPress ? (
         <Pressable
           onPress={onPress}
+          onPressIn={() => setPressed(true)}
+          onPressOut={() => setPressed(false)}
           accessibilityRole="button"
           accessibilityLabel={`${label}: ${value}. Open ${label.toLowerCase()}`}
-          style={({ pressed }) => [pressed ? styles.statTilePressed : null]}
+          style={pressed ? styles.statTilePressed : null}
         >
           <CardSurface padding={spacing.lg}>{body}</CardSurface>
         </Pressable>

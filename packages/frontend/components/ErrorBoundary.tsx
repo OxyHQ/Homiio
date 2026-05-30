@@ -114,6 +114,9 @@ function ErrorFallback({
 }: ErrorFallbackProps) {
   const { t } = useTranslation();
   const [showDetails, setShowDetails] = useState(false);
+  const [badgePressed, setBadgePressed] = useState(false);
+  const [errorIdPressed, setErrorIdPressed] = useState(false);
+  const [detailsTogglePressed, setDetailsTogglePressed] = useState(false);
   const isWide = useMediaQuery({ minWidth: 768 });
   // Mirror state into a ref so the report generator stays current without
   // re-running on every state change.
@@ -197,9 +200,11 @@ function ErrorFallback({
         style={[styles.card, isWide && styles.cardWide, isWide && withShadow('lg')]}>
         <Pressable
           onPress={handleBadgePress}
+          onPressIn={() => setBadgePressed(true)}
+          onPressOut={() => setBadgePressed(false)}
           accessibilityRole="button"
           accessibilityLabel={t('error.boundary.title')}
-          style={({ pressed }) => [styles.iconBadge, pressed && styles.iconBadgePressed]}>
+          style={[styles.iconBadge, badgePressed && styles.iconBadgePressed]}>
           <Ionicons name="alert-circle-outline" size={56} color={colors.danger} />
         </Pressable>
 
@@ -210,10 +215,12 @@ function ErrorFallback({
 
         <Pressable
           onPress={handleCopyErrorId}
+          onPressIn={() => setErrorIdPressed(true)}
+          onPressOut={() => setErrorIdPressed(false)}
           accessibilityRole="button"
           accessibilityLabel={t('error.boundary.copyIdHint')}
           accessibilityHint={errorId}
-          style={({ pressed }) => [styles.errorIdChip, pressed && styles.errorIdChipPressed]}>
+          style={[styles.errorIdChip, errorIdPressed && styles.errorIdChipPressed]}>
           <BloomText style={styles.errorIdLabel}>{t('error.boundary.errorId')}</BloomText>
           <BloomText style={styles.errorIdValue}>{errorId}</BloomText>
           <Ionicons name="copy-outline" size={12} color={colors.muted} style={styles.errorIdCopyIcon} />
@@ -253,9 +260,11 @@ function ErrorFallback({
         {showErrorDetails && (
           <Pressable
             onPress={() => setShowDetails((prev) => !prev)}
+            onPressIn={() => setDetailsTogglePressed(true)}
+            onPressOut={() => setDetailsTogglePressed(false)}
             accessibilityRole="button"
             accessibilityState={{ expanded: showDetails }}
-            style={({ pressed }) => [styles.detailsToggle, pressed && styles.detailsTogglePressed]}>
+            style={[styles.detailsToggle, detailsTogglePressed && styles.detailsTogglePressed]}>
             <BloomText style={styles.detailsToggleText}>
               {showDetails ? t('error.boundary.hideDetails') : t('error.boundary.showDetails')}
             </BloomText>

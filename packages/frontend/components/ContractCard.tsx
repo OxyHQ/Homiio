@@ -6,7 +6,7 @@
  *   - Bloom Typography for every label / value, no raw <Text>.
  *   - Inline Bloom Button actions for share / download (when provided).
  */
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@oxyhq/bloom/button';
@@ -64,6 +64,8 @@ export const ContractCard: React.FC<ContractCardProps> = ({
   onSharePress,
   onDownloadPress,
 }) => {
+  const [pressed, setPressed] = useState(false);
+
   const formattedRent = useMemo(
     () => `${currency}${monthlyRent.toLocaleString()}`,
     [currency, monthlyRent],
@@ -138,7 +140,9 @@ export const ContractCard: React.FC<ContractCardProps> = ({
       {onPress ? (
         <Pressable
           onPress={onPress}
-          style={({ pressed }) => [
+          onPressIn={() => setPressed(true)}
+          onPressOut={() => setPressed(false)}
+          style={[
             styles.bodyPressable,
             pressed && styles.containerPressed,
           ]}

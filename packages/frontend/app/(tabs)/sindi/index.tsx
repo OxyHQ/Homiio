@@ -71,10 +71,13 @@ const ConversationItem = memo<ConversationItemProps>(
   ({ conversation, isLast, onPress }) => {
     const last =
       conversation.messages[conversation.messages.length - 1];
+    const [pressed, setPressed] = useState(false);
     return (
       <Pressable
         onPress={onPress}
-        style={({ pressed }) => [
+        onPressIn={() => setPressed(true)}
+        onPressOut={() => setPressed(false)}
+        style={[
           styles.conversationItem,
           isLast && styles.conversationItemLast,
           pressed && styles.conversationItemPressed,

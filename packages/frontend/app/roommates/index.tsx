@@ -51,6 +51,37 @@ const TABS: { id: Tab; label: string; icon: IoniconName }[] = [
   { id: 'rooms', label: 'Rooms', icon: 'bed-outline' },
 ];
 
+const TabButton: React.FC<{
+  tab: { id: Tab; label: string; icon: IoniconName };
+  isActive: boolean;
+  onPress: () => void;
+}> = ({ tab, isActive, onPress }) => {
+  const [pressed, setPressed] = useState(false);
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      style={[
+        styles.tab,
+        isActive && styles.tabActive,
+        pressed && styles.tabPressed,
+      ]}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: isActive }}
+    >
+      <Ionicons
+        name={tab.icon}
+        size={16}
+        color={isActive ? colors.white : colors.COLOR_BLACK_LIGHT_2}
+      />
+      <BloomText style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
+        {tab.label}
+      </BloomText>
+    </Pressable>
+  );
+};
+
 const TabBar: React.FC<{
   activeTab: Tab;
   onChange: (tab: Tab) => void;
@@ -60,33 +91,14 @@ const TabBar: React.FC<{
     showsHorizontalScrollIndicator={false}
     contentContainerStyle={styles.tabBarContent}
   >
-    {TABS.map((tab) => {
-      const isActive = tab.id === activeTab;
-      return (
-        <Pressable
-          key={tab.id}
-          onPress={() => onChange(tab.id)}
-          style={({ pressed }) => [
-            styles.tab,
-            isActive && styles.tabActive,
-            pressed && styles.tabPressed,
-          ]}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: isActive }}
-        >
-          <Ionicons
-            name={tab.icon}
-            size={16}
-            color={isActive ? colors.white : colors.COLOR_BLACK_LIGHT_2}
-          />
-          <BloomText
-            style={[styles.tabLabel, isActive && styles.tabLabelActive]}
-          >
-            {tab.label}
-          </BloomText>
-        </Pressable>
-      );
-    })}
+    {TABS.map((tab) => (
+      <TabButton
+        key={tab.id}
+        tab={tab}
+        isActive={tab.id === activeTab}
+        onPress={() => onChange(tab.id)}
+      />
+    ))}
   </ScrollView>
 );
 

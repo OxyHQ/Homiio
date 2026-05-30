@@ -7,7 +7,7 @@
  * it owns no presentation chrome of its own beyond the rows + title so the
  * caller controls how it's surfaced.
  */
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -66,6 +66,37 @@ function matchOption(sortBy: SearchSortBy, sortOrder: SearchSortOrder): string {
   return found?.key ?? SORT_OPTIONS[0].key;
 }
 
+interface SortRowProps {
+  label: string;
+  isSelected: boolean;
+  onPress: () => void;
+}
+
+/**
+ * A single sort option row. NativeWind's css-interop swallows the function form
+ * of `style`, so the pressed tint is driven by onPressIn/onPressOut state over a
+ * static style array instead.
+ */
+const SortRow: React.FC<SortRowProps> = ({ label, isSelected, onPress }) => {
+  const [pressed, setPressed] = useState(false);
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      accessibilityRole="radio"
+      accessibilityState={{ selected: isSelected }}
+      accessibilityLabel={label}
+      style={[styles.row, pressed ? styles.rowPressed : null]}
+    >
+      <BloomText style={[styles.label, isSelected ? styles.labelSelected : null]}>
+        {label}
+      </BloomText>
+      <RadioIndicator selected={isSelected} />
+    </Pressable>
+  );
+};
+
 interface SortControlProps {
   sortBy: SearchSortBy;
   sortOrder: SearchSortOrder;
@@ -98,19 +129,12 @@ export const SortControl: React.FC<SortControlProps> = ({
         const isSelected = option.key === activeKey;
         const label = t(option.labelKey, option.fallback) || option.fallback;
         return (
-          <Pressable
+          <SortRow
             key={option.key}
+            label={label}
+            isSelected={isSelected}
             onPress={() => handleSelect(option)}
-            accessibilityRole="radio"
-            accessibilityState={{ selected: isSelected }}
-            accessibilityLabel={label}
-            style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
-          >
-            <BloomText style={[styles.label, isSelected ? styles.labelSelected : null]}>
-              {label}
-            </BloomText>
-            <RadioIndicator selected={isSelected} />
-          </Pressable>
+          />
         );
       })}
     </View>

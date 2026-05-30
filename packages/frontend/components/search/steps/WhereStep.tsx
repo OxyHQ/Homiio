@@ -7,7 +7,7 @@
  * Selecting a row resolves a {@link SearchLocation} (label + center + a small
  * bounding box) and hands it back to the panel.
  */
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -47,6 +47,55 @@ function toSearchLocation(s: AddressSuggestion): SearchLocation | null {
     },
   };
 }
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+interface SuggestionRowProps {
+  icon: IoniconName;
+  title: string;
+  subtitle?: string;
+  accessibilityLabel: string;
+  onPress: () => void;
+}
+
+/**
+ * A single tappable suggestion / recent-search row. NativeWind's css-interop
+ * swallows the function form of `style`, so the pressed background is driven by
+ * onPressIn/onPressOut state over a static style array instead.
+ */
+const SuggestionRow: React.FC<SuggestionRowProps> = ({
+  icon,
+  title,
+  subtitle,
+  accessibilityLabel,
+  onPress,
+}) => {
+  const [pressed, setPressed] = useState(false);
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      style={[styles.row, pressed ? styles.rowPressed : null]}
+    >
+      <View style={styles.iconWrap}>
+        <Ionicons name={icon} size={18} color={colors.COLOR_BLACK_LIGHT_3} />
+      </View>
+      <View style={styles.rowText}>
+        <BloomText style={styles.rowTitle} numberOfLines={1}>
+          {title}
+        </BloomText>
+        {subtitle ? (
+          <BloomText style={styles.rowSubtitle} numberOfLines={1}>
+            {subtitle}
+          </BloomText>
+        ) : null}
+      </View>
+    </Pressable>
+  );
+};
 
 interface WhereStepProps {
   /** Current free-text value of the input. */
@@ -123,27 +172,14 @@ export const WhereStep: React.FC<WhereStepProps> = ({
               {t('search.recent.title', 'Recent searches') || 'Recent searches'}
             </BloomText>
             {recentSearches.map((recent) => (
-              <Pressable
+              <SuggestionRow
                 key={recent.id}
-                onPress={() => onSelectRecent(recent)}
-                accessibilityRole="button"
+                icon="time-outline"
+                title={recent.label}
+                subtitle={recent.sublabel}
                 accessibilityLabel={recent.label}
-                style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
-              >
-                <View style={styles.iconWrap}>
-                  <Ionicons name="time-outline" size={18} color={colors.COLOR_BLACK_LIGHT_3} />
-                </View>
-                <View style={styles.rowText}>
-                  <BloomText style={styles.rowTitle} numberOfLines={1}>
-                    {recent.label}
-                  </BloomText>
-                  {recent.sublabel ? (
-                    <BloomText style={styles.rowSubtitle} numberOfLines={1}>
-                      {recent.sublabel}
-                    </BloomText>
-                  ) : null}
-                </View>
-              </Pressable>
+                onPress={() => onSelectRecent(recent)}
+              />
             ))}
           </View>
         ) : null
@@ -156,25 +192,14 @@ export const WhereStep: React.FC<WhereStepProps> = ({
             </BloomText>
           ) : null}
           {resolvedSuggestions.map((location) => (
-            <Pressable
+            <SuggestionRow
               key={`${location.center[0]},${location.center[1]}`}
-              onPress={() => onSelectLocation(location)}
-              accessibilityRole="button"
+              icon="location-outline"
+              title={location.shortLabel}
+              subtitle={location.label}
               accessibilityLabel={location.label}
-              style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
-            >
-              <View style={styles.iconWrap}>
-                <Ionicons name="location-outline" size={18} color={colors.COLOR_BLACK_LIGHT_3} />
-              </View>
-              <View style={styles.rowText}>
-                <BloomText style={styles.rowTitle} numberOfLines={1}>
-                  {location.shortLabel}
-                </BloomText>
-                <BloomText style={styles.rowSubtitle} numberOfLines={1}>
-                  {location.label}
-                </BloomText>
-              </View>
-            </Pressable>
+              onPress={() => onSelectLocation(location)}
+            />
           ))}
         </View>
       )}

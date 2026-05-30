@@ -20,7 +20,7 @@
  * Tapping anywhere reopens the expanding `SearchPanel`. Used both on the home
  * hero and as the editable summary in the results top bar.
  */
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -136,27 +136,37 @@ const PillColumn: React.FC<PillColumnProps> = ({
   isNarrow = false,
   onPress,
   accessibilityLabel,
-}) => (
-  <Pressable
-    onPress={onPress}
-    accessibilityRole="button"
-    accessibilityLabel={accessibilityLabel}
-    style={({ pressed }) => [
-      styles.column,
-      isNarrow ? styles.columnNarrow : null,
-      isFirst ? styles.columnFirst : null,
-      isFirst && isNarrow ? styles.columnFirstNarrow : null,
-      pressed ? styles.columnPressed : null,
-    ]}
-  >
-    <BloomText style={styles.columnLabel} numberOfLines={1} ellipsizeMode="tail">
-      {label}
-    </BloomText>
-    <BloomText style={styles.columnValue} numberOfLines={1} ellipsizeMode="tail">
-      {value}
-    </BloomText>
-  </Pressable>
-);
+}) => {
+  // NativeWind's css-interop rewrites the `style` prop and does not support
+  // React Native's function form (`style={({ pressed }) => …}`) — the function
+  // is swallowed and the element renders with no style. Use a STATIC style
+  // array (which css-interop merges correctly) and drive the pressed tint with
+  // onPressIn/onPressOut state instead.
+  const [pressed, setPressed] = useState(false);
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      style={[
+        styles.column,
+        isNarrow && styles.columnNarrow,
+        isFirst && styles.columnFirst,
+        isFirst && isNarrow && styles.columnFirstNarrow,
+        pressed && styles.columnPressed,
+      ]}
+    >
+      <BloomText style={styles.columnLabel} numberOfLines={1} ellipsizeMode="tail">
+        {label}
+      </BloomText>
+      <BloomText style={styles.columnValue} numberOfLines={1} ellipsizeMode="tail">
+        {value}
+      </BloomText>
+    </Pressable>
+  );
+};
 
 export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
   query,
@@ -166,6 +176,7 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
 }) => {
   const { t } = useTranslation();
   const isWide = useIsScreenNotMobile();
+  const [searchPressed, setSearchPressed] = useState(false);
 
   const handlePress = useCallback(() => onPress(), [onPress]);
   const openColumn = useCallback(
@@ -287,12 +298,11 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
         />
         <Pressable
           onPress={handlePress}
+          onPressIn={() => setSearchPressed(true)}
+          onPressOut={() => setSearchPressed(false)}
           accessibilityRole="button"
           accessibilityLabel={t('searchBar.search', 'Search') || 'Search'}
-          style={({ pressed }) => [
-            styles.searchButton,
-            pressed ? styles.searchButtonPressed : null,
-          ]}
+          style={[styles.searchButton, searchPressed && styles.searchButtonPressed]}
         >
           <Ionicons name="search" size={SEARCH_ICON_SIZE} color={colors.white} />
         </Pressable>
@@ -304,15 +314,13 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
   return (
     <Pressable
       onPress={handlePress}
+      onPressIn={() => setSearchPressed(true)}
+      onPressOut={() => setSearchPressed(false)}
       accessibilityRole="button"
       accessibilityLabel={
         t('search.summary.edit', 'Edit search') || 'Edit search'
       }
-      style={({ pressed }) => [
-        styles.pill,
-        cardShadow.md,
-        pressed ? styles.pillPressed : null,
-      ]}
+      style={[styles.pill, cardShadow.md, searchPressed && styles.pillPressed]}
     >
       <View style={styles.searchIcon}>
         <Ionicons name="search" size={COMPACT_ICON_SIZE} color={colors.COLOR_BLACK} />
