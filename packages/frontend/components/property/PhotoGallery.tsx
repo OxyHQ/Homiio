@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { View, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
+import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { colors } from '@/styles/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
+import { radius, spacing } from '@/constants/styles';
+import { SECTION_GUTTER } from './Section';
 import { ImageGalleryModal } from './ImageGalleryModal';
 import type { PropertyImage } from '@homiio/shared-types';
 
@@ -12,6 +14,9 @@ interface PhotoGalleryProps {
     onOpen?: (index: number) => void;
     t: (key: string) => string | undefined;
 }
+
+const THUMB_SIZE = 100;
+const MAX_THUMBS = 5;
 
 export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, onOpen, t }) => {
     const [modalVisible, setModalVisible] = useState(false);
@@ -28,9 +33,9 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, onOpen, t })
         <>
             <View style={styles.photoGalleryContainer}>
                 <View style={styles.galleryHeader}>
-                    <ThemedText style={styles.sectionTitle}>{t('Photo Gallery')}</ThemedText>
+                    <BloomText style={styles.sectionTitle}>{t('Photo Gallery')}</BloomText>
                     <TouchableOpacity style={styles.viewAllButton} onPress={() => handleImagePress(0)}>
-                        <ThemedText style={styles.viewAllButtonText}>{t('View All')}</ThemedText>
+                        <BloomText style={styles.viewAllButtonText}>{t('View All')}</BloomText>
                         <Ionicons name="chevron-forward" size={16} color={colors.primaryColor} />
                     </TouchableOpacity>
                 </View>
@@ -40,7 +45,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, onOpen, t })
                     style={styles.galleryScroll}
                     contentContainerStyle={styles.galleryScrollContent}
                 >
-                    {images.slice(0, 5).map((image, index) => (
+                    {images.slice(0, MAX_THUMBS).map((image, index) => (
                         <TouchableOpacity
                             key={index}
                             style={styles.galleryImageContainer}
@@ -48,9 +53,9 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, onOpen, t })
                             activeOpacity={0.8}
                         >
                             <Image source={getPropertyImageSource(image)} style={styles.galleryImage} resizeMode="cover" />
-                            {index === 4 && images.length > 5 && (
+                            {index === MAX_THUMBS - 1 && images.length > MAX_THUMBS && (
                                 <View style={styles.moreImagesOverlay}>
-                                    <ThemedText style={styles.moreImagesText}>+{images.length - 5}</ThemedText>
+                                    <BloomText style={styles.moreImagesText}>+{images.length - MAX_THUMBS}</BloomText>
                                 </View>
                             )}
                         </TouchableOpacity>
@@ -69,31 +74,34 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, onOpen, t })
 };
 
 const styles = StyleSheet.create({
+    // Full-bleed container: the horizontal gutter lives on the header and
+    // the scroll's contentContainerStyle so the scroll track runs
+    // edge-to-edge (matches HomeCarouselSection).
     photoGalleryContainer: {
-        marginBottom: 20,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        marginBottom: spacing.xl,
+        paddingVertical: spacing.md,
     },
     galleryHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 10,
+        marginBottom: spacing.md,
+        paddingHorizontal: SECTION_GUTTER,
     },
     sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 0,
+        fontSize: 20,
+        fontWeight: '700',
+        color: colors.COLOR_BLACK,
+        letterSpacing: -0.2,
     },
-    viewAllButton: { flexDirection: 'row', alignItems: 'center' },
-    viewAllButtonText: { fontSize: 14, color: colors.primaryColor, marginRight: 5 },
-    galleryScroll: { height: 100 },
-    galleryScrollContent: { paddingHorizontal: 16 },
+    viewAllButton: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+    viewAllButtonText: { fontSize: 14, color: colors.primaryColor },
+    galleryScroll: { height: THUMB_SIZE },
+    galleryScrollContent: { paddingHorizontal: SECTION_GUTTER, gap: spacing.md },
     galleryImageContainer: {
-        width: 100,
-        height: 100,
-        borderRadius: 12,
-        marginRight: 12,
+        width: THUMB_SIZE,
+        height: THUMB_SIZE,
+        borderRadius: radius.md,
         overflow: 'hidden',
         backgroundColor: colors.COLOR_BLACK_LIGHT_6,
     },
@@ -104,8 +112,8 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.6)',
-        borderRadius: 12,
+        backgroundColor: colors.overlay,
+        borderRadius: radius.md,
         justifyContent: 'center',
         alignItems: 'center',
     },
