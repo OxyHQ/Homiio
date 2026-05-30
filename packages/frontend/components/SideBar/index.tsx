@@ -546,11 +546,12 @@ export function SideBar() {
   }, []);
 
   /* --------------------------------------------------------------
-     Below the sidebar breakpoint the BottomBar takes over and the
-     sidebar becomes an on-demand slide-in overlay drawer. Nothing is
-     rendered inline at this breakpoint — the expanded content is rendered
-     through Bloom's root Portal at the bottom of this component so it
-     overlays the whole viewport.
+     Below the sidebar breakpoint the native bottom tab bar (the `(tabs)`
+     group's `NativeTabs`) takes over primary navigation and the sidebar
+     becomes an on-demand slide-in overlay drawer. Nothing is rendered
+     inline at this breakpoint — the expanded content is rendered through
+     Bloom's root Portal at the bottom of this component so it overlays the
+     whole viewport.
      -------------------------------------------------------------- */
   const isMobile = !isSidebarVisible;
 
@@ -1011,9 +1012,9 @@ export function SideBar() {
      Mirrors the inbox app's `front`-type `expo-router/drawer`: the panel
      slides in from the left over the current screen and a full-viewport
      dimming scrim sits behind it as a tap-to-dismiss target. Mounted only
-     while open so it occupies no layout when closed (the BottomBar drives
-     navigation at this breakpoint). One responsive component — the same nav
-     content is reused; only the chrome differs from the persistent rail.
+     while open so it occupies no layout when closed (the native bottom tab
+     bar drives navigation at this breakpoint). One responsive component —
+     the same nav content is reused; only the chrome differs from the rail.
      ============================================================== */
   if (isMobile) {
     // Cap the panel width to the viewport so it never overflows on the

@@ -16,7 +16,6 @@ import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { SideBar } from '@/components/SideBar';
 import { RightBar } from '@/components/RightBar';
 import { colors } from '@/styles/colors';
-import { useKeyboardVisibility } from '@/hooks/useKeyboardVisibility';
 import { Toaster } from '@/lib/sonner';
 import {
   setupNotifications,
@@ -29,7 +28,6 @@ import enUS from '@/locales/en.json';
 import esES from '@/locales/es.json';
 import caES from '@/locales/ca-ES.json';
 import itIT from '@/locales/it.json';
-import { BottomBar } from '@/components/BottomBar';
 import { MenuProvider } from 'react-native-popup-menu';
 
 import AppSplashScreen from '@/components/AppSplashScreen';
@@ -81,6 +79,18 @@ export default function RootLayout() {
   const isScreenNotMobile = useIsScreenNotMobile();
   const pathname = usePathname() || '/';
 
+  /**
+   * On native phones the `(tabs)` group owns the screen container via
+   * `NativeTabs` (a navigator that renders the platform tab bar — `UITabBar` /
+   * `BottomNavigationView`). A navigator must directly own its screens, so on
+   * this branch we render `<Slot/>` without the outer `Animated.ScrollView` or
+   * `RightBar`, and let the native bar replace the old JS `BottomBar`. `SideBar`
+   * still mounts so its on-demand overlay drawer (opened from screen headers via
+   * the UI store) keeps working. Web and wide native screens keep the original
+   * persistent SideBar + content + RightBar shell.
+   */
+  const useNativeTabBar = Platform.OS !== 'web' && !isScreenNotMobile;
+
   const styles = useMemo(() => StyleSheet.create({
     container: {
       ...(isScreenNotMobile ? {
@@ -129,9 +139,6 @@ export default function RootLayout() {
       },
     },
   }), []);
-
-  // --- Keyboard State ---
-  const keyboardVisible = useKeyboardVisibility();
 
   const initializeApp = useCallback(async () => {
     try {
@@ -216,22 +223,41 @@ export default function RootLayout() {
                                 <ErrorBoundary>
                                   <MapStateProvider>
                                     <SearchModeProvider>
-                                      <LayoutScrollProvider value={layoutScrollContextValue}>
-                                        <Animated.ScrollView
-                                          contentContainerStyle={styles.container}
-                                          style={{ flex: 1 }}
-                                          onScroll={layoutScrollHandler}
-                                          scrollEventThrottle={16}
-                                        >
+                                      {useNativeTabBar ? (
+                                        /*
+                                          Native phones: the `(tabs)` group's
+                                          `NativeTabs` navigator owns the screen
+                                          container, so `<Slot/>` is rendered
+                                          directly (no outer scroll view / right
+                                          rail). `SideBar` stays mounted for its
+                                          Portal overlay drawer. The platform tab
+                                          bar replaces the old JS `BottomBar`.
+                                          Screens that read `LayoutScrollContext`
+                                          fall back to a local `scrollY` when the
+                                          provider is absent.
+                                        */
+                                        <>
                                           <SideBar />
-                                          <View style={styles.mainContent}>
-                                            <View style={styles.mainContentWrapper}>
-                                              <Slot />
+                                          <Slot />
+                                        </>
+                                      ) : (
+                                        <LayoutScrollProvider value={layoutScrollContextValue}>
+                                          <Animated.ScrollView
+                                            contentContainerStyle={styles.container}
+                                            style={{ flex: 1 }}
+                                            onScroll={layoutScrollHandler}
+                                            scrollEventThrottle={16}
+                                          >
+                                            <SideBar />
+                                            <View style={styles.mainContent}>
+                                              <View style={styles.mainContentWrapper}>
+                                                <Slot />
+                                              </View>
+                                              <RightBar />
                                             </View>
-                                            <RightBar />
-                                          </View>
-                                        </Animated.ScrollView>
-                                      </LayoutScrollProvider>
+                                          </Animated.ScrollView>
+                                        </LayoutScrollProvider>
+                                      )}
                                     </SearchModeProvider>
                                   </MapStateProvider>
                                   <StatusBar style="auto" />
@@ -240,7 +266,6 @@ export default function RootLayout() {
                                     swipeToDismissDirection="left"
                                     offset={15}
                                   />
-                                  {!isScreenNotMobile && !keyboardVisible && <BottomBar />}
                                 </ErrorBoundary>
                                 {/*
                                   Root overlay outlet. The mobile navigation
