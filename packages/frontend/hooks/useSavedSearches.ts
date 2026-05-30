@@ -5,7 +5,7 @@ import {
   type SavedSearch,
   type SavedSearchFilters,
 } from '@/store/savedSearchesStore';
-import { toast } from 'sonner';
+import { toast } from '@/lib/sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError } from '@/utils/api';

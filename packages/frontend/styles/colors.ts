@@ -46,11 +46,21 @@ const hslToHex = (h: number, s: number, l: number): string => {
 };
 
 /**
- * Normalise a Bloom color value to a 6-digit hex string. Bloom emits `hsl(h, s%,
- * l%)`; pass-through anything already hex/rgba so the conversion is total.
+ * Normalise a Bloom color value to a 6-digit hex string.
+ *
+ * Bloom currently serialises neutrals as comma-separated `hsl(h, s%, l%)`, but
+ * the parser also accepts the space-separated CSS Color 4 syntax
+ * (`hsl(h s% l%)`) so a future Bloom serialisation change cannot silently leak
+ * an unconverted `hsl(…)` string into React Native style props (RN's color
+ * parser rejects space-separated hsl). Separators between the three components
+ * may be commas and/or whitespace. Anything already hex/rgba passes through so
+ * the conversion is total.
  */
 const toHex = (value: string): string => {
-  const match = /^hsl\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*\)$/i.exec(value);
+  const match =
+    /^hsl\(\s*([\d.]+)\s*(?:,\s*|\s+)([\d.]+)%\s*(?:,\s*|\s+)([\d.]+)%\s*\)$/i.exec(
+      value,
+    );
   if (match) {
     return hslToHex(Number(match[1]), Number(match[2]), Number(match[3]));
   }
@@ -120,8 +130,12 @@ export type DomainColorKey = keyof typeof DomainColors.light;
 export const colors = {
   // --- Brand (now Bloom `blue` #1D9BF0) ---
   primaryColor: L('primary'),
-  /** White surface / text-on-primary. Historically pure white. */
-  primaryLight: WHITE,
+  /**
+   * Page/content surface (the white panel behind app content). Tracks Bloom's
+   * `background` neutral (near-white) rather than a hardcoded `#fff` so it stays
+   * in step with the rest of the Bloom-derived surfaces.
+   */
+  primaryLight: L('background'),
   primaryLight_1: L('primarySubtle'),
   primaryLight_2: L('primarySubtle'),
   /** Near-black used as default icon/heading color (role: foreground). */
@@ -133,17 +147,28 @@ export const colors = {
   overlay: BLOOM_LIGHT.overlay,
   shadow: BLOOM_LIGHT.shadow,
 
-  // --- Neutral grayscale ramp (Homiio domain neutrals) ---
+  // --- Neutral grayscale ramp (now derived BY ROLE from Bloom `blue` light
+  //     neutrals, darkest → lightest). Bloom models fewer neutral steps than
+  //     this legacy 9-stop ramp and uses one value for textSecondary/textTertiary,
+  //     so adjacent stops can coincide; the ordering stays monotonic
+  //     (non-increasing darkness), preserving the original visual hierarchy.
+  //       _1/_2  headings / primary text     → text          (#1f1f1f)
+  //       _3/_4  body / muted text           → textSecondary (#666c70)
+  //       _5     faint icons / placeholders  → textTertiary  (#666c70)
+  //       _6     hairline borders            → border        (#dee1e3)
+  //       _7     light fills                 → backgroundTertiary  (#f1f2f3)
+  //       _8     lighter fills               → backgroundSecondary (#f7f7f8)
+  //       _9     near-white surfaces         → background          (#fcfcfc)
   COLOR_BLACK: BLACK,
-  COLOR_BLACK_LIGHT_1: '#111111',
-  COLOR_BLACK_LIGHT_2: '#1e1e1e',
-  COLOR_BLACK_LIGHT_3: '#3c3c3c',
-  COLOR_BLACK_LIGHT_4: '#5e5e5e',
-  COLOR_BLACK_LIGHT_5: '#949494',
-  COLOR_BLACK_LIGHT_6: '#ededed',
-  COLOR_BLACK_LIGHT_7: '#F5F5F5',
-  COLOR_BLACK_LIGHT_8: '#FAFAFA',
-  COLOR_BLACK_LIGHT_9: '#FDFDFD',
+  COLOR_BLACK_LIGHT_1: L('text'),
+  COLOR_BLACK_LIGHT_2: L('text'),
+  COLOR_BLACK_LIGHT_3: L('textSecondary'),
+  COLOR_BLACK_LIGHT_4: L('textSecondary'),
+  COLOR_BLACK_LIGHT_5: L('textTertiary'),
+  COLOR_BLACK_LIGHT_6: L('border'),
+  COLOR_BLACK_LIGHT_7: L('backgroundTertiary'),
+  COLOR_BLACK_LIGHT_8: L('backgroundSecondary'),
+  COLOR_BLACK_LIGHT_9: L('background'),
   COLOR_BACKGROUND: L('primarySubtle'),
 
   // --- Messaging / chat (Homiio inbox domain) ---
@@ -175,10 +200,11 @@ export const colors = {
   sindiColor: L('primarySubtleForeground'),
 
   // --- Semantic tokens (Bloom-backed) ---
-  /** Page surface (off-white background, Bloom `background`). */
-  surface: L('background'),
-  /** Raised card surface (white card on top of `surface`). */
-  surfaceElevated: WHITE,
+  /** Page surface (off-white, Bloom `backgroundSecondary`). */
+  surface: L('backgroundSecondary'),
+  /** Raised card surface — Bloom `background` (brighter than `surface`, so cards
+   *  read as elevated above the page). */
+  surfaceElevated: L('background'),
   /** Muted neutral text used for secondary labels. */
   muted: L('textSecondary'),
   /** Soft neutral fill used for chips/badges that sit on `surface`. */
@@ -225,9 +251,9 @@ export const colors = {
   textSecondary: L('textSecondary'),
   /** Tertiary/faint text. */
   textTertiary: L('textTertiary'),
-  /** App background surface. */
-  background: WHITE,
-  /** Pure white (icon/text on colored fills). */
+  /** App background surface (near-white, Bloom `background`). */
+  background: L('background'),
+  /** Pure white (icon/text on colored fills). Intentionally literal white. */
   white: WHITE,
   /** Error color alias (= danger). */
   error: L('error'),

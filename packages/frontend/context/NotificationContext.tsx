@@ -11,7 +11,7 @@ import { AppState, AppStateStatus, NativeEventSubscription, Platform } from 'rea
 import type { EventSubscription } from 'expo-modules-core';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { toast } from '@/lib/sonner';
 
 import {
     requestNotificationPermissions,

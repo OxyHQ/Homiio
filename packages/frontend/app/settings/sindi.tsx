@@ -11,7 +11,7 @@ import React, { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { toast } from 'sonner';
+import { toast } from '@/lib/sonner';
 
 import { Switch } from '@oxyhq/bloom/switch';
 import {

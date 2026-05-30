@@ -17,7 +17,7 @@ import { useNotifications } from '@/context/NotificationContext';
 import { NotificationItem } from '@/components/NotificationItem';
 import { ThemedText } from '@/components/ThemedText';
 import { colors } from '@/styles/colors';
-import { toast } from 'sonner';
+import { toast } from '@/lib/sonner';
 import type { Notification } from '@/services/notificationService';
 import { logger } from '@/utils/logger';
 

@@ -20,7 +20,7 @@ import { Property } from '@homiio/shared-types';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import savedPropertyService from '@/services/savedPropertyService';
-import { toast } from 'sonner';
+import { toast } from '@/lib/sonner';
 
 
 interface SaveToFolderBottomSheetProps {

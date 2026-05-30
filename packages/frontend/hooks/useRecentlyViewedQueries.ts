@@ -3,7 +3,7 @@ import { useOxy } from '@oxyhq/services';
 import { recentlyViewedService } from '@/services/recentlyViewedService';
 import { useRecentlyViewedStore } from '@/store/recentlyViewedStore';
 import { RecentlyViewedType, Property } from '@homiio/shared-types';
-import { toast } from 'sonner';
+import { toast } from '@/lib/sonner';
 
 /**
  * Hook for fetching recently viewed properties

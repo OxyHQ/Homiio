@@ -60,7 +60,7 @@ export const createPropertyStyles = StyleSheet.create({
     color: colors.primaryDark,
   },
   inputError: {
-    borderColor: 'red',
+    borderColor: colors.danger,
   },
   textArea: {
     backgroundColor: colors.COLOR_BLACK_LIGHT_9,
@@ -73,7 +73,7 @@ export const createPropertyStyles = StyleSheet.create({
     minHeight: 120,
   },
   errorText: {
-    color: 'red',
+    color: colors.danger,
     fontSize: 12,
     marginTop: 4,
   },

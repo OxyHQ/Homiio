@@ -13,7 +13,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { Header } from '@/components/Header';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
+import { toast } from '@/lib/sonner';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';

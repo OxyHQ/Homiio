@@ -9,7 +9,7 @@ import { Header } from '@/components/Header';
 import { Button } from '@oxyhq/bloom/button';
 import { colors } from '@/styles/colors';
 import savedPropertyFolderService from '@/services/savedPropertyFolderService';
-import { toast } from 'sonner';
+import { toast } from '@/lib/sonner';
 import { logger } from '@/utils/logger';
 
 // Reuse the curated folder-color picker palette from SaveToFolderBottomSheet.

@@ -7,7 +7,7 @@ import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
 import type { SavedSearchFilters } from '@/store/savedSearchesStore';
-import { toast } from 'sonner';
+import { toast } from '@/lib/sonner';
 import { Button } from '@oxyhq/bloom/button';
 
 

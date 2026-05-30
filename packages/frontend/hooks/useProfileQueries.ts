@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { useProfileStore } from '@/store/profileStore';
 import { useOxy } from '@oxyhq/services';
-import { toast } from 'sonner';
+import { toast } from '@/lib/sonner';
 import { ProfileType, type UpdateProfileData } from '@homiio/shared-types';
 
 // Profile Zustand Hook

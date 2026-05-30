@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCreateProfileMutation } from '@/hooks/query/useProfiles';
 import { ProfileType as SharedProfileType, type CreateProfileData } from '@/services/profileService';
 import { BusinessType, type BusinessDetails } from '@homiio/shared-types';
-import { toast } from 'sonner';
+import { toast } from '@/lib/sonner';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 

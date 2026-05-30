@@ -34,7 +34,7 @@ import Animated, {
 import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { toast } from 'sonner';
+import { toast } from '@/lib/sonner';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';

@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useProfileStore } from '@/store/profileStore';
 import { Profile, CreateProfileData } from '@/services/profileService';
 import { useOxy } from '@oxyhq/services';
-import { toast } from 'sonner';
+import { toast } from '@/lib/sonner';
 import profileService from '@/services/profileService';
 
 export const useProfile = () => {

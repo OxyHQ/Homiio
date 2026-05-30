@@ -1,7 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 import { API_URL_SOCKET } from '@/config';
 import { getData, storeData } from './storage';
-import { toast } from 'sonner';
+import { toast } from '@/lib/sonner';
 import { jwtDecode } from 'jwt-decode';
 import { SOCKET_CONFIG, getReconnectDelay, debug } from './socketConfig';
 

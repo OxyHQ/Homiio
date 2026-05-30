@@ -162,7 +162,7 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({
           zIndex: 30,
           backgroundColor: colors.white,
           borderBottomWidth: 1,
-          borderBottomColor: 'rgba(0, 0, 0, 0.06)',
+          borderBottomColor: colors.border,
         } as unknown as object)
       : null;
 

@@ -46,6 +46,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.successSubtle,
   },
   learnMoreButtonText: {
-    color: 'green',
+    color: colors.success,
   },
 });

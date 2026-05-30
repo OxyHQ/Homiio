@@ -8,7 +8,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { toast } from 'sonner';
+import { toast } from '@/lib/sonner';
 
 import {
   SettingsListGroup,

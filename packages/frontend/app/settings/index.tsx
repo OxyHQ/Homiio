@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { useOxy } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import { toast } from 'sonner';
+import { toast } from '@/lib/sonner';
 
 import { Switch } from '@oxyhq/bloom/switch';
 import {
@@ -55,7 +55,6 @@ export default function SettingsScreen() {
   const { getCurrentCurrency } = useCurrency();
 
   const [notifications, setNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
   const [autoSync, setAutoSync] = useState(true);
   const [offlineMode, setOfflineMode] = useState(false);
 
@@ -149,14 +148,13 @@ export default function SettingsScreen() {
             value={`${currentCurrencyInfo.symbol} ${currentCurrencyInfo.code}`}
             onPress={() => router.push('/settings/currency')}
           />
-          <SettingsListItem
-            icon={<RowIcon name="moon" />}
-            title={t('settings.preferences.darkMode')}
-            description={t('settings.preferences.darkModeDesc')}
-            rightElement={
-              <Switch value={darkMode} onValueChange={setDarkMode} />
-            }
-          />
+          {/*
+            Dark mode toggle intentionally omitted: the app currently renders a
+            single light theme (static `colors.ts` is light-only; Bloom is pinned
+            to light in app/_layout.tsx). A live toggle would be misleading until
+            the reactive color migration lands. Re-add a wired Switch here once
+            components consume `useColors()` for live light/dark values.
+          */}
         </SettingsListGroup>
 
         <SettingsListGroup title={t('settings.sections.notifications', 'Notifications')}>

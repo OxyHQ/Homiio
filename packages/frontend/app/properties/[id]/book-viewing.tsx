@@ -21,7 +21,7 @@ import { PropertyType } from '@homiio/shared-types';
 import { useOxy } from '@oxyhq/services';
 import ViewingService, { type ViewingRequest } from '@/services/viewingService';
 import { ApiError } from '@/utils/api';
-import { toast } from 'sonner';
+import { toast } from '@/lib/sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { logger } from '@/utils/logger';
 
