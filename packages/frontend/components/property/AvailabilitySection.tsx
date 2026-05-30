@@ -1,7 +1,9 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
-import { SectionCard } from '@/components/ui/SectionCard';
+import { StyleSheet, View } from 'react-native';
+import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Section } from '@/components/property/Section';
+import { colors } from '@/styles/colors';
+import { spacing } from '@/constants/styles';
 import { useTranslation } from 'react-i18next';
 import type { Property } from '@homiio/shared-types';
 
@@ -14,15 +16,33 @@ export const AvailabilitySection: React.FC<Props> = ({ property }) => {
     if (!availableFrom && !leaseTerm) return null;
     const dateStr = availableFrom ? new Date(availableFrom).toLocaleDateString() : undefined;
     return (
-        <SectionCard title={t('Availability')}>
-            {dateStr && <ThemedText style={styles.item}>{t('Available From')}: {dateStr}</ThemedText>}
-            {leaseTerm && <ThemedText style={styles.item}>{t('Lease Term')}: {leaseTerm}</ThemedText>}
-        </SectionCard>
+        <Section title={t('Availability')} bodyStyle={styles.body}>
+            {dateStr && (
+                <View style={styles.row}>
+                    <BloomText style={styles.label}>{t('Available From')}</BloomText>
+                    <BloomText style={styles.value}>{dateStr}</BloomText>
+                </View>
+            )}
+            {leaseTerm && (
+                <View style={styles.row}>
+                    <BloomText style={styles.label}>{t('Lease Term')}</BloomText>
+                    <BloomText style={styles.value}>{leaseTerm}</BloomText>
+                </View>
+            )}
+        </Section>
     );
 };
 
 const styles = StyleSheet.create({
-    item: { fontSize: 14, marginBottom: 8 },
+    body: { gap: spacing.sm },
+    row: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: spacing.lg,
+    },
+    label: { fontSize: 15, color: colors.COLOR_BLACK_LIGHT_3 },
+    value: { fontSize: 15, fontWeight: '600', color: colors.COLOR_BLACK },
 });
 
 export default AvailabilitySection;

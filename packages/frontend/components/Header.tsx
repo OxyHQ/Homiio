@@ -1,4 +1,4 @@
-import React, { useEffect, useState, ReactNode } from 'react';
+import React, { useEffect, ReactNode } from 'react';
 import { StyleSheet, View, ViewStyle, Platform, Pressable } from 'react-native';
 import Animated, {
   interpolate,
@@ -31,7 +31,9 @@ interface Props {
 export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) => {
   const layoutScroll = useLayoutScroll();
   const router = useRouter();
-  const [canGoBack, setCanGoBack] = useState(false);
+  // Derived directly from the router rather than synced via an effect — this is
+  // a pure read of navigation state and avoids cascading renders.
+  const canGoBack = router.canGoBack();
   const insets = useSafeAreaInsets();
   const internalScrollY = useSharedValue(0);
   const scrollY = externalScrollY ?? layoutScroll?.scrollY ?? internalScrollY;
@@ -39,10 +41,6 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
   const titlePosition = options?.titlePosition || 'left';
   const isTransparent = options?.transparent || false;
   const scrollThreshold = options?.scrollThreshold || 20;
-
-  useEffect(() => {
-    setCanGoBack(router.canGoBack());
-  }, [router]);
 
   useEffect(() => {
     if (Platform.OS !== 'web' || externalScrollY || layoutScroll?.scrollY) return;

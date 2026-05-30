@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react';
 import { View, Animated } from 'react-native';
 import { LogoIcon } from '@/assets/logo';
 import { Loading } from '@oxyhq/bloom/loading';
@@ -17,7 +17,9 @@ const AppSplashScreen: React.FC<AppSplashScreenProps> = ({ onFadeComplete, start
       target: 'style',
     },
   });
-  const fadeAnim = useRef(new Animated.Value(1)).current; // Use useRef to prevent recreation
+  // Lazy-init keeps a single Animated.Value across renders without reading a
+  // ref during render (which the React Compiler / react-hooks rules forbid).
+  const [fadeAnim] = useState(() => new Animated.Value(1));
   const animationRef = useRef<Animated.CompositeAnimation | null>(null);
 
   // Memoize the fade completion callback to prevent recreating it

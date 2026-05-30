@@ -24,7 +24,6 @@ import { format } from 'date-fns';
 import { toast } from '@/lib/sonner';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@oxyhq/bloom/button';
-import { Loading } from '@oxyhq/bloom/loading';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { Text as BloomText, H2, H3 } from '@oxyhq/bloom/typography';
 import { Avatar } from '@oxyhq/bloom/avatar';

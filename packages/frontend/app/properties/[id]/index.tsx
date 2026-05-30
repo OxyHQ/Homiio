@@ -7,9 +7,10 @@
  *    booking/apply card.
  *  - On scroll past the photo grid, a slim sticky breadcrumb header
  *    (StickyPropertyHeader) appears with title + price + CTA.
- *  - Sections use shared Bloom Typography, consistent section spacing
- *    (`sectionSpacing.web/mobile`), and hairline dividers between
- *    blocks.
+ *  - Sections are flat (no cards/shadows): shared Bloom Typography, a
+ *    consistent vertical rhythm (`styles.section`), and a single
+ *    hairline divider between blocks. Content sits directly on the page
+ *    background and aligns to one gutter.
  *  - Action bar (footer): existing PropertyActionBar reused.
  */
 import React, {
@@ -81,10 +82,11 @@ import { AmenitiesSection } from '@/components/property/AmenitiesSection';
 import { ReviewsSection } from '@/components/property/ReviewsSection';
 import { PropertyActionBar } from '@/components/property/PropertyActionBar';
 import { StickyPropertyHeader } from '@/components/property/StickyPropertyHeader';
+import { SECTION_GUTTER } from '@/components/property/Section';
 import { ApplyToRentCTA } from '@/components/property/ApplyToRentCTA';
 
 import { colors } from '@/styles/colors';
-import { hairline, resolveSectionSpacing, sectionSpacing, spacing } from '@/constants/styles';
+import { contentClamp, hairline, spacing } from '@/constants/styles';
 
 interface PropertyDetailViewModel {
   id: string;
@@ -449,8 +451,6 @@ export default function PropertyDetailPage() {
     (apiProperty.rentMode === RentMode.VACATION ||
       apiProperty.rentMode === RentMode.BOTH);
 
-  const sectionGap = resolveSectionSpacing(isDesktop);
-
   return (
     <View style={styles.scrollContainer}>
       <View
@@ -467,58 +467,63 @@ export default function PropertyDetailPage() {
             titlePosition: 'center',
             transparent: true,
             scrollThreshold: 100,
-            rightComponents: [
-              landlordProfileId ? (
-                <Pressable
-                  key="profile"
-                  style={styles.headerButton}
-                  onPress={() => router.push(`/profile/${landlordProfileId}`)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Open host profile"
-                >
-                  <Ionicons name="person-circle-outline" size={24} color={colors.COLOR_BLACK} />
-                </Pressable>
-              ) : null,
-              <Pressable
-                key="share"
-                style={styles.headerButton}
-                onPress={handleShare}
-                accessibilityRole="button"
-                accessibilityLabel="Share property"
-              >
-                <Ionicons name="share-outline" size={24} color={colors.COLOR_BLACK} />
-              </Pressable>,
-              <Pressable
-                key="viewings"
-                style={styles.headerButton}
-                onPress={() => router.push('/viewings')}
-                accessibilityRole="button"
-                accessibilityLabel="View bookings"
-              >
-                <View style={styles.viewingIconContainer}>
-                  <Ionicons
-                    name="calendar-outline"
-                    size={24}
-                    color={colors.COLOR_BLACK}
-                  />
-                  {hasActiveViewing ? (
-                    <View style={styles.viewingBadge}>
-                      <Ionicons name="checkmark" size={12} color={colors.white} />
+            // Once the sticky property bar takes over the top, it owns
+            // the back / share / save affordances — strip them here so
+            // the two bars don't double up.
+            rightComponents: stickyHeaderVisible
+              ? []
+              : [
+                  landlordProfileId ? (
+                    <Pressable
+                      key="profile"
+                      style={styles.headerButton}
+                      onPress={() => router.push(`/profile/${landlordProfileId}`)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Open host profile"
+                    >
+                      <Ionicons name="person-circle-outline" size={24} color={colors.COLOR_BLACK} />
+                    </Pressable>
+                  ) : null,
+                  <Pressable
+                    key="share"
+                    style={styles.headerButton}
+                    onPress={handleShare}
+                    accessibilityRole="button"
+                    accessibilityLabel="Share property"
+                  >
+                    <Ionicons name="share-outline" size={24} color={colors.COLOR_BLACK} />
+                  </Pressable>,
+                  <Pressable
+                    key="viewings"
+                    style={styles.headerButton}
+                    onPress={() => router.push('/viewings')}
+                    accessibilityRole="button"
+                    accessibilityLabel="View bookings"
+                  >
+                    <View style={styles.viewingIconContainer}>
+                      <Ionicons
+                        name="calendar-outline"
+                        size={24}
+                        color={colors.COLOR_BLACK}
+                      />
+                      {hasActiveViewing ? (
+                        <View style={styles.viewingBadge}>
+                          <Ionicons name="checkmark" size={12} color={colors.white} />
+                        </View>
+                      ) : null}
                     </View>
-                  ) : null}
-                </View>
-              </Pressable>,
-              <View key="save" style={styles.headerSaveWrap}>
-                <SaveButton
-                  property={apiProperty as Property}
-                  variant="heart"
-                  color={colors.COLOR_BLACK}
-                  activeColor={colors.error}
-                  showCount
-                  countDisplayMode="inline"
-                />
-              </View>,
-            ],
+                  </Pressable>,
+                  <View key="save" style={styles.headerSaveWrap}>
+                    <SaveButton
+                      property={apiProperty as Property}
+                      variant="heart"
+                      color={colors.COLOR_BLACK}
+                      activeColor={colors.error}
+                      showCount
+                      countDisplayMode="inline"
+                    />
+                  </View>,
+                ],
           }}
         />
       </View>
@@ -529,6 +534,7 @@ export default function PropertyDetailPage() {
         property={apiProperty ?? null}
         rentalMode={rentalMode}
         visible={stickyHeaderVisible}
+        onBack={() => router.back()}
         onShare={handleShare}
         onCtaPress={handleCtaPress}
       />
@@ -560,13 +566,15 @@ export default function PropertyDetailPage() {
         >
           <View style={isDesktop ? styles.mainColumn : undefined}>
             {apiProperty ? (
-              <HostStatsCard
-                property={apiProperty}
-                landlordProfile={landlordProfile}
-              />
+              <View style={styles.section}>
+                <HostStatsCard
+                  property={apiProperty}
+                  landlordProfile={landlordProfile}
+                />
+              </View>
             ) : null}
 
-            <View style={[styles.section, { marginBottom: sectionGap }]}>
+            <View style={[styles.section, styles.divider]}>
               <BasicInfoSection
                 property={apiProperty}
                 hasActiveViewing={hasActiveViewing}
@@ -575,13 +583,13 @@ export default function PropertyDetailPage() {
             </View>
 
             {showBookingWidgetMobile ? (
-              <View style={[styles.section, styles.divider]}>
+              <View style={[styles.section, styles.gutter, styles.divider]}>
                 <BookingWidget property={apiProperty as Property} />
               </View>
             ) : null}
 
             {showApplyCTAMobile ? (
-              <View style={[styles.section, styles.divider]}>
+              <View style={[styles.section, styles.gutter, styles.divider]}>
                 <ApplyToRentCTA
                   propertyId={String(apiProperty?._id ?? apiProperty?.id ?? '')}
                 />
@@ -709,12 +717,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
+  // Page containers are full-bleed (no horizontal padding) so
+  // horizontally-scrolling section bodies can run edge-to-edge. The
+  // horizontal gutter lives per-section (Section primitive + section
+  // roots, sourced from SECTION_GUTTER) instead. Desktop keeps the
+  // content clamp + column gap.
   twoColumnContainer: {
     flexDirection: 'row',
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    gap: 48,
-    maxWidth: 1280,
+    paddingTop: spacing.md,
+    gap: spacing['3xl'],
+    maxWidth: contentClamp.page,
     alignSelf: 'center',
     width: '100%',
   },
@@ -723,19 +735,28 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   sideColumn: {
-    width: 380,
-    paddingTop: spacing.md,
+    width: 380 + SECTION_GUTTER * 2,
+    paddingTop: spacing.xl,
+    paddingHorizontal: SECTION_GUTTER,
   },
   infoContainer: {
-    paddingHorizontal: spacing.xl,
+    width: '100%',
   },
+  // Flat section rhythm: every block gets the same vertical breathing
+  // room (no per-component margins) and is separated by a single
+  // hairline. Content sits directly on the page — no cards. Horizontal
+  // gutter is added per-section, not here.
   section: {
-    paddingTop: spacing.xl,
+    paddingVertical: spacing.xl,
+  },
+  // Horizontal gutter for section roots that don't use the Section
+  // primitive (third-party widgets inlined on mobile).
+  gutter: {
+    paddingHorizontal: SECTION_GUTTER,
   },
   divider: {
     borderTopWidth: hairline.width,
     borderTopColor: hairline.color,
-    marginTop: sectionSpacing.mobile / 2,
   },
   webHeaderWrapper: Platform.select({
     web: { position: 'sticky', top: 0, left: 0, right: 0, zIndex: 1000 },

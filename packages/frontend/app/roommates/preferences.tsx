@@ -105,21 +105,24 @@ export default function RoommatePreferencesPage() {
     useState<PreferencesState>(INITIAL_PREFERENCES);
   const { primaryProfile, isPersonalProfile, hasPersonalProfile } = useProfile();
 
-  useEffect(() => {
-    if (primaryProfile && isPersonalProfile) {
-      const roommateSettings =
-        primaryProfile.personalProfile?.settings?.roommate;
-      if (roommateSettings) {
-        setRoommateEnabled(Boolean(roommateSettings.enabled));
-        if (roommateSettings.preferences) {
-          setPreferences((prev) => ({
-            ...prev,
-            ...roommateSettings.preferences,
-          }));
-        }
+  // Seed the form from the personal profile's saved roommate settings. Uses
+  // React's "adjust state when a tracked value changes" pattern rather than an
+  // effect to avoid cascading renders; the form stays user-editable afterwards.
+  const profileSettingsKey = isPersonalProfile ? primaryProfile : null;
+  const [prevProfileSettingsKey, setPrevProfileSettingsKey] = useState(profileSettingsKey);
+  if (profileSettingsKey !== prevProfileSettingsKey) {
+    setPrevProfileSettingsKey(profileSettingsKey);
+    const roommateSettings = profileSettingsKey?.personalProfile?.settings?.roommate;
+    if (roommateSettings) {
+      setRoommateEnabled(Boolean(roommateSettings.enabled));
+      if (roommateSettings.preferences) {
+        setPreferences((prev) => ({
+          ...prev,
+          ...roommateSettings.preferences,
+        }));
       }
     }
-  }, [primaryProfile, isPersonalProfile]);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -143,11 +146,16 @@ export default function RoommatePreferencesPage() {
     gcTime: 1000 * 60 * 10,
   });
 
-  useEffect(() => {
-    if (preferencesQuery.data) {
-      setPreferences((prev) => ({ ...prev, ...preferencesQuery.data }));
+  // Merge server-saved preferences into the form once the query resolves.
+  // Adjust-on-change pattern (not an effect) to avoid cascading renders.
+  const preferencesData = preferencesQuery.data;
+  const [prevPreferencesData, setPrevPreferencesData] = useState(preferencesData);
+  if (preferencesData !== prevPreferencesData) {
+    setPrevPreferencesData(preferencesData);
+    if (preferencesData) {
+      setPreferences((prev) => ({ ...prev, ...preferencesData }));
     }
-  }, [preferencesQuery.data]);
+  }
 
   const toggleMutation = useMutation({
     mutationKey: ['roommates', 'toggle'],

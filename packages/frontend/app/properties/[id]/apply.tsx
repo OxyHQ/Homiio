@@ -174,7 +174,7 @@ export default function ApplyToRentScreen() {
     });
   }, [property]);
 
-  const moveInBounds = useMemo(getMoveInBounds, []);
+  const moveInBounds = useMemo(() => getMoveInBounds(), []);
 
   const monthlyIncomeNumber = useMemo(() => {
     const parsed = parseFloat(monthlyIncome.replace(/,/g, '.'));

@@ -100,8 +100,12 @@ export default function PublicProfileScreen() {
   }, [profileId]);
 
   useEffect(() => {
-    loadProfileProperties({ reset: true });
-    loadProfileInfo();
+    // Wrapped in an inline async function so the loaders' internal setState
+    // calls are not invoked synchronously within the effect body (which would
+    // cause cascading renders). Reloads when the active type / sort changes.
+    void (async () => {
+      await Promise.all([loadProfileProperties({ reset: true }), loadProfileInfo()]);
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeType, sortKey]);
 

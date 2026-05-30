@@ -1,4 +1,11 @@
-import React, { type ErrorInfo, type ReactNode, useCallback, useRef, useState } from 'react';
+import React, {
+  type ErrorInfo,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   View,
   StyleSheet,
@@ -118,17 +125,19 @@ function ErrorFallback({
   const [errorIdPressed, setErrorIdPressed] = useState(false);
   const [detailsTogglePressed, setDetailsTogglePressed] = useState(false);
   const isWide = useMediaQuery({ minWidth: 768 });
-  // Mirror state into a ref so the report generator stays current without
-  // re-running on every state change.
-  const showDetailsRef = useRef(showDetails);
-  showDetailsRef.current = showDetails;
 
-  // Stable id per error instance — `error` identity changes when the boundary
-  // catches a fresh throw, so this re-derives correctly without effects.
-  const errorId = React.useMemo(
-    () => `ERR_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
-    [error],
-  );
+  // Stable id per error instance. The id is generated from impure sources
+  // (`Date.now`/`Math.random`) which may not run during render, so we seed it
+  // once via a lazy initializer and regenerate only when a genuinely new error
+  // instance is caught — driven from an effect, not from render.
+  const [errorId, setErrorId] = useState(generateErrorId);
+  const errorIdSourceRef = useRef(error);
+  useEffect(() => {
+    if (errorIdSourceRef.current !== error) {
+      errorIdSourceRef.current = error;
+      setErrorId(generateErrorId());
+    }
+  }, [error]);
 
   const handleRetry = useCallback(() => {
     if (retryCount >= maxRetries) {
@@ -174,9 +183,9 @@ function ErrorFallback({
   const handleBadgePress = useCallback(() => {
     // Small delight: tapping the badge resets the disclosure state so the
     // user can re-collapse a noisy details panel without scrolling back up.
-    if (showDetailsRef.current) {
-      setShowDetails(false);
-    }
+    // Setting `false` when already collapsed is a no-op (React bails out), so
+    // no guard is needed and we avoid mirroring state into a ref.
+    setShowDetails(false);
   }, []);
 
   // Web gets `role="alert"` + `aria-live="assertive"`; native uses the
@@ -343,6 +352,15 @@ function DetailBlock({ label, value }: DetailBlockProps) {
       </ScrollView>
     </View>
   );
+}
+
+/**
+ * Generates a unique, human-shareable error id. Uses impure sources, so it
+ * must only ever be called from a lazy state initializer or an event/effect —
+ * never directly during render.
+ */
+function generateErrorId(): string {
+  return `ERR_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 }
 
 function generateErrorReport({

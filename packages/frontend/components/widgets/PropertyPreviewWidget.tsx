@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState, useEffect } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { colors } from '@/styles/colors';
 import { ThemedText } from '../ThemedText';
@@ -24,6 +24,16 @@ interface PreviewSection {
   isComplete: boolean;
   hasData: boolean;
 }
+
+/** Maps each create-property wizard step index to the preview section to expand. */
+const STEP_TO_SECTION: Record<number, string> = {
+  0: 'basic', // Basic Info step
+  1: 'location', // Location step
+  2: 'pricing', // Pricing step
+  3: 'amenities', // Amenities step
+  4: 'media', // Media step (or Rules step, depending on property type)
+  5: 'description', // Description step or final step
+};
 
 export function PropertyPreviewWidget() {
   const { formData, currentStep } = useCreatePropertyFormStore();
@@ -130,27 +140,19 @@ export function PropertyPreviewWidget() {
     _setIsCollapsed((prev: boolean) => !prev);
   }, []);
 
-  // Auto-toggle section based on current step
-  useEffect(() => {
-    const stepToSectionMap: { [key: number]: string } = {
-      0: 'basic', // Basic Info step
-      1: 'location', // Location step
-      2: 'pricing', // Pricing step
-      3: 'amenities', // Amenities step
-      4: 'media', // Media step (or Rules step, depending on property type)
-      5: 'description', // Description step or final step
-    };
-
-    const sectionToToggle = stepToSectionMap[currentStep];
+  // Auto-expand only the section for the current wizard step. This resets the
+  // user's manual toggles whenever the step changes, so it is implemented with
+  // React's "adjust state during render when a tracked value changes" pattern
+  // instead of an effect (which caused cascading renders).
+  const [prevStep, setPrevStep] = useState(currentStep);
+  if (currentStep !== prevStep) {
+    setPrevStep(currentStep);
+    const sectionToToggle = STEP_TO_SECTION[currentStep];
     if (sectionToToggle) {
-      setExpandedSections((_prev) => {
-        const newSet = new Set<string>();
-        // Only keep the current step's section expanded, collapse all others
-        newSet.add(sectionToToggle);
-        return newSet;
-      });
+      // Only keep the current step's section expanded, collapse all others.
+      setExpandedSections(new Set<string>([sectionToToggle]));
     }
-  }, [currentStep]);
+  }
 
   // Memoized property title generation
   const propertyTitle = useMemo(() => {

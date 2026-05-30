@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
-import { SectionCard } from '@/components/ui/SectionCard';
+import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Section } from '@/components/property/Section';
 import { colors } from '@/styles/colors';
+import { spacing } from '@/constants/styles';
 import { useTranslation } from 'react-i18next';
 import type { Property } from '@homiio/shared-types';
 
@@ -15,42 +16,44 @@ export const PropertyDetailsCard: React.FC<Props> = ({ property }) => {
     const yearBuilt = property?.yearBuilt;
     const parkingSpaces = property?.parkingSpaces;
     return (
-        <SectionCard title={t('Property Details') || 'Property Details'}>
-            <View style={styles.row}>
+        <Section title={t('Property Details') || 'Property Details'}>
+            <View style={styles.grid}>
                 <View style={styles.item}>
-                    <ThemedText style={styles.label}>{t('Property Type') || 'Property Type'}</ThemedText>
-                    <ThemedText style={styles.value}>{type ? type.charAt(0).toUpperCase() + type.slice(1) : t('Not specified') || 'Not specified'}</ThemedText>
+                    <BloomText style={styles.label}>{t('Property Type') || 'Property Type'}</BloomText>
+                    <BloomText style={styles.value}>{type ? type.charAt(0).toUpperCase() + type.slice(1) : t('Not specified') || 'Not specified'}</BloomText>
                 </View>
                 {floor !== undefined && (
                     <View style={styles.item}>
-                        <ThemedText style={styles.label}>{t('Floor') || 'Floor'}</ThemedText>
-                        <ThemedText style={styles.value}>{floor}</ThemedText>
+                        <BloomText style={styles.label}>{t('Floor') || 'Floor'}</BloomText>
+                        <BloomText style={styles.value}>{floor}</BloomText>
                     </View>
                 )}
-            </View>
-            <View style={styles.row}>
                 {yearBuilt && (
                     <View style={styles.item}>
-                        <ThemedText style={styles.label}>{t('Year Built') || 'Year Built'}</ThemedText>
-                        <ThemedText style={styles.value}>{yearBuilt}</ThemedText>
+                        <BloomText style={styles.label}>{t('Year Built') || 'Year Built'}</BloomText>
+                        <BloomText style={styles.value}>{yearBuilt}</BloomText>
                     </View>
                 )}
                 {parkingSpaces !== undefined && (
                     <View style={styles.item}>
-                        <ThemedText style={styles.label}>{t('Parking Spaces') || 'Parking Spaces'}</ThemedText>
-                        <ThemedText style={styles.value}>{parkingSpaces}</ThemedText>
+                        <BloomText style={styles.label}>{t('Parking Spaces') || 'Parking Spaces'}</BloomText>
+                        <BloomText style={styles.value}>{parkingSpaces}</BloomText>
                     </View>
                 )}
             </View>
-        </SectionCard>
+        </Section>
     );
 };
 
 const styles = StyleSheet.create({
-    row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-    item: { flex: 1 },
-    label: { fontSize: 14, color: colors.COLOR_BLACK_LIGHT_3, marginBottom: 5 },
-    value: { fontSize: 16, fontWeight: 'bold', color: colors.COLOR_BLACK },
+    grid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        rowGap: spacing.lg,
+    },
+    item: { width: '50%' },
+    label: { fontSize: 14, color: colors.COLOR_BLACK_LIGHT_3, marginBottom: spacing.xs },
+    value: { fontSize: 16, fontWeight: '600', color: colors.COLOR_BLACK },
 });
 
 export default PropertyDetailsCard;

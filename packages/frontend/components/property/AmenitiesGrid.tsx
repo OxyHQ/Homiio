@@ -19,6 +19,7 @@ import { Divider } from '@oxyhq/bloom/divider';
 import { H2, Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { BottomSheetContext } from '@/context/BottomSheetContext';
+import { Section } from '@/components/property/Section';
 import { colors } from '@/styles/colors';
 import { sectionSpacing, spacing } from '@/constants/styles';
 import { getAmenityById } from '@/constants/amenities';
@@ -112,10 +113,7 @@ export const AmenitiesGrid: React.FC<AmenitiesGridProps> = ({
   const hasMore = amenities.length > maxVisible;
 
   return (
-    <View style={styles.section}>
-      <H2 style={styles.title}>
-        {t('property.amenities.title', 'What this place offers')}
-      </H2>
+    <Section title={t('property.amenities.title', 'What this place offers')}>
       <View style={styles.grid}>
         {visible.map((id, idx) => (
           <View key={`${id}-${idx}`} style={styles.cell}>
@@ -138,21 +136,11 @@ export const AmenitiesGrid: React.FC<AmenitiesGridProps> = ({
           </Button>
         </View>
       ) : null}
-    </View>
+    </Section>
   );
 };
 
 const styles = StyleSheet.create({
-  section: {
-    marginTop: spacing['3xl'],
-    marginBottom: spacing['3xl'],
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-    marginBottom: spacing.xl,
-  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

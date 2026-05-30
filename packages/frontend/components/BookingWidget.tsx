@@ -210,7 +210,7 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ property }) => {
       </Button>
       {!property.instantBook ? (
         <BloomText style={styles.subnote}>
-          You won't be charged yet. The host has 24 hours to respond.
+          You won&apos;t be charged yet. The host has 24 hours to respond.
         </BloomText>
       ) : null}
       {property.cancellationPolicy ? (

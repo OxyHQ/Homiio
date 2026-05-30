@@ -8,7 +8,7 @@
  * the contact/apply flows; we keep both because they do different
  * jobs in the detail page.
  */
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -19,7 +19,8 @@ import { Badge } from '@oxyhq/bloom/badge';
 import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
 
 import { colors } from '@/styles/colors';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
+import { SECTION_GUTTER } from '@/components/property/Section';
 import type { Profile, Property } from '@homiio/shared-types';
 
 interface HostStatsCardProps {
@@ -72,6 +73,7 @@ export const HostStatsCard: React.FC<HostStatsCardProps> = ({
 }) => {
   const router = useRouter();
   const { t } = useTranslation();
+  const [pressed, setPressed] = useState(false);
 
   const displayName = useMemo(
     () => getDisplayName(landlordProfile),
@@ -105,7 +107,7 @@ export const HostStatsCard: React.FC<HostStatsCardProps> = ({
   if (property?.housingType === 'public') {
     const state = property.address?.state;
     return (
-      <View style={[styles.card, withShadow('md')]}>
+      <View style={styles.card}>
         <View style={styles.governmentAvatar}>
           <Ionicons name="library" size={28} color={colors.white} />
         </View>
@@ -131,7 +133,9 @@ export const HostStatsCard: React.FC<HostStatsCardProps> = ({
 
   return (
     <Pressable
-      style={[styles.card, withShadow('md')]}
+      style={[styles.card, pressed && styles.cardPressed]}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
       onPress={handleOpenProfile}
       accessibilityRole="button"
       accessibilityLabel={t('property.host.openProfile', 'Open host profile') || 'Open host profile'}
@@ -184,11 +188,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.lg,
-    backgroundColor: colors.white,
-    borderRadius: radius.lg,
-    padding: spacing.xl,
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
+    paddingHorizontal: SECTION_GUTTER,
+  },
+  cardPressed: {
+    opacity: 0.6,
   },
   body: {
     flex: 1,

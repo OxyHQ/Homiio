@@ -31,7 +31,7 @@ export default function RecentlyViewedScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>(isMobile ? 'grid' : 'list');
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const [fadeAnim] = useState(() => new Animated.Value(0));
   const [headerHeight, setHeaderHeight] = useState(0);
 
   const { properties: recentProperties, isLoading, error, refetch, clear } = useRecentlyViewed();

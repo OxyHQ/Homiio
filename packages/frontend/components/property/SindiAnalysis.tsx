@@ -3,6 +3,8 @@ import { View, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { SindiIcon } from '@/assets/icons';
 import { colors } from '@/styles/colors';
+import { radius, spacing } from '@/constants/styles';
+import { SECTION_GUTTER } from '@/components/property/Section';
 import { Property } from '@homiio/shared-types';
 
 interface SindiAnalysisProps {
@@ -27,28 +29,25 @@ export const SindiAnalysis: React.FC<SindiAnalysisProps> = ({ property }) => pro
 
 const styles = StyleSheet.create({
     sindiContainer: {
-        marginBottom: 20,
-        borderRadius: 100,
+        borderRadius: radius.lg,
+        marginHorizontal: SECTION_GUTTER,
         overflow: 'hidden',
-        shadowColor: colors.COLOR_BLACK,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
-        padding: 12,
+        padding: spacing.lg,
         backgroundColor: colors.primaryColor,
     },
-    sindiHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    sindiHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
     sindiIconContainer: {
         width: 50,
         height: 50,
-        borderRadius: 35,
+        borderRadius: 25,
         backgroundColor: 'rgba(255, 255, 255, 0.2)',
         justifyContent: 'center',
         alignItems: 'center',
         position: 'relative',
     },
-    sindiTextContainer: { flex: 1, gap: 4 },
+    sindiTextContainer: { flex: 1, gap: spacing.xs },
     sindiTitle: { fontSize: 16, fontWeight: '700', color: colors.white },
     sindiDescription: { fontSize: 14, color: 'rgba(255, 255, 255, 0.9)', lineHeight: 20 },
 });
+
+export default SindiAnalysis;

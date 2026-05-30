@@ -415,11 +415,15 @@ export function SideBar() {
           : property.address.city
         : undefined;
 
+      // Properties with no timestamp are treated as the most recent and sort
+      // first. Using MAX_SAFE_INTEGER (instead of the impure `Date.now()`)
+      // keeps this pure during render while preserving the "newest-first"
+      // ordering for entries that lack both `updatedAt` and `createdAt`.
       const timestamp = property.updatedAt
         ? new Date(property.updatedAt).getTime()
         : property.createdAt
           ? new Date(property.createdAt).getTime()
-          : Date.now();
+          : Number.MAX_SAFE_INTEGER;
 
       result.push({ id, title, subtitle, imageUrl, timestamp });
     }

@@ -3,8 +3,9 @@ import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { ThemedText } from '@/components/ThemedText';
-import { SectionCard } from '@/components/ui/SectionCard';
+import { Section } from '@/components/property/Section';
 import { colors } from '@/styles/colors';
+import { spacing } from '@/constants/styles';
 
 type FurnishedStatus = 'furnished' | 'partially_furnished' | 'unfurnished';
 
@@ -91,7 +92,7 @@ export const PropertyFeatures: React.FC<Props> = ({ property }) => {
     if (!hasAny) return null;
 
     return (
-        <SectionCard title={t('Property Features')}>
+        <Section title={t('Property Features')}>
             <View style={styles.grid}>
                 {furnishedChip}
                 {hasBalcony !== undefined && (
@@ -104,7 +105,7 @@ export const PropertyFeatures: React.FC<Props> = ({ property }) => {
                     <FeatureChip k="elevator" active={!!hasElevator} label={t('Elevator')} />
                 )}
             </View>
-        </SectionCard>
+        </Section>
     );
 };
 
@@ -112,14 +113,14 @@ const styles = StyleSheet.create({
     grid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: 10,
+        gap: spacing.sm,
     },
     chip: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
+        gap: spacing.sm,
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.md,
         borderRadius: 999,
         borderWidth: 1,
     },

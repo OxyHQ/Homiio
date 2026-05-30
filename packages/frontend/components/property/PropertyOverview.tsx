@@ -12,8 +12,9 @@ import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Divider } from '@oxyhq/bloom/divider';
-import { H2, Text as BloomText } from '@oxyhq/bloom/typography';
+import { Text as BloomText } from '@oxyhq/bloom/typography';
 
+import { Section } from '@/components/property/Section';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
@@ -62,39 +63,26 @@ export const PropertyOverview: React.FC<Props> = ({ property }) => {
   ];
 
   return (
-    <View style={styles.section}>
-      <H2 style={styles.title}>{t('Property Overview', 'Property Overview')}</H2>
-      <View>
-        {rows.map((row, idx) => (
-          <React.Fragment key={row.label}>
-            <View style={styles.row}>
-              <BloomText style={styles.label}>{row.label}</BloomText>
-              <BloomText style={styles.value}>{row.value}</BloomText>
-            </View>
-            {idx !== rows.length - 1 ? <Divider /> : null}
-          </React.Fragment>
-        ))}
-      </View>
-    </View>
+    <Section title={t('Property Overview', 'Property Overview')}>
+      {rows.map((row, idx) => (
+        <React.Fragment key={row.label}>
+          <View style={styles.row}>
+            <BloomText style={styles.label}>{row.label}</BloomText>
+            <BloomText style={styles.value}>{row.value}</BloomText>
+          </View>
+          {idx !== rows.length - 1 ? <Divider /> : null}
+        </React.Fragment>
+      ))}
+    </Section>
   );
 };
 
 const styles = StyleSheet.create({
-  section: {
-    marginTop: spacing['3xl'],
-    marginBottom: spacing['3xl'],
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-    marginBottom: spacing.lg,
-  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     gap: spacing.lg,
   },
   label: {

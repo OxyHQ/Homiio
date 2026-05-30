@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { ThemedText } from '@/components/ThemedText';
@@ -13,23 +13,22 @@ interface NumberSelectorProps {
 
 export function NumberSelector({ value, onChange, maxValue = 5, minValue = 0 }: NumberSelectorProps) {
     const { t } = useTranslation();
-    const [showInput, setShowInput] = useState(false);
-    const [inputValue, setInputValue] = useState('');
+    // The custom input is shown whenever the value already exceeds maxValue
+    // (derived from props) or the user has explicitly tapped the "+max" button
+    // (tracked locally). Deriving `showInput` instead of syncing it in an effect
+    // avoids cascading renders.
+    const [userOpenedInput, setUserOpenedInput] = useState(false);
+    const showInput = value > maxValue || userOpenedInput;
+    const [inputText, setInputText] = useState<string | null>(null);
+    // The field shows the user's in-progress text when present, otherwise the
+    // current value (when it overflows maxValue).
+    const inputValue = inputText ?? (value > maxValue ? value.toString() : '');
     const numbers = Array.from({ length: maxValue + 1 }, (_, i) => i);
-
-    useEffect(() => {
-        if (value > maxValue) {
-            setInputValue(value.toString());
-            setShowInput(true);
-        } else {
-            setShowInput(false);
-        }
-    }, [value, maxValue]);
 
     const handleInputChange = (text: string) => {
         // Only allow numbers
         const numericValue = text.replace(/[^0-9]/g, '');
-        setInputValue(numericValue);
+        setInputText(numericValue);
 
         const parsedValue = parseInt(numericValue);
         if (!isNaN(parsedValue) && parsedValue >= maxValue) {
@@ -39,10 +38,11 @@ export function NumberSelector({ value, onChange, maxValue = 5, minValue = 0 }: 
 
     const handleNumberPress = (num: number) => {
         if (num === maxValue) {
-            setShowInput(true);
-            setInputValue(value > maxValue ? value.toString() : '');
+            setUserOpenedInput(true);
+            setInputText(value > maxValue ? value.toString() : '');
         } else {
-            setShowInput(false);
+            setUserOpenedInput(false);
+            setInputText(null);
             onChange(num);
         }
     };

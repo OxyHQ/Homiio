@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -51,11 +51,7 @@ export default function PropertyDraftsScreen() {
   const [loading, setLoading] = useState(true);
   const [deletingDraft, setDeletingDraft] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadDrafts();
-  }, []);
-
-  const loadDrafts = async () => {
+  const loadDrafts = useCallback(async () => {
     try {
       setLoading(true);
       const draftsData = await AsyncStorage.getItem('property_drafts');
@@ -74,7 +70,15 @@ export default function PropertyDraftsScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // Inline async wrapper keeps `loadDrafts`' internal setState off the
+    // synchronous effect path (avoids cascading renders).
+    void (async () => {
+      await loadDrafts();
+    })();
+  }, [loadDrafts]);
 
   const deleteDraft = async (draftId: string) => {
     Alert.alert(

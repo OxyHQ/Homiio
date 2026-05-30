@@ -483,7 +483,11 @@ export default function AddressDetailsPage() {
   );
 
   useEffect(() => {
-    fetchAllData();
+    // Inline async wrapper keeps the fetchers' internal setState off the
+    // synchronous effect path (avoids cascading renders).
+    void (async () => {
+      await fetchAllData();
+    })();
   }, [fetchAllData]);
 
   const handleWriteReview = () => {

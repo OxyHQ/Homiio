@@ -6,13 +6,12 @@
  *   - Hero card uses radius.xl with withShadow('sm') and a category pill.
  *   - Loading uses Skeleton.Box; ErrorState shared with the rest of the app.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Skeleton from '@oxyhq/bloom/skeleton';
 import {
   H1,
   H2,
@@ -86,57 +85,27 @@ const renderMarkdown = (content: string): React.ReactNode[] => {
   return elements;
 };
 
-const ArticleSkeleton: React.FC = () => (
-  <View style={styles.content}>
-    <Skeleton.Box width="100%" height={240} borderRadius={radius.xl} />
-    <View style={styles.skeletonBody}>
-      <Skeleton.Text style={{ width: '90%', lineHeight: 32 }} />
-      <Skeleton.Text style={{ width: '70%', lineHeight: 24 }} />
-      <Skeleton.Text style={{ width: '95%', lineHeight: 20 }} />
-      <Skeleton.Text style={{ width: '88%', lineHeight: 20 }} />
-      <Skeleton.Text style={{ width: '70%', lineHeight: 20 }} />
-    </View>
-  </View>
-);
 
 export default function TipArticleScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [tip, setTip] = useState<TipArticle | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!id) return;
-    setLoading(true);
-    setError(null);
+  // Tips are served synchronously from a local fallback set, so the article is
+  // derived from `id` during render instead of being loaded in an effect.
+  const { tip, error } = useMemo<{ tip: TipArticle | null; error: string | null }>(() => {
+    if (!id) return { tip: null, error: null };
     try {
       const fallbackTips = tipsService.getFallbackTips();
       const foundTip = fallbackTips.find((entry) => entry.id === id) ?? null;
-      setTip(foundTip);
-      if (!foundTip) {
-        setError('Article not found');
-      }
+      return { tip: foundTip, error: foundTip ? null : 'Article not found' };
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load tip');
-    } finally {
-      setLoading(false);
+      return {
+        tip: null,
+        error: err instanceof Error ? err.message : 'Failed to load tip',
+      };
     }
   }, [id]);
-
-  if (loading) {
-    return (
-      <View style={styles.root}>
-        <Header
-          options={{ title: t('tips.article'), showBackButton: true }}
-        />
-        <ScrollView contentContainerStyle={styles.content}>
-          <ArticleSkeleton />
-        </ScrollView>
-      </View>
-    );
-  }
 
   if (!tip || error) {
     return (
@@ -214,9 +183,6 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing['2xl'],
     paddingBottom: spacing['4xl'],
-  },
-  skeletonBody: {
-    gap: spacing.md,
   },
   hero: {
     position: 'relative',

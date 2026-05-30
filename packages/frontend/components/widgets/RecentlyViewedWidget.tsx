@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { Loading } from '@oxyhq/bloom/loading';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,17 +26,18 @@ export function RecentlyViewedWidget() {
   const isNative = Platform.OS === 'ios' || Platform.OS === 'android';
   const showArrows = !isNative && recentProperties.length > 2; // Only show if more than 2 items
 
-  // Initialize scroll state
-  useEffect(() => {
-    if (showArrows && recentProperties.length > 2) {
-      setCanScrollRight(true);
-      setCanScrollLeft(false);
-      setCurrentScrollX(0);
-    } else {
-      setCanScrollRight(false);
-      setCanScrollLeft(false);
-    }
-  }, [showArrows, recentProperties.length]);
+  // Reset the scroll affordances to the start position whenever the visible
+  // content changes. Done via React's "adjust state during render when a tracked
+  // value changes" pattern instead of an effect, which avoids cascading renders.
+  // Scroll interactions then update these states from `handleScroll`.
+  const scrollResetKey = `${showArrows}:${recentProperties.length}`;
+  const [prevScrollResetKey, setPrevScrollResetKey] = useState(scrollResetKey);
+  if (scrollResetKey !== prevScrollResetKey) {
+    setPrevScrollResetKey(scrollResetKey);
+    setCanScrollRight(showArrows && recentProperties.length > 2);
+    setCanScrollLeft(false);
+    setCurrentScrollX(0);
+  }
 
   const scrollLeft = () => {
     if (scrollViewRef.current) {

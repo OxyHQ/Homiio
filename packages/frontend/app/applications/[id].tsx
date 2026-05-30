@@ -34,7 +34,6 @@ import { Button } from '@oxyhq/bloom/button';
 import { Loading } from '@oxyhq/bloom/loading';
 import { Text as BloomText, H2 } from '@oxyhq/bloom/typography';
 import {
-  TenantApplication,
   TenantApplicationDocument,
   TenantApplicationStatus,
 } from '@homiio/shared-types';

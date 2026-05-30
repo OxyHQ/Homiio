@@ -116,8 +116,15 @@ export default function SavedPropertiesScreen() {
     );
   }, [folders, searchQuery]);
 
+  // Use the moment the saved-properties data was fetched as "now" instead of
+  // calling the impure `Date.now()` during render. `dataUpdatedAt` advances on
+  // every refetch, so the recency window stays accurate without render-phase
+  // impurity.
+  const dataUpdatedAt = savedQuery.dataUpdatedAt;
   const filteredRecent = useMemo<SavedProperty[]>(() => {
-    const now = Date.now();
+    // When `dataUpdatedAt` is 0 (no successful fetch yet) `savedProperties` is
+    // empty, so the value of `now` is irrelevant to the (empty) result.
+    const now = dataUpdatedAt;
     return savedProperties.filter((property) => {
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
@@ -138,7 +145,7 @@ export default function SavedPropertiesScreen() {
           return true;
       }
     });
-  }, [savedProperties, searchQuery, recency]);
+  }, [savedProperties, searchQuery, recency, dataUpdatedAt]);
 
   const handleRefresh = useCallback(async () => {
     await Promise.all([

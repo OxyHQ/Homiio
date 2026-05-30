@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -48,8 +48,6 @@ export default function BookViewingPage() {
   const { id, modifyViewingId } = useLocalSearchParams();
   const { oxyServices, activeSessionId } = useOxy();
   const queryClient = useQueryClient();
-  const [property, setProperty] = useState<PropertyData | null>(null);
-  const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [message, setMessage] = useState<string>('');
@@ -63,6 +61,7 @@ export default function BookViewingPage() {
   const normalizedId = Array.isArray(id) ? id[0] : id;
   const {
     property: apiProperty,
+    loading,
     loadProperty,
   } = useProperty(normalizedId || '');
 
@@ -113,42 +112,40 @@ export default function BookViewingPage() {
     return fallback;
   };
 
-  useEffect(() => {
-    if (apiProperty) {
-      // Map API property type to PropertyData type
-      const mapPropertyType = (type: string): PropertyType | undefined => {
-        switch (type) {
-          case 'apartment':
-            return PropertyType.APARTMENT;
-          case 'house':
-            return PropertyType.HOUSE;
-          case 'room':
-            return PropertyType.ROOM;
-          case 'studio':
-            return PropertyType.STUDIO;
-          default:
-            return PropertyType.APARTMENT; // Default fallback
-        }
-      };
+  // Derive the view model from the fetched property instead of syncing it in an
+  // effect (which caused cascading renders). `loading` comes from the query.
+  const property = useMemo<PropertyData | null>(() => {
+    if (!apiProperty) return null;
 
-      const generatedTitle = generatePropertyTitle({
-        type: mapPropertyType(apiProperty.type),
-        address: apiProperty.address,
-        bedrooms: apiProperty.bedrooms,
-        bathrooms: apiProperty.bathrooms,
-      });
+    const mapPropertyType = (type: string): PropertyType | undefined => {
+      switch (type) {
+        case 'apartment':
+          return PropertyType.APARTMENT;
+        case 'house':
+          return PropertyType.HOUSE;
+        case 'room':
+          return PropertyType.ROOM;
+        case 'studio':
+          return PropertyType.STUDIO;
+        default:
+          return PropertyType.APARTMENT; // Default fallback
+      }
+    };
 
-      const propertyData: PropertyData = {
-        id: apiProperty._id || apiProperty.id || '',
-        title: generatedTitle,
-        location: `${apiProperty.address?.city || ''}, ${apiProperty.address?.state || ''}`,
-        landlordName: 'Property Owner',
-        landlordRating: 4.8,
-      };
+    const generatedTitle = generatePropertyTitle({
+      type: mapPropertyType(apiProperty.type),
+      address: apiProperty.address,
+      bedrooms: apiProperty.bedrooms,
+      bathrooms: apiProperty.bathrooms,
+    });
 
-      setProperty(propertyData);
-      setLoading(false);
-    }
+    return {
+      id: apiProperty._id || apiProperty.id || '',
+      title: generatedTitle,
+      location: `${apiProperty.address?.city || ''}, ${apiProperty.address?.state || ''}`,
+      landlordName: 'Property Owner',
+      landlordRating: 4.8,
+    };
   }, [apiProperty]);
 
   // Load existing viewing data if in modify mode

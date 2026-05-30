@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { propertyService, type Property } from '@/services/propertyService';
 import { getPropertyTitle } from '@/utils/propertyUtils';
+import { logger } from '@/utils/logger';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { RoomFilters, type RoomFilterOptions } from '@/components/RoomFilters';
 import { PropertyType } from '@homiio/shared-types';
@@ -160,16 +161,47 @@ export function RoomList({ filters, onFilterChange }: RoomListProps) {
             setHasMore(response.page < response.totalPages);
             setPage(pageNum);
         } catch (error) {
-            console.error('Error loading rooms:', error);
+            logger.error('Error loading rooms:', error);
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
     }, [filters, hasMore, loading]);
 
+    // Initial load + reload whenever the filters change. The fetch is performed
+    // in an inline guarded async function so no setState runs synchronously
+    // within the effect (which would cause cascading renders). `loadRooms` is
+    // still used by the refresh / load-more event handlers below.
     useEffect(() => {
-        loadRooms(1, true);
-    }, [loadRooms, filters]);
+        let active = true;
+        (async () => {
+            try {
+                const params: RoomFilterOptions = {
+                    ...filters,
+                    type: PropertyType.ROOM,
+                    page: 1,
+                    limit: 10,
+                    sortBy: filters?.sortBy || 'createdAt',
+                    sortOrder: filters?.sortOrder || 'desc',
+                };
+                const response = await propertyService.getRooms(params);
+                if (!active) return;
+                setRooms(response.rooms);
+                setHasMore(response.page < response.totalPages);
+                setPage(1);
+            } catch (error) {
+                logger.error('Error loading rooms:', error);
+            } finally {
+                if (active) {
+                    setLoading(false);
+                    setRefreshing(false);
+                }
+            }
+        })();
+        return () => {
+            active = false;
+        };
+    }, [filters]);
 
     const handleRefresh = useCallback(() => {
         setRefreshing(true);

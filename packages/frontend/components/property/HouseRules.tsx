@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
+import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Section } from '@/components/property/Section';
 import { colors } from '@/styles/colors';
+import { spacing } from '@/constants/styles';
 import { useTranslation } from 'react-i18next';
 import type { Property } from '@homiio/shared-types';
 
@@ -15,23 +17,39 @@ export const HouseRules: React.FC<Props> = ({ property }) => {
     if (petsAllowed === undefined && smokingAllowed === undefined && partiesAllowed === undefined) return null;
     const yesNo = (v?: boolean) => v === undefined ? '-' : v ? t('Yes') : t('No');
     return (
-        <View style={styles.container}>
-            <ThemedText style={styles.sectionTitle}>{t('House Rules')}</ThemedText>
-            <View style={styles.card}>
-                {petsAllowed !== undefined && <ThemedText style={styles.item}>{t('Pets Allowed')}: <ThemedText style={styles.value}>{yesNo(petsAllowed)}</ThemedText></ThemedText>}
-                {smokingAllowed !== undefined && <ThemedText style={styles.item}>{t('Smoking Allowed')}: <ThemedText style={styles.value}>{yesNo(smokingAllowed)}</ThemedText></ThemedText>}
-                {partiesAllowed !== undefined && <ThemedText style={styles.item}>{t('Parties Allowed')}: <ThemedText style={styles.value}>{yesNo(partiesAllowed)}</ThemedText></ThemedText>}
-            </View>
-        </View>
+        <Section title={t('House Rules')} bodyStyle={styles.body}>
+            {petsAllowed !== undefined && (
+                <View style={styles.row}>
+                    <BloomText style={styles.label}>{t('Pets Allowed')}</BloomText>
+                    <BloomText style={styles.value}>{yesNo(petsAllowed)}</BloomText>
+                </View>
+            )}
+            {smokingAllowed !== undefined && (
+                <View style={styles.row}>
+                    <BloomText style={styles.label}>{t('Smoking Allowed')}</BloomText>
+                    <BloomText style={styles.value}>{yesNo(smokingAllowed)}</BloomText>
+                </View>
+            )}
+            {partiesAllowed !== undefined && (
+                <View style={styles.row}>
+                    <BloomText style={styles.label}>{t('Parties Allowed')}</BloomText>
+                    <BloomText style={styles.value}>{yesNo(partiesAllowed)}</BloomText>
+                </View>
+            )}
+        </Section>
     );
 };
 
 const styles = StyleSheet.create({
-    container: { marginBottom: 20 },
-    sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15 },
-    card: { padding: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
-    item: { fontSize: 14, marginBottom: 8 },
-    value: { fontWeight: '600', color: colors.primaryColor },
+    body: { gap: spacing.sm },
+    row: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: spacing.lg,
+    },
+    label: { fontSize: 15, color: colors.COLOR_BLACK_LIGHT_3 },
+    value: { fontSize: 15, fontWeight: '600', color: colors.COLOR_BLACK },
 });
 
 export default HouseRules;

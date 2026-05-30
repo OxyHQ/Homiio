@@ -72,10 +72,11 @@ i18nInit({
 
 export default function RootLayout() {
   const [appIsReady, setAppIsReady] = useState(false);
-  const [splashState, setSplashState] = useState({
-    initializationComplete: false,
-    startFade: false,
-  });
+  // `startFade` is fully derived from initialization completing — there is no
+  // other trigger — so we keep a single source of truth and derive the fade
+  // flag instead of syncing it in an effect (which caused cascading renders).
+  const [initializationComplete, setInitializationComplete] = useState(false);
+  const startFade = initializationComplete;
   const isScreenNotMobile = useIsScreenNotMobile();
   const pathname = usePathname() || '/';
 
@@ -140,22 +141,6 @@ export default function RootLayout() {
     },
   }), []);
 
-  const initializeApp = useCallback(async () => {
-    try {
-      if (Platform.OS !== 'web') {
-        await setupNotifications();
-        const hasPermission = await requestNotificationPermissions();
-        if (hasPermission && __DEV__) {
-          await scheduleDemoNotification();
-        }
-      }
-      setSplashState((prev) => ({ ...prev, initializationComplete: true }));
-      await SplashScreen.hideAsync();
-    } catch (error: unknown) {
-      logger.warn('Failed to set up notifications:', error);
-    }
-  }, []);
-
   // --- Splash Fade Handler ---
   const handleSplashFadeComplete = useCallback(() => {
     setAppIsReady(true);
@@ -179,15 +164,35 @@ export default function RootLayout() {
     };
   }, []);
 
+  // One-time app bootstrap: set up notifications (native only), hide the native
+  // splash, then mark initialization complete to start the JS splash fade. The
+  // completion state is set in an async continuation (after `await`) and guarded
+  // by `active` so it never runs synchronously within the effect or after
+  // unmount.
   useEffect(() => {
-    initializeApp();
-  }, [initializeApp]);
+    let active = true;
+    (async () => {
+      try {
+        if (Platform.OS !== 'web') {
+          await setupNotifications();
+          const hasPermission = await requestNotificationPermissions();
+          if (hasPermission && __DEV__) {
+            await scheduleDemoNotification();
+          }
+        }
+        await SplashScreen.hideAsync();
+        if (active) {
+          setInitializationComplete(true);
+        }
+      } catch (error: unknown) {
+        logger.warn('Failed to set up notifications:', error);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  useEffect(() => {
-    if (splashState.initializationComplete && !splashState.startFade) {
-      setSplashState((prev) => ({ ...prev, startFade: true }));
-    }
-  }, [splashState.initializationComplete, splashState.startFade]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -206,7 +211,7 @@ export default function RootLayout() {
           <BloomThemeProvider mode="light" colorPreset="blue" fonts onFontsLoading={<AppSplashScreen />}>
           {!appIsReady ? (
             <AppSplashScreen
-              startFade={splashState.startFade}
+              startFade={startFade}
               onFadeComplete={handleSplashFadeComplete}
             />
           ) : (

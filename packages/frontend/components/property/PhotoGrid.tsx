@@ -32,7 +32,7 @@ import { ImageGalleryModal } from './ImageGalleryModal';
 import { PhotoGallery } from './PhotoGallery';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 import { colors } from '@/styles/colors';
-import { cardShadow, radius } from '@/constants/styles';
+import { radius } from '@/constants/styles';
 import type { PropertyImage } from '@homiio/shared-types';
 
 export interface PhotoGridProps {
@@ -74,7 +74,7 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({ images, t }) => {
 
   return (
     <>
-      <View style={[styles.outer, cardShadow.sm]}>
+      <View style={styles.outer}>
         <View style={styles.grid}>
           <Pressable
             style={styles.heroTile}

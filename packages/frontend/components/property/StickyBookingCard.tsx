@@ -24,7 +24,7 @@ import { BookingWidget } from '@/components/BookingWidget';
 import { ApplyToRentCTA } from '@/components/property/ApplyToRentCTA';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { colors } from '@/styles/colors';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { hairline, radius, spacing } from '@/constants/styles';
 import { RentMode, type Property } from '@homiio/shared-types';
 
 interface StickyBookingCardProps {
@@ -61,7 +61,7 @@ export const StickyBookingCard: React.FC<StickyBookingCardProps> = ({
 
   return (
     <View style={Platform.OS === 'web' ? styles.stickyWrapperWeb : null}>
-      <View style={[styles.card, withShadow('md')]}>
+      <View style={styles.card}>
         <View style={styles.priceRow}>
           <H3 style={styles.price}>{priceLabel}</H3>
           {priceSubtitle ? (
@@ -112,6 +112,8 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.white,
     borderRadius: radius.lg,
+    borderWidth: hairline.width,
+    borderColor: hairline.color,
     padding: spacing['2xl'],
     maxWidth: 380,
     width: '100%',
@@ -135,8 +137,8 @@ const styles = StyleSheet.create({
     marginHorizontal: -spacing.sm,
   },
   divider: {
-    height: 1,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
+    height: hairline.width,
+    backgroundColor: hairline.color,
     marginVertical: spacing.xs,
   },
   reportRow: {

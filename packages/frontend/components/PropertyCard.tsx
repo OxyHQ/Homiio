@@ -206,6 +206,11 @@ export function PropertyCard({
     }
   }, [queryClient, property]);
 
+  const showInstantBook = useMemo(
+    () => (property ? shouldShowInstantBook(property, mode) : false),
+    [property, mode],
+  );
+
   // Show skeleton loading state
   if (isLoading) {
     return (
@@ -245,8 +250,6 @@ export function PropertyCard({
     rating: undefined as number | undefined,
     reviewCount: undefined as number | undefined,
   };
-
-  const showInstantBook = useMemo(() => shouldShowInstantBook(property, mode), [property, mode]);
 
   const isEco = Boolean(property.isEcoFriendly);
   const isFeatured = variant === 'featured';

@@ -22,10 +22,11 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Text as BloomText, H2 } from '@oxyhq/bloom/typography';
+import { Text as BloomText } from '@oxyhq/bloom/typography';
 
+import { SectionHeader, SECTION_GUTTER } from '@/components/property/Section';
 import { colors } from '@/styles/colors';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { hairline, radius, spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
 
 interface SleepArrangementProps {
@@ -59,20 +60,15 @@ export const SleepArrangement: React.FC<SleepArrangementProps> = ({ property }) 
   if (bedrooms.length === 0) return null;
 
   return (
-    <View style={styles.section}>
-      <H2 style={styles.title}>
-        {t('property.sleep.title', "Where you'll sleep")}
-      </H2>
+    <View>
+      <SectionHeader title={t('property.sleep.title', "Where you'll sleep")} />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         {bedrooms.map((bedroom) => (
-          <View
-            key={bedroom.id}
-            style={[styles.bedroomCard, withShadow('sm')]}
-          >
+          <View key={bedroom.id} style={styles.bedroomCard}>
             <Ionicons name="bed-outline" size={26} color={colors.COLOR_BLACK} />
             <BloomText style={styles.bedroomTitle}>{bedroom.title}</BloomText>
             <BloomText style={styles.bedroomDescription}>
@@ -86,25 +82,16 @@ export const SleepArrangement: React.FC<SleepArrangementProps> = ({ property }) 
 };
 
 const styles = StyleSheet.create({
-  section: {
-    paddingTop: spacing.md,
-    paddingBottom: spacing['2xl'],
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
-  },
   scrollContent: {
     gap: spacing.md,
-    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingHorizontal: SECTION_GUTTER,
   },
   bedroomCard: {
     width: 200,
     height: 140,
-    backgroundColor: colors.white,
+    borderWidth: hairline.width,
+    borderColor: hairline.color,
     borderRadius: radius.lg,
     padding: spacing.xl,
     justifyContent: 'space-between',

@@ -260,16 +260,23 @@ export default function RoommatesPage() {
 
   const [roomFilters, setRoomFilters] = useState<PropertyFilters>({});
 
-  useEffect(() => {
-    if (preferencesQuery.data?.preferences) {
-      const prefs = preferencesQuery.data.preferences;
+  // Seed the price range from the user's saved roommate preferences once the
+  // query resolves. Implemented with React's "adjust state when a tracked value
+  // changes" pattern instead of an effect to avoid cascading renders; the user
+  // can still adjust the filters afterwards.
+  const preferencesData = preferencesQuery.data;
+  const [prevPreferencesData, setPrevPreferencesData] = useState(preferencesData);
+  if (preferencesData !== prevPreferencesData) {
+    setPrevPreferencesData(preferencesData);
+    if (preferencesData?.preferences) {
+      const prefs = preferencesData.preferences;
       setRoomFilters((prev: PropertyFilters) => ({
         ...prev,
         minPrice: prefs.budget?.min,
         maxPrice: prefs.budget?.max,
       }));
     }
-  }, [preferencesQuery.data]);
+  }
 
   const renderDiscoverTab = () => {
     if (!isPersonalProfile || !hasPersonalProfile) {

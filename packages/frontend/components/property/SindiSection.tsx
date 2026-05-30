@@ -5,6 +5,8 @@ import {
     TouchableOpacity,
 } from 'react-native';
 import { colors } from '@/styles/colors';
+import { radius, spacing } from '@/constants/styles';
+import { SECTION_GUTTER } from '@/components/property/Section';
 import { ThemedText } from '@/components/ThemedText';
 import { Button } from '@oxyhq/bloom/button';
 import { SindiIcon } from '@/assets/icons';
@@ -67,21 +69,9 @@ export function SindiSection({ property }: SindiSectionProps) {
                     <TouchableOpacity
                         key={index}
                         onPress={() => handleOpenSindi(suggestion.text)}
-                        style={{
-                            backgroundColor: colors.surface,
-                            paddingHorizontal: 8,
-                            paddingVertical: 4,
-                            borderRadius: 16,
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                        }}
+                        style={styles.suggestionChip}
                     >
-                        <ThemedText
-                            style={{
-                                fontSize: 12,
-                                color: colors.COLOR_BLACK_LIGHT_3
-                            }}
-                        >
+                        <ThemedText style={styles.suggestionText}>
                             {suggestion.text}
                         </ThemedText>
                     </TouchableOpacity>
@@ -94,24 +84,15 @@ export function SindiSection({ property }: SindiSectionProps) {
 const styles = StyleSheet.create({
     bannerContainer: {
         backgroundColor: colors.primaryColor,
-        borderRadius: 16,
-        padding: 0,
-        marginBottom: 16,
+        borderRadius: radius.lg,
+        marginHorizontal: SECTION_GUTTER,
         overflow: 'hidden',
-        shadowColor: colors.COLOR_BLACK,
-        shadowOffset: {
-            width: 0,
-            height: 4,
-        },
-        shadowOpacity: 0.15,
-        shadowRadius: 6,
-        elevation: 6,
     },
     bannerContent: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: 20,
+        padding: spacing.xl,
     },
     leftSection: {
         flexDirection: 'row',
@@ -119,7 +100,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     rightSection: {
-        marginLeft: 16,
+        marginLeft: spacing.lg,
     },
     iconContainer: {
         width: 48,
@@ -128,7 +109,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255, 255, 255, 0.2)',
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 16,
+        marginRight: spacing.lg,
     },
     textContainer: {
         flex: 1,
@@ -148,33 +129,22 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         backgroundColor: 'rgba(0, 0, 0, 0.05)',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.md,
         justifyContent: 'flex-start',
         alignItems: 'flex-start',
-        gap: 8,
+        gap: spacing.sm,
     },
-    featureBadge: {
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.4)',
-        shadowColor: colors.COLOR_BLACK,
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.15,
-        shadowRadius: 3,
-        elevation: 2,
-        alignSelf: 'flex-start',
+    suggestionChip: {
+        backgroundColor: colors.surface,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.xs,
+        borderRadius: radius.lg,
+        flexDirection: 'row',
+        alignItems: 'center',
     },
-    badgeText: {
-        fontSize: 11,
-        fontWeight: '500',
-        color: colors.primaryColor,
-        lineHeight: 14,
+    suggestionText: {
+        fontSize: 12,
+        color: colors.COLOR_BLACK_LIGHT_3,
     },
 });

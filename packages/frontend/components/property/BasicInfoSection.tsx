@@ -17,10 +17,11 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@oxyhq/bloom/button';
-import { H2, Text as BloomText } from '@oxyhq/bloom/typography';
+import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { CurrencyFormatter } from '@/components/CurrencyFormatter';
 import { TruncatedDescription } from '@/components/ui/TruncatedDescription';
+import { SECTION_GUTTER } from '@/components/property/Section';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 
@@ -96,9 +97,10 @@ export const BasicInfoSection: React.FC<Props> = ({
 
       {description && description.trim() !== '' ? (
         <View style={styles.descriptionBlock}>
-          <H2 style={styles.aboutTitle}>
-            {t('property.about.title', 'About this property') || 'About this property'}
-          </H2>
+          <BloomText style={styles.aboutTitle}>
+            {t('property.about.title', 'About this property') ||
+              'About this property'}
+          </BloomText>
           <TruncatedDescription text={description} />
         </View>
       ) : null}
@@ -130,9 +132,8 @@ export const BasicInfoSection: React.FC<Props> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: spacing.xl,
-    marginBottom: spacing['2xl'],
     gap: spacing.lg,
+    paddingHorizontal: SECTION_GUTTER,
   },
   priceRow: {
     flexDirection: 'row',
@@ -165,9 +166,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   aboutTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
     color: colors.COLOR_BLACK,
+    letterSpacing: -0.2,
   },
   viewingBanner: {
     flexDirection: 'row',

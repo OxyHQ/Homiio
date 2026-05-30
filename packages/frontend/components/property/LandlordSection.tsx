@@ -1,11 +1,12 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
-import { SectionCard } from '@/components/ui/SectionCard';
+import { Section, SECTION_GUTTER } from '@/components/property/Section';
 import ProfileAvatar from '@/components/ProfileAvatar';
 import { Avatar } from '@oxyhq/bloom/avatar';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
+import { hairline, spacing } from '@/constants/styles';
 import { ActionButton } from '@/components/ui/ActionButton';
 import type { Profile, Property } from '@homiio/shared-types';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';
@@ -106,13 +107,12 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
         return <ProfileAvatar profile={profile} size={52} style={styles.landlordAvatar} />;
     };
     return (
-        <SectionCard
+        <Section
+            fullBleed
             title={isPublicHousing ? t('Housing Authority') || 'Housing Authority' : t('Landlord') || 'Landlord'}
-            padding={0}
-            borderRadius={16}
         >
             {isPublicHousing ? (
-                <View style={styles.contentContainer}>
+                <View style={[styles.contentContainer, styles.gutter]}>
                     <View style={styles.landlordHeader}>
                         <View style={[styles.landlordAvatar, styles.governmentAvatar]}>
                             <Ionicons name="library" size={26} color={colors.white} />
@@ -141,7 +141,7 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
             ) : (
                 <View style={styles.contentContainer}>
                     <TouchableOpacity
-                        style={styles.landlordHeader}
+                        style={[styles.landlordHeader, styles.gutter]}
                         onPress={() => router.push(`/profile/${landlordProfile?._id || landlordProfile?.id}`)}
                         activeOpacity={0.7}
                     >
@@ -183,27 +183,24 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
                     )}
                 </View>
             )}
-        </SectionCard>
+        </Section>
     );
 };
 
 const styles = StyleSheet.create({
     contentContainer: {
-        padding: 16,
+        gap: spacing.md,
+    },
+    gutter: {
+        paddingHorizontal: SECTION_GUTTER,
     },
     landlordHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 12,
         paddingVertical: 2,
     },
     landlordAvatar: {
-        marginRight: 12,
-        shadowColor: colors.COLOR_BLACK,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 1,
+        marginRight: spacing.md,
     },
     defaultAvatar: {
         backgroundColor: colors.COLOR_BLACK_LIGHT_6,
@@ -272,9 +269,8 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     propertiesSection: {
-        marginTop: 12,
-        paddingTop: 12,
-        borderTopWidth: 1,
-        borderTopColor: colors.mutedSubtle,
+        paddingTop: spacing.md,
+        borderTopWidth: hairline.width,
+        borderTopColor: hairline.color,
     },
 });

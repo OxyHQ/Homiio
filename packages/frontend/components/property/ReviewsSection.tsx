@@ -11,22 +11,24 @@
  * the loading state. The actual review-card rendering still uses
  * the shared `ReviewCard` component.
  */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@oxyhq/bloom/button';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
-import { H1, H2, Text as BloomText } from '@oxyhq/bloom/typography';
+import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { ReviewCard, type ReviewData } from '@/components/ReviewCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { SectionHeader, SECTION_GUTTER } from '@/components/property/Section';
 import { api } from '@/utils/api';
 import { colors } from '@/styles/colors';
-import { cardShadow, hairline, radius, spacing } from '@/constants/styles';
+import { hairline, radius, spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
 
 interface ReviewsSectionProps {
@@ -134,9 +136,6 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
 }) => {
   const { t } = useTranslation();
   const router = useRouter();
-  const [reviews, setReviews] = useState<ReviewData[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const isPreview = variant === 'preview';
   const maxVisible = isPreview ? 6 : 10;
@@ -158,11 +157,15 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
     return undefined;
   }, [property?.address]);
 
-  const fetchReviews = useCallback(async () => {
-    if (!addressId) return;
-    setLoading(true);
-    setError(null);
-    try {
+  const {
+    data: reviews = [],
+    isLoading: loading,
+    error: queryError,
+    refetch,
+  } = useQuery<ReviewData[]>({
+    queryKey: ['addressReviews', addressId],
+    enabled: Boolean(addressId),
+    queryFn: async () => {
       const response = await api.get<ReviewsResponse>(
         `/api/reviews/address/${addressId}`,
       );
@@ -170,20 +173,15 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
       const responseData = payload?.success ? payload : payload?.data ?? payload;
       const buildingReviews = responseData?.buildingReviews ?? [];
       const unitReviews = responseData?.unitReviews ?? [];
-      const all = [...buildingReviews, ...unitReviews].map(normalizeReview);
-      setReviews(all);
-    } catch (e) {
-      const message =
-        e instanceof Error ? e.message : 'Unable to load reviews';
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  }, [addressId]);
+      return [...buildingReviews, ...unitReviews].map(normalizeReview);
+    },
+  });
 
-  useEffect(() => {
-    fetchReviews();
-  }, [fetchReviews]);
+  const error = queryError
+    ? queryError instanceof Error
+      ? queryError.message
+      : 'Unable to load reviews'
+    : null;
 
   const stats = useMemo(() => computeStats(reviews), [reviews]);
 
@@ -203,10 +201,9 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
   };
 
   return (
-    <View style={styles.section}>
-      <H2 style={styles.title}>
-        {t('property.reviews.title', 'Reviews') || 'Reviews'}
-      </H2>
+    <View>
+      <SectionHeader title={t('property.reviews.title', 'Reviews') || 'Reviews'} />
+      <View style={styles.body}>
       <BloomText style={styles.disclaimer}>
         {t(
           'property.reviews.disclaimer',
@@ -218,7 +215,7 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
       {loading ? (
         <View style={styles.skeletonGrid}>
           {Array.from({ length: 4 }).map((_, idx) => (
-            <View key={idx} style={[styles.skeletonCard, cardShadow.sm]}>
+            <View key={idx} style={styles.skeletonCard}>
               <Skeleton.Box width="60%" height={14} borderRadius={4} />
               <Skeleton.Box
                 width="100%"
@@ -252,7 +249,9 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
           }
           description={error}
           retryLabel={t('common.tryAgain', 'Try again') || 'Try again'}
-          onRetry={fetchReviews}
+          onRetry={() => {
+            refetch();
+          }}
         />
       ) : null}
 
@@ -334,24 +333,19 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
           </View>
         </>
       ) : null}
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  section: {
-    marginTop: spacing['3xl'],
-    marginBottom: spacing['3xl'],
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-    marginBottom: spacing.sm,
+  body: {
+    paddingHorizontal: SECTION_GUTTER,
   },
   disclaimer: {
     fontSize: 13,
     color: colors.COLOR_BLACK_LIGHT_3,
+    marginTop: spacing.sm,
     marginBottom: spacing.xl,
     lineHeight: 18,
   },
@@ -414,8 +408,8 @@ const styles = StyleSheet.create({
     minWidth: 240,
     flexGrow: 1,
     padding: spacing.lg,
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.lg,
+    backgroundColor: colors.mutedSubtle,
+    borderRadius: radius.md,
     gap: spacing.sm,
   },
   skeletonLine: {
