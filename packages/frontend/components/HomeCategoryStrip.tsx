@@ -8,9 +8,11 @@
  *     clipped to a `radius.lg` rounded square so it reads as a premium tile.
  *   - 13px label sitting just under the image, on a fixed-width item so
  *     labels line up across the row.
- *   - Active state = dark + bold label with a 2px primary underline bar and
- *     the image at full opacity; inactive = muted label, no bar, image at
- *     0.85 opacity (dim the tile, don't recolor the render).
+ *   - Active state = a soft rounded background highlight behind the whole
+ *     item (icon + label) plus a dark + bold label and the image at full
+ *     opacity; inactive = transparent background, muted label, image at
+ *     0.85 opacity (dim the tile, don't recolor the render). The item keeps
+ *     identical padding in both states so the layout never shifts.
  *   - On web: subtle scale-1.04 on hover (never re-tints).
  *
  * Spacing is anchored on the design-token `spacing`/`radius` scale.
@@ -98,7 +100,12 @@ const CategoryItem: React.FC<CategoryItemProps> = ({ item, active, label, onPres
   /**
    * The isometric render is full-color, so we never tint it — active vs
    * inactive is conveyed by image opacity (1 vs 0.85), the label color/weight,
-   * and the 2px underline bar. Hover on web nudges scale slightly only.
+   * and a soft rounded background highlight behind the whole item. The
+   * highlight uses the lightest neutral fill (`COLOR_BLACK_LIGHT_8`, Bloom
+   * `backgroundSecondary`) so the selected category reads as a subtle pill
+   * without competing with the colorful tile. Padding is identical in both
+   * states (so the row never reflows on selection); only the background
+   * toggles. Hover on web nudges scale slightly only.
    */
   const labelColor = active ? colors.COLOR_BLACK : colors.COLOR_BLACK_LIGHT_3;
   const scale = hovered && Platform.OS === 'web' ? 1.04 : 1;
@@ -108,11 +115,18 @@ const CategoryItem: React.FC<CategoryItemProps> = ({ item, active, label, onPres
       onPress={onPress}
       onHoverIn={() => setHovered(true)}
       onHoverOut={() => setHovered(false)}
-      className="items-center justify-start"
+      className="items-center justify-center"
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       accessibilityLabel={label}
-      style={{ width: ITEM_WIDTH, transform: [{ scale }] }}
+      style={{
+        width: ITEM_WIDTH,
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.sm,
+        borderRadius: radius.lg,
+        backgroundColor: active ? colors.COLOR_BLACK_LIGHT_8 : 'transparent',
+        transform: [{ scale }],
+      }}
     >
       <View
         className="items-center justify-center overflow-hidden"
@@ -120,7 +134,7 @@ const CategoryItem: React.FC<CategoryItemProps> = ({ item, active, label, onPres
           width: TILE_SIZE,
           height: TILE_SIZE,
           borderRadius: radius.lg,
-          marginBottom: spacing.sm,
+          marginBottom: spacing.xs,
         }}
       >
         <Image
@@ -142,15 +156,6 @@ const CategoryItem: React.FC<CategoryItemProps> = ({ item, active, label, onPres
       >
         {label}
       </Text>
-      <View
-        className="rounded-full"
-        style={{
-          marginTop: spacing.xs,
-          height: 2,
-          alignSelf: 'stretch',
-          backgroundColor: active ? colors.primaryColor : 'transparent',
-        }}
-      />
     </Pressable>
   );
 };
