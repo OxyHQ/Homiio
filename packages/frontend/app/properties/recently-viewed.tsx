@@ -1,176 +1,130 @@
-import React, { useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  Animated,
-  Dimensions,
-} from 'react-native';
+/**
+ * Recently viewed — the small, personal list of listings the user has opened.
+ *
+ * Rebuilt to match the `/properties` browse surface: the shared
+ * `PropertyListHeader` over a responsive `PropertyResultsGrid` of the standard
+ * photo-carousel `PropertyCard`, with `PropertyResultsGridSkeleton` /
+ * `EmptyState` / `ErrorState` for the non-content states.
+ *
+ * Data source is unchanged — `useRecentlyViewed` (the recently-viewed Zustand
+ * store, hydrated from the backend when authenticated). There is no search bar:
+ * this is a short, capped history (≤10 items), not a searchable catalog, so the
+ * old `SearchBar` + view-mode toggle were removed. The "clear history" action is
+ * preserved as a header action.
+ */
+import React, { useCallback } from 'react';
+import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
+
+import { Button } from '@oxyhq/bloom/button';
+
+import { PropertyListHeader } from '@/components/ui/PropertyListHeader';
+import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
+import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { colors } from '@/styles/colors';
-import { Header } from '@/components/Header';
-import { PropertyList } from '@/components/PropertyList';
-import { SearchBar } from '@/components/SearchBar';
-import { Property } from '@homiio/shared-types';
-import { Ionicons } from '@expo/vector-icons';
-import { getPropertyTitle } from '@/utils/propertyUtils';
-import { useOxy } from '@oxyhq/services';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
+import { contentClamp, spacing } from '@/constants/styles';
+import type { Property } from '@homiio/shared-types';
 
-const screenWidth = Dimensions.get('window').width;
-const isMobile = screenWidth < 600;
+/** Number of skeleton cards shown during the first load. */
+const SKELETON_COUNT = 4;
+/** Roomy columns — like `/properties`, this surface owns the full width. */
+const GRID_COLUMNS = { sm: 1, md: 2, lg: 3, xl: 3 } as const;
 
 export default function RecentlyViewedScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { oxyServices, activeSessionId } = useOxy();
-  const [refreshing, setRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>(isMobile ? 'grid' : 'list');
-  const [fadeAnim] = useState(() => new Animated.Value(0));
-  const [headerHeight, setHeaderHeight] = useState(0);
+  const { properties, isLoading, error, refetch, clear } = useRecentlyViewed();
 
-  const { properties: recentProperties, isLoading, error, refetch, clear } = useRecentlyViewed();
-
-  // Filter properties based on search query
-  const filteredProperties = React.useMemo(() => {
-    if (!searchQuery.trim()) return recentProperties;
-
-    const query = searchQuery.toLowerCase();
-    return recentProperties.filter((property) => {
-      const title = (getPropertyTitle(property) || '').toLowerCase();
-      const location =
-        `${property.address?.city || ''}, ${property.address?.state || ''}`.toLowerCase();
-      const description = property.description?.toLowerCase() || '';
-
-      return title.includes(query) || location.includes(query) || description.includes(query);
-    });
-  }, [recentProperties, searchQuery]);
-
-  React.useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 400,
-      useNativeDriver: true,
-    }).start();
-  }, [filteredProperties]);
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
-  };
-
-  const handlePropertyPress = (property: Property) => {
-    router.push(`/properties/${property._id || property.id}`);
-  };
-
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-  };
-
-  const handleClearHistory = () => {
-    clear();
-  };
-
-  const renderEmptyState = () => (
-    <EmptyState
-      icon="time-outline"
-      title={t('home.recentlyViewed.noProperties')}
-      description={t('home.recentlyViewed.noPropertiesDescription')}
-      actionText={t('home.recentlyViewed.browseProperties')}
-      actionIcon="home"
-      onAction={() => router.push('/properties')}
-    />
+  const handlePropertyPress = useCallback(
+    (property: Property) => {
+      router.push(`/properties/${property._id || property.id}`);
+    },
+    [router],
   );
 
-  const renderErrorState = () => (
-    <EmptyState
-      icon="alert-circle-outline"
-      title={t('home.recentlyViewed.errorTitle')}
-      description={error || t('home.recentlyViewed.errorDescription')}
-      actionText={t('home.recentlyViewed.retry')}
-      actionIcon="refresh"
-      onAction={handleRefresh}
-    />
-  );
+  const handleRefresh = useCallback(() => {
+    void refetch();
+  }, [refetch]);
 
-  // View mode toggle button
-  const renderViewModeToggle = () => (
-    <View style={styles.viewModeToggle}>
-      <TouchableOpacity
-        style={[styles.toggleButton, viewMode === 'grid' && styles.toggleButtonActive]}
-        onPress={() => setViewMode('grid')}
-      >
-        <Ionicons
-          name="grid-outline"
-          size={20}
-          color={viewMode === 'grid' ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+  const handleClear = useCallback(() => {
+    void clear();
+  }, [clear]);
+
+  const body = (() => {
+    if (isLoading && properties.length === 0) {
+      return (
+        <PropertyResultsGridSkeleton
+          count={SKELETON_COUNT}
+          columns={GRID_COLUMNS}
+          style={styles.gridPadding}
         />
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.toggleButton, viewMode === 'list' && styles.toggleButtonActive]}
-        onPress={() => setViewMode('list')}
-      >
-        <Ionicons
-          name="list-outline"
-          size={22}
-          color={viewMode === 'list' ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
+      );
+    }
+    if (error) {
+      return (
+        <ErrorState
+          title={t('home.recentlyViewed.errorTitle')}
+          description={error}
+          retryLabel={t('home.recentlyViewed.retry')}
+          onRetry={handleRefresh}
         />
-      </TouchableOpacity>
-    </View>
-  );
+      );
+    }
+    if (properties.length === 0) {
+      return (
+        <EmptyState
+          icon="time-outline"
+          title={t('home.recentlyViewed.noProperties')}
+          description={t('home.recentlyViewed.noPropertiesDescription')}
+          actionText={t('home.recentlyViewed.browseProperties')}
+          actionIcon="home"
+          onAction={() => router.push('/properties')}
+        />
+      );
+    }
+    return (
+      <PropertyResultsGrid
+        properties={properties}
+        onPropertyPress={handlePropertyPress}
+        columns={GRID_COLUMNS}
+        style={styles.gridPadding}
+      />
+    );
+  })();
 
   return (
     <View style={styles.container}>
-      <View
-        style={styles.stickyHeaderWrapper}
-        onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
+      <PropertyListHeader
+        title={t('home.recentlyViewed.title')}
+        subtitle={
+          properties.length > 0
+            ? `${t('home.recentlyViewed.results')}: ${properties.length}`
+            : undefined
+        }
+        right={
+          properties.length > 0 ? (
+            <Button
+              variant="ghost"
+              size="small"
+              onPress={handleClear}
+              accessibilityLabel={t('home.recentlyViewed.retry')}
+            >
+              {t('common.clear', 'Clear')}
+            </Button>
+          ) : undefined
+        }
+      />
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <Header options={{ title: t('home.recentlyViewed.title'), titlePosition: 'left' }} />
-      </View>
-      <View style={{ paddingTop: headerHeight, flex: 1 }}>
-        <View style={styles.topBar}>
-          <View style={styles.searchBarContainer}>
-            <SearchBar hideFilterIcon={true} />
-          </View>
-          {recentProperties.length > 0 && (
-            <TouchableOpacity style={styles.clearButton} onPress={handleClearHistory}>
-              <Ionicons name="trash-outline" size={20} color={colors.danger} />
-            </TouchableOpacity>
-          )}
-          {renderViewModeToggle()}
-        </View>
-        <View style={styles.resultCountBar}>
-          <Text style={styles.resultCountText}>
-            {t('home.recentlyViewed.results')}: {filteredProperties.length}{' '}
-            {searchQuery && `(${t('home.recentlyViewed.filtered')})`}
-          </Text>
-        </View>
-        {isLoading && !recentProperties.length ? (
-          <PropertyListSkeleton viewMode={viewMode} />
-        ) : error ? (
-          renderErrorState()
-        ) : filteredProperties.length === 0 ? (
-          renderEmptyState()
-        ) : (
-          <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-            <PropertyList
-              key={viewMode}
-              properties={filteredProperties}
-              onPropertyPress={handlePropertyPress}
-              style={styles.list}
-              contentContainerStyle={styles.listContent}
-              numColumns={viewMode === 'grid' ? 2 : 1}
-              variant={viewMode === 'grid' ? 'compact' : 'default'}
-            />
-          </Animated.View>
-        )}
-      </View>
+        {body}
+      </ScrollView>
     </View>
   );
 }
@@ -178,65 +132,21 @@ export default function RecentlyViewedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.surface,
   },
-  stickyHeaderWrapper: {
-    zIndex: 100,
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.primaryLight,
+  scroll: Platform.select<ViewStyle>({
+    web: { flex: 1, overflow: 'auto' } as unknown as ViewStyle,
+    default: { flex: 1 },
+  }) as ViewStyle,
+  scrollContent: {
+    paddingTop: spacing.lg,
+    paddingBottom: spacing['4xl'],
+    maxWidth: contentClamp.page,
+    width: '100%',
+    alignSelf: 'center',
   },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    gap: 8,
-    backgroundColor: colors.primaryLight,
-  },
-  searchBarContainer: {
-    flex: 1,
-  },
-  clearButton: {
-    marginLeft: 8,
-    backgroundColor: colors.primaryLight_1,
-    borderRadius: 100,
-    padding: 8,
-    borderWidth: 1,
-    borderColor: colors.danger,
-  },
-  viewModeToggle: {
-    flexDirection: 'row',
-    marginLeft: 8,
-    backgroundColor: colors.primaryLight_1,
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: colors.primaryColor,
-    overflow: 'hidden',
-  },
-  toggleButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  toggleButtonActive: {
-    backgroundColor: colors.primaryColor,
-  },
-  resultCountBar: {
-    paddingHorizontal: 20,
-    paddingTop: 4,
-    paddingBottom: 2,
-    backgroundColor: colors.primaryLight,
-  },
-  resultCountText: {
-    fontSize: 15,
-    color: colors.COLOR_BLACK_LIGHT_4,
-  },
-  list: {
-    flex: 1,
-  },
-  listContent: {
-    paddingBottom: 32,
+  gridPadding: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
   },
 });

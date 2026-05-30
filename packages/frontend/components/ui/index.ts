@@ -6,6 +6,9 @@ export { EmptyState } from './EmptyState';
 export { ErrorState } from './ErrorState';
 export { ListSkeleton, type ListSkeletonProps } from './ListSkeleton';
 export { ProgressBar } from './ProgressBar';
+export { PropertyListHeader } from './PropertyListHeader';
+export { PropertyResultsGrid } from './PropertyResultsGrid';
+export { PropertyResultsGridSkeleton } from './PropertyResultsGridSkeleton';
 export { SectionCard } from './SectionCard';
 export { SectionEyebrow } from './SectionEyebrow';
 

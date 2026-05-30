@@ -44,6 +44,13 @@ interface PropertyResultsGridProps {
   gap?: number;
   /** Container style. */
   style?: StyleProp<ViewStyle>;
+  /**
+   * Optional per-card footer slot — rendered inside each `PropertyCard` below
+   * the standard content. Owner-facing lists (My properties) use this to attach
+   * edit/delete actions without forking the card. Defaults to `undefined`, in
+   * which case the cards render exactly as on search/browse.
+   */
+  renderFooter?: (property: Property) => React.ReactNode;
 }
 
 const DEFAULT_COLUMNS = { sm: 1, md: 2, lg: 2, xl: 3 };
@@ -55,6 +62,7 @@ export const PropertyResultsGrid: React.FC<PropertyResultsGridProps> = ({
   columns,
   gap = gridGap.comfortable,
   style,
+  renderFooter,
 }) => {
   const isMd = useMediaQuery({ minWidth: 640 });
   const isLg = useMediaQuery({ minWidth: 1024 });
@@ -109,6 +117,7 @@ export const PropertyResultsGrid: React.FC<PropertyResultsGridProps> = ({
                 showSaveButton
                 showVerifiedBadge
                 showSaveCount={false}
+                footerContent={renderFooter ? renderFooter(property) : undefined}
               />
             </View>
           );

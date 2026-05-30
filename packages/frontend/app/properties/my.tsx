@@ -1,190 +1,215 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  RefreshControl,
-} from 'react-native';
+/**
+ * My properties — the signed-in owner's own listings.
+ *
+ * Rebuilt to match the `/properties` browse surface: the shared
+ * `PropertyListHeader` (with an "Add property" action) over a responsive
+ * `PropertyResultsGrid` of photo-carousel `PropertyCard`s, with the shared
+ * `PropertyResultsGridSkeleton` / `EmptyState` / `ErrorState` states.
+ *
+ * Data source is unchanged in spirit — `useUserProperties`, the owner-listings
+ * query — but it now receives the resolved `profileId` from `ProfileContext`
+ * (mirroring `app/host/calendar.tsx`). The previous call passed no id, so the
+ * hook short-circuited and the list never loaded.
+ *
+ * Owner actions (edit / delete) are preserved as clean Bloom buttons attached
+ * to each card via the grid's `renderFooter` slot. Delete confirmation uses the
+ * shared `ConfirmDialog` (the app's modern pattern; the RN `Alert` it replaced
+ * is a no-op on web).
+ */
+import React, { useCallback, useMemo, useState } from 'react';
+import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '@/styles/colors';
-import { Header } from '@/components/Header';
-import { PropertyCard } from '@/components/PropertyCard';
-import { useUserProperties, useDeleteProperty } from '@/hooks/usePropertyQueries';
-import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
+
+import { Button } from '@oxyhq/bloom/button';
+
+import { PropertyListHeader } from '@/components/ui/PropertyListHeader';
+import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
+import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { useProfile } from '@/context/ProfileContext';
+import { useUserProperties, useDeleteProperty } from '@/hooks/usePropertyQueries';
+import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
+import { colors } from '@/styles/colors';
+import { contentClamp, spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
 import { logger } from '@/utils/logger';
+
+/** Number of skeleton cards shown during the first load. */
+const SKELETON_COUNT = 4;
+/** Roomy columns — like `/properties`, this surface owns the full width. */
+const GRID_COLUMNS = { sm: 1, md: 2, lg: 3, xl: 3 } as const;
+
+/** A pending delete target, carried while the confirm dialog is open. */
+interface DeleteTarget {
+  id: string;
+  title: string;
+}
 
 export default function MyPropertiesScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { data, isLoading, error, refetch } = useUserProperties();
-  const { deleteProperty } = useDeleteProperty();
-  const [refreshing, setRefreshing] = useState(false);
-  const [headerHeight, setHeaderHeight] = useState(0);
+  const { primaryProfile } = useProfile();
+  const profileId = primaryProfile?._id ?? primaryProfile?.id;
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
-  };
+  const { data, isLoading, error, refetch } = useUserProperties(profileId);
+  const { deleteProperty, loading: isDeleting } = useDeleteProperty();
 
-  const handleCreateProperty = () => {
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+
+  const properties = useMemo<Property[]>(
+    () => data?.properties ?? [],
+    [data?.properties],
+  );
+
+  const handleCreateProperty = useCallback(() => {
     router.push('/properties/create');
-  };
+  }, [router]);
 
-  const handlePropertyPress = (propertyId: string) => {
-    router.push(`/properties/${propertyId}`);
-  };
+  const handlePropertyPress = useCallback(
+    (property: Property) => {
+      router.push(`/properties/${property._id || property.id}`);
+    },
+    [router],
+  );
 
-  const handleEditProperty = (propertyId: string) => {
-    router.push(`/properties/create?id=${propertyId}`);
-  };
+  const handleEditProperty = useCallback(
+    (propertyId: string) => {
+      router.push(`/properties/create?id=${propertyId}`);
+    },
+    [router],
+  );
 
-  const handleDeleteProperty = (propertyId: string, propertyTitle: string) => {
-    Alert.alert(
-      t('properties.my.deleteTitle'),
-      t('properties.my.deleteMessage', { title: propertyTitle }),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.delete'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteProperty(propertyId);
-              await refetch();
-            } catch (deleteError: unknown) {
-              logger.error('Failed to delete property:', deleteError);
-            }
-          },
-        },
-      ],
-    );
-  };
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteProperty(deleteTarget.id);
+      await refetch();
+    } catch (deleteError: unknown) {
+      logger.error('Failed to delete property:', deleteError);
+    } finally {
+      setDeleteTarget(null);
+    }
+  }, [deleteTarget, deleteProperty, refetch]);
 
-  const renderProperty = ({ item }: { item: Property }) => {
-    const propertyId = (item._id || item.id) as string;
-    // Generate title dynamically from property data for the delete function
-    const title = generatePropertyTitle({
-      type: item.type,
-      address: item.address,
-      bedrooms: item.bedrooms,
-      bathrooms: item.bathrooms,
-    });
-
-    return (
-      <View style={styles.propertyContainer}>
-        <PropertyCard
-          property={item}
-          onPress={() => handlePropertyPress(propertyId)}
-          style={styles.propertyCard}
-        />
-
-        <View style={styles.propertyActions}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.editButton]}
+  const renderFooter = useCallback(
+    (property: Property) => {
+      const propertyId = (property._id || property.id) as string;
+      const title = generatePropertyTitle({
+        type: property.type,
+        address: property.address,
+        bedrooms: property.bedrooms,
+        bathrooms: property.bathrooms,
+      });
+      return (
+        <View style={styles.ownerActions}>
+          <Button
+            variant="secondary"
+            size="small"
             onPress={() => handleEditProperty(propertyId)}
+            icon={
+              <Ionicons name="create-outline" size={16} color={colors.primaryColor} />
+            }
+            style={styles.ownerActionButton}
           >
-            <Ionicons name="create-outline" size={16} color={colors.primaryColor} />
-            <Text style={[styles.actionText, styles.editText]}>{t('properties.my.edit')}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.deleteButton]}
-            onPress={() => handleDeleteProperty(propertyId, title)}
+            {t('properties.my.edit')}
+          </Button>
+          <Button
+            variant="secondary"
+            size="small"
+            onPress={() => setDeleteTarget({ id: propertyId, title })}
+            icon={<Ionicons name="trash-outline" size={16} color={colors.danger} />}
+            textStyle={styles.deleteText}
+            style={styles.ownerActionButton}
           >
-            <Ionicons name="trash-outline" size={16} color={colors.danger} />
-            <Text style={[styles.actionText, styles.deleteText]}>{t('properties.my.delete')}</Text>
-          </TouchableOpacity>
+            {t('properties.my.delete')}
+          </Button>
         </View>
-      </View>
-    );
-  };
-
-  const renderEmptyState = () => (
-    <EmptyState
-      icon="home-outline"
-      title={t('properties.my.emptyTitle')}
-      description={t('properties.my.emptyDescription')}
-      actionText={t('properties.my.createFirst')}
-      actionIcon="add"
-      onAction={handleCreateProperty}
-    />
+      );
+    },
+    [t, handleEditProperty],
   );
 
-  const renderErrorState = () => (
-    <ErrorState
-      title={t('properties.my.errorTitle')}
-      description={t('properties.my.errorDescription')}
-      retryLabel={t('common.retry')}
-      onRetry={handleRefresh}
-    />
-  );
-
-  if (isLoading && !data) {
+  const body = (() => {
+    if (isLoading && properties.length === 0) {
+      return (
+        <PropertyResultsGridSkeleton
+          count={SKELETON_COUNT}
+          columns={GRID_COLUMNS}
+          style={styles.gridPadding}
+        />
+      );
+    }
+    if (error) {
+      return (
+        <ErrorState
+          title={t('properties.my.errorTitle')}
+          description={t('properties.my.errorDescription')}
+          retryLabel={t('common.retry')}
+          onRetry={() => void refetch()}
+        />
+      );
+    }
+    if (properties.length === 0) {
+      return (
+        <EmptyState
+          icon="home-outline"
+          title={t('properties.my.emptyTitle')}
+          description={t('properties.my.emptyDescription')}
+          actionText={t('properties.my.createFirst')}
+          actionIcon="add"
+          onAction={handleCreateProperty}
+        />
+      );
+    }
     return (
-      <View style={styles.container}>
-        <View
-          style={styles.stickyHeaderWrapper}
-          onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
-        >
-          <Header options={{ title: t('properties.my.title') }} />
-        </View>
-        <View style={{ paddingTop: headerHeight, flex: 1 }}>
-          <PropertyListSkeleton viewMode="list" />
-        </View>
-      </View>
+      <PropertyResultsGrid
+        properties={properties}
+        onPropertyPress={handlePropertyPress}
+        columns={GRID_COLUMNS}
+        style={styles.gridPadding}
+        renderFooter={renderFooter}
+      />
     );
-  }
+  })();
 
   return (
     <View style={styles.container}>
-      <View
-        style={styles.stickyHeaderWrapper}
-        onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
+      <PropertyListHeader
+        title={t('properties.my.title')}
+        right={
+          <Button
+            variant="primary"
+            size="small"
+            onPress={handleCreateProperty}
+            icon={<Ionicons name="add" size={18} color={colors.white} />}
+            accessibilityLabel={t('properties.my.createFirst')}
+          >
+            {t('common.add')}
+          </Button>
+        }
+      />
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <Header
-          options={{
-            title: t('properties.my.title'),
-            rightComponents: [
-              <TouchableOpacity key="add" onPress={handleCreateProperty} style={styles.addButton}>
-                <Ionicons name="add" size={24} color={colors.primaryColor} />
-              </TouchableOpacity>,
-            ],
-          }}
-        />
-      </View>
-      <View style={{ paddingTop: headerHeight, flex: 1 }}>
-        {error ? (
-          renderErrorState()
-        ) : data?.properties.length === 0 ? (
-          renderEmptyState()
-        ) : (
-          <FlatList
-            data={data?.properties || []}
-            renderItem={renderProperty}
-            keyExtractor={(item) => item._id || item.id || ''}
-            contentContainerStyle={styles.listContainer}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-                colors={[colors.primaryColor]}
-                tintColor={colors.primaryColor}
-              />
-            }
-            showsVerticalScrollIndicator={false}
-          />
-        )}
-      </View>
+        {body}
+      </ScrollView>
+      <ConfirmDialog
+        visible={deleteTarget !== null}
+        title={t('properties.my.deleteTitle')}
+        message={t('properties.my.deleteMessage', { title: deleteTarget?.title ?? '' })}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        confirmDestructive
+        loading={isDeleting}
+        onConfirm={() => void handleConfirmDelete()}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </View>
   );
 }
@@ -192,76 +217,32 @@ export default function MyPropertiesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.mutedSubtle,
+    backgroundColor: colors.surface,
   },
-  listContainer: {
-    padding: 16,
-    paddingBottom: 32,
+  scroll: Platform.select<ViewStyle>({
+    web: { flex: 1, overflow: 'auto' } as unknown as ViewStyle,
+    default: { flex: 1 },
+  }) as ViewStyle,
+  scrollContent: {
+    paddingTop: spacing.lg,
+    paddingBottom: spacing['4xl'],
+    maxWidth: contentClamp.page,
+    width: '100%',
+    alignSelf: 'center',
   },
-  propertyContainer: {
-    marginBottom: 20,
+  gridPadding: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
   },
-  propertyCard: {
-    marginBottom: 8,
-  },
-  propertyActions: {
+  ownerActions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: 12,
-    shadowColor: colors.COLOR_BLACK,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    gap: spacing.sm,
+    marginTop: spacing.xs,
   },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+  ownerActionButton: {
     flex: 1,
-    marginHorizontal: 4,
-  },
-  editButton: {
-    backgroundColor: colors.primaryLight,
-    borderWidth: 1,
-    borderColor: colors.primaryColor,
-  },
-  deleteButton: {
-    backgroundColor: colors.dangerSubtle,
-    borderWidth: 1,
-    borderColor: colors.danger,
-  },
-  actionText: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginLeft: 6,
-  },
-  editText: {
-    color: colors.primaryColor,
   },
   deleteText: {
     color: colors.danger,
-  },
-  addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.primaryColor,
-  },
-  stickyHeaderWrapper: {
-    zIndex: 100,
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.primaryLight,
   },
 });

@@ -1,25 +1,54 @@
-import React, { useState, useEffect, useCallback } from 'react';
+/**
+ * Property drafts — locally-saved, in-progress listings the user hasn't
+ * published yet. The data source is unchanged: AsyncStorage under the
+ * `property_drafts` key (drafts are partial form state, NOT server `Property`
+ * objects, so they don't flow through `PropertyResultsGrid`).
+ *
+ * Modernized to match the rest of the property surfaces: the shared
+ * `PropertyListHeader` over Bloom-typed draft cards, `PropertyResultsGridSkeleton`
+ * for loading and `EmptyState` for empty. All copy is Bloom `Text`/`H4` — no
+ * `ThemedText`. AsyncStorage reads/writes are wrapped in React Query
+ * (query + mutation) instead of a `useEffect` + manual `useState(loading)`,
+ * which also gives us a clean optimistic delete.
+ */
+import React, { useCallback, useState } from 'react';
 import {
-  View,
-  StyleSheet,
+  Platform,
+  Pressable,
   ScrollView,
-  TouchableOpacity,
-  Alert,
+  StyleSheet,
+  View,
+  type ViewStyle,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { colors } from '@/styles/colors';
-import { ThemedText } from '@/components/ThemedText';
-import { Header } from '@/components/Header';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { toast } from '@/lib/sonner';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import { Button } from '@oxyhq/bloom/button';
+import { H4, Text as BloomText } from '@oxyhq/bloom/typography';
+
+import { PropertyListHeader } from '@/components/ui/PropertyListHeader';
+import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { toast } from '@/lib/sonner';
+import { colors } from '@/styles/colors';
+import { contentClamp, radius, spacing, withShadow } from '@/constants/styles';
 import { logger } from '@/utils/logger';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+/** Roomy columns — match `/properties` so the loading skeleton lines up. */
+const GRID_COLUMNS = { sm: 1, md: 2, lg: 3, xl: 3 } as const;
+const SKELETON_COUNT = 4;
+/** AsyncStorage keys owned by the draft flow. */
+const DRAFTS_KEY = 'property_drafts';
+const CURRENT_DRAFT_KEY = 'current_draft';
+/** Hours/day boundaries for the relative "last saved" label. */
+const HOURS_PER_DAY = 24;
+const MS_PER_HOUR = 1000 * 60 * 60;
 
 interface PropertyDraft {
   id: string;
@@ -44,324 +73,308 @@ interface PropertyDraft {
 /** Shape persisted to AsyncStorage, where `lastSaved` is serialized as an ISO string. */
 type StoredPropertyDraft = Omit<PropertyDraft, 'lastSaved'> & { lastSaved: string };
 
-export default function PropertyDraftsScreen() {
-  const { t } = useTranslation();
-  const router = useRouter();
-  const [drafts, setDrafts] = useState<PropertyDraft[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [deletingDraft, setDeletingDraft] = useState<string | null>(null);
+const DRAFTS_QUERY_KEY = ['propertyDrafts'] as const;
 
-  const loadDrafts = useCallback(async () => {
-    try {
-      setLoading(true);
-      const draftsData = await AsyncStorage.getItem('property_drafts');
-      if (draftsData) {
-        const parsedDrafts: StoredPropertyDraft[] = JSON.parse(draftsData);
-        // Convert string dates back to Date objects
-        const draftsWithDates: PropertyDraft[] = parsedDrafts.map((draft) => ({
-          ...draft,
-          lastSaved: new Date(draft.lastSaved),
-        }));
-        setDrafts(draftsWithDates);
-      }
-    } catch (error: unknown) {
-      logger.error('Error loading drafts:', error);
-      toast.error('Failed to load drafts');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+async function readDrafts(): Promise<PropertyDraft[]> {
+  const raw = await AsyncStorage.getItem(DRAFTS_KEY);
+  if (!raw) return [];
+  const parsed: StoredPropertyDraft[] = JSON.parse(raw);
+  return parsed.map((draft) => ({ ...draft, lastSaved: new Date(draft.lastSaved) }));
+}
 
-  useEffect(() => {
-    // Inline async wrapper keeps `loadDrafts`' internal setState off the
-    // synchronous effect path (avoids cascading renders).
-    void (async () => {
-      await loadDrafts();
-    })();
-  }, [loadDrafts]);
+const PROPERTY_TYPE_ICONS: Record<string, IoniconName> = {
+  apartment: 'business-outline',
+  house: 'home-outline',
+  room: 'bed-outline',
+  studio: 'home-outline',
+  couchsurfing: 'people-outline',
+  roommates: 'people-circle-outline',
+  coliving: 'home-outline',
+  hostel: 'bed-outline',
+  guesthouse: 'home-outline',
+  campsite: 'leaf-outline',
+  boat: 'boat-outline',
+  treehouse: 'leaf-outline',
+  yurt: 'home-outline',
+  other: 'ellipsis-horizontal-outline',
+};
 
-  const deleteDraft = async (draftId: string) => {
-    Alert.alert(
-      'Delete Draft',
-      'Are you sure you want to delete this draft? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setDeletingDraft(draftId);
-              const updatedDrafts = drafts.filter((draft) => draft.id !== draftId);
-              await AsyncStorage.setItem('property_drafts', JSON.stringify(updatedDrafts));
-              setDrafts(updatedDrafts);
-              toast.success('Draft deleted successfully');
-            } catch (error: unknown) {
-              logger.error('Error deleting draft:', error);
-              toast.error('Failed to delete draft');
-            } finally {
-              setDeletingDraft(null);
-            }
-          },
-        },
-      ],
-    );
-  };
+const PROPERTY_TYPE_LABELS: Record<string, string> = {
+  apartment: 'Apartment',
+  house: 'House',
+  room: 'Room',
+  studio: 'Studio',
+  couchsurfing: 'Couchsurfing',
+  roommates: 'Roommates',
+  coliving: 'Co-Living',
+  hostel: 'Hostel',
+  guesthouse: 'Guesthouse',
+  campsite: 'Campsite',
+  boat: 'Boat/Houseboat',
+  treehouse: 'Treehouse',
+  yurt: 'Yurt/Tent',
+  other: 'Other',
+};
 
-  const continueEditing = (draft: PropertyDraft) => {
-    // Store the draft data in AsyncStorage for the create screen to load
-    AsyncStorage.setItem('current_draft', JSON.stringify(draft.formData))
-      .then(() => {
-        router.push('/properties/create');
-      })
-      .catch((error: unknown) => {
-        logger.error('Error setting current draft:', error);
-        toast.error('Failed to load draft');
-      });
-  };
+function getPropertyTypeIcon(type: string): IoniconName {
+  return PROPERTY_TYPE_ICONS[type] ?? 'home-outline';
+}
 
-  const formatDate = (date: Date) => {
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+function getPropertyTypeLabel(type: string): string {
+  return PROPERTY_TYPE_LABELS[type] ?? 'Property';
+}
 
-    if (diffInHours < 1) {
-      return 'Just now';
-    } else if (diffInHours < 24) {
-      return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
-    } else {
-      const diffInDays = Math.floor(diffInHours / 24);
-      return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
-    }
-  };
+function formatRelativeDate(date: Date): string {
+  const diffInHours = Math.floor((Date.now() - date.getTime()) / MS_PER_HOUR);
+  if (diffInHours < 1) return 'Just now';
+  if (diffInHours < HOURS_PER_DAY) {
+    return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+  }
+  const diffInDays = Math.floor(diffInHours / HOURS_PER_DAY);
+  return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+}
 
-  const getPropertyTypeIcon = (type: string): IoniconName => {
-    const iconMap: { [key: string]: IoniconName } = {
-      apartment: 'business-outline',
-      house: 'home-outline',
-      room: 'bed-outline',
-      studio: 'home-outline',
-      couchsurfing: 'people-outline',
-      roommates: 'people-circle-outline',
-      coliving: 'home-outline',
-      hostel: 'bed-outline',
-      guesthouse: 'home-outline',
-      campsite: 'leaf-outline',
-      boat: 'boat-outline',
-      treehouse: 'leaf-outline',
-      yurt: 'home-outline',
-      other: 'ellipsis-horizontal-outline',
-    };
-    return iconMap[type] || 'home-outline';
-  };
-
-  const getPropertyTypeLabel = (type: string) => {
-    const labelMap: { [key: string]: string } = {
-      apartment: 'Apartment',
-      house: 'House',
-      room: 'Room',
-      studio: 'Studio',
-      couchsurfing: 'Couchsurfing',
-      roommates: 'Roommates',
-      coliving: 'Co-Living',
-      hostel: 'Hostel',
-      guesthouse: 'Guesthouse',
-      campsite: 'Campsite',
-      boat: 'Boat/Houseboat',
-      treehouse: 'Treehouse',
-      yurt: 'Yurt/Tent',
-      other: 'Other',
-    };
-    return labelMap[type] || 'Property';
-  };
-
-  const renderDraftCard = (draft: PropertyDraft) => (
-    <View key={draft.id} style={styles.draftCard}>
+/** A single draft card — its own component so the delete tap state is local. */
+function DraftCard({
+  draft,
+  onContinue,
+  onDelete,
+}: {
+  draft: PropertyDraft;
+  onContinue: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <View style={[styles.draftCard, withShadow('sm')]}>
       <View style={styles.draftHeader}>
         <View style={styles.draftTypeContainer}>
-          <Ionicons
-            name={getPropertyTypeIcon(draft.type)}
-            size={20}
-            color={colors.primaryColor}
-          />
-          <ThemedText style={styles.draftType}>{getPropertyTypeLabel(draft.type)}</ThemedText>
+          <Ionicons name={getPropertyTypeIcon(draft.type)} size={20} color={colors.primaryColor} />
+          <BloomText style={styles.draftType}>{getPropertyTypeLabel(draft.type)}</BloomText>
         </View>
         <View style={styles.draftActions}>
-          <TouchableOpacity style={styles.actionButton} onPress={() => continueEditing(draft)}>
-            <Ionicons name="create-outline" size={20} color={colors.primaryColor} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.deleteButton]}
-            onPress={() => deleteDraft(draft.id)}
-            disabled={deletingDraft === draft.id}
-          >
-            {deletingDraft === draft.id ? (
-              <View style={{ width: 20, height: 20, justifyContent: 'center', alignItems: 'center' }}>
-                <View style={{ 
-                  width: 16, 
-                  height: 16, 
-                  borderWidth: 2, 
-                  borderColor: colors.primaryColor, 
-                  borderTopColor: 'transparent',
-                  borderRadius: 8 
-                }} />
-              </View>
-            ) : (
-              <Ionicons name="trash-outline" size={20} color={colors.danger} />
-            )}
-          </TouchableOpacity>
+          <DraftIconButton icon="create-outline" tint={colors.primaryColor} onPress={onContinue} />
+          <DraftIconButton icon="trash-outline" tint={colors.danger} onPress={onDelete} />
         </View>
       </View>
 
       <View style={styles.draftContent}>
-        <ThemedText style={styles.draftTitle}>
+        <H4 style={styles.draftTitle}>
           {draft.title || `${draft.address.street}, ${draft.address.city}`}
-        </ThemedText>
-
-        <ThemedText style={styles.draftAddress}>
+        </H4>
+        <BloomText style={styles.draftAddress}>
           {draft.address.street}, {draft.address.city}, {draft.address.state}{' '}
           {draft.address.zipCode}
-        </ThemedText>
-
-        {draft.rent.amount > 0 && (
-          <ThemedText style={styles.draftPrice}>
+        </BloomText>
+        {draft.rent.amount > 0 ? (
+          <BloomText style={styles.draftPrice}>
             ${draft.rent.amount.toLocaleString()}/
             {draft.rent.currency === 'USD' ? 'month' : draft.rent.currency}
-          </ThemedText>
-        )}
-
+          </BloomText>
+        ) : null}
         <View style={styles.draftMeta}>
           <View style={styles.draftMetaItem}>
-            <Ionicons name="time-outline" size={14} color={colors.primaryDark_1} />
-            <ThemedText style={styles.draftMetaText}>{formatDate(draft.lastSaved)}</ThemedText>
+            <Ionicons name="time-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} />
+            <BloomText style={styles.draftMetaText}>{formatRelativeDate(draft.lastSaved)}</BloomText>
           </View>
           <View style={styles.draftMetaItem}>
-            <Ionicons name="save-outline" size={14} color={colors.primaryDark_1} />
-            <ThemedText style={styles.draftMetaText}>Draft</ThemedText>
+            <Ionicons name="save-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} />
+            <BloomText style={styles.draftMetaText}>Draft</BloomText>
           </View>
         </View>
       </View>
     </View>
   );
+}
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        <Header
-          options={{
-            showBackButton: true,
-            title: 'Property Drafts',
-            titlePosition: 'center',
-          }}
+/** NativeWind-safe circular icon button (static style + pressed state). */
+function DraftIconButton({
+  icon,
+  tint,
+  onPress,
+}: {
+  icon: IoniconName;
+  tint: string;
+  onPress: () => void;
+}) {
+  const [pressed, setPressed] = useState(false);
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      style={[styles.draftIconButton, pressed && styles.draftIconButtonPressed]}
+    >
+      <Ionicons name={icon} size={20} color={tint} />
+    </Pressable>
+  );
+}
+
+export default function PropertyDraftsScreen() {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const { data: drafts = [], isLoading } = useQuery({
+    queryKey: DRAFTS_QUERY_KEY,
+    queryFn: readDrafts,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (draftId: string) => {
+      const current = await readDrafts();
+      const next = current.filter((draft) => draft.id !== draftId);
+      const stored: StoredPropertyDraft[] = next.map((draft) => ({
+        ...draft,
+        lastSaved: draft.lastSaved.toISOString(),
+      }));
+      await AsyncStorage.setItem(DRAFTS_KEY, JSON.stringify(stored));
+      return next;
+    },
+    onSuccess: (next) => {
+      queryClient.setQueryData(DRAFTS_QUERY_KEY, next);
+      toast.success('Draft deleted successfully');
+    },
+    onError: (error: unknown) => {
+      logger.error('Error deleting draft:', error);
+      toast.error('Failed to delete draft');
+    },
+  });
+
+  const continueEditing = useCallback(
+    async (draft: PropertyDraft) => {
+      try {
+        await AsyncStorage.setItem(CURRENT_DRAFT_KEY, JSON.stringify(draft.formData));
+        router.push('/properties/create');
+      } catch (error: unknown) {
+        logger.error('Error setting current draft:', error);
+        toast.error('Failed to load draft');
+      }
+    },
+    [router],
+  );
+
+  const handleConfirmDelete = useCallback(() => {
+    if (!deleteId) return;
+    deleteMutation.mutate(deleteId, { onSettled: () => setDeleteId(null) });
+  }, [deleteId, deleteMutation]);
+
+  const body = (() => {
+    if (isLoading && drafts.length === 0) {
+      return (
+        <PropertyResultsGridSkeleton
+          count={SKELETON_COUNT}
+          columns={GRID_COLUMNS}
+          style={styles.gridPadding}
         />
-        <PropertyListSkeleton viewMode="list" />
-      </SafeAreaView>
+      );
+    }
+    if (drafts.length === 0) {
+      return (
+        <EmptyState
+          icon="folder-open-outline"
+          title="No drafts found"
+          description="You don't have any saved property drafts yet. Start creating a property to save drafts automatically."
+          actionText="Create new property"
+          actionIcon="add"
+          onAction={() => router.push('/properties/create')}
+        />
+      );
+    }
+    return (
+      <View style={styles.content}>
+        <View style={styles.draftsList}>
+          {drafts.map((draft) => (
+            <DraftCard
+              key={draft.id}
+              draft={draft}
+              onContinue={() => void continueEditing(draft)}
+              onDelete={() => setDeleteId(draft.id)}
+            />
+          ))}
+        </View>
+        <Button
+          variant="secondary"
+          onPress={() => router.push('/properties/create')}
+          icon={<Ionicons name="add-circle" size={20} color={colors.primaryColor} />}
+          style={styles.createNewButton}
+        >
+          Create new property
+        </Button>
+      </View>
     );
-  }
+  })();
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <Header
-        options={{
-          showBackButton: true,
-          title: 'Property Drafts',
-          titlePosition: 'center',
-        }}
+    <View style={styles.container}>
+      <PropertyListHeader
+        title="Drafts"
+        subtitle={drafts.length > 0 ? `${drafts.length} saved` : undefined}
       />
-
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.content}>
-          {drafts.length === 0 ? (
-            <EmptyState
-              icon="folder-open-outline"
-              title="No Drafts Found"
-              description="You don't have any saved property drafts yet. Start creating a property to save drafts automatically."
-              actionText="Create New Property"
-              actionIcon="add"
-              onAction={() => router.push('/properties/create')}
-            />
-          ) : (
-            <>
-              <View style={styles.header}>
-                <ThemedText style={styles.headerTitle}>Saved Drafts ({drafts.length})</ThemedText>
-                <ThemedText style={styles.headerSubtitle}>
-                  Continue editing your property drafts or start a new one
-                </ThemedText>
-              </View>
-
-              <View style={styles.draftsList}>{drafts.map(renderDraftCard)}</View>
-
-              <TouchableOpacity
-                style={styles.createNewButton}
-                onPress={() => router.push('/properties/create')}
-              >
-                <Ionicons name="add-circle" size={24} color={colors.primaryColor} />
-                <ThemedText style={styles.createNewButtonText}>Create New Property</ThemedText>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {body}
       </ScrollView>
-    </SafeAreaView>
+      <ConfirmDialog
+        visible={deleteId !== null}
+        title="Delete draft"
+        message="Are you sure you want to delete this draft? This action cannot be undone."
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        confirmDestructive
+        loading={deleteMutation.isPending}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteId(null)}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.surface,
+  },
+  scroll: Platform.select<ViewStyle>({
+    web: { flex: 1, overflow: 'auto' } as unknown as ViewStyle,
+    default: { flex: 1 },
+  }) as ViewStyle,
+  scrollContent: {
+    paddingBottom: spacing['4xl'],
+    maxWidth: contentClamp.page,
+    width: '100%',
+    alignSelf: 'center',
   },
   content: {
-    padding: 16,
+    padding: spacing.lg,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: colors.primaryDark_1,
-  },
-
-  header: {
-    marginBottom: 24,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.COLOR_BLACK,
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: colors.primaryDark_1,
+  gridPadding: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.lg,
   },
   draftsList: {
-    gap: 16,
+    gap: spacing.lg,
   },
   draftCard: {
     backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: colors.primaryLight_1,
-    shadowColor: colors.COLOR_BLACK,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
   },
   draftHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   draftTypeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
   draftType: {
     fontSize: 16,
@@ -370,27 +383,30 @@ const styles = StyleSheet.create({
   },
   draftActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
   },
-  actionButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: colors.primaryLight,
+  draftIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  deleteButton: {
-    backgroundColor: colors.primaryLight,
+  draftIconButtonPressed: {
+    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
   },
   draftContent: {
-    gap: 8,
+    gap: spacing.sm,
   },
   draftTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: colors.COLOR_BLACK,
   },
   draftAddress: {
     fontSize: 14,
-    color: colors.primaryDark_1,
+    color: colors.COLOR_BLACK_LIGHT_3,
   },
   draftPrice: {
     fontSize: 16,
@@ -399,34 +415,19 @@ const styles = StyleSheet.create({
   },
   draftMeta: {
     flexDirection: 'row',
-    gap: 16,
-    marginTop: 8,
+    gap: spacing.lg,
+    marginTop: spacing.sm,
   },
   draftMetaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xs,
   },
   draftMetaText: {
     fontSize: 12,
-    color: colors.primaryDark_1,
+    color: colors.COLOR_BLACK_LIGHT_3,
   },
   createNewButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primaryLight,
-    paddingVertical: 16,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: colors.primaryColor,
-    borderStyle: 'dashed',
-    marginTop: 24,
-    gap: 8,
-  },
-  createNewButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.primaryColor,
+    marginTop: spacing['2xl'],
   },
 });
