@@ -4,7 +4,7 @@ import {
     Dimensions,
     Platform,
 } from 'react-native';
-import { ChatContent } from '@/app/sindi/[conversationId]';
+import { ChatContent } from '@/components/sindi/ChatContent';
 import { Property } from '@homiio/shared-types';
 import { useOxy } from '@oxyhq/services';
 import { useConversationStore } from '@/store/conversationStore';

@@ -24,10 +24,6 @@ import { useConversationStore } from '@/store/conversationStore';
 import { logger } from '@/utils/logger';
 import { colors } from '@/styles/colors';
 
-// Re-exported so the in-property `SindiChatBottomSheet` keeps a single, stable
-// import for the chat pane. The implementation lives in `components/sindi`.
-export { ChatContent } from '@/components/sindi/ChatContent';
-
 /** iOS keyboard offset accounting for the fixed Header height. */
 const IOS_KEYBOARD_OFFSET = 64;
 
