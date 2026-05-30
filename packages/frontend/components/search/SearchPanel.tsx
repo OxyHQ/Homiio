@@ -72,6 +72,13 @@ interface SearchPanelProps {
   /** The query to seed the draft from when the panel opens. */
   initialQuery: SearchQuery;
   /**
+   * Step to open on. Defaults to `'where'`. The collapsed 3-column pill passes
+   * the column the user tapped (e.g. `'type'`) so the panel lands on the
+   * relevant step. If the requested step is not valid for the seeded rental
+   * mode (e.g. `'dates'` in long-term), it falls back to `'where'`.
+   */
+  initialStep?: SearchStep;
+  /**
    * Commit handler. Receives the fully-composed query. The caller persists it
    * to the active-search store and navigates to results.
    */
@@ -82,6 +89,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
   open,
   onClose,
   initialQuery,
+  initialStep = 'where',
   onSubmit,
 }) => {
   const { t } = useTranslation();
@@ -97,7 +105,15 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
   const [whereText, setWhereText] = useState<string>(
     initialQuery.location?.label ?? '',
   );
-  const [step, setStep] = useState<SearchStep>('where');
+  // Seed the opening step from `initialStep`, clamped to the steps valid for the
+  // seeded rental mode (e.g. `'dates'` only exists in vacation). The panel fully
+  // unmounts while collapsed, so this initializer re-runs on every reopen — no
+  // `useEffect` needed.
+  const [step, setStep] = useState<SearchStep>(() => {
+    const validSteps =
+      initialQuery.rentMode === RentMode.VACATION ? VACATION_STEPS : LONG_TERM_STEPS;
+    return validSteps.includes(initialStep) ? initialStep : 'where';
+  });
 
   const steps = useMemo(
     () => (draft.rentMode === RentMode.VACATION ? VACATION_STEPS : LONG_TERM_STEPS),

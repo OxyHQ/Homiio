@@ -62,7 +62,7 @@ import { HomeCarouselSection } from '@/components/HomeCarouselSection';
 import { HomeCategoryStrip } from '@/components/HomeCategoryStrip';
 import { SearchSummaryBar } from '@/components/search/SearchSummaryBar';
 import { SearchPanel } from '@/components/search/SearchPanel';
-import type { SearchQuery } from '@/components/search/types';
+import type { SearchQuery, SearchStep } from '@/components/search/types';
 import { useSearchQueryStore } from '@/store/searchQueryStore';
 import {
   CityShowcaseSection,
@@ -192,6 +192,9 @@ export default function HomePage() {
   // hero pill renders this collapsed; the expanding panel edits a draft of it.
   const activeQuery = useSearchQueryStore((s) => s.query);
   const [searchPanelOpen, setSearchPanelOpen] = useState(false);
+  // Step the panel should open on. The collapsed 3-column pill sets this to the
+  // tapped column; tapping the pill as a whole defaults to 'where'.
+  const [searchPanelStep, setSearchPanelStep] = useState<SearchStep>('where');
 
   // Seed the panel from the active query, overriding the rental mode with the
   // user's current selection so opening the hero search respects the
@@ -204,7 +207,14 @@ export default function HomePage() {
     [activeQuery, mode],
   );
 
-  const handleOpenSearchPanel = useCallback(() => setSearchPanelOpen(true), []);
+  const handleOpenSearchPanel = useCallback(() => {
+    setSearchPanelStep('where');
+    setSearchPanelOpen(true);
+  }, []);
+  const handleOpenSearchPanelAt = useCallback((step: SearchStep) => {
+    setSearchPanelStep(step);
+    setSearchPanelOpen(true);
+  }, []);
   const handleCloseSearchPanel = useCallback(() => setSearchPanelOpen(false), []);
 
   const handleSubmitSearch = useCallback(
@@ -443,6 +453,7 @@ export default function HomePage() {
                 <SearchSummaryBar
                   query={activeQuery}
                   onPress={handleOpenSearchPanel}
+                  onPressColumn={handleOpenSearchPanelAt}
                 />
                 {searchPanelOpen ? (
                   <View style={styles.searchPanelAnchor}>
@@ -450,6 +461,7 @@ export default function HomePage() {
                       open={searchPanelOpen}
                       onClose={handleCloseSearchPanel}
                       initialQuery={heroSearchSeed}
+                      initialStep={searchPanelStep}
                       onSubmit={handleSubmitSearch}
                     />
                   </View>
@@ -467,11 +479,13 @@ export default function HomePage() {
             <SearchSummaryBar
               query={activeQuery}
               onPress={handleOpenSearchPanel}
+              onPressColumn={handleOpenSearchPanelAt}
             />
             <SearchPanel
               open={searchPanelOpen}
               onClose={handleCloseSearchPanel}
               initialQuery={heroSearchSeed}
+              initialStep={searchPanelStep}
               onSubmit={handleSubmitSearch}
             />
           </View>
