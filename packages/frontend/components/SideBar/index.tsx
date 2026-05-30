@@ -83,6 +83,34 @@ const COLLAPSED_WIDTH = 48;
 const EXPANDED_WIDTH = 240;
 
 /**
+ * Hairline styles for the sidebar's chrome border and inner dividers. Bloom's
+ * `--border`/`--muted` CSS variables only resolve to the themed hairline on
+ * web; on native the `border-border` / `bg-border` color classes don't pick up
+ * the runtime variable reliably and a `borderWidth: 1` renders as a full
+ * device-pixel rule that reads as a hard black line. Using an explicit Bloom
+ * token (`colors.border`) at `StyleSheet.hairlineWidth` matches the subtle,
+ * flat hairline the rest of the app draws (see the ~15 `borderColor:
+ * colors.border` call sites) and renders identically on web and native.
+ */
+const sidebarBorders = StyleSheet.create({
+  /** Right edge of the persistent rail / expanded panel + the drawer panel. */
+  railEdge: {
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: colors.border,
+  },
+  /** Horizontal divider between sidebar sections (header → body, body → footer). */
+  divider: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  /** Thin separator between groups inside the account popover menu. */
+  menuSeparator: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+  },
+});
+
+/**
  * Sliver of viewport kept to the right of the mobile overlay drawer so the
  * panel never spans the full width on the narrowest phones and the underlying
  * screen always peeks through behind the dimming scrim.
@@ -565,8 +593,9 @@ export function SideBar() {
   if (!isMobile && isCollapsed) {
     return (
       <View
-        className="flex flex-col bg-background border-r border-border items-center"
+        className="flex flex-col bg-background items-center"
         style={[
+          sidebarBorders.railEdge,
           { width: COLLAPSED_WIDTH },
           Platform.OS === 'web'
             ? ({
@@ -597,7 +626,7 @@ export function SideBar() {
           ))}
         </View>
 
-        <View className="mx-2 border-t border-border/30 w-8 my-1" />
+        <View className="mx-2 w-8 my-1" style={sidebarBorders.divider} />
 
         <View className="flex flex-col items-center gap-1 py-1 shrink-0">
           <NavItem
@@ -713,7 +742,7 @@ export function SideBar() {
         ))}
       </View>
 
-      <View className="mx-2 border-t border-border/30 my-1" />
+      <View className="mx-2 my-1" style={sidebarBorders.divider} />
     </View>
   );
 
@@ -867,7 +896,7 @@ export function SideBar() {
               </View>
             )}
             {Platform.OS === 'web' && (
-              <View className="h-px bg-border my-1 mx-1" />
+              <View className="my-1 mx-1" style={sidebarBorders.menuSeparator} />
             )}
             <MenuOption onSelect={handleAddProperty}>
               <View className="flex-row items-center gap-2 py-1.5 px-2">
@@ -903,7 +932,7 @@ export function SideBar() {
                 </Text>
               </View>
             </MenuOption>
-            <View className="h-px bg-border my-1 mx-1" />
+            <View className="my-1 mx-1" style={sidebarBorders.menuSeparator} />
             <MenuOption onSelect={handleOpenTerms}>
               <View className="flex-row items-center gap-2 py-1.5 px-2">
                 <FileText size={16} color={colors.primaryDark_2} />
@@ -924,7 +953,7 @@ export function SideBar() {
                 </Text>
               </View>
             </MenuOption>
-            <View className="h-px bg-border my-1 mx-1" />
+            <View className="my-1 mx-1" style={sidebarBorders.menuSeparator} />
             <MenuOption onSelect={handleSignOut}>
               <View className="flex-row items-center gap-2 py-1.5 px-2">
                 <LogOut size={16} color={colors.busy} />
@@ -1062,8 +1091,8 @@ export function SideBar() {
               <Animated.View
                 entering={slideIn}
                 exiting={slideOut}
-                style={{ width: drawerWidth }}
-                className="h-full bg-background border-r border-border"
+                style={[{ width: drawerWidth }, sidebarBorders.railEdge]}
+                className="h-full bg-background"
               >
                 <BaseSidebar header={header} footer={footer}>
                   {middle}
@@ -1078,8 +1107,8 @@ export function SideBar() {
 
   return (
     <View
-      style={{ width: EXPANDED_WIDTH }}
-      className="h-full border-r border-border"
+      style={[{ width: EXPANDED_WIDTH }, sidebarBorders.railEdge]}
+      className="h-full"
     >
       <BaseSidebar header={header} footer={footer}>
         {middle}

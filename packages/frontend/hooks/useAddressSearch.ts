@@ -35,11 +35,36 @@ export interface UseAddressSearchReturn {
 /** Public OpenStreetMap Nominatim geocoder (free, no API key required). */
 const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search';
 
+/**
+ * Nominatim's usage policy requires an identifying `User-Agent`; requests
+ * without one are rejected with HTTP 403. Browsers send their own UA (and
+ * treat `User-Agent` as a forbidden header, so they ignore ours), but native
+ * RN fetch sends `okhttp/...` which Nominatim blocks — hence search returned
+ * zero suggestions on native. Sending a descriptive UA fixes native without
+ * affecting web.
+ */
+export const NOMINATIM_HEADERS = {
+  'User-Agent': 'Homiio/1.0 (https://homiio.com)',
+  Accept: 'application/json',
+} as const;
+
 interface NominatimSearchResult {
   place_id?: number | string;
   display_name?: string;
   lat?: string;
   lon?: string;
+  address?: {
+    road?: string;
+    city?: string;
+    town?: string;
+    village?: string;
+    state?: string;
+    country?: string;
+    postcode?: string;
+  };
+}
+interface NominatimReverseResult {
+  display_name?: string;
   address?: {
     road?: string;
     city?: string;
@@ -71,7 +96,9 @@ export const geocodeAddress = async (
     ...(includeAddressDetails && { addressdetails: '1' }),
   });
 
-  const response = await fetch(`${NOMINATIM_SEARCH_URL}?${params.toString()}`);
+  const response = await fetch(`${NOMINATIM_SEARCH_URL}?${params.toString()}`, {
+    headers: NOMINATIM_HEADERS,
+  });
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: Failed to fetch address suggestions`);
   }
@@ -258,7 +285,7 @@ export const useDebouncedAddressSearch = (
  * ```
  */
 export const useReverseGeocode = () => {
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<NominatimReverseResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -269,16 +296,17 @@ export const useReverseGeocode = () => {
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+        { headers: NOMINATIM_HEADERS },
       );
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: Failed to reverse geocode`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as NominatimReverseResult;
       setResult(data);
-    } catch (err: any) {
-      setError(err.message || 'Failed to reverse geocode');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to reverse geocode');
       setResult(null);
     } finally {
       setLoading(false);

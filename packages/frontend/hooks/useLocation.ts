@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useLocationStore, useLocationSelectors } from '@/store/locationStore';
+import { NOMINATIM_HEADERS } from '@/hooks/useAddressSearch';
 
 export const useLocationSearch = () => {
   const { searchResults, isLoading, error } = useLocationSelectors();
@@ -21,6 +22,7 @@ export const useLocationSearch = () => {
 
           const response = await fetch(
             `https://nominatim.openstreetmap.org/search?${params.toString()}`,
+            { headers: NOMINATIM_HEADERS },
           );
 
           if (!response.ok) {
@@ -30,8 +32,8 @@ export const useLocationSearch = () => {
           const data = await response.json();
           setSearchResults(data);
           addSearchHistory(query, data);
-        } catch (error: any) {
-          setError(error.message || 'Failed to search location');
+        } catch (error: unknown) {
+          setError(error instanceof Error ? error.message : 'Failed to search location');
         } finally {
           setLoading(false);
         }
@@ -65,6 +67,7 @@ export const useReverseGeocode = () => {
 
         const response = await fetch(
           `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+          { headers: NOMINATIM_HEADERS },
         );
 
         if (!response.ok) {
@@ -84,8 +87,8 @@ export const useReverseGeocode = () => {
         };
 
         setCurrentLocation(locationData);
-      } catch (error: any) {
-        setError(error.message || 'Failed to reverse geocode');
+      } catch (error: unknown) {
+        setError(error instanceof Error ? error.message : 'Failed to reverse geocode');
       } finally {
         setLoading(false);
       }
@@ -135,6 +138,7 @@ export const useLocation = () => {
 
           const response = await fetch(
             `https://nominatim.openstreetmap.org/search?${params.toString()}`,
+            { headers: NOMINATIM_HEADERS },
           );
 
           if (!response.ok) {
@@ -144,8 +148,8 @@ export const useLocation = () => {
           const data = await response.json();
           setSearchResults(data);
           addSearchHistory(query, data);
-        } catch (error: any) {
-          setError(error.message || 'Failed to search location');
+        } catch (error: unknown) {
+          setError(error instanceof Error ? error.message : 'Failed to search location');
         } finally {
           setLoading(false);
         }
@@ -162,6 +166,7 @@ export const useLocation = () => {
 
         const response = await fetch(
           `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+          { headers: NOMINATIM_HEADERS },
         );
 
         if (!response.ok) {
@@ -181,8 +186,8 @@ export const useLocation = () => {
         };
 
         setCurrentLocation(locationData);
-      } catch (error: any) {
-        setError(error.message || 'Failed to reverse geocode');
+      } catch (error: unknown) {
+        setError(error instanceof Error ? error.message : 'Failed to reverse geocode');
       } finally {
         setLoading(false);
       }

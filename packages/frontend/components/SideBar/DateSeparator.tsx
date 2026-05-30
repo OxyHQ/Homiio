@@ -1,7 +1,21 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Text } from '@oxyhq/bloom/typography';
 import { colors } from '@/styles/colors';
+
+/**
+ * Hairline rule trailing the date label. Uses an explicit Bloom token at
+ * `StyleSheet.hairlineWidth` so it renders as the same subtle line on web and
+ * native (the `bg-border` color class doesn't reliably resolve `--border` on
+ * native).
+ */
+const styles = StyleSheet.create({
+  rule: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+  },
+});
 
 interface DateSeparatorProps {
   label: string;
@@ -27,7 +41,7 @@ export const DateSeparator = React.memo(function DateSeparator({
       >
         {label}
       </Text>
-      <View className="h-px bg-border flex-1" />
+      <View style={styles.rule} />
     </View>
   );
 });

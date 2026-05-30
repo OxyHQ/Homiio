@@ -47,4 +47,16 @@ config.transformer = {
 
 // NativeWind
 const { withNativeWind } = require('nativewind/metro');
-module.exports = withNativeWind(config, { input: './styles/global.css' });
+
+// 1rem === 16px on every platform. NativeWind defaults `inlineRem` to 14 on
+// native (16 on web), which silently shrinks every rem-based utility
+// (`text-*`, `gap-*`, `p-*`, `w-*`, `h-*`, `rounded-*` …) to 87.5% of its web
+// size — making the whole app, and the sidebar in particular, render smaller
+// on native than on web. Pinning it to the browser default of 16 keeps the
+// box model and typography identical across web and native.
+const REM_PX = 16;
+
+module.exports = withNativeWind(config, {
+  input: './styles/global.css',
+  inlineRem: REM_PX,
+});

@@ -3,10 +3,26 @@ import {
   Platform,
   View,
   ScrollView,
+  StyleSheet,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors } from '@/styles/colors';
+
+/**
+ * Hairline divider above the footer. Drawn with an explicit Bloom token at
+ * `StyleSheet.hairlineWidth` (not the `border-border` color class) so it
+ * resolves to the same subtle, flat line on web and native — the
+ * `--border` CSS variable behind `border-border` doesn't reliably reach the
+ * native runtime and a full `borderWidth: 1` reads as a hard black rule.
+ */
+const styles = StyleSheet.create({
+  footerDivider: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+});
 
 interface BaseSidebarProps {
   /** Fixed header at top (logo + collapse toggle, mode toggle). */
@@ -63,8 +79,8 @@ export const BaseSidebar = React.memo(function BaseSidebar({
       </ScrollView>
 
       <View
-        className="mt-auto w-full min-w-0 border-t border-border/50 flex-col items-center justify-center"
-        style={{ paddingBottom: insets.bottom }}
+        className="mt-auto w-full min-w-0 flex-col items-center justify-center"
+        style={[styles.footerDivider, { paddingBottom: insets.bottom }]}
       >
         {footer}
       </View>
