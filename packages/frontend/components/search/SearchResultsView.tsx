@@ -329,8 +329,13 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   }, [t, isLoading, total]);
 
   // --- shared sub-renders ---
+  // The route wraps this screen in a plain View (no SafeAreaView) and the
+  // top bar is the first element, so it must clear the status bar itself.
+  // The bar's surfaceElevated background fills the inset region; on web
+  // `insets.top` is 0 so the `position: sticky; top: 0` placement is
+  // unchanged.
   const topBar = (
-    <View style={[styles.topBar, cardShadow.sm]}>
+    <View style={[styles.topBar, { paddingTop: insets.top }]}>
       <View style={styles.topBarContent}>
         <View style={styles.summaryWrap}>
           <SearchSummaryBar query={query} onPress={onEditSearch} compact />
