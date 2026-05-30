@@ -518,8 +518,8 @@ export function SideBar() {
     () => handleNavigate('/profile'),
     [handleNavigate],
   );
-  const handleMailbox = React.useCallback(
-    () => handleNavigate('/mailbox'),
+  const handleInbox = React.useCallback(
+    () => handleNavigate('/inbox'),
     [handleNavigate],
   );
   const handleAddProperty = React.useCallback(
@@ -914,12 +914,12 @@ export function SideBar() {
                 </Text>
               </View>
             </MenuOption>
-            <MenuOption onSelect={handleMailbox}>
+            <MenuOption onSelect={handleInbox}>
               <View className="flex-row items-center gap-2 py-1.5 px-2">
                 <Mail size={16} color={colors.primaryDark} />
                 <Text style={{ fontSize: 13, color: colors.primaryDark }}>
-                  {t('sidebar.menu.mailbox', {
-                    defaultValue: 'Mailbox',
+                  {t('sidebar.menu.inbox', {
+                    defaultValue: 'Inbox',
                   })}
                 </Text>
               </View>

@@ -11,10 +11,15 @@
  * `primary` blue; the bar surface is `background`; on Android the selection
  * indicator and touch ripple use `primarySubtle` (Bloom's soft brand tint).
  *
- * The five triggers mirror `components/BottomBar.tsx` exactly (Home, Search,
- * Sindi, Saved, Profile), in the same order, with labels from the shared
- * `sidebar.navigation.*` i18n namespace. Each maps to a route file inside this
- * `(tabs)` group — `name` matches the file name (`index` for the home route).
+ * The five triggers are Explore, Saved, Sindi, Inbox, Profile (in that order),
+ * with labels from the shared `sidebar.navigation.*` i18n namespace. Each maps
+ * to a route file inside this `(tabs)` group — `name` matches the route (`index`
+ * for the Explore/home route, `inbox`/`saved`/`sindi`/`profile` for the folders).
+ *
+ * `NativeTabs` registers a screen ONLY for routes with a declared trigger
+ * (expo-router builds the native navigator with `useOnlyUserDefinedScreens`), so
+ * the search experience lives OUTSIDE this group at `app/search/` and stays
+ * reachable at `/search` (e.g. from `SearchSummaryBar`) without a bottom-bar tab.
  *
  * Web has its own layout (`_layout.web.tsx`, a bare `<Slot/>`) because the web
  * shell uses the persistent sidebar + right rail, not a native tab bar.
@@ -52,25 +57,11 @@ export default function TabsLayout() {
     >
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Icon
-          sf={{ default: 'house', selected: 'house.fill' }}
-          md="home"
+          sf={{ default: 'safari', selected: 'safari.fill' }}
+          md="explore"
         />
         <NativeTabs.Trigger.Label>
-          {t('sidebar.navigation.home')}
-        </NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="search">
-        <NativeTabs.Trigger.Icon sf="magnifyingglass" md="search" />
-        <NativeTabs.Trigger.Label>
-          {t('sidebar.navigation.search')}
-        </NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="sindi">
-        <NativeTabs.Trigger.Icon sf="sparkles" md="auto_awesome" />
-        <NativeTabs.Trigger.Label>
-          {t('sidebar.navigation.sindi')}
+          {t('sidebar.navigation.explore')}
         </NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
 
@@ -81,6 +72,23 @@ export default function TabsLayout() {
         />
         <NativeTabs.Trigger.Label>
           {t('sidebar.navigation.saved')}
+        </NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="sindi">
+        <NativeTabs.Trigger.Icon sf="sparkles" md="auto_awesome" />
+        <NativeTabs.Trigger.Label>
+          {t('sidebar.navigation.sindi')}
+        </NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="inbox">
+        <NativeTabs.Trigger.Icon
+          sf={{ default: 'tray', selected: 'tray.fill' }}
+          md="inbox"
+        />
+        <NativeTabs.Trigger.Label>
+          {t('sidebar.navigation.inbox')}
         </NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
 

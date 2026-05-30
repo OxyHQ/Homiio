@@ -99,7 +99,7 @@
   "error.chat.load_failed": "Error carregant missatges",
   "error.data.fetch_failed": "Error obtenint dades: {{message}}",
   "error.users.fetch_failed": "Error obtenint usuaris: {{message}}",
-  "mailbox.title": "Bústia",
+  "inbox.title": "Bústia",
   "notification.welcome.title": "Benvingut a Homiio! 👋",
   "notification.welcome.body": "Gràcies per provar la nostra aplicació. Comença a explorar ara!",
   "success.signup": "Registre exitós",
@@ -469,6 +469,54 @@
         "duplex": "Dúplex",
         "penthouse": "Àtic"
       }
+    }
+  },
+  "property": {
+    "communityNotes": {
+      "title": "Notes de la comunitat",
+      "subtitle": "Notes verificades per la comunitat sobre l'edifici. L'experiència pot variar segons l'habitatge.",
+      "count_one": "{{count}} nota",
+      "count_other": "{{count}} notes",
+      "summaryRecommend": "Recomanen",
+      "summaryVerified": "Verificades",
+      "summaryEvidence": "Amb proves",
+      "distributionLabel": "Desglossament de valoracions",
+      "sort": {
+        "label": "Ordena",
+        "recent": "Més recents",
+        "highest": "Més ben valorades",
+        "helpful": "Més útils"
+      },
+      "readMore": "Llegeix-ne més",
+      "readLess": "Llegeix-ne menys",
+      "helpful": "Útil ({{count}})",
+      "helpfulThanksTitle": "Gràcies",
+      "helpfulThanksBody": "Hem registrat la teva valoració.",
+      "report": "Denuncia",
+      "reportTitle": "Denuncia la nota",
+      "reportBody": "Segur que vols denunciar aquesta nota de la comunitat per contingut inadequat?",
+      "reportConfirm": "Denuncia",
+      "reportedTitle": "Denunciada",
+      "reportedBody": "Aquesta nota de la comunitat s'ha enviat al nostre equip de moderació.",
+      "reply": "Respon",
+      "replyTitle": "Respon a la nota",
+      "replyBody": "Les respostes permeten a propietaris i gestors respondre les notes de la comunitat.",
+      "recommends": "Recomana",
+      "doesNotRecommend": "No recomana",
+      "anonymous": "Anònim",
+      "verifiedResident": "Resident verificat",
+      "verifiedBadge": "Verificada",
+      "underReview": "En revisió",
+      "livedMonths_one": "Hi va viure {{count}} mes",
+      "livedMonths_other": "Hi va viure {{count}} mesos",
+      "liked": "El que m'ha agradat",
+      "disliked": "El que no m'ha agradat",
+      "addAction": "Afegeix una nota",
+      "showAll": "Mostra les {{count}} notes",
+      "showMore": "Mostra'n més",
+      "errorTitle": "No s'han pogut carregar les notes de la comunitat",
+      "emptyTitle": "Encara no hi ha notes de la comunitat",
+      "emptyDescription": "Sigues la primera persona a explicar com va ser viure aquí."
     }
   },
   "viewings": {
@@ -872,8 +920,10 @@
   "sidebar": {
     "navigation": {
       "home": "Inici",
+      "explore": "Explora",
       "search": "Cercar",
       "saved": "Desats",
+      "inbox": "Bústia",
       "sindi": "Sindi",
       "contracts": "Contractes",
       "profile": "Perfil",
@@ -917,7 +967,7 @@
     },
     "menu": {
       "account": "Compte",
-      "mailbox": "Bústia",
+      "inbox": "Bústia",
       "terms": "Termes del servei",
       "privacy": "Política de privacitat"
     },

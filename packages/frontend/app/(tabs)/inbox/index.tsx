@@ -46,7 +46,7 @@ const formatDistanceToNow = (date: Date) => {
     return `${Math.floor(diffInSeconds / 31536000)}y ago`;
 };
 
-export default function MailboxScreen() {
+export default function InboxScreen() {
     const { t } = useTranslation();
     const router = useRouter();
     const insets = useSafeAreaInsets();
@@ -271,7 +271,7 @@ export default function MailboxScreen() {
                     <Ionicons name="arrow-back" size={24} color={colors.primaryDark} />
                 </TouchableOpacity>
                 <ThemedText style={styles.headerTitle}>
-                    {t('mailbox.title', 'Mailbox')}
+                    {t('inbox.title', 'Inbox')}
                 </ThemedText>
                 <View style={styles.headerActions}>
                     {unreadCount > 0 && (

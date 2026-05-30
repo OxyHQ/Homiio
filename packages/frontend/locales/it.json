@@ -112,7 +112,7 @@
   "error.boundary.stackTrace": "Stack trace",
   "error.boundary.componentStack": "Stack dei componenti",
   "error.boundary.deviceInformation": "Informazioni dispositivo",
-  "mailbox.title": "Posta",
+  "inbox.title": "Posta",
   "notification.welcome.title": "Benvenuto su Homiio! 👋",
   "notification.welcome.body": "Grazie per aver provato la nostra app. Inizia a esplorare ora!",
   "success.signup": "Registrazione completata",
@@ -503,6 +503,54 @@
       }
     }
   },
+  "property": {
+    "communityNotes": {
+      "title": "Note della community",
+      "subtitle": "Note verificate dalla community sull'edificio. L'esperienza può variare da unità a unità.",
+      "count_one": "{{count}} nota",
+      "count_other": "{{count}} note",
+      "summaryRecommend": "Consigliano",
+      "summaryVerified": "Verificate",
+      "summaryEvidence": "Con prove",
+      "distributionLabel": "Distribuzione delle valutazioni",
+      "sort": {
+        "label": "Ordina",
+        "recent": "Più recenti",
+        "highest": "Più votate",
+        "helpful": "Più utili"
+      },
+      "readMore": "Leggi di più",
+      "readLess": "Leggi di meno",
+      "helpful": "Utile ({{count}})",
+      "helpfulThanksTitle": "Grazie",
+      "helpfulThanksBody": "Il tuo feedback è stato registrato.",
+      "report": "Segnala",
+      "reportTitle": "Segnala nota",
+      "reportBody": "Vuoi davvero segnalare questa nota della community per contenuti inappropriati?",
+      "reportConfirm": "Segnala",
+      "reportedTitle": "Segnalata",
+      "reportedBody": "Questa nota della community è stata segnalata al nostro team di moderazione.",
+      "reply": "Rispondi",
+      "replyTitle": "Rispondi alla nota",
+      "replyBody": "Le risposte permettono a proprietari e gestori di rispondere alle note della community.",
+      "recommends": "Consiglia",
+      "doesNotRecommend": "Non consiglia",
+      "anonymous": "Anonimo",
+      "verifiedResident": "Residente verificato",
+      "verifiedBadge": "Verificata",
+      "underReview": "In revisione",
+      "livedMonths_one": "Ha vissuto {{count}} mese",
+      "livedMonths_other": "Ha vissuto {{count}} mesi",
+      "liked": "Cosa mi è piaciuto",
+      "disliked": "Cosa non mi è piaciuto",
+      "addAction": "Aggiungi una nota",
+      "showAll": "Mostra tutte le {{count}} note",
+      "showMore": "Mostra altro",
+      "errorTitle": "Impossibile caricare le note della community",
+      "emptyTitle": "Ancora nessuna nota della community",
+      "emptyDescription": "Sii il primo a raccontare com'è stato vivere qui."
+    }
+  },
   "viewings": {
     "title": "Visite",
     "success": {
@@ -731,8 +779,10 @@
   "sidebar": {
     "navigation": {
       "home": "Home",
+      "explore": "Esplora",
       "search": "Cerca",
       "saved": "Salvati",
+      "inbox": "Posta",
       "sindi": "Sindi",
       "contracts": "Contratti",
       "profile": "Profilo",
@@ -776,7 +826,7 @@
     },
     "menu": {
       "account": "Account",
-      "mailbox": "Posta",
+      "inbox": "Posta",
       "terms": "Termini del servizio",
       "privacy": "Politica sulla privacy"
     },

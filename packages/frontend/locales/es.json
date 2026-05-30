@@ -99,7 +99,7 @@
   "error.chat.load_failed": "Error al cargar mensajes",
   "error.data.fetch_failed": "Error al obtener datos: {{message}}",
   "error.users.fetch_failed": "Error al obtener usuarios: {{message}}",
-  "mailbox.title": "Buzón",
+  "inbox.title": "Buzón",
   "notification.welcome.title": "¡Bienvenido a Homiio! 👋",
   "notification.welcome.body": "Gracias por probar nuestra aplicación. ¡Comienza a explorar ahora!",
   "success.signup": "Registro exitoso",
@@ -447,6 +447,54 @@
         "duplex": "Dúplex",
         "penthouse": "Ático"
       }
+    }
+  },
+  "property": {
+    "communityNotes": {
+      "title": "Notas de la comunidad",
+      "subtitle": "Notas verificadas por la comunidad sobre el edificio. La experiencia puede variar según la vivienda.",
+      "count_one": "{{count}} nota",
+      "count_other": "{{count}} notas",
+      "summaryRecommend": "Recomiendan",
+      "summaryVerified": "Verificadas",
+      "summaryEvidence": "Con pruebas",
+      "distributionLabel": "Desglose de valoraciones",
+      "sort": {
+        "label": "Ordenar",
+        "recent": "Más recientes",
+        "highest": "Mejor valoradas",
+        "helpful": "Más útiles"
+      },
+      "readMore": "Leer más",
+      "readLess": "Leer menos",
+      "helpful": "Útil ({{count}})",
+      "helpfulThanksTitle": "Gracias",
+      "helpfulThanksBody": "Hemos registrado tu valoración.",
+      "report": "Denunciar",
+      "reportTitle": "Denunciar nota",
+      "reportBody": "¿Seguro que quieres denunciar esta nota de la comunidad por contenido inapropiado?",
+      "reportConfirm": "Denunciar",
+      "reportedTitle": "Denunciada",
+      "reportedBody": "Esta nota de la comunidad se ha enviado a nuestro equipo de moderación.",
+      "reply": "Responder",
+      "replyTitle": "Responder a la nota",
+      "replyBody": "Las respuestas permiten a propietarios y gestores responder a las notas de la comunidad.",
+      "recommends": "Recomienda",
+      "doesNotRecommend": "No recomienda",
+      "anonymous": "Anónimo",
+      "verifiedResident": "Residente verificado",
+      "verifiedBadge": "Verificada",
+      "underReview": "En revisión",
+      "livedMonths_one": "Vivió {{count}} mes",
+      "livedMonths_other": "Vivió {{count}} meses",
+      "liked": "Lo que me gustó",
+      "disliked": "Lo que no me gustó",
+      "addAction": "Añadir una nota",
+      "showAll": "Ver las {{count}} notas",
+      "showMore": "Ver más",
+      "errorTitle": "No se pudieron cargar las notas de la comunidad",
+      "emptyTitle": "Aún no hay notas de la comunidad",
+      "emptyDescription": "Sé la primera persona en contar cómo fue vivir aquí."
     }
   },
   "viewings": {
@@ -853,8 +901,10 @@
   "sidebar": {
     "navigation": {
       "home": "Inicio",
+      "explore": "Explorar",
       "search": "Buscar",
       "saved": "Guardados",
+      "inbox": "Buzón",
       "sindi": "Sindi",
       "contracts": "Contratos",
       "profile": "Perfil",
@@ -898,7 +948,7 @@
     },
     "menu": {
       "account": "Cuenta",
-      "mailbox": "Buzón",
+      "inbox": "Buzón",
       "terms": "Términos del servicio",
       "privacy": "Política de privacidad"
     },

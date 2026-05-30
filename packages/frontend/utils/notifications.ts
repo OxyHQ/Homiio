@@ -70,7 +70,7 @@ export async function scheduleDemoNotification() {
       content: {
         title: i18next.t('notification.welcome.title'),
         body: i18next.t('notification.welcome.body'),
-        data: { screen: 'mailbox', type: 'welcome' },
+        data: { screen: '/inbox', type: 'welcome' },
         sound: true,
         priority: 'high',
       },
