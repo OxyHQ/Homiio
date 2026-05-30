@@ -15,10 +15,16 @@
  *    scales down, so the phone pill reads as a narrower web pill, not a
  *    squished one.
  *  - `compact` mode (results top bar): a single "Where · Type · Price" summary
- *    line inside the same rounded, elevated pill.
+ *    line inside the same rounded, elevated pill, with an optional trailing
+ *    bookmark (Airbnb places the save affordance at the right end of the
+ *    results search bar). The summary line and the bookmark are SIBLING
+ *    Pressables — never nested — so tapping the summary opens "edit search"
+ *    while tapping the bookmark saves the search, and web never renders a
+ *    `<button>` inside a `<button>`. The bookmark only appears when
+ *    `onSavePress` is supplied; the full hero pill never shows it.
  *
- * Tapping anywhere reopens the expanding `SearchPanel`. Used both on the home
- * hero and as the editable summary in the results top bar.
+ * Tapping the summary reopens the expanding `SearchPanel`. Used both on the
+ * home hero and as the editable summary in the results top bar.
  */
 import React, { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -84,6 +90,17 @@ const COLUMN_FIRST_PAD_LEFT_NARROW = spacing.lg;
 /** Single-line (compact) pill leading search-icon size. */
 const COMPACT_ICON_SIZE = 16;
 
+/**
+ * Compact-pill trailing save affordance. The bookmark sits at the right end of
+ * the results pill (Airbnb places the bookmark there). It is its own ~40dp tap
+ * target, a SIBLING of the summary Pressable — never nested inside it — so web
+ * never renders a `<button>` inside a `<button>`.
+ */
+const SAVE_BUTTON_SIZE = 40;
+const SAVE_ICON_SIZE = 20;
+/** Height of the hairline divider that separates the summary from the bookmark. */
+const SAVE_DIVIDER_HEIGHT = 24;
+
 interface SummarySegments {
   where: string;
   type: string;
@@ -108,6 +125,17 @@ interface SearchSummaryBarProps {
    * leading search-icon emphasis). Defaults to the full hero pill.
    */
   compact?: boolean;
+  /**
+   * Save-search affordance. When provided AND `compact` is true, a bookmark
+   * button renders at the right end of the pill as its own tap target (a
+   * sibling of the summary Pressable, not nested inside it). The full hero pill
+   * never shows it. Omit `onSavePress` to render the pill without a bookmark.
+   */
+  onSavePress?: () => void;
+  /** Whether the current search is already saved (fills the bookmark + tints it). */
+  isSaved?: boolean;
+  /** Accessibility label for the bookmark button (e.g. "Saved" / "Save"). */
+  saveAccessibilityLabel?: string;
 }
 
 interface PillColumnProps {
@@ -168,17 +196,62 @@ const PillColumn: React.FC<PillColumnProps> = ({
   );
 };
 
+interface SaveBookmarkButtonProps {
+  isSaved: boolean;
+  onPress: () => void;
+  accessibilityLabel: string;
+}
+
+/**
+ * Trailing bookmark in the compact pill. A SIBLING of the summary Pressable —
+ * never nested — so web renders two independent buttons, not a `<button>` in a
+ * `<button>`. Owns its own pressed/hovered state (a hook can't run in `.map()`,
+ * and keeping the visual state local mirrors `PillColumn`/`SearchActionPill`).
+ */
+const SaveBookmarkButton: React.FC<SaveBookmarkButtonProps> = ({
+  isSaved,
+  onPress,
+  accessibilityLabel,
+}) => {
+  const [pressed, setPressed] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
+      accessibilityRole="button"
+      accessibilityState={{ selected: isSaved }}
+      accessibilityLabel={accessibilityLabel}
+      style={[styles.saveButton, (pressed || hovered) && styles.saveButtonPressed]}
+    >
+      <Ionicons
+        name={isSaved ? 'bookmark' : 'bookmark-outline'}
+        size={SAVE_ICON_SIZE}
+        color={isSaved ? colors.primaryColor : colors.COLOR_BLACK}
+      />
+    </Pressable>
+  );
+};
+
 export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
   query,
   onPress,
   onPressColumn,
   compact = false,
+  onSavePress,
+  isSaved = false,
+  saveAccessibilityLabel,
 }) => {
   const { t } = useTranslation();
   const isWide = useIsScreenNotMobile();
   const [searchPressed, setSearchPressed] = useState(false);
+  const [summaryPressed, setSummaryPressed] = useState(false);
 
   const handlePress = useCallback(() => onPress(), [onPress]);
+  const handleSavePress = useCallback(() => onSavePress?.(), [onSavePress]);
   const openColumn = useCallback(
     (step: SearchStep) => {
       if (onPressColumn) {
@@ -311,35 +384,56 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
   }
 
   // --- Compact mode (results top bar): single "Where · Type · Price" line ---
+  // The outer element is a plain View carrying the pill chrome (background,
+  // border, radius, shadow). The summary area is ONE child Pressable (opens
+  // "edit search"); the bookmark is a SIBLING Pressable, never nested inside
+  // the summary — this mirrors how PropertyCard renders its save heart as a
+  // sibling overlay so web never produces a <button> inside a <button>.
+  const showSave = Boolean(onSavePress);
   return (
-    <Pressable
-      onPress={handlePress}
-      onPressIn={() => setSearchPressed(true)}
-      onPressOut={() => setSearchPressed(false)}
-      accessibilityRole="button"
-      accessibilityLabel={
-        t('search.summary.edit', 'Edit search') || 'Edit search'
-      }
-      style={[styles.pill, cardShadow.md, searchPressed && styles.pillPressed]}
-    >
-      <View style={styles.searchIcon}>
-        <Ionicons name="search" size={COMPACT_ICON_SIZE} color={colors.COLOR_BLACK} />
-      </View>
-      <View style={styles.segments}>
-        <BloomText style={styles.primary} numberOfLines={1}>
-          {segments.where}
-        </BloomText>
-        <View style={styles.secondaryRow}>
-          <BloomText style={styles.secondary} numberOfLines={1}>
-            {segments.type}
-          </BloomText>
-          <BloomText style={styles.dot}>·</BloomText>
-          <BloomText style={styles.secondary} numberOfLines={1}>
-            {segments.price}
-          </BloomText>
+    <View style={[styles.pill, cardShadow.md]}>
+      <Pressable
+        onPress={handlePress}
+        onPressIn={() => setSummaryPressed(true)}
+        onPressOut={() => setSummaryPressed(false)}
+        accessibilityRole="button"
+        accessibilityLabel={
+          t('search.summary.edit', 'Edit search') || 'Edit search'
+        }
+        style={[styles.summaryTap, summaryPressed && styles.summaryTapPressed]}
+      >
+        <View style={styles.searchIcon}>
+          <Ionicons name="search" size={COMPACT_ICON_SIZE} color={colors.COLOR_BLACK} />
         </View>
-      </View>
-    </Pressable>
+        <View style={styles.segments}>
+          <BloomText style={styles.primary} numberOfLines={1}>
+            {segments.where}
+          </BloomText>
+          <View style={styles.secondaryRow}>
+            <BloomText style={styles.secondary} numberOfLines={1}>
+              {segments.type}
+            </BloomText>
+            <BloomText style={styles.dot}>·</BloomText>
+            <BloomText style={styles.secondary} numberOfLines={1}>
+              {segments.price}
+            </BloomText>
+          </View>
+        </View>
+      </Pressable>
+      {showSave ? (
+        <>
+          <View style={styles.saveDivider} />
+          <SaveBookmarkButton
+            isSaved={isSaved}
+            onPress={handleSavePress}
+            accessibilityLabel={
+              saveAccessibilityLabel ||
+              (t('search.actions.save', 'Save') || 'Save')
+            }
+          />
+        </>
+      ) : null}
+    </View>
   );
 };
 
@@ -414,19 +508,51 @@ const styles = StyleSheet.create({
   },
 
   // --- Single-line (compact) pill ---
+  // Outer chrome only: the summary tap target and the bookmark are SIBLINGS
+  // inside this row. `overflow: hidden` keeps the summary's pressed tint inside
+  // the rounded corners; the trailing padding insets the bookmark from the edge.
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
+    paddingRight: spacing.xs,
     backgroundColor: colors.surfaceElevated,
     borderRadius: radius.pill,
     borderWidth: hairline.width,
     borderColor: colors.border,
+    overflow: 'hidden',
   },
-  pillPressed: {
-    opacity: 0.85,
+  // The tappable summary (search-icon + Where / Type · Price). Carries the
+  // pill's inner padding so the bookmark can sit flush at the right end.
+  summaryTap: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingLeft: spacing.lg,
+    paddingRight: spacing.md,
+  },
+  summaryTapPressed: {
+    opacity: 0.6,
+  },
+  // Hairline rule between the summary and the trailing bookmark.
+  saveDivider: {
+    width: hairline.width,
+    height: SAVE_DIVIDER_HEIGHT,
+    backgroundColor: hairline.color,
+  },
+  saveButton: {
+    flexShrink: 0,
+    width: SAVE_BUTTON_SIZE,
+    height: SAVE_BUTTON_SIZE,
+    borderRadius: SAVE_BUTTON_SIZE / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.xs,
+  },
+  saveButtonPressed: {
+    backgroundColor: colors.COLOR_BLACK_LIGHT_8,
   },
   searchIcon: {
     alignItems: 'center',

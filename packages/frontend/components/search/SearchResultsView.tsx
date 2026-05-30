@@ -9,10 +9,11 @@
  *  - Narrow: the list with a floating "Map" toggle → full-screen map, and a
  *    "List" toggle back.
  *
- * Top bar: an editable `SearchSummaryBar` (tap → reopens the panel), a Filters
- * button (reuses `SearchFiltersBottomSheet`), and a Sort control (`SortControl`).
- * A "Search this area" button over the map re-queries using the current map
- * bounds. A Save-search action reuses `SaveSearchBottomSheet`.
+ * Top bar: an editable `SearchSummaryBar` (tap → reopens the panel) whose
+ * trailing bookmark saves the search (reuses `SaveSearchBottomSheet`), plus a
+ * Filters button (reuses `SearchFiltersBottomSheet`) and a Sort control
+ * (`SortControl`). A "Search this area" button over the map re-queries using
+ * the current map bounds.
  *
  * Data comes from `usePropertySearch` keyed by the active query; this component
  * owns no fetching logic beyond reading that hook and forwarding map bounds.
@@ -26,6 +27,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@oxyhq/bloom/button';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
+import { useSavedSearches } from '@/hooks/useSavedSearches';
 import MapView, { type MapApi } from '@/components/Map';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
@@ -48,8 +50,9 @@ import { cardShadow, hairline, radius, spacing } from '@/constants/styles';
 import { PropertyType } from '@homiio/shared-types';
 import type { Property } from '@homiio/shared-types';
 
+import { SearchActionPill } from './SearchActionPill';
 import { SearchSummaryBar } from './SearchSummaryBar';
-import { SortControl } from './SortControl';
+import { resolveSortLabel, SortControl } from './SortControl';
 import type {
   SearchBounds,
   SearchQuery,
@@ -108,6 +111,22 @@ function toSheetFilters(query: SearchQuery): SearchFilters {
   };
 }
 
+/**
+ * Count the *applied* refinements in a query for the Filters pill badge. The
+ * location, sort, and map bounds are surfaced elsewhere (the summary pill and
+ * the Sort pill), so they don't count here — only the controls the filters
+ * sheet edits: property type(s), price, bedrooms, bathrooms, and each amenity.
+ */
+function countActiveFilters(query: SearchQuery): number {
+  let count = 0;
+  count += query.propertyTypes.length;
+  if (query.priceMin !== undefined || query.priceMax !== undefined) count += 1;
+  if (query.bedrooms !== undefined) count += 1;
+  if (query.bathrooms !== undefined) count += 1;
+  count += query.amenities.length;
+  return count;
+}
+
 interface SearchResultsViewProps {
   /** The active search query (source of truth for the data + map + summary). */
   query: SearchQuery;
@@ -145,7 +164,23 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   const { properties, total, isLoading, isError, error, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } =
     search;
 
+  const { searchExists } = useSavedSearches();
+
   const markers = useMemo(() => toMarkers(properties), [properties]);
+
+  // --- Top-bar control state (drives the action pills' active/badge UI) ---
+  const activeFilterCount = useMemo(() => countActiveFilters(query), [query]);
+
+  const sort = useMemo(
+    () => resolveSortLabel(query.sortBy, query.sortOrder, t),
+    [query.sortBy, query.sortOrder, t],
+  );
+
+  // A search is "saved" when one already exists matching this location label.
+  const isSearchSaved = useMemo(() => {
+    const label = query.location?.label;
+    return label ? searchExists(label, label) : false;
+  }, [query.location?.label, searchExists]);
 
   const initialCoordinates = useMemo<[number, number] | undefined>(
     () => query.location?.center,
@@ -338,40 +373,53 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     <View style={[styles.topBar, { paddingTop: insets.top }]}>
       <View style={styles.topBarContent}>
         <View style={styles.summaryWrap}>
-          <SearchSummaryBar query={query} onPress={onEditSearch} compact />
+          <SearchSummaryBar
+            query={query}
+            onPress={onEditSearch}
+            compact
+            onSavePress={handleSaveSearch}
+            isSaved={isSearchSaved}
+            saveAccessibilityLabel={
+              isSearchSaved
+                ? t('search.actions.saved', 'Saved') || 'Saved'
+                : t('search.actions.save', 'Save') || 'Save'
+            }
+          />
         </View>
-        <View style={styles.topBarActions}>
-          <Button
+        {/* Horizontally-scrollable so the action pills never wrap onto a second
+            line or get clipped on a narrow phone; on wide screens the content
+            simply fits and the scroll never engages. The Save affordance now
+            lives in the summary pill itself (its trailing bookmark). */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.topBarActionsScroll}
+          contentContainerStyle={styles.topBarActions}
+        >
+          <SearchActionPill
+            label={t('search.actions.filters', 'Filters') || 'Filters'}
+            icon="options-outline"
+            active={activeFilterCount > 0}
+            count={activeFilterCount}
             onPress={handleFiltersPress}
-            variant="secondary"
-            size="small"
-            icon={<Ionicons name="options-outline" size={16} color={colors.COLOR_BLACK} />}
-            iconPosition="left"
-            accessibilityLabel={t('search.actions.filters', 'Filters') || 'Filters'}
-          >
-            {t('search.actions.filters', 'Filters') || 'Filters'}
-          </Button>
-          <Button
+            accessibilityLabel={
+              activeFilterCount > 0
+                ? `${t('search.actions.filters', 'Filters') || 'Filters'}, ${activeFilterCount}`
+                : t('search.actions.filters', 'Filters') || 'Filters'
+            }
+          />
+          <SearchActionPill
+            label={
+              sort.isDefault
+                ? t('search.actions.sort', 'Sort') || 'Sort'
+                : sort.label
+            }
+            icon="swap-vertical"
+            active={!sort.isDefault}
             onPress={handleSortPress}
-            variant="ghost"
-            size="small"
-            icon={<Ionicons name="swap-vertical" size={16} color={colors.COLOR_BLACK} />}
-            iconPosition="left"
-            accessibilityLabel={t('search.actions.sort', 'Sort') || 'Sort'}
-          >
-            {t('search.actions.sort', 'Sort') || 'Sort'}
-          </Button>
-          <Button
-            onPress={handleSaveSearch}
-            variant="ghost"
-            size="small"
-            icon={<Ionicons name="bookmark-outline" size={16} color={colors.COLOR_BLACK} />}
-            iconPosition="left"
-            accessibilityLabel={t('search.actions.save', 'Save') || 'Save'}
-          >
-            {t('search.actions.save', 'Save') || 'Save'}
-          </Button>
-        </View>
+            accessibilityLabel={`${t('search.actions.sort', 'Sort') || 'Sort'}: ${sort.label}`}
+          />
+        </ScrollView>
       </View>
     </View>
   );
@@ -568,23 +616,28 @@ const styles = StyleSheet.create({
   topBarContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     maxWidth: 1440,
     width: '100%',
     alignSelf: 'center',
-    flexWrap: 'wrap',
   },
   summaryWrap: {
     flex: 1,
-    minWidth: 220,
+    minWidth: 0,
     maxWidth: 520,
+  },
+  // The pill row is its own horizontal scroller; cap its flex so the summary
+  // pill keeps a usable width, and let the pills scroll if all three can't fit.
+  topBarActionsScroll: {
+    flexGrow: 0,
+    flexShrink: 1,
   },
   topBarActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   splitRow: {
     flex: 1,

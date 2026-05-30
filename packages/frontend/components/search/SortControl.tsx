@@ -59,11 +59,30 @@ const SORT_OPTIONS: readonly SortOption[] = [
 ] as const;
 
 /** Resolve the active option from a (sortBy, sortOrder) pair. */
-function matchOption(sortBy: SearchSortBy, sortOrder: SearchSortOrder): string {
-  const found = SORT_OPTIONS.find(
-    (o) => o.sortBy === sortBy && o.sortOrder === sortOrder,
+function matchOption(sortBy: SearchSortBy, sortOrder: SearchSortOrder): SortOption {
+  return (
+    SORT_OPTIONS.find((o) => o.sortBy === sortBy && o.sortOrder === sortOrder) ??
+    SORT_OPTIONS[0]
   );
-  return found?.key ?? SORT_OPTIONS[0].key;
+}
+
+/** The default (relevance) order — used by callers to tell "is a sort applied". */
+export const DEFAULT_SORT_OPTION = SORT_OPTIONS[0];
+
+/**
+ * Human label for the active (sortBy, sortOrder) pair, for the results bar's
+ * Sort pill. Shared with {@link SortControl} so the pill and the sheet agree.
+ */
+export function resolveSortLabel(
+  sortBy: SearchSortBy,
+  sortOrder: SearchSortOrder,
+  t: (key: string, fallback: string) => string,
+): { label: string; isDefault: boolean } {
+  const option = matchOption(sortBy, sortOrder);
+  return {
+    label: t(option.labelKey, option.fallback) || option.fallback,
+    isDefault: option.key === DEFAULT_SORT_OPTION.key,
+  };
 }
 
 interface SortRowProps {
@@ -112,7 +131,7 @@ export const SortControl: React.FC<SortControlProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation();
-  const activeKey = matchOption(sortBy, sortOrder);
+  const activeKey = matchOption(sortBy, sortOrder).key;
 
   const handleSelect = useCallback(
     (option: SortOption) => {
