@@ -56,8 +56,6 @@ const styles = StyleSheet.create({
     enhancedHeader: {
         backgroundColor: colors.primaryLight,
         padding: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
     },
     headerTitle: {
         fontSize: 24,
