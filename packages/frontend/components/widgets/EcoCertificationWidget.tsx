@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { BaseWidget } from './BaseWidget';
 import { Button } from '@oxyhq/bloom/button';
+import { colors } from '@/styles/colors';
 
 export function EcoCertificationWidget() {
   const { t } = useTranslation();
@@ -42,7 +43,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   learnMoreButton: {
-    backgroundColor: '#e7f4e4',
+    backgroundColor: colors.successSubtle,
   },
   learnMoreButtonText: {
     color: 'green',

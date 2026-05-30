@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { useTranslation } from 'react-i18next';
 import type { Property } from '@homiio/shared-types';
+import { colors } from '@/styles/colors';
 
 interface Amenity { name: string; distance?: number; }
 interface Props { property: Property }
@@ -30,7 +31,7 @@ export const NearbyAmenities: React.FC<Props> = ({ property }) => {
 const styles = StyleSheet.create({
     container: { marginBottom: 20 },
     sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15 },
-    card: { padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#e9ecef' },
+    card: { padding: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
     item: { fontSize: 14, marginBottom: 4 },
 });
 

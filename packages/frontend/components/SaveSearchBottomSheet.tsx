@@ -70,7 +70,7 @@ export const SaveSearchBottomSheet: React.FC<SaveSearchBottomSheetProps> = ({
                     value={notificationsEnabled}
                     onValueChange={setNotificationsEnabled}
                     trackColor={{ false: colors.COLOR_BLACK_LIGHT_5, true: colors.primaryColor + '40' }}
-                    thumbColor={notificationsEnabled ? colors.primaryColor : '#ffffff'}
+                    thumbColor={notificationsEnabled ? colors.primaryColor : colors.white}
                 />
             </View>
 
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.COLOR_BLACK_LIGHT_5,
     },
     saveText: {
-        color: 'white',
+        color: colors.white,
         fontWeight: '600',
     },
 });

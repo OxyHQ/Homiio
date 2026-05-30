@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryLight,
   },
   headerImage: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
   },
   content: {
     flex: 1,
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   galleryImage: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
   },
   sectionTitle: {
     marginBottom: 16,
@@ -177,10 +177,10 @@ const styles = StyleSheet.create({
     width: '22%',
   },
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 16,
-    shadowColor: '#000',
+    shadowColor: colors.COLOR_BLACK,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -212,14 +212,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: colors.COLOR_BLACK_LIGHT_6,
   },
   priceSection: {
     flex: 1,

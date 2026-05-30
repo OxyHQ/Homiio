@@ -29,7 +29,7 @@ export const HouseRules: React.FC<Props> = ({ property }) => {
 const styles = StyleSheet.create({
     container: { marginBottom: 20 },
     sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15 },
-    card: { padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#e9ecef' },
+    card: { padding: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
     item: { fontSize: 14, marginBottom: 8 },
     value: { fontWeight: '600', color: colors.primaryColor },
 });

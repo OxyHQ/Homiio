@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { useTranslation } from 'react-i18next';
+import { colors } from '@/styles/colors';
 
 interface Props {
     property?: {
@@ -23,7 +24,7 @@ export const ExamplePropertySection: React.FC<Props> = ({ property }) => {
             // Optional: customize the card appearance
             padding={20}
             borderRadius={16}
-            cardStyle={{ backgroundColor: '#f8f9fa' }}
+            cardStyle={{ backgroundColor: colors.surface }}
         >
             <View style={styles.content}>
                 <ThemedText style={styles.text}>

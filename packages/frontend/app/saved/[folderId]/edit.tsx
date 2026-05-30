@@ -12,7 +12,8 @@ import savedPropertyFolderService from '@/services/savedPropertyFolderService';
 import { toast } from 'sonner';
 import { logger } from '@/utils/logger';
 
-// Reuse the color palette from SaveToFolderBottomSheet
+// Reuse the curated folder-color picker palette from SaveToFolderBottomSheet.
+// These are user-selectable swatches, not theme tokens, so they stay literal.
 const FOLDER_COLORS = [
   '#3B82F6',
   '#EF4444',
@@ -150,7 +151,7 @@ export default function EditFolderScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fafbfc',
+    backgroundColor: colors.surface,
     paddingBottom: 40,
   },
   form: {
@@ -162,10 +163,10 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_3,
   },
   input: {
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#eaeaea',
+    borderColor: colors.border,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,

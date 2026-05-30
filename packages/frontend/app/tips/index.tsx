@@ -43,7 +43,7 @@ const TipCard: React.FC<{ tip: TipArticle; onPress: () => void }> = ({
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <Ionicons name={tip.icon as IoniconName} size={36} color="#ffffff" />
+        <Ionicons name={tip.icon as IoniconName} size={36} color={colors.white} />
       </LinearGradient>
       <View style={styles.tipCategoryBadge}>
         <BloomText style={styles.tipCategoryText}>{tip.category}</BloomText>

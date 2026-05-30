@@ -335,7 +335,7 @@ export default function NotesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fafbfc',
+    backgroundColor: colors.surface,
   },
   content: {
     padding: 16,
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#eaeaea',
+    borderBottomColor: colors.border,
   },
   tabItem: {
     paddingVertical: 8,
@@ -372,15 +372,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   noteCard: {
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#eaeaea',
+    borderColor: colors.border,
     padding: 12,
     marginBottom: 12,
     flex: 1,
     marginHorizontal: 4,
-    shadowColor: '#000',
+    shadowColor: colors.COLOR_BLACK,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
     shadowRadius: 3,
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
   noteRow: {
     paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: '#f1f3f4',
+    borderTopColor: colors.mutedSubtle,
   },
   noteText: {
     fontSize: 14,
@@ -420,14 +420,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     borderTopWidth: 1,
-    borderTopColor: '#f1f3f4',
+    borderTopColor: colors.mutedSubtle,
     paddingTop: 10,
   },
   previewImageL: {
     width: 44,
     height: 44,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
   },
   previewTitle: {
     fontSize: 13,
@@ -472,10 +472,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   editor: {
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#eaeaea',
+    borderColor: colors.border,
     padding: 12,
     marginTop: 8,
   },
@@ -492,9 +492,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#eaeaea',
+    borderColor: colors.border,
     marginRight: 8,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
   },
   pillActive: {
     backgroundColor: colors.primaryLight,
@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#eaeaea',
+    borderColor: colors.border,
     borderRadius: 10,
     padding: 10,
     minHeight: 100,

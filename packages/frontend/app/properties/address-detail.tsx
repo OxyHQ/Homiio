@@ -3,6 +3,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { colors } from '@/styles/colors';
 
 // Example component showing how to navigate to Address Detail Screen
 export default function AddressDetailExample() {
@@ -72,13 +73,13 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   button: {
-    backgroundColor: '#0047bf',
+    backgroundColor: colors.primaryColor,
     paddingHorizontal: 30,
     paddingVertical: 15,
     borderRadius: 8,
   },
   buttonText: {
-    color: '#ffffff',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
   },

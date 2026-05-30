@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
     ...cardShadow.sm,
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
   cardCity: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#ffffff',
+    color: colors.white,
     letterSpacing: tracker.tight,
     textShadowColor: 'rgba(0, 0, 0, 0.35)',
     textShadowOffset: { width: 0, height: 1 },

@@ -44,6 +44,9 @@ export function QuickFiltersWidget() {
 
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
 
+  // Curated per-category accent palette (decorative selected-pill tints). These
+  // are intentional distinct category colors, not Bloom status tokens, so they
+  // stay literal to preserve the original multi-hue look.
   const quickFilters: QuickFilter[] = [
     {
       id: 'eco',
@@ -100,7 +103,7 @@ export function QuickFiltersWidget() {
             style={styles.applyButton}
             textStyle={styles.applyButtonText}
             onPress={handleApplyFilters}
-            icon={<Ionicons name="search" size={16} color="white" />}
+            icon={<Ionicons name="search" size={16} color={colors.white} />}
             iconPosition="left"
           >
             {`${t('Search with')} ${selectedFilters.length} ${t('filters')}`}
@@ -129,9 +132,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 20,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
   },
   filterPillSelected: {
     backgroundColor: colors.primaryColor,
@@ -143,7 +146,7 @@ const styles = StyleSheet.create({
     fontWeight: 'normal',
   },
   filterPillTextSelected: {
-    color: 'white',
+    color: colors.white,
     fontWeight: '600',
   },
   applyButton: {
@@ -163,7 +166,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   applyButtonText: {
-    color: 'white',
+    color: colors.white,
     fontWeight: '600',
     fontSize: 14,
   },

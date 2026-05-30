@@ -25,7 +25,7 @@ import {
   X,
   PlusCircle,
   UserCircle,
-  Bell,
+  Mail,
   Settings,
   ShieldCheck,
   LogOut,
@@ -458,8 +458,8 @@ export function SideBar() {
     () => handleNavigate('/profile'),
     [handleNavigate],
   );
-  const handleNotifications = React.useCallback(
-    () => handleNavigate('/notifications'),
+  const handleMailbox = React.useCallback(
+    () => handleNavigate('/mailbox'),
     [handleNavigate],
   );
   const handleAddProperty = React.useCallback(
@@ -851,12 +851,12 @@ export function SideBar() {
                 </Text>
               </View>
             </MenuOption>
-            <MenuOption onSelect={handleNotifications}>
+            <MenuOption onSelect={handleMailbox}>
               <View className="flex-row items-center gap-2 py-1.5 px-2">
-                <Bell size={16} color={colors.primaryDark} />
+                <Mail size={16} color={colors.primaryDark} />
                 <Text style={{ fontSize: 13, color: colors.primaryDark }}>
-                  {t('sidebar.menu.notifications', {
-                    defaultValue: 'Notifications',
+                  {t('sidebar.menu.mailbox', {
+                    defaultValue: 'Mailbox',
                   })}
                 </Text>
               </View>

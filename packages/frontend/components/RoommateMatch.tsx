@@ -62,9 +62,9 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
   };
 
   const getMatchScoreColor = (score: number) => {
-    if (score >= 80) return '#00C853'; // Green for success
-    if (score >= 60) return '#FFCC00'; // Yellow for warning
-    return '#FF3B30'; // Red for error
+    if (score >= 80) return colors.success; // Green for success
+    if (score >= 60) return colors.warning; // Yellow for warning
+    return colors.danger; // Red for error
   };
 
   const getMatchScoreText = (score: number) => {

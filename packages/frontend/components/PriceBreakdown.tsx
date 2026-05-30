@@ -122,7 +122,7 @@ export const PriceBreakdown: React.FC<PriceBreakdownProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 16,
     gap: 8,

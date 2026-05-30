@@ -202,7 +202,7 @@ export default function PropertyDraftsScreen() {
                 }} />
               </View>
             ) : (
-              <Ionicons name="trash-outline" size={20} color="#ff6b6b" />
+              <Ionicons name="trash-outline" size={20} color={colors.danger} />
             )}
           </TouchableOpacity>
         </View>
@@ -337,12 +337,12 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   draftCard: {
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
     borderColor: colors.primaryLight_1,
-    shadowColor: '#000',
+    shadowColor: colors.COLOR_BLACK,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,

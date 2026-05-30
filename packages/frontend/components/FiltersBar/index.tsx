@@ -21,7 +21,7 @@ export function FiltersBar({ activeFiltersCount, onFilterPress, sortBy, onSortPr
                 <Ionicons
                     name="filter"
                     size={20}
-                    color={activeFiltersCount > 0 ? '#fff' : colors.COLOR_BLACK}
+                    color={activeFiltersCount > 0 ? colors.white : colors.COLOR_BLACK}
                 />
                 <ThemedText style={[
                     styles.buttonText,
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
         color: colors.COLOR_BLACK,
     },
     buttonTextActive: {
-        color: '#fff',
+        color: colors.white,
     },
     sortButton: {
         flex: 1,

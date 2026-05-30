@@ -99,6 +99,7 @@
   "error.chat.load_failed": "Error al cargar mensajes",
   "error.data.fetch_failed": "Error al obtener datos: {{message}}",
   "error.users.fetch_failed": "Error al obtener usuarios: {{message}}",
+  "mailbox.title": "Buzón",
   "notification.welcome.title": "¡Bienvenido a Homiio! 👋",
   "notification.welcome.body": "Gracias por probar nuestra aplicación. ¡Comienza a explorar ahora!",
   "success.signup": "Registro exitoso",
@@ -897,7 +898,7 @@
     },
     "menu": {
       "account": "Cuenta",
-      "notifications": "Notificaciones",
+      "mailbox": "Buzón",
       "terms": "Términos del servicio",
       "privacy": "Política de privacidad"
     },

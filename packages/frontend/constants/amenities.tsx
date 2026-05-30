@@ -35,6 +35,9 @@ export const ETHICAL_AMENITY_GUIDELINES = {
   noDiscrimination: true, // Amenities cannot be used to discriminate
 };
 
+// Per-category accent colors. This is a curated multi-hue category palette
+// (one distinct hue per amenity group) used for icon tints, not Bloom theme
+// tokens — kept as literals so the categories stay visually distinguishable.
 export const AMENITY_CATEGORIES: AmenityCategory[] = [
   {
     id: 'essential',

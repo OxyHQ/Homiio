@@ -31,6 +31,9 @@ interface SaveToFolderBottomSheetProps {
   onSave: (folderId: string | null) => void;
 }
 
+// Curated folder-color picker palette. These are user-selectable swatches
+// (distinct color CHOICES), not semantic theme tokens, so they stay as a fixed
+// literal palette independent of the Bloom theme.
 const FOLDER_COLORS = [
   '#3B82F6', // Blue
   '#EF4444', // Red
@@ -173,7 +176,7 @@ export function SaveToFolderBottomSheet({
             ]}
             onPress={() => setSelectedColor(color)}
           >
-            {selectedColor === color && <Ionicons name="checkmark" size={16} color="white" />}
+            {selectedColor === color && <Ionicons name="checkmark" size={16} color={colors.white} />}
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -278,7 +281,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
   },
   previewTexts: {
     flex: 1,
@@ -414,7 +417,7 @@ const styles = StyleSheet.create({
   },
   folderEmojiText: {
     fontSize: 20,
-    color: 'white',
+    color: colors.white,
   },
   createFolderActions: {
     flexDirection: 'row',

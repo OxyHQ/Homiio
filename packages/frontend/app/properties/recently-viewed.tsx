@@ -140,7 +140,7 @@ export default function RecentlyViewedScreen() {
           </View>
           {recentProperties.length > 0 && (
             <TouchableOpacity style={styles.clearButton} onPress={handleClearHistory}>
-              <Ionicons name="trash-outline" size={20} color="#ff4757" />
+              <Ionicons name="trash-outline" size={20} color={colors.danger} />
             </TouchableOpacity>
           )}
           {renderViewModeToggle()}
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     padding: 8,
     borderWidth: 1,
-    borderColor: '#ff4757',
+    borderColor: colors.danger,
   },
   viewModeToggle: {
     flexDirection: 'row',

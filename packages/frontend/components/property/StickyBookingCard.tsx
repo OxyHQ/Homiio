@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     top: STICKY_TOP_OFFSET,
   },
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderRadius: radius.lg,
     padding: spacing['2xl'],
     maxWidth: 380,

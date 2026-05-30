@@ -286,7 +286,7 @@ export function SavedSearchesWidget() {
                   style={styles.actionItem}
                   onPress={() => handleDeleteSavedSearch(selectedSearch)}
                 >
-                  <Ionicons name="trash-outline" size={20} color="#ff4757" />
+                  <Ionicons name="trash-outline" size={20} color={colors.danger} />
                   <Text style={[styles.actionText, styles.deleteText]}>{t('common.delete')}</Text>
                 </TouchableOpacity>
               </>
@@ -360,7 +360,7 @@ export function SavedSearchesWidget() {
                     false: colors.COLOR_BLACK_LIGHT_5,
                     true: colors.primaryColor + '40',
                   }}
-                  thumbColor={editNotificationsEnabled ? colors.primaryColor : '#ffffff'}
+                  thumbColor={editNotificationsEnabled ? colors.primaryColor : colors.white}
                 />
               </View>
             </View>
@@ -449,10 +449,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlay,
   },
   actionsContainer: {
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 8,
     minWidth: 200,
@@ -471,18 +471,18 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   deleteText: {
-    color: '#ff4757',
+    color: colors.danger,
   },
   // Edit Modal Styles
   editModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   editModalContent: {
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 16,
     padding: 24,
     width: '100%',
@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.COLOR_BACKGROUND,
   },
   textInputError: {
-    borderColor: '#ff4757',
+    borderColor: colors.danger,
   },
   toggleSection: {
     marginBottom: 20,
@@ -547,7 +547,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   errorText: {
-    color: '#ff4757',
+    color: colors.danger,
     fontSize: 14,
     marginBottom: 16,
     textAlign: 'center',

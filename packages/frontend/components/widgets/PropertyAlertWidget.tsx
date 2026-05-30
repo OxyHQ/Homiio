@@ -134,7 +134,7 @@ export function PropertyAlertWidget() {
               value={emailNotifications}
               onValueChange={setEmailNotifications}
               trackColor={{ false: colors.COLOR_BLACK_LIGHT_6, true: colors.primaryColor }}
-              thumbColor={emailNotifications ? '#fff' : '#f4f3f4'}
+              thumbColor={emailNotifications ? colors.white : colors.COLOR_BLACK_LIGHT_6}
             />
           </View>
 
@@ -144,7 +144,7 @@ export function PropertyAlertWidget() {
               value={pushNotifications}
               onValueChange={setPushNotifications}
               trackColor={{ false: colors.COLOR_BLACK_LIGHT_6, true: colors.primaryColor }}
-              thumbColor={pushNotifications ? '#fff' : '#f4f3f4'}
+              thumbColor={pushNotifications ? colors.white : colors.COLOR_BLACK_LIGHT_6}
             />
           </View>
         </View>
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.COLOR_BLACK_LIGHT_4,
   },
   createButtonText: {
-    color: 'white',
+    color: colors.white,
     fontWeight: '600',
     fontSize: 14,
   },

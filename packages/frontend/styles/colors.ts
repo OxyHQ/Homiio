@@ -1,28 +1,140 @@
-function lightenColor(hex: string, percent: number): string {
-  const num = parseInt(hex.slice(1), 16);
-  const amt = Math.round(2.55 * percent);
-  const R = (num >> 16) + amt;
-  const G = ((num >> 8) & 0x00ff) + amt;
-  const B = (num & 0x0000ff) + amt;
-  return `#${(0x1000000 + (R < 255 ? (R < 1 ? 0 : R) : 255) * 0x10000 + (G < 255 ? (G < 1 ? 0 : G) : 255) * 0x100 + (B < 255 ? (B < 1 ? 0 : B) : 255)).toString(16).slice(1).toUpperCase()}`;
-}
+/**
+ * Bloom is the single source of truth for Homiio's colors.
+ *
+ * The static `colors` object below is DERIVED from Bloom's `blue` preset via
+ * `buildTheme('blue', …)` so brand, text, background, border and status colors
+ * always track Bloom. `buildTheme` is a pure function (it only reads
+ * `Platform.OS` inside its adaptive branch, which we never enable), so it is
+ * safe to call at module load — even though `styles/colors.ts` is imported in
+ * static (non-component) scope across the app.
+ *
+ * Bloom serialises its palette as `hsl(…)` strings. The static `colors` map is
+ * a legacy compatibility layer consumed by ~1700 call sites, some of which
+ * append an 8-bit alpha suffix to the brand color (`colors.primaryColor + '20'`),
+ * a pattern that requires hex. We therefore convert Bloom's `hsl(…)` values to
+ * hex once, at module load, via `toHex()` — the values stay 100% Bloom-sourced,
+ * just serialised as hex. Components that need live light/dark values should use
+ * the `useColors()` hook (see `@/hooks/useThemeColor`), which returns Bloom's
+ * native palette unchanged.
+ *
+ * App-specific colors Bloom does not model (the yellow secondary, chat/message
+ * palette) live in `DomainColors` below and are layered on top — mirroring the
+ * accounts app's `useColors()` + `DomainColors` pattern. No hand-copied generic
+ * palette: every brand/neutral/status value comes from Bloom.
+ */
 
-// Updated primary color for better contrast and modern feel
-const primaryColor = '#0070e9';
+import { buildTheme } from '@oxyhq/bloom/theme';
+import type { ThemeColors } from '@oxyhq/bloom/theme';
 
+/** Bloom `blue` resolved palettes — the single source of truth. */
+export const BLOOM_LIGHT: ThemeColors = buildTheme('blue', 'light').colors;
+export const BLOOM_DARK: ThemeColors = buildTheme('blue', 'dark').colors;
+
+const channelToHex = (value: number): string =>
+  Math.round(Math.max(0, Math.min(255, value)))
+    .toString(16)
+    .padStart(2, '0');
+
+const hslToHex = (h: number, s: number, l: number): string => {
+  const sat = s / 100;
+  const lum = l / 100;
+  const k = (n: number): number => (n + h / 30) % 12;
+  const a = sat * Math.min(lum, 1 - lum);
+  const f = (n: number): number =>
+    255 * (lum - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))));
+  return `#${channelToHex(f(0))}${channelToHex(f(8))}${channelToHex(f(4))}`;
+};
+
+/**
+ * Normalise a Bloom color value to a 6-digit hex string. Bloom emits `hsl(h, s%,
+ * l%)`; pass-through anything already hex/rgba so the conversion is total.
+ */
+const toHex = (value: string): string => {
+  const match = /^hsl\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*\)$/i.exec(value);
+  if (match) {
+    return hslToHex(Number(match[1]), Number(match[2]), Number(match[3]));
+  }
+  return value;
+};
+
+/** Bloom `blue` light palette converted to hex for the legacy static `colors` map. */
+const L = (key: keyof ThemeColors): string => toHex(BLOOM_LIGHT[key]);
+
+/** Pure white — Bloom's primary-foreground for the `blue` preset. */
+const WHITE = '#ffffff';
+/** Pure black — used for true black icon/text fills. */
+const BLACK = '#000000';
+
+/**
+ * App-only colors Bloom does not model. Kept here (not in the Bloom-derived
+ * palette) so the design system stays honest about what is Bloom and what is
+ * Homiio-specific. Layered on top of Bloom via `useColors()`.
+ */
+export const DomainColors = {
+  light: {
+    /** Homiio secondary brand accent (warm yellow). Not a Bloom token. */
+    secondaryColor: '#ffd013',
+    /** Soft tint behind the yellow secondary. */
+    secondaryLight: '#fff7d7',
+    /** Amber used for rating stars / highlights. */
+    ratingStar: '#F2B400',
+    /** Deep authoritative blue for "official / government-verified" landlord badges. */
+    governmentBadge: '#1E40AF',
+    // --- Chat / messaging surface (Homiio inbox) ---
+    messageBubbleReceived: toHex(BLOOM_LIGHT.backgroundTertiary),
+    messageTextReceived: toHex(BLOOM_LIGHT.text),
+    messageTimestamp: toHex(BLOOM_LIGHT.textTertiary),
+    messageSeparator: toHex(BLOOM_LIGHT.border),
+    chatInputBackground: toHex(BLOOM_LIGHT.backgroundSecondary),
+    chatInputBorder: toHex(BLOOM_LIGHT.border),
+    chatInputText: toHex(BLOOM_LIGHT.text),
+    chatInputPlaceholder: toHex(BLOOM_LIGHT.textTertiary),
+    chatHeaderBorder: toHex(BLOOM_LIGHT.border),
+  },
+  dark: {
+    secondaryColor: '#ffd013',
+    secondaryLight: '#3a3413',
+    ratingStar: '#F2B400',
+    governmentBadge: '#2563EB',
+    messageBubbleReceived: toHex(BLOOM_DARK.backgroundTertiary),
+    messageTextReceived: toHex(BLOOM_DARK.text),
+    messageTimestamp: toHex(BLOOM_DARK.textTertiary),
+    messageSeparator: toHex(BLOOM_DARK.border),
+    chatInputBackground: toHex(BLOOM_DARK.backgroundSecondary),
+    chatInputBorder: toHex(BLOOM_DARK.border),
+    chatInputText: toHex(BLOOM_DARK.text),
+    chatInputPlaceholder: toHex(BLOOM_DARK.textTertiary),
+    chatHeaderBorder: toHex(BLOOM_DARK.border),
+  },
+} as const;
+
+export type DomainColorKey = keyof typeof DomainColors.light;
+
+/**
+ * Static color map kept for backwards compatibility with the ~1700 legacy
+ * `colors.X` call sites. Every key is preserved; values are derived from
+ * Bloom's `blue` light palette by ROLE (what each key is actually used for in
+ * the app), so appearance is preserved except for the intended brand-primary
+ * shift to Bloom blue. The grayscale ramp is Homiio's neutral domain.
+ */
 export const colors = {
-  primaryColor,
-  primaryLight: '#ffffff',
-  primaryLight_1: '#DDF3F5',
-  primaryLight_2: '#E5F0FF',
-  primaryDark: '#1A1A1A',
-  primaryDark_1: '#2D2D2D',
-  primaryDark_2: '#404040',
-  secondaryColor: '#ffd013',
-  secondaryLight: '#fff7d7',
-  overlay: 'rgba(0, 0, 0, 0.5)',
-  shadow: 'rgba(0, 0, 0, 0.1)',
-  COLOR_BLACK: '#000',
+  // --- Brand (now Bloom `blue` #1D9BF0) ---
+  primaryColor: L('primary'),
+  /** White surface / text-on-primary. Historically pure white. */
+  primaryLight: WHITE,
+  primaryLight_1: L('primarySubtle'),
+  primaryLight_2: L('primarySubtle'),
+  /** Near-black used as default icon/heading color (role: foreground). */
+  primaryDark: L('text'),
+  primaryDark_1: L('textSecondary'),
+  primaryDark_2: L('textTertiary'),
+  secondaryColor: DomainColors.light.secondaryColor,
+  secondaryLight: DomainColors.light.secondaryLight,
+  overlay: BLOOM_LIGHT.overlay,
+  shadow: BLOOM_LIGHT.shadow,
+
+  // --- Neutral grayscale ramp (Homiio domain neutrals) ---
+  COLOR_BLACK: BLACK,
   COLOR_BLACK_LIGHT_1: '#111111',
   COLOR_BLACK_LIGHT_2: '#1e1e1e',
   COLOR_BLACK_LIGHT_3: '#3c3c3c',
@@ -32,85 +144,91 @@ export const colors = {
   COLOR_BLACK_LIGHT_7: '#F5F5F5',
   COLOR_BLACK_LIGHT_8: '#FAFAFA',
   COLOR_BLACK_LIGHT_9: '#FDFDFD',
-  COLOR_BACKGROUND: lightenColor(primaryColor, 90),
+  COLOR_BACKGROUND: L('primarySubtle'),
 
-  // New modern messaging colors
-  messageBubbleSent: primaryColor,
-  messageBubbleReceived: '#EDF2F7',
-  messageTextSent: '#FFFFFF',
-  messageTextReceived: '#1A202C',
-  messageTimestamp: '#A0AEC0',
-  messageSeparator: '#CBD5E0',
+  // --- Messaging / chat (Homiio inbox domain) ---
+  messageBubbleSent: L('primary'),
+  messageBubbleReceived: DomainColors.light.messageBubbleReceived,
+  messageTextSent: WHITE,
+  messageTextReceived: DomainColors.light.messageTextReceived,
+  messageTimestamp: DomainColors.light.messageTimestamp,
+  messageSeparator: DomainColors.light.messageSeparator,
+  chatInputBackground: DomainColors.light.chatInputBackground,
+  chatInputBorder: DomainColors.light.chatInputBorder,
+  chatInputText: DomainColors.light.chatInputText,
+  chatInputPlaceholder: DomainColors.light.chatInputPlaceholder,
+  chatHeaderBorder: DomainColors.light.chatHeaderBorder,
+  chatUnreadBadge: L('error'),
+  chatTypingIndicator: L('success'),
 
-  // Chat UI specific colors
-  chatInputBackground: '#F7FAFC',
-  chatInputBorder: '#E2E8F0',
-  chatInputText: '#2D3748',
-  chatInputPlaceholder: '#A0AEC0',
-  chatHeaderBorder: '#E2E8F0',
-  chatUnreadBadge: '#FF3B30',
-  chatTypingIndicator: '#00C853',
+  // --- Interactive elements ---
+  buttonPrimary: L('primary'),
+  buttonSecondary: L('textSecondary'),
+  buttonDisabled: L('border'),
+  linkColor: L('primary'),
 
-  // Interactive elements
-  buttonPrimary: primaryColor,
-  buttonSecondary: '#718096',
-  buttonDisabled: '#CBD5E0',
-  linkColor: primaryColor,
+  // --- Status colors ---
+  online: L('success'),
+  offline: L('textSecondary'),
+  busy: L('error'),
+  away: L('warning'),
+  sindiColor: L('primarySubtleForeground'),
 
-  // Status colors
-  online: '#00C853',
-  offline: '#718096',
-  busy: '#FF3B30',
-  away: '#FFCC00',
-  sindiColor: '#175fac',
-
-  // Semantic tokens — use these in new components instead of brand/grey
-  // aliases above. Keeps the design system aligned with Bloom's theme
-  // language (danger/success/warning + muted/surface) without coupling
-  // consumers to the Bloom theme provider for static styles.
-  /** Page surface (off-white background, same as Bloom `background`). */
-  surface: '#FAFAFA',
+  // --- Semantic tokens (Bloom-backed) ---
+  /** Page surface (off-white background, Bloom `background`). */
+  surface: L('background'),
   /** Raised card surface (white card on top of `surface`). */
-  surfaceElevated: '#FFFFFF',
+  surfaceElevated: WHITE,
   /** Muted neutral text used for secondary labels. */
-  muted: '#5e5e5e',
+  muted: L('textSecondary'),
   /** Soft neutral fill used for chips/badges that sit on `surface`. */
-  mutedSubtle: '#F1F1F1',
+  mutedSubtle: L('backgroundTertiary'),
   /** Strong danger color used for error icons + critical labels. */
-  danger: '#D7263D',
+  danger: L('error'),
   /** Soft danger background used behind danger icons (icon badges). */
-  dangerSubtle: '#FBE9EC',
+  dangerSubtle: L('negativeSubtle'),
   /** Success accent (confirmed bookings, approved applications). */
-  success: '#2E7D5B',
-  /** Soft success surface used behind success badges and calendar blocks. */
+  success: L('success'),
+  /**
+   * Soft success surface (badges / calendar blocks). Bloom models only a single
+   * subtle pair (primary/negative), so this green tint is a Homiio status surface.
+   */
   successSubtle: '#E5F5EC',
   /** Warning accent (pending requests, in-review items). */
-  warning: '#B5651D',
-  /** Soft warning surface used behind warning badges and calendar blocks. */
+  warning: L('warning'),
+  /**
+   * Soft warning surface (badges / calendar blocks). Bloom has no amber subtle,
+   * so this is a Homiio status surface paired with Bloom's `warning`.
+   */
   warningSubtle: '#FBEFDD',
   /** Informational accent (neutral statuses, secondary metadata highlights). */
-  info: '#175FAC',
+  info: L('info'),
   /** Soft info surface for info badges and inline notices. */
-  infoSubtle: '#E5F0FF',
+  infoSubtle: L('primarySubtle'),
+  /** Deep brand-tinted foreground for text/icons on `primaryLight_1` surfaces. */
+  primarySubtleForeground: L('primarySubtleForeground'),
   /** Subtle background used to mark "blocked" / unavailable calendar cells. */
-  blockedSubtle: '#F5E6E8',
+  blockedSubtle: L('negativeSubtle'),
   /** Soft accent surface used for rating stars and amber highlights. */
-  ratingStar: '#F2B400',
+  ratingStar: DomainColors.light.ratingStar,
+  /** Deep blue for official / government-verified landlord badges (domain). */
+  governmentBadge: DomainColors.light.governmentBadge,
   /** Mid-strength border color for hairlines on cards. */
-  border: '#ECECEC',
+  border: L('border'),
+
   // --- Semantic aliases (stable names used across screens) ---
   /** Primary brand color alias (= primaryColor). */
-  primary: '#0070e9',
-  /** Default body text color (= COLOR_BLACK). */
-  text: '#000000',
+  primary: L('primary'),
+  /** Default body text color. */
+  text: L('text'),
   /** Secondary/muted text. */
-  textSecondary: '#717171',
+  textSecondary: L('textSecondary'),
   /** Tertiary/faint text. */
-  textTertiary: '#9CA3AF',
+  textTertiary: L('textTertiary'),
   /** App background surface. */
-  background: '#ffffff',
+  background: WHITE,
   /** Pure white (icon/text on colored fills). */
-  white: '#ffffff',
+  white: WHITE,
   /** Error color alias (= danger). */
-  error: '#C13515',
+  error: L('error'),
 } as const;

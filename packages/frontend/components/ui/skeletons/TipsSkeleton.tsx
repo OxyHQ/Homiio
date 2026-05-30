@@ -31,11 +31,11 @@ function TipCardSkeleton() {
   return (
     <View
       style={{
-        backgroundColor: 'white',
+        backgroundColor: colors.white,
         borderRadius: 12,
         marginBottom: 16,
         overflow: 'hidden',
-        shadowColor: '#000',
+        shadowColor: colors.COLOR_BLACK,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.08,
         shadowRadius: 8,

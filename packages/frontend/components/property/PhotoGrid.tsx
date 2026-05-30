@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     borderRadius: radius.photo,
     overflow: 'hidden',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
   },
   grid: {
     flexDirection: 'row',

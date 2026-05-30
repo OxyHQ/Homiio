@@ -318,7 +318,7 @@ export const HostCalendarGrid: React.FC<HostCalendarGridProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderRadius: 16,
     padding: 16,
     gap: 8,
@@ -362,13 +362,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.COLOR_BLACK_LIGHT_8,
   },
   dayCellConfirmed: {
-    backgroundColor: '#22c55e',
+    backgroundColor: colors.success,
   },
   dayCellPending: {
-    backgroundColor: '#f59e0b',
+    backgroundColor: colors.warning,
   },
   dayCellBlocked: {
-    backgroundColor: '#ef4444',
+    backgroundColor: colors.error,
   },
   dayCellSelected: {
     borderColor: colors.primaryColor,
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_5,
   },
   dayTextOnOverlay: {
-    color: '#ffffff',
+    color: colors.white,
     fontWeight: '700',
   },
   dayTextSelected: {
@@ -409,13 +409,13 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   legendConfirmed: {
-    backgroundColor: '#22c55e',
+    backgroundColor: colors.success,
   },
   legendPending: {
-    backgroundColor: '#f59e0b',
+    backgroundColor: colors.warning,
   },
   legendBlocked: {
-    backgroundColor: '#ef4444',
+    backgroundColor: colors.error,
   },
   legendLabel: {
     fontSize: 12,

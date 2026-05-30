@@ -499,7 +499,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderRadius: 16,
     padding: 16,
     width: '100%',
@@ -607,7 +607,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   daySelectedText: {
-    color: '#ffffff',
+    color: colors.white,
     fontSize: 14,
     fontWeight: '700',
   },

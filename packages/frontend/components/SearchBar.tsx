@@ -257,7 +257,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
               accessibilityRole="button"
               accessibilityLabel={t('searchBar.search', 'Search') || 'Search'}
             >
-              <Ionicons name="search" size={20} color="#ffffff" />
+              <Ionicons name="search" size={20} color={colors.white} />
             </Pressable>
           ) : null}
         </View>
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderRadius: radius.pill,
     borderWidth: hairline.width,
     borderColor: hairline.color,

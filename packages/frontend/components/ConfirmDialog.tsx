@@ -72,7 +72,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: colors.overlay,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderRadius: 16,
     padding: 20,
     gap: 12,
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   destructive: {
-    backgroundColor: '#dc2626',
+    backgroundColor: colors.danger,
   },
 });
 

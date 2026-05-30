@@ -5,6 +5,7 @@ import * as Location from 'expo-location';
 import { useMapState } from '@/context/MapStateContext';
 import { api, type ApiResponse } from '@/utils/api';
 import { buildMapDocument, DEFAULT_STYLE_URL } from './mapDocument';
+import { colors } from '@/styles/colors';
 import type {
   AddressData,
   ClusterLeaf,
@@ -119,8 +120,8 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
 
   // Memoize marker style configuration
   const markerStyleFinal = useMemo<Required<MarkerStyle>>(() => ({
-    chipBg: markerStyle?.chipBg ?? '#111827',
-    chipText: markerStyle?.chipText ?? '#FFFFFF',
+    chipBg: markerStyle?.chipBg ?? colors.COLOR_BLACK_LIGHT_1,
+    chipText: markerStyle?.chipText ?? colors.white,
     onMarkerZoom: markerStyle?.onMarkerZoom ?? 15.5,
   }), [markerStyle]);
 
@@ -129,8 +130,8 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     enabled: cluster?.enabled ?? true,
     radius: cluster?.radius ?? 40,
     maxZoom: cluster?.maxZoom ?? 17,
-    color: cluster?.color ?? '#3B82F6',
-    textColor: cluster?.textColor ?? '#FFFFFF'
+    color: cluster?.color ?? colors.info,
+    textColor: cluster?.textColor ?? colors.white
   }), [cluster]);
 
   // Get user location
@@ -496,7 +497,7 @@ const addressInstructionStyles = {
     zIndex: 1000,
   },
   text: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 14,
     textAlign: 'center' as const,
     fontWeight: '500' as const,

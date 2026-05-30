@@ -316,7 +316,7 @@ export function PropertyCard({
           {finalShowRating && propertyData.rating && !isGrid && (
             <View style={styles.ratingBadge}>
               <ThemedText style={styles.ratingBadgeText}>{propertyData.rating.toFixed(1)}</ThemedText>
-              <Ionicons name="star" size={12} color="#FFD700" />
+              <Ionicons name="star" size={12} color={colors.ratingStar} />
             </View>
           )}
 
@@ -325,22 +325,22 @@ export function PropertyCard({
           <>
             {/* Eco Badge */}
             {isEco && (
-              <View style={[styles.ecoBadge, styles.statusChip, { backgroundColor: '#e8f5e9' }]}>
-                <Ionicons name="leaf-outline" size={16} color="#4CAF50" />
+              <View style={[styles.ecoBadge, styles.statusChip, { backgroundColor: colors.successSubtle }]}>
+                <Ionicons name="leaf-outline" size={16} color={colors.success} />
               </View>
             )}
 
             {/* Verified Badge */}
             {showVerifiedBadge && propertyData.isVerified && (
               <View style={[styles.verifiedBadge, styles.statusChip, { backgroundColor: colors.primaryColor }]}>
-                <Ionicons name="shield-checkmark" size={14} color="#fff" />
+                <Ionicons name="shield-checkmark" size={14} color={colors.white} />
               </View>
             )}
 
             {/* Instant Book badge (vacation mode only) */}
             {showInstantBook && (
               <View style={styles.instantBookBadge}>
-                <Ionicons name="flash" size={12} color="#fff" />
+                <Ionicons name="flash" size={12} color={colors.white} />
                 <ThemedText style={styles.instantBookBadgeText}>Instant book</ThemedText>
               </View>
             )}
@@ -351,7 +351,7 @@ export function PropertyCard({
                 <Ionicons
                   name={(propertyData.type === 'house' ? 'home-outline' : 'business-outline') as IoniconName}
                   size={16}
-                  color="#fff"
+                  color={colors.white}
                 />
               </View>
             )}
@@ -696,13 +696,13 @@ const styles = StyleSheet.create({
   instantBookBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#ffffff',
+    color: colors.white,
     letterSpacing: 0.2,
   },
   sourceBadgeText: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#ffffff',
+    color: colors.white,
     textTransform: 'capitalize',
   },
   ratingBadge: {
@@ -718,7 +718,7 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     ...(Platform.OS === 'web'
       ? { boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }
-      : { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }),
+      : { shadowColor: colors.COLOR_BLACK, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }),
     justifyContent: 'center',
   },
   ratingBadgeText: {
@@ -731,7 +731,7 @@ const styles = StyleSheet.create({
   // Note styles (shared)
   noteContainer: {
     marginTop: spacing.sm,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderRadius: 12,
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
@@ -739,7 +739,7 @@ const styles = StyleSheet.create({
     borderColor: colors.COLOR_BLACK_LIGHT_6,
     ...(Platform.OS === 'web'
       ? { boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }
-      : { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 }),
+      : { shadowColor: colors.COLOR_BLACK, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 }),
   },
   noteEmpty: {
     backgroundColor: colors.COLOR_BLACK_LIGHT_8,

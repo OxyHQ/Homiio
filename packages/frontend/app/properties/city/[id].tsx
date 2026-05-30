@@ -424,7 +424,7 @@ export default function CityPropertiesPage() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.surface,
   },
   container: {
     flex: 1,
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.surface,
   },
   loadingText: {
     marginTop: 16,
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.white,
     marginBottom: 4,
   },
   heroSubtitle: {
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
     paddingRight: 20,
   },
   neighborhoodPill: {
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 25,
@@ -559,7 +559,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 20,
     shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 1 },
@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 16,
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 25,
     marginRight: 12,
     shadowColor: colors.shadow,
@@ -607,7 +607,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   activeFilterChipText: {
-    color: 'white',
+    color: colors.white,
   },
 
   // Properties List
@@ -615,7 +615,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   propertyCard: {
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 16,
     overflow: 'hidden',
     shadowColor: colors.shadow,

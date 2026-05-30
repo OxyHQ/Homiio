@@ -152,7 +152,9 @@ export const savedPropertiesUtils = {
    * Generate folder color from name (deterministic)
    */
   generateFolderColor: (name: string): string => {
-    const colors = [
+    // Curated folder-swatch palette (distinct selectable colors, not Bloom
+    // theme tokens) used to deterministically tint folders by name.
+    const folderSwatches = [
       '#3B82F6', '#EF4444', '#10B981', '#F59E0B',
       '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16',
       '#F97316', '#6366F1', '#14B8A6', '#F43F5E'
@@ -164,7 +166,7 @@ export const savedPropertiesUtils = {
       hash = hash & hash; // Convert to 32bit integer
     }
     
-    return colors[Math.abs(hash) % colors.length];
+    return folderSwatches[Math.abs(hash) % folderSwatches.length];
   },
 } as const;
 

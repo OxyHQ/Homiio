@@ -94,7 +94,7 @@ export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ propertyId }) =>
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderRadius: 16,
     padding: 16,
     gap: 8,

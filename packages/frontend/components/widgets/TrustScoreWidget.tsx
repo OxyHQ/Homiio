@@ -49,11 +49,11 @@ export const TrustScoreWidget = React.memo(function TrustScoreWidget() {
 
   // Helper function to get color based on score percentage
   const getScoreColor = useCallback((score: number) => {
-    if (score >= 90) return '#4CAF50';
-    if (score >= 70) return '#8BC34A';
-    if (score >= 50) return '#FFC107';
-    if (score >= 30) return '#FF9800';
-    return '#F44336';
+    if (score >= 90) return colors.success;
+    if (score >= 70) return colors.success;
+    if (score >= 50) return colors.warning;
+    if (score >= 30) return colors.warning;
+    return colors.danger;
   }, []);
 
   // Memoize loading content

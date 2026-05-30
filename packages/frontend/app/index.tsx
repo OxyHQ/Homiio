@@ -3,8 +3,8 @@
  * strongly-spaced, image-heavy merchandising beats:
  *
  *   1. Hero canvas (Barcelona-flavored full-bleed photo, gradient
- *      overlay, hero pill SearchBar floats centered on web / sits below
- *      on mobile).
+ *      overlay, collapsed SearchSummaryBar pill floats centered on web /
+ *      sits below on mobile and opens the expanding SearchPanel).
  *   2. Sticky category strip (web only) with primary-colored active
  *      state.
  *   3. Property carousel — recommended for you.
@@ -47,7 +47,7 @@ import * as Location from 'expo-location';
 
 import { H1, P } from '@oxyhq/bloom/typography';
 
-import type { Property } from '@homiio/shared-types';
+import { RentMode, type Property } from '@homiio/shared-types';
 
 // Real data hooks
 import { useProperties } from '@/hooks';
@@ -60,7 +60,10 @@ import { useRentalMode } from '@/context/RentalModeContext';
 import { PropertyCard } from '@/components/PropertyCard';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';
 import { HomeCategoryStrip } from '@/components/HomeCategoryStrip';
-import { SearchBar } from '@/components/SearchBar';
+import { SearchSummaryBar } from '@/components/search/SearchSummaryBar';
+import { SearchPanel } from '@/components/search/SearchPanel';
+import type { SearchQuery } from '@/components/search/types';
+import { useSearchQueryStore } from '@/store/searchQueryStore';
 import {
   CityShowcaseSection,
   type CityShowcaseItem,
@@ -184,6 +187,34 @@ export default function HomePage() {
   // on-demand overlay drawer, so the hero needs a way to open it.
   const isScreenNotMobile = useIsScreenNotMobile();
   const openMobileDrawer = useUIStore((s) => s.openMobileDrawer);
+
+  // Active search query (source of truth shared with the results route). The
+  // hero pill renders this collapsed; the expanding panel edits a draft of it.
+  const activeQuery = useSearchQueryStore((s) => s.query);
+  const [searchPanelOpen, setSearchPanelOpen] = useState(false);
+
+  // Seed the panel from the active query, overriding the rental mode with the
+  // user's current selection so opening the hero search respects the
+  // Long-term/Vacation toggle they last picked.
+  const heroSearchSeed = useMemo<SearchQuery>(
+    () => ({
+      ...activeQuery,
+      rentMode: mode === 'vacation' ? RentMode.VACATION : RentMode.LONG_TERM,
+    }),
+    [activeQuery, mode],
+  );
+
+  const handleOpenSearchPanel = useCallback(() => setSearchPanelOpen(true), []);
+  const handleCloseSearchPanel = useCallback(() => setSearchPanelOpen(false), []);
+
+  const handleSubmitSearch = useCallback(
+    (query: SearchQuery) => {
+      useSearchQueryStore.getState().setQuery(query);
+      setSearchPanelOpen(false);
+      router.push('/search');
+    },
+    [router],
+  );
 
   // Get user location on mount. Foreground permissions are an explicit
   // side effect — `useEffect` is the correct primitive.
@@ -409,16 +440,40 @@ export default function HomePage() {
 
             {isWide ? (
               <View style={styles.searchPillSlotWeb}>
-                <SearchBar />
+                <SearchSummaryBar
+                  query={activeQuery}
+                  onPress={handleOpenSearchPanel}
+                />
+                {searchPanelOpen ? (
+                  <View style={styles.searchPanelAnchor}>
+                    <SearchPanel
+                      open={searchPanelOpen}
+                      onClose={handleCloseSearchPanel}
+                      initialQuery={heroSearchSeed}
+                      onSubmit={handleSubmitSearch}
+                    />
+                  </View>
+                ) : null}
               </View>
             ) : null}
           </View>
         </View>
 
-        {/* Mobile-only search pill */}
+        {/* Mobile-only search pill. The panel itself renders as a full-screen
+            modal on narrow screens (breakpoint-driven inside SearchPanel), so a
+            single mount here covers the whole mobile flow. */}
         {!isWide ? (
           <View style={styles.searchPillSlotMobile}>
-            <SearchBar />
+            <SearchSummaryBar
+              query={activeQuery}
+              onPress={handleOpenSearchPanel}
+            />
+            <SearchPanel
+              open={searchPanelOpen}
+              onClose={handleCloseSearchPanel}
+              initialQuery={heroSearchSeed}
+              onSubmit={handleSubmitSearch}
+            />
           </View>
         ) : null}
 
@@ -615,7 +670,7 @@ const createStyles = (
     heroTitle: {
       fontSize: isXL ? 56 : isWide ? 44 : 34,
       lineHeight: isXL ? 60 : isWide ? 48 : 38,
-      color: '#ffffff',
+      color: colors.white,
       fontWeight: '700',
       letterSpacing: tracker.tight,
       textAlign: isWide ? 'center' : 'left',
@@ -625,7 +680,7 @@ const createStyles = (
     heroSubtitle: {
       fontSize: isWide ? 18 : 16,
       lineHeight: isWide ? 26 : 22,
-      color: '#ffffff',
+      color: colors.white,
       opacity: 0.92,
       textAlign: isWide ? 'center' : 'left',
       marginBottom: spacing['2xl'],
@@ -635,6 +690,16 @@ const createStyles = (
       width: '100%',
       maxWidth: 880,
       marginTop: spacing.lg,
+      position: 'relative',
+      zIndex: 20,
+    },
+    searchPanelAnchor: {
+      position: 'absolute',
+      top: '100%',
+      left: 0,
+      right: 0,
+      marginTop: spacing.md,
+      zIndex: 30,
     },
     searchPillSlotMobile: {
       width: '100%',

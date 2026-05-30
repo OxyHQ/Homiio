@@ -4,7 +4,7 @@
  */
 
 const { horizonService } = require('../services');
-const { successResponse, paginationResponse, AppError } = require('../middlewares/errorHandler');
+const { successResponse, paginationResponse } = require('../middlewares/errorHandler');
 const { logger } = require('../middlewares/logging');
 
 class NotificationController {

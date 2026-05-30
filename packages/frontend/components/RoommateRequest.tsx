@@ -87,13 +87,13 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'accepted':
-        return '#00C853'; // Green for success
+        return colors.success; // Green for success
       case 'declined':
-        return '#FF3B30'; // Red for error
+        return colors.danger; // Red for error
       case 'expired':
         return colors.COLOR_BLACK_LIGHT_5;
       default:
-        return '#FFCC00'; // Yellow for warning
+        return colors.warning; // Yellow for warning
     }
   };
 

@@ -195,14 +195,14 @@ export default function SubscriptionsScreen() {
                 <View style={[styles.card, styles.highlightedCard]}>
                     {plusActive && (
                         <View style={styles.activeBadge}>
-                            <Icon name="checkmark-circle" size={16} color="#fff" />
+                            <Icon name="checkmark-circle" size={16} color={colors.white} />
                             <Text style={styles.activeBadgeText}>Active subscription</Text>
                         </View>
                     )}
 
                     {plusCanceledAt && !plusActive && (
                         <View style={styles.canceledBadge}>
-                            <Icon name="close-circle" size={16} color="#fff" />
+                            <Icon name="close-circle" size={16} color={colors.white} />
                             <Text style={styles.canceledBadgeText}>Canceled on {formatDate(plusCanceledAt)}</Text>
                         </View>
                     )}
@@ -221,15 +221,15 @@ export default function SubscriptionsScreen() {
 
                     <View style={styles.featuresList}>
                         <View style={styles.featureItem}>
-                            <Icon name="checkmark-circle" size={16} color="#10b981" />
+                            <Icon name="checkmark-circle" size={16} color={colors.success} />
                             <Text style={styles.featureText}>Unlimited contract history</Text>
                         </View>
                         <View style={styles.featureItem}>
-                            <Icon name="checkmark-circle" size={16} color="#10b981" />
+                            <Icon name="checkmark-circle" size={16} color={colors.success} />
                             <Text style={styles.featureText}>Legal alerts & notifications</Text>
                         </View>
                         <View style={styles.featureItem}>
-                            <Icon name="checkmark-circle" size={16} color="#10b981" />
+                            <Icon name="checkmark-circle" size={16} color={colors.success} />
                             <Text style={styles.featureText}>Priority support</Text>
                         </View>
                     </View>
@@ -299,14 +299,14 @@ export default function SubscriptionsScreen() {
                             <View style={{ marginTop: 16 }}>
                                 <Text style={[styles.debugText, { marginBottom: 8 }]}>Test Cancellation:</Text>
                                 <TouchableOpacity
-                                    style={[styles.primaryBtn, { marginBottom: 8, backgroundColor: '#dc2626' }]}
+                                    style={[styles.primaryBtn, { marginBottom: 8, backgroundColor: colors.danger }]}
                                     onPress={() => handleCancelSubscription(false)}
                                 >
                                     <Text style={styles.primaryBtnText}>Cancel at Period End</Text>
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
-                                    style={[styles.primaryBtn, { backgroundColor: '#dc2626' }]}
+                                    style={[styles.primaryBtn, { backgroundColor: colors.danger }]}
                                     onPress={() => handleCancelSubscription(true)}
                                 >
                                     <Text style={styles.primaryBtnText}>Cancel Immediately</Text>
@@ -316,7 +316,7 @@ export default function SubscriptionsScreen() {
 
                         {/* Sync Subscription Button */}
                         <TouchableOpacity
-                            style={[styles.primaryBtn, { marginTop: 8, backgroundColor: '#3b82f6' }]}
+                            style={[styles.primaryBtn, { marginTop: 8, backgroundColor: colors.info }]}
                             onPress={handleSyncSubscription}
                         >
                             <Text style={styles.primaryBtnText}>Sync from Stripe</Text>
@@ -324,7 +324,7 @@ export default function SubscriptionsScreen() {
 
                         {/* Debug Subscription Button */}
                         <TouchableOpacity
-                            style={[styles.primaryBtn, { marginTop: 8, backgroundColor: '#8b5cf6' }]}
+                            style={[styles.primaryBtn, { marginTop: 8, backgroundColor: colors.primaryColor }]}
                             onPress={async () => {
                                 try {
                                     const response = await api.get('/api/billing/debug-subscription');
@@ -352,7 +352,7 @@ export default function SubscriptionsScreen() {
                 {/* Navigation */}
                 <View style={styles.navRow}>
                     <TouchableOpacity style={styles.linkBtn} onPress={() => router.back()}>
-                        <Icon name="chevron-back" size={18} color="#111b21" />
+                        <Icon name="chevron-back" size={18} color={colors.text} />
                         <Text style={styles.linkBtnText}>Back</Text>
                     </TouchableOpacity>
                 </View>
@@ -362,7 +362,7 @@ export default function SubscriptionsScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fafbfc' },
+    container: { flex: 1, backgroundColor: colors.surface },
     scrollView: { flex: 1 },
     header: {
         paddingHorizontal: 16,
@@ -381,26 +381,26 @@ const styles = StyleSheet.create({
         top: -2,
         right: -2
     },
-    headerTitle: { fontSize: 28, fontWeight: '800', color: '#111b21', marginBottom: 8 },
-    headerSubtitle: { fontSize: 16, color: '#6b7280', lineHeight: 22, textAlign: 'center' },
+    headerTitle: { fontSize: 28, fontWeight: '800', color: colors.text, marginBottom: 8 },
+    headerSubtitle: { fontSize: 16, color: colors.muted, lineHeight: 22, textAlign: 'center' },
     introText: {
-        color: '#6b7280',
+        color: colors.muted,
         fontSize: 15,
         lineHeight: 22,
         textAlign: 'center'
     },
     card: {
-        backgroundColor: '#fff',
+        backgroundColor: colors.white,
         margin: 16,
         padding: 20,
         borderRadius: 12,
         borderWidth: 0.5,
-        borderColor: '#eaeaea'
+        borderColor: colors.border
     },
     highlightedCard: {
         borderColor: colors.primaryColor,
         borderWidth: 2,
-        backgroundColor: '#fef2f2'
+        backgroundColor: colors.dangerSubtle
     },
     activeBadge: {
         flexDirection: 'row',
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
         alignSelf: 'flex-start'
     },
     activeBadgeText: {
-        color: '#fff',
+        color: colors.white,
         fontSize: 12,
         fontWeight: '700',
         marginLeft: 8
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     canceledBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#dc2626', // Red for canceled
+        backgroundColor: colors.danger, // Red for canceled
         paddingVertical: 6,
         paddingHorizontal: 12,
         borderRadius: 20,
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
         alignSelf: 'flex-start'
     },
     canceledBadgeText: {
-        color: '#fff',
+        color: colors.white,
         fontSize: 12,
         fontWeight: '700',
         marginLeft: 8
@@ -441,10 +441,10 @@ const styles = StyleSheet.create({
         gap: 12
     },
     cardTitleContainer: { flex: 1 },
-    cardTitle: { fontSize: 20, fontWeight: '700', color: '#111b21' },
+    cardTitle: { fontSize: 20, fontWeight: '700', color: colors.text },
     cardPrice: { fontSize: 16, fontWeight: '600', color: colors.primaryColor, marginTop: 2 },
     cardDesc: {
-        color: '#6b7280',
+        color: colors.muted,
         marginBottom: 16,
         lineHeight: 20,
         fontSize: 15
@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 8
     },
-    featureText: { color: '#374151', fontSize: 14 },
+    featureText: { color: colors.COLOR_BLACK_LIGHT_3, fontSize: 14 },
     primaryBtn: {
         backgroundColor: colors.primaryColor,
         paddingVertical: 16,
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     primaryBtnText: {
-        color: '#fff',
+        color: colors.white,
         fontWeight: '700',
         fontSize: 16
     },
@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         borderRadius: 12,
         alignItems: 'center',
-        backgroundColor: '#fff'
+        backgroundColor: colors.white
     },
     secondaryBtnText: {
         color: colors.primaryColor,
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     footerText: {
-        color: '#6b7280',
+        color: colors.muted,
         fontSize: 13,
         lineHeight: 18,
         textAlign: 'center'
@@ -500,31 +500,31 @@ const styles = StyleSheet.create({
         marginBottom: 16
     },
     debugLinkText: {
-        color: '#6b7280',
+        color: colors.muted,
         fontSize: 14,
         textDecorationLine: 'underline'
     },
     debugSection: {
-        backgroundColor: '#f0f0f0',
+        backgroundColor: colors.COLOR_BLACK_LIGHT_6,
         padding: 16,
         borderRadius: 8,
         marginHorizontal: 16,
         marginBottom: 16,
         borderWidth: 0.5,
-        borderColor: '#e0e0e0'
+        borderColor: colors.border
     },
     debugTitle: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#333',
+        color: colors.COLOR_BLACK_LIGHT_3,
         marginBottom: 8
     },
     debugText: {
         fontSize: 14,
-        color: '#555',
+        color: colors.muted,
         marginBottom: 4
     },
     navRow: { padding: 16, flexDirection: 'row' },
     linkBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    linkBtnText: { color: '#111b21', fontWeight: '600' },
+    linkBtnText: { color: colors.text, fontWeight: '600' },
 });

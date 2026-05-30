@@ -103,7 +103,7 @@ export default function SharedConversationView() {
           end={{ x: 1, y: 1 }}
         >
           <View style={styles.errorContent}>
-            <Ionicons name="alert-circle" size={48} color="white" />
+            <Ionicons name="alert-circle" size={48} color={colors.white} />
             <Text style={styles.errorText}>{error}</Text>
             <Text style={styles.errorSubtext}>{t('sindi.shared.error.description')}</Text>
           </View>
@@ -165,7 +165,7 @@ export default function SharedConversationView() {
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
-          <Ionicons name="share-outline" size={16} color="white" />
+          <Ionicons name="share-outline" size={16} color={colors.white} />
           <Text style={styles.sharedBadgeText}>{t('sindi.shared.badge')}</Text>
         </LinearGradient>
       </View>
@@ -184,7 +184,7 @@ export default function SharedConversationView() {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <SindiIcon size={48} color="white" />
+              <SindiIcon size={48} color={colors.white} />
               <Text style={styles.emptyTitle}>{t('sindi.shared.empty.title')}</Text>
               <Text style={styles.emptySubtitle}>{t('sindi.shared.empty.subtitle')}</Text>
             </LinearGradient>
@@ -240,7 +240,7 @@ export default function SharedConversationView() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.surface,
   },
   loadingContainer: {
     flex: 1,
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
   },
   sharedBadgeText: {
     fontSize: 12,
-    color: 'white',
+    color: colors.white,
     fontWeight: '500',
     marginLeft: 4,
   },
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.white,
     marginTop: 16,
     marginBottom: 8,
   },
@@ -325,23 +325,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryColor,
   },
   assistantBubble: {
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: colors.border,
   },
   messageText: {
     fontSize: 16,
     lineHeight: 22,
   },
   userText: {
-    color: 'white',
+    color: colors.white,
   },
   assistantText: {
-    color: '#2c3e50',
+    color: colors.COLOR_BLACK_LIGHT_2,
   },
   messageTime: {
     fontSize: 12,
-    color: '#95a5a6',
+    color: colors.textTertiary,
     marginTop: 4,
     marginHorizontal: 8,
   },
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 12,
-    color: 'white',
+    color: colors.white,
     textAlign: 'center',
   },
   errorContainer: {
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.white,
     marginTop: 16,
     marginBottom: 8,
   },

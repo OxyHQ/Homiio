@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   title: {
-    color: '#ffffff',
+    color: colors.white,
     fontWeight: '700',
     letterSpacing: tracker.tight,
     maxWidth: 520,

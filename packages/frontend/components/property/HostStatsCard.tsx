@@ -107,7 +107,7 @@ export const HostStatsCard: React.FC<HostStatsCardProps> = ({
     return (
       <View style={[styles.card, withShadow('md')]}>
         <View style={styles.governmentAvatar}>
-          <Ionicons name="library" size={28} color="#ffffff" />
+          <Ionicons name="library" size={28} color={colors.white} />
         </View>
         <View style={styles.body}>
           <H3 style={styles.name}>
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.lg,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderRadius: radius.lg,
     padding: spacing.xl,
     marginHorizontal: spacing.lg,
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#1E40AF',
+    backgroundColor: colors.governmentBadge,
     alignItems: 'center',
     justifyContent: 'center',
   },

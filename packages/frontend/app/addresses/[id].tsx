@@ -303,7 +303,7 @@ const ContentTabSwitcher: React.FC<ContentTabSwitcherProps> = ({
           <Ionicons
             name={tab.icon}
             size={16}
-            color={active ? '#ffffff' : colors.COLOR_BLACK_LIGHT_2}
+            color={active ? colors.white : colors.COLOR_BLACK_LIGHT_2}
           />
           <BloomText
             style={[styles.tabPillLabel, active && styles.tabPillLabelActive]}
@@ -672,7 +672,7 @@ export default function AddressDetailsPage() {
                     <Ionicons
                       name="create-outline"
                       size={16}
-                      color="#ffffff"
+                      color={colors.white}
                     />
                   }
                 >
@@ -798,7 +798,7 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_2,
   },
   tabPillLabelActive: {
-    color: '#ffffff',
+    color: colors.white,
   },
   propertiesList: {
     gap: spacing.md,
@@ -835,7 +835,7 @@ const styles = StyleSheet.create({
     color: colors.muted,
   },
   reviewTabLabelActive: {
-    color: '#ffffff',
+    color: colors.white,
   },
   reviewsList: {
     gap: spacing.md,

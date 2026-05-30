@@ -377,10 +377,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     roomCard: {
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.white,
         borderRadius: 12,
         marginBottom: 16,
-        shadowColor: '#000',
+        shadowColor: colors.COLOR_BLACK,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
         height: '100%',
     },
     placeholderImage: {
-        backgroundColor: '#f3f4f6',
+        backgroundColor: colors.mutedSubtle,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
     },
     matchScoreText: {
-        color: '#ffffff',
+        color: colors.white,
         fontSize: 12,
         fontWeight: '600',
     },

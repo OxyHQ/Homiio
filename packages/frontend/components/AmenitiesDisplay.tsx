@@ -5,6 +5,9 @@ import { ThemedText } from '@/components/ThemedText';
 import { colors } from '@/styles/colors';
 import { getAmenityById } from '@/constants/amenities';
 
+// Distinct indigo accent for the "accessibility" amenity category so it reads
+// apart from the green essential/eco chips. Category accent, not a Bloom token.
+const ACCESSIBILITY_ACCENT = '#6366f1';
 
 type AmenitiesDisplayProps = {
   amenities: string[];
@@ -57,11 +60,11 @@ export function AmenitiesDisplay({
                   size={16}
                   color={
                     amenityConfig.accessibility
-                      ? '#6366f1'
+                      ? ACCESSIBILITY_ACCENT
                       : amenityConfig.essential
-                        ? '#059669'
+                        ? colors.success
                         : amenityConfig.environmental === 'positive'
-                          ? '#16a34a'
+                          ? colors.success
                           : colors.primaryColor
                   }
                   style={styles.amenityChipIcon}
@@ -113,16 +116,18 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   essentialChip: {
-    backgroundColor: '#f0f9ff',
-    borderColor: '#059669',
+    backgroundColor: colors.successSubtle,
+    borderColor: colors.success,
   },
+  // Accessibility amenities use a distinct indigo category accent (not a Bloom
+  // status token) so they read apart from the green essential/eco chips.
   accessibilityChip: {
     backgroundColor: '#f5f3ff',
-    borderColor: '#6366f1',
+    borderColor: ACCESSIBILITY_ACCENT,
   },
   ecoChip: {
-    backgroundColor: '#f0fdf4',
-    borderColor: '#16a34a',
+    backgroundColor: colors.successSubtle,
+    borderColor: colors.success,
   },
   amenityChipIcon: {
     marginRight: 4,
@@ -132,22 +137,22 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
   },
   essentialChipText: {
-    color: '#059669',
+    color: colors.success,
     fontWeight: '600',
   },
   accessibilityChipText: {
-    color: '#6366f1',
+    color: ACCESSIBILITY_ACCENT,
     fontWeight: '600',
   },
   ecoChipText: {
-    color: '#16a34a',
+    color: colors.success,
     fontWeight: '600',
   },
   includedDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#059669',
+    backgroundColor: colors.success,
     marginLeft: 4,
   },
   emptyContainer: {

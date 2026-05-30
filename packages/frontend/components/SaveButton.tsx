@@ -27,7 +27,7 @@
  *   property={propertyObject} 
  *   showCount={true}
  *   countDisplayMode="badge"
- *   countBadgeStyle={{ backgroundColor: '#ff0000' }}
+ *   countBadgeStyle={{ backgroundColor: colors.danger }}
  * />
  * ```
  */
@@ -75,8 +75,8 @@ export function SaveButton({
   style,
   disabled = false,
   variant = 'heart',
-  color = '#ccc',
-  activeColor = '#EF4444',
+  color = colors.border,
+  activeColor = colors.error,
   showLoading = true,
   isLoading = false,
   // Only need the property object
@@ -316,7 +316,7 @@ export function SaveButton({
         >
           <ThemedText
             style={{
-              color: '#fff',
+              color: colors.white,
               fontSize: 10,
               fontWeight: 'bold',
               textAlign: 'center',
@@ -333,7 +333,7 @@ export function SaveButton({
 const webShadow = Platform.select({
   web: { boxShadow: '0 2px 8px rgba(0,0,0,0.08)' },
   default: {
-    shadowColor: '#000',
+    shadowColor: colors.COLOR_BLACK,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,

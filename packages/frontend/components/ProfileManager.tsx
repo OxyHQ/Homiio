@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useProfile } from '@/hooks/useProfile';
 import { useOxy } from '@oxyhq/services';
+import { colors } from '@/styles/colors';
 import {
   CreateProfileData,
   UpdateProfileData,
@@ -292,7 +293,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.surface,
   },
   title: {
     fontSize: 24,
@@ -303,12 +304,12 @@ const styles = StyleSheet.create({
   message: {
     fontSize: 16,
     textAlign: 'center',
-    color: '#666',
+    color: colors.muted,
   },
   selector: {
     flexDirection: 'row',
     marginBottom: 20,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderRadius: 8,
     padding: 4,
   },
@@ -320,18 +321,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   selectorButtonActive: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primaryColor,
   },
   selectorButtonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#666',
+    color: colors.muted,
   },
   selectorButtonTextActive: {
-    color: '#fff',
+    color: colors.white,
   },
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderRadius: 8,
     padding: 16,
     marginBottom: 16,
@@ -344,10 +345,10 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 14,
     marginBottom: 4,
-    color: '#333',
+    color: colors.COLOR_BLACK_LIGHT_3,
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primaryColor,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 25,
@@ -355,13 +356,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   buttonSecondary: {
-    backgroundColor: '#34C759',
+    backgroundColor: colors.success,
   },
   buttonDanger: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: colors.danger,
   },
   buttonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '500',
   },
@@ -371,6 +372,6 @@ const styles = StyleSheet.create({
   detailText: {
     fontSize: 14,
     marginBottom: 4,
-    color: '#666',
+    color: colors.muted,
   },
 });

@@ -23,10 +23,10 @@ export function InsightsSkeleton() {
             key={index}
             style={{
               flex: 1,
-              backgroundColor: 'white',
+              backgroundColor: colors.white,
               padding: 16,
               borderRadius: 12,
-              shadowColor: '#000',
+              shadowColor: colors.COLOR_BLACK,
               shadowOffset: { width: 0, height: 2 },
               shadowOpacity: 0.1,
               shadowRadius: 4,
@@ -43,10 +43,10 @@ export function InsightsSkeleton() {
       <View style={{ marginHorizontal: 16, marginBottom: 24 }}>
         <View
           style={{
-            backgroundColor: 'white',
+            backgroundColor: colors.white,
             padding: 20,
             borderRadius: 12,
-            shadowColor: '#000',
+            shadowColor: colors.COLOR_BLACK,
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.1,
             shadowRadius: 4,
@@ -65,11 +65,11 @@ export function InsightsSkeleton() {
           <View
             key={index}
             style={{
-              backgroundColor: 'white',
+              backgroundColor: colors.white,
               borderRadius: 12,
               marginBottom: 12,
               overflow: 'hidden',
-              shadowColor: '#000',
+              shadowColor: colors.COLOR_BLACK,
               shadowOffset: { width: 0, height: 2 },
               shadowOpacity: 0.1,
               shadowRadius: 4,

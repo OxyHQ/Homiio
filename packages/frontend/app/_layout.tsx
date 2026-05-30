@@ -99,7 +99,7 @@ export default function RootLayout() {
       ...(isScreenNotMobile ? {
         borderLeftWidth: 0.5,
         borderRightWidth: 0.5,
-        borderColor: '#0d0d0d0d',
+        borderColor: colors.border,
       } : {}),
       backgroundColor: colors.primaryLight,
     },
@@ -182,7 +182,7 @@ export default function RootLayout() {
     <View style={{ flex: 1 }}>
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <GestureHandlerRootView style={{ flex: 1 }}>
-          <BloomThemeProvider fonts onFontsLoading={<AppSplashScreen />}>
+          <BloomThemeProvider colorPreset="blue" fonts onFontsLoading={<AppSplashScreen />}>
           {!appIsReady ? (
             <AppSplashScreen
               startFade={splashState.startFade}

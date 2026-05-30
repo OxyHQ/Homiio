@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 
 import { H1, H2, P, Text } from '@oxyhq/bloom/typography';
+import { colors } from '@/styles/colors';
 
 export type ThemedTextType =
   | 'default'
@@ -51,7 +52,7 @@ const typeStyles = StyleSheet.create({
   link: {
     fontSize: 16,
     lineHeight: 30,
-    color: '#0a7ea4',
+    color: colors.linkColor,
   },
 });
 

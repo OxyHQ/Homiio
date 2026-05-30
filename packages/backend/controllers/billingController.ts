@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import config from '../config';
-const { Profile, Billing } = require('../models');
+const { Billing } = require('../models');
 
 // Lazy require Stripe to avoid hard crash if not configured
 function getStripe() {

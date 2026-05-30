@@ -6,6 +6,7 @@
 import { useCallback, useMemo } from 'react';
 import { useSavedProperties } from '@/context/SavedPropertiesProvider';
 import type { SavedProperty, SavePropertyOperation } from '@/types/savedProperties';
+import { colors } from '@/styles/colors';
 
 /**
  * Hook for quick property save/unsave operations
@@ -88,7 +89,7 @@ export function useFolderOperations() {
     return await createFolder({
       name,
       description: options?.description,
-      color: options?.color || '#3B82F6', // Default blue
+      color: options?.color || colors.info, // Default blue
       icon: options?.icon || 'folder',
     });
   }, [createFolder]);

@@ -668,7 +668,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   propertyCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderRadius: 16,
     padding: 16,
     gap: 4,
@@ -691,7 +691,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   section: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderRadius: 16,
     padding: 16,
     gap: 12,

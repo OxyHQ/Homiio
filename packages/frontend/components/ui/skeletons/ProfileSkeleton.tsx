@@ -86,11 +86,11 @@ export function ProfileSkeleton({ showHeader = true, showActions = true }: Profi
             <View
               key={index}
               style={{
-                backgroundColor: 'white',
+                backgroundColor: colors.white,
                 padding: 16,
                 borderRadius: 8,
                 marginBottom: 12,
-                shadowColor: '#000',
+                shadowColor: colors.COLOR_BLACK,
                 shadowOffset: { width: 0, height: 1 },
                 shadowOpacity: 0.1,
                 shadowRadius: 3,

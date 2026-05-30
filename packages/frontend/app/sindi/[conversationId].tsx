@@ -313,7 +313,7 @@ export default function ConversationDetail() {
   return (
     <SafeAreaView style={[styles.container, (webStyles as any).container]}>
       <LinearGradient
-        colors={["#ffffff", `${colors.primaryColor}40`]}
+        colors={[colors.white, `${colors.primaryColor}40`]}
         style={styles.backgroundGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -1005,7 +1005,7 @@ export function ChatContent({
           end={{ x: 1, y: 1 }}
         >
           <View style={styles.errorContent}>
-            <Ionicons name="alert-circle" size={48} color="white" />
+            <Ionicons name="alert-circle" size={48} color={colors.white} />
             <Text style={styles.errorText}>{t('sindi.errors.connection')}</Text>
             <Text style={styles.errorSubtext}>{t('sindi.errors.connectionMessage')}</Text>
           </View>
@@ -1434,13 +1434,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111b21',
+    color: colors.text,
     marginBottom: 6,
     textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#667781',
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
     paddingHorizontal: 8,
@@ -1458,9 +1458,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#f0f2f5',
+    backgroundColor: colors.mutedSubtle,
     borderWidth: 1,
-    borderColor: '#e9edef',
+    borderColor: colors.border,
     gap: 6,
   },
   suggestionText: {
@@ -1494,9 +1494,9 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 18,
   },
   assistantBubble: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: '#e9edef',
+    borderColor: colors.border,
     borderTopLeftRadius: 18,
   },
   timestampInBubble: { display: 'none' },
@@ -1508,16 +1508,16 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 1000,
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
+    borderTopColor: colors.border,
   },
   inputBar: {
-    backgroundColor: '#f0f2f5',
+    backgroundColor: colors.mutedSubtle,
     paddingHorizontal: 8,
     paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: '#e9edef',
+    borderTopColor: colors.border,
   },
   inputContainer: {
     paddingHorizontal: 8,
@@ -1526,13 +1526,13 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderRadius: 24,
     paddingHorizontal: 12,
     paddingVertical: 8,
     minHeight: 44,
     borderWidth: 1,
-    borderColor: '#e9edef',
+    borderColor: colors.border,
   },
   textInput: {
     flex: 1,
@@ -1540,7 +1540,7 @@ const styles = StyleSheet.create({
     maxHeight: 120,
     paddingVertical: 8,
     paddingHorizontal: 6,
-    color: '#111b21',
+    color: colors.text,
     lineHeight: 22,
   },
   sendButtonPlain: {
@@ -1571,7 +1571,7 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.white,
     marginTop: 16,
     marginBottom: 8,
   },
@@ -1619,19 +1619,19 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 6,
     borderLeftWidth: 3,
-    borderLeftColor: '#e9edef',
+    borderLeftColor: colors.border,
     paddingLeft: 8,
     fontStyle: 'italic',
   },
   userText: {
-    color: 'white',
+    color: colors.white,
   },
   assistantText: {
-    color: '#111b21',
+    color: colors.text,
   },
   link: {
     textDecorationLine: 'underline',
-    color: '#1b72e8',
+    color: colors.linkColor,
   },
   codeInline: {
     fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
@@ -1641,9 +1641,9 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   codeBlock: {
-    backgroundColor: '#f6f8fa',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#e9edef',
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 8,
     marginVertical: 6,
@@ -1661,11 +1661,11 @@ const styles = StyleSheet.create({
     marginBottom: 8, // More space before the bubble
     padding: 8,
     paddingBottom: 4,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#e9ecef',
-    shadowColor: '#000',
+    borderColor: colors.border,
+    shadowColor: colors.COLOR_BLACK,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -1680,7 +1680,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   filePreviewText: {
-    color: 'white',
+    color: colors.white,
     fontSize: 13,
     marginRight: 8,
   },
@@ -1693,7 +1693,7 @@ const styles = StyleSheet.create({
   },
   messageTime: {
     fontSize: 11,
-    color: '#8696a0',
+    color: colors.textTertiary,
     marginTop: 2,
     marginHorizontal: 8,
   },

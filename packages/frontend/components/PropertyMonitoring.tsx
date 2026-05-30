@@ -15,13 +15,18 @@ interface UtilityData {
   saving: string;
 }
 
+// Per-utility data-viz series color. Electricity reuses Bloom's `info`; water
+// uses a distinct cyan so the two chart series read apart (chart category color,
+// not a Bloom theme token).
+const WATER_CHART_COLOR = '#00BCD4';
+
 // Dummy data for the chart
 const mockElectricityData = {
   labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
   datasets: [
     {
       data: [90, 75, 82, 70, 65, 60],
-      color: () => '#2196F3',
+      color: () => colors.info,
       strokeWidth: 2,
     },
   ],
@@ -32,7 +37,7 @@ const mockWaterData = {
   datasets: [
     {
       data: [45, 38, 42, 36, 35, 30],
-      color: () => '#00BCD4',
+      color: () => WATER_CHART_COLOR,
       strokeWidth: 2,
     },
   ],
@@ -43,7 +48,7 @@ const mockGasData = {
   datasets: [
     {
       data: [120, 100, 105, 90, 85, 80],
-      color: () => '#FF9800',
+      color: () => colors.warning,
       strokeWidth: 2,
     },
   ],
@@ -74,7 +79,7 @@ export function PropertyMonitoring({
         return {
           data: mockElectricityData,
           icon: 'flash-outline',
-          color: '#2196F3',
+          color: colors.info,
           unit: 'kWh',
           current: 60,
           average: 85,
@@ -84,7 +89,7 @@ export function PropertyMonitoring({
         return {
           data: mockWaterData,
           icon: 'water-outline',
-          color: '#00BCD4',
+          color: WATER_CHART_COLOR,
           unit: 'm³',
           current: 30,
           average: 45,
@@ -94,7 +99,7 @@ export function PropertyMonitoring({
         return {
           data: mockGasData,
           icon: 'flame-outline',
-          color: '#FF9800',
+          color: colors.warning,
           unit: 'm³',
           current: 80,
           average: 110,
@@ -138,12 +143,12 @@ export function PropertyMonitoring({
           <Ionicons
             name="flash-outline"
             size={20}
-            color={selectedUtility === 'electricity' ? '#2196F3' : colors.primaryDark_1}
+            color={selectedUtility === 'electricity' ? colors.info : colors.primaryDark_1}
           />
           <Text
             style={[
               styles.utilitySelectorText,
-              selectedUtility === 'electricity' && { color: '#2196F3' },
+              selectedUtility === 'electricity' && { color: colors.info },
             ]}
           >
             Electricity
@@ -160,12 +165,12 @@ export function PropertyMonitoring({
           <Ionicons
             name="water-outline"
             size={20}
-            color={selectedUtility === 'water' ? '#00BCD4' : colors.primaryDark_1}
+            color={selectedUtility === 'water' ? WATER_CHART_COLOR : colors.primaryDark_1}
           />
           <Text
             style={[
               styles.utilitySelectorText,
-              selectedUtility === 'water' && { color: '#00BCD4' },
+              selectedUtility === 'water' && { color: WATER_CHART_COLOR },
             ]}
           >
             Water
@@ -182,10 +187,10 @@ export function PropertyMonitoring({
           <Ionicons
             name="flame-outline"
             size={20}
-            color={selectedUtility === 'gas' ? '#FF9800' : colors.primaryDark_1}
+            color={selectedUtility === 'gas' ? colors.warning : colors.primaryDark_1}
           />
           <Text
-            style={[styles.utilitySelectorText, selectedUtility === 'gas' && { color: '#FF9800' }]}
+            style={[styles.utilitySelectorText, selectedUtility === 'gas' && { color: colors.warning }]}
           >
             Gas
           </Text>
@@ -216,8 +221,8 @@ export function PropertyMonitoring({
         <View style={styles.statBox}>
           <Text style={styles.statLabel}>Savings</Text>
           <View style={styles.statValueContainer}>
-            <Ionicons name="trending-down-outline" size={24} color="#4CAF50" />
-            <Text style={[styles.statValue, { color: '#4CAF50' }]}>{utilityData.saving}</Text>
+            <Ionicons name="trending-down-outline" size={24} color={colors.success} />
+            <Text style={[styles.statValue, { color: colors.success }]}>{utilityData.saving}</Text>
           </View>
         </View>
       </View>
@@ -231,9 +236,9 @@ export function PropertyMonitoring({
           width={Dimensions.get('window').width - 40}
           height={180}
           chartConfig={{
-            backgroundColor: '#ffffff',
-            backgroundGradientFrom: '#ffffff',
-            backgroundGradientTo: '#ffffff',
+            backgroundColor: colors.white,
+            backgroundGradientFrom: colors.white,
+            backgroundGradientTo: colors.white,
             decimalPlaces: 0,
             color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
             labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
@@ -253,7 +258,7 @@ export function PropertyMonitoring({
 
       <View style={styles.featuredTip}>
         <View style={styles.tipIconContainer}>
-          <Ionicons name="bulb-outline" size={24} color="#FFD700" />
+          <Ionicons name="bulb-outline" size={24} color={colors.ratingStar} />
         </View>
         <View style={styles.tipContent}>
           <Text style={styles.tipTitle}>Energy Saving Tip</Text>

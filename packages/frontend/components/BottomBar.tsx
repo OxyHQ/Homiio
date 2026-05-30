@@ -52,7 +52,7 @@ export const BottomBar = () => {
     bottomBar: {
       width: '100%',
       height: 60 + insets.bottom,
-      backgroundColor: '#ffffff',
+      backgroundColor: colors.white,
       flexDirection: 'row',
       justifyContent: 'space-around',
       alignItems: 'center',

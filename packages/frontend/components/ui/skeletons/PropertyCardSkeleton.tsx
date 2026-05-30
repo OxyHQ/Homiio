@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { Skeleton } from '@oxyhq/bloom';
 import { TextLines } from './TextLines';
 import { PropertyCardVariant, PropertyCardOrientation } from '../../PropertyCard';
+import { colors } from '@/styles/colors';
 
 export interface PropertyCardSkeletonProps {
   variant?: PropertyCardVariant;
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
   // Image container
   imageContainer: {
     position: 'relative',
-    backgroundColor: '#f8f8f8',
+    backgroundColor: colors.surface,
     borderRadius: 16,
     overflow: 'hidden',
   },

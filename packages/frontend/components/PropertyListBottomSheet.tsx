@@ -209,7 +209,7 @@ export function PropertyListBottomSheet({
             ) : (
                 <View style={styles.emptyStateContainer}>
                     <View style={styles.emptyStateContent}>
-                        <Ionicons name="home-outline" size={64} color="#ccc" />
+                        <Ionicons name="home-outline" size={64} color={colors.border} />
                         <ThemedText style={styles.emptyStateTitle}>
                             No properties found in this area
                         </ThemedText>
@@ -225,14 +225,14 @@ export function PropertyListBottomSheet({
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: '#fff',
+        backgroundColor: colors.white,
         flex: 1,
     },
     // Header Styles
     headerContainer: {
-        backgroundColor: '#fff',
+        backgroundColor: colors.white,
         borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
+        borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
     },
     headerContent: {
         flexDirection: 'row',
@@ -248,25 +248,25 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#333',
+        color: colors.COLOR_BLACK_LIGHT_3,
         marginBottom: 2,
     },
     headerSubtitle: {
         fontSize: 14,
-        color: '#666',
+        color: colors.muted,
     },
     headerActions: {
         flexDirection: 'row',
         gap: 8,
     },
     headerActionButton: {
-        backgroundColor: '#f8f9fa',
+        backgroundColor: colors.surface,
         borderRadius: 10,
         padding: 10,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: '#e9ecef',
+        borderColor: colors.border,
     },
     // Properties Content
     propertiesContent: {
@@ -292,12 +292,12 @@ const styles = StyleSheet.create({
         minWidth: 0,
     },
     propertyCard: {
-        backgroundColor: '#fff',
+        backgroundColor: colors.white,
         borderRadius: 16,
         overflow: 'hidden',
         flex: 1,
         borderWidth: 1,
-        borderColor: '#f0f0f0',
+        borderColor: colors.COLOR_BLACK_LIGHT_6,
     },
     highlightedCard: {
         borderWidth: 2,
@@ -317,14 +317,14 @@ const styles = StyleSheet.create({
     emptyStateTitle: {
         fontSize: 20,
         fontWeight: '600',
-        color: '#333',
+        color: colors.COLOR_BLACK_LIGHT_3,
         marginTop: 16,
         marginBottom: 8,
         textAlign: 'center',
     },
     emptyStateSubtitle: {
         fontSize: 16,
-        color: '#666',
+        color: colors.muted,
         textAlign: 'center',
         lineHeight: 24,
     },

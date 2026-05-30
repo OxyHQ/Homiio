@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BaseWidget } from './BaseWidget';
 import { ThemedText } from '../ThemedText';
 import { Button } from '@oxyhq/bloom/button';
+import { colors } from '@/styles/colors';
 
 export function HorizonInitiativeWidget() {
   const { t } = useTranslation();
@@ -12,7 +13,7 @@ export function HorizonInitiativeWidget() {
   return (
     <BaseWidget
       title={t('horizon.title', 'Horizon Initiative')}
-      icon={<Ionicons name="star" size={22} color="#FFD700" />}
+      icon={<Ionicons name="star" size={22} color={colors.ratingStar} />}
     >
       <ThemedText style={styles.membershipText}>
         {t(
@@ -40,9 +41,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   joinButton: {
-    backgroundColor: '#c2e3ff',
+    backgroundColor: colors.primaryLight_1,
   },
   joinButtonText: {
-    color: '#002646',
+    color: colors.primarySubtleForeground,
   },
 });

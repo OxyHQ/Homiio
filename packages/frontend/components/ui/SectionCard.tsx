@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
+import { colors } from '@/styles/colors';
 
 interface SectionCardProps {
     /**
@@ -95,7 +96,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({
 };
 
 const shadowStyles = {
-    shadowColor: '#000',
+    shadowColor: colors.COLOR_BLACK,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -112,9 +113,9 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     card: {
-        backgroundColor: '#fff',
+        backgroundColor: colors.white,
         borderWidth: 1,
-        borderColor: '#e9ecef',
+        borderColor: colors.border,
         borderRadius: 12,
         padding: 16,
     },

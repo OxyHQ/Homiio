@@ -158,7 +158,7 @@ export const GuestSelector: React.FC<GuestSelectorProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderRadius: 16,
     padding: 16,
     gap: 4,

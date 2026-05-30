@@ -13,7 +13,7 @@ const styles = StyleSheet.create({
     fraudWarningContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFF8E1',
+        backgroundColor: colors.warningSubtle,
         padding: 10,
         borderRadius: 8,
     },

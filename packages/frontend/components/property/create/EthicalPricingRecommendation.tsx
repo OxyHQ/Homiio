@@ -9,14 +9,15 @@ import {
 } from '@/utils/ethicalPricing';
 import type { CreatePropertyFormData } from '@/store/createPropertyFormStore';
 import { createPropertyStyles as styles } from './styles';
+import { colors } from '@/styles/colors';
 
 interface EthicalPricingRecommendationProps {
   proposedRent: number;
   propertyData: CreatePropertyFormData;
 }
 
-const COLOR_WITHIN_RANGE = '#4CAF50';
-const COLOR_WARNING = '#FFA500';
+const COLOR_WITHIN_RANGE = colors.success;
+const COLOR_WARNING = colors.warning;
 
 const toFurnishedStatus = (
   isFurnished: boolean | undefined,

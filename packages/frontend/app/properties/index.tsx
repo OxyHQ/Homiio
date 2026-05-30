@@ -115,7 +115,7 @@ export default function PropertiesScreen() {
 
   const renderFAB = () => (
     <TouchableOpacity style={styles.fab} onPress={() => router.push('/properties/create')}>
-      <Ionicons name="add" size={24} color="white" />
+      <Ionicons name="add" size={24} color={colors.white} />
     </TouchableOpacity>
   );
 
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#ff4757',
+    color: colors.danger,
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     height: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
+    shadowColor: colors.COLOR_BLACK,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,

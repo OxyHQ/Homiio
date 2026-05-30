@@ -112,7 +112,7 @@ export const createPropertyStyles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_3,
   },
   propertyTypeTextSelected: {
-    color: 'white',
+    color: colors.white,
     fontWeight: 'bold',
   },
   mapContainer: {
@@ -135,7 +135,7 @@ export const createPropertyStyles = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: colors.COLOR_BLACK,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -271,7 +271,7 @@ export const createPropertyStyles = StyleSheet.create({
     flex: 1,
   },
   fieldError: {
-    color: '#FF3B30',
+    color: colors.danger,
     fontSize: 12,
     marginTop: 4,
     marginLeft: 4,
@@ -343,8 +343,8 @@ export const createPropertyStyles = StyleSheet.create({
     padding: 12,
   },
   ethicalPricingWarning: {
-    borderColor: '#FFA500',
-    backgroundColor: '#FFF8E1',
+    borderColor: colors.warning,
+    backgroundColor: colors.warningSubtle,
   },
   ethicalPricingHeader: {
     flexDirection: 'row',
@@ -364,7 +364,7 @@ export const createPropertyStyles = StyleSheet.create({
   },
   ethicalPricingWarningText: {
     fontSize: 12,
-    color: '#FF6B35',
+    color: colors.warning,
     marginTop: 8,
   },
   ethicalPricingWarnings: {
@@ -394,7 +394,7 @@ export const createPropertyStyles = StyleSheet.create({
     borderRadius: 8,
   },
   errorButtonText: {
-    color: 'white',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
   },

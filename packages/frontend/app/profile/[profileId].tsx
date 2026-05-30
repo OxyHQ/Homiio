@@ -117,8 +117,8 @@ export default function PublicProfileScreen() {
                 key="follow"
                 isSaved={isProfileSaved(String(profileId))}
                 variant="heart"
-                color="#222"
-                activeColor="#EF4444"
+                color={colors.COLOR_BLACK_LIGHT_2}
+                activeColor={colors.error}
                 profileId={String(profileId)}
               />
             ) : null,
@@ -391,7 +391,7 @@ export default function PublicProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fafbfc',
+    backgroundColor: colors.surface,
   },
   list: {
     padding: 16,
@@ -404,9 +404,9 @@ const styles = StyleSheet.create({
   },
   cover: {
     height: 96,
-    backgroundColor: '#e9eef5',
+    backgroundColor: colors.mutedSubtle,
     borderBottomWidth: 1,
-    borderBottomColor: '#e6e6e6',
+    borderBottomColor: colors.border,
   },
   profileHeaderCard: {
     flexDirection: 'row',
@@ -415,11 +415,11 @@ const styles = StyleSheet.create({
     marginTop: -20,
     marginBottom: 8,
     padding: 12,
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#eaeaea',
-    shadowColor: '#000',
+    borderColor: colors.border,
+    shadowColor: colors.COLOR_BLACK,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
     shadowRadius: 6,
@@ -442,12 +442,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 100,
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: '#eaeaea',
+    borderColor: colors.border,
   },
   chipActive: {
-    backgroundColor: '#f5f7fb',
+    backgroundColor: colors.surface,
     borderColor: colors.primaryColor,
   },
   chipText: {
@@ -467,8 +467,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderRadius: 100,
     borderWidth: 1,
-    borderColor: '#eaeaea',
-    backgroundColor: 'white',
+    borderColor: colors.border,
+    backgroundColor: colors.white,
   },
   segment: {
     paddingHorizontal: 10,
@@ -500,10 +500,10 @@ const styles = StyleSheet.create({
   bioCard: {
     marginHorizontal: 16,
     marginBottom: 8,
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#eaeaea',
+    borderColor: colors.border,
     padding: 12,
   },
   sectionText: {
@@ -515,10 +515,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 8,
     marginBottom: 4,
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 100,
     borderWidth: 1,
-    borderColor: '#eaeaea',
+    borderColor: colors.border,
     overflow: 'hidden',
   },
   tabItem: {
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   tabItemActive: {
-    backgroundColor: '#f5f7fb',
+    backgroundColor: colors.surface,
   },
   tabText: {
     fontSize: 13,
@@ -542,10 +542,10 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   aboutCard: {
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#eaeaea',
+    borderColor: colors.border,
     padding: 12,
     marginBottom: 12,
   },
@@ -567,11 +567,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 8,
     padding: 12,
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#eaeaea',
-    shadowColor: '#000',
+    borderColor: colors.border,
+    shadowColor: colors.COLOR_BLACK,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
     shadowRadius: 6,

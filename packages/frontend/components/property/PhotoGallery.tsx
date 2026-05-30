@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         marginRight: 12,
         overflow: 'hidden',
-        backgroundColor: '#f0f0f0',
+        backgroundColor: colors.COLOR_BLACK_LIGHT_6,
     },
     galleryImage: { width: '100%', height: '100%' },
     moreImagesOverlay: {
@@ -109,5 +109,5 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    moreImagesText: { color: 'white', fontSize: 16, fontWeight: '600' },
+    moreImagesText: { color: colors.white, fontSize: 16, fontWeight: '600' },
 });

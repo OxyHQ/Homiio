@@ -134,7 +134,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderRadius: radius.lg,
     overflow: 'hidden',
     marginBottom: spacing.md,

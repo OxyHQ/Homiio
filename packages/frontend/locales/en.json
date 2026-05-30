@@ -88,6 +88,7 @@
   "error.chat.load_failed": "Failed to load messages",
   "error.data.fetch_failed": "Error fetching data: {{message}}",
   "error.users.fetch_failed": "Error fetching users: {{message}}",
+  "mailbox.title": "Mailbox",
   "notification.welcome.title": "Welcome to Homiio! 👋",
   "notification.welcome.body": "Thanks for trying out our app. Start exploring now!",
   "notification.search.placeholder": "Search notifications...",
@@ -951,7 +952,7 @@
     },
     "menu": {
       "account": "Account",
-      "notifications": "Notifications",
+      "mailbox": "Mailbox",
       "terms": "Terms of service",
       "privacy": "Privacy policy"
     },

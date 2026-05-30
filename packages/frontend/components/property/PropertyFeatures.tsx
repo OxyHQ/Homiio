@@ -17,7 +17,7 @@ interface Props {
     } | null;
 }
 
-const AMBER = '#FFA500';
+const AMBER = colors.warning;
 
 const ICONS = {
     furnished: ['cube', 'cube-outline'] as const, // filled = furnished, outline = not
@@ -39,8 +39,8 @@ function FeatureChip({
 }) {
     const icon = ICONS[k][active ? 0 : 1];
     const tint = warn ? AMBER : active ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4;
-    const bg = active ? '#f7fafe' : '#fff';
-    const border = active ? '#dceefe' : '#edf1f4';
+    const bg = active ? colors.primaryLight_1 : colors.white;
+    const border = active ? colors.primaryLight_2 : colors.border;
 
     return (
         <View style={[styles.chip, { backgroundColor: bg, borderColor: border }]}>

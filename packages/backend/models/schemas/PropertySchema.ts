@@ -14,7 +14,6 @@ const {
   LayoutType,
   PaymentFrequency,
   UtilitiesIncluded,
-  PriceUnit,
   LeaseDuration,
   RentMode,
   AvailabilityWindowStatus,

@@ -5,7 +5,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import config from '../config';
 
 // Log environment information for debugging

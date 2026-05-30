@@ -315,7 +315,7 @@ export default function Sindi() {
           variant="primary"
           size="large"
           onPress={createNewConversation}
-          icon={<Ionicons name="add" size={20} color="#ffffff" />}
+          icon={<Ionicons name="add" size={20} color={colors.white} />}
           style={styles.newButton}
         >
           Start new conversation

@@ -88,11 +88,11 @@ export function NeighborhoodRatingWidget({
     return (
       <View style={styles.starsContainer}>
         {[...Array(fullStars)].map((_, i) => (
-          <Ionicons key={`full-${i}`} name="star" size={14} color="#FFD700" />
+          <Ionicons key={`full-${i}`} name="star" size={14} color={colors.ratingStar} />
         ))}
-        {halfStar && <Ionicons name="star-half" size={14} color="#FFD700" />}
+        {halfStar && <Ionicons name="star-half" size={14} color={colors.ratingStar} />}
         {[...Array(emptyStars)].map((_, i) => (
-          <Ionicons key={`empty-${i}`} name="star-outline" size={14} color="#FFD700" />
+          <Ionicons key={`empty-${i}`} name="star-outline" size={14} color={colors.ratingStar} />
         ))}
         <Text style={styles.ratingNumber}>{rating.toFixed(1)}</Text>
       </View>
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   retryButtonText: {
-    color: 'white',
+    color: colors.white,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   moreButton: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
     paddingVertical: 8,
     paddingHorizontal: 15,
     borderRadius: 20,

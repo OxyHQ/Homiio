@@ -503,7 +503,7 @@ export default function PropertyDetailPage() {
                   />
                   {hasActiveViewing ? (
                     <View style={styles.viewingBadge}>
-                      <Ionicons name="checkmark" size={12} color="#fff" />
+                      <Ionicons name="checkmark" size={12} color={colors.white} />
                     </View>
                   ) : null}
                 </View>
@@ -513,7 +513,7 @@ export default function PropertyDetailPage() {
                   property={apiProperty as Property}
                   variant="heart"
                   color={colors.COLOR_BLACK}
-                  activeColor="#EF4444"
+                  activeColor={colors.error}
                   showCount
                   countDisplayMode="inline"
                 />

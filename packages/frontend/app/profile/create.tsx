@@ -171,7 +171,7 @@ export default function ProfileCreateScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
+          <Ionicons name="arrow-back" size={24} color={colors.COLOR_BLACK} />
         </TouchableOpacity>
         <ThemedText style={styles.headerTitle}>Create Profile</ThemedText>
         <TouchableOpacity
@@ -180,7 +180,7 @@ export default function ProfileCreateScreen() {
           disabled={!selectedType || isCreating || isCreatingMut}
         >
           {isCreating || isCreatingMut ? (
-            <Ionicons name="refresh" size={20} color="#fff" />
+            <Ionicons name="refresh" size={20} color={colors.white} />
           ) : (
             <ThemedText style={styles.createButtonText}>Create</ThemedText>
           )}
@@ -207,7 +207,7 @@ export default function ProfileCreateScreen() {
                 <Ionicons
                   name={profileType.icon}
                   size={20}
-                  color={selectedType === profileType.type ? colors.primaryColor : '#666'}
+                  color={selectedType === profileType.type ? colors.primaryColor : colors.muted}
                   style={styles.settingIcon}
                 />
                 <View>
@@ -612,7 +612,7 @@ export default function ProfileCreateScreen() {
                 <Ionicons
                   name="information-circle"
                   size={20}
-                  color="#666"
+                  color={colors.muted}
                   style={styles.settingIcon}
                 />
                 <View style={styles.infoContent}>
@@ -634,7 +634,7 @@ export default function ProfileCreateScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f2f2f2',
+    backgroundColor: colors.mutedSubtle,
   },
   header: {
     flexDirection: 'row',
@@ -643,9 +643,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   backButton: {
     padding: 8,
@@ -653,7 +653,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#000',
+    color: colors.COLOR_BLACK,
   },
   createButton: {
     paddingHorizontal: 16,
@@ -662,10 +662,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   createButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: colors.border,
   },
   createButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -679,11 +679,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: colors.COLOR_BLACK_LIGHT_3,
     marginBottom: 12,
   },
   settingItem: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -711,17 +711,17 @@ const styles = StyleSheet.create({
   settingLabel: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#333',
+    color: colors.COLOR_BLACK_LIGHT_3,
     marginBottom: 2,
   },
   settingDescription: {
     fontSize: 14,
-    color: '#666',
+    color: colors.muted,
     flexWrap: 'wrap',
     flexShrink: 1,
   },
   selectedItem: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.primaryColor,
   },
@@ -735,17 +735,17 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: colors.COLOR_BLACK_LIGHT_3,
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
   },
   textArea: {
     height: 100,
@@ -761,8 +761,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    backgroundColor: '#fff',
+    borderColor: colors.border,
+    backgroundColor: colors.white,
   },
   radioButtonSelected: {
     backgroundColor: colors.primaryColor,
@@ -770,10 +770,10 @@ const styles = StyleSheet.create({
   },
   radioButtonText: {
     fontSize: 14,
-    color: '#333',
+    color: colors.COLOR_BLACK_LIGHT_3,
   },
   radioButtonTextSelected: {
-    color: '#fff',
+    color: colors.white,
   },
   checkboxGroup: {
     flexDirection: 'row',
@@ -785,8 +785,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    backgroundColor: '#fff',
+    borderColor: colors.border,
+    backgroundColor: colors.white,
   },
   checkboxSelected: {
     backgroundColor: colors.primaryColor,
@@ -794,10 +794,10 @@ const styles = StyleSheet.create({
   },
   checkboxText: {
     fontSize: 14,
-    color: '#333',
+    color: colors.COLOR_BLACK_LIGHT_3,
   },
   checkboxTextSelected: {
-    color: '#fff',
+    color: colors.white,
   },
   infoContent: {
     flex: 1,

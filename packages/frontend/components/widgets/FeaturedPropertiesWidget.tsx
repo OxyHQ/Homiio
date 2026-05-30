@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
   },
   errorText: {
-    color: '#ff6b6b',
+    color: colors.danger,
     fontWeight: '500',
   },
   emptyContainer: {

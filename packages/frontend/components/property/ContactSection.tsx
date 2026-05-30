@@ -31,9 +31,9 @@ export const ContactSection: React.FC<Props> = ({ property: _property, onMessage
 const styles = StyleSheet.create({
     container: { marginBottom: 20 },
     sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15 },
-    card: { padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#e9ecef' },
+    card: { padding: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
     button: { backgroundColor: colors.primaryColor, paddingVertical: 10, borderRadius: 8, marginBottom: 10, alignItems: 'center' },
-    buttonText: { color: '#fff', fontWeight: '600' },
+    buttonText: { color: colors.white, fontWeight: '600' },
 });
 
 export default ContactSection;

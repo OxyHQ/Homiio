@@ -115,7 +115,7 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
                 <View style={styles.contentContainer}>
                     <View style={styles.landlordHeader}>
                         <View style={[styles.landlordAvatar, styles.governmentAvatar]}>
-                            <Ionicons name="library" size={26} color="white" />
+                            <Ionicons name="library" size={26} color={colors.white} />
                         </View>
                         <View style={styles.landlordInfo}>
                             <View style={styles.landlordNameRow}>
@@ -151,7 +151,7 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
                                 <ThemedText style={styles.landlordName}>{getLandlordDisplayName(landlordProfile)}</ThemedText>
                                 {landlordProfile?.isActive && (
                                     <View style={styles.verifiedBadge}>
-                                        <Ionicons name="checkmark" size={12} color="white" />
+                                        <Ionicons name="checkmark" size={12} color={colors.white} />
                                     </View>
                                 )}
                             </View>
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     },
     landlordAvatar: {
         marginRight: 12,
-        shadowColor: '#000',
+        shadowColor: colors.COLOR_BLACK,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
         shadowRadius: 2,
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     governmentAvatar: {
-        backgroundColor: '#1E40AF',
+        backgroundColor: colors.governmentBadge,
         borderRadius: 26,
         width: 52,
         height: 52,
@@ -234,18 +234,18 @@ const styles = StyleSheet.create({
     landlordName: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#1F2937',
+        color: colors.COLOR_BLACK_LIGHT_2,
         marginRight: 6,
         lineHeight: 20,
     },
     landlordSubtitle: {
         fontSize: 13,
-        color: '#6B7280',
+        color: colors.muted,
         fontWeight: '500',
         lineHeight: 16,
     },
     verifiedBadge: {
-        backgroundColor: '#10B981',
+        backgroundColor: colors.success,
         paddingHorizontal: 6,
         paddingVertical: 2,
         borderRadius: 10,
@@ -254,13 +254,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     governmentBadge: {
-        backgroundColor: '#1E40AF',
+        backgroundColor: colors.governmentBadge,
         paddingHorizontal: 8,
         paddingVertical: 2,
         borderRadius: 10,
     },
     verifiedText: {
-        color: 'white',
+        color: colors.white,
         fontSize: 11,
         fontWeight: '700',
     },
@@ -275,6 +275,6 @@ const styles = StyleSheet.create({
         marginTop: 12,
         paddingTop: 12,
         borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
+        borderTopColor: colors.mutedSubtle,
     },
 });

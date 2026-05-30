@@ -112,6 +112,7 @@
   "error.boundary.stackTrace": "Stack trace",
   "error.boundary.componentStack": "Stack dei componenti",
   "error.boundary.deviceInformation": "Informazioni dispositivo",
+  "mailbox.title": "Posta",
   "notification.welcome.title": "Benvenuto su Homiio! 👋",
   "notification.welcome.body": "Grazie per aver provato la nostra app. Inizia a esplorare ora!",
   "success.signup": "Registrazione completata",
@@ -775,7 +776,7 @@
     },
     "menu": {
       "account": "Account",
-      "notifications": "Notifiche",
+      "mailbox": "Posta",
       "terms": "Termini del servizio",
       "privacy": "Politica sulla privacy"
     },

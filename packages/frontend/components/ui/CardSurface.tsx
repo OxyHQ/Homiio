@@ -4,7 +4,7 @@
  * Wraps section content in a white surface with the small Homiio shadow
  * (`withShadow('sm')`), the standard card radius, and zero border. Personal
  * screens compose these instead of hand-rolling `style={{ backgroundColor:
- * '#fff', borderRadius: …, shadow*: … }}` everywhere.
+ * colors.white, borderRadius: …, shadow*: … }}` everywhere.
  *
  * Usage:
  *   <CardSurface>

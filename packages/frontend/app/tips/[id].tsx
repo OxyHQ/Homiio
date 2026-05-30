@@ -171,7 +171,7 @@ export default function TipArticleScreen() {
             <Ionicons
               name={tip.icon as IoniconName}
               size={56}
-              color="#ffffff"
+              color={colors.white}
             />
           </LinearGradient>
           <View style={styles.heroBadge}>

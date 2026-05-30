@@ -107,8 +107,11 @@ export default function InsightsScreen() {
                 <ThemedText style={styles.subtitle}>Marketplace overview for rentals</ThemedText>
             </LinearGradient>
 
+            {/* KPI cards use a coordinated multi-hue data-viz accent palette
+                (indigo / green / amber / cyan). These accent gradients and tint
+                circles are intentional chart colors, not Bloom theme tokens. */}
             <View style={styles.kpiRow}>
-                <View style={[styles.kpiCard, { backgroundColor: '#ffffff' }]}>
+                <View style={[styles.kpiCard, { backgroundColor: colors.white }]}>
                     <LinearGradient colors={['#4E67EB20', '#4E67EB10']} style={styles.kpiInner}>
                         <View style={styles.kpiIconCircle}>
                             <Ionicons name="home-outline" size={18} color={colors.primaryColor} />
@@ -117,25 +120,25 @@ export default function InsightsScreen() {
                         <ThemedText style={styles.kpiLabel}>Properties</ThemedText>
                     </LinearGradient>
                 </View>
-                <View style={[styles.kpiCard, { backgroundColor: '#ffffff' }]}>
+                <View style={[styles.kpiCard, { backgroundColor: colors.white }]}>
                     <LinearGradient colors={['#22c55e20', '#22c55e10']} style={styles.kpiInner}>
                         <View style={[styles.kpiIconCircle, { backgroundColor: '#22c55e15' }]}>
-                            <Ionicons name="business-outline" size={18} color="#16a34a" />
+                            <Ionicons name="business-outline" size={18} color={colors.success} />
                         </View>
                         <ThemedText style={styles.kpiValue}>{appStats?.totals.cities ?? 0}</ThemedText>
                         <ThemedText style={styles.kpiLabel}>Cities</ThemedText>
                     </LinearGradient>
                 </View>
-                <View style={[styles.kpiCard, { backgroundColor: '#ffffff' }]}>
+                <View style={[styles.kpiCard, { backgroundColor: colors.white }]}>
                     <LinearGradient colors={['#f59e0b20', '#f59e0b10']} style={styles.kpiInner}>
                         <View style={[styles.kpiIconCircle, { backgroundColor: '#f59e0b15' }]}>
-                            <Ionicons name="bookmark-outline" size={18} color="#f59e0b" />
+                            <Ionicons name="bookmark-outline" size={18} color={colors.warning} />
                         </View>
                         <ThemedText style={styles.kpiValue}>{appStats?.totals.saves ?? 0}</ThemedText>
                         <ThemedText style={styles.kpiLabel}>Saves</ThemedText>
                     </LinearGradient>
                 </View>
-                <View style={[styles.kpiCard, { backgroundColor: '#ffffff' }]}>
+                <View style={[styles.kpiCard, { backgroundColor: colors.white }]}>
                     <LinearGradient colors={['#06b6d420', '#06b6d410']} style={styles.kpiInner}>
                         <View style={[styles.kpiIconCircle, { backgroundColor: '#06b6d415' }]}>
                             <Ionicons name="people-outline" size={18} color="#06b6d4" />
@@ -195,8 +198,8 @@ export default function InsightsScreen() {
                                     const y = h - paddingBottom - barH;
                                     return (
                                         <React.Fragment key={`bar-${i}`}>
-                                            <Rect x={x} y={y} rx={25} ry={25} width={barW} height={barH} fill="#000" />
-                                            <SvgText x={x + barW / 2} y={h - 8} fontSize="10" fill="#666" textAnchor="middle">
+                                            <Rect x={x} y={y} rx={25} ry={25} width={barW} height={barH} fill={colors.COLOR_BLACK} />
+                                            <SvgText x={x + barW / 2} y={h - 8} fontSize="10" fill={colors.muted} textAnchor="middle">
                                                 {labels[i]}
                                             </SvgText>
                                         </React.Fragment>
@@ -207,7 +210,7 @@ export default function InsightsScreen() {
                                     const yTick = h - paddingBottom - Math.round((val / maxVal) * innerH);
                                     return (
                                         <React.Fragment key={`tick-${i}`}>
-                                            <SvgText x={yAxisWidth - 6} y={yTick + 3} fontSize="10" fill="#666" textAnchor="end">
+                                            <SvgText x={yAxisWidth - 6} y={yTick + 3} fontSize="10" fill={colors.muted} textAnchor="end">
                                                 {formatTick(val)}
                                             </SvgText>
                                         </React.Fragment>
@@ -289,12 +292,12 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     title: {
-        color: '#fff',
+        color: colors.white,
         fontSize: 24,
         fontWeight: 'bold',
     },
     subtitle: {
-        color: '#fff',
+        color: colors.white,
         opacity: 0.9,
         marginTop: 4,
     },
@@ -311,7 +314,7 @@ const styles = StyleSheet.create({
         minWidth: 160,
         borderRadius: 16,
         overflow: 'hidden',
-        shadowColor: '#000',
+        shadowColor: colors.COLOR_BLACK,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.08,
         shadowRadius: 8,
@@ -354,11 +357,11 @@ const styles = StyleSheet.create({
     },
     card: {
         width: '100%',
-        backgroundColor: '#fff',
+        backgroundColor: colors.white,
         borderRadius: 20,
         paddingHorizontal: 16,
         paddingVertical: 12,
-        shadowColor: '#000',
+        shadowColor: colors.COLOR_BLACK,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.08,
         shadowRadius: 8,
@@ -382,10 +385,10 @@ const styles = StyleSheet.create({
     metricCardSmall: {
         flexGrow: 1,
         minWidth: 120,
-        backgroundColor: '#fff',
+        backgroundColor: colors.white,
         borderRadius: 16,
         padding: 12,
-        shadowColor: '#000',
+        shadowColor: colors.COLOR_BLACK,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.08,
         shadowRadius: 8,
@@ -393,7 +396,7 @@ const styles = StyleSheet.create({
     },
     chart: {
         borderRadius: 16,
-        backgroundColor: '#fff',
+        backgroundColor: colors.white,
         paddingRight: 16,
     },
     citiesGrid: {
@@ -404,12 +407,12 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     cityCard: {
-        backgroundColor: '#fff',
+        backgroundColor: colors.white,
         borderRadius: 16,
         padding: 12,
         flexGrow: 1,
         minWidth: 160,
-        shadowColor: '#000',
+        shadowColor: colors.COLOR_BLACK,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.08,
         shadowRadius: 8,
@@ -450,7 +453,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        backgroundColor: '#f8fafc',
+        backgroundColor: colors.surface,
         borderRadius: 12,
         paddingVertical: 6,
         paddingHorizontal: 8,

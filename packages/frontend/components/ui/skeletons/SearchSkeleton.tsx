@@ -51,11 +51,11 @@ function SearchResultSkeleton() {
   return (
     <View
       style={{
-        backgroundColor: 'white',
+        backgroundColor: colors.white,
         borderRadius: 12,
         marginBottom: 16,
         overflow: 'hidden',
-        shadowColor: '#000',
+        shadowColor: colors.COLOR_BLACK,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,

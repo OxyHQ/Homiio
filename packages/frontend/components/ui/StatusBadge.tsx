@@ -53,40 +53,40 @@ function getStatusInfo(status: StatusType): StatusInfo {
     case 'draft':
       return { icon: 'document-outline', color: colors.COLOR_BLACK_LIGHT_3, badgeColor: 'default', label: 'Draft' };
     case 'pending':
-      return { icon: 'hourglass-outline', color: '#FFC107', badgeColor: 'warning', label: 'Pending' };
+      return { icon: 'hourglass-outline', color: colors.warning, badgeColor: 'warning', label: 'Pending' };
     case 'active':
-      return { icon: 'checkmark-circle', color: '#4CAF50', badgeColor: 'success', label: 'Active' };
+      return { icon: 'checkmark-circle', color: colors.success, badgeColor: 'success', label: 'Active' };
     case 'expired':
-      return { icon: 'calendar-outline', color: '#9E9E9E', badgeColor: 'default', label: 'Expired' };
+      return { icon: 'calendar-outline', color: colors.textTertiary, badgeColor: 'default', label: 'Expired' };
     case 'terminated':
-      return { icon: 'close-circle-outline', color: '#F44336', badgeColor: 'error', label: 'Terminated' };
+      return { icon: 'close-circle-outline', color: colors.danger, badgeColor: 'error', label: 'Terminated' };
     // Payment statuses
     case 'processing':
-      return { icon: 'reload-outline', color: '#2196F3', badgeColor: 'info', label: 'Processing' };
+      return { icon: 'reload-outline', color: colors.info, badgeColor: 'info', label: 'Processing' };
     case 'completed':
-      return { icon: 'checkmark-circle', color: '#4CAF50', badgeColor: 'success', label: 'Completed' };
+      return { icon: 'checkmark-circle', color: colors.success, badgeColor: 'success', label: 'Completed' };
     case 'failed':
-      return { icon: 'close-circle-outline', color: '#F44336', badgeColor: 'error', label: 'Failed' };
+      return { icon: 'close-circle-outline', color: colors.danger, badgeColor: 'error', label: 'Failed' };
     case 'refunded':
-      return { icon: 'refresh-circle-outline', color: '#9E9E9E', badgeColor: 'default', label: 'Refunded' };
+      return { icon: 'refresh-circle-outline', color: colors.textTertiary, badgeColor: 'default', label: 'Refunded' };
     // General statuses
     case 'success':
-      return { icon: 'checkmark-circle', color: '#4CAF50', badgeColor: 'success', label: 'Success' };
+      return { icon: 'checkmark-circle', color: colors.success, badgeColor: 'success', label: 'Success' };
     case 'warning':
-      return { icon: 'warning', color: '#FFC107', badgeColor: 'warning', label: 'Warning' };
+      return { icon: 'warning', color: colors.warning, badgeColor: 'warning', label: 'Warning' };
     case 'error':
-      return { icon: 'close-circle-outline', color: '#F44336', badgeColor: 'error', label: 'Error' };
+      return { icon: 'close-circle-outline', color: colors.danger, badgeColor: 'error', label: 'Error' };
     case 'info':
-      return { icon: 'information-circle-outline', color: '#2196F3', badgeColor: 'info', label: 'Info' };
+      return { icon: 'information-circle-outline', color: colors.info, badgeColor: 'info', label: 'Info' };
     // Custom statuses
     case 'investigating':
-      return { icon: 'search-outline', color: '#FFC107', badgeColor: 'warning', label: 'Investigating' };
+      return { icon: 'search-outline', color: colors.warning, badgeColor: 'warning', label: 'Investigating' };
     case 'resolved':
-      return { icon: 'checkmark-circle', color: '#4CAF50', badgeColor: 'success', label: 'Resolved' };
+      return { icon: 'checkmark-circle', color: colors.success, badgeColor: 'success', label: 'Resolved' };
     case 'online':
-      return { icon: 'radio-button-on', color: '#4CAF50', badgeColor: 'success', label: 'Online' };
+      return { icon: 'radio-button-on', color: colors.success, badgeColor: 'success', label: 'Online' };
     case 'offline':
-      return { icon: 'radio-button-off', color: '#9E9E9E', badgeColor: 'default', label: 'Offline' };
+      return { icon: 'radio-button-off', color: colors.textTertiary, badgeColor: 'default', label: 'Offline' };
     default:
       return { icon: 'help-circle-outline', color: colors.COLOR_BLACK_LIGHT_3, badgeColor: 'default', label: 'Unknown' };
   }
@@ -132,7 +132,7 @@ export function StatusBadge({
           style,
         ]}
       >
-        <Ionicons name={finalIcon} size={iconSize} color="#fff" style={styles.icon} />
+        <Ionicons name={finalIcon} size={iconSize} color={colors.white} style={styles.icon} />
         <Text style={[styles.text, { fontSize: iconSize }]}>{finalText}</Text>
       </View>
     );
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   text: {
-    color: 'white',
+    color: colors.white,
     fontWeight: '500',
   },
 });

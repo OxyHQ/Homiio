@@ -169,7 +169,7 @@ export function FiltersBottomSheet({
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: colors.white,
         padding: 16,
     },
     header: {
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
         color: colors.COLOR_BLACK,
     },
     chipTextSelected: {
-        color: '#fff',
+        color: colors.white,
     },
     rangeContainer: {
         flexDirection: 'row',
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     applyButtonText: {
-        color: '#fff',
+        color: colors.white,
         fontSize: 14,
         fontWeight: '600',
     },

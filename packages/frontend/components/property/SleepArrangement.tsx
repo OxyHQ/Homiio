@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   bedroomCard: {
     width: 200,
     height: 140,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderRadius: radius.lg,
     padding: spacing.xl,
     justifyContent: 'space-between',

@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useSavedProperties } from '@/context/SavedPropertiesProvider';
 import type { SavePropertyOperation } from '@/types/savedProperties';
+import { colors } from '@/styles/colors';
 
 /**
  * Props for SaveButton component
@@ -182,7 +183,7 @@ export function SaveButton({
     if (isLoading) {
       return (
         <View className="flex-row items-center gap-2">
-          <ActivityIndicator size="small" color={textColor.includes('white') ? '#ffffff' : '#666666'} />
+          <ActivityIndicator size="small" color={textColor.includes(colors.white) ? colors.white : colors.muted} />
           {showCount && (
             <Text className={`${sizeConfig.countText} ${textColor} font-medium`}>
               {frozenCount}
@@ -197,7 +198,7 @@ export function SaveButton({
         <Ionicons
           name={isSaved ? 'heart' : 'heart-outline'}
           size={sizeConfig.icon}
-          color={textColor.includes('red') ? '#ef4444' : textColor.includes('white') ? '#ffffff' : '#666666'}
+          color={textColor.includes('red') ? colors.error : textColor.includes(colors.white) ? colors.white : colors.muted}
         />
         {showCount && (
           <Text className={`${sizeConfig.countText} ${textColor} font-medium`}>

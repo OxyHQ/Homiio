@@ -3,9 +3,9 @@ import { Logger } from '../utils/logger';
 import { ScraperService } from './scraperService';
 import { HealthService } from './healthService';
 import { CleanupService } from './cleanupService';
-import { CronConfig, ScrapeSource } from '../types/cron';
+import { ScrapeSource } from '../types/cron';
 import { MetricsService } from '../utils/metrics';
-import { getCronConfig, getEnabledSources } from '../config/cron';
+import { getEnabledSources } from '../config/cron';
 
 // Initialize services
 const logger = new Logger('CronService');
@@ -15,7 +15,6 @@ const cleanupService = new CleanupService();
 const metricsService = new MetricsService();
 
 // Get configuration
-const cronConfig = getCronConfig();
 const SCRAPE_SOURCES = getEnabledSources();
 
 /**

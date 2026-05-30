@@ -72,7 +72,7 @@ const AppSplashScreen: React.FC<AppSplashScreenProps> = ({ onFadeComplete, start
     <Animated.View style={containerStyle}>
       <LinearGradient
         colors={gradientColors}
-        className="flex-1 items-center justify-center bg-primary-light dark:bg-primary-dark"
+        className="flex-1 items-center justify-center"
       >
         <View style={logoContainerStyle}>
           <LogoIcon size={100} color={colors.secondaryColor} />

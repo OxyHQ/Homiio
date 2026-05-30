@@ -26,10 +26,10 @@ import { colors } from '@/styles/colors';
 import { Button } from '@oxyhq/bloom/button';
 
 // Apple-style colors
-const APPLE_CARD_BACKGROUND = '#ffffff';
-const APPLE_TEXT_PRIMARY = '#1f2937';
-const APPLE_TEXT_SECONDARY = '#6b7280';
-const MINIMAL_BORDER = '#e5e7eb';
+const APPLE_CARD_BACKGROUND = colors.white;
+const APPLE_TEXT_PRIMARY = colors.COLOR_BLACK_LIGHT_2;
+const APPLE_TEXT_SECONDARY = colors.muted;
+const MINIMAL_BORDER = colors.border;
 
 interface SindiExplanationBottomSheetProps {
   onClose: () => void;
@@ -389,7 +389,7 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
         <Button
           onPress={handleNext}
           style={{ flex: 1, backgroundColor: colors.primaryColor }}
-          textStyle={{ color: '#fff' }}
+          textStyle={{ color: colors.white }}
         >
           {currentStep === TOTAL_STEPS - 1 ? 'Start' : 'Next'}
         </Button>
@@ -502,8 +502,8 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     paddingHorizontal: 16,
   },
-  darkTitle: { color: '#f9fafb' },
-  darkDescription: { color: '#cbd5e1' },
+  darkTitle: { color: colors.surface },
+  darkDescription: { color: colors.border },
   stepContent: {
     marginHorizontal: 20,
     paddingVertical: 28,
@@ -513,7 +513,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   stepContentDark: {
-    backgroundColor: '#0f172a',
+    backgroundColor: colors.COLOR_BLACK_LIGHT_1,
     borderRadius: 28,
     paddingVertical: 32,
     paddingHorizontal: 12,
@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
   },
   nextText: {
     fontSize: 16,
-    color: '#fff',
+    color: colors.white,
     fontWeight: '700',
   },
   heroImage: {

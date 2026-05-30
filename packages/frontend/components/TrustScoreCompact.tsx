@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { colors } from '@/styles/colors';
 
 type TrustScoreCompactProps = {
   score: number;
@@ -17,11 +18,11 @@ export function TrustScoreCompact({
   // Memoize expensive calculations
   const { color, trustLevel, sizeStyle } = useMemo(() => {
     const getColor = (score: number) => {
-      if (score >= 90) return '#4CAF50';
-      if (score >= 70) return '#8BC34A';
-      if (score >= 50) return '#FFC107';
-      if (score >= 30) return '#FF9800';
-      return '#F44336';
+      if (score >= 90) return colors.success;
+      if (score >= 70) return colors.success;
+      if (score >= 50) return colors.warning;
+      if (score >= 30) return colors.warning;
+      return colors.danger;
     };
 
     const getTrustLevel = (score: number) => {
@@ -92,7 +93,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scoreText: {
-    color: 'white',
+    color: colors.white,
     fontWeight: 'bold',
   },
   label: {

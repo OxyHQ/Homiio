@@ -5,7 +5,7 @@ export type SavedSearchPayload = {
   id?: string;
   name?: string;
   query: string;
-  filters?: any;
+  filters?: Record<string, unknown>;
 };
 
 type Listener = (payload: SavedSearchPayload) => void | Promise<void>;

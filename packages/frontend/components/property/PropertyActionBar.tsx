@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { HousingType, type Profile, type Property } from '@homiio/shared-types';
+import { colors } from '@/styles/colors';
 
 interface Props {
     property: Property | null;
@@ -85,9 +86,9 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         zIndex: 1000,
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.white,
         borderTopWidth: 1,
-        borderTopColor: '#e9ecef',
+        borderTopColor: colors.border,
         paddingHorizontal: 16,
         paddingVertical: 12,
     } as unknown as ViewStyle,

@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primaryLight,
         padding: 20,
         borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
+        borderBottomColor: colors.border,
     },
     headerTitle: {
         fontSize: 24,

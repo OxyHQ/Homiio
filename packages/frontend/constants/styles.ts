@@ -14,6 +14,7 @@
  *   <View style={{ gap: spacing.lg, padding: spacing.xl }} />
  */
 import { Platform, type ViewStyle } from 'react-native';
+import { colors } from '@/styles/colors';
 
 type ShadowStyle = Pick<
   ViewStyle,
@@ -32,21 +33,21 @@ export type ShadowLevel = 'sm' | 'md' | 'lg';
  */
 export const cardShadow: Record<ShadowLevel, ShadowStyle> = {
   sm: {
-    shadowColor: '#000',
+    shadowColor: colors.COLOR_BLACK,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 2,
   },
   md: {
-    shadowColor: '#000',
+    shadowColor: colors.COLOR_BLACK,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 5,
   },
   lg: {
-    shadowColor: '#000',
+    shadowColor: colors.COLOR_BLACK,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.12,
     shadowRadius: 32,
@@ -177,7 +178,7 @@ export const gridGap = {
  * the photo gallery feel consistent.
  */
 export const backdrop = {
-  color: 'rgba(0, 0, 0, 0.5)',
+  color: colors.overlay,
 } as const;
 
 /**

@@ -101,7 +101,7 @@ export default function MyPropertiesScreen() {
             style={[styles.actionButton, styles.deleteButton]}
             onPress={() => handleDeleteProperty(propertyId, title)}
           >
-            <Ionicons name="trash-outline" size={16} color="#ff4757" />
+            <Ionicons name="trash-outline" size={16} color={colors.danger} />
             <Text style={[styles.actionText, styles.deleteText]}>{t('properties.my.delete')}</Text>
           </TouchableOpacity>
         </View>
@@ -192,7 +192,7 @@ export default function MyPropertiesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f2f2f2',
+    backgroundColor: colors.mutedSubtle,
   },
   listContainer: {
     padding: 16,
@@ -207,10 +207,10 @@ const styles = StyleSheet.create({
   propertyActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 12,
-    shadowColor: '#000',
+    shadowColor: colors.COLOR_BLACK,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -231,9 +231,9 @@ const styles = StyleSheet.create({
     borderColor: colors.primaryColor,
   },
   deleteButton: {
-    backgroundColor: '#fff5f5',
+    backgroundColor: colors.dangerSubtle,
     borderWidth: 1,
-    borderColor: '#ff4757',
+    borderColor: colors.danger,
   },
   actionText: {
     fontSize: 14,
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
     color: colors.primaryColor,
   },
   deleteText: {
-    color: '#ff4757',
+    color: colors.danger,
   },
   addButton: {
     width: 40,

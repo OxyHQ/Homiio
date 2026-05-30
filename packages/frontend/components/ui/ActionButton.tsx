@@ -39,8 +39,8 @@ export function ActionButton({
             backgroundColor: colors.primaryColor,
             borderColor: colors.primaryColor,
           },
-          text: { color: 'white' },
-          icon: { color: 'white' },
+          text: { color: colors.white },
+          icon: { color: colors.white },
         };
       case 'secondary':
         return {
@@ -73,11 +73,11 @@ export function ActionButton({
       case 'danger':
         return {
           container: {
-            backgroundColor: '#F44336',
-            borderColor: '#F44336',
+            backgroundColor: colors.danger,
+            borderColor: colors.danger,
           },
-          text: { color: 'white' },
-          icon: { color: 'white' },
+          text: { color: colors.white },
+          icon: { color: colors.white },
         };
       default:
         return {
@@ -85,8 +85,8 @@ export function ActionButton({
             backgroundColor: colors.primaryColor,
             borderColor: colors.primaryColor,
           },
-          text: { color: 'white' },
-          icon: { color: 'white' },
+          text: { color: colors.white },
+          icon: { color: colors.white },
         };
     }
   };

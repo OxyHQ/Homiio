@@ -1,21 +1,33 @@
 /**
- * Learn more about light and dark modes:
- * https://docs.expo.dev/guides/color-schemes/
+ * Theme hooks backed by Bloom — the single source of truth for colors.
+ *
+ * - `useThemeColor(key)` re-exports Bloom's hook so any Bloom `ThemeColors` key
+ *   resolves to the active light/dark value.
+ * - `useColors()` returns Bloom's `ThemeColors` merged with Homiio's
+ *   `DomainColors` (yellow secondary, chat palette), mirroring the accounts
+ *   app's pattern. Prefer this in components that need live light/dark values.
  */
 
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { useMemo } from 'react';
+import { useTheme, useThemeColor } from '@oxyhq/bloom/theme';
+import type { ThemeColors } from '@oxyhq/bloom/theme';
+import { DomainColors, type DomainColorKey } from '@/styles/colors';
 
-export function useThemeColor(
-  props: { light?: string; dark?: string },
-  colorName: keyof typeof Colors.light & keyof typeof Colors.dark,
-) {
-  const theme: 'light' | 'dark' = useColorScheme() === 'dark' ? 'dark' : 'light';
-  const colorFromProps = props[theme];
+export { useThemeColor };
 
-  if (colorFromProps) {
-    return colorFromProps;
-  } else {
-    return Colors[theme][colorName];
-  }
+/** Bloom theme colors merged with Homiio-specific domain colors. */
+export type AppColors = ThemeColors & Record<DomainColorKey, string>;
+
+/**
+ * Single hook that gives every component a merged colour palette: Bloom's
+ * ThemeColors (background, text, border, primary, status …) plus Homiio's
+ * DomainColors (yellow secondary, rating star, chat/message palette).
+ */
+export function useColors(): AppColors {
+  const { mode, colors } = useTheme();
+
+  return useMemo<AppColors>(() => {
+    const domain = DomainColors[mode];
+    return { ...colors, ...domain };
+  }, [mode, colors]);
 }

@@ -52,7 +52,7 @@ export const SavedSearchActionsBottomSheet: React.FC<Props> = ({
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.actionItem} onPress={() => { onDelete(search); onClose(); }}>
-        <Ionicons name="trash-outline" size={20} color="#ff4757" />
+        <Ionicons name="trash-outline" size={20} color={colors.danger} />
         <Text style={[styles.actionText, styles.deleteText]}>{t('common.delete')}</Text>
       </TouchableOpacity>
     </View>
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   deleteText: {
-    color: '#ff4757',
+    color: colors.danger,
   },
 });
 

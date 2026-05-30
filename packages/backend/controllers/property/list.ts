@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 const { Property, Reservation } = require('../../models');
-import { successResponse, paginationResponse } from '../../middlewares/errorHandler';
+import { paginationResponse } from '../../middlewares/errorHandler';
 const {
   RentMode,
   AvailabilityWindowStatus,

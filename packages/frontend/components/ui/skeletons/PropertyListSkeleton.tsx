@@ -76,17 +76,17 @@ const styles = StyleSheet.create({
   },
   gridItem: {
     width: '47%',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderRadius: 12,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: colors.COLOR_BLACK,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
   },
   gridImage: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
   },
   gridContent: {
     padding: 12,
@@ -108,19 +108,19 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   listItem: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 12,
     flexDirection: 'row',
     gap: 12,
-    shadowColor: '#000',
+    shadowColor: colors.COLOR_BLACK,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
   },
   listImage: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
   },
   listContent: {
     flex: 1,

@@ -292,7 +292,7 @@ const policyLabel = (policy: CancellationPolicy): string => {
 const styles = StyleSheet.create({
   card: {
     borderRadius: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.COLOR_BLACK_LIGHT_6,
     padding: 20,
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalSurface: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     width: '100%',
     maxWidth: 720,
     maxHeight: '92%',

@@ -518,7 +518,7 @@ export default function WriteReviewPage() {
                       size={18}
                       color={
                         formData.recommendation === true
-                          ? '#ffffff'
+                          ? colors.white
                           : colors.COLOR_BLACK
                       }
                     />
@@ -537,7 +537,7 @@ export default function WriteReviewPage() {
                       size={18}
                       color={
                         formData.recommendation === false
-                          ? '#ffffff'
+                          ? colors.white
                           : colors.COLOR_BLACK
                       }
                     />

@@ -77,7 +77,7 @@ const TabBar: React.FC<{
           <Ionicons
             name={tab.icon}
             size={16}
-            color={isActive ? '#ffffff' : colors.COLOR_BLACK_LIGHT_2}
+            color={isActive ? colors.white : colors.COLOR_BLACK_LIGHT_2}
           />
           <BloomText
             style={[styles.tabLabel, isActive && styles.tabLabelActive]}
@@ -562,7 +562,7 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_2,
   },
   tabLabelActive: {
-    color: '#ffffff',
+    color: colors.white,
   },
   content: {
     flex: 1,

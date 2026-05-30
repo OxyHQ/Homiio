@@ -99,6 +99,7 @@
   "error.chat.load_failed": "Error carregant missatges",
   "error.data.fetch_failed": "Error obtenint dades: {{message}}",
   "error.users.fetch_failed": "Error obtenint usuaris: {{message}}",
+  "mailbox.title": "Bústia",
   "notification.welcome.title": "Benvingut a Homiio! 👋",
   "notification.welcome.body": "Gràcies per provar la nostra aplicació. Comença a explorar ara!",
   "success.signup": "Registre exitós",
@@ -916,7 +917,7 @@
     },
     "menu": {
       "account": "Compte",
-      "notifications": "Notificacions",
+      "mailbox": "Bústia",
       "terms": "Termes del servei",
       "privacy": "Política de privacitat"
     },

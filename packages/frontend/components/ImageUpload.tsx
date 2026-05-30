@@ -262,7 +262,7 @@ export function ImageUpload({
                                         style={styles.actionButton}
                                         onPress={() => setPrimaryImage(image.imageId)}
                                     >
-                                        <Ionicons name="star-outline" size={16} color="white" />
+                                        <Ionicons name="star-outline" size={16} color={colors.white} />
                                     </TouchableOpacity>
                                 )}
 
@@ -270,7 +270,7 @@ export function ImageUpload({
                                     style={[styles.actionButton, styles.deleteButton]}
                                     onPress={() => deleteImage(image.imageId)}
                                 >
-                                    <Ionicons name="trash-outline" size={16} color="white" />
+                                    <Ionicons name="trash-outline" size={16} color={colors.white} />
                                 </TouchableOpacity>
                             </View>
 
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     },
     primaryBadgeText: {
         fontSize: 10,
-        color: 'white',
+        color: colors.white,
         fontWeight: 'bold',
     },
     imageActions: {
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
     },
     imageInfoText: {
         fontSize: 10,
-        color: 'white',
+        color: colors.white,
         textAlign: 'center',
         backgroundColor: 'rgba(0, 0, 0, 0.6)',
         paddingHorizontal: 4,

@@ -11,6 +11,7 @@ import { useConversationStore } from '@/store/conversationStore';
 import type { Conversation } from '@/store/conversationStore';
 import { fetch as expoFetch } from 'expo/fetch';
 import { ScrollView } from 'react-native-gesture-handler';
+import { colors } from '@/styles/colors';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -174,6 +175,6 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
 const styles = StyleSheet.create({
     container: {
         maxHeight: screenHeight * 0.9,
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.white,
     },
 });

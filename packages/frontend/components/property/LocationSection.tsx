@@ -4,6 +4,7 @@ import { ThemedText } from '@/components/ThemedText';
 import Map from '@/components/Map';
 import { useTranslation } from 'react-i18next';
 import type { Property } from '@homiio/shared-types';
+import { colors } from '@/styles/colors';
 
 interface ProximityInfo {
     proximityToTransport?: boolean;
@@ -69,10 +70,10 @@ export const LocationSection: React.FC<Props> = ({ property }) => {
 const styles = StyleSheet.create({
     container: { marginBottom: 20 },
     sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15 },
-    card: { padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#e9ecef', marginBottom: 12 },
+    card: { padding: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.border, marginBottom: 12 },
     item: { fontSize: 14, marginBottom: 8 },
-    mapWrapper: { borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#e9ecef', marginBottom: 12 },
-    amenitiesCard: { padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#e9ecef' },
+    mapWrapper: { borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, marginBottom: 12 },
+    amenitiesCard: { padding: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
     amenitiesTitle: { fontSize: 16, fontWeight: '600', marginBottom: 8 },
     amenityItem: { fontSize: 14, marginBottom: 4 },
 });

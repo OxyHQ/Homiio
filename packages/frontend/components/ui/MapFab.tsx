@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@oxyhq/bloom/button';
 
 import { cardShadow } from '@/constants/styles';
+import { colors } from '@/styles/colors';
 
 interface MapFabProps {
   onPress: () => void;
@@ -38,7 +39,7 @@ export const MapFab: React.FC<MapFabProps> = ({
         onPress={onPress}
         variant="primary"
         size="medium"
-        icon={<Ionicons name={icon} size={18} color="#ffffff" />}
+        icon={<Ionicons name={icon} size={18} color={colors.white} />}
         iconPosition="left"
         accessibilityLabel={label}
       >

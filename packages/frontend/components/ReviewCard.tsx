@@ -105,11 +105,11 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
         return (
             <View style={styles.starsContainer}>
                 {[...Array(fullStars)].map((_, i) => (
-                    <Ionicons key={`full-${i}`} name="star" size={16} color="#FFD700" />
+                    <Ionicons key={`full-${i}`} name="star" size={16} color={colors.ratingStar} />
                 ))}
-                {halfStar && <Ionicons name="star-half" size={16} color="#FFD700" />}
+                {halfStar && <Ionicons name="star-half" size={16} color={colors.ratingStar} />}
                 {[...Array(emptyStars)].map((_, i) => (
-                    <Ionicons key={`empty-${i}`} name="star-outline" size={16} color="#FFD700" />
+                    <Ionicons key={`empty-${i}`} name="star-outline" size={16} color={colors.ratingStar} />
                 ))}
             </View>
         );
@@ -183,8 +183,8 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
                                 {/* Confidence Score */}
                                 {!isCompact && (
                                     <View style={[styles.confidenceBadge, {
-                                        backgroundColor: (review.confidenceScore || 0) >= 80 ? '#4CAF50' :
-                                            (review.confidenceScore || 0) >= 60 ? '#FF9800' : '#F44336'
+                                        backgroundColor: (review.confidenceScore || 0) >= 80 ? colors.success :
+                                            (review.confidenceScore || 0) >= 60 ? colors.warning : colors.danger
                                     }]}>
                                         <ThemedText style={styles.confidenceText}>
                                             {review.confidenceScore || 0}% confident
@@ -205,7 +205,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
                                 {/* Karma Score */}
                                 {!isCompact && (review.karmaScore || 0) > 0 && (
                                     <View style={styles.karmaBadge}>
-                                        <Ionicons name="trending-up" size={12} color="#9C27B0" />
+                                        <Ionicons name="trending-up" size={12} color={colors.info} />
                                         <ThemedText style={styles.karmaText}>{review.karmaScore || 0} karma</ThemedText>
                                     </View>
                                 )}
@@ -270,18 +270,18 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
                     <View style={styles.moderationSection}>
                         <TouchableOpacity
                             style={[styles.helpfulButton, {
-                                backgroundColor: (review.helpfulVotes || 0) > 0 ? '#e8f5e8' : '#f8fafc',
-                                borderColor: (review.helpfulVotes || 0) > 0 ? '#4CAF50' : '#e2e8f0'
+                                backgroundColor: (review.helpfulVotes || 0) > 0 ? colors.successSubtle : colors.surface,
+                                borderColor: (review.helpfulVotes || 0) > 0 ? colors.success : colors.border
                             }]}
                             onPress={handleHelpful}
                         >
                             <Ionicons
                                 name="thumbs-up"
                                 size={18}
-                                color={(review.helpfulVotes || 0) > 0 ? '#4CAF50' : colors.COLOR_BLACK_LIGHT_4}
+                                color={(review.helpfulVotes || 0) > 0 ? colors.success : colors.COLOR_BLACK_LIGHT_4}
                             />
                             <ThemedText style={[styles.helpfulText, {
-                                color: (review.helpfulVotes || 0) > 0 ? '#2e7d32' : colors.COLOR_BLACK_LIGHT_4
+                                color: (review.helpfulVotes || 0) > 0 ? colors.success : colors.COLOR_BLACK_LIGHT_4
                             }]}>
                                 Helpful ({review.helpfulVotes || 0})
                             </ThemedText>
@@ -289,13 +289,13 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
 
                         <TouchableOpacity
                             style={[styles.helpfulButton, {
-                                backgroundColor: '#f8fafc',
-                                borderColor: '#e2e8f0'
+                                backgroundColor: colors.surface,
+                                borderColor: colors.border
                             }]}
                             onPress={handleReport}
                         >
-                            <Ionicons name="flag" size={18} color="#ef4444" />
-                            <ThemedText style={[styles.helpfulText, { color: '#ef4444' }]}>Report</ThemedText>
+                            <Ionicons name="flag" size={18} color={colors.error} />
+                            <ThemedText style={[styles.helpfulText, { color: colors.error }]}>Report</ThemedText>
                         </TouchableOpacity>
 
                         {/* Right of Reply Button */}
@@ -322,7 +322,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
                         {/* Moderation Status Indicator */}
                         {review.moderationStatus === 'flagged' && (
                             <View style={styles.flaggedIndicator}>
-                                <Ionicons name="warning" size={12} color="#FF9800" />
+                                <Ionicons name="warning" size={12} color={colors.warning} />
                                 <ThemedText style={styles.flaggedText}>Under Review</ThemedText>
                             </View>
                         )}
@@ -335,7 +335,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
 
 const styles = StyleSheet.create({
     reviewCard: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: colors.surfaceElevated,
         borderRadius: radius.lg,
         padding: spacing.xl,
         marginBottom: spacing.lg,
@@ -391,17 +391,17 @@ const styles = StyleSheet.create({
     verifiedBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#e8f5e8',
+        backgroundColor: colors.successSubtle,
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 12,
         gap: 4,
         borderWidth: 1,
-        borderColor: '#4CAF50',
+        borderColor: colors.success,
     },
     verifiedText: {
         fontSize: 11,
-        color: '#2e7d32',
+        color: colors.success,
         fontWeight: '700',
     },
     confidenceBadge: {
@@ -412,39 +412,39 @@ const styles = StyleSheet.create({
     },
     confidenceText: {
         fontSize: 11,
-        color: '#FFFFFF',
+        color: colors.white,
         fontWeight: '700',
     },
     evidenceBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f0f4f8',
+        backgroundColor: colors.mutedSubtle,
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 12,
         gap: 4,
         borderWidth: 1,
-        borderColor: '#cbd5e0',
+        borderColor: colors.border,
     },
     evidenceText: {
         fontSize: 11,
-        color: '#4a5568',
+        color: colors.muted,
         fontWeight: '600',
     },
     karmaBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f3e8ff',
+        backgroundColor: colors.infoSubtle,
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 12,
         gap: 4,
         borderWidth: 1,
-        borderColor: '#9C27B0',
+        borderColor: colors.info,
     },
     karmaText: {
         fontSize: 11,
-        color: '#7c3aed',
+        color: colors.info,
         fontWeight: '600',
     },
     reviewMetaRow: {
@@ -479,28 +479,28 @@ const styles = StyleSheet.create({
         marginTop: 12,
     },
     issueTag: {
-        backgroundColor: '#fff4e6',
+        backgroundColor: colors.warningSubtle,
         paddingHorizontal: 10,
         paddingVertical: 5,
         borderRadius: 14,
         borderWidth: 1,
-        borderColor: '#ff9800',
+        borderColor: colors.warning,
     },
     issueTagText: {
         fontSize: 12,
-        color: '#e65100',
+        color: colors.warning,
         fontWeight: '600',
     },
     starsContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 3,
-        backgroundColor: '#fff9e6',
+        backgroundColor: colors.warningSubtle,
         paddingHorizontal: 10,
         paddingVertical: 6,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#ffd700',
+        borderColor: colors.ratingStar,
     },
     reviewText: {
         fontSize: 16,
@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
     },
     commentSection: {
         marginBottom: 12,
-        backgroundColor: '#f8fafc',
+        backgroundColor: colors.surface,
         padding: 12,
         borderRadius: 12,
         borderLeftWidth: 4,
@@ -541,7 +541,7 @@ const styles = StyleSheet.create({
         marginTop: 16,
         paddingTop: 16,
         borderTopWidth: 1,
-        borderTopColor: '#e9ecef',
+        borderTopColor: colors.border,
     },
     moderationSection: {
         flexDirection: 'row',
@@ -579,18 +579,18 @@ const styles = StyleSheet.create({
     flaggedIndicator: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff4e6',
+        backgroundColor: colors.warningSubtle,
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 10,
         gap: 4,
         marginTop: 6,
         borderWidth: 1,
-        borderColor: '#ff9800',
+        borderColor: colors.warning,
     },
     flaggedText: {
         fontSize: 11,
-        color: '#e65100',
+        color: colors.warning,
         fontWeight: '600',
     },
 });

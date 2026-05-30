@@ -27,6 +27,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 import type { PropertyImage } from '@homiio/shared-types';
+import { colors } from '@/styles/colors';
 
 interface ImageGalleryModalProps {
     visible: boolean;
@@ -322,13 +323,13 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
                     {/* Zoom Controls */}
                     <View style={[styles.zoomControls, { bottom: safeAreaBottom + 100 }]}>
                         <TouchableOpacity style={styles.zoomButton} onPress={zoomOut}>
-                            <Ionicons name="remove" size={20} color="white" />
+                            <Ionicons name="remove" size={20} color={colors.white} />
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.zoomButton} onPress={resetZoom}>
-                            <Ionicons name="contract" size={20} color="white" />
+                            <Ionicons name="contract" size={20} color={colors.white} />
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.zoomButton} onPress={zoomIn}>
-                            <Ionicons name="add" size={20} color="white" />
+                            <Ionicons name="add" size={20} color={colors.white} />
                         </TouchableOpacity>
                     </View>
 
@@ -336,7 +337,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
                     {currentIndex > 0 && (
                         <TouchableOpacity style={[styles.leftArrow, { top: '50%' }]} onPress={goToPrevious}>
                             <View style={styles.arrowContainer}>
-                                <Ionicons name="chevron-back" size={24} color="white" />
+                                <Ionicons name="chevron-back" size={24} color={colors.white} />
                             </View>
                         </TouchableOpacity>
                     )}
@@ -344,7 +345,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
                     {currentIndex < images.length - 1 && (
                         <TouchableOpacity style={[styles.rightArrow, { top: '50%' }]} onPress={goToNext}>
                             <View style={styles.arrowContainer}>
-                                <Ionicons name="chevron-forward" size={24} color="white" />
+                                <Ionicons name="chevron-forward" size={24} color={colors.white} />
                             </View>
                         </TouchableOpacity>
                     )}
@@ -353,7 +354,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
                 {/* Header - Overlay on top with safe area */}
                 <View style={[styles.headerOverlay, { paddingTop: safeAreaTop + 15 }]}>
                     <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                        <Ionicons name="close" size={28} color="white" />
+                        <Ionicons name="close" size={28} color={colors.white} />
                     </TouchableOpacity>
                     <Text style={styles.counter}>
                         {currentIndex + 1} / {images.length}
@@ -413,7 +414,7 @@ const styles = StyleSheet.create({
         padding: 5,
     },
     counter: {
-        color: 'white',
+        color: colors.white,
         fontSize: 16,
         fontWeight: '500',
     },
@@ -524,7 +525,7 @@ const styles = StyleSheet.create({
         borderColor: 'transparent',
     },
     activeThumbnail: {
-        borderColor: 'white',
+        borderColor: colors.white,
     },
     thumbnailImage: {
         width: '100%',

@@ -124,7 +124,7 @@ export const SaveSearchModal: React.FC<SaveSearchModalProps> = ({
                 value={notificationsEnabled}
                 onValueChange={setNotificationsEnabled}
                 trackColor={{ false: colors.COLOR_BLACK_LIGHT_5, true: colors.primaryColor + '40' }}
-                thumbColor={notificationsEnabled ? colors.primaryColor : '#ffffff'}
+                thumbColor={notificationsEnabled ? colors.primaryColor : colors.white}
               />
             </View>
           </View>
@@ -141,7 +141,7 @@ export const SaveSearchModal: React.FC<SaveSearchModalProps> = ({
               disabled={isSaving || !searchName.trim()}
             >
               {isSaving && (
-                <Ionicons name="refresh" size={16} color="white" style={styles.loadingIcon} />
+                <Ionicons name="refresh" size={16} color={colors.white} style={styles.loadingIcon} />
               )}
               <Text style={styles.saveButtonText}>
                 {isSaving ? t('common.saving') : t('common.save')}
@@ -157,18 +157,18 @@ export const SaveSearchModal: React.FC<SaveSearchModalProps> = ({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   modalContent: {
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 16,
     padding: 24,
     width: '100%',
     maxWidth: 400,
-    shadowColor: '#000',
+    shadowColor: colors.COLOR_BLACK,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 16,
@@ -235,13 +235,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     color: colors.primaryDark,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
   },
   textInputError: {
-    borderColor: '#EF4444',
+    borderColor: colors.error,
   },
   errorText: {
-    color: '#EF4444',
+    color: colors.error,
     fontSize: 14,
     marginTop: 6,
   },
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'white',
+    color: colors.white,
   },
   loadingIcon: {
     marginRight: 4,

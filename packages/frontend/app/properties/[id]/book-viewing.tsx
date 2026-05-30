@@ -302,7 +302,7 @@ export default function BookViewingPage() {
             <View style={styles.landlordDetails}>
               <Text style={styles.landlordName}>{property.landlordName}</Text>
               <View style={styles.ratingContainer}>
-                <Ionicons name="star" size={14} color="#FFD700" />
+                <Ionicons name="star" size={14} color={colors.ratingStar} />
                 <Text style={styles.ratingText}>{property.landlordRating}</Text>
               </View>
             </View>
@@ -359,7 +359,7 @@ export default function BookViewingPage() {
                 </Text>
 
                 {selectedTime === time && (
-                  <Ionicons name="checkmark-circle" size={18} color="white" />
+                  <Ionicons name="checkmark-circle" size={18} color={colors.white} />
                 )}
               </TouchableOpacity>
             ))}
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_3,
   },
   propertyCard: {
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 15,
     padding: 15,
     marginBottom: 20,
@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: colors.COLOR_BLACK_LIGHT_6,
     paddingTop: 15,
   },
   landlordAvatar: {
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
   dateCard: {
     width: 70,
     height: 90,
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 12,
     marginRight: 10,
     alignItems: 'center',
@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_3,
   },
   activeDateText: {
-    color: 'white',
+    color: colors.white,
   },
   timeSlotsContainer: {
     flexDirection: 'row',
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
   },
   timeSlot: {
     minWidth: 100,
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 10,
     padding: 15,
     alignItems: 'center',
@@ -556,11 +556,11 @@ const styles = StyleSheet.create({
     marginRight: 5,
   },
   selectedSlotText: {
-    color: 'white',
+    color: colors.white,
     fontWeight: '600',
   },
   notesInput: {
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 10,
     padding: 15,
     marginBottom: 10,
@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.COLOR_BLACK,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
   },
   policyContainer: {
     flexDirection: 'row',

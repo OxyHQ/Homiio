@@ -160,7 +160,7 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({
           position: 'sticky',
           top: 0,
           zIndex: 30,
-          backgroundColor: '#ffffff',
+          backgroundColor: colors.white,
           borderBottomWidth: 1,
           borderBottomColor: 'rgba(0, 0, 0, 0.06)',
         } as unknown as object)

@@ -89,7 +89,7 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
               property={property as Property & { _id: string }}
               variant="heart"
               color={colors.COLOR_BLACK}
-              activeColor="#EF4444"
+              activeColor={colors.error}
             />
           ) : null}
           <Button

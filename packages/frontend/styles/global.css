@@ -1,3 +1,65 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Bloom is the single source of truth for colors. The CSS variables below are
+ * the `blue` preset exported from @oxyhq/bloom/theme (APP_COLOR_PRESETS.blue),
+ * mirrored here so NativeWind utilities (bg-primary, bg-background,
+ * text-foreground, border-border …) resolve to the same values Bloom uses.
+ *
+ * Bloom's BloomThemeProvider also injects these vars at runtime and toggles the
+ * `.dark` class; this static block guarantees correct first-paint values on web
+ * before hydration and keeps light/dark in sync with `darkMode: 'class'`.
+ */
+@layer base {
+  :root {
+    --background: 0 0% 99%;
+    --foreground: 0 0% 12%;
+    --surface: 205 10% 97%;
+    --surface-foreground: 0 0% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 12%;
+
+    --primary: 205 87% 53%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 205 8% 95%;
+    --secondary-foreground: 0 0% 12%;
+    --muted: 205 8% 95%;
+    --muted-foreground: 205 5% 42%;
+    --accent: 205 8% 95%;
+    --accent-foreground: 0 0% 12%;
+
+    --destructive: 0 84% 60%;
+    --border: 205 8% 88%;
+    --input: 205 8% 88%;
+    --ring: 205 87% 53%;
+    --sidebar: 205 10% 97%;
+  }
+
+  .dark {
+    --background: 205 50% 5%;
+    --foreground: 0 0% 93%;
+    --surface: 205 20% 18%;
+    --surface-foreground: 0 0% 93%;
+    --popover: 205 20% 18%;
+    --popover-foreground: 0 0% 93%;
+
+    --primary: 205 87% 53%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 205 20% 18%;
+    --secondary-foreground: 0 0% 93%;
+    --muted: 205 18% 20%;
+    --muted-foreground: 0 0% 70%;
+    --accent: 205 18% 20%;
+    --accent-foreground: 0 0% 93%;
+
+    --destructive: 0 84% 60%;
+    --border: 205 12% 20%;
+    --input: 205 10% 23%;
+    --ring: 205 87% 53%;
+    --sidebar: 205 30% 8%;
+  }
+}

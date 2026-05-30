@@ -47,25 +47,28 @@ export function EcoCertification({
   features = [],
   compact = false,
 }: EcoCertificationProps) {
+  // EU-style energy-label scale (A+ green → G red). Endpoints map to Bloom
+  // status tokens; the two mid-scale steps (C lime, F orange) are intentional
+  // gradient stops Bloom's 3 status colors can't represent.
   const getRatingColor = (rating: EcoRating) => {
     switch (rating) {
       case 'A+':
       case 'A':
-        return '#4CAF50';
+        return colors.success;
       case 'B':
-        return '#8BC34A';
+        return colors.success;
       case 'C':
-        return '#CDDC39';
+        return '#CDDC39'; // energy-scale mid step (lime)
       case 'D':
-        return '#FFC107';
+        return colors.warning;
       case 'E':
-        return '#FF9800';
+        return colors.warning;
       case 'F':
-        return '#FF5722';
+        return '#FF5722'; // energy-scale mid step (deep orange)
       case 'G':
-        return '#F44336';
+        return colors.danger;
       default:
-        return '#9E9E9E';
+        return colors.textTertiary;
     }
   };
 
@@ -85,7 +88,7 @@ export function EcoCertification({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Ionicons name="leaf" size={24} color="#4CAF50" />
+        <Ionicons name="leaf" size={24} color={colors.success} />
         <Text style={styles.title}>Eco-Certified Property</Text>
       </View>
 
@@ -102,7 +105,7 @@ export function EcoCertification({
           <View style={styles.featuresList}>
             {features.map((feature, index) => (
               <View key={index} style={styles.featureItem}>
-                <Ionicons name={ecoFeatureInfo[feature].icon} size={16} color="#4CAF50" />
+                <Ionicons name={ecoFeatureInfo[feature].icon} size={16} color={colors.success} />
                 <Text style={styles.featureText}>{ecoFeatureInfo[feature].label}</Text>
               </View>
             ))}
@@ -115,11 +118,11 @@ export function EcoCertification({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#F1F8E9',
+    backgroundColor: colors.successSubtle,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#C8E6C9',
+    borderColor: colors.success,
   },
   header: {
     flexDirection: 'row',
@@ -129,7 +132,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2E7D32',
+    color: colors.success,
     marginLeft: 8,
   },
   ratingContainer: {
@@ -150,7 +153,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ratingText: {
-    color: 'white',
+    color: colors.white,
     fontWeight: 'bold',
     fontSize: 16,
   },
@@ -170,7 +173,7 @@ const styles = StyleSheet.create({
   featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 16,
@@ -189,7 +192,7 @@ const styles = StyleSheet.create({
   compactLabel: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#4CAF50',
+    color: colors.success,
     marginLeft: 8,
   },
 });

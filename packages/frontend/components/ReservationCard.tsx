@@ -101,7 +101,7 @@ export const ReservationCard: React.FC<ReservationCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderRadius: radius.lg,
     overflow: 'hidden',
     marginBottom: spacing.md,
