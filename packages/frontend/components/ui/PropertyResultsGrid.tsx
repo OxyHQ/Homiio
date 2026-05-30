@@ -81,31 +81,39 @@ export const PropertyResultsGrid: React.FC<PropertyResultsGridProps> = ({
 
   if (properties.length === 0) return null;
 
+  // The caller's `style` (which may carry horizontal padding) lives on the
+  // OUTER View. The inner grid is what we measure via `onLayout`, so
+  // `gridWidth` is the padded content width — not the border-box width.
+  // Computing `cellWidth` from the content width keeps cells inside the
+  // gutter instead of overflowing by the padding. Mirrors
+  // `FeaturedGridSection`.
   return (
-    <View style={[styles.grid, { gap }, style]} onLayout={handleLayout}>
-      {properties.map((property) => {
-        const isHighlighted = property._id === highlightedPropertyId;
-        return (
-          <View
-            key={property._id}
-            style={[
-              styles.cell,
-              cellWidth ? { width: cellWidth } : { width: `${100 / cols}%` },
-              isHighlighted ? styles.cellHighlighted : null,
-            ]}
-          >
-            <PropertyCard
-              property={property}
-              variant="grid"
-              orientation="vertical"
-              onPress={() => onPropertyPress(property)}
-              showSaveButton
-              showVerifiedBadge
-              showSaveCount={false}
-            />
-          </View>
-        );
-      })}
+    <View style={style}>
+      <View style={[styles.grid, { gap }]} onLayout={handleLayout}>
+        {properties.map((property) => {
+          const isHighlighted = property._id === highlightedPropertyId;
+          return (
+            <View
+              key={property._id}
+              style={[
+                styles.cell,
+                cellWidth ? { width: cellWidth } : { width: `${100 / cols}%` },
+                isHighlighted ? styles.cellHighlighted : null,
+              ]}
+            >
+              <PropertyCard
+                property={property}
+                variant="grid"
+                orientation="vertical"
+                onPress={() => onPropertyPress(property)}
+                showSaveButton
+                showVerifiedBadge
+                showSaveCount={false}
+              />
+            </View>
+          );
+        })}
+      </View>
     </View>
   );
 };

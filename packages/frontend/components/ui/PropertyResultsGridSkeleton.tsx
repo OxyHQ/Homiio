@@ -56,39 +56,45 @@ export const PropertyResultsGridSkeleton: React.FC<
     setGridWidth(e.nativeEvent.layout.width);
   }, []);
 
+  // Same split as PropertyResultsGrid: the caller's `style` (padding) lives
+  // on the OUTER View; the inner grid is measured so `cellWidth` is derived
+  // from the padded content width and the skeleton doesn't overflow (and
+  // matches the real grid once it loads — no layout shift).
   return (
-    <View style={[styles.grid, { gap }, style]} onLayout={handleLayout}>
-      {Array.from({ length: count }).map((_, idx) => (
-        <View
-          key={idx}
-          style={[
-            styles.cell,
-            cellWidth ? { width: cellWidth } : { width: `${100 / cols}%` },
-          ]}
-        >
-          <Skeleton.Box
-            width="100%"
-            height={240}
-            borderRadius={radius.photo}
-            style={styles.image}
-          />
-          <View style={styles.meta}>
-            <Skeleton.Box width="70%" height={14} borderRadius={4} />
+    <View style={style}>
+      <View style={[styles.grid, { gap }]} onLayout={handleLayout}>
+        {Array.from({ length: count }).map((_, idx) => (
+          <View
+            key={idx}
+            style={[
+              styles.cell,
+              cellWidth ? { width: cellWidth } : { width: `${100 / cols}%` },
+            ]}
+          >
             <Skeleton.Box
-              width="40%"
-              height={12}
-              borderRadius={4}
-              style={styles.metaLine}
+              width="100%"
+              height={240}
+              borderRadius={radius.photo}
+              style={styles.image}
             />
-            <Skeleton.Box
-              width="30%"
-              height={14}
-              borderRadius={4}
-              style={styles.metaLine}
-            />
+            <View style={styles.meta}>
+              <Skeleton.Box width="70%" height={14} borderRadius={4} />
+              <Skeleton.Box
+                width="40%"
+                height={12}
+                borderRadius={4}
+                style={styles.metaLine}
+              />
+              <Skeleton.Box
+                width="30%"
+                height={14}
+                borderRadius={4}
+                style={styles.metaLine}
+              />
+            </View>
           </View>
-        </View>
-      ))}
+        ))}
+      </View>
     </View>
   );
 };
