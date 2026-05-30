@@ -4,56 +4,75 @@
  * long-term; Beachfront / Cabins / Pools for vacation).
  *
  * Visual language:
- *   - 28px outline-style Ionicons (not filled blobs).
- *   - 12px label sitting 8px under the icon.
- *   - Active state = primary color icon + label, 2px underline bar.
- *   - On web: 32px gap between items, subtle scale-1.04 on hover.
- *   - On mobile: 22px gap, snap-to-item via scroll inertia.
+ *   - Rich 54px isometric PNG render per category (full-color, never tinted)
+ *     clipped to a `radius.lg` rounded square so it reads as a premium tile.
+ *   - 13px label sitting just under the image, on a fixed-width item so
+ *     labels line up across the row.
+ *   - Active state = dark + bold label with a 2px primary underline bar and
+ *     the image at full opacity; inactive = muted label, no bar, image at
+ *     0.85 opacity (dim the tile, don't recolor the render).
+ *   - On web: subtle scale-1.04 on hover (never re-tints).
  *
- * Spacing is anchored on the design-token `spacing` scale.
+ * Spacing is anchored on the design-token `spacing`/`radius` scale.
  */
 import React, { useCallback, useMemo, useState } from 'react';
-import { Platform, Pressable, ScrollView, View } from 'react-native';
+import {
+  Image,
+  Platform,
+  Pressable,
+  ScrollView,
+  View,
+  type ImageSourcePropType,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@oxyhq/bloom/typography';
 
 import { useRentalMode } from '@/context/RentalModeContext';
 import { useHomeCategoryStore, type HomeCategory } from '@/store/homeCategoryStore';
 import { colors } from '@/styles/colors';
-import { spacing, tracker } from '@/constants/styles';
+import { radius, spacing, tracker } from '@/constants/styles';
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+// Isometric 3D render shared by every category for now. Each category will
+// get its own distinct PNG later — swap the per-entry `image` source below
+// (the shape already supports a unique image per category). Loaded via
+// `require` (typed) so it renders through RN's `Image` on web + native alike,
+// matching the app's other local-asset images.
+const isometricIcon: ImageSourcePropType = require('@/assets/categories/isometric-icon.png');
 
 interface CategoryDef {
   id: HomeCategory;
   labelKey: string;
   fallback: string;
-  icon: IoniconName;
+  image: ImageSourcePropType;
 }
 
 const LONG_TERM_CATEGORIES: CategoryDef[] = [
-  { id: 'studios', labelKey: 'home.category.studios', fallback: 'Studios', icon: 'square-outline' },
-  { id: 'apartments', labelKey: 'home.category.apartments', fallback: 'Apartments', icon: 'business-outline' },
-  { id: 'houses', labelKey: 'home.category.houses', fallback: 'Houses', icon: 'home-outline' },
-  { id: 'rooms', labelKey: 'home.category.rooms', fallback: 'Rooms', icon: 'bed-outline' },
-  { id: 'coliving', labelKey: 'home.category.coliving', fallback: 'Co-living', icon: 'people-outline' },
-  { id: 'luxury', labelKey: 'home.category.luxury', fallback: 'Luxury', icon: 'diamond-outline' },
-  { id: 'new_listings', labelKey: 'home.category.newListings', fallback: 'New listings', icon: 'sparkles-outline' },
-  { id: 'near_you', labelKey: 'home.category.nearYou', fallback: 'Near you', icon: 'navigate-outline' },
+  { id: 'studios', labelKey: 'home.category.studios', fallback: 'Studios', image: isometricIcon },
+  { id: 'apartments', labelKey: 'home.category.apartments', fallback: 'Apartments', image: isometricIcon },
+  { id: 'houses', labelKey: 'home.category.houses', fallback: 'Houses', image: isometricIcon },
+  { id: 'rooms', labelKey: 'home.category.rooms', fallback: 'Rooms', image: isometricIcon },
+  { id: 'coliving', labelKey: 'home.category.coliving', fallback: 'Co-living', image: isometricIcon },
+  { id: 'luxury', labelKey: 'home.category.luxury', fallback: 'Luxury', image: isometricIcon },
+  { id: 'new_listings', labelKey: 'home.category.newListings', fallback: 'New listings', image: isometricIcon },
+  { id: 'near_you', labelKey: 'home.category.nearYou', fallback: 'Near you', image: isometricIcon },
 ];
 
 const VACATION_CATEGORIES: CategoryDef[] = [
-  { id: 'beachfront', labelKey: 'home.category.beachfront', fallback: 'Beachfront', icon: 'sunny-outline' },
-  { id: 'cabins', labelKey: 'home.category.cabins', fallback: 'Cabins', icon: 'leaf-outline' },
-  { id: 'pools', labelKey: 'home.category.pools', fallback: 'Pools', icon: 'water-outline' },
-  { id: 'mountain', labelKey: 'home.category.mountain', fallback: 'Mountain', icon: 'triangle-outline' },
-  { id: 'city_breaks', labelKey: 'home.category.cityBreaks', fallback: 'City breaks', icon: 'business-outline' },
-  { id: 'countryside', labelKey: 'home.category.countryside', fallback: 'Countryside', icon: 'flower-outline' },
-  { id: 'instant_book', labelKey: 'home.category.instantBook', fallback: 'Instant book', icon: 'flash-outline' },
-  { id: 'pet_friendly', labelKey: 'home.category.petFriendly', fallback: 'Pet friendly', icon: 'paw-outline' },
+  { id: 'beachfront', labelKey: 'home.category.beachfront', fallback: 'Beachfront', image: isometricIcon },
+  { id: 'cabins', labelKey: 'home.category.cabins', fallback: 'Cabins', image: isometricIcon },
+  { id: 'pools', labelKey: 'home.category.pools', fallback: 'Pools', image: isometricIcon },
+  { id: 'mountain', labelKey: 'home.category.mountain', fallback: 'Mountain', image: isometricIcon },
+  { id: 'city_breaks', labelKey: 'home.category.cityBreaks', fallback: 'City breaks', image: isometricIcon },
+  { id: 'countryside', labelKey: 'home.category.countryside', fallback: 'Countryside', image: isometricIcon },
+  { id: 'instant_book', labelKey: 'home.category.instantBook', fallback: 'Instant book', image: isometricIcon },
+  { id: 'pet_friendly', labelKey: 'home.category.petFriendly', fallback: 'Pet friendly', image: isometricIcon },
 ];
+
+/** Edge length of the isometric tile — larger than a line icon so the 3D render reads. */
+const TILE_SIZE = 54;
+/** Fixed item width keeps labels aligned across the row regardless of label length. */
+const ITEM_WIDTH = 84;
 
 interface HomeCategoryStripProps {
   /** Optional class applied to the outer wrapper for custom spacing/background. */
@@ -77,12 +96,11 @@ const CategoryItem: React.FC<CategoryItemProps> = ({ item, active, label, onPres
   const [hovered, setHovered] = useState(false);
 
   /**
-   * Active items pop in the primary color (icon + label + 2px bar);
-   * inactive items mute to neutral gray at 70% opacity. Hover on web
-   * nudges scale slightly but never re-tints — that keeps the active
-   * state unambiguous.
+   * The isometric render is full-color, so we never tint it — active vs
+   * inactive is conveyed by image opacity (1 vs 0.85), the label color/weight,
+   * and the 2px underline bar. Hover on web nudges scale slightly only.
    */
-  const tint = active ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3;
+  const labelColor = active ? colors.COLOR_BLACK : colors.COLOR_BLACK_LIGHT_3;
   const scale = hovered && Platform.OS === 'web' ? 1.04 : 1;
 
   return (
@@ -94,19 +112,30 @@ const CategoryItem: React.FC<CategoryItemProps> = ({ item, active, label, onPres
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       accessibilityLabel={label}
-      style={{
-        opacity: active ? 1 : 0.7,
-        transform: [{ scale }],
-      }}
+      style={{ width: ITEM_WIDTH, transform: [{ scale }] }}
     >
-      <View className="items-center justify-center" style={{ paddingBottom: spacing.sm }}>
-        <Ionicons name={item.icon} size={28} color={tint} />
+      <View
+        className="items-center justify-center overflow-hidden"
+        style={{
+          width: TILE_SIZE,
+          height: TILE_SIZE,
+          borderRadius: radius.lg,
+          marginBottom: spacing.sm,
+        }}
+      >
+        <Image
+          source={item.image}
+          style={{ width: TILE_SIZE, height: TILE_SIZE, opacity: active ? 1 : 0.85 }}
+          resizeMode="contain"
+          accessible={false}
+        />
       </View>
       <Text
+        numberOfLines={1}
         style={{
-          fontSize: 12,
+          fontSize: 13,
           fontWeight: active ? '700' : '500',
-          color: tint,
+          color: labelColor,
           letterSpacing: tracker.wide,
           textAlign: 'center',
         }}
@@ -116,7 +145,7 @@ const CategoryItem: React.FC<CategoryItemProps> = ({ item, active, label, onPres
       <View
         className="rounded-full"
         style={{
-          marginTop: spacing.sm,
+          marginTop: spacing.xs,
           height: 2,
           alignSelf: 'stretch',
           backgroundColor: active ? colors.primaryColor : 'transparent',
@@ -175,8 +204,8 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({
         snapToAlignment="start"
         contentContainerStyle={
           isWeb
-            ? { paddingHorizontal: spacing['2xl'], gap: spacing['3xl'] }
-            : { paddingHorizontal: spacing.lg, gap: spacing['2xl'] }
+            ? { paddingHorizontal: spacing['2xl'], gap: spacing.lg }
+            : { paddingHorizontal: spacing.lg, gap: spacing.md }
         }
       >
         {items.map((item) => (
