@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback, useContext } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useProperties } from '@/hooks';
@@ -12,6 +13,7 @@ import { FiltersBottomSheet, FilterSection, FilterValue } from '@/components/Fil
 import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
 
 import { Property as BaseProperty } from '@homiio/shared-types';
+import { logger } from '@/utils/logger';
 
 interface Property extends Omit<BaseProperty, '_id'> {
     _id?: string;
@@ -22,6 +24,7 @@ export default function PropertyTypeScreen() {
     const { type } = useLocalSearchParams();
     const { t } = useTranslation();
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const [refreshing, setRefreshing] = useState(false);
     const { openBottomSheet, closeBottomSheet } = useContext(BottomSheetContext);
     const [filters, setFilters] = useState({
@@ -178,8 +181,8 @@ export default function PropertyTypeScreen() {
                 status: 'published',
                 type: type as string,
             });
-        } catch (error) {
-            console.error('Error refreshing data:', error);
+        } catch (error: unknown) {
+            logger.error('Error refreshing data:', error);
         } finally {
             setRefreshing(false);
         }
@@ -203,7 +206,7 @@ export default function PropertyTypeScreen() {
             style={styles.container}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
                 <ThemedText style={styles.title}>
                     {t('properties.type.title', { type: getTypeName(type as string) })}
                 </ThemedText>

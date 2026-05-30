@@ -29,8 +29,10 @@ import {
   StyleSheet,
   RefreshControl,
   Image,
+  Pressable,
   useWindowDimensions,
 } from 'react-native';
+import { Menu } from 'lucide-react-native';
 import Animated, {
   interpolate,
   useAnimatedScrollHandler,
@@ -68,6 +70,9 @@ import { HostCtaBanner } from '@/components/HostCtaBanner';
 import { HomeFooterStrip } from '@/components/HomeFooterStrip';
 import { useMediaQuery } from 'react-responsive';
 import { useLayoutScroll } from '@/context/LayoutScrollContext';
+import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
+import { useUIStore } from '@/store/uiStore';
+import { colors } from '@/styles/colors';
 import {
   resolveSectionSpacing,
   spacing,
@@ -174,6 +179,11 @@ export default function HomePage() {
   const [nearbyProperties, setNearbyProperties] = useState<Record<string, Property[]>>({});
   const isWide = useMediaQuery({ minWidth: 768 });
   const isXL = useMediaQuery({ minWidth: 1024 });
+  // Matches the breakpoint that hides the persistent sidebar in _layout.tsx
+  // (useIsScreenNotMobile === minWidth 500). Below it, the sidebar is an
+  // on-demand overlay drawer, so the hero needs a way to open it.
+  const isScreenNotMobile = useIsScreenNotMobile();
+  const openMobileDrawer = useUIStore((s) => s.openMobileDrawer);
 
   // Get user location on mount. Foreground permissions are an explicit
   // side effect — `useEffect` is the correct primitive.
@@ -379,6 +389,20 @@ export default function HomePage() {
             pointerEvents="none"
           />
 
+          {/* Drawer toggle — small screens only. Opens the overlay sidebar
+              (the persistent sidebar is hidden below the 500px breakpoint). */}
+          {!isScreenNotMobile ? (
+            <Pressable
+              onPress={openMobileDrawer}
+              accessibilityRole="button"
+              accessibilityLabel={t('sidebar.open', { defaultValue: 'Open menu' })}
+              hitSlop={spacing.sm}
+              style={[styles.heroMenuButton, { top: insets.top + spacing.sm }]}
+            >
+              <Menu size={22} color={colors.primaryLight} />
+            </Pressable>
+          ) : null}
+
           <View style={styles.heroContent}>
             <H1 style={styles.heroTitle}>{t('home.hero.title')}</H1>
             <P style={styles.heroSubtitle}>{t('home.hero.subtitle')}</P>
@@ -568,6 +592,17 @@ const createStyles = (
       left: 0,
       right: 0,
       bottom: 0,
+    },
+    heroMenuButton: {
+      position: 'absolute',
+      left: spacing.lg,
+      zIndex: 10,
+      width: 40,
+      height: 40,
+      borderRadius: 999,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(0,0,0,0.35)',
     },
     heroContent: {
       width: '100%',

@@ -26,8 +26,8 @@ export function ProfileManager() {
   const [selectedProfileType, setSelectedProfileType] = useState<ProfileType>(ProfileType.PERSONAL);
 
   // Get personal and agency profiles from allProfiles
-  const personalProfile = allProfiles.find((p: any) => p.profileType === ProfileType.PERSONAL);
-  const agencyProfiles = allProfiles.filter((p: any) => p.profileType === ProfileType.AGENCY);
+  const personalProfile = allProfiles.find((p) => p.profileType === ProfileType.PERSONAL);
+  const agencyProfiles = allProfiles.filter((p) => p.profileType === ProfileType.AGENCY);
 
   if (!oxyServices || !activeSessionId) {
     return (
@@ -102,20 +102,19 @@ export function ProfileManager() {
 
       await createProfile(profileData);
       Alert.alert('Success', `${profileType} profile created successfully!`);
-    } catch (error: any) {
-      Alert.alert(
-        'Error',
-        `Failed to create ${profileType} profile: ${error.message || 'Unknown error'}`,
-      );
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      Alert.alert('Error', `Failed to create ${profileType} profile: ${message}`);
     }
   };
 
   const handleUpdateProfile = async (profileId: string, updateData: UpdateProfileData) => {
     try {
-      await updateProfile(profileId, updateData as any);
+      await updateProfile(profileId, updateData);
       Alert.alert('Success', 'Profile updated successfully!');
-    } catch (error: any) {
-      Alert.alert('Error', `Failed to update profile: ${error.message || 'Unknown error'}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      Alert.alert('Error', `Failed to update profile: ${message}`);
     }
   };
 
@@ -129,8 +128,9 @@ export function ProfileManager() {
           try {
             await deleteProfile(profileId);
             Alert.alert('Success', 'Profile deleted successfully!');
-          } catch (error: any) {
-            Alert.alert('Error', `Failed to delete profile: ${error.message || 'Unknown error'}`);
+          } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            Alert.alert('Error', `Failed to delete profile: ${message}`);
           }
         },
       },

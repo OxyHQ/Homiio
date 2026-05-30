@@ -11,21 +11,18 @@ import {
     ScrollView,
     TextInput,
 } from 'react-native';
-import { useOxy } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
-import { propertyService, type Property, type PropertyFilters } from '@/services/propertyService';
+import { propertyService, type Property } from '@/services/propertyService';
+import { getPropertyTitle } from '@/utils/propertyUtils';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { RoomFilters } from '@/components/RoomFilters';
+import { RoomFilters, type RoomFilterOptions } from '@/components/RoomFilters';
 import { PropertyType } from '@homiio/shared-types';
 
-// Type assertion for Ionicons compatibility
-const IconComponent = Ionicons as any;
-
 interface RoomListProps {
-    filters?: PropertyFilters;
-    onFilterChange?: (filters: PropertyFilters) => void;
+    filters?: RoomFilterOptions;
+    onFilterChange?: (filters: RoomFilterOptions) => void;
 }
 
 interface RoomCardProps {
@@ -40,15 +37,16 @@ const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
         router.push(`/properties/${property._id}/`);
     };
 
-    const isAvailable = property.availability?.isAvailable ?? true;
+    const isAvailable = propertyService.isPropertyAvailable(property);
     const primaryImage = propertyService.getPrimaryImageUrl(property);
     const formattedPrice = propertyService.formatPropertyPrice(property);
+    const title = getPropertyTitle(property);
+    const score = matchScore ?? 0;
 
-    // Calculate occupancy status
-    const maxOccupants = property.rules?.maxOccupancy ?? 1;
-    const currentOccupants = property.occupancy?.currentOccupants?.length ?? 0;
-    const isFull = currentOccupants >= maxOccupants;
-    const capacityText = `${currentOccupants}/${maxOccupants} occupants`;
+    // The property contract does not expose live occupancy, so surface the
+    // maximum capacity the listing supports instead of an occupied/total count.
+    const maxOccupants = property.rules?.maxGuests ?? property.maxGuests ?? 1;
+    const capacityText = `Up to ${maxOccupants} ${maxOccupants === 1 ? 'guest' : 'guests'}`;
 
     return (
         <TouchableOpacity
@@ -70,9 +68,9 @@ const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
                     </View>
                 )}
                 {/* Match Score Badge */}
-                {matchScore > 0 && (
+                {score > 0 && (
                     <View style={styles.matchScoreBadge}>
-                        <Text style={styles.matchScoreText}>{matchScore}% Match</Text>
+                        <Text style={styles.matchScoreText}>{score}% Match</Text>
                     </View>
                 )}
             </View>
@@ -81,19 +79,13 @@ const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
             <View style={styles.detailsContainer}>
                 <View style={styles.headerRow}>
                     <Text style={styles.roomName} numberOfLines={1}>
-                        {property.title}
+                        {title}
                     </Text>
                     <Text style={styles.price}>{formattedPrice}</Text>
                 </View>
 
-                {property.parentPropertyId && (
-                    <Text style={styles.propertyName} numberOfLines={1}>
-                        Part of {property.parentPropertyTitle || 'Larger Property'}
-                    </Text>
-                )}
-
                 <Text style={styles.location} numberOfLines={1}>
-                    {property.address?.city}, {property.address?.state}
+                    {[property.address?.city, property.address?.state].filter(Boolean).join(', ')}
                 </Text>
 
                 {/* Room Features */}
@@ -119,13 +111,13 @@ const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
                 {/* Availability Badge */}
                 <View style={[
                     styles.availabilityBadge,
-                    { backgroundColor: !isAvailable || isFull ? colors.COLOR_RED_LIGHT_1 : colors.COLOR_GREEN_LIGHT_1 }
+                    { backgroundColor: isAvailable ? colors.successSubtle : colors.dangerSubtle }
                 ]}>
                     <Text style={[
                         styles.availabilityText,
-                        { color: !isAvailable || isFull ? colors.COLOR_RED : colors.COLOR_GREEN }
+                        { color: isAvailable ? colors.success : colors.danger }
                     ]}>
-                        {!isAvailable ? 'Unavailable' : isFull ? 'Full' : 'Available'}
+                        {isAvailable ? 'Available' : 'Unavailable'}
                     </Text>
                 </View>
             </View>
@@ -135,7 +127,6 @@ const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
 RoomCard.displayName = 'RoomCard';
 
 export function RoomList({ filters, onFilterChange }: RoomListProps) {
-    const { oxyServices, activeSessionId } = useOxy();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [rooms, setRooms] = useState<Property[]>([]);
@@ -149,18 +140,19 @@ export function RoomList({ filters, onFilterChange }: RoomListProps) {
 
             if (!refresh) setLoading(true);
 
-            const response = await propertyService.getRooms(
-                {
-                    ...filters,
-                    type: PropertyType.ROOM,
-                    page: pageNum,
-                    limit: 10,
-                    sortBy: filters?.sortBy || 'createdAt',
-                    sortOrder: filters?.sortOrder || 'desc'
-                },
-                oxyServices,
-                activeSessionId
-            );
+            // Typed as RoomFilterOptions so the room-only `sortBy` / `sortOrder`
+            // query params flow through to the (subtype-compatible) PropertyFilters
+            // expected by the service and on to the properties list endpoint.
+            const params: RoomFilterOptions = {
+                ...filters,
+                type: PropertyType.ROOM,
+                page: pageNum,
+                limit: 10,
+                sortBy: filters?.sortBy || 'createdAt',
+                sortOrder: filters?.sortOrder || 'desc',
+            };
+
+            const response = await propertyService.getRooms(params);
 
             setRooms(prev =>
                 refresh ? response.rooms : [...prev, ...response.rooms]
@@ -173,7 +165,7 @@ export function RoomList({ filters, onFilterChange }: RoomListProps) {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [filters, hasMore, loading, oxyServices, activeSessionId]);
+    }, [filters, hasMore, loading]);
 
     useEffect(() => {
         loadRooms(1, true);
@@ -225,20 +217,20 @@ export function RoomList({ filters, onFilterChange }: RoomListProps) {
             {/* Header with filter button */}
             <View style={styles.header}>
                 <View style={styles.searchBar}>
-                    <IconComponent name="search-outline" size={20} color={colors.COLOR_BLACK_LIGHT_5} />
+                    <Ionicons name="search-outline" size={20} color={colors.COLOR_BLACK_LIGHT_5} />
                     <TextInput
                         style={styles.searchInput}
                         placeholder="Search rooms..."
                         placeholderTextColor={colors.COLOR_BLACK_LIGHT_5}
-                        onChangeText={text => onFilterChange?.({ ...filters, searchText: text })}
-                        value={filters?.searchText}
+                        onChangeText={text => onFilterChange?.({ ...filters, search: text })}
+                        value={filters?.search}
                     />
                 </View>
                 <TouchableOpacity
                     style={styles.filterButton}
                     onPress={() => setShowFilters(true)}
                 >
-                    <IconComponent name="filter" size={20} color={colors.primaryColor} />
+                    <Ionicons name="filter" size={20} color={colors.primaryColor} />
                 </TouchableOpacity>
             </View>
 
@@ -251,24 +243,23 @@ export function RoomList({ filters, onFilterChange }: RoomListProps) {
                     contentContainerStyle={styles.filtersContent}
                 >
                     {Object.entries(filters).map(([key, value]) => {
-                        if (!value || key === 'searchText' || key === 'sortBy' || key === 'sortOrder' || key === 'type') return null;
+                        if (!value || key === 'search' || key === 'sortBy' || key === 'sortOrder' || key === 'type') return null;
                         return (
                             <TouchableOpacity
                                 key={key}
                                 style={styles.filterChip}
                                 onPress={() => {
                                     const newFilters = { ...filters };
-                                    delete newFilters[key as keyof PropertyFilters];
+                                    delete newFilters[key as keyof RoomFilterOptions];
                                     onFilterChange?.(newFilters);
                                 }}
                             >
                                 <Text style={styles.filterChipText}>
-                                    {key === 'minPrice' ? `$${value}+` :
-                                        key === 'maxPrice' ? `Up to $${value}` :
-                                            key === 'type' ? propertyService.getPropertyTypeDisplay(value as PropertyType) :
-                                                Array.isArray(value) ? `${value.length} selected` : value.toString()}
+                                    {key === 'minRent' ? `$${value}+` :
+                                        key === 'maxRent' ? `Up to $${value}` :
+                                            Array.isArray(value) ? `${value.length} selected` : String(value)}
                                 </Text>
-                                <IconComponent name="close-circle" size={16} color={colors.primaryColor} />
+                                <Ionicons name="close-circle" size={16} color={colors.primaryColor} />
                             </TouchableOpacity>
                         );
                     })}

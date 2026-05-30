@@ -20,9 +20,8 @@ import { useOxy } from '@oxyhq/services';
 import { api } from '@/utils/api';
 import { type Profile, ProfileType } from '@/services/profileService';
 import { Ionicons } from '@expo/vector-icons';
-import { PropertyType } from '@homiio/shared-types';
-
-type PublicProperty = any;
+import { PropertyType, type Property } from '@homiio/shared-types';
+import { logger } from '@/utils/logger';
 
 export default function PublicProfileScreen() {
   const { t } = useTranslation();
@@ -30,7 +29,7 @@ export default function PublicProfileScreen() {
   useOxy();
   const { isProfileSaved } = useSavedProfiles();
 
-  const [properties, setProperties] = useState<PublicProperty[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,15 +69,17 @@ export default function PublicProfileScreen() {
             type: activeType === 'all' ? undefined : activeType,
           },
         });
-        const list = res.data?.data || res.data?.properties || [];
+        const list: Property[] = res.data?.data || res.data?.properties || [];
         const pagination = res.data?.pagination;
         const total = pagination?.total ?? list.length;
         setProperties(opts?.reset ? list : [...properties, ...list]);
         setListingsTotal(total);
         setHasNext(Boolean(pagination?.hasNext));
         setPage(currentPage + 1);
-      } catch (e: any) {
-        setError(e?.message || 'Failed to load profile');
+      } catch (e: unknown) {
+        logger.error('Failed to load profile properties:', e);
+        const message = e instanceof Error ? e.message : 'Failed to load profile';
+        setError(message);
       } finally {
         setIsLoading(false);
       }
@@ -92,9 +93,9 @@ export default function PublicProfileScreen() {
       // Public, no-auth variant
       const res = await api.get(`/api/public/profiles/${profileId}`);
       setProfile(res.data?.data || res.data);
-    } catch (e: any) {
+    } catch (e: unknown) {
       // Non-blocking; still show properties
-      console.warn('Failed to load profile info', e?.message);
+      logger.warn('Failed to load profile info', e);
     }
   }, [profileId]);
 
@@ -177,7 +178,7 @@ export default function PublicProfileScreen() {
                   <TouchableOpacity
                     key={String(tab)}
                     onPress={() => {
-                      setActiveType(tab as any);
+                      setActiveType(tab);
                     }}
                     style={[styles.chip, activeType === tab && styles.chipActive]}
                   >
@@ -368,7 +369,7 @@ export default function PublicProfileScreen() {
                   <Text style={styles.aboutItem}>
                     {t('profile.serviceAreas', 'Service areas')}:{' '}
                     {profile.agencyProfile.businessDetails.serviceAreas
-                      .map((s: any) => s.city)
+                      .map((s) => s.city)
                       .filter(Boolean)
                       .join(', ')}
                   </Text>

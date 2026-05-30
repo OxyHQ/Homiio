@@ -142,7 +142,7 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
                 <View style={styles.contentContainer}>
                     <TouchableOpacity
                         style={styles.landlordHeader}
-                        onPress={() => router.push(`/profile/${(landlordProfile as any)?._id || (landlordProfile as any)?.id}`)}
+                        onPress={() => router.push(`/profile/${landlordProfile?._id || landlordProfile?.id}`)}
                         activeOpacity={0.7}
                     >
                         {renderAvatar(landlordProfile)}
@@ -170,9 +170,9 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
                                 loading={false}
                                 renderItem={(prop) => (
                                     <PropertyCard
-                                        property={prop as any}
+                                        property={prop}
                                         variant="compact"
-                                        onPress={() => router.push(`/properties/${(prop as any)._id || (prop as any).id}`)}
+                                        onPress={() => router.push(`/properties/${prop._id || prop.id}`)}
                                         showSaveButton={false}
                                         showVerifiedBadge={false}
                                         showRating={false}

@@ -1,17 +1,9 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform, ViewStyle } from 'react-native';
 import { usePathname } from 'expo-router';
 import { WidgetManager } from './widgets';
 import { useIsRightBarVisible } from '@/hooks/useOptimizedMediaQuery';
 import { useSearchMode } from '@/context/SearchModeContext';
-
-// Global form data store for create property screen
-let createPropertyFormData: any = null;
-
-// Function to update form data (will be called from create property screen)
-export const updateCreatePropertyFormData = (formData: any) => {
-  createPropertyFormData = formData;
-};
 
 export const RightBar = React.memo(function RightBar() {
   const isRightBarVisible = useIsRightBarVisible();
@@ -113,23 +105,25 @@ const styles = StyleSheet.create({
   },
   fixedContainer: {
     ...Platform.select({
+      // RN-Web supports CSS-only values (`fixed`, `overflowY`, `100vh`) that are
+      // absent from RN's ViewStyle, so the web block is typed as a whole.
       web: {
-        position: 'fixed' as any,
+        position: 'fixed',
         top: 0,
         right: 20,
         zIndex: 1000,
-        overflowY: 'auto' as any,
-        height: '100vh' as any,
-        pointerEvents: 'none' as any,
-      },
+        overflowY: 'auto',
+        height: '100vh',
+        pointerEvents: 'none',
+      } as unknown as ViewStyle,
     }),
   },
   stickyWidgetsContainer: {
     gap: 10,
-    position: 'sticky' as any,
+    position: 'sticky',
     top: 0,
     zIndex: 10,
     paddingVertical: 20,
-    pointerEvents: 'none' as any,
-  },
+    pointerEvents: 'none',
+  } as unknown as ViewStyle,
 });

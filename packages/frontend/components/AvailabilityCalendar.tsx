@@ -472,7 +472,6 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
             minDate={effectiveMin}
             maxDate={effectiveMax}
             disabledLookup={disabledLookup}
-            hoverDate={null}
             weekStartsOn={WEEK_START}
             onDayPress={handleDayPress}
             weekdayLabels={WEEKDAY_LABELS}

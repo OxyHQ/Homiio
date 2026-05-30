@@ -18,9 +18,9 @@ import { ActionButton } from '@/components/ui/ActionButton';
 import { Chip } from '@oxyhq/bloom/chip';
 import { colors } from '@/styles/colors';
 import { api } from '@/utils/api';
+import { logger } from '@/utils/logger';
 
-// Type assertion for Ionicons compatibility
-const IconComponent = Ionicons as any;
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 type DonationTier = {
     id: string;
@@ -29,7 +29,7 @@ type DonationTier = {
     amount: number;
     currency: string;
     type: 'one-time' | 'monthly' | 'founder';
-    icon: string;
+    icon: IoniconName;
     benefits: string[];
     popular?: boolean;
 };
@@ -88,7 +88,7 @@ export default function DonatePage() {
         },
     ];
 
-    const impactAreas = [
+    const impactAreas: { icon: IoniconName; title: string; description: string }[] = [
         {
             icon: 'construct',
             title: t('donations.page.impact.areas.development.title'),
@@ -138,12 +138,13 @@ export default function DonatePage() {
             } else {
                 throw new Error(response.data.error?.message || 'Failed to create checkout session');
             }
-        } catch (error: any) {
-            console.error('Donation error:', error);
-            Alert.alert(
-                'Error',
-                error.message || 'Unable to process donation. Please try again later.'
-            );
+        } catch (error: unknown) {
+            logger.error('Donation error:', error);
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : 'Unable to process donation. Please try again later.';
+            Alert.alert('Error', message);
         } finally {
             setLoading(false);
         }
@@ -164,7 +165,7 @@ export default function DonatePage() {
             )}
 
             <View style={styles.tierHeader}>
-                <IconComponent
+                <Ionicons
                     name={tier.icon}
                     size={24}
                     color={tier.popular ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
@@ -191,7 +192,7 @@ export default function DonatePage() {
             <View style={styles.benefitsList}>
                 {tier.benefits.map((benefit, index) => (
                     <View key={index} style={styles.benefitItem}>
-                        <IconComponent name="checkmark" size={16} color={colors.primaryColor} />
+                        <Ionicons name="checkmark" size={16} color={colors.primaryColor} />
                         <ThemedText style={styles.benefitText}>{benefit}</ThemedText>
                     </View>
                 ))}
@@ -210,7 +211,7 @@ export default function DonatePage() {
     );
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['bottom']}>
             <Header
                 options={{
                     title: t('donations.page.title'),
@@ -224,7 +225,7 @@ export default function DonatePage() {
                     colors={[colors.primaryColor, colors.primaryColor + '90']}
                     style={styles.heroSection}
                 >
-                    <IconComponent name="heart" size={48} color="#FFFFFF" />
+                    <Ionicons name="heart" size={48} color="#FFFFFF" />
                     <ThemedText style={styles.heroTitle}>
                         {t('donations.page.subtitle')}
                     </ThemedText>
@@ -251,7 +252,7 @@ export default function DonatePage() {
                     {impactAreas.map((area, index) => (
                         <View key={index} style={styles.impactItem}>
                             <View style={styles.impactIcon}>
-                                <IconComponent name={area.icon} size={20} color={colors.primaryColor} />
+                                <Ionicons name={area.icon} size={20} color={colors.primaryColor} />
                             </View>
                             <View style={styles.impactContent}>
                                 <ThemedText style={styles.impactTitle}>{area.title}</ThemedText>
@@ -273,7 +274,7 @@ export default function DonatePage() {
                     <View style={styles.whyList}>
                         {(t('donations.page.mission.goals', { returnObjects: true }) as string[]).map((item: string, index: number) => (
                             <View key={index} style={styles.whyItem}>
-                                <IconComponent name="arrow-forward" size={16} color={colors.primaryColor} />
+                                <Ionicons name="arrow-forward" size={16} color={colors.primaryColor} />
                                 <ThemedText style={styles.whyItemText}>{item}</ThemedText>
                             </View>
                         ))}

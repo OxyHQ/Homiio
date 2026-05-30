@@ -27,7 +27,8 @@ import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkel
 
 const screenWidth = Dimensions.get('window').width;
 const isMobile = screenWidth < 600;
-const IconComponent = Ionicons as any;
+
+type PropertyWithSavedStatus = Property & { isSaved?: boolean };
 
 export default function PropertiesScreen() {
   const { t } = useTranslation();
@@ -47,11 +48,11 @@ export default function PropertiesScreen() {
   const { isInitialized } = useSavedPropertiesContext();
 
   // Combine properties with saved status
-  const propertiesWithSavedStatus = allProperties.map((property) => ({
+  const propertiesWithSavedStatus: PropertyWithSavedStatus[] = allProperties.map((property) => ({
     ...property,
     isSaved: isInitialized
       ? isSaved(property._id || property.id || '')
-      : (property as any)?.isSaved,
+      : (property as PropertyWithSavedStatus).isSaved,
   }));
 
   useEffect(() => {
@@ -89,7 +90,7 @@ export default function PropertiesScreen() {
       style={styles.filterButton}
       onPress={() => router.push('/properties/filters')}
     >
-      <IconComponent name="filter" size={20} color={colors.COLOR_BLACK} />
+      <Ionicons name="filter" size={20} color={colors.COLOR_BLACK} />
     </TouchableOpacity>
   );
 
@@ -98,13 +99,13 @@ export default function PropertiesScreen() {
       style={styles.recentlyViewedButton}
       onPress={() => router.push('/properties/recently-viewed')}
     >
-      <IconComponent name="time" size={20} color={colors.COLOR_BLACK} />
+      <Ionicons name="time" size={20} color={colors.COLOR_BLACK} />
     </TouchableOpacity>
   );
 
   const renderViewModeToggle = () => (
     <TouchableOpacity style={styles.viewModeToggle} onPress={toggleViewMode}>
-      <IconComponent
+      <Ionicons
         name={viewMode === 'grid' ? 'list' : 'grid'}
         size={20}
         color={colors.COLOR_BLACK}
@@ -114,7 +115,7 @@ export default function PropertiesScreen() {
 
   const renderFAB = () => (
     <TouchableOpacity style={styles.fab} onPress={() => router.push('/properties/create')}>
-      <IconComponent name="add" size={24} color="white" />
+      <Ionicons name="add" size={24} color="white" />
     </TouchableOpacity>
   );
 

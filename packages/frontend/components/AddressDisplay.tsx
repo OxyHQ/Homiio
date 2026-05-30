@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Platform, Linking } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Platform, Linking, StyleProp, ViewStyle } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
@@ -8,7 +8,6 @@ import * as Clipboard from 'expo-clipboard';
 import { toast } from 'sonner';
 import * as Haptics from 'expo-haptics';
 
-const IconComponent = Ionicons as any;
 
 export interface Address {
   street: string;
@@ -28,7 +27,7 @@ interface AddressDisplayProps {
   showActions?: boolean;
   showMap?: boolean;
   onPress?: () => void;
-  style?: any;
+  style?: StyleProp<ViewStyle>;
 }
 
 export function AddressDisplay({
@@ -88,12 +87,12 @@ export function AddressDisplay({
         onPress={handlePress}
         disabled={!onPress}
       >
-        <IconComponent name="location-outline" size={16} color={colors.COLOR_BLACK_LIGHT_5} />
+        <Ionicons name="location-outline" size={16} color={colors.COLOR_BLACK_LIGHT_5} />
         <ThemedText style={styles.compactText} numberOfLines={1}>
           {shortAddress}
         </ThemedText>
         {onPress && (
-          <IconComponent name="chevron-forward" size={16} color={colors.COLOR_BLACK_LIGHT_5} />
+          <Ionicons name="chevron-forward" size={16} color={colors.COLOR_BLACK_LIGHT_5} />
         )}
       </TouchableOpacity>
     );
@@ -104,7 +103,7 @@ export function AddressDisplay({
       <View style={[styles.cardContainer, style]}>
         <View style={styles.cardHeader}>
           <View style={styles.addressInfo}>
-            <IconComponent name="location" size={20} color={colors.primaryColor} />
+            <Ionicons name="location" size={20} color={colors.primaryColor} />
             <View style={styles.addressTextContainer}>
               <ThemedText style={styles.cardStreet}>{address.street}</ThemedText>
               <ThemedText style={styles.cardCityState}>
@@ -115,17 +114,17 @@ export function AddressDisplay({
           {showActions && (
             <View style={styles.cardActions}>
               <TouchableOpacity style={styles.actionButton} onPress={handleCopyAddress}>
-                <IconComponent name="copy-outline" size={16} color={colors.primaryColor} />
+                <Ionicons name="copy-outline" size={16} color={colors.primaryColor} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.actionButton} onPress={handleOpenInMaps}>
-                <IconComponent name="map-outline" size={16} color={colors.primaryColor} />
+                <Ionicons name="map-outline" size={16} color={colors.primaryColor} />
               </TouchableOpacity>
             </View>
           )}
         </View>
         {showMap && address.coordinates && (
           <View style={styles.mapPlaceholder}>
-            <IconComponent name="map" size={24} color={colors.COLOR_BLACK_LIGHT_5} />
+            <Ionicons name="map" size={24} color={colors.COLOR_BLACK_LIGHT_5} />
             <ThemedText style={styles.mapPlaceholderText}>{t('Map view available')}</ThemedText>
           </View>
         )}
@@ -137,7 +136,7 @@ export function AddressDisplay({
   return (
     <View style={[styles.detailedContainer, style]}>
       <View style={styles.detailedHeader}>
-        <IconComponent name="location" size={24} color={colors.primaryColor} />
+        <Ionicons name="location" size={24} color={colors.primaryColor} />
         <View style={styles.detailedAddressInfo}>
           <ThemedText style={styles.detailedStreet}>{address.street}</ThemedText>
           <ThemedText style={styles.detailedCityState}>
@@ -152,12 +151,12 @@ export function AddressDisplay({
       {showActions && (
         <View style={styles.detailedActions}>
           <TouchableOpacity style={styles.detailedActionButton} onPress={handleCopyAddress}>
-            <IconComponent name="copy-outline" size={16} color={colors.primaryColor} />
+            <Ionicons name="copy-outline" size={16} color={colors.primaryColor} />
             <ThemedText style={styles.actionButtonText}>{t('Copy')}</ThemedText>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.detailedActionButton} onPress={handleOpenInMaps}>
-            <IconComponent name="map-outline" size={16} color={colors.primaryColor} />
+            <Ionicons name="map-outline" size={16} color={colors.primaryColor} />
             <ThemedText style={styles.actionButtonText}>{t('Open in Maps')}</ThemedText>
           </TouchableOpacity>
         </View>

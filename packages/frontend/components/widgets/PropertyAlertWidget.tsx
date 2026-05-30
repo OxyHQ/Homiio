@@ -6,11 +6,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
+import type { SavedSearchFilters } from '@/store/savedSearchesStore';
 import { toast } from 'sonner';
 import { Button } from '@oxyhq/bloom/button';
 
-// Type assertion for Ionicons compatibility
-const IconComponent = Ionicons as any;
 
 export function PropertyAlertWidget() {
   const { t } = useTranslation();
@@ -39,7 +38,7 @@ export function PropertyAlertWidget() {
       const queryParts = [];
       if (location.trim()) queryParts.push(location.trim());
 
-      const filters: any = {};
+      const filters: SavedSearchFilters = {};
       if (minPrice) filters.minPrice = parseFloat(minPrice);
       if (maxPrice) filters.maxPrice = parseFloat(maxPrice);
 
@@ -72,7 +71,7 @@ export function PropertyAlertWidget() {
     return (
       <BaseWidget
         title={t('Property Alerts')}
-        icon={<IconComponent name="notifications" size={22} color={colors.primaryColor} />}
+        icon={<Ionicons name="notifications" size={22} color={colors.primaryColor} />}
       >
         <View style={styles.container}>
           <Text style={styles.subtitle}>{t('Sign in to create property alerts')}</Text>
@@ -87,7 +86,7 @@ export function PropertyAlertWidget() {
   return (
     <BaseWidget
       title={t('Property Alerts')}
-      icon={<IconComponent name="notifications" size={22} color={colors.primaryColor} />}
+      icon={<Ionicons name="notifications" size={22} color={colors.primaryColor} />}
     >
       <View style={styles.container}>
         <Text style={styles.subtitle}>Get notified when new properties match your criteria</Text>

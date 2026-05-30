@@ -10,6 +10,7 @@ import { Button } from '@oxyhq/bloom/button';
 import { colors } from '@/styles/colors';
 import savedPropertyFolderService from '@/services/savedPropertyFolderService';
 import { toast } from 'sonner';
+import { logger } from '@/utils/logger';
 
 // Reuse the color palette from SaveToFolderBottomSheet
 const FOLDER_COLORS = [
@@ -32,7 +33,7 @@ export default function EditFolderScreen() {
   // Use React Query for folders data
   const { data: foldersData, isLoading: foldersLoading } = useQuery({
     queryKey: ['savedFolders'],
-    queryFn: () => savedPropertyFolderService.getSavedPropertyFolders(oxyServices!, activeSessionId!),
+    queryFn: () => savedPropertyFolderService.getSavedPropertyFolders(),
     enabled: !!oxyServices && !!activeSessionId,
     staleTime: 1000 * 60,
     gcTime: 1000 * 60 * 10,
@@ -40,7 +41,7 @@ export default function EditFolderScreen() {
 
   const folders = foldersData?.folders || [];
 
-  const folder = useMemo(() => folders.find((f: any) => f._id === folderId), [folders, folderId]);
+  const folder = useMemo(() => folders.find((f) => f._id === folderId), [folders, folderId]);
   const [name, setName] = useState(folder?.name || '');
   const [emoji, setEmoji] = useState(folder?.icon || '📁');
   const [color, setColor] = useState(folder?.color || colors.primaryColor);
@@ -51,20 +52,15 @@ export default function EditFolderScreen() {
       if (!oxyServices || !activeSessionId) {
         throw new Error('Authentication required');
       }
-      return savedPropertyFolderService.updateSavedPropertyFolder(
-        folderId,
-        folderData,
-        oxyServices,
-        activeSessionId
-      );
+      return savedPropertyFolderService.updateSavedPropertyFolder(folderId, folderData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
       toast.success('Folder updated successfully');
       router.back();
     },
-    onError: (error: any) => {
-      console.error('Failed to update folder:', error);
+    onError: (error: unknown) => {
+      logger.error('Failed to update folder:', error);
       toast.error('Failed to update folder');
     },
   });

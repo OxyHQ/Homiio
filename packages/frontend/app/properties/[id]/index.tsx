@@ -412,7 +412,7 @@ export default function PropertyDetailPage() {
             titlePosition: 'center',
           }}
         />
-        <SafeAreaView style={styles.errorBody} edges={['top']}>
+        <SafeAreaView style={styles.errorBody} edges={['bottom']}>
           <ErrorState
             icon="home-outline"
             title={t('property.notFound', 'Property not found') || 'Property not found'}

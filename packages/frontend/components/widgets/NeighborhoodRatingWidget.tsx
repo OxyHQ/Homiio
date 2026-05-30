@@ -10,9 +10,6 @@ import { Loading } from '@oxyhq/bloom/loading';
 import { Button } from '@oxyhq/bloom/button';
 import type { NeighborhoodRating } from '@/services/neighborhoodService';
 
-// Type assertion for Ionicons compatibility with React 19
-const IconComponent = Ionicons as any;
-
 interface NeighborhoodRatingWidgetProps {
   propertyId?: string;
   neighborhoodName?: string;
@@ -63,20 +60,12 @@ export function NeighborhoodRatingWidget({
     if (isAuthenticated && (!currentNeighborhood || isDataStale())) {
       if (propertyId) {
         // If we have a property ID, fetch neighborhood data for that property
-        console.log('NeighborhoodRatingWidget: Fetching neighborhood for property:', propertyId);
         fetchByProperty(propertyId);
       } else if (neighborhoodName && city) {
         // If we have neighborhood name and city, fetch by name
-        console.log(
-          'NeighborhoodRatingWidget: Fetching neighborhood by name:',
-          neighborhoodName,
-          city,
-        );
         fetchByName(neighborhoodName, city, state);
-      } else {
-        // Fallback to default location
-        console.log('NeighborhoodRatingWidget: Using default neighborhood data');
       }
+      // Otherwise the curated default neighborhood data is used.
     }
   }, [
     isAuthenticated,
@@ -99,11 +88,11 @@ export function NeighborhoodRatingWidget({
     return (
       <View style={styles.starsContainer}>
         {[...Array(fullStars)].map((_, i) => (
-          <IconComponent key={`full-${i}`} name="star" size={14} color="#FFD700" />
+          <Ionicons key={`full-${i}`} name="star" size={14} color="#FFD700" />
         ))}
-        {halfStar && <IconComponent name="star-half" size={14} color="#FFD700" />}
+        {halfStar && <Ionicons name="star-half" size={14} color="#FFD700" />}
         {[...Array(emptyStars)].map((_, i) => (
-          <IconComponent key={`empty-${i}`} name="star-outline" size={14} color="#FFD700" />
+          <Ionicons key={`empty-${i}`} name="star-outline" size={14} color="#FFD700" />
         ))}
         <Text style={styles.ratingNumber}>{rating.toFixed(1)}</Text>
       </View>
@@ -115,7 +104,7 @@ export function NeighborhoodRatingWidget({
     return (
       <BaseWidget
         title={t('Neighborhood')}
-        icon={<IconComponent name="location" size={22} color={colors.primaryColor} />}
+        icon={<Ionicons name="location" size={22} color={colors.primaryColor} />}
       >
         <View style={styles.loadingContainer}>
           <Loading iconSize={16} showText={false} />
@@ -130,10 +119,10 @@ export function NeighborhoodRatingWidget({
     return (
       <BaseWidget
         title={t('Neighborhood')}
-        icon={<IconComponent name="location" size={22} color={colors.primaryColor} />}
+        icon={<Ionicons name="location" size={22} color={colors.primaryColor} />}
       >
         <View style={styles.errorContainer}>
-          <IconComponent name="alert-circle-outline" size={24} color={colors.COLOR_BLACK_LIGHT_4} />
+          <Ionicons name="alert-circle-outline" size={24} color={colors.COLOR_BLACK_LIGHT_4} />
           <Text style={styles.errorText}>{t('Unable to load neighborhood data')}</Text>
           <TouchableOpacity
             style={styles.retryButton}
@@ -157,7 +146,7 @@ export function NeighborhoodRatingWidget({
   return (
     <BaseWidget
       title={t('Neighborhood')}
-      icon={<IconComponent name="location" size={22} color={colors.primaryColor} />}
+      icon={<Ionicons name="location" size={22} color={colors.primaryColor} />}
     >
       <View style={styles.container}>
         <View style={styles.headerSection}>
@@ -169,7 +158,7 @@ export function NeighborhoodRatingWidget({
           {categories.map((category, index) => (
             <View key={index} style={styles.categoryItem}>
               <View style={styles.categoryInfo}>
-                <IconComponent name={category.icon} size={16} color={colors.primaryColor} />
+                <Ionicons name={category.icon as keyof typeof Ionicons.glyphMap} size={16} color={colors.primaryColor} />
                 <Text style={styles.categoryName}>{category.category}</Text>
               </View>
               {renderStars(category.score)}

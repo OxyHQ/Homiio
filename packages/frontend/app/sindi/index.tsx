@@ -248,7 +248,7 @@ export default function Sindi() {
   }
 
   return (
-    <SafeAreaView style={[styles.root, webContainerStyle]}>
+    <SafeAreaView style={[styles.root, webContainerStyle]} edges={['bottom']}>
       <Header
         options={{
           title: t('sindi.title'),

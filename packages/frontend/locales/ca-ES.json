@@ -921,7 +921,9 @@
       "privacy": "Política de privacitat"
     },
     "collapse": "Contraure barra lateral",
-    "expand": "Expandir barra lateral"
+    "expand": "Expandir barra lateral",
+    "open": "Obrir menú",
+    "close": "Tancar menú"
   },
   "saved": {
     "header": "Desats",

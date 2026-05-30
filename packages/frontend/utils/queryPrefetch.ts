@@ -1,16 +1,11 @@
 import { QueryClient } from '@tanstack/react-query';
 import { propertyService } from '@/services/propertyService';
 
-export async function prefetchProperty(
-  queryClient: QueryClient,
-  id: string,
-  oxyServices?: any,
-  activeSessionId?: string,
-) {
+export async function prefetchProperty(queryClient: QueryClient, id: string) {
   if (!id) return;
   await queryClient.prefetchQuery({
     queryKey: ['property', id],
-    queryFn: async () => propertyService.getProperty(id, oxyServices, activeSessionId || ''),
+    queryFn: async () => propertyService.getPropertyById(id),
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,
   });

@@ -484,8 +484,7 @@ export function ChatContent({
     queryKey: ['entitlements'],
     queryFn: async () => {
       const { data } = await api.get<{ success: boolean; entitlements: Entitlements }>(
-        '/api/profiles/me/entitlements',
-        { oxyServices, activeSessionId: activeSessionId || undefined }
+        '/api/profiles/me/entitlements'
       );
       if (!data?.success) {
         throw new Error('Failed to load entitlements');
@@ -1390,7 +1389,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   backgroundGradient: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   loadingContainer: {
     flex: 1,

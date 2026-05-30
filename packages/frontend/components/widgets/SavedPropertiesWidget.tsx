@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { router } from 'expo-router';
 import { useSavedProperties } from '@/hooks/useSavedProperties';
 import { ThemedText } from '@/components/ThemedText';
@@ -7,7 +7,7 @@ import { HeartIcon, HeartIconActive } from '@/assets/icons/heart-icon';
 import { colors } from '@/styles/colors';
 
 interface SavedPropertiesWidgetProps {
-  style?: any;
+  style?: StyleProp<ViewStyle>;
 }
 
 export const SavedPropertiesWidget: React.FC<SavedPropertiesWidgetProps> = ({ style }) => {

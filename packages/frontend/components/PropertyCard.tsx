@@ -242,8 +242,8 @@ export function PropertyCard({
     size: property.squareFootage || 0,
     sizeUnit: 'm²',
     isVerified: property.isVerified || false,
-    rating: undefined,
-    reviewCount: undefined,
+    rating: undefined as number | undefined,
+    reviewCount: undefined as number | undefined,
   };
 
   const showInstantBook = useMemo(() => shouldShowInstantBook(property, mode), [property, mode]);

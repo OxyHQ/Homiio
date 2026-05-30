@@ -12,7 +12,10 @@ type EcoCertificationProps = {
   compact?: boolean;
 };
 
-const ecoFeatureInfo = {
+const ecoFeatureInfo: Record<
+  EcoFeature,
+  { icon: keyof typeof Ionicons.glyphMap; label: string }
+> = {
   solar: {
     icon: 'sunny-outline',
     label: 'Solar Energy',
@@ -99,7 +102,7 @@ export function EcoCertification({
           <View style={styles.featuresList}>
             {features.map((feature, index) => (
               <View key={index} style={styles.featureItem}>
-                <Ionicons name={ecoFeatureInfo[feature].icon as any} size={16} color="#4CAF50" />
+                <Ionicons name={ecoFeatureInfo[feature].icon} size={16} color="#4CAF50" />
                 <Text style={styles.featureText}>{ecoFeatureInfo[feature].label}</Text>
               </View>
             ))}

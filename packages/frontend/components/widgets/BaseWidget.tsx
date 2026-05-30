@@ -29,7 +29,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryLight,
     borderRadius: 15,
     overflow: 'hidden',
-    pointerEvents: 'auto' as any,
+    pointerEvents: 'auto',
   },
   widgetHeader: {
     flexDirection: 'row',

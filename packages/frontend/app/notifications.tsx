@@ -12,11 +12,27 @@ import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import type * as Notifications from 'expo-notifications';
 import { useNotifications } from '@/context/NotificationContext';
 import { NotificationItem } from '@/components/NotificationItem';
 import { ThemedText } from '@/components/ThemedText';
 import { colors } from '@/styles/colors';
 import { toast } from 'sonner';
+import type { Notification } from '@/services/notificationService';
+import { logger } from '@/utils/logger';
+
+/**
+ * Safely reads the scheduled date from an Expo notification trigger. Only
+ * date-based triggers carry a `date`; other trigger kinds return undefined.
+ */
+const getTriggerDate = (
+  trigger: Notifications.NotificationRequest['trigger'],
+): Date | number | undefined => {
+  if (trigger && typeof trigger === 'object' && 'date' in trigger) {
+    return (trigger as { date?: Date | number }).date;
+  }
+  return undefined;
+};
 // Simple date formatting function
 const formatDistanceToNow = (date: Date) => {
     const now = new Date();
@@ -87,14 +103,15 @@ export default function NotificationsScreen() {
         setRefreshing(true);
         try {
             await refreshAll();
-        } catch (error) {
+        } catch (error: unknown) {
+            logger.error('Failed to refresh notifications:', error);
         } finally {
             setRefreshing(false);
         }
     }, [refreshAll]);
 
     // Handle notification press
-    const handleNotificationPress = useCallback(async (notification: any) => {
+    const handleNotificationPress = useCallback(async (notification: Notification) => {
         try {
             // Mark as read if it's unread
             if (!notification.read) {
@@ -102,8 +119,9 @@ export default function NotificationsScreen() {
             }
 
             // Navigate based on notification type
-            if (notification.data?.screen) {
-                router.push(notification.data.screen);
+            const screen = notification.data?.screen;
+            if (typeof screen === 'string') {
+                router.push(screen);
             } else if (notification.type === 'property' && notification.data?.propertyId) {
                 router.push(`/properties/${notification.data.propertyId}`);
             } else if (notification.type === 'message') {
@@ -113,12 +131,13 @@ export default function NotificationsScreen() {
             } else if (notification.type === 'payment') {
                 router.push('/payments');
             }
-        } catch (error) {
+        } catch (error: unknown) {
+            logger.error('Failed to handle notification press:', error);
         }
     }, [markAsRead, router]);
 
     // Handle delete notification
-    const handleDeleteNotification = useCallback(async (notification: any) => {
+    const handleDeleteNotification = useCallback(async (notification: Notification) => {
         Alert.alert(
             t('notification.delete.title', 'Delete Notification'),
             t('notification.delete.message', 'Are you sure you want to delete this notification?'),
@@ -131,7 +150,8 @@ export default function NotificationsScreen() {
                         try {
                             await deleteNotification(notification.id);
                             toast.success(t('notification.delete.success', 'Notification deleted'));
-                        } catch (error) {
+                        } catch (error: unknown) {
+                            logger.error('Failed to delete notification:', error);
                             toast.error(t('notification.delete.error', 'Failed to delete notification'));
                         }
                     },
@@ -145,7 +165,8 @@ export default function NotificationsScreen() {
         try {
             await markAllAsRead();
             toast.success(t('notification.markAllRead.success', 'All notifications marked as read'));
-        } catch (error) {
+        } catch (error: unknown) {
+            logger.error('Failed to mark all notifications as read:', error);
             toast.error(t('notification.markAllRead.error', 'Failed to mark all as read'));
         }
     }, [markAllAsRead, t]);
@@ -159,13 +180,14 @@ export default function NotificationsScreen() {
             } else {
                 toast.error(t('notification.permissions.denied', 'Notification permissions denied'));
             }
-        } catch (error) {
+        } catch (error: unknown) {
+            logger.error('Failed to request notification permissions:', error);
             toast.error(t('notification.permissions.error', 'Failed to request permissions'));
         }
     }, [requestPermissions, t]);
 
     // Render notification item
-    const renderNotificationItem = useCallback(({ item }: { item: any }) => (
+    const renderNotificationItem = useCallback(({ item }: { item: Notification }) => (
         <NotificationItem
             type={item.type}
             title={item.title}
@@ -178,31 +200,34 @@ export default function NotificationsScreen() {
     ), [handleNotificationPress]);
 
     // Render scheduled notification item
-    const renderScheduledNotificationItem = useCallback(({ item }: { item: any }) => (
-        <View style={styles.scheduledNotificationItem}>
-            <View style={styles.scheduledNotificationHeader}>
-                <Ionicons name="time-outline" size={16} color={colors.COLOR_BLACK_LIGHT_5} />
-                <ThemedText style={styles.scheduledNotificationTitle}>
-                    {item.content.title}
+    const renderScheduledNotificationItem = useCallback(({ item }: { item: Notifications.NotificationRequest }) => {
+        const triggerDate = getTriggerDate(item.trigger);
+        return (
+            <View style={styles.scheduledNotificationItem}>
+                <View style={styles.scheduledNotificationHeader}>
+                    <Ionicons name="time-outline" size={16} color={colors.COLOR_BLACK_LIGHT_5} />
+                    <ThemedText style={styles.scheduledNotificationTitle}>
+                        {item.content.title}
+                    </ThemedText>
+                    <TouchableOpacity
+                        onPress={() => cancelLocalNotification(item.identifier)}
+                        style={styles.cancelButton}
+                    >
+                        <Ionicons name="close" size={16} color={colors.chatUnreadBadge} />
+                    </TouchableOpacity>
+                </View>
+                <ThemedText style={styles.scheduledNotificationBody}>
+                    {item.content.body}
                 </ThemedText>
-                <TouchableOpacity
-                    onPress={() => cancelLocalNotification(item.identifier)}
-                    style={styles.cancelButton}
-                >
-                    <Ionicons name="close" size={16} color={colors.chatUnreadBadge} />
-                </TouchableOpacity>
+                <ThemedText style={styles.scheduledNotificationTime}>
+                    {triggerDate ?
+                        `Scheduled for ${new Date(triggerDate).toLocaleString()}` :
+                        'Scheduled notification'
+                    }
+                </ThemedText>
             </View>
-            <ThemedText style={styles.scheduledNotificationBody}>
-                {item.content.body}
-            </ThemedText>
-            <ThemedText style={styles.scheduledNotificationTime}>
-                {item.trigger.date ?
-                    `Scheduled for ${new Date(item.trigger.date).toLocaleString()}` :
-                    'Scheduled notification'
-                }
-            </ThemedText>
-        </View>
-    ), [cancelLocalNotification]);
+        );
+    }, [cancelLocalNotification]);
 
     // Render filter button
     const renderFilterButton = useCallback((filter: typeof selectedFilter, label: string) => (
@@ -523,6 +548,9 @@ const styles = StyleSheet.create({
     listContainer: {
         flexGrow: 1,
         paddingHorizontal: 16,
+    },
+    notificationItem: {
+        marginBottom: 8,
     },
     emptyState: {
         flex: 1,

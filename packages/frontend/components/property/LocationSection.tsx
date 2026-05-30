@@ -3,8 +3,16 @@ import { View, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import Map from '@/components/Map';
 import { useTranslation } from 'react-i18next';
+import type { Property } from '@homiio/shared-types';
 
-interface Props { property: any }
+interface ProximityInfo {
+    proximityToTransport?: boolean;
+    proximityToSchools?: boolean;
+    proximityToShopping?: boolean;
+}
+
+// `proximity` is an optional nested grouping some API responses provide.
+interface Props { property: Property & { proximity?: ProximityInfo } }
 
 // Unified location section: address + map + nearby amenities
 export const LocationSection: React.FC<Props> = ({ property }) => {

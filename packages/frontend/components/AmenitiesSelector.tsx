@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
 import { colors } from '@/styles/colors';
@@ -9,14 +9,12 @@ import {
   getAmenitiesByPropertyType,
 } from '@/constants/amenities';
 
-// Type assertion for Ionicons compatibility with React 19
-const IconComponent = Ionicons as any;
 
 type AmenitiesSelectorProps = {
   selectedAmenities: string[];
   onAmenityToggle: (amenityId: string) => void;
   showPremiumBadge?: boolean;
-  style?: any;
+  style?: StyleProp<ViewStyle>;
   propertyType?: string;
 };
 
@@ -48,8 +46,8 @@ export function AmenitiesSelector({
               onPress={() => onAmenityToggle(amenity.id)}
             >
               <View style={styles.amenityOptionContent}>
-                <IconComponent
-                  name={amenity.icon as any}
+                <Ionicons
+                  name={amenity.icon}
                   size={16}
                   color={isSelected ? 'white' : colors.primaryColor}
                 />

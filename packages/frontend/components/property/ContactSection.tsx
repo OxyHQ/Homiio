@@ -3,8 +3,9 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { colors } from '@/styles/colors';
 import { useTranslation } from 'react-i18next';
+import type { Property } from '@homiio/shared-types';
 
-interface Props { property: any; onMessage?: () => void; onCall?: () => void; onViewing?: () => void; canMessage?: boolean; phone?: string; }
+interface Props { property: Property; onMessage?: () => void; onCall?: () => void; onViewing?: () => void; canMessage?: boolean; phone?: string; }
 
 export const ContactSection: React.FC<Props> = ({ property: _property, onMessage, onCall, onViewing, canMessage, phone }) => {
     const { t } = useTranslation();

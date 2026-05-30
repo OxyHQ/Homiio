@@ -184,11 +184,10 @@ export default function ViewingsPage() {
   const viewingsQuery = useQuery({
     queryKey: ['viewings', 'me'],
     queryFn: async () => {
-      const res = await viewingService.listMyViewingRequests(
-        { page: 1, limit: 50 },
-        oxyServices!,
-        activeSessionId!,
-      );
+      const res = await viewingService.listMyViewingRequests({
+        page: 1,
+        limit: 50,
+      });
       return Array.isArray(res?.data) ? (res.data as ViewingRequest[]) : [];
     },
     enabled: isAuthed,
@@ -214,8 +213,7 @@ export default function ViewingsPage() {
   };
 
   const cancelMutation = useMutation({
-    mutationFn: async (viewingId: string) =>
-      viewingService.cancel(viewingId, oxyServices!, activeSessionId!),
+    mutationFn: async (viewingId: string) => viewingService.cancel(viewingId),
     onSuccess: () => {
       toast.success(t('viewings.success.cancelled'));
       queryClient.invalidateQueries({ queryKey: ['viewings', 'me'] });

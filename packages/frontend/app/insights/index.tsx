@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, ScrollView, StyleSheet, Dimensions, LayoutChangeEvent } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';
 import { ThemedText } from '@/components/ThemedText';
@@ -12,12 +13,15 @@ import { HomeCarouselSection } from '@/components/HomeCarouselSection';
 import { PropertyCard } from '@/components/PropertyCard';
 import { useRouter } from 'expo-router';
 import { InsightsSkeleton } from '@/components/ui/skeletons/InsightsSkeleton';
+import type { Property } from '@homiio/shared-types';
+import { logger } from '@/utils/logger';
 
 // Chart width will adapt to 100% of available content width
 
 export default function InsightsScreen() {
     const { t: _t } = useTranslation();
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [_data, setData] = useState<AnalyticsInsights | null>(null);
@@ -28,7 +32,7 @@ export default function InsightsScreen() {
         priceBuckets: { bucket: string; count: number }[];
     } | null>(null);
     const [contentWidth, setContentWidth] = useState<number>(Dimensions.get('window').width);
-    const [topProperties, setTopProperties] = useState<any[]>([]);
+    const [topProperties, setTopProperties] = useState<Property[]>([]);
     const [topPropsLoading, setTopPropsLoading] = useState<boolean>(false);
 
     const handleLayout = (e: LayoutChangeEvent) => {
@@ -55,7 +59,7 @@ export default function InsightsScreen() {
                 // Load top properties (simple: latest active listings)
                 setTopPropsLoading(true);
                 propertyService
-                    .getProperties({ limit: 8, status: 'published', sort: 'createdAt' } as any)
+                    .getProperties({ limit: 8, status: 'published' })
                     .then((res) => {
                         if (active) setTopProperties(res.properties || []);
                     })
@@ -65,8 +69,10 @@ export default function InsightsScreen() {
                     .finally(() => {
                         if (active) setTopPropsLoading(false);
                     });
-            } catch (e: any) {
-                if (active) setError(e?.message || 'Failed to load analytics');
+            } catch (e: unknown) {
+                logger.error('Failed to load analytics:', e);
+                const message = e instanceof Error ? e.message : 'Failed to load analytics';
+                if (active) setError(message);
             } finally {
                 if (active) setLoading(false);
             }
@@ -95,7 +101,7 @@ export default function InsightsScreen() {
             <LinearGradient
                 colors={[colors.primaryColor, colors.secondaryLight, colors.primaryLight]}
                 locations={[0, 0.85, 1]}
-                style={styles.header}
+                style={[styles.header, { paddingTop: insets.top + 32 }]}
             >
                 <ThemedText style={styles.title}>Insights</ThemedText>
                 <ThemedText style={styles.subtitle}>Marketplace overview for rentals</ThemedText>
@@ -285,7 +291,7 @@ const styles = StyleSheet.create({
     title: {
         color: '#fff',
         fontSize: 24,
-        fontWeight: 'bold' as any,
+        fontWeight: 'bold',
     },
     subtitle: {
         color: '#fff',
@@ -326,7 +332,7 @@ const styles = StyleSheet.create({
     kpiValue: {
         fontSize: 22,
         color: colors.COLOR_BLACK,
-        fontWeight: '700' as any,
+        fontWeight: '700',
     },
     kpiLabel: {
         fontSize: 12,
@@ -341,7 +347,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         width: '100%',
         fontSize: 18,
-        fontWeight: '600' as any,
+        fontWeight: '600',
         color: colors.COLOR_BLACK,
         paddingHorizontal: 16,
         marginBottom: 6,
@@ -360,7 +366,7 @@ const styles = StyleSheet.create({
     },
     cardTitle: {
         fontSize: 22,
-        fontWeight: '800' as any,
+        fontWeight: '800',
         color: colors.COLOR_BLACK,
         marginBottom: 8,
     },
@@ -429,7 +435,7 @@ const styles = StyleSheet.create({
     cityName: {
         fontSize: 14,
         color: colors.COLOR_BLACK,
-        fontWeight: '600' as any,
+        fontWeight: '600',
     },
     cityState: {
         fontSize: 12,

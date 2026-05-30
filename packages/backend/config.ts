@@ -68,8 +68,21 @@ export interface Config {
     successUrl?: string;
     cancelUrl?: string;
   };
-  mapbox?: {
-    token?: string;
+  geocoding: {
+    /**
+     * Base URL of the Nominatim (OpenStreetMap) instance used for forward
+     * and reverse geocoding. Defaults to the public OSM endpoint, which is
+     * free and requires no API key.
+     */
+    nominatimBaseUrl: string;
+    /**
+     * Descriptive User-Agent sent with every Nominatim request. The OSM
+     * usage policy REQUIRES an identifying User-Agent; requests without one
+     * are blocked. See https://operations.osmfoundation.org/policies/nominatim/
+     */
+    userAgent: string;
+    /** Optional Referer header, also accepted by the OSM usage policy. */
+    referer?: string;
   };
 }
 
@@ -191,9 +204,12 @@ const config: Config = {
     })(),
   },
   
-  // Mapbox Configuration
-  mapbox: {
-    token: process.env.MAPBOX_TOKEN,
+  // Geocoding Configuration (Nominatim / OpenStreetMap — free, no API key)
+  geocoding: {
+    nominatimBaseUrl: process.env.NOMINATIM_BASE_URL || 'https://nominatim.openstreetmap.org',
+    // OSM requires a descriptive, identifying User-Agent on every request.
+    userAgent: process.env.GEOCODING_USER_AGENT || 'Homiio/1.0 (+https://homiio.com)',
+    referer: process.env.GEOCODING_REFERER || 'https://homiio.com',
   }
 };
 

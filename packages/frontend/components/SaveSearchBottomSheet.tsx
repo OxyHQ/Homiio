@@ -5,11 +5,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
+import type { SavedSearchFilters } from '@/store/savedSearchesStore';
 
 interface SaveSearchBottomSheetProps {
     defaultName?: string;
     query: string;
-    filters?: Record<string, any>;
+    filters?: SavedSearchFilters;
     onClose: () => void;
     onSaved?: () => void;
 }

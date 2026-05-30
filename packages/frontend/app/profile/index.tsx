@@ -45,6 +45,7 @@ import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import type { Profile } from '@/services/profileService';
 import { colors } from '@/styles/colors';
 import { spacing, tracker } from '@/constants/styles';
+import { logger } from '@/utils/logger';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -159,7 +160,8 @@ export default function ProfileScreen() {
         }),
       );
       setPendingSwitch(null);
-    } catch (error) {
+    } catch (error: unknown) {
+      logger.error('Failed to switch profile:', error);
       const message =
         error instanceof Error
           ? error.message
@@ -176,7 +178,8 @@ export default function ProfileScreen() {
       await logout();
       router.replace('/');
       toast.success(t('settings.signOutSuccess', 'Signed out'));
-    } catch {
+    } catch (error: unknown) {
+      logger.error('Failed to sign out:', error);
       toast.error(t('settings.signOutFailed', 'Failed to sign out'));
     } finally {
       setBusyLogout(false);

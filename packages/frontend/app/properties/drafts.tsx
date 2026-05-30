@@ -17,8 +17,9 @@ import { toast } from 'sonner';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
+import { logger } from '@/utils/logger';
 
-const IconComponent = Ionicons as any;
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 interface PropertyDraft {
   id: string;
@@ -35,10 +36,13 @@ interface PropertyDraft {
     amount: number;
     currency: string;
   };
-  images: any[];
+  images: unknown[];
   lastSaved: Date;
-  formData: any;
+  formData: unknown;
 }
+
+/** Shape persisted to AsyncStorage, where `lastSaved` is serialized as an ISO string. */
+type StoredPropertyDraft = Omit<PropertyDraft, 'lastSaved'> & { lastSaved: string };
 
 export default function PropertyDraftsScreen() {
   const { t } = useTranslation();
@@ -56,16 +60,16 @@ export default function PropertyDraftsScreen() {
       setLoading(true);
       const draftsData = await AsyncStorage.getItem('property_drafts');
       if (draftsData) {
-        const parsedDrafts = JSON.parse(draftsData);
+        const parsedDrafts: StoredPropertyDraft[] = JSON.parse(draftsData);
         // Convert string dates back to Date objects
-        const draftsWithDates = parsedDrafts.map((draft: any) => ({
+        const draftsWithDates: PropertyDraft[] = parsedDrafts.map((draft) => ({
           ...draft,
           lastSaved: new Date(draft.lastSaved),
         }));
         setDrafts(draftsWithDates);
       }
-    } catch (error) {
-      console.error('Error loading drafts:', error);
+    } catch (error: unknown) {
+      logger.error('Error loading drafts:', error);
       toast.error('Failed to load drafts');
     } finally {
       setLoading(false);
@@ -88,8 +92,8 @@ export default function PropertyDraftsScreen() {
               await AsyncStorage.setItem('property_drafts', JSON.stringify(updatedDrafts));
               setDrafts(updatedDrafts);
               toast.success('Draft deleted successfully');
-            } catch (error) {
-              console.error('Error deleting draft:', error);
+            } catch (error: unknown) {
+              logger.error('Error deleting draft:', error);
               toast.error('Failed to delete draft');
             } finally {
               setDeletingDraft(null);
@@ -106,8 +110,8 @@ export default function PropertyDraftsScreen() {
       .then(() => {
         router.push('/properties/create');
       })
-      .catch((error) => {
-        console.error('Error setting current draft:', error);
+      .catch((error: unknown) => {
+        logger.error('Error setting current draft:', error);
         toast.error('Failed to load draft');
       });
   };
@@ -126,8 +130,8 @@ export default function PropertyDraftsScreen() {
     }
   };
 
-  const getPropertyTypeIcon = (type: string) => {
-    const iconMap: { [key: string]: string } = {
+  const getPropertyTypeIcon = (type: string): IoniconName => {
+    const iconMap: { [key: string]: IoniconName } = {
       apartment: 'business-outline',
       house: 'home-outline',
       room: 'bed-outline',
@@ -170,7 +174,7 @@ export default function PropertyDraftsScreen() {
     <View key={draft.id} style={styles.draftCard}>
       <View style={styles.draftHeader}>
         <View style={styles.draftTypeContainer}>
-          <IconComponent
+          <Ionicons
             name={getPropertyTypeIcon(draft.type)}
             size={20}
             color={colors.primaryColor}
@@ -179,7 +183,7 @@ export default function PropertyDraftsScreen() {
         </View>
         <View style={styles.draftActions}>
           <TouchableOpacity style={styles.actionButton} onPress={() => continueEditing(draft)}>
-            <IconComponent name="create-outline" size={20} color={colors.primaryColor} />
+            <Ionicons name="create-outline" size={20} color={colors.primaryColor} />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.deleteButton]}
@@ -198,7 +202,7 @@ export default function PropertyDraftsScreen() {
                 }} />
               </View>
             ) : (
-              <IconComponent name="trash-outline" size={20} color="#ff6b6b" />
+              <Ionicons name="trash-outline" size={20} color="#ff6b6b" />
             )}
           </TouchableOpacity>
         </View>
@@ -223,11 +227,11 @@ export default function PropertyDraftsScreen() {
 
         <View style={styles.draftMeta}>
           <View style={styles.draftMetaItem}>
-            <IconComponent name="time-outline" size={14} color={colors.primaryDark_1} />
+            <Ionicons name="time-outline" size={14} color={colors.primaryDark_1} />
             <ThemedText style={styles.draftMetaText}>{formatDate(draft.lastSaved)}</ThemedText>
           </View>
           <View style={styles.draftMetaItem}>
-            <IconComponent name="save-outline" size={14} color={colors.primaryDark_1} />
+            <Ionicons name="save-outline" size={14} color={colors.primaryDark_1} />
             <ThemedText style={styles.draftMetaText}>Draft</ThemedText>
           </View>
         </View>
@@ -237,7 +241,7 @@ export default function PropertyDraftsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['bottom']}>
         <Header
           options={{
             showBackButton: true,
@@ -251,7 +255,7 @@ export default function PropertyDraftsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <Header
         options={{
           showBackButton: true,
@@ -286,7 +290,7 @@ export default function PropertyDraftsScreen() {
                 style={styles.createNewButton}
                 onPress={() => router.push('/properties/create')}
               >
-                <IconComponent name="add-circle" size={24} color={colors.primaryColor} />
+                <Ionicons name="add-circle" size={24} color={colors.primaryColor} />
                 <ThemedText style={styles.createNewButtonText}>Create New Property</ThemedText>
               </TouchableOpacity>
             </>

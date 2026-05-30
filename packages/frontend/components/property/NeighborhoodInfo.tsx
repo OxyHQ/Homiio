@@ -3,8 +3,10 @@ import { StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { useTranslation } from 'react-i18next';
+import type { Property } from '@homiio/shared-types';
 
-interface Props { property: any }
+// `neighborhoodDescription` is an optional API-provided field absent from the base model.
+interface Props { property: (Property & { neighborhoodDescription?: string }) | null }
 
 export const NeighborhoodInfo: React.FC<Props> = ({ property }) => {
     const { t } = useTranslation();

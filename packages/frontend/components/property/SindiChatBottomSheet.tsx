@@ -69,9 +69,13 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
                 ...(body !== null && { body }),
             };
 
-            // Use appropriate fetch implementation
-            const fetchImpl: typeof globalThis.fetch = Platform.OS === 'web' ? globalThis.fetch : (expoFetch as any);
-            return fetchImpl(url, fetchOptions as any);
+            // Use appropriate fetch implementation. Expo's fetch is runtime-compatible
+            // with the DOM fetch the caller expects, but its types diverge structurally.
+            const fetchImpl: typeof globalThis.fetch =
+                Platform.OS === 'web'
+                    ? globalThis.fetch
+                    : (expoFetch as unknown as typeof globalThis.fetch);
+            return fetchImpl(url, fetchOptions);
         },
         [oxyServices, activeSessionId],
     );
@@ -131,7 +135,6 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
                     }
 
                     // Set the message immediately - no timeout needed
-                    console.log('Setting initial message:', messageToSend);
                     setInitialMessageToSend(messageToSend);
                 } else {
                     console.error('Failed to create conversation: Invalid response');
@@ -152,13 +155,6 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
 
     // Check if user is authenticated
     const isAuthenticated = !!oxyServices && !!activeSessionId;
-
-    console.log('SindiChatBottomSheet render:', {
-        conversationId,
-        hasConversation: !!currentConversation,
-        hasInitialMessage: !!initialMessageToSend,
-        isAuthenticated
-    });
 
     return (
         <ScrollView style={styles.container}>

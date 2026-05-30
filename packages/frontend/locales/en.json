@@ -956,7 +956,9 @@
       "privacy": "Privacy policy"
     },
     "collapse": "Collapse sidebar",
-    "expand": "Expand sidebar"
+    "expand": "Expand sidebar",
+    "open": "Open menu",
+    "close": "Close menu"
   },
   "saved": {
     "header": "Saved",

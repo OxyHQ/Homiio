@@ -1,15 +1,13 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle, StyleProp } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 
-// Type assertion for Ionicons compatibility
-const IconComponent = Ionicons as any;
 
 export type ActionButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 
 type ActionButtonProps = {
-  icon: string;
+  icon: keyof typeof Ionicons.glyphMap;
   text: string;
   onPress: () => void;
   variant?: ActionButtonVariant;
@@ -18,7 +16,7 @@ type ActionButtonProps = {
   loading?: boolean;
   style?: ViewStyle;
   iconSize?: number;
-  textStyle?: any;
+  textStyle?: StyleProp<TextStyle>;
 };
 
 export function ActionButton({
@@ -140,14 +138,14 @@ export function ActionButton({
       activeOpacity={0.7}
     >
       {loading ? (
-        <IconComponent
+        <Ionicons
           name="reload"
           size={finalIconSize}
           color={variantStyles.icon.color}
           style={[styles.loadingIcon, { color: variantStyles.icon.color }]}
         />
       ) : (
-        <IconComponent
+        <Ionicons
           name={icon}
           size={finalIconSize}
           color={variantStyles.icon.color}

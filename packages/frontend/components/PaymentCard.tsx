@@ -5,8 +5,6 @@ import { colors } from '@/styles/colors';
 import { radius, spacing, withShadow } from '@/constants/styles';
 import { StatusBadge, type StatusType } from './ui/StatusBadge';
 
-// Type assertion for Ionicons compatibility
-const IconComponent = Ionicons as any;
 
 export type PaymentStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'refunded';
 export type PaymentType = 'rent' | 'deposit' | 'service' | 'fairCoin';
@@ -50,7 +48,9 @@ export function PaymentCard({
     });
   };
 
-  const getTypeInfo = (type: PaymentType) => {
+  const getTypeInfo = (
+    type: PaymentType,
+  ): { icon: keyof typeof Ionicons.glyphMap; label: string } => {
     switch (type) {
       case 'rent':
         return {
@@ -82,7 +82,7 @@ export function PaymentCard({
       <View style={styles.header}>
         <View style={styles.typeContainer}>
           <View style={styles.iconContainer}>
-            <IconComponent name={typeInfo.icon} size={20} color={colors.primaryColor} />
+            <Ionicons name={typeInfo.icon} size={20} color={colors.primaryColor} />
           </View>
           <View>
             <Text style={styles.typeLabel}>{typeInfo.label}</Text>
@@ -99,7 +99,7 @@ export function PaymentCard({
 
       {propertyName && (
         <View style={styles.propertyRow}>
-          <IconComponent name="home-outline" size={16} color={colors.primaryDark_1} />
+          <Ionicons name="home-outline" size={16} color={colors.primaryDark_1} />
           <Text style={styles.propertyName} numberOfLines={1}>
             {propertyName}
           </Text>
@@ -139,11 +139,11 @@ export function PaymentCard({
 
       <View style={styles.actionsContainer}>
         <TouchableOpacity style={styles.actionButton} onPress={onViewPress}>
-          <IconComponent name="eye-outline" size={18} color={colors.primaryColor} />
+          <Ionicons name="eye-outline" size={18} color={colors.primaryColor} />
           <Text style={styles.actionText}>View Details</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={onReceiptPress}>
-          <IconComponent name="document-text-outline" size={18} color={colors.primaryColor} />
+          <Ionicons name="document-text-outline" size={18} color={colors.primaryColor} />
           <Text style={styles.actionText}>Receipt</Text>
         </TouchableOpacity>
       </View>

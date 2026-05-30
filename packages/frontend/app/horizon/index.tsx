@@ -47,7 +47,7 @@ export default function HorizonPage() {
   ];
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <Header
         options={{
           showBackButton: true,

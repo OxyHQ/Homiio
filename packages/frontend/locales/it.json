@@ -780,7 +780,9 @@
       "privacy": "Politica sulla privacy"
     },
     "collapse": "Comprimi barra laterale",
-    "expand": "Espandi barra laterale"
+    "expand": "Espandi barra laterale",
+    "open": "Apri menu",
+    "close": "Chiudi menu"
   },
   "saved": {
     "title": "Proprietà Salvate",

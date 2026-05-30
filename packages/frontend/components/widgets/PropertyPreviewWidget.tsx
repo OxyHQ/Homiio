@@ -16,13 +16,11 @@ import {
 
 import { PropertyCard } from '../PropertyCard';
 
-const IconComponent = Ionicons as any;
-
 
 interface PreviewSection {
   id: string;
   title: string;
-  icon: string;
+  icon: keyof typeof Ionicons.glyphMap;
   isComplete: boolean;
   hasData: boolean;
 }
@@ -305,7 +303,7 @@ export function PropertyPreviewWidget() {
       >
         <View style={styles.emptyContainer}>
           <View style={styles.emptyIconContainer}>
-            <IconComponent name="eye-outline" size={48} color={colors.COLOR_BLACK_LIGHT_3} />
+            <Ionicons name="eye-outline" size={48} color={colors.COLOR_BLACK_LIGHT_3} />
           </View>
           <ThemedText style={styles.emptyTitle}>Start Building Your Listing</ThemedText>
           <ThemedText style={styles.emptySubtitle}>
@@ -375,7 +373,7 @@ export function PropertyPreviewWidget() {
                 <View
                   style={[styles.sectionIcon, section.isComplete && styles.sectionIconComplete]}
                 >
-                  <IconComponent
+                  <Ionicons
                     name={section.icon}
                     size={16}
                     color={section.isComplete ? colors.primaryLight : colors.COLOR_BLACK_LIGHT_3}
@@ -391,14 +389,14 @@ export function PropertyPreviewWidget() {
                       section.isComplete && styles.completionIndicatorComplete,
                     ]}
                   >
-                    <IconComponent
+                    <Ionicons
                       name={section.isComplete ? 'checkmark' : 'ellipse-outline'}
                       size={12}
                       color={section.isComplete ? colors.primaryLight : colors.COLOR_BLACK_LIGHT_3}
                     />
                   </View>
                 )}
-                <IconComponent
+                <Ionicons
                   name={expandedSections.has(section.id) ? 'chevron-up' : 'chevron-down'}
                   size={16}
                   color={colors.COLOR_BLACK_LIGHT_3}
@@ -528,7 +526,7 @@ export function PropertyPreviewWidget() {
                       <View style={styles.amenitiesGrid}>
                         {amenitiesDisplay.map((amenity: string, index: number) => (
                           <View key={index} style={styles.amenityTag}>
-                            <IconComponent
+                            <Ionicons
                               name="checkmark-circle"
                               size={12}
                               color={colors.primaryColor}
@@ -618,7 +616,7 @@ export function PropertyPreviewWidget() {
                 : styles.publishStatusIncomplete,
             ]}
           >
-            <IconComponent
+            <Ionicons
               name={completionPercentage >= 80 ? 'checkmark-circle' : 'alert-circle'}
               size={20}
               color={completionPercentage >= 80 ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3}

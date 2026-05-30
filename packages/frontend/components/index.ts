@@ -17,7 +17,6 @@ export { PaymentCard } from './PaymentCard';
 export { EcoCertification } from './EcoCertification';
 export { RoommateMatch } from './RoommateMatch';
 export { PropertyMonitoring } from './PropertyMonitoring';
-export { ListItem } from './ListItem';
 export { Logo } from './Logo';
 export { default as ErrorBoundary } from './ErrorBoundary';
 export { default as NotFoundScreen } from './NotFoundScreen';

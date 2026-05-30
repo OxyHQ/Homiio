@@ -4,6 +4,7 @@ import {
   Pressable,
   Platform,
   Linking,
+  Modal,
   useWindowDimensions,
 } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
@@ -21,6 +22,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ChevronRight,
+  X,
   PlusCircle,
   UserCircle,
   Bell,
@@ -71,6 +73,15 @@ const COLLAPSED_WIDTH = 48;
 
 /** Width of the expanded sidebar. */
 const EXPANDED_WIDTH = 240;
+
+/**
+ * Sliver of backdrop kept to the right of the mobile overlay drawer so the
+ * underlying screen peeks through and there's always a tap-to-dismiss zone.
+ */
+const MOBILE_DRAWER_BACKDROP_GAP = 56;
+
+/** Dimming scrim behind the mobile overlay drawer. */
+const MOBILE_DRAWER_SCRIM = 'rgba(0, 0, 0, 0.45)';
 
 interface NavEntry {
   key: string;
@@ -190,6 +201,8 @@ export function SideBar() {
 
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
   const toggleSidebarCollapsed = useUIStore((s) => s.toggleSidebarCollapsed);
+  const mobileDrawerOpen = useUIStore((s) => s.mobileDrawerOpen);
+  const closeMobileDrawer = useUIStore((s) => s.closeMobileDrawer);
   const savedFoldersOpen = useUIStore((s) => s.savedFoldersOpen);
   const setSavedFoldersOpen = useUIStore((s) => s.setSavedFoldersOpen);
   const recentPropertiesOpen = useUIStore((s) => s.recentPropertiesOpen);
@@ -427,9 +440,13 @@ export function SideBar() {
      -------------------------------------------------------------- */
   const handleNavigate = React.useCallback(
     (route: string) => {
+      // Dismiss the mobile overlay drawer on any navigation so the
+      // destination screen isn't hidden behind it. No-op on large screens
+      // where the drawer is never open.
+      closeMobileDrawer();
       if (pathname !== route) router.push(route);
     },
-    [pathname, router],
+    [pathname, router, closeMobileDrawer],
   );
 
   const handleHome = React.useCallback(() => handleNavigate('/'), [handleNavigate]);
@@ -501,14 +518,17 @@ export function SideBar() {
   }, []);
 
   /* --------------------------------------------------------------
-     Below the sidebar breakpoint the BottomBar takes over.
+     Below the sidebar breakpoint the BottomBar takes over and the
+     sidebar becomes an on-demand overlay drawer. When that drawer is
+     closed we render nothing inline (the expanded content is rendered
+     inside a Modal at the bottom of this component).
      -------------------------------------------------------------- */
-  if (!isSidebarVisible) return null;
+  const isMobile = !isSidebarVisible;
 
   /* ==============================================================
-     COLLAPSED LAYOUT (icon-only rail, 48px wide)
+     COLLAPSED LAYOUT (icon-only rail, 48px wide) — large screens only
      ============================================================== */
-  if (isCollapsed) {
+  if (!isMobile && isCollapsed) {
     return (
       <View
         className="flex flex-col bg-background border-r border-border items-center"
@@ -612,7 +632,20 @@ export function SideBar() {
     <View className="flex flex-col shrink-0">
       <View className="h-14 flex-row items-center shrink-0 px-2">
         <SidebarBrand onPress={handleHome} />
-        {isLargeScreen && (
+        {isMobile ? (
+          <View className="ms-auto shrink-0">
+            <Pressable
+              onPress={closeMobileDrawer}
+              accessibilityRole="button"
+              accessibilityLabel={t('sidebar.close', {
+                defaultValue: 'Close menu',
+              })}
+              className="h-10 w-10 rounded-xl items-center justify-center hover:bg-muted active:bg-muted/80"
+            >
+              <X size={20} color={colors.primaryDark_2} />
+            </Pressable>
+          </View>
+        ) : isLargeScreen ? (
           <View className="ms-auto shrink-0">
             <Pressable
               onPress={toggleSidebarCollapsed}
@@ -625,7 +658,7 @@ export function SideBar() {
               <ChevronsLeft size={18} color={colors.primaryDark_2} />
             </Pressable>
           </View>
-        )}
+        ) : null}
       </View>
 
       <View className="shrink-0 px-2 pb-1">
@@ -943,6 +976,44 @@ export function SideBar() {
       )}
     </View>
   );
+
+  /* ==============================================================
+     MOBILE OVERLAY DRAWER (small screens)
+     A dimmed, tap-to-dismiss backdrop with the expanded sidebar
+     panel sliding in from the left. Works on native + web via Modal.
+     ============================================================== */
+  if (isMobile) {
+    // Cap the panel width to the viewport so it never overflows on the
+    // narrowest phones, leaving a tap-target sliver of backdrop on the right.
+    const drawerWidth = Math.min(EXPANDED_WIDTH, width - MOBILE_DRAWER_BACKDROP_GAP);
+    return (
+      <Modal
+        visible={mobileDrawerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={closeMobileDrawer}
+        statusBarTranslucent
+      >
+        <View className="flex-1 flex-row">
+          <View
+            style={{ width: drawerWidth }}
+            className="h-full bg-background border-r border-border"
+          >
+            <BaseSidebar header={header} footer={footer}>
+              {middle}
+            </BaseSidebar>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('sidebar.close', { defaultValue: 'Close menu' })}
+            onPress={closeMobileDrawer}
+            className="flex-1 h-full"
+            style={{ backgroundColor: MOBILE_DRAWER_SCRIM }}
+          />
+        </View>
+      </Modal>
+    );
+  }
 
   return (
     <View

@@ -3,8 +3,9 @@ import { View, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { useTranslation } from 'react-i18next';
 import Map from '@/components/Map';
+import type { Property } from '@homiio/shared-types';
 
-interface Props { property: any }
+interface Props { property: Property }
 
 export const LocationDetails: React.FC<Props> = ({ property }) => {
     const { t } = useTranslation();
@@ -12,7 +13,7 @@ export const LocationDetails: React.FC<Props> = ({ property }) => {
     const region = property?.address?.state;
     const country = property?.address?.country;
     const address = property?.address?.street;
-    const coordinates: any = property?.address?.coordinates?.coordinates;
+    const coordinates = property?.address?.coordinates?.coordinates;
     if (!city && !region && !country && !address) return null;
     return (
         <View style={styles.container}>

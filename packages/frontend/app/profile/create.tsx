@@ -8,12 +8,14 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useCreateProfileMutation } from '@/hooks/query/useProfiles';
 import { ProfileType as SharedProfileType, type CreateProfileData } from '@/services/profileService';
+import { BusinessType, type BusinessDetails } from '@homiio/shared-types';
 import { toast } from 'sonner';
 
-// Type assertion for Ionicons compatibility with React 19
-const IconComponent = Ionicons as any;
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 type ProfileType = 'agency' | 'business' | 'cooperative';
+
+type EmployeeCount = NonNullable<BusinessDetails['employeeCount']>;
 
 export default function ProfileCreateScreen() {
   useTranslation();
@@ -22,34 +24,34 @@ export default function ProfileCreateScreen() {
   const [isCreating, setIsCreating] = useState(false);
   const [selectedType, setSelectedType] = useState<ProfileType | null>(null);
   const [formData, setFormData] = useState({
-    businessType: '',
+    businessType: '' as BusinessType | '',
     description: '',
     businessDetails: {
       licenseNumber: '',
       taxId: '',
       yearEstablished: '',
-      employeeCount: '',
+      employeeCount: '' as EmployeeCount | '',
       specialties: [] as string[],
     },
     legalCompanyName: '',
     legalName: '',
   });
 
-  const profileTypes = [
+  const profileTypes: { type: ProfileType; title: string; description: string; icon: IoniconName }[] = [
     {
-      type: 'agency' as ProfileType,
+      type: 'agency',
       title: 'Agency Profile',
       description: 'For real estate agencies and property management',
       icon: 'business-outline',
     },
     {
-      type: 'business' as ProfileType,
+      type: 'business',
       title: 'Business Profile',
       description: 'For small businesses and freelancers',
       icon: 'briefcase-outline',
     },
     {
-      type: 'cooperative' as ProfileType,
+      type: 'cooperative',
       title: 'Cooperative Profile',
       description: 'For housing or member-owned cooperatives',
       icon: 'people-outline',
@@ -71,10 +73,10 @@ export default function ProfileCreateScreen() {
           cooperative: SharedProfileType.COOPERATIVE,
         } as const)[t];
 
-      const profileData: any = {
+      const profileData: CreateProfileData = {
         profileType: toSharedType(selectedType),
         data: {},
-      } satisfies Partial<CreateProfileData> as any;
+      };
 
       // Add type-specific data
       if (selectedType === 'agency') {
@@ -136,13 +138,15 @@ export default function ProfileCreateScreen() {
         };
       }
 
-  await createProfile(profileData as CreateProfileData);
+  await createProfile(profileData);
       toast.success(
         `${profileTypes.find((p) => p.type === selectedType)?.title} created successfully!`,
       );
       router.back();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create profile. Please try again.');
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to create profile. Please try again.';
+      toast.error(message);
     } finally {
       setIsCreating(false);
     }
@@ -160,14 +164,14 @@ export default function ProfileCreateScreen() {
     }));
   };
 
-  const employeeCountOptions = ['1-10', '11-50', '51-200', '200+'];
+  const employeeCountOptions: EmployeeCount[] = ['1-10', '11-50', '51-200', '200+'];
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <IconComponent name="arrow-back" size={24} color="#000" />
+          <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
         <ThemedText style={styles.headerTitle}>Create Profile</ThemedText>
         <TouchableOpacity
@@ -176,7 +180,7 @@ export default function ProfileCreateScreen() {
           disabled={!selectedType || isCreating || isCreatingMut}
         >
           {isCreating || isCreatingMut ? (
-            <IconComponent name="refresh" size={20} color="#fff" />
+            <Ionicons name="refresh" size={20} color="#fff" />
           ) : (
             <ThemedText style={styles.createButtonText}>Create</ThemedText>
           )}
@@ -200,8 +204,8 @@ export default function ProfileCreateScreen() {
               onPress={() => setSelectedType(profileType.type)}
             >
               <View style={styles.settingInfo}>
-                <IconComponent
-                  name={profileType.icon as any}
+                <Ionicons
+                  name={profileType.icon}
                   size={20}
                   color={selectedType === profileType.type ? colors.primaryColor : '#666'}
                   style={styles.settingIcon}
@@ -221,7 +225,7 @@ export default function ProfileCreateScreen() {
                 </View>
               </View>
               {selectedType === profileType.type && (
-                <IconComponent name="checkmark" size={20} color={colors.primaryColor} />
+                <Ionicons name="checkmark" size={20} color={colors.primaryColor} />
               )}
             </TouchableOpacity>
           ))}
@@ -236,11 +240,11 @@ export default function ProfileCreateScreen() {
               <ThemedText style={styles.label}>Business Type *</ThemedText>
               <View style={styles.radioGroup}>
                 {[
-                  'real_estate_agency',
-                  'property_management',
-                  'brokerage',
-                  'developer',
-                  'other',
+                  BusinessType.REAL_ESTATE_AGENCY,
+                  BusinessType.PROPERTY_MANAGEMENT,
+                  BusinessType.BROKERAGE,
+                  BusinessType.DEVELOPER,
+                  BusinessType.OTHER,
                 ].map((type) => (
                   <TouchableOpacity
                     key={type}
@@ -404,7 +408,13 @@ export default function ProfileCreateScreen() {
             <View style={styles.inputGroup}>
               <ThemedText style={styles.label}>Business Type *</ThemedText>
               <View style={styles.radioGroup}>
-                {['small_business', 'startup', 'freelancer', 'consultant', 'other'].map((type) => (
+                {[
+                  BusinessType.SMALL_BUSINESS,
+                  BusinessType.STARTUP,
+                  BusinessType.FREELANCER,
+                  BusinessType.CONSULTANT,
+                  BusinessType.OTHER,
+                ].map((type) => (
                   <TouchableOpacity
                     key={type}
                     style={[
@@ -487,7 +497,7 @@ export default function ProfileCreateScreen() {
             <View style={styles.inputGroup}>
               <ThemedText style={styles.label}>Number of Employees</ThemedText>
               <View style={styles.radioGroup}>
-                {['1-5', '6-10', '11-25', '26+'].map((count) => (
+                {(['1-5', '6-10', '11-25', '26+'] satisfies EmployeeCount[]).map((count) => (
                   <TouchableOpacity
                     key={count}
                     style={[
@@ -599,7 +609,7 @@ export default function ProfileCreateScreen() {
             <ThemedText style={styles.sectionTitle}>What&apos;s Next?</ThemedText>
             <View style={[styles.settingItem, styles.firstSettingItem, styles.lastSettingItem]}>
               <View style={styles.settingInfo}>
-                <IconComponent
+                <Ionicons
                   name="information-circle"
                   size={20}
                   color="#666"

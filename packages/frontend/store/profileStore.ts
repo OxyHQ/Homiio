@@ -1,6 +1,21 @@
 import { create } from 'zustand';
 import profileService from '@/services/profileService';
-import { Profile, UpdateProfileData, ProfileType } from '@homiio/shared-types';
+import {
+  Profile,
+  UpdateProfileData,
+  ProfileType,
+  type CreateProfileData,
+} from '@homiio/shared-types';
+
+/**
+ * Input accepted by the store's `createProfile` action. Callers provide the
+ * target profile type plus the optional type-specific payload; the action maps
+ * it to the {@link CreateProfileData} envelope expected by the service.
+ */
+interface CreateProfileInput {
+  profileType: ProfileType;
+  data?: CreateProfileData['data'];
+}
 
 interface ProfileState {
   // State
@@ -25,11 +40,7 @@ interface ProfileState {
   fetchPrimaryProfile: () => Promise<Profile | null>;
   fetchUserProfiles: () => Promise<Profile[]>;
   fetchLandlordProfileById: (profileId: string) => Promise<Profile | null>;
-  createProfile: (profileData: {
-    profileType: ProfileType;
-    personalProfile?: any;
-    businessProfile?: any;
-  }) => Promise<Profile>;
+  createProfile: (profileData: CreateProfileInput) => Promise<Profile>;
   updateProfile: (profileId: string, profileData: UpdateProfileData) => Promise<Profile>;
   deleteProfile: (profileId: string) => Promise<void>;
   activateProfile: (profileId: string) => Promise<Profile>;
@@ -98,11 +109,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     }
   },
 
-  createProfile: async (profileData: {
-    profileType: ProfileType;
-    personalProfile?: any;
-    businessProfile?: any;
-  }) => {
+  createProfile: async (profileData: CreateProfileInput) => {
     try {
       // Check if trying to create a personal profile
       if (profileData.profileType === ProfileType.PERSONAL) {
@@ -112,13 +119,12 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       }
 
       set({ isLoading: true, error: null });
-      
-      // Transform the data to match the service expectation
-      const createData = {
-        data: profileData
+
+      const createData: CreateProfileData = {
+        profileType: profileData.profileType,
+        data: profileData.data ?? {},
       };
-      
-      const profile = await profileService.createProfile(createData as any);
+      const profile = await profileService.createProfile(createData);
 
       // Update state
       const { allProfiles } = get();

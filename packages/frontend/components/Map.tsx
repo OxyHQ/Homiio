@@ -1,765 +1,506 @@
 import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react';
 import { Platform, View, ViewStyle, Text } from 'react-native';
-import { WebView } from 'react-native-webview';
+import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import * as Location from 'expo-location';
 import { useMapState } from '@/context/MapStateContext';
-import { geocodingApi } from '@/utils/api';
+import { api, type ApiResponse } from '@/utils/api';
+import { buildMapDocument, DEFAULT_STYLE_URL } from './mapDocument';
+import type {
+  AddressData,
+  ClusterLeaf,
+  ClusterOptions,
+  LonLat,
+  MapApi,
+  MapEvent,
+  MarkerInput,
+  MarkerStyle,
+  OutboundMapMessage,
+} from './mapTypes';
 
-// Coordinate type: [longitude, latitude] following GeoJSON standard
-// NOTE: This is OPPOSITE to the common [latitude, longitude] format!
-type LonLat = [number, number];
+// Re-export the public map types so existing call sites can keep importing
+// them from the component entry point (e.g. `import { MapApi } from '@/components/Map'`).
+export type {
+  AddressData,
+  ClusterOptions,
+  LonLat,
+  MapApi,
+  MarkerInput,
+  MarkerStyle,
+} from './mapTypes';
 
-// Helper function to convert [latitude, longitude] to [longitude, latitude]
+/** Convert [latitude, longitude] to GeoJSON [longitude, latitude]. */
 export const latLngToLonLat = (lat: number, lng: number): LonLat => [lng, lat];
 
-export interface AddressData {
-    street?: string;
-    houseNumber?: string;
-    neighborhood?: string;
-    city?: string;
-    state?: string;
-    country?: string;
-    postalCode?: string;
-    fullAddress?: string;
-}
-
-type MapEvent =
-    | { type: 'ready' }
-    | { type: 'mapClick'; lngLat: LonLat }
-    | { type: 'markerClick'; id: string; lngLat: LonLat }
-    | { type: 'clusterClick'; leaves: any[] }
-    | { type: 'addressLookup'; address: AddressData; coordinates: LonLat }
-    | { type: 'requestAddressLookup'; coordinates: LonLat }
-    | {
-        type: 'region';
-        center: LonLat;
-        zoom: number;
-        bearing: number;
-        pitch: number;
-        bounds: { west: number; south: number; east: number; north: number };
-        isFinal?: boolean; // true when move/zoom gesture ends
-    };
-
-export interface MarkerInput {
-    id: string;
-    coordinates: LonLat;
-    priceLabel: string;
-}
-
-export interface ClusterOptions {
-    enabled?: boolean;
-    radius?: number;
-    maxZoom?: number;
-    color?: string;
-    textColor?: string;
-}
-
-export interface MarkerStyle {
-    /**
-     * @deprecated The Airbnb-style price pill uses a fixed light-on-dark
-     * palette baked into the marker stylesheet. Kept on the interface
-     * so existing callers don't fail typecheck, but the values are no
-     * longer applied. Restyle the pill in `Map.tsx` directly instead.
-     */
-    chipBg?: string;
-    /**
-     * @deprecated See `chipBg`.
-     */
-    chipText?: string;
-    /** Zoom level the camera eases to when a marker is selected. */
-    onMarkerZoom?: number;
-}
-
-export interface MapApi {
-    navigateToLocation: (center: LonLat, zoom?: number) => void;
-    highlightMarker: (id: string | null) => void;
-    lookupAddress: (coordinates: LonLat) => Promise<AddressData | null>;
-}
-
 export interface MapProps {
-    style?: ViewStyle | any;
-    /** Initial map center coordinates in [longitude, latitude] format (GeoJSON standard).
-     *  NOTE: This is [longitude, latitude], NOT [latitude, longitude]!
-     *  Example: [2.2149101, 41.5425579] for Barcelona
-     *  Use latLngToLonLat(lat, lng) helper if you have lat/lng format
-     */
-    initialCoordinates?: LonLat;
-    initialZoom?: number;
-    styleURL?: string;
-    startFromCurrentLocation?: boolean;
-    markers?: MarkerInput[];
-    cluster?: ClusterOptions;
-    markerStyle?: MarkerStyle;
-    screenId?: string;
-    enableAddressLookup?: boolean;
-    showAddressInstructions?: boolean;
-    onMapPress?: (e: { lngLat: LonLat }) => void;
-    onAddressSelect?: (address: AddressData, coordinates: LonLat) => void;
-    onAddressLookupStart?: () => void;
-    onAddressLookupEnd?: () => void;
-    onRegionChange?: (e: { center: LonLat; zoom: number; bearing: number; pitch: number; bounds: { west: number; south: number; east: number; north: number }; isFinal?: boolean }) => void;
-    onMarkerPress?: (e: { id: string; lngLat: LonLat }) => void;
-    onClusterPress?: (e: { leaves: any[] }) => void;
+  style?: ViewStyle | Record<string, unknown>;
+  /** Initial map center coordinates in [longitude, latitude] format (GeoJSON standard).
+   *  NOTE: This is [longitude, latitude], NOT [latitude, longitude]!
+   *  Example: [2.2149101, 41.5425579] for Barcelona
+   *  Use latLngToLonLat(lat, lng) helper if you have lat/lng format
+   */
+  initialCoordinates?: LonLat;
+  initialZoom?: number;
+  styleURL?: string;
+  startFromCurrentLocation?: boolean;
+  markers?: MarkerInput[];
+  cluster?: ClusterOptions;
+  markerStyle?: MarkerStyle;
+  screenId?: string;
+  enableAddressLookup?: boolean;
+  showAddressInstructions?: boolean;
+  onMapPress?: (e: { lngLat: LonLat }) => void;
+  onAddressSelect?: (address: AddressData, coordinates: LonLat) => void;
+  onAddressLookupStart?: () => void;
+  onAddressLookupEnd?: () => void;
+  onRegionChange?: (e: { center: LonLat; zoom: number; bearing: number; pitch: number; bounds: { west: number; south: number; east: number; north: number }; isFinal?: boolean }) => void;
+  onMarkerPress?: (e: { id: string; lngLat: LonLat }) => void;
+  onClusterPress?: (e: { leaves: ClusterLeaf[] }) => void;
 }
 
 const DEFAULT_CENTER: LonLat = [2.16538, 41.38723];
 const DEFAULT_ZOOM = 12;
-const DEFAULT_STYLE = 'mapbox://styles/mapbox/streets-v12';
-const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN || '';
 
-// Address lookup function using backend API
+// Address lookup function using backend API (Nominatim-backed, no API key).
 const lookupAddressFromCoordinates = async (coordinates: LonLat): Promise<AddressData | null> => {
-    try {
-        const [lng, lat] = coordinates;
-        const result = await geocodingApi.reverseGeocode(lng, lat);
+  try {
+    const [longitude, latitude] = coordinates;
+    const { data: result } = await api.get<ApiResponse<AddressData>>('/api/geocoding/reverse', {
+      params: { longitude, latitude },
+      requireAuth: false,
+    });
 
-        if (!result.success || !result.data) {
-            return null;
-        }
-
-        return result.data;
-    } catch {
-        return null;
+    if (!result.success || !result.data) {
+      return null;
     }
+
+    return result.data;
+  } catch {
+    return null;
+  }
 };
 
-const buildHTML = (
-    token: string,
-    center: LonLat,
-    zoom: number,
-    styleURL: string,
-    markerStyle: Required<MarkerStyle>,
-    clusterOpts: Required<ClusterOptions>,
-    enableAddressLookup: boolean
-) => `<!doctype html><html><head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<link href="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.css" rel="stylesheet" />
-<style>
-  html,body,#map{height:100%;margin:0;padding:0}
-  #map{position:absolute;inset:0}
-  /* Airbnb-style price bubble markers — rendered as real DOM nodes
-     anchored by mapbox-gl Marker so we get proper rounded-pill shape,
-     soft shadow, and crisp typography that the GL circle/symbol layers
-     can't produce. */
-  .homiio-price-pill {
-    background: #ffffff;
-    color: #1a1a1a;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    padding: 6px 12px;
-    border-radius: 9999px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.06);
-    white-space: nowrap;
-    cursor: pointer;
-    transition: transform 120ms ease-out, background 120ms ease-out, color 120ms ease-out;
-    user-select: none;
-    line-height: 18px;
-  }
-  .homiio-price-pill:hover {
-    transform: scale(1.05);
-  }
-  .homiio-price-pill.is-selected {
-    background: #1a1a1a;
-    color: #ffffff;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28), 0 0 0 2px #ffffff;
-  }
-</style>
-</head><body>
-  <div id="map"></div>
-<script src="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.js"></script>
-<script>(function(){
-  const isRN = !!window.ReactNativeWebView;
-  const post = (msg)=>{const d=JSON.stringify(msg); if(isRN) window.ReactNativeWebView.postMessage(d); else window.parent&&window.parent.postMessage(d,'*');};
-  mapboxgl.accessToken=${JSON.stringify(token)};
-  const map=new mapboxgl.Map({container:'map',style:${JSON.stringify(styleURL)},center:${JSON.stringify(center)},zoom:${JSON.stringify(zoom)},attributionControl:true,hash:false});
+const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref) {
+  const {
+    style,
+    initialCoordinates = DEFAULT_CENTER,
+    initialZoom = DEFAULT_ZOOM,
+    styleURL = DEFAULT_STYLE_URL,
+    startFromCurrentLocation = true,
+    markers = [],
+    cluster,
+    markerStyle,
+    screenId,
+    enableAddressLookup = false,
+    showAddressInstructions = false,
+    onMapPress,
+    onAddressSelect,
+    onAddressLookupStart: _onAddressLookupStart,
+    onAddressLookupEnd: _onAddressLookupEnd,
+    onRegionChange,
+    onMarkerPress,
+    onClusterPress,
+  } = props;
 
-  const toGeoJSON=(list)=>({type:'FeatureCollection',features:(Array.isArray(list)?list:[]).map(p=>({
-    type:'Feature', id: p.id, geometry:{type:'Point',coordinates:p.coordinates},
-    properties:{ id: String(p.id), price: String(p.priceLabel||'') }
-  }))});
+  const { getMapState, setMapState } = useMapState();
 
-  const srcId='markers';
-  const cluster=${String(clusterOpts.enabled)}, cRad=${clusterOpts.radius}, cMax=${clusterOpts.maxZoom};
-  const cColor=${JSON.stringify(clusterOpts.color)}, cText=${JSON.stringify(clusterOpts.textColor)};
-  let highlightedFeatureId = null;
-  let selectedMarker = null;
+  const [userCoord, setUserCoord] = useState<LonLat | null>(null);
+  const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
+  const [childReady, setChildReady] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(enableAddressLookup && showAddressInstructions);
+  const pending = useRef<string[]>([]);
+  const mapInitialized = useRef(false);
 
-  // Track DOM Marker instances keyed by feature id so we can:
-  // (a) remove the ones that no longer exist after a setData,
-  // (b) update existing ones in place rather than churning markers.
-  const pillMarkers = new Map();
+  // Get saved map state if screenId is provided
+  const savedState = screenId ? getMapState(screenId) : null;
 
-  const renderPillMarkers = (featureCollection) => {
-    const seenIds = new Set();
-    (featureCollection.features || []).forEach((feature) => {
-      const id = feature.properties.id;
-      seenIds.add(id);
+  // Freeze initial center/zoom for HTML to prevent iframe reloads
+  const initialCenterRef = useRef<LonLat>(savedState?.center || initialCoordinates);
+  const initialZoomRef = useRef<number>(savedState?.zoom || initialZoom);
 
-      const existing = pillMarkers.get(id);
-      if (existing) {
-        existing.setLngLat(feature.geometry.coordinates);
-        const label = existing.getElement().firstChild;
-        if (label && label.textContent !== feature.properties.price) {
-          label.textContent = feature.properties.price;
+  // Memoize marker style configuration
+  const markerStyleFinal = useMemo<Required<MarkerStyle>>(() => ({
+    chipBg: markerStyle?.chipBg ?? '#111827',
+    chipText: markerStyle?.chipText ?? '#FFFFFF',
+    onMarkerZoom: markerStyle?.onMarkerZoom ?? 15.5,
+  }), [markerStyle]);
+
+  // Memoize cluster configuration
+  const clusterFinal = useMemo<Required<ClusterOptions>>(() => ({
+    enabled: cluster?.enabled ?? true,
+    radius: cluster?.radius ?? 40,
+    maxZoom: cluster?.maxZoom ?? 17,
+    color: cluster?.color ?? '#3B82F6',
+    textColor: cluster?.textColor ?? '#FFFFFF'
+  }), [cluster]);
+
+  // Get user location
+  useEffect(() => {
+    if (!startFromCurrentLocation) return;
+
+    const getUserLocation = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          return;
         }
+
+        // Get location with high accuracy and fresh data
+        const loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+          timeInterval: 10000,
+          distanceInterval: 10,
+        });
+
+        setLocationAccuracy(loc.coords.accuracy || null);
+        setUserCoord([loc.coords.longitude, loc.coords.latitude]);
+      } catch {
+        // Silently handle location errors
+      }
+    };
+
+    getUserLocation();
+  }, [startFromCurrentLocation]);
+
+  // Generate HTML once with frozen initial coordinates to prevent iframe reloads
+  const html = useMemo(
+    () => buildMapDocument({
+      center: initialCenterRef.current,
+      zoom: initialZoomRef.current,
+      styleURL,
+      markerStyle: markerStyleFinal,
+      cluster: clusterFinal,
+      enableAddressLookup,
+    }),
+    [styleURL, markerStyleFinal, clusterFinal, enableAddressLookup]
+  );
+
+  const webviewRef = useRef<WebView | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+
+  // Memoize post function
+  const reallyPost = useCallback((str: string) => {
+    if (Platform.OS === 'web' && iframeRef.current?.contentWindow) {
+      iframeRef.current.contentWindow.postMessage(str, '*');
+    } else {
+      webviewRef.current?.postMessage?.(str);
+      webviewRef.current?.injectJavaScript?.(`window.dispatchEvent(new MessageEvent('message',{data:${JSON.stringify(str)}})); true;`);
+    }
+  }, []);
+
+  const post = useCallback((payload: OutboundMapMessage) => {
+    const str = JSON.stringify(payload);
+    if (childReady) {
+      reallyPost(str);
+    } else {
+      pending.current.push(str);
+    }
+  }, [childReady, reallyPost]);
+
+  const flushPending = useCallback(() => {
+    while (pending.current.length) {
+      reallyPost(pending.current.shift() as string);
+    }
+  }, [reallyPost]);
+
+  // Handle marker updates efficiently
+  useEffect(() => {
+    if (childReady && mapInitialized.current && screenId) {
+      // Only update markers if they've actually changed
+      const currentState = getMapState(screenId);
+      const currentMarkers = currentState?.markers || [];
+
+      const markersChanged = markers.length !== currentMarkers.length ||
+        markers.some((marker, index) => {
+          const current = currentMarkers[index];
+          return !current ||
+            marker.id !== current.id ||
+            marker.coordinates[0] !== current.coordinates[0] ||
+            marker.coordinates[1] !== current.coordinates[1] ||
+            marker.priceLabel !== current.priceLabel;
+        });
+
+      if (markersChanged) {
+        post({ type: 'setData', features: markers });
+      }
+    } else if (childReady && mapInitialized.current) {
+      // If no screenId, always update markers
+      post({ type: 'setData', features: markers });
+    }
+  }, [markers, childReady, post, screenId, getMapState]);
+
+  // Send markers when map becomes initialized
+  useEffect(() => {
+    if (childReady && mapInitialized.current && markers.length > 0) {
+      post({ type: 'setData', features: markers });
+    }
+  }, [childReady, markers, post]);
+
+  // Fallback: Send markers after a delay if map doesn't initialize
+  useEffect(() => {
+    if (childReady && !mapInitialized.current && markers.length > 0) {
+      const timeoutId = setTimeout(() => {
+        mapInitialized.current = true; // Force initialization
+        post({ type: 'setData', features: markers });
+      }, 2000);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [childReady, markers, post]);
+
+  // Save markers to state
+  useEffect(() => {
+    if (screenId && markers.length > 0) {
+      const currentState = getMapState(screenId);
+      const currentMarkers = currentState?.markers || [];
+
+      const markersChanged = markers.length !== currentMarkers.length ||
+        markers.some((marker, index) => {
+          const current = currentMarkers[index];
+          return !current ||
+            marker.id !== current.id ||
+            marker.coordinates[0] !== current.coordinates[0] ||
+            marker.coordinates[1] !== current.coordinates[1] ||
+            marker.priceLabel !== current.priceLabel;
+        });
+
+      if (markersChanged) {
+        setMapState(screenId, { markers });
+      }
+    }
+  }, [markers, screenId, setMapState, getMapState]);
+
+  // Handle user location centering
+  const hasCenteredOnce = useRef(false);
+
+  // Initialize instructions visibility based on address lookup mode
+  useEffect(() => {
+    if (showAddressInstructions && enableAddressLookup) {
+      setShowInstructions(true);
+    } else {
+      setShowInstructions(false);
+    }
+  }, [showAddressInstructions, enableAddressLookup]);
+
+  useEffect(() => {
+    if (!userCoord) return;
+
+    post({ type: 'setUserLocation', coordinates: userCoord });
+
+    // Only auto-center on user location if no specific initialCoordinates were provided
+    const hasSpecificInitialCoords = initialCoordinates !== DEFAULT_CENTER &&
+      (initialCoordinates[0] !== DEFAULT_CENTER[0] ||
+        initialCoordinates[1] !== DEFAULT_CENTER[1]);
+
+    if (!hasCenteredOnce.current && !savedState && !hasSpecificInitialCoords) {
+      // If location accuracy is poor, use a lower zoom level to show a wider area
+      const zoomLevel = locationAccuracy && locationAccuracy > 1000
+        ? Math.max(initialZoom, 10) // Lower zoom for poor accuracy
+        : Math.max(initialZoom, 14); // Higher zoom for good accuracy
+
+      post({ type: 'setView', center: userCoord, zoom: zoomLevel });
+      hasCenteredOnce.current = true;
+    }
+  }, [userCoord, post, initialZoom, savedState, locationAccuracy, initialCoordinates]);
+
+  // Memoize message handler
+  const handleMessage = useCallback((event: MessageEvent | WebViewMessageEvent) => {
+    try {
+      const rawData =
+        'data' in event && typeof event.data === 'string'
+          ? event.data
+          : 'nativeEvent' in event
+            ? event.nativeEvent.data
+            : undefined;
+      const msg = JSON.parse(rawData || '{}') as MapEvent;
+
+      if (msg.type === 'ready') {
+        setChildReady(true);
+        mapInitialized.current = true;
+        flushPending();
+
+        // Set the view if we have saved state (otherwise HTML already has correct coordinates)
+        if (savedState) {
+          post({ type: 'setView', center: savedState.center, zoom: savedState.zoom, duration: 0 });
+        }
+
+        // Restore saved markers
+        if (savedState?.markers && savedState.markers.length > 0) {
+          post({ type: 'setData', features: savedState.markers });
+        }
+
         return;
       }
 
-      const wrapper = document.createElement('div');
-      const pill = document.createElement('div');
-      pill.className = 'homiio-price-pill';
-      pill.textContent = feature.properties.price || '';
-      pill.addEventListener('click', (event) => {
-        event.stopPropagation();
-        post({ type: 'markerClick', id: id, lngLat: feature.geometry.coordinates });
-      });
-      wrapper.appendChild(pill);
-
-      const marker = new mapboxgl.Marker({ element: wrapper, anchor: 'center' })
-        .setLngLat(feature.geometry.coordinates)
-        .addTo(map);
-      pillMarkers.set(id, marker);
-    });
-
-    // Reap markers that are no longer in the source.
-    pillMarkers.forEach((marker, id) => {
-      if (!seenIds.has(id)) {
-        marker.remove();
-        pillMarkers.delete(id);
+      if (msg.type === 'mapClick') {
+        // Hide instructions when user clicks on map (for address lookup)
+        if (enableAddressLookup && showInstructions) {
+          setShowInstructions(false);
+        }
+        onMapPress?.(msg);
       }
-    });
-
-    // Re-apply highlight after re-render in case the highlighted id
-    // was removed and added back in the same setData call.
-    if (highlightedFeatureId) {
-      const target = pillMarkers.get(String(highlightedFeatureId));
-      if (target) {
-        target.getElement().firstChild.classList.add('is-selected');
+      if (msg.type === 'markerClick') onMarkerPress?.(msg);
+      if (msg.type === 'clusterClick') onClusterPress?.(msg);
+      if (msg.type === 'addressLookup' && onAddressSelect) {
+        onAddressSelect(msg.address, msg.coordinates);
       }
-    }
-  };
-
-  map.on('load', () => {
-    map.addSource(srcId, {
-        type:'geojson', data:toGeoJSON([]), cluster:cluster, clusterRadius:cRad, clusterMaxZoom:cMax, promoteId: 'id'
-    });
-
-    if(cluster){
-      map.addLayer({id:'clusters',type:'circle',source:srcId,filter:['has','point_count'],paint:{
-        'circle-color':cColor,'circle-radius':['step',['get','point_count'],16,20,18,50,22],
-        'circle-stroke-color':'#FFFFFF','circle-stroke-width':2}});
-      map.addLayer({id:'cluster-count',type:'symbol',source:srcId,filter:['has','point_count'],layout:{
-        'text-field':['get','point_count_abbreviated'],'text-font':['Open Sans Bold'],'text-size':12},paint:{'text-color':cText}});
-    }
-
-    map.on('click','clusters',(e)=>{
-      const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
-      if (!features.length) return;
-      const clusterId = features[0].properties.cluster_id;
-      map.getSource(srcId).getClusterExpansionZoom(clusterId,(err,z)=>{ if(err) return; map.easeTo({center: features[0].geometry.coordinates, zoom:z}); });
-    });
-
-    map.on('mouseenter', 'clusters', () => { map.getCanvas().style.cursor = 'pointer'; });
-    map.on('mouseleave', 'clusters', () => { map.getCanvas().style.cursor = ''; });
-
-    post({ type:'ready' });
-  });
-
-  map.on('click', (e) => {
-    const coordinates = e.lngLat.toArray();
-    post({ type: 'mapClick', lngLat: coordinates });
-    
-    if (${enableAddressLookup}) {
-      if (selectedMarker) {
-        selectedMarker.remove();
+      if (msg.type === 'requestAddressLookup' && onAddressSelect) {
+        // Handle address lookup request using the TypeScript function
+        lookupAddressFromCoordinates(msg.coordinates).then(address => {
+          if (address) {
+            onAddressSelect(address, msg.coordinates);
+          }
+        }).catch(() => {
+          // Silently handle address lookup errors
+        });
       }
-      
-      selectedMarker = new mapboxgl.Marker({ color: '#007AFF' })
-        .setLngLat(coordinates)
-        .addTo(map);
-      
-      // Request address lookup from the React Native side
-      post({ type: 'requestAddressLookup', coordinates: coordinates });
-    }
-  });
-
-  let last = 0;
-  const emit = (force=false) => {
-    const now = Date.now();
-    if (!force && now - last < 100) return;
-    last = now;
-    const c = map.getCenter();
-    const b = map.getBounds();
-    const boundsPayload = { west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() };
-    post({ type:'region', center:[c.lng,c.lat], zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch(), bounds: boundsPayload, isFinal: force });
-  };
-  
-  ['move','zoom','rotate','pitch'].forEach(ev => map.on(ev, () => { emit(false); }));
-  ['moveend','zoomend','rotateend','pitchend'].forEach(ev => map.on(ev, () => { emit(true); }));
-
-  const handle=(raw)=>{ try{
-    const m = JSON.parse(raw.data || raw);
-    if(!m || typeof m !== 'object') return;
-    if(m.type==='setView'){ 
-      if (m.duration === 0) {
-        map.jumpTo({ center: m.center, zoom: m.zoom });
-      } else {
-        map.easeTo({ center: m.center, zoom: m.zoom, duration: m.duration || 500 }); 
+      if (msg.type === 'region') {
+        if (screenId) {
+          setMapState(screenId, {
+            center: msg.center,
+            zoom: msg.zoom,
+            bounds: msg.bounds,
+          });
+        }
+        onRegionChange?.(msg);
       }
+    } catch {
+      // Silently handle message parsing errors
     }
-    if(m.type==='setData'){
-      const s = map.getSource(srcId);
-      if (s) {
-        const geoJSON = toGeoJSON(m.features || []);
-        s.setData(geoJSON);
-        // Mapbox renders the clustered points as circles via the layer
-        // above, but the unclustered ones are bubble DOM markers — keep
-        // those in sync with the new feature set on every update.
-        renderPillMarkers({ features: (m.features || []).map(p => ({
-          properties: { id: String(p.id), price: String(p.priceLabel || '') },
-          geometry: { coordinates: p.coordinates }
-        })) });
-      }
+  }, [onMapPress, onMarkerPress, onClusterPress, onAddressSelect, onRegionChange, screenId, setMapState, flushPending, post, savedState, enableAddressLookup, showInstructions]);
+
+  // Set up message listeners
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    window.addEventListener('message', handleMessage);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      mapInitialized.current = false;
+    };
+  }, [handleMessage]);
+
+  const handleNativeMessage = useCallback((event: WebViewMessageEvent) => handleMessage(event), [handleMessage]);
+
+  // Expose map API
+  React.useImperativeHandle(ref, () => ({
+    navigateToLocation: (center: LonLat, zoom: number = 15) => {
+      post({ type: 'setView', center, zoom, duration: 500 });
+    },
+    highlightMarker: (id: string | null) => {
+      post({ type: 'highlightMarker', id });
+    },
+    lookupAddress: async (coordinates: LonLat) => {
+      return await lookupAddressFromCoordinates(coordinates);
     }
-    if(m.type==='highlightMarker'){
-        if (highlightedFeatureId) {
-            const prev = pillMarkers.get(String(highlightedFeatureId));
-            if (prev) prev.getElement().firstChild.classList.remove('is-selected');
-        }
-        if (m.id) {
-            const next = pillMarkers.get(String(m.id));
-            if (next) next.getElement().firstChild.classList.add('is-selected');
-            highlightedFeatureId = m.id;
-        } else {
-            highlightedFeatureId = null;
-        }
-    }
-  } catch{} };
-  if(isRN) document.addEventListener('message',handle); else window.addEventListener('message',(e)=>handle(e));
-})();</script></body></html>`;
+  }), [post]);
 
-const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref) {
-    const {
-        style,
-        initialCoordinates = DEFAULT_CENTER,
-        initialZoom = DEFAULT_ZOOM,
-        styleURL = DEFAULT_STYLE,
-        startFromCurrentLocation = true,
-        markers = [],
-        cluster,
-        markerStyle,
-        screenId,
-        enableAddressLookup = false,
-        showAddressInstructions = false,
-        onMapPress,
-        onAddressSelect,
-        onAddressLookupStart: _onAddressLookupStart,
-        onAddressLookupEnd: _onAddressLookupEnd,
-        onRegionChange,
-        onMarkerPress,
-        onClusterPress,
-    } = props;
-
-    const { getMapState, setMapState } = useMapState();
-
-    const [userCoord, setUserCoord] = useState<LonLat | null>(null);
-    const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
-    const [childReady, setChildReady] = useState(false);
-    const [showInstructions, setShowInstructions] = useState(enableAddressLookup && showAddressInstructions);
-    const pending = useRef<string[]>([]);
-    const mapInitialized = useRef(false);
-
-    // Get saved map state if screenId is provided
-    const savedState = screenId ? getMapState(screenId) : null;
-
-    // Freeze initial center/zoom for HTML to prevent iframe reloads
-    const initialCenterRef = useRef<LonLat>(savedState?.center || initialCoordinates);
-    const initialZoomRef = useRef<number>(savedState?.zoom || initialZoom);
-    // Memoize marker style configuration
-    const markerStyleFinal = useMemo<Required<MarkerStyle>>(() => ({
-        chipBg: markerStyle?.chipBg ?? '#111827',
-        chipText: markerStyle?.chipText ?? '#FFFFFF',
-        onMarkerZoom: markerStyle?.onMarkerZoom ?? 15.5,
-    }), [markerStyle]);
-
-    // Memoize cluster configuration
-    const clusterFinal = useMemo<Required<ClusterOptions>>(() => ({
-        enabled: cluster?.enabled ?? true,
-        radius: cluster?.radius ?? 40,
-        maxZoom: cluster?.maxZoom ?? 17,
-        color: cluster?.color ?? '#3B82F6',
-        textColor: cluster?.textColor ?? '#FFFFFF'
-    }), [cluster]);
-
-    // Get user location
-    useEffect(() => {
-        if (!startFromCurrentLocation) return;
-
-        const getUserLocation = async () => {
-            try {
-                const { status } = await Location.requestForegroundPermissionsAsync();
-                if (status !== 'granted') {
-                    return;
-                }
-
-                // Get location with high accuracy and fresh data
-                const loc = await Location.getCurrentPositionAsync({
-                    accuracy: Location.Accuracy.High,
-                    timeInterval: 10000,
-                    distanceInterval: 10,
-                });
-
-                setLocationAccuracy(loc.coords.accuracy || null);
-                setUserCoord([loc.coords.longitude, loc.coords.latitude]);
-            } catch {
-                // Silently handle location errors
-            }
-        };
-
-        getUserLocation();
-    }, [startFromCurrentLocation]);
-
-    // Generate HTML once with frozen initial coordinates to prevent iframe reloads
-    const html = useMemo(
-        () => buildHTML(
-            MAPBOX_TOKEN,
-            initialCenterRef.current,
-            initialZoomRef.current,
-            styleURL,
-            markerStyleFinal,
-            clusterFinal,
-            enableAddressLookup
-        ),
-        [styleURL, markerStyleFinal, clusterFinal, enableAddressLookup]
-    );
-
-    const webviewRef = useRef<any>(null);
-    const iframeRef = useRef<HTMLIFrameElement | null>(null);
-
-    // Memoize post function
-    const reallyPost = useCallback((str: string) => {
-        if (Platform.OS === 'web' && iframeRef.current?.contentWindow) {
-            iframeRef.current.contentWindow.postMessage(str, '*');
-        } else {
-            webviewRef.current?.postMessage?.(str);
-            webviewRef.current?.injectJavaScript?.(`window.dispatchEvent(new MessageEvent('message',{data:${JSON.stringify(str)}})); true;`);
-        }
-    }, []);
-
-    const post = useCallback((payload: any) => {
-        const str = JSON.stringify(payload);
-        if (childReady) {
-            reallyPost(str);
-        } else {
-            pending.current.push(str);
-        }
-    }, [childReady, reallyPost]);
-
-    const flushPending = useCallback(() => {
-        while (pending.current.length) {
-            reallyPost(pending.current.shift() as string);
-        }
-    }, [reallyPost]);
-
-    // Handle marker updates efficiently
-    useEffect(() => {
-        if (childReady && mapInitialized.current && screenId) {
-            // Only update markers if they've actually changed
-            const currentState = getMapState(screenId);
-            const currentMarkers = currentState?.markers || [];
-
-            const markersChanged = markers.length !== currentMarkers.length ||
-                markers.some((marker, index) => {
-                    const current = currentMarkers[index];
-                    return !current ||
-                        marker.id !== current.id ||
-                        marker.coordinates[0] !== current.coordinates[0] ||
-                        marker.coordinates[1] !== current.coordinates[1] ||
-                        marker.priceLabel !== current.priceLabel;
-                });
-
-            if (markersChanged) {
-                post({ type: 'setData', features: markers });
-            }
-        } else if (childReady && mapInitialized.current) {
-            // If no screenId, always update markers
-            post({ type: 'setData', features: markers });
-        }
-    }, [markers, childReady, post, screenId, getMapState]);
-
-    // Send markers when map becomes initialized
-    useEffect(() => {
-        if (childReady && mapInitialized.current && markers.length > 0) {
-            post({ type: 'setData', features: markers });
-        }
-    }, [childReady, markers, post]);
-
-    // Fallback: Send markers after a delay if map doesn't initialize
-    useEffect(() => {
-        if (childReady && !mapInitialized.current && markers.length > 0) {
-            const timeoutId = setTimeout(() => {
-                mapInitialized.current = true; // Force initialization
-                post({ type: 'setData', features: markers });
-            }, 2000);
-
-            return () => clearTimeout(timeoutId);
-        }
-    }, [childReady, markers, post]);
-
-    // Save markers to state
-    useEffect(() => {
-        if (screenId && markers.length > 0) {
-            const currentState = getMapState(screenId);
-            const currentMarkers = currentState?.markers || [];
-
-            const markersChanged = markers.length !== currentMarkers.length ||
-                markers.some((marker, index) => {
-                    const current = currentMarkers[index];
-                    return !current ||
-                        marker.id !== current.id ||
-                        marker.coordinates[0] !== current.coordinates[0] ||
-                        marker.coordinates[1] !== current.coordinates[1] ||
-                        marker.priceLabel !== current.priceLabel;
-                });
-
-            if (markersChanged) {
-                setMapState(screenId, { markers });
-            }
-        }
-    }, [markers, screenId, setMapState, getMapState]);
-
-    // Handle user location centering
-    const hasCenteredOnce = useRef(false);
-
-    // Initialize instructions visibility based on address lookup mode
-    useEffect(() => {
-        if (showAddressInstructions && enableAddressLookup) {
-            setShowInstructions(true);
-        } else {
-            setShowInstructions(false);
-        }
-    }, [showAddressInstructions, enableAddressLookup]);
-
-    useEffect(() => {
-        if (!userCoord) return;
-
-        post({ type: 'setUserLocation', coordinates: userCoord });
-
-        // Only auto-center on user location if no specific initialCoordinates were provided
-        const hasSpecificInitialCoords = initialCoordinates !== DEFAULT_CENTER &&
-            (initialCoordinates[0] !== DEFAULT_CENTER[0] ||
-                initialCoordinates[1] !== DEFAULT_CENTER[1]);
-
-        if (!hasCenteredOnce.current && !savedState && !hasSpecificInitialCoords) {
-            // If location accuracy is poor, use a lower zoom level to show a wider area
-            const zoomLevel = locationAccuracy && locationAccuracy > 1000
-                ? Math.max(initialZoom, 10) // Lower zoom for poor accuracy
-                : Math.max(initialZoom, 14); // Higher zoom for good accuracy
-
-            post({ type: 'setView', center: userCoord, zoom: zoomLevel });
-            hasCenteredOnce.current = true;
-        }
-    }, [userCoord, post, initialZoom, savedState, locationAccuracy, initialCoordinates]);
-
-    // Memoize message handler
-    const handleMessage = useCallback((event: any) => {
-        try {
-            const rawData = event?.data || event?.nativeEvent?.data;
-            const msg = JSON.parse(rawData || '{}') as MapEvent;
-
-            if (msg.type === 'ready') {
-                setChildReady(true);
-                mapInitialized.current = true;
-                flushPending();
-
-                // Set the view if we have saved state (otherwise HTML already has correct coordinates)
-                if (savedState) {
-                    post({ type: 'setView', center: savedState.center, zoom: savedState.zoom, duration: 0 });
-                }
-
-                // Restore saved markers
-                if (savedState?.markers && savedState.markers.length > 0) {
-                    post({ type: 'setData', features: savedState.markers });
-                }
-
-                return;
-            }
-
-            if (msg.type === 'mapClick') {
-                // Hide instructions when user clicks on map (for address lookup)
-                if (enableAddressLookup && showInstructions) {
-                    setShowInstructions(false);
-                }
-                onMapPress?.(msg);
-            }
-            if (msg.type === 'markerClick') onMarkerPress?.(msg);
-            if (msg.type === 'clusterClick') onClusterPress?.(msg);
-            if (msg.type === 'addressLookup' && onAddressSelect) {
-                onAddressSelect(msg.address, msg.coordinates);
-            }
-            if (msg.type === 'requestAddressLookup' && onAddressSelect) {
-                // Handle address lookup request using the TypeScript function
-                lookupAddressFromCoordinates(msg.coordinates).then(address => {
-                    if (address) {
-                        onAddressSelect(address, msg.coordinates);
-                    }
-                }).catch(() => {
-                    // Silently handle address lookup errors
-                });
-            }
-            if (msg.type === 'region') {
-                if (screenId) {
-                    setMapState(screenId, {
-                        center: msg.center,
-                        zoom: msg.zoom,
-                        bounds: msg.bounds,
-                    });
-                }
-                onRegionChange?.(msg);
-            }
-        } catch {
-            // Silently handle message parsing errors
-        }
-    }, [onMapPress, onMarkerPress, onClusterPress, onAddressSelect, onRegionChange, screenId, setMapState, flushPending, post, savedState, enableAddressLookup, showInstructions]);
-
-    // Set up message listeners
-    useEffect(() => {
-        if (Platform.OS !== 'web') return;
-
-        window.addEventListener('message', handleMessage);
-        return () => {
-            window.removeEventListener('message', handleMessage);
-            mapInitialized.current = false;
-        };
-    }, [handleMessage]);
-
-    const handleNativeMessage = useCallback((event: any) => handleMessage(event), [handleMessage]);
-
-    // Expose map API
-    React.useImperativeHandle(ref, () => ({
-        navigateToLocation: (center: LonLat, zoom: number = 15) => {
-            post({ type: 'setView', center, zoom, duration: 500 });
-        },
-        highlightMarker: (id: string | null) => {
-            post({ type: 'highlightMarker', id });
-        },
-        lookupAddress: async (coordinates: LonLat) => {
-            return await lookupAddressFromCoordinates(coordinates);
-        }
-    }), [post]);
-
-    if (Platform.OS === 'web') {
-        return (
-            <View style={{ flex: 1, ...style }}>
-                {showInstructions && enableAddressLookup && (
-                    <View style={addressInstructionStyles.overlay}>
-                        <Text style={addressInstructionStyles.text}>
-                            Tap on the map to select a location
-                        </Text>
-                    </View>
-                )}
-                <iframe
-                    ref={iframeRef}
-                    title="mapbox-map"
-                    srcDoc={html}
-                    style={{ border: '0', width: '100%', height: '100%' }}
-                    sandbox="allow-scripts allow-same-origin"
-                    onLoad={() => {
-                        mapInitialized.current = false;
-                    }}
-                />
-            </View>
-        );
-    }
-
+  if (Platform.OS === 'web') {
     return (
-        <View style={[{ flex: 1 }, style]}>
-            {showInstructions && enableAddressLookup && (
-                <View style={addressInstructionStyles.overlay}>
-                    <Text style={addressInstructionStyles.text}>
-                        Tap on the map to select a location
-                    </Text>
-                </View>
-            )}
-            <WebView
-                ref={webviewRef}
-                originWhitelist={['*']}
-                source={{ html }}
-                onMessage={handleNativeMessage}
-                javaScriptEnabled
-                domStorageEnabled
-                allowFileAccess
-                allowsInlineMediaPlayback
-                setSupportMultipleWindows={false}
-                injectedJavaScriptBeforeContentLoaded={`true;`}
-                onUnload={() => {
-                    mapInitialized.current = false;
-                }}
-            />
-        </View>
+      <View style={{ flex: 1, ...style }}>
+        {showInstructions && enableAddressLookup && (
+          <View style={addressInstructionStyles.overlay}>
+            <Text style={addressInstructionStyles.text}>
+              Tap on the map to select a location
+            </Text>
+          </View>
+        )}
+        <iframe
+          ref={iframeRef}
+          title="map"
+          srcDoc={html}
+          style={{ border: '0', width: '100%', height: '100%' }}
+          sandbox="allow-scripts allow-same-origin"
+          onLoad={() => {
+            mapInitialized.current = false;
+          }}
+        />
+      </View>
     );
+  }
+
+  return (
+    <View style={[{ flex: 1 }, style]}>
+      {showInstructions && enableAddressLookup && (
+        <View style={addressInstructionStyles.overlay}>
+          <Text style={addressInstructionStyles.text}>
+            Tap on the map to select a location
+          </Text>
+        </View>
+      )}
+      <WebView
+        ref={webviewRef}
+        originWhitelist={['*']}
+        source={{ html }}
+        onMessage={handleNativeMessage}
+        javaScriptEnabled
+        domStorageEnabled
+        allowFileAccess
+        allowsInlineMediaPlayback
+        setSupportMultipleWindows={false}
+        injectedJavaScriptBeforeContentLoaded={`true;`}
+      />
+    </View>
+  );
 });
 
 // Optimized memoization with custom comparison
 const Map = React.memo(MapComponent, (prevProps, nextProps) => {
-    // For create property screens, ignore coordinate changes to prevent reloads
-    if (nextProps.screenId === 'create-property' || nextProps.screenId === 'create-property-fullscreen') {
-        return (
-            prevProps.screenId === nextProps.screenId &&
-            prevProps.enableAddressLookup === nextProps.enableAddressLookup &&
-            prevProps.showAddressInstructions === nextProps.showAddressInstructions &&
-            prevProps.styleURL === nextProps.styleURL &&
-            prevProps.initialZoom === nextProps.initialZoom &&
-            prevProps.startFromCurrentLocation === nextProps.startFromCurrentLocation &&
-            JSON.stringify(prevProps.markers) === JSON.stringify(nextProps.markers) &&
-            JSON.stringify(prevProps.cluster) === JSON.stringify(nextProps.cluster) &&
-            JSON.stringify(prevProps.markerStyle) === JSON.stringify(nextProps.markerStyle) &&
-            JSON.stringify(prevProps.style) === JSON.stringify(nextProps.style)
-        );
-    }
+  // For create property screens, ignore coordinate changes to prevent reloads
+  if (nextProps.screenId === 'create-property' || nextProps.screenId === 'create-property-fullscreen') {
+    return (
+      prevProps.screenId === nextProps.screenId &&
+      prevProps.enableAddressLookup === nextProps.enableAddressLookup &&
+      prevProps.showAddressInstructions === nextProps.showAddressInstructions &&
+      prevProps.styleURL === nextProps.styleURL &&
+      prevProps.initialZoom === nextProps.initialZoom &&
+      prevProps.startFromCurrentLocation === nextProps.startFromCurrentLocation &&
+      JSON.stringify(prevProps.markers) === JSON.stringify(nextProps.markers) &&
+      JSON.stringify(prevProps.cluster) === JSON.stringify(nextProps.cluster) &&
+      JSON.stringify(prevProps.markerStyle) === JSON.stringify(nextProps.markerStyle) &&
+      JSON.stringify(prevProps.style) === JSON.stringify(nextProps.style)
+    );
+  }
 
-    // For search screens, allow re-renders for marker updates
-    if (nextProps.screenId === 'search' || nextProps.screenId === 'search-screen') {
-        return (
-            prevProps.screenId === nextProps.screenId &&
-            prevProps.styleURL === nextProps.styleURL &&
-            prevProps.initialZoom === nextProps.initialZoom &&
-            prevProps.startFromCurrentLocation === nextProps.startFromCurrentLocation &&
-            JSON.stringify(prevProps.cluster) === JSON.stringify(nextProps.cluster) &&
-            JSON.stringify(prevProps.markerStyle) === JSON.stringify(nextProps.markerStyle) &&
-            JSON.stringify(prevProps.style) === JSON.stringify(nextProps.style) &&
-            prevProps.onMapPress === nextProps.onMapPress &&
-            prevProps.onMarkerPress === nextProps.onMarkerPress &&
-            prevProps.onRegionChange === nextProps.onRegionChange
-            // Note: We allow marker changes to trigger re-renders for search screens
-        );
-    }
+  // For search screens, allow re-renders for marker updates
+  if (nextProps.screenId === 'search' || nextProps.screenId === 'search-screen') {
+    return (
+      prevProps.screenId === nextProps.screenId &&
+      prevProps.styleURL === nextProps.styleURL &&
+      prevProps.initialZoom === nextProps.initialZoom &&
+      prevProps.startFromCurrentLocation === nextProps.startFromCurrentLocation &&
+      JSON.stringify(prevProps.cluster) === JSON.stringify(nextProps.cluster) &&
+      JSON.stringify(prevProps.markerStyle) === JSON.stringify(nextProps.markerStyle) &&
+      JSON.stringify(prevProps.style) === JSON.stringify(nextProps.style) &&
+      prevProps.onMapPress === nextProps.onMapPress &&
+      prevProps.onMarkerPress === nextProps.onMarkerPress &&
+      prevProps.onRegionChange === nextProps.onRegionChange
+      // Note: We allow marker changes to trigger re-renders for search screens
+    );
+  }
 
-    // For other screens, allow normal re-renders
-    return false;
+  // For other screens, allow normal re-renders
+  return false;
 });
 
 // Styles for address instructions overlay
 const addressInstructionStyles = {
-    overlay: {
-        position: 'absolute' as const,
-        top: 10,
-        left: 10,
-        right: 10,
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 8,
-        zIndex: 1000,
-    },
-    text: {
-        color: '#FFFFFF',
-        fontSize: 14,
-        textAlign: 'center' as const,
-        fontWeight: '500' as const,
-    }
+  overlay: {
+    position: 'absolute' as const,
+    top: 10,
+    left: 10,
+    right: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    zIndex: 1000,
+  },
+  text: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    textAlign: 'center' as const,
+    fontWeight: '500' as const,
+  }
 };
 
 export default Map;

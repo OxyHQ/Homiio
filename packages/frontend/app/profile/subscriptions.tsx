@@ -7,6 +7,10 @@ import { colors } from '@/styles/colors';
 import { useOxy } from '@oxyhq/services';
 import { useSubscriptionStore } from '@/store/subscriptionStore';
 import { api } from '@/utils/api';
+import { logger } from '@/utils/logger';
+
+const getErrorMessage = (error: unknown, fallback: string): string =>
+    error instanceof Error ? error.message : fallback;
 
 export default function SubscriptionsScreen() {
     const router = useRouter();
@@ -60,8 +64,9 @@ export default function SubscriptionsScreen() {
 
         try {
             await startCheckout(product, oxyServices, activeSessionId);
-        } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to start checkout');
+        } catch (error: unknown) {
+            logger.error('Failed to start checkout:', error);
+            Alert.alert('Error', getErrorMessage(error, 'Failed to start checkout'));
         }
     };
 
@@ -73,8 +78,9 @@ export default function SubscriptionsScreen() {
 
         try {
             await openCustomerPortal(oxyServices, activeSessionId);
-        } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to open subscription management');
+        } catch (error: unknown) {
+            logger.error('Failed to open subscription management:', error);
+            Alert.alert('Error', getErrorMessage(error, 'Failed to open subscription management'));
         }
     };
 
@@ -87,8 +93,9 @@ export default function SubscriptionsScreen() {
         try {
             await syncSubscription(oxyServices, activeSessionId);
             Alert.alert('Success', 'Subscription status synced from Stripe');
-        } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to sync subscription');
+        } catch (error: unknown) {
+            logger.error('Failed to sync subscription:', error);
+            Alert.alert('Error', getErrorMessage(error, 'Failed to sync subscription'));
         }
     };
 
@@ -111,8 +118,9 @@ export default function SubscriptionsScreen() {
                             try {
                                 await cancelSubscription(true, oxyServices, activeSessionId);
                                 Alert.alert('Success', 'Subscription canceled immediately');
-                            } catch (error: any) {
-                                Alert.alert('Error', error.message || 'Failed to cancel subscription');
+                            } catch (error: unknown) {
+                                logger.error('Failed to cancel subscription immediately:', error);
+                                Alert.alert('Error', getErrorMessage(error, 'Failed to cancel subscription'));
                             }
                         }
                     }
@@ -122,8 +130,9 @@ export default function SubscriptionsScreen() {
             try {
                 await cancelSubscription(false, oxyServices, activeSessionId);
                 Alert.alert('Success', 'Subscription will be canceled at the end of the current period');
-            } catch (error: any) {
-                Alert.alert('Error', error.message || 'Failed to cancel subscription');
+            } catch (error: unknown) {
+                logger.error('Failed to schedule subscription cancellation:', error);
+                Alert.alert('Error', getErrorMessage(error, 'Failed to cancel subscription'));
             }
         }
     };
@@ -329,8 +338,9 @@ export default function SubscriptionsScreen() {
                                             `Sync Action: ${response.data.debugInfo.comparison?.syncAction || 'Unknown'}`
                                         );
                                     }
-                                } catch (error: any) {
-                                    Alert.alert('Error', error.message || 'Failed to debug subscription');
+                                } catch (error: unknown) {
+                                    logger.error('Failed to debug subscription:', error);
+                                    Alert.alert('Error', getErrorMessage(error, 'Failed to debug subscription'));
                                 }
                             }}
                         >

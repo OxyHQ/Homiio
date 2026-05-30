@@ -3,12 +3,17 @@ import { View, StyleSheet } from 'react-native';
 import { Loading } from '@oxyhq/bloom/loading';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import type { Property } from '@homiio/shared-types';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
 import { useProperties } from '@/hooks';
 import { PropertyCard } from '../PropertyCard';
 import { ThemedText } from '../ThemedText';
 import { Button } from '@oxyhq/bloom/button';
+
+// The API decorates listings with an aggregate save count that is not part of
+// the persisted Property model, so it is modelled as an optional extension.
+type FeaturedProperty = Property & { savesCount?: number };
 
 export function FeaturedPropertiesWidget() {
   const { t } = useTranslation();
@@ -59,12 +64,9 @@ export function FeaturedPropertiesWidget() {
   );
 }
 
-function FeaturedProperties({ properties }: { properties: any[] }) {
+function FeaturedProperties({ properties }: { properties: FeaturedProperty[] }) {
   const router = useRouter();
   const { t } = useTranslation();
-
-  // Debug: Log the properties to see the actual structure
-  console.log('FeaturedProperties received:', properties);
 
   // Order most saved to less saved, then limit to 4
   const sorted = Array.isArray(properties)

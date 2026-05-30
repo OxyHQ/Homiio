@@ -12,15 +12,14 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
+import type { SavedSearchFilters } from '@/store/savedSearchesStore';
 
-// Type assertion for Ionicons compatibility
-const IconComponent = Ionicons as any;
 
 interface SaveSearchModalProps {
   visible: boolean;
   onClose: () => void;
   searchQuery: string;
-  filters?: any;
+  filters?: SavedSearchFilters;
   onSaveSuccess?: () => void;
 }
 
@@ -79,14 +78,14 @@ export const SaveSearchModal: React.FC<SaveSearchModalProps> = ({
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{t('search.saveSearch')}</Text>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <IconComponent name="close" size={24} color={colors.COLOR_BLACK_LIGHT_3} />
+              <Ionicons name="close" size={24} color={colors.COLOR_BLACK_LIGHT_3} />
             </TouchableOpacity>
           </View>
 
           {/* Search Preview */}
           <View style={styles.searchPreview}>
             <View style={styles.searchPreviewHeader}>
-              <IconComponent name="search" size={16} color={colors.primaryColor} />
+              <Ionicons name="search" size={16} color={colors.primaryColor} />
               <Text style={styles.searchPreviewLabel}>{t('search.searchQuery')}</Text>
             </View>
             <Text style={styles.searchPreviewText}>{formatSearchQuery()}</Text>
@@ -142,7 +141,7 @@ export const SaveSearchModal: React.FC<SaveSearchModalProps> = ({
               disabled={isSaving || !searchName.trim()}
             >
               {isSaving && (
-                <IconComponent name="refresh" size={16} color="white" style={styles.loadingIcon} />
+                <Ionicons name="refresh" size={16} color="white" style={styles.loadingIcon} />
               )}
               <Text style={styles.saveButtonText}>
                 {isSaving ? t('common.saving') : t('common.save')}

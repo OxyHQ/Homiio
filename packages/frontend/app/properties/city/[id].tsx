@@ -19,9 +19,10 @@ import { cityService, City } from '@/services/cityService';
 import { LinearGradient } from 'expo-linear-gradient';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FiltersBar } from '@/components/FiltersBar';
-import { FiltersBottomSheet, FilterSection } from '@/components/FiltersBar/FiltersBottomSheet';
+import { FiltersBottomSheet, type FilterSection, type FilterValue } from '@/components/FiltersBar/FiltersBottomSheet';
 
 import { BottomSheetContext } from '@/context/BottomSheetContext';
+import { logger } from '@/utils/logger';
 
 export default function CityPropertiesPage() {
   const { t } = useTranslation();
@@ -112,8 +113,8 @@ export default function CityPropertiesPage() {
 
         // Ensure we always set an array
         setProperties(propertiesResponse?.properties || []);
-      } catch (err) {
-        console.error('Error loading city data:', err);
+      } catch (err: unknown) {
+        logger.error('Error loading city data:', err);
         setError('Failed to load city data');
         setProperties([]); // Ensure properties is always an array
       } finally {
@@ -126,7 +127,7 @@ export default function CityPropertiesPage() {
     }
   }, [id]);
 
-  const handleFilterChange = useCallback((sectionId: string, value: any) => {
+  const handleFilterChange = useCallback((sectionId: string, value: FilterValue) => {
     setFilters(prev => {
       switch (sectionId) {
         case 'verified':
@@ -134,9 +135,9 @@ export default function CityPropertiesPage() {
         case 'ecoFriendly':
           return { ...prev, ecoFriendly: value === 'true' };
         case 'bedrooms':
-          return { ...prev, bedrooms: value };
+          return { ...prev, bedrooms: String(value) };
         case 'bathrooms':
-          return { ...prev, bathrooms: value };
+          return { ...prev, bathrooms: String(value) };
         default:
           return prev;
       }

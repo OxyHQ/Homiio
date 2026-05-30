@@ -40,9 +40,6 @@ interface SavedSearch {
   notificationsEnabled?: boolean;
 }
 
-// Type assertion for Ionicons compatibility
-const IconComponent = Ionicons as any;
-
 export function SavedSearchesWidget() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -166,7 +163,7 @@ export function SavedSearchesWidget() {
       <View style={styles.searchActions}>
         {item.notificationsEnabled && (
           <View style={styles.notificationBadge}>
-            <IconComponent name="notifications" size={12} color={colors.primaryColor} />
+            <Ionicons name="notifications" size={12} color={colors.primaryColor} />
           </View>
         )}
         <TouchableOpacity
@@ -174,7 +171,7 @@ export function SavedSearchesWidget() {
           onPress={() => handleShowActions(item)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <IconComponent name="ellipsis-vertical" size={16} color={colors.COLOR_BLACK_LIGHT_4} />
+          <Ionicons name="ellipsis-vertical" size={16} color={colors.COLOR_BLACK_LIGHT_4} />
         </TouchableOpacity>
       </View>
     </View>
@@ -184,7 +181,7 @@ export function SavedSearchesWidget() {
     return (
       <BaseWidget
         title={t('Saved Searches')}
-        icon={<IconComponent name="bookmark" size={22} color={colors.primaryColor} />}
+        icon={<Ionicons name="bookmark" size={22} color={colors.primaryColor} />}
       >
         <View style={styles.container}>
           <Text style={styles.emptyText}>{t('Sign in to save searches')}</Text>
@@ -200,7 +197,7 @@ export function SavedSearchesWidget() {
     return (
       <BaseWidget
         title={t('Saved Searches')}
-        icon={<IconComponent name="bookmark" size={22} color={colors.primaryColor} />}
+        icon={<Ionicons name="bookmark" size={22} color={colors.primaryColor} />}
       >
         <View style={styles.container}>
           <Text style={styles.emptyText}>{t('No saved searches yet')}</Text>
@@ -216,7 +213,7 @@ export function SavedSearchesWidget() {
     <>
       <BaseWidget
         title={t('Saved Searches')}
-        icon={<IconComponent name="bookmark" size={22} color={colors.primaryColor} />}
+        icon={<Ionicons name="bookmark" size={22} color={colors.primaryColor} />}
       >
         <View style={styles.container}>
           <FlatList
@@ -261,7 +258,7 @@ export function SavedSearchesWidget() {
                   style={styles.actionItem}
                   onPress={() => handleEditSearch(selectedSearch)}
                 >
-                  <IconComponent name="create-outline" size={20} color={colors.primaryColor} />
+                  <Ionicons name="create-outline" size={20} color={colors.primaryColor} />
                   <Text style={styles.actionText}>{t('common.edit')}</Text>
                 </TouchableOpacity>
 
@@ -269,7 +266,7 @@ export function SavedSearchesWidget() {
                   style={styles.actionItem}
                   onPress={() => handleToggleSearchNotifications(selectedSearch)}
                 >
-                  <IconComponent
+                  <Ionicons
                     name={
                       selectedSearch.notificationsEnabled
                         ? 'notifications-off-outline'
@@ -289,7 +286,7 @@ export function SavedSearchesWidget() {
                   style={styles.actionItem}
                   onPress={() => handleDeleteSavedSearch(selectedSearch)}
                 >
-                  <IconComponent name="trash-outline" size={20} color="#ff4757" />
+                  <Ionicons name="trash-outline" size={20} color="#ff4757" />
                   <Text style={[styles.actionText, styles.deleteText]}>{t('common.delete')}</Text>
                 </TouchableOpacity>
               </>
@@ -311,7 +308,7 @@ export function SavedSearchesWidget() {
             <View style={styles.editModalHeader}>
               <Text style={styles.editModalTitle}>{t('search.editSearch')}</Text>
               <TouchableOpacity onPress={handleEditClose} style={styles.closeButton}>
-                <IconComponent name="close" size={24} color={colors.COLOR_BLACK_LIGHT_3} />
+                <Ionicons name="close" size={24} color={colors.COLOR_BLACK_LIGHT_3} />
               </TouchableOpacity>
             </View>
 
@@ -374,7 +371,7 @@ export function SavedSearchesWidget() {
             <View style={styles.actionButtons}>
               <Button
                 onPress={handleEditClose}
-                textColor={colors.COLOR_BLACK_LIGHT_4}
+                textStyle={{ color: colors.COLOR_BLACK_LIGHT_4 }}
               >
                 {t('common.cancel')}
               </Button>

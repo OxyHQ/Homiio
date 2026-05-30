@@ -121,7 +121,7 @@ export default function SavedPropertiesScreen() {
     return savedProperties.filter((property) => {
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const title = getPropertyTitle(property as any).toLowerCase();
+        const title = getPropertyTitle(property).toLowerCase();
         const city = property.address?.city?.toLowerCase() ?? '';
         if (!title.includes(q) && !city.includes(q)) return false;
       }
@@ -188,7 +188,7 @@ export default function SavedPropertiesScreen() {
   const renderProperty: ListRenderItem<SavedProperty> = ({ item }) => (
     <View style={styles.gridItem}>
       <PropertyCard
-        property={item as any}
+        property={item}
         variant="compact"
         orientation="vertical"
         onPress={() => {

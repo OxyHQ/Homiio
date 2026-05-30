@@ -14,7 +14,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { colors } from '@/styles/colors';
 import { ThemedText } from '@/components/ThemedText';
 import { imageUploadService, UploadedImage } from '@/services/imageUploadService';
-import { useOxy } from '@oxyhq/services';
 
 
 
@@ -33,7 +32,6 @@ export function ImageUpload({
   folder = 'properties',
   disabled = false,
 }: ImageUploadProps) {
-  const { oxyServices, activeSessionId } = useOxy();
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
 
@@ -123,17 +121,24 @@ export function ImageUpload({
         const newImages: UploadedImage[] = [];
 
         try {
-                  // Upload images using the service
-      const uploadedImages = await imageUploadService.uploadMultipleImages(
-        selectedImages.map(img => img.uri),
-        folder,
-        oxyServices,
-        activeSessionId || undefined
-      );
+            // Upload images using the service
+            const response = await imageUploadService.uploadMultipleImages(
+                selectedImages.map((img) => img.uri),
+                folder,
+            );
 
-            // Add primary flag to the first image if no images exist
-            const processedImages = uploadedImages.map((image, index) => ({
-                ...image,
+            // Map the upload response into UploadedImage records and flag the
+            // first image as primary when the gallery is currently empty.
+            const processedImages: UploadedImage[] = response.data.images.map((image, index) => ({
+                imageId: image.imageId,
+                urls: {
+                    small: image.urls.small ?? image.urls.original ?? '',
+                    medium: image.urls.medium ?? image.urls.original ?? '',
+                    large: image.urls.large ?? image.urls.original ?? '',
+                    original: image.urls.original ?? '',
+                },
+                keys: image.keys,
+                metadata: image.metadata,
                 isPrimary: images.length === 0 && index === 0,
             }));
 
@@ -164,12 +169,8 @@ export function ImageUpload({
                             const imageToDelete = images.find(img => img.imageId === imageId);
                             if (!imageToDelete) return;
 
-                                          // Delete from backend using service
-              await imageUploadService.deleteImage(
-                imageToDelete.keys.original,
-                oxyServices,
-                activeSessionId || undefined
-              );
+                            // Delete from backend using service
+                            await imageUploadService.deleteImage(imageToDelete.keys.original);
 
                             // Remove from local state
                             const updatedImages = images.filter(img => img.imageId !== imageId);

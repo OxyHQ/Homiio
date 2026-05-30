@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { API_URL } from '@/config';
-import { fetch as expoFetch } from 'expo/fetch';
+import { logger } from '@/utils/logger';
 
 export interface ConversationMessage {
   id: string;
@@ -88,11 +88,11 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
           set({ conversations: formattedConversations });
         }
       } else {
-        console.error('Failed to load conversations:', response.status);
+        logger.error('Failed to load conversations:', response.status);
         set({ error: 'Failed to load conversations' });
       }
     } catch (error) {
-      console.error('Failed to load conversations:', error);
+      logger.error('Failed to load conversations:', error);
       set({ error: 'Failed to load conversations' });
     } finally {
       set({ loading: false });
@@ -102,10 +102,10 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
   // Load specific conversation
   loadConversation: async (conversationId, authenticatedFetch) => {
     try {
-      console.log('Store: Loading conversation with ID:', conversationId);
+      logger.debug('Loading conversation with ID:', conversationId);
 
       if (!conversationId) {
-        console.error('Store: conversationId is undefined or null');
+        logger.error('loadConversation called with undefined or null id');
         set({ error: 'Invalid conversation ID', loading: false });
         return null;
       }
@@ -114,7 +114,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
 
       // Check if this is a client-generated ID (starts with 'conv_')
       if (conversationId.startsWith('conv_')) {
-        console.log('Store: Creating new client-side conversation');
+        logger.debug('Creating new client-side conversation');
         const newConversation: Conversation = {
           id: conversationId,
           title: 'New Conversation',
@@ -151,10 +151,10 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
           set({ currentConversation: formattedConversation });
           return formattedConversation;
         } else {
-          console.error('Store: Invalid API response structure:', data);
+          logger.error('Invalid API response structure for conversation:', data);
         }
       } else if (response.status === 404) {
-        console.log('Store: Conversation not found, creating new one');
+        logger.debug('Conversation not found, creating new one');
         // Conversation not found, create new one
         const newConversation: Conversation = {
           id: conversationId,
@@ -166,11 +166,11 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
         set({ currentConversation: newConversation });
         return newConversation;
       } else {
-        console.error('Store: Failed to load conversation:', response.status, response.statusText);
+        logger.error('Failed to load conversation:', response.status, response.statusText);
         set({ error: 'Failed to load conversation' });
       }
     } catch (error) {
-      console.error('Store: Exception while loading conversation:', error);
+      logger.error('Exception while loading conversation:', error);
       set({ error: 'Failed to load conversation' });
       // Fallback to new conversation
       const newConversation: Conversation = {
@@ -191,25 +191,20 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
   // Save conversation
   saveConversation: async (conversation, authenticatedFetch) => {
     try {
-      console.log('Store: saveConversation called with:', {
+      logger.debug('saveConversation called', {
         id: conversation.id,
-        title: conversation.title,
         messageCount: conversation.messages.length,
-        messages: conversation.messages.map((m) => ({
-          role: m.role,
-          content: m.content.substring(0, 50) + '...',
-        })),
       });
 
       // Skip saving if this is a client-generated ID that hasn't been created yet
       if (conversation.id.startsWith('conv_') && conversation.messages.length === 0) {
-        console.log('Store: Skipping save - client ID with no messages');
+        logger.debug('Skipping save - client ID with no messages');
         return conversation;
       }
 
       // If this is a client-generated ID with messages, create the conversation first
       if (conversation.id.startsWith('conv_') && conversation.messages.length > 0) {
-        console.log('Store: Creating new conversation from client ID');
+        logger.debug('Creating new conversation from client ID');
         const requestBody = {
           title: conversation.title,
           messages: conversation.messages.map((msg) => ({
@@ -218,7 +213,6 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             timestamp: msg.timestamp,
           })),
         };
-        console.log('Store: POST request body:', requestBody);
 
         const response = await authenticatedFetch(`${API_URL}/api/ai/conversations`, {
           method: 'POST',
@@ -230,7 +224,6 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
 
         if (response.ok) {
           const data = await response.json();
-          console.log('Store: POST response data:', data);
           if (data.success && data.conversation) {
             const newConversation: Conversation = {
               ...conversation,
@@ -251,14 +244,16 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             return newConversation;
           }
         } else {
-          console.error('Store: POST request failed:', response.status, response.statusText);
+          logger.error('Create conversation request failed:', response.status, response.statusText);
         }
         return conversation;
       }
 
       // Update existing conversation
-      console.log('Store: Updating existing conversation with ID:', conversation.id);
-      console.log('Store: Messages to save:', conversation.messages.length);
+      logger.debug('Updating existing conversation', {
+        id: conversation.id,
+        messageCount: conversation.messages.length,
+      });
       const requestBody = {
         title: conversation.title,
         messages: conversation.messages.map((msg) => ({
@@ -267,7 +262,6 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
           timestamp: msg.timestamp,
         })),
       };
-      console.log('Store: PUT request body:', JSON.stringify(requestBody, null, 2));
 
       const response = await authenticatedFetch(
         `${API_URL}/api/ai/conversations/${conversation.id}`,
@@ -281,7 +275,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
       );
 
       if (response.ok) {
-        console.log('Store: PUT request successful');
+        logger.debug('Update conversation request successful');
         // Update conversations list
         const { conversations } = get();
         const updatedConversations = conversations.map((c) =>
@@ -289,12 +283,12 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
         );
         set({ conversations: updatedConversations });
       } else {
-        console.error('Store: PUT request failed:', response.status, response.statusText);
+        logger.error('Update conversation request failed:', response.status, response.statusText);
       }
 
       return conversation;
     } catch (error) {
-      console.error('Store: Exception in saveConversation:', error);
+      logger.error('Exception in saveConversation:', error);
       return conversation;
     }
   },
@@ -303,12 +297,11 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
   createConversation: async (title, initialMessage, authenticatedFetch) => {
     try {
       if (authenticatedFetch) {
-        console.log('Store: Creating conversation with title:', title, 'initialMessage:', initialMessage);
+        logger.debug('Creating conversation', { title, hasInitialMessage: Boolean(initialMessage) });
         const requestBody = {
           title,
           initialMessage,
         };
-        console.log('Store: POST request body:', JSON.stringify(requestBody, null, 2));
         const response = await authenticatedFetch(`${API_URL}/api/ai/conversations`, {
           method: 'POST',
           headers: {
@@ -319,16 +312,8 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
 
         if (response.ok) {
           const data = await response.json();
-          console.log('Store: Create conversation API response:', data);
 
           if (data.success && data.conversation && data.conversation._id) {
-            console.log('Store: Received conversation from API:', {
-              id: data.conversation._id,
-              title: data.conversation.title,
-              messageCount: data.conversation.messages?.length || 0,
-              messages: data.conversation.messages
-            });
-            
             const newConversation: Conversation = {
               id: data.conversation._id,
               title: data.conversation.title || title,
@@ -337,7 +322,10 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
               updatedAt: new Date(data.conversation.updatedAt),
             };
 
-            console.log('Store: Created conversation with ID:', newConversation.id, 'and messages:', newConversation.messages.length);
+            logger.debug('Created conversation', {
+              id: newConversation.id,
+              messageCount: newConversation.messages.length,
+            });
 
             // Add to conversations list
             const { conversations } = get();
@@ -345,15 +333,15 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
 
             return newConversation;
           } else {
-            console.error('Store: Invalid API response structure for create conversation:', data);
+            logger.error('Invalid API response structure for create conversation:', data);
           }
         } else {
-          console.error('Store: Create conversation API failed with status:', response.status);
+          logger.error('Create conversation API failed with status:', response.status);
         }
       }
 
       // Fallback to client-side ID generation
-      console.log('Store: Falling back to client-side ID generation');
+      logger.debug('Falling back to client-side conversation ID generation');
       const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const newConversation: Conversation = {
         id: conversationId,
@@ -363,10 +351,9 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
         updatedAt: new Date(),
       };
 
-      console.log('Store: Generated client-side conversation with ID:', conversationId);
       return newConversation;
     } catch (error) {
-      console.error('Store: Exception in createConversation:', error);
+      logger.error('Exception in createConversation:', error);
       // Fallback to client-side ID generation
       const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const newConversation: Conversation = {
@@ -377,7 +364,6 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
         updatedAt: new Date(),
       };
 
-      console.log('Store: Exception fallback conversation with ID:', conversationId);
       return newConversation;
     }
   },
@@ -426,7 +412,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
       }
       return null;
     } catch (error) {
-      console.error('Failed to generate share token:', error);
+      logger.error('Failed to generate share token:', error);
       return null;
     }
   },

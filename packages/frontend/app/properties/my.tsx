@@ -14,19 +14,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { Header } from '@/components/Header';
 import { PropertyCard } from '@/components/PropertyCard';
-import { useUserProperties } from '@/hooks/usePropertyQueries';
+import { useUserProperties, useDeleteProperty } from '@/hooks/usePropertyQueries';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
-
-// Type assertion for Ionicons compatibility with React 19
-const IconComponent = Ionicons as any;
+import type { Property } from '@homiio/shared-types';
+import { logger } from '@/utils/logger';
 
 export default function MyPropertiesScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { data, isLoading, error, refetch } = useUserProperties();
+  const { deleteProperty } = useDeleteProperty();
   const [refreshing, setRefreshing] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(0);
 
@@ -57,16 +57,21 @@ export default function MyPropertiesScreen() {
         {
           text: t('common.delete'),
           style: 'destructive',
-          onPress: () => {
-            // TODO: Implement delete functionality
-            Alert.alert(t('common.success'), t('properties.my.deleteSuccess'));
+          onPress: async () => {
+            try {
+              await deleteProperty(propertyId);
+              await refetch();
+            } catch (deleteError: unknown) {
+              logger.error('Failed to delete property:', deleteError);
+            }
           },
         },
       ],
     );
   };
 
-  const renderProperty = ({ item }: { item: any }) => {
+  const renderProperty = ({ item }: { item: Property }) => {
+    const propertyId = (item._id || item.id) as string;
     // Generate title dynamically from property data for the delete function
     const title = generatePropertyTitle({
       type: item.type,
@@ -79,24 +84,24 @@ export default function MyPropertiesScreen() {
       <View style={styles.propertyContainer}>
         <PropertyCard
           property={item}
-          onPress={() => handlePropertyPress(item._id || item.id)}
+          onPress={() => handlePropertyPress(propertyId)}
           style={styles.propertyCard}
         />
 
         <View style={styles.propertyActions}>
           <TouchableOpacity
             style={[styles.actionButton, styles.editButton]}
-            onPress={() => handleEditProperty(item._id || item.id)}
+            onPress={() => handleEditProperty(propertyId)}
           >
-            <IconComponent name="create-outline" size={16} color={colors.primaryColor} />
+            <Ionicons name="create-outline" size={16} color={colors.primaryColor} />
             <Text style={[styles.actionText, styles.editText]}>{t('properties.my.edit')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.actionButton, styles.deleteButton]}
-            onPress={() => handleDeleteProperty(item._id || item.id, title)}
+            onPress={() => handleDeleteProperty(propertyId, title)}
           >
-            <IconComponent name="trash-outline" size={16} color="#ff4757" />
+            <Ionicons name="trash-outline" size={16} color="#ff4757" />
             <Text style={[styles.actionText, styles.deleteText]}>{t('properties.my.delete')}</Text>
           </TouchableOpacity>
         </View>
@@ -151,7 +156,7 @@ export default function MyPropertiesScreen() {
             title: t('properties.my.title'),
             rightComponents: [
               <TouchableOpacity key="add" onPress={handleCreateProperty} style={styles.addButton}>
-                <IconComponent name="add" size={24} color={colors.primaryColor} />
+                <Ionicons name="add" size={24} color={colors.primaryColor} />
               </TouchableOpacity>,
             ],
           }}

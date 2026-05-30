@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useCallback } from 'react';
-import { View, StyleSheet, FlatList, Dimensions, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, FlatList, Dimensions, TouchableOpacity, ViewToken } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Property } from '@homiio/shared-types';
 import { PropertyCard } from '@/components/PropertyCard';
@@ -79,7 +79,7 @@ export function PropertyListBottomSheet({
     const handleViewableItemsChanged = useMemo(() => {
         if (!onViewableItemsChanged) return undefined;
 
-        return ({ viewableItems }: { viewableItems: any[] }) => {
+        return ({ viewableItems }: { viewableItems: ViewToken<Property>[] }) => {
             if (viewableItems.length > 0) {
                 onViewableItemsChanged(viewableItems);
             }

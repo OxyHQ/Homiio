@@ -7,8 +7,6 @@ import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
 import { Button } from '@oxyhq/bloom/button';
 
-// Type assertion for Ionicons compatibility
-const IconComponent = Ionicons as any;
 
 interface QuickFilter {
   id: string;
@@ -102,7 +100,7 @@ export function QuickFiltersWidget() {
             style={styles.applyButton}
             textStyle={styles.applyButtonText}
             onPress={handleApplyFilters}
-            icon={<IconComponent name="search" size={16} color="white" />}
+            icon={<Ionicons name="search" size={16} color="white" />}
             iconPosition="left"
           >
             {`${t('Search with')} ${selectedFilters.length} ${t('filters')}`}

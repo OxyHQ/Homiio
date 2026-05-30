@@ -1,0 +1,129 @@
+---
+title: Contributing
+description: Repo layout, the agent-first workflow, code conventions, and the rules that keep the monorepo healthy.
+order: 8
+---
+
+# Contributing
+
+This page is the cheat sheet for working on Homiio. Read it before opening a PR.
+
+## Repo layout
+
+```
+Homiio/
+├── packages/
+│   ├── frontend/        @homiio/frontend       Expo / RN app (iOS, Android, Web)
+│   ├── backend/         @homiio/backend        Express + Mongoose API
+│   └── shared-types/    @homiio/shared-types   Pure TS types built first
+├── scripts/             Vercel build + deploy helpers
+├── docs/                MDX source synced into the Oxy docs site
+├── docs.config.json     Tells sync-docs where docs live and how to label them
+├── vercel.json          Repo-root Vercel config (frontend by default)
+├── package.json         Bun workspaces, scripts, engines, dependencies
+└── CLAUDE.md            Agent rules + commands
+```
+
+## Package manager
+
+Always use **Bun**. Never `npm` or `yarn`. Use `bunx` instead of `npx`. Root scripts are written to forward through Bun:
+
+```sh
+bun install              # Install everything; runs build:shared-types as postinstall
+bun run dev              # All workspaces in parallel
+bun run dev:frontend     # Expo tunnel
+bun run dev:backend      # nodemon + ts-node
+bun run build            # All
+bun run test             # All
+bun run lint             # All
+bun run clean            # Remove dist + node_modules
+```
+
+If you find a leftover `package-lock.json`, delete it and run `bun install` so the canonical `bun.lock` is regenerated.
+
+## Custom agents (Claude / AI workflows)
+
+`CLAUDE.md` defines the project's agent:
+
+- `homiio` — Full-stack engineer responsible for all Homiio implementation work (Expo / RN frontend + Express backend + Stripe + Oxy integration).
+
+Cross-project agents that show up here:
+
+- `mention-fixer` — Senior debugger for issues that cross layers.
+- `oxy-core`, `oxy-services` — When a bug is in `@oxyhq/core` or `@oxyhq/services`, fix it upstream first (build, test, push, publish) and then bump the dep in Homiio. Never patch the shared package locally.
+- `test-build` and `git-ops` — Required before pushing: tests + build, then commit and push when green.
+
+The rule is: **never code in the main thread**. Delegate to agents in parallel; the main thread coordinates.
+
+## Code standards
+
+These are enforced in review and mirror the Oxy ecosystem rules.
+
+- **TypeScript strict mode** across all packages.
+- **Production-grade code.** No hacks, no `as any`, no `@ts-ignore`, no `@ts-expect-error`, no `console.log` in committed code, no `var`, no `!` non-null assertions, no silent `catch {}`, no TODO/FIXME comments.
+- **Avoid `useEffect`.** Prefer derived state, event handlers, `useMemo`, or React Query. `useEffect` is a code smell except for true subscriptions (NetInfo, AppState) and one-time initialisations.
+- **No backwards-compatibility shims.** Import directly from the canonical entry point. No barrel-file re-exports across packages.
+- **NativeWind classes**, not inline styles, when both are possible on RN.
+- **No hardcoded URLs / keys / magic numbers.** Use `config.ts` or env vars.
+- **`@homiio/shared-types` is the source of truth for shared types.** When you add a new shared shape, put it there and export it from `src/index.ts`.
+
+## Adding a feature
+
+1. **Where it lives**: feature code goes under `packages/frontend/features/<feature-name>/` or `packages/backend/{routes,controllers,models,services}/` — never in `app/_layout.tsx` or `server.ts`.
+2. **Types first**: if the feature has cross-package shapes, add them to `packages/shared-types/src/` and re-build (`bun run build:shared-types`).
+3. **Backend**: add a route in `routes/`, a controller in `controllers/`, a Mongoose schema in `models/schemas/`, and register the route in `routes/index.ts`. Use `oxy.auth()`-gated routes for anything that touches user data; use `routes/public.ts` for anonymous browsing.
+4. **Frontend**: add a TanStack Query hook in `hooks/query/` or `hooks/`, a service wrapper in `services/`, and a screen under `app/`. Use Zustand only for local UI state.
+5. **i18n**: add new strings to all locales in `packages/frontend/locales/`.
+6. **Self-audit**: read every integration point you touched. If the feature crosses Oxy or Bloom, verify the upstream package version in `package.json` matches what you're using.
+
+## Adding a Mongoose schema
+
+- File location: `packages/backend/models/schemas/<Name>Schema.ts`.
+- Re-export the model from `packages/backend/models/index.ts`.
+- Add cross-package types to `packages/shared-types/src/<name>.ts`.
+- For ownership scoping, store the Oxy user id as `oxyUserId: { type: String, required: true, index: true }` (or `profileId` for profile-scoped data).
+- For unique-per-user records, add a unique index: `{ oxyUserId: 1 }` with `unique: true`.
+- For external/scraped data with a TTL, use a TTL index on `expiresAt` with `expireAfterSeconds: 0`.
+
+## Adding a route
+
+```ts
+// packages/backend/routes/<name>.ts
+import express from 'express';
+import { asyncHandler } from '../middlewares';
+const controller = require('../controllers/<name>Controller');
+
+export default function () {
+  const router = express.Router();
+  router.get('/', asyncHandler(controller.list));
+  router.post('/', asyncHandler(controller.create));
+  return router;
+}
+```
+
+Then in `routes/index.ts`:
+
+```ts
+const <name> = require('./<name>').default;
+// ...
+router.use('/<name>', <name>());
+```
+
+Public routes go in `routes/public.ts` instead.
+
+## Pull requests
+
+1. Branch from `main`. Branch names: `feat/<scope>`, `fix/<scope>`, `chore/<scope>`, `docs/<scope>`.
+2. Run `bun run lint` and `bun run build` locally — both must pass.
+3. Commit message follows Conventional Commits (`feat(frontend): ...`, `fix(backend): ...`, `docs: ...`).
+4. PR description: what changed, why, and any migration notes.
+5. CI runs the same lint + build matrix; do not merge if red.
+
+## Where to find help
+
+- Architecture overview: [Architecture](./architecture).
+- Stripe / billing logic: [Payments](./payments).
+- Listings data model: [Listings](./listings).
+- Oxy integration: [Auth](./auth).
+- Deployment specifics: [Deployment](./deployment).
+- The root [README](https://github.com/OxyHQ/Homiio) for high-level installation.

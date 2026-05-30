@@ -187,7 +187,7 @@ export function useNotificationManager() {
   const notifySystemUpdate = useCallback(async (
     title: string,
     message: string,
-    priority: 'low' | 'normal' | 'high' = 'normal'
+    priority: 'default' | 'normal' | 'high' = 'normal'
   ) => {
     try {
       await createLocalNotification(title, message, {

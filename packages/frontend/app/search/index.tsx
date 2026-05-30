@@ -74,6 +74,11 @@ import { useMapState } from '@/context/MapStateContext';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { useSearchMode } from '@/context/SearchModeContext';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
+import {
+  useDebouncedAddressSearch,
+  geocodeAddress,
+  type AddressSuggestion,
+} from '@/hooks/useAddressSearch';
 import { useIsDesktop } from '@/hooks/useOptimizedMediaQuery';
 import { propertyService } from '@/services/propertyService';
 import { useMapSearchStore } from '@/store/mapSearchStore';
@@ -91,15 +96,34 @@ import { Property, RentMode } from '@homiio/shared-types';
 /** Distinct view modes the search screen can render in. */
 type ViewMode = 'split' | 'list' | 'map';
 
-interface MapboxSearchResult {
+/**
+ * A location suggestion shown in the search-as-you-type overlay. Sourced from
+ * the keyless OpenStreetMap Nominatim geocoder via `useDebouncedAddressSearch`.
+ */
+interface LocationSuggestion {
   id: string;
+  /** Full human-readable place name (Nominatim `display_name`). */
   place_name: string;
-  center: [number, number];
+  /** Short primary label for the row. */
   text: string;
-  context?: { text: string }[];
-  bbox?: [number, number, number, number];
-  place_type?: string[];
+  /** Secondary line for the row (the remainder of the place name). */
+  secondary: string;
+  /** [longitude, latitude], GeoJSON order. */
+  center: [number, number];
 }
+
+/** Map a Nominatim address suggestion onto the overlay's display shape. */
+const toLocationSuggestion = (s: AddressSuggestion): LocationSuggestion | null => {
+  if (typeof s.lat !== 'number' || typeof s.lon !== 'number') return null;
+  const [primary, ...rest] = s.text.split(',');
+  return {
+    id: s.id,
+    place_name: s.text,
+    text: (primary ?? s.text).trim() || s.text,
+    secondary: rest.join(',').trim(),
+    center: [s.lon, s.lat],
+  };
+};
 
 const DEFAULT_FILTERS: SearchFilters = {
   minPrice: 0,
@@ -120,6 +144,8 @@ const DEFAULT_BARCELONA_BOUNDS = {
 const SEARCH_DEBOUNCE_MS = 300;
 const MIN_MOVE_DISTANCE_METERS = 500;
 const MIN_ZOOM_DELTA = 0.8;
+/** Half-width of the search box (in degrees) applied around a picked point. */
+const LOCATION_BOUNDS_DELTA_DEG = 0.05;
 
 // Filter-chip definitions are derived from the active filters so the
 // chip can reflect "Set" vs "Default" state visually.
@@ -213,9 +239,19 @@ export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState(
     urlQuery || savedState?.searchQuery || '',
   );
-  const [isSearching, setIsSearching] = useState(false);
-  const [mapboxResults, setMapboxResults] = useState<MapboxSearchResult[]>([]);
-  const [showMapboxResults, setShowMapboxResults] = useState(false);
+  // Keyless OpenStreetMap Nominatim geocoder for search-as-you-type.
+  const {
+    suggestions: addressSuggestions,
+    loading: isSearching,
+    debouncedSearch,
+    clearSuggestions,
+  } = useDebouncedAddressSearch({
+    minQueryLength: 2,
+    debounceDelay: SEARCH_DEBOUNCE_MS,
+    maxResults: 6,
+    includeAddressDetails: false,
+  });
+  const [showLocationResults, setShowLocationResults] = useState(false);
   const [filters, setFilters] = useState<SearchFilters>({
     ...DEFAULT_FILTERS,
     ...(savedState?.filters ?? {}),
@@ -402,70 +438,47 @@ export default function SearchScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rentalMode]);
 
-  // --- search-as-you-type via Mapbox geocoding ---
+  // Location suggestions derived from the keyless Nominatim geocoder.
+  const locationResults = useMemo<LocationSuggestion[]>(
+    () =>
+      addressSuggestions
+        .map(toLocationSuggestion)
+        .filter((s): s is LocationSuggestion => s !== null),
+    [addressSuggestions],
+  );
+
+  // --- search-as-you-type via OpenStreetMap Nominatim geocoding ---
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setMapboxResults([]);
-      setShowMapboxResults(false);
+    const query = searchQuery.trim();
+    if (!query || query === lastSelectedLocationRef.current) {
+      clearSuggestions();
+      setShowLocationResults(false);
       return;
     }
-    if (searchQuery === lastSelectedLocationRef.current) return;
-
-    const token = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
-    if (!token) return;
-
-    const timer = setTimeout(async () => {
-      setIsSearching(true);
-      try {
-        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
-          searchQuery,
-        )}.json?access_token=${token}`;
-        const response = await fetch(url);
-        const data: { features?: MapboxSearchResult[] } = await response.json();
-        if (data.features) {
-          setMapboxResults(data.features);
-          setShowMapboxResults(true);
-        } else {
-          setMapboxResults([]);
-          setShowMapboxResults(false);
-        }
-      } catch {
-        setMapboxResults([]);
-        setShowMapboxResults(false);
-      } finally {
-        setIsSearching(false);
-      }
-    }, SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+    setShowLocationResults(true);
+    debouncedSearch(query);
+  }, [searchQuery, debouncedSearch, clearSuggestions]);
 
   const handleSelectLocation = useCallback(
-    (result: MapboxSearchResult) => {
+    (result: LocationSuggestion) => {
       const [lng, lat] = result.center;
-      setMapboxResults([]);
-      setShowMapboxResults(false);
+      clearSuggestions();
+      setShowLocationResults(false);
       setSearchQuery(result.place_name);
       lastSelectedLocationRef.current = result.place_name;
       mapRef.current?.navigateToLocation(result.center, 14);
       lastFetchCenterRef.current = result.center;
       lastFetchZoomRef.current = 14;
-      const radiusDelta = 0.05;
-      const bounds = result.bbox
-        ? {
-            west: result.bbox[0],
-            south: result.bbox[1],
-            east: result.bbox[2],
-            north: result.bbox[3],
-          }
-        : {
-            west: lng - radiusDelta,
-            south: lat - radiusDelta,
-            east: lng + radiusDelta,
-            north: lat + radiusDelta,
-          };
+      const radiusDelta = LOCATION_BOUNDS_DELTA_DEG;
+      const bounds = {
+        west: lng - radiusDelta,
+        south: lat - radiusDelta,
+        east: lng + radiusDelta,
+        north: lat + radiusDelta,
+      };
       fetchProperties(bounds);
     },
-    [fetchProperties],
+    [fetchProperties, clearSuggestions],
   );
 
   // Saved-search bus subscription.
@@ -478,15 +491,10 @@ export default function SearchScreen() {
           ...prev,
           ...(saved.filters as Partial<SearchFilters>),
         }));
-        const token = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
-        if (!token || !saved.query) return;
-        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
-          saved.query,
-        )}.json?access_token=${token}`;
-        const response = await fetch(url);
-        const data: { features?: MapboxSearchResult[] } = await response.json();
-        const feature = data?.features?.[0];
-        if (feature) handleSelectLocation(feature);
+        if (!saved.query) return;
+        const [match] = await geocodeAddress(saved.query, { maxResults: 1 });
+        const suggestion = match ? toLocationSuggestion(match) : null;
+        if (suggestion) handleSelectLocation(suggestion);
       } catch {
         /* silent — UI stays in last state */
       }
@@ -872,17 +880,17 @@ export default function SearchScreen() {
     </View>
   );
 
-  const renderMapboxOverlay = () => {
-    if (!showMapboxResults || mapboxResults.length === 0) return null;
+  const renderLocationOverlay = () => {
+    if (!showLocationResults || locationResults.length === 0) return null;
     return (
-      <View style={[styles.mapboxOverlay, withShadow('md')]}>
-        {mapboxResults.slice(0, 6).map((result) => (
+      <View style={[styles.locationOverlay, withShadow('md')]}>
+        {locationResults.map((result) => (
           <Pressable
             key={result.id}
             onPress={() => handleSelectLocation(result)}
             style={({ pressed }) => [
-              styles.mapboxRow,
-              pressed ? styles.mapboxRowPressed : null,
+              styles.locationRow,
+              pressed ? styles.locationRowPressed : null,
             ]}
             accessibilityRole="button"
             accessibilityLabel={result.place_name}
@@ -892,11 +900,13 @@ export default function SearchScreen() {
               size={18}
               color={colors.COLOR_BLACK_LIGHT_3}
             />
-            <View style={styles.mapboxText}>
-              <BloomText style={styles.mapboxTitle}>{result.text}</BloomText>
-              <BloomText style={styles.mapboxSubtitle}>
-                {result.place_name.replace(`${result.text}, `, '')}
-              </BloomText>
+            <View style={styles.locationText}>
+              <BloomText style={styles.locationTitle}>{result.text}</BloomText>
+              {result.secondary ? (
+                <BloomText style={styles.locationSubtitle}>
+                  {result.secondary}
+                </BloomText>
+              ) : null}
             </View>
           </Pressable>
         ))}
@@ -1006,7 +1016,7 @@ export default function SearchScreen() {
     return (
       <View style={styles.container}>
         {renderTopBar()}
-        {renderMapboxOverlay()}
+        {renderLocationOverlay()}
         {viewMode === 'split' ? (
           <View style={styles.splitRow}>
             <View style={styles.splitListColumn}>
@@ -1031,7 +1041,7 @@ export default function SearchScreen() {
   return (
     <View style={styles.container}>
       {renderTopBar()}
-      {renderMapboxOverlay()}
+      {renderLocationOverlay()}
       {showMobileMap ? (
         <View style={styles.fullColumn}>{renderMapPanel()}</View>
       ) : (
@@ -1091,7 +1101,7 @@ const styles = StyleSheet.create({
   viewModeWrap: {
     width: 280,
   },
-  mapboxOverlay: {
+  locationOverlay: {
     position: 'absolute',
     top: 88,
     left: 16,
@@ -1103,26 +1113,26 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     overflow: 'hidden',
   },
-  mapboxRow: {
+  locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     gap: spacing.md,
   },
-  mapboxRowPressed: {
+  locationRowPressed: {
     backgroundColor: colors.mutedSubtle,
   },
-  mapboxText: {
+  locationText: {
     flex: 1,
     gap: 2,
   },
-  mapboxTitle: {
+  locationTitle: {
     fontSize: 15,
     fontWeight: '600',
     color: colors.COLOR_BLACK,
   },
-  mapboxSubtitle: {
+  locationSubtitle: {
     fontSize: 13,
     color: colors.COLOR_BLACK_LIGHT_3,
   },

@@ -13,18 +13,36 @@ import { colors } from '@/styles/colors';
 import { PropertyFilters } from '@/services/propertyService';
 import { PropertyType } from '@homiio/shared-types';
 
+/** Direction used when sorting room results. */
+export type RoomSortOrder = 'asc' | 'desc';
+
+/**
+ * Filters used by the rooms feature. Extends the shared {@link PropertyFilters}
+ * contract with the room-list query options that the properties list endpoint
+ * supports (sorting) plus the smoking-preference toggle surfaced in the UI.
+ */
+export interface RoomFilterOptions extends PropertyFilters {
+    /** Field to sort the room results by (maps to the backend `sortBy`). */
+    sortBy?: string;
+    /** Sort direction (maps to the backend `sortOrder`). */
+    sortOrder?: RoomSortOrder;
+    /** UI preference for listings that allow smoking. */
+    smokingAllowed?: boolean;
+}
+
+/** Values a single filter control can produce. */
+type RoomFilterValue = RoomFilterOptions[keyof RoomFilterOptions];
+
 interface RoomFiltersProps {
-    filters: PropertyFilters;
-    onApplyFilters: (filters: PropertyFilters) => void;
+    filters: RoomFilterOptions;
+    onApplyFilters: (filters: RoomFilterOptions) => void;
     onClose: () => void;
 }
 
-const IconComponent = Ionicons as any;
-
 export function RoomFilters({ filters, onApplyFilters, onClose }: RoomFiltersProps) {
-    const [localFilters, setLocalFilters] = useState<PropertyFilters>(filters);
+    const [localFilters, setLocalFilters] = useState<RoomFilterOptions>(filters);
 
-    const handleInputChange = (key: keyof PropertyFilters, value: any) => {
+    const handleInputChange = (key: keyof RoomFilterOptions, value: RoomFilterValue) => {
         setLocalFilters(prev => ({
             ...prev,
             [key]: value
@@ -37,7 +55,7 @@ export function RoomFilters({ filters, onApplyFilters, onClose }: RoomFiltersPro
     };
 
     const handleReset = () => {
-        const resetFilters: PropertyFilters = {
+        const resetFilters: RoomFilterOptions = {
             type: PropertyType.ROOM,
             sortBy: 'createdAt',
             sortOrder: 'desc'
@@ -51,7 +69,7 @@ export function RoomFilters({ filters, onApplyFilters, onClose }: RoomFiltersPro
         <View style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                    <IconComponent name="close" size={24} color={colors.primaryDark} />
+                    <Ionicons name="close" size={24} color={colors.primaryDark} />
                 </TouchableOpacity>
                 <Text style={styles.title}>Filter Rooms</Text>
                 <TouchableOpacity onPress={handleReset} style={styles.resetButton}>
@@ -68,8 +86,8 @@ export function RoomFilters({ filters, onApplyFilters, onClose }: RoomFiltersPro
                             <Text style={styles.label}>Min ($)</Text>
                             <TextInput
                                 style={styles.input}
-                                value={localFilters.minPrice?.toString()}
-                                onChangeText={value => handleInputChange('minPrice', value ? parseInt(value) : undefined)}
+                                value={localFilters.minRent?.toString()}
+                                onChangeText={value => handleInputChange('minRent', value ? parseInt(value, 10) : undefined)}
                                 keyboardType="numeric"
                                 placeholder="Min"
                             />
@@ -78,8 +96,8 @@ export function RoomFilters({ filters, onApplyFilters, onClose }: RoomFiltersPro
                             <Text style={styles.label}>Max ($)</Text>
                             <TextInput
                                 style={styles.input}
-                                value={localFilters.maxPrice?.toString()}
-                                onChangeText={value => handleInputChange('maxPrice', value ? parseInt(value) : undefined)}
+                                value={localFilters.maxRent?.toString()}
+                                onChangeText={value => handleInputChange('maxRent', value ? parseInt(value, 10) : undefined)}
                                 keyboardType="numeric"
                                 placeholder="Max"
                             />
@@ -134,16 +152,16 @@ export function RoomFilters({ filters, onApplyFilters, onClose }: RoomFiltersPro
                     <View style={styles.switchRow}>
                         <Text style={styles.switchLabel}>Pet Friendly</Text>
                         <Switch
-                            value={localFilters.pets}
-                            onValueChange={value => handleInputChange('pets', value)}
+                            value={localFilters.petFriendly ?? false}
+                            onValueChange={value => handleInputChange('petFriendly', value)}
                             trackColor={{ false: colors.COLOR_BLACK_LIGHT_6, true: colors.primaryColor }}
                         />
                     </View>
                     <View style={styles.switchRow}>
                         <Text style={styles.switchLabel}>Smoking Allowed</Text>
                         <Switch
-                            value={localFilters.smoking}
-                            onValueChange={value => handleInputChange('smoking', value)}
+                            value={localFilters.smokingAllowed ?? false}
+                            onValueChange={value => handleInputChange('smokingAllowed', value)}
                             trackColor={{ false: colors.COLOR_BLACK_LIGHT_6, true: colors.primaryColor }}
                         />
                     </View>

@@ -12,24 +12,42 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/**
+ * A loosely-typed note as it may appear in the persisted JSON string. Every
+ * field is optional/unknown until validated and normalised into a
+ * {@link PropertyNote}.
+ */
+interface RawPropertyNote {
+  id?: unknown;
+  text?: unknown;
+  createdAt?: unknown;
+  updatedAt?: unknown;
+  isArchived?: unknown;
+  isPinned?: unknown;
+  color?: unknown;
+}
+
+const asString = (value: unknown): string | undefined =>
+  typeof value === 'string' ? value : undefined;
+
 export function parseNotesString(raw: string | undefined | null): PropertyNote[] {
   if (!raw) return [];
   const trimmed = String(raw).trim();
   if (!trimmed) return [];
   try {
-    const parsed = JSON.parse(trimmed);
+    const parsed: unknown = JSON.parse(trimmed);
     if (Array.isArray(parsed)) {
       // basic shape validation
-      return parsed
-        .filter((n) => n && typeof n === 'object' && typeof n.text === 'string')
+      return (parsed as RawPropertyNote[])
+        .filter((n): n is RawPropertyNote => !!n && typeof n === 'object' && typeof n.text === 'string')
         .map((n) => ({
-          id: n.id || generateId(),
-          text: n.text,
-          createdAt: n.createdAt || new Date().toISOString(),
-          updatedAt: n.updatedAt || new Date().toISOString(),
-          isArchived: Boolean((n as any).isArchived),
-          isPinned: Boolean((n as any).isPinned),
-          color: (n as any).color || undefined,
+          id: asString(n.id) || generateId(),
+          text: asString(n.text) ?? '',
+          createdAt: asString(n.createdAt) || new Date().toISOString(),
+          updatedAt: asString(n.updatedAt) || new Date().toISOString(),
+          isArchived: Boolean(n.isArchived),
+          isPinned: Boolean(n.isPinned),
+          color: asString(n.color) || undefined,
         }));
     }
   } catch {

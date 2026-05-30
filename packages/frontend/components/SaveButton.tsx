@@ -33,7 +33,7 @@
  */
 
 import React, { useState, useContext } from 'react';
-import { TouchableOpacity, StyleSheet, ViewStyle, View, Platform } from 'react-native';
+import { TouchableOpacity, StyleSheet, ViewStyle, View, Platform, StyleProp } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { Loading } from '@oxyhq/bloom/loading';
@@ -45,7 +45,6 @@ import { getPropertyTitle } from '@/utils/propertyUtils';
 import { ThemedText } from '@/components/ThemedText';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 
-const IconComponent = Ionicons as any;
 
 interface SaveButtonProps {
   isSaved?: boolean; // Made optional since we'll determine this from React Query
@@ -64,7 +63,7 @@ interface SaveButtonProps {
   // For saving profiles instead of properties
   profileId?: string;
   showCount?: boolean;
-  countBadgeStyle?: any;
+  countBadgeStyle?: StyleProp<ViewStyle>;
   countDisplayMode?: 'badge' | 'inline';
 }
 
@@ -108,7 +107,7 @@ export function SaveButton({
   const initialSavedState =
     typeof propIsSaved === 'boolean'
       ? propIsSaved
-      : (property as any)?.isSaved;
+      : (property as Property & { isSaved?: boolean })?.isSaved;
 
   // Use context state when initialized, otherwise fall back to initial state
   const isSaved = propertyId
@@ -288,7 +287,7 @@ export function SaveButton({
           <Loading iconSize={sizeAll} color={getIconColor()} showText={false} />
         ) : (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: sizeAll / 4 }}>
-            <IconComponent name={getIconName()} size={sizeAll} color={getIconColor()} />
+            <Ionicons name={getIconName()} size={sizeAll} color={getIconColor()} />
             {renderInlineCount()}
           </View>
         )}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Platform, View, StyleSheet, AppState, AppStateStatus, LogBox } from 'react-native';
+import { Platform, View, StyleSheet, AppState, AppStateStatus } from 'react-native';
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
@@ -48,21 +48,7 @@ import '../styles/global.css';
 import { OXY_BASE_URL } from '@/config';
 import { QueryClient, QueryClientProvider, onlineManager, focusManager } from '@tanstack/react-query';
 import NetInfo from '@react-native-community/netinfo';
-
-// Known upstream regression: react-native-reanimated 4.3.x/4.4.x + react-native-worklets
-// 0.8.x/0.9.x on React Native 0.85 (new architecture) emit a non-fatal worklet
-// error on first mount of any `useAnimatedStyle` ("Tried to synchronously call a
-// non-worklet function `addListener` on the UI thread" + "Tried to modify key
-// `value` of an object which has been already passed to a worklet"). The app
-// renders and is fully interactive — the dev-only LogBox overlay is the only
-// symptom and production builds are unaffected. Reanimated 4 is new-arch-only and
-// @oxyhq/services requires reanimated >=4.3.0, so neither downgrading nor disabling
-// the new architecture is viable. Scoped to these exact messages; remove once
-// reanimated ships a fix. Tracking: https://github.com/software-mansion/react-native-reanimated/issues
-LogBox.ignoreLogs([
-  /Tried to synchronously call a non-worklet function `addListener`/,
-  /Tried to modify key `value` of an object which has been already passed to a worklet/,
-]);
+import { logger } from '@/utils/logger';
 
 i18nUse(initReactI18next);
 
@@ -154,8 +140,8 @@ export default function RootLayout() {
       }
       setSplashState((prev) => ({ ...prev, initializationComplete: true }));
       await SplashScreen.hideAsync();
-    } catch (error) {
-      console.warn('Failed to set up notifications:', error);
+    } catch (error: unknown) {
+      logger.warn('Failed to set up notifications:', error);
     }
   }, []);
 

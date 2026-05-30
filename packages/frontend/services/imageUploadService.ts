@@ -71,7 +71,7 @@ class ImageUploadService {
       uri: imageUri,
       type: 'image/jpeg',
       name: 'image.jpg',
-    } as any);
+    });
     formData.append('folder', folder);
 
     const response = await api.post('/api/images/upload', formData);
@@ -94,7 +94,7 @@ class ImageUploadService {
         uri,
         type: 'image/jpeg',
         name: `image${index}.jpg`,
-      } as any);
+      });
     });
     formData.append('folder', folder);
 

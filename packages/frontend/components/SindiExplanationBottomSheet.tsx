@@ -42,7 +42,11 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
   const [layoutWidth, setLayoutWidth] = useState(Dimensions.get('window').width);
   // dynamic height
   const [containerHeight, setContainerHeight] = useState<number>(0);
-  const heightsRef = useRef<number[]>(Array(TOTAL_STEPS).fill(0));
+  // Per-step measured heights live on a SharedValue (not a plain ref) so the
+  // scroll worklet can read them on the UI thread by reference. Reading a plain
+  // JS ref/array inside a worklet would capture and freeze it, breaking the
+  // worklet runtime (see reanimated serializable freezing in dev).
+  const heights = useSharedValue<number[]>(Array(TOTAL_STEPS).fill(0));
   const navVisibility = useSharedValue(1); // 1 visible, 0 hidden
   const navContentHeight = useSharedValue(0); // measured height of nav for collapse
 
@@ -93,8 +97,9 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
         const rawIndex = offsetX / layoutWidth;
         const base = Math.floor(rawIndex);
         const progress = rawIndex - base;
-        const h1 = heightsRef.current[base];
-        const h2 = heightsRef.current[Math.min(base + 1, TOTAL_STEPS - 1)];
+        const stepHeights = heights.value;
+        const h1 = stepHeights[base];
+        const h2 = stepHeights[Math.min(base + 1, TOTAL_STEPS - 1)];
         if (h1 && h2) {
           heightAnim.value = h1 + (h2 - h1) * progress;
         } else if (h1) {
@@ -127,10 +132,10 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
 
   // Reset cached heights when width changes (e.g., orientation)
   useEffect(() => {
-    heightsRef.current = Array(TOTAL_STEPS).fill(0);
+    heights.value = Array(TOTAL_STEPS).fill(0);
     setContainerHeight(0);
     heightAnim.value = 0;
-  }, [layoutWidth, heightAnim]);
+  }, [layoutWidth, heightAnim, heights]);
 
   const handleScrollEnd = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -138,11 +143,11 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
       const index = Math.round(offsetX / Math.max(1, layoutWidth));
       if (index !== currentStep) {
         setCurrentStep(index);
-        const h = heightsRef.current[index] || containerHeight;
+        const h = heights.value[index] || containerHeight;
         setContainerHeight(h);
       }
       // ensure final snap animation to exact measured height
-      const hFinal = heightsRef.current[index] || containerHeight;
+      const hFinal = heights.value[index] || containerHeight;
       heightAnim.value = withTiming(
         hFinal,
         { duration: 160, easing: Easing.out(Easing.quad) },
@@ -151,7 +156,7 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
         },
       );
     },
-    [layoutWidth, currentStep, heightAnim, containerHeight],
+    [layoutWidth, currentStep, heightAnim, containerHeight, heights],
   );
 
   const handlePrevious = useCallback(() => {
@@ -159,11 +164,11 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
     const target = Math.max(0, currentStep - 1);
     if (target !== currentStep) {
       setCurrentStep(target);
-      const h = heightsRef.current[target] || containerHeight;
+      const h = heights.value[target] || containerHeight;
       setContainerHeight(h);
     }
     scrollRef.current.scrollTo({ x: target * layoutWidth, animated: true });
-  }, [currentStep, layoutWidth, containerHeight]);
+  }, [currentStep, layoutWidth, containerHeight, heights]);
 
   const handleNext = useCallback(() => {
     if (currentStep >= TOTAL_STEPS - 1) {
@@ -174,11 +179,11 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
     const target = Math.min(TOTAL_STEPS - 1, currentStep + 1);
     if (target !== currentStep) {
       setCurrentStep(target);
-      const h = heightsRef.current[target] || containerHeight;
+      const h = heights.value[target] || containerHeight;
       setContainerHeight(h);
     }
     scrollRef.current.scrollTo({ x: target * layoutWidth, animated: true });
-  }, [currentStep, layoutWidth, handleStart, containerHeight]);
+  }, [currentStep, layoutWidth, handleStart, containerHeight, heights]);
 
   // animated style for bottom nav: fade + translate + height collapse using measured height
   const bottomNavAnimatedStyle = useAnimatedStyle(() => {
@@ -209,15 +214,20 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
   const onPageLayout = useCallback(
     (index: number, h: number) => {
       if (!h) return;
-      if (heightsRef.current[index] === h) return;
-      heightsRef.current[index] = h;
+      if (heights.value[index] === h) return;
+      // Assign a fresh array rather than mutating the existing one in place:
+      // the array is shared with the UI thread, and in-place mutation of a
+      // value already passed to a worklet is unsupported.
+      const next = heights.value.slice();
+      next[index] = h;
+      heights.value = next;
       if (index === 0 && !containerHeight) {
         setContainerHeight(h);
         heightAnim.value = h;
       }
       if (index === currentStep) setContainerHeight(h);
     },
-    [currentStep, containerHeight, heightAnim],
+    [currentStep, containerHeight, heightAnim, heights],
   );
 
   const onNavLayout = useCallback(

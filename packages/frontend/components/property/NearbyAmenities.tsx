@@ -2,9 +2,10 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { useTranslation } from 'react-i18next';
+import type { Property } from '@homiio/shared-types';
 
 interface Amenity { name: string; distance?: number; }
-interface Props { property: any }
+interface Props { property: Property }
 
 export const NearbyAmenities: React.FC<Props> = ({ property }) => {
     const { t } = useTranslation();

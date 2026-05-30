@@ -15,6 +15,7 @@ module.exports = {
     extend: {
       colors: {
         primary: {
+          DEFAULT: '#0070e9',
           50: '#eff6ff',
           100: '#dbeafe',
           200: '#bfdbfe',
@@ -26,6 +27,17 @@ module.exports = {
           800: '#1e40af',
           900: '#1e3a8a',
         },
+        // Semantic surface tokens used by the sidebar (mirrors Clarity's palette
+        // mapped onto Homiio's brand colors). Keeping these named lets us share
+        // the same NativeWind className patterns as Clarity.
+        background: '#FFFFFF',
+        foreground: '#1A1A1A',
+        muted: {
+          DEFAULT: '#F5F5F5',
+          foreground: '#404040',
+        },
+        border: '#0d0d0d0d',
+        card: '#FFFFFF',
       },
     },
   },

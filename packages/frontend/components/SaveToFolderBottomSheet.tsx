@@ -22,7 +22,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import savedPropertyService from '@/services/savedPropertyService';
 import { toast } from 'sonner';
 
-const IconComponent = Ionicons as any;
 
 interface SaveToFolderBottomSheetProps {
   propertyId: string;
@@ -71,7 +70,7 @@ export function SaveToFolderBottomSheet({
       queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
       toast.success('Property saved to folder');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       console.error('Failed to save to folder:', error);
       toast.error('Failed to save to folder');
     },
@@ -85,7 +84,7 @@ export function SaveToFolderBottomSheet({
       queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
       toast.success('Folder created successfully');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       console.error('Failed to create folder:', error);
       toast.error('Failed to create folder');
     },
@@ -146,7 +145,7 @@ export function SaveToFolderBottomSheet({
           {folder.propertyCount} {folder.propertyCount === 1 ? 'property' : 'properties'}
         </ThemedText>
       </View>
-      <IconComponent name="chevron-forward" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
+      <Ionicons name="chevron-forward" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
     </TouchableOpacity>
   );
 
@@ -174,7 +173,7 @@ export function SaveToFolderBottomSheet({
             ]}
             onPress={() => setSelectedColor(color)}
           >
-            {selectedColor === color && <IconComponent name="checkmark" size={16} color="white" />}
+            {selectedColor === color && <Ionicons name="checkmark" size={16} color="white" />}
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -214,7 +213,7 @@ export function SaveToFolderBottomSheet({
       <View style={styles.header}>
         <ThemedText style={styles.title}>Save to Folder</ThemedText>
         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <IconComponent name="close" size={24} color={colors.COLOR_BLACK_LIGHT_4} />
+          <Ionicons name="close" size={24} color={colors.COLOR_BLACK_LIGHT_4} />
         </TouchableOpacity>
       </View>
 
@@ -254,7 +253,7 @@ export function SaveToFolderBottomSheet({
               onPress={() => setShowCreateFolder(true)}
               disabled={isLoading}
             >
-              <IconComponent name="add-circle-outline" size={24} color={colors.primaryColor} />
+              <Ionicons name="add-circle-outline" size={24} color={colors.primaryColor} />
               <ThemedText style={styles.createFolderText}>Create New Folder</ThemedText>
             </TouchableOpacity>
           </>

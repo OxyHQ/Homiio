@@ -22,9 +22,13 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
     isPropertySaving: isPropertySavingFromContext,
     savePropertyToFolder,
     unsaveProperty: unsavePropertyFromContext,
+    savingPropertyIds,
     isLoading,
     error,
   } = useSavedPropertiesContext();
+
+  // True while any property is mid save/unsave (mirrors per-property state).
+  const isSaving = savingPropertyIds.size > 0;
 
   // Memoize saved property IDs for performance
   const savedPropertyIds = useMemo(() =>
@@ -50,8 +54,11 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
     [isPropertySavingFromContext],
   );
 
+  // Error lifecycle is owned by SavedPropertiesContext, which clears errors on
+  // the next successful save/unsave/load. This hook intentionally exposes a
+  // no-op so consumers can call it uniformly without managing context state.
   const clearError = useCallback(() => {
-    // TODO: Add clearError to context if needed
+    // Intentionally empty: context resets `error` on its next action.
   }, []);
 
   const toggleSaved = useCallback(
@@ -119,7 +126,7 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
   return {
     savedPropertyIds,
     isLoading,
-    isSaving: false, // TODO: Add saving state tracking if needed
+    isSaving,
     error,
     toggleSaved,
     isSaved,

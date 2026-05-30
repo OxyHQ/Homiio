@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, Platform } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Platform, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,8 +10,7 @@ import { colors } from '@/styles/colors';
 import { SindiIcon } from '@/assets/icons';
 import { Header } from '@/components/Header';
 import { useTranslation } from 'react-i18next';
-
-const IconComponent = Ionicons as any;
+import { logger } from '@/utils/logger';
 
 interface ConversationMessage {
   id: string;
@@ -26,6 +25,11 @@ interface SharedConversation {
   messages: ConversationMessage[];
   createdAt: Date;
   updatedAt: Date;
+}
+
+interface SharedConversationResponse {
+  success: boolean;
+  conversation?: SharedConversation;
 }
 
 export default function SharedConversationView() {
@@ -44,7 +48,7 @@ export default function SharedConversationView() {
         const response = await expoFetch(`${API_URL}/api/ai/shared/${token}`);
 
         if (response.ok) {
-          const data = await response.json();
+          const data: SharedConversationResponse = await response.json();
           if (data.success && data.conversation) {
             setConversation(data.conversation);
           } else {
@@ -55,8 +59,8 @@ export default function SharedConversationView() {
         } else {
           setError(t('sindi.shared.error.failed'));
         }
-      } catch (err) {
-        console.error('Failed to load shared conversation:', err);
+      } catch (err: unknown) {
+        logger.error('Failed to load shared conversation:', err);
         setError(t('sindi.shared.error.failed'));
       } finally {
         setLoading(false);
@@ -68,7 +72,7 @@ export default function SharedConversationView() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['bottom']}>
         <Header
           options={{
             title: t('sindi.shared.loading'),
@@ -76,7 +80,7 @@ export default function SharedConversationView() {
           }}
         />
         <View style={styles.loadingContainer}>
-          <IconComponent name="hourglass" size={48} color={colors.primaryColor} />
+          <Ionicons name="hourglass" size={48} color={colors.primaryColor} />
           <Text style={styles.loadingText}>{t('sindi.shared.loadingMessage')}</Text>
         </View>
       </SafeAreaView>
@@ -85,7 +89,7 @@ export default function SharedConversationView() {
 
   if (error) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['bottom']}>
         <Header
           options={{
             title: t('sindi.shared.error.title'),
@@ -99,7 +103,7 @@ export default function SharedConversationView() {
           end={{ x: 1, y: 1 }}
         >
           <View style={styles.errorContent}>
-            <IconComponent name="alert-circle" size={48} color="white" />
+            <Ionicons name="alert-circle" size={48} color="white" />
             <Text style={styles.errorText}>{error}</Text>
             <Text style={styles.errorSubtext}>{t('sindi.shared.error.description')}</Text>
           </View>
@@ -110,7 +114,7 @@ export default function SharedConversationView() {
 
   if (!conversation) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['bottom']}>
         <Header
           options={{
             title: t('sindi.shared.error.title'),
@@ -124,17 +128,26 @@ export default function SharedConversationView() {
     );
   }
 
-  // Web-specific styles for sticky positioning
-  const webStyles =
+  // Web-specific styles for sticky positioning. Viewport units and the `auto`
+  // overflow value are valid for React Native Web but absent from RN's style
+  // types, so the web-only values are widened to the corresponding RN fields.
+  const webStyles: { container?: ViewStyle; messagesContainer?: ViewStyle } =
     Platform.OS === 'web'
       ? {
-        container: { height: '100vh', display: 'flex', flexDirection: 'column' } as any,
-        messagesContainer: { flex: 1, overflow: 'auto' } as any,
-      }
+          container: {
+            height: '100vh' as unknown as ViewStyle['height'],
+            display: 'flex',
+            flexDirection: 'column',
+          },
+          messagesContainer: {
+            flex: 1,
+            overflow: 'auto' as unknown as ViewStyle['overflow'],
+          },
+        }
       : {};
 
   return (
-    <SafeAreaView style={[styles.container, webStyles.container]}>
+    <SafeAreaView style={[styles.container, webStyles.container]} edges={['bottom']}>
       {/* Header */}
       <Header
         options={{
@@ -152,7 +165,7 @@ export default function SharedConversationView() {
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
-          <IconComponent name="share-outline" size={16} color="white" />
+          <Ionicons name="share-outline" size={16} color="white" />
           <Text style={styles.sharedBadgeText}>{t('sindi.shared.badge')}</Text>
         </LinearGradient>
       </View>

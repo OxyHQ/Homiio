@@ -1,12 +1,24 @@
 import { create } from 'zustand';
 
+/**
+ * Arbitrary filter criteria attached to a saved search (price range, property
+ * type, amenities, etc.). The shape is determined by the search UI and is
+ * persisted/round-tripped verbatim, so it is intentionally a loose record.
+ */
+export type SavedSearchFilters = Record<string, unknown>;
+
 // Saved Search Interface
-interface SavedSearch {
+export interface SavedSearch {
   id: string;
   name: string;
   query: string;
-  filters?: any;
+  filters?: SavedSearchFilters;
   notifications: boolean;
+  /**
+   * Mirror of {@link SavedSearch.notifications} kept for downstream components
+   * that read the backend's `notificationsEnabled` field name.
+   */
+  notificationsEnabled?: boolean;
   createdAt: string;
   updatedAt: string;
 }

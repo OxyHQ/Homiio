@@ -4,8 +4,6 @@ import { ThemedText } from '@/components/ThemedText';
 import { colors } from '@/styles/colors';
 import { Ionicons } from '@expo/vector-icons';
 
-const IconComponent = Ionicons as any;
-
 interface StepsContainerProps {
     steps: string[];
     currentStep: number;
@@ -39,7 +37,7 @@ export function StepsContainer({ steps, currentStep }: StepsContainerProps) {
                                 ]}
                             >
                                 {index < currentStep ? (
-                                    <IconComponent name="checkmark" size={14} color="white" />
+                                    <Ionicons name="checkmark" size={14} color="white" />
                                 ) : (
                                     <ThemedText style={[styles.stepNumber, index === currentStep && styles.stepNumberActive]}>
                                         {index + 1}

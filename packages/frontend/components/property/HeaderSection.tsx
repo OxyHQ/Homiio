@@ -25,7 +25,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({
     return (
         <>
             <Image
-                source={getPropertyImageSource(images)}
+                source={getPropertyImageSource(images[0])}
                 style={Platform.OS === 'web' ? styles.mainImageWeb : styles.mainImage}
                 resizeMode="cover"
             />
@@ -91,10 +91,10 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 300,
         marginTop: -50,
-    } as any,
+    },
     mainImageWeb: {
         width: '100%',
         height: 300,
         marginTop: -80,
-    } as any,
+    },
 });

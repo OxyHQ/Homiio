@@ -115,9 +115,9 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     if (!activeSessionId) return [];
 
     return allProfiles.filter(
-      (profile) =>
+      (profile): boolean =>
         profile.profileType === 'agency' &&
-        (profile as any).ownerId === activeSessionId,
+        (profile as Profile & { ownerId?: string }).ownerId === activeSessionId,
     );
   }, [allProfiles, activeSessionId]);
 

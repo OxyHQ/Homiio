@@ -115,18 +115,21 @@ export async function createNotification(
 
 export async function scheduleNotification(
   content: NotificationContent,
-  trigger: any,
-  repeats: boolean = false
+  trigger: import('expo-notifications').NotificationTriggerInput,
+  _repeats: boolean = false
 ): Promise<string> {
   if (!Notifications) {
     throw new Error('Notifications not supported on web');
   }
 
+  // Note: in expo-notifications, `repeats` is a property of the trigger
+  // (TimeInterval/Calendar/etc.), so callers encode it directly in `trigger`.
+  // The `_repeats` parameter is retained only for backwards-compatible call
+  // sites and is intentionally not forwarded to the request.
   try {
     const notificationId = await Notifications.scheduleNotificationAsync({
       content,
       trigger,
-      repeats,
     });
 
     return notificationId;
@@ -205,11 +208,13 @@ export async function setupNotifications() {
     Notifications.setNotificationHandler({
       handleNotification: async (notification) => {
         const { data } = notification.request.content;
+        const isSilent = data?.type === 'silent';
 
         return {
-          shouldShowAlert: true,
+          shouldShowBanner: true,
+          shouldShowList: true,
           shouldPlaySound: true,
-          shouldSetBadge: data?.type !== 'silent',
+          shouldSetBadge: !isSilent,
         };
       },
     });
@@ -298,6 +303,10 @@ export async function createReminderNotification(
   date: Date,
   data: Record<string, any> = {}
 ) {
+  if (!Notifications) {
+    throw new Error('Notifications not supported on web');
+  }
+
   return scheduleNotification(
     {
       title,
@@ -311,6 +320,7 @@ export async function createReminderNotification(
       priority: 'normal',
     },
     {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
       date,
     }
   );
@@ -322,7 +332,12 @@ export async function createRepeatingNotification(
   interval: 'hour' | 'day' | 'week',
   data: Record<string, any> = {}
 ) {
-  const trigger = {
+  if (!Notifications) {
+    throw new Error('Notifications not supported on web');
+  }
+
+  const trigger: import('expo-notifications').TimeIntervalTriggerInput = {
+    type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
     seconds: interval === 'hour' ? 3600 : interval === 'day' ? 86400 : 604800,
     repeats: true,
   };

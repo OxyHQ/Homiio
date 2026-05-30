@@ -14,8 +14,6 @@ import { Property } from '@homiio/shared-types';
 import { PropertyCard } from './PropertyCard';
 import { Button } from '@oxyhq/bloom/button';
 
-const IconComponent = Ionicons as any;
-
 interface EditNotesBottomSheetProps {
   propertyId: string;
   propertyTitle: string;
@@ -73,7 +71,7 @@ export function EditNotesBottomSheet({
       <View style={styles.header}>
         <ThemedText style={styles.title}>Edit Notes</ThemedText>
         <TouchableOpacity onPress={handleCancel} style={styles.closeButton}>
-          <IconComponent name="close" size={24} color={colors.COLOR_BLACK_LIGHT_4} />
+          <Ionicons name="close" size={24} color={colors.COLOR_BLACK_LIGHT_4} />
         </TouchableOpacity>
       </View>
 
@@ -84,7 +82,7 @@ export function EditNotesBottomSheet({
             property={property}
             variant="compact"
             orientation="horizontal"
-            showFavoriteButton={false}
+            showSaveButton={false}
             showVerifiedBadge={false}
             showTypeIcon={false}
             showFeatures={false}

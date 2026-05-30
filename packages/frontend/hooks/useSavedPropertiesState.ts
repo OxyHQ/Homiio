@@ -13,6 +13,7 @@ import type {
   OptimisticUpdate,
 } from '@/types/savedProperties';
 import { LoadingState } from '@/types/savedProperties';
+import { logger } from '@/utils/logger';
 
 /**
  * Initial state for saved properties
@@ -411,10 +412,12 @@ class SavedPropertiesEventBusImpl implements SavedPropertiesEventBus {
   private listeners = new Map<string, Set<Function>>();
 
   on(event: string, callback: Function): () => void {
-    if (!this.listeners.has(event)) {
-      this.listeners.set(event, new Set());
+    let eventListeners = this.listeners.get(event);
+    if (!eventListeners) {
+      eventListeners = new Set();
+      this.listeners.set(event, eventListeners);
     }
-    this.listeners.get(event)!.add(callback);
+    eventListeners.add(callback);
 
     // Return unsubscribe function
     return () => {
@@ -435,6 +438,7 @@ class SavedPropertiesEventBusImpl implements SavedPropertiesEventBus {
         try {
           callback(data);
         } catch (error) {
+          logger.error(`SavedPropertiesEventBus listener for "${event}" threw`, error);
         }
       });
     }

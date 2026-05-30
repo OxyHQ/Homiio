@@ -1,19 +1,17 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
 import { colors } from '@/styles/colors';
 import { getAmenityById } from '@/constants/amenities';
 
-// Type assertion for Ionicons compatibility with React 19
-const IconComponent = Ionicons as any;
 
 type AmenitiesDisplayProps = {
   amenities: string[];
   title?: string;
   showEmptyState?: boolean;
   emptyStateText?: string;
-  style?: any;
+  style?: StyleProp<ViewStyle>;
 };
 
 export function AmenitiesDisplay({
@@ -30,7 +28,7 @@ export function AmenitiesDisplay({
       <View style={[styles.container, style]}>
         <ThemedText style={styles.title}>{title}</ThemedText>
         <View style={styles.emptyContainer}>
-          <IconComponent name="home-outline" size={48} color={colors.COLOR_BLACK_LIGHT_4} />
+          <Ionicons name="home-outline" size={48} color={colors.COLOR_BLACK_LIGHT_4} />
           <ThemedText style={styles.emptyText}>{emptyStateText}</ThemedText>
         </View>
       </View>
@@ -54,8 +52,8 @@ export function AmenitiesDisplay({
               ]}
             >
               {amenityConfig && (
-                <IconComponent
-                  name={amenityConfig.icon as any}
+                <Ionicons
+                  name={amenityConfig.icon}
                   size={16}
                   color={
                     amenityConfig.accessibility

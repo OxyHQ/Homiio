@@ -1,0 +1,120 @@
+---
+title: Getting started
+description: Clone, install, configure environment, and run Homiio locally for the first time.
+order: 1
+---
+
+# Getting started
+
+Homiio is a Bun workspaces monorepo with three packages: `@homiio/frontend` (Expo / React Native), `@homiio/backend` (Express + Mongoose), and `@homiio/shared-types` (pure TypeScript). This guide takes you from a clean checkout to a running dev environment.
+
+## Prerequisites
+
+- **Node.js 22.x** — pinned in the root `engines` field. Use `nvm` / `fnm` / `mise` to switch.
+- **Bun 1.0+** — the only supported package manager. `npm` and `yarn` are not maintained.
+- **MongoDB** — local instance (`brew install mongodb-community` on macOS, or run `mongod` in Docker). Hosted Atlas works equally well.
+- **iOS development**: macOS + Xcode 16 with the iOS 17 simulator.
+- **Android development**: Android Studio with at least one configured AVD.
+- **Web only**: nothing extra — `bun run dev:frontend` then press `w`.
+
+Optional but recommended: Stripe CLI (for webhook forwarding in dev), AWS credentials with S3 access (for the image pipeline), an OpenAI API key (for Sindi).
+
+## Clone and install
+
+```sh
+git clone https://github.com/OxyHQ/Homiio.git
+cd Homiio
+bun install
+```
+
+`bun install` resolves every workspace, then runs `bun run build:shared-types` as `postinstall`. Without that build the frontend and backend cannot resolve `@homiio/shared-types/dist`, so the postinstall step is load-bearing — do not skip it.
+
+## Configure environment
+
+Two env files, one per backed service.
+
+`packages/backend/.env`:
+
+```env
+MONGODB_URI=mongodb://localhost:27017/homiio
+OXY_API_URL=https://api.oxy.so
+PORT=4000
+NODE_ENV=development
+
+# Stripe (optional in dev — endpoints return 501 STRIPE_NOT_CONFIGURED if unset)
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRICE_PLUS=price_...
+STRIPE_PRICE_FILE=price_...
+STRIPE_SUCCESS_URL=http://localhost:8081/success
+STRIPE_CANCEL_URL=http://localhost:8081/profile/subscriptions
+
+# OpenAI — required for the Sindi assistant
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o
+
+# AWS S3 — required for image uploads
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_REGION=eu-west-1
+AWS_S3_BUCKET=homiio-images
+```
+
+`packages/frontend/.env`:
+
+```env
+EXPO_PUBLIC_OXY_BASE_URL=https://api.oxy.so
+API_URL=http://localhost:4000
+
+# Optional Stripe Payment Link fallbacks for when Checkout API is unavailable
+EXPO_PUBLIC_STRIPE_LINK_PLUS=https://buy.stripe.com/...
+EXPO_PUBLIC_STRIPE_LINK_FILE=https://buy.stripe.com/...
+```
+
+In production, `EXPO_PUBLIC_OXY_BASE_URL` should point at the Oxy production API (`https://api.oxy.so`). In local dev, the frontend defaults to `http://192.168.86.44:3001` if you do not override — replace that with whatever LAN address actually serves Oxy locally.
+
+## Run the dev servers
+
+```sh
+# Start frontend and backend in parallel
+bun run dev
+
+# Or run them in separate terminals
+bun run dev:backend     # nodemon + ts-node, http://localhost:4000
+bun run dev:frontend    # Expo with --tunnel, opens the dev menu
+```
+
+Inside the Expo CLI:
+
+- Press `w` for the web preview.
+- Press `i` for the iOS simulator.
+- Press `a` for the Android emulator.
+- Press `r` to reload, `j` to open the JS debugger.
+
+The backend exposes `GET /health` (unauthenticated) — hit it from a second terminal to confirm Mongo is connected:
+
+```sh
+curl http://localhost:4000/health | jq
+```
+
+If `database.status` is anything other than `"connected"`, check the `MONGODB_URI` value and that `mongod` is running.
+
+## Build for production
+
+```sh
+bun run build           # All packages
+bun run build:frontend  # Expo web export -> packages/frontend/dist
+bun run build:backend   # tsc -> packages/backend/dist
+```
+
+The frontend web export is what Vercel deploys. The backend is deployed separately — see [Deployment](./deployment).
+
+## Useful scripts
+
+```sh
+bun run test            # Run tests across all packages
+bun run lint            # Lint all packages
+bun run clean           # Remove dist directories and node_modules
+```
+
+For backend-only diagnostics (Stripe wiring, subscription state, image upload smoke test) check `packages/backend/scripts/` — every script is invoked via `ts-node --transpile-only`.

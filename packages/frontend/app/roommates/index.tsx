@@ -117,7 +117,7 @@ export default function RoommatesPage() {
   const statusQuery = useQuery({
     queryKey: ['roommates', 'status'],
     queryFn: async () =>
-      roommateService.getMyRoommateStatus(oxyServices!, activeSessionId!),
+      roommateService.getMyRoommateStatus(oxyServices, activeSessionId ?? undefined),
     enabled: Boolean(oxyServices && activeSessionId),
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,
@@ -238,8 +238,8 @@ export default function RoommatesPage() {
     queryKey: ['roommates', 'preferences'],
     queryFn: async () =>
       roommateService.getMyRoommatePreferences(
-        oxyServices!,
-        activeSessionId!,
+        oxyServices,
+        activeSessionId ?? undefined,
       ),
     enabled: Boolean(oxyServices && activeSessionId),
     staleTime: 1000 * 30,

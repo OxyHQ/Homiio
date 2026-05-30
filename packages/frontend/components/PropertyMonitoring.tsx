@@ -3,6 +3,17 @@ import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { LineChart } from 'react-native-chart-kit';
+import type { LineChartData } from 'react-native-chart-kit/dist/line-chart/LineChart';
+
+interface UtilityData {
+  data: LineChartData;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+  unit: string;
+  current: number;
+  average: number;
+  saving: string;
+}
 
 // Dummy data for the chart
 const mockElectricityData = {
@@ -57,7 +68,7 @@ export function PropertyMonitoring({
 }: PropertyMonitoringProps) {
   const [selectedUtility, setSelectedUtility] = useState<UtilityType>('electricity');
 
-  const getUtilityData = (type: UtilityType) => {
+  const getUtilityData = (type: UtilityType): UtilityData => {
     switch (type) {
       case 'electricity':
         return {
@@ -185,7 +196,7 @@ export function PropertyMonitoring({
         <View style={styles.statBox}>
           <Text style={styles.statLabel}>Current Usage</Text>
           <View style={styles.statValueContainer}>
-            <Ionicons name={utilityData.icon as any} size={24} color={utilityData.color} />
+            <Ionicons name={utilityData.icon} size={24} color={utilityData.color} />
             <Text style={[styles.statValue, { color: utilityData.color }]}>
               {utilityData.current} {utilityData.unit}
             </Text>

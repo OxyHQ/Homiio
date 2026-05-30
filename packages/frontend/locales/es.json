@@ -902,7 +902,9 @@
       "privacy": "Política de privacidad"
     },
     "collapse": "Contraer barra lateral",
-    "expand": "Expandir barra lateral"
+    "expand": "Expandir barra lateral",
+    "open": "Abrir menú",
+    "close": "Cerrar menú"
   },
   "saved": {
     "header": "Guardados",

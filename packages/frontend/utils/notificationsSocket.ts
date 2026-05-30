@@ -7,7 +7,7 @@ import { SOCKET_CONFIG, getReconnectDelay, debug } from './socketConfig';
 
 let notificationSocket: Socket | null = null;
 let retryCount = 0;
-let tokenRefreshTimeout: NodeJS.Timeout | null = null;
+let tokenRefreshTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const refreshSocketToken = async (socket: Socket) => {
   try {
@@ -176,7 +176,7 @@ export const disconnectNotificationSocket = (): void => {
   }
 
   if (notificationSocket) {
-    console.log('Manually disconnecting notification socket');
+    debug.log('Manually disconnecting notification socket');
     notificationSocket.disconnect();
     notificationSocket = null;
     retryCount = 0;

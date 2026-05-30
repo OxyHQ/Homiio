@@ -24,8 +24,44 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useUserLeases, useHasRentalProperties } from '@/hooks/useLeaseQueries';
 import type { Lease } from '@/services/leaseService';
+import type { Profile } from '@homiio/shared-types';
+import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { radius, spacing, withShadow } from '@/constants/styles';
 import { colors } from '@/styles/colors';
+
+/**
+ * Derive a human-readable name from a Homiio Profile. Profiles do not carry a
+ * raw person name; the displayable identity depends on the profile type
+ * (matches the derivation used in LandlordSection / HostStatsCard).
+ */
+const profileDisplayName = (profile?: Profile): string => {
+  if (!profile) return 'Unknown';
+  switch (profile.profileType) {
+    case 'agency':
+      return profile.agencyProfile?.legalCompanyName || profile.oxyUserId || 'Real Estate Agency';
+    case 'business':
+      return profile.businessProfile?.legalCompanyName || profile.oxyUserId || 'Property Management';
+    case 'cooperative':
+      return profile.cooperativeProfile?.legalName || profile.oxyUserId || 'Housing Cooperative';
+    case 'personal':
+    default:
+      return profile.oxyUserId || 'Unknown';
+  }
+};
+
+/**
+ * Build a display title for the property a lease is attached to. Properties
+ * have no `title` field, so derive one from the address/type.
+ */
+const leasePropertyTitle = (property?: Lease['property']): string => {
+  if (!property) return 'Property';
+  return generatePropertyTitle({
+    type: property.type,
+    address: property.address,
+    bedrooms: property.bedrooms,
+    bathrooms: property.bathrooms,
+  });
+};
 
 type FilterOption = 'all' | 'active' | 'pending_signature' | 'expired' | 'draft';
 
@@ -69,27 +105,22 @@ export default function ContractsScreen() {
 
   const contracts = useMemo(() => {
     if (!leasesData?.leases) return [];
-    return leasesData.leases.map((lease: Lease) => ({
-      id: lease.id,
-      title:
-        lease.property?.title ||
-        `Lease for ${lease.property?.address?.street || 'Property'}`,
-      propertyId: lease.propertyId,
-      propertyName:
-        lease.property?.title ||
-        `${lease.property?.address?.street}, ${lease.property?.address?.city}`,
-      startDate: lease.startDate,
-      endDate: lease.endDate,
-      status: lease.status as ContractStatus,
-      landlordName: lease.landlord
-        ? `${lease.landlord.firstName} ${lease.landlord.lastName}`
-        : 'Unknown',
-      tenantName: lease.tenant
-        ? `${lease.tenant.firstName} ${lease.tenant.lastName}`
-        : 'Unknown',
-      monthlyRent: lease.rent.amount,
-      currency: lease.rent.currency,
-    }));
+    return leasesData.leases.map((lease: Lease) => {
+      const propertyTitle = leasePropertyTitle(lease.property);
+      return {
+        id: lease.id,
+        title: propertyTitle,
+        propertyId: lease.propertyId,
+        propertyName: propertyTitle,
+        startDate: lease.startDate,
+        endDate: lease.endDate,
+        status: lease.status as ContractStatus,
+        landlordName: profileDisplayName(lease.landlord),
+        tenantName: profileDisplayName(lease.tenant),
+        monthlyRent: lease.rent.amount,
+        currency: lease.rent.currency,
+      };
+    });
   }, [leasesData]);
 
   const filteredContracts = useMemo(() => {
@@ -114,7 +145,7 @@ export default function ContractsScreen() {
             titlePosition: 'center',
           }}
         />
-        <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
+        <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <EmptyState
             icon="document-text-outline"
             title={t('No rental contracts')}
@@ -138,7 +169,7 @@ export default function ContractsScreen() {
           titlePosition: 'center',
         }}
       />
-      <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
+      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.titleBlock}>
             <SectionEyebrow>Agreements</SectionEyebrow>

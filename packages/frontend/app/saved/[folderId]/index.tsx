@@ -85,7 +85,7 @@ export default function SavedFolderScreen() {
     return (
       <View style={styles.gridItem}>
         <PropertyCard
-          property={item as any}
+          property={item}
           variant="compact"
           orientation="vertical"
           onPress={() => {

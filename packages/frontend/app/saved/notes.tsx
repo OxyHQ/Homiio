@@ -9,6 +9,7 @@ import {
   Alert,
   Image,
   ScrollView,
+  type ImageSourcePropType,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,7 +30,10 @@ import {
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 
 import { useSavedNotesMutation } from '@/hooks/useSavedNotes';
+import { logger } from '@/utils/logger';
 // removed useOxy; mutation hook reads auth internally
+
+type NotesFilter = 'all' | 'active' | 'pinned' | 'archived';
 
 export default function NotesScreen() {
   const { t } = useTranslation();
@@ -42,7 +46,7 @@ export default function NotesScreen() {
       propertyId: string;
       note: PropertyNote;
       title: string;
-      image: any;
+      image: ImageSourcePropType;
       price?: number;
       currency?: string;
       location?: string;
@@ -51,7 +55,7 @@ export default function NotesScreen() {
     }[] = [];
     savedProperties.forEach((p) => {
       const pid = (p._id || p.id) as string;
-      const notesArr = parseNotesString(p.notes as any);
+      const notesArr = parseNotesString(p.notes);
       const title = getPropertyTitle(p) || p.address?.city || 'Property';
       const image = getPropertyImageSource(p);
       const price = p.rent?.amount;
@@ -81,7 +85,7 @@ export default function NotesScreen() {
   );
   const [text, setText] = useState('');
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'active' | 'pinned' | 'archived'>('all');
+  const [filter, setFilter] = useState<NotesFilter>('all');
 
   const handleSaveNote = useCallback(async () => {
     if (!editing) return;
@@ -94,7 +98,7 @@ export default function NotesScreen() {
     try {
       const prop = savedProperties.find((p) => (p._id || p.id) === targetPropId);
       if (!prop) return;
-      const currentNotes = parseNotesString(prop.notes as any);
+      const currentNotes = parseNotesString(prop.notes);
       const updatedNotes = upsertNote(currentNotes, { id: note?.id, text });
       const payload = serializeNotesArray(updatedNotes);
       await updateNotesMutate({ propertyId: targetPropId, notes: payload });
@@ -102,7 +106,8 @@ export default function NotesScreen() {
       setEditing(null);
       setText('');
       Alert.alert(t('common.success'), t('common.update'));
-    } catch {
+    } catch (error: unknown) {
+      logger.error('Failed to save note:', error);
       Alert.alert(t('common.error'), t('saved.errors.updateNotesFailed'));
     }
   }, [editing, text, updateNotesMutate, savedProperties, selectedPropertyId, t, loadSavedProperties]);
@@ -112,12 +117,13 @@ export default function NotesScreen() {
       try {
         const prop = savedProperties.find((p) => (p._id || p.id) === propertyId);
         if (!prop) return;
-        const updatedNotes = deleteNote(parseNotesString(prop.notes as any), noteId);
+        const updatedNotes = deleteNote(parseNotesString(prop.notes), noteId);
         const payload = serializeNotesArray(updatedNotes);
         await updateNotesMutate({ propertyId, notes: payload });
         await loadSavedProperties();
         Alert.alert(t('common.success'), t('common.update'));
-      } catch {
+      } catch (error: unknown) {
+        logger.error('Failed to delete note:', error);
         Alert.alert(t('common.error'), t('saved.errors.updateNotesFailed'));
       }
     },
@@ -128,7 +134,7 @@ export default function NotesScreen() {
     async (propertyId: string, mutator: (arr: PropertyNote[]) => PropertyNote[]) => {
       const prop = savedProperties.find((p) => (p._id || p.id) === propertyId);
       if (!prop) return;
-      const updated = mutator(parseNotesString(prop.notes as any));
+      const updated = mutator(parseNotesString(prop.notes));
       await updateNotesMutate({ propertyId, notes: serializeNotesArray(updated) });
       await loadSavedProperties();
     },
@@ -139,7 +145,8 @@ export default function NotesScreen() {
     async (propertyId: string, noteId: string) => {
       try {
         await persistNotes(propertyId, (arr) => toggleArchive(arr, noteId));
-      } catch {
+      } catch (error: unknown) {
+        logger.error('Failed to toggle note archive:', error);
         Alert.alert(t('common.error'), t('saved.errors.updateNotesFailed'));
       }
     },
@@ -150,7 +157,8 @@ export default function NotesScreen() {
     async (propertyId: string, noteId: string) => {
       try {
         await persistNotes(propertyId, (arr) => togglePin(arr, noteId));
-      } catch {
+      } catch (error: unknown) {
+        logger.error('Failed to toggle note pin:', error);
         Alert.alert(t('common.error'), t('saved.errors.updateNotesFailed'));
       }
     },
@@ -161,16 +169,16 @@ export default function NotesScreen() {
     <View style={styles.container}>
       <Header options={{ title: t('saved.notes.title', 'Notes'), showBackButton: true }} />
       <View style={styles.tabsContainer}>
-        {[
+        {([
           { key: 'all', label: 'All' },
           { key: 'active', label: 'Active' },
           { key: 'pinned', label: 'Pinned' },
           { key: 'archived', label: 'Archived' },
-        ].map((tab) => (
+        ] satisfies { key: NotesFilter; label: string }[]).map((tab) => (
           <TouchableOpacity
             key={tab.key}
             style={[styles.tabItem, filter === tab.key && styles.tabItemActive]}
-            onPress={() => setFilter(tab.key as any)}
+            onPress={() => setFilter(tab.key)}
           >
             <Text style={[styles.tabText, filter === tab.key && styles.tabTextActive]}>
               {tab.label}

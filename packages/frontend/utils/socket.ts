@@ -7,7 +7,7 @@ import { SOCKET_CONFIG, getReconnectDelay, debug, isAuthError } from './socketCo
 const SOCKET_URL = API_URL_SOCKET || 'ws://localhost:3000';
 let socket: Socket | null = null;
 let retryCount = 0;
-let tokenRefreshTimeout: NodeJS.Timeout | null = null;
+let tokenRefreshTimeout: ReturnType<typeof setTimeout> | null = null;
 let transportFallbackAttempted = false;
 
 const refreshSocketToken = async (socket: Socket) => {
@@ -159,7 +159,7 @@ export const disconnectSocket = () => {
   }
 
   if (socket) {
-    console.log('Manually disconnecting socket');
+    debug.log('Manually disconnecting socket');
     socket.disconnect();
     socket = null;
     retryCount = 0;
