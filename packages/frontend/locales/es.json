@@ -62,9 +62,28 @@
   "error.message.delete_timeout": "Tiempo de espera al eliminar. Por favor, inténtalo de nuevo.",
   "error.signup.missing_fields": "Por favor, completa todos los campos",
   "error.signup.failed": "Error en el registro:",
-  "error.boundary.title": "¡Ups! Algo salió mal",
-  "error.boundary.message": "Nos disculpamos por las molestias. Por favor, inténtalo de nuevo.",
+  "error.boundary.title": "Algo salió mal",
+  "error.boundary.message": "Un problema inesperado interrumpió lo que estabas haciendo. Puedes volver a intentarlo o enviarnos un informe rápido para que lo revisemos.",
   "error.boundary.retry": "Reintentar",
+  "error.boundary.reportIssue": "Informar del problema",
+  "error.boundary.errorId": "ID de error",
+  "error.boundary.copyIdHint": "Toca para copiar el ID",
+  "error.boundary.copiedToClipboard": "Copiado al portapapeles",
+  "error.boundary.showDetails": "Mostrar detalles técnicos",
+  "error.boundary.hideDetails": "Ocultar detalles técnicos",
+  "error.boundary.technicalDetails": "Detalles técnicos",
+  "error.boundary.maxRetriesTitle": "Sigue sin funcionar",
+  "error.boundary.maxRetriesMessage": "Has alcanzado el límite de reintentos. Por favor, informa del problema para que podamos revisarlo.",
+  "error.boundary.forceRetry": "Forzar reintento",
+  "error.boundary.reportCopiedTitle": "Informe copiado",
+  "error.boundary.reportCopiedMessage": "El informe del error se ha copiado al portapapeles.",
+  "error.boundary.reportFailedTitle": "No se pudo copiar",
+  "error.boundary.reportFailedMessage": "No pudimos copiar el informe al portapapeles. Por favor, inténtalo de nuevo.",
+  "error.boundary.errorMessage": "Mensaje de error",
+  "error.boundary.errorType": "Tipo de error",
+  "error.boundary.stackTrace": "Traza de pila",
+  "error.boundary.componentStack": "Pila de componentes",
+  "error.boundary.deviceInformation": "Información del dispositivo",
   "error.file_selection": "Error al procesar los archivos seleccionados. Por favor, inténtalo de nuevo.",
   "error.login_required": "Por favor, inicia sesión para gestionar archivos",
   "error.load_notifications": "Error al cargar notificaciones",
@@ -80,6 +99,7 @@
   "error.chat.load_failed": "Error al cargar mensajes",
   "error.data.fetch_failed": "Error al obtener datos: {{message}}",
   "error.users.fetch_failed": "Error al obtener usuarios: {{message}}",
+  "mailbox.title": "Buzón",
   "notification.welcome.title": "¡Bienvenido a Homiio! 👋",
   "notification.welcome.body": "Gracias por probar nuestra aplicación. ¡Comienza a explorar ahora!",
   "success.signup": "Registro exitoso",
@@ -840,7 +860,13 @@
       "profile": "Perfil",
       "payments": "Pagos",
       "roommates": "Compañeros de Cuarto",
-      "settings": "Configuración"
+      "settings": "Configuración",
+      "applications": "Mis solicitudes",
+      "stays": "Estancias",
+      "tips": "Consejos",
+      "hostCalendar": "Calendario de anfitrión",
+      "hostReservations": "Reservas de anfitrión",
+      "landlordApplications": "Bandeja de solicitudes"
     },
     "actions": {
       "addProperty": "Agregar Propiedad",
@@ -852,7 +878,34 @@
     },
     "footer": {
       "brandName": "Homiio - Plataforma de Vivienda Ética"
-    }
+    },
+    "mode": {
+      "longTerm": "Larga estancia",
+      "vacation": "Vacaciones"
+    },
+    "savedProperties": {
+      "title": "Carpetas guardadas",
+      "empty": "Aún no hay carpetas guardadas",
+      "viewAll": "Ver todo"
+    },
+    "recent": {
+      "title": "Vistas recientemente",
+      "today": "Hoy",
+      "yesterday": "Ayer",
+      "earlier": "Antes",
+      "empty": "Las propiedades que veas aparecerán aquí",
+      "remove": "Quitar de recientes"
+    },
+    "menu": {
+      "account": "Cuenta",
+      "mailbox": "Buzón",
+      "terms": "Términos del servicio",
+      "privacy": "Política de privacidad"
+    },
+    "collapse": "Contraer barra lateral",
+    "expand": "Expandir barra lateral",
+    "open": "Abrir menú",
+    "close": "Cerrar menú"
   },
   "saved": {
     "header": "Guardados",

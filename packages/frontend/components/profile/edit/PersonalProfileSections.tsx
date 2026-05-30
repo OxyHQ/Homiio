@@ -1,0 +1,763 @@
+import React from 'react';
+import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+import { TrustScore } from '@/components/TrustScore';
+import { profileEditStyles as styles } from './styles';
+import type {
+  PersonalInfoForm,
+  PreferencesForm,
+  ReasonForLeavingValue,
+  ReferenceForm,
+  ReferenceRelationshipValue,
+  RentalHistoryForm,
+  SettingsForm,
+} from './types';
+
+const EMPLOYMENT_STATUSES = [
+  'employed',
+  'self_employed',
+  'student',
+  'retired',
+  'unemployed',
+  'other',
+] as const;
+
+const LEASE_DURATIONS = ['monthly', '3_months', '6_months', 'yearly', 'flexible'] as const;
+
+const PRICE_UNITS = ['day', 'night', 'week', 'month', 'year'] as const;
+
+const PROPERTY_TYPES = ['apartment', 'house', 'room', 'studio'] as const;
+
+const AMENITIES = [
+  'parking',
+  'gym',
+  'pool',
+  'washer',
+  'dishwasher',
+  'balcony',
+  'elevator',
+  'ac',
+  'heating',
+  'internet',
+] as const;
+
+const REFERENCE_RELATIONSHIPS = ['landlord', 'employer', 'personal', 'other'] as const;
+
+const REASONS_FOR_LEAVING = [
+  'lease_ended',
+  'bought_home',
+  'job_relocation',
+  'family_reasons',
+  'upgrade',
+  'other',
+] as const;
+
+const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+const titleizeUnderscore = (value: string) => value.replace('_', ' ').toUpperCase();
+
+interface PersonalProfileSectionsProps {
+  activeSection: string;
+  personalInfo: PersonalInfoForm;
+  preferences: PreferencesForm;
+  settings: SettingsForm;
+  references: ReferenceForm[];
+  rentalHistory: RentalHistoryForm[];
+  trustScoreData: { score: number; factors: { type: string; value: number; maxValue: number; label: string }[] };
+  updatePersonalInfo: (updates: Partial<PersonalInfoForm>) => void;
+  updatePreferences: (updates: Partial<PreferencesForm>) => void;
+  updateSettings: (updates: Partial<SettingsForm>) => void;
+  toggleAmenity: (amenity: string) => void;
+  togglePropertyType: (type: string) => void;
+  addReference: () => void;
+  updateReference: (index: number, updates: Partial<ReferenceForm>) => void;
+  removeReference: (index: number) => void;
+  addRentalHistory: () => void;
+  updateRentalHistory: (index: number, updates: Partial<RentalHistoryForm>) => void;
+  removeRentalHistory: (index: number) => void;
+}
+
+export function PersonalProfileSections({
+  activeSection,
+  personalInfo,
+  preferences,
+  settings,
+  references,
+  rentalHistory,
+  trustScoreData,
+  updatePersonalInfo,
+  updatePreferences,
+  updateSettings,
+  toggleAmenity,
+  togglePropertyType,
+  addReference,
+  updateReference,
+  removeReference,
+  addRentalHistory,
+  updateRentalHistory,
+  removeRentalHistory,
+}: PersonalProfileSectionsProps) {
+  switch (activeSection) {
+    case 'personal':
+      return (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Personal Information</Text>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Bio</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={personalInfo.bio}
+              onChangeText={(text) => updatePersonalInfo({ bio: text })}
+              placeholder="Tell us about yourself..."
+              multiline
+              numberOfLines={4}
+            />
+          </View>
+
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>Occupation</Text>
+              <TextInput
+                style={styles.input}
+                value={personalInfo.occupation}
+                onChangeText={(text) => updatePersonalInfo({ occupation: text })}
+                placeholder="e.g., Software Engineer"
+              />
+            </View>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>Employer</Text>
+              <TextInput
+                style={styles.input}
+                value={personalInfo.employer}
+                onChangeText={(text) => updatePersonalInfo({ employer: text })}
+                placeholder="e.g., Tech Corp"
+              />
+            </View>
+          </View>
+
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>Annual Income ($)</Text>
+              <TextInput
+                style={styles.input}
+                value={personalInfo.annualIncome}
+                onChangeText={(text) => updatePersonalInfo({ annualIncome: text })}
+                placeholder="e.g., 75000"
+                keyboardType="numeric"
+              />
+            </View>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>Employment Status</Text>
+              <View style={styles.pickerContainer}>
+                {EMPLOYMENT_STATUSES.map((status) => (
+                  <TouchableOpacity
+                    key={status}
+                    style={[
+                      styles.pickerOption,
+                      personalInfo.employmentStatus === status && styles.pickerOptionSelected,
+                    ]}
+                    onPress={() => updatePersonalInfo({ employmentStatus: status })}
+                  >
+                    <Text
+                      style={[
+                        styles.pickerOptionText,
+                        personalInfo.employmentStatus === status &&
+                          styles.pickerOptionTextSelected,
+                      ]}
+                    >
+                      {titleizeUnderscore(status)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>Move-in Date</Text>
+              <TextInput
+                style={styles.input}
+                value={personalInfo.moveInDate}
+                onChangeText={(text) => updatePersonalInfo({ moveInDate: text })}
+                placeholder="YYYY-MM-DD"
+              />
+            </View>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>Lease Duration</Text>
+              <View style={styles.pickerContainer}>
+                {LEASE_DURATIONS.map((duration) => (
+                  <TouchableOpacity
+                    key={duration}
+                    style={[
+                      styles.pickerOption,
+                      personalInfo.leaseDuration === duration && styles.pickerOptionSelected,
+                    ]}
+                    onPress={() => updatePersonalInfo({ leaseDuration: duration })}
+                  >
+                    <Text
+                      style={[
+                        styles.pickerOptionText,
+                        personalInfo.leaseDuration === duration &&
+                          styles.pickerOptionTextSelected,
+                      ]}
+                    >
+                      {titleizeUnderscore(duration)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
+        </View>
+      );
+
+    case 'preferences':
+      return (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Property Preferences</Text>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Maximum Rent ($)</Text>
+            <TextInput
+              style={styles.input}
+              value={preferences.maxRent}
+              onChangeText={(text) => updatePreferences({ maxRent: text })}
+              placeholder="Enter maximum rent"
+              keyboardType="numeric"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Rent Period</Text>
+            <View style={styles.pickerContainer}>
+              {PRICE_UNITS.map((unit) => (
+                <TouchableOpacity
+                  key={unit}
+                  style={[
+                    styles.pickerOption,
+                    preferences.priceUnit === unit && styles.pickerOptionSelected,
+                  ]}
+                  onPress={() => updatePreferences({ priceUnit: unit })}
+                >
+                  <Text
+                    style={[
+                      styles.pickerOptionText,
+                      preferences.priceUnit === unit && styles.pickerOptionTextSelected,
+                    ]}
+                  >
+                    {capitalize(unit)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>Min Bedrooms</Text>
+              <TextInput
+                style={styles.input}
+                value={preferences.minBedrooms}
+                onChangeText={(text) => updatePreferences({ minBedrooms: text })}
+                placeholder="0"
+                keyboardType="numeric"
+              />
+            </View>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>Min Bathrooms</Text>
+              <TextInput
+                style={styles.input}
+                value={preferences.minBathrooms}
+                onChangeText={(text) => updatePreferences({ minBathrooms: text })}
+                placeholder="0"
+                keyboardType="numeric"
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Property Types</Text>
+            <View style={styles.checkboxGroup}>
+              {PROPERTY_TYPES.map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.checkbox,
+                    preferences.propertyTypes.includes(type) && styles.checkboxSelected,
+                  ]}
+                  onPress={() => togglePropertyType(type)}
+                >
+                  <Text
+                    style={[
+                      styles.checkboxText,
+                      preferences.propertyTypes.includes(type) && styles.checkboxTextSelected,
+                    ]}
+                  >
+                    {capitalize(type)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Preferred Amenities</Text>
+            <View style={styles.checkboxGroup}>
+              {AMENITIES.map((amenity) => (
+                <TouchableOpacity
+                  key={amenity}
+                  style={[
+                    styles.checkbox,
+                    preferences.preferredAmenities.includes(amenity) && styles.checkboxSelected,
+                  ]}
+                  onPress={() => toggleAmenity(amenity)}
+                >
+                  <Text
+                    style={[
+                      styles.checkboxText,
+                      preferences.preferredAmenities.includes(amenity) &&
+                        styles.checkboxTextSelected,
+                    ]}
+                  >
+                    {capitalize(amenity)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Additional Preferences</Text>
+            <View style={styles.switchGroup}>
+              <TouchableOpacity
+                style={[styles.switch, preferences.petFriendly && styles.switchActive]}
+                onPress={() => updatePreferences({ petFriendly: !preferences.petFriendly })}
+              >
+                <Text
+                  style={[styles.switchText, preferences.petFriendly && styles.switchTextActive]}
+                >
+                  Pet Friendly
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.switch, preferences.smokingAllowed && styles.switchActive]}
+                onPress={() => updatePreferences({ smokingAllowed: !preferences.smokingAllowed })}
+              >
+                <Text
+                  style={[styles.switchText, preferences.smokingAllowed && styles.switchTextActive]}
+                >
+                  Smoking Allowed
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.switch, preferences.furnished && styles.switchActive]}
+                onPress={() => updatePreferences({ furnished: !preferences.furnished })}
+              >
+                <Text style={[styles.switchText, preferences.furnished && styles.switchTextActive]}>
+                  Furnished
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.switch, preferences.parkingRequired && styles.switchActive]}
+                onPress={() => updatePreferences({ parkingRequired: !preferences.parkingRequired })}
+              >
+                <Text
+                  style={[
+                    styles.switchText,
+                    preferences.parkingRequired && styles.switchTextActive,
+                  ]}
+                >
+                  Parking Required
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.switch, preferences.accessibility && styles.switchActive]}
+                onPress={() => updatePreferences({ accessibility: !preferences.accessibility })}
+              >
+                <Text
+                  style={[styles.switchText, preferences.accessibility && styles.switchTextActive]}
+                >
+                  Accessibility Features
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      );
+
+    case 'references':
+      return (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>References</Text>
+            <TouchableOpacity style={styles.addButton} onPress={addReference}>
+              <Text style={styles.addButtonText}>+ Add Reference</Text>
+            </TouchableOpacity>
+          </View>
+
+          {references.map((reference, index) => (
+            <View key={index} style={styles.referenceCard}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>Reference {index + 1}</Text>
+                <TouchableOpacity onPress={() => removeReference(index)}>
+                  <Text style={styles.removeButton}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Name</Text>
+                <TextInput
+                  style={styles.input}
+                  value={reference.name}
+                  onChangeText={(text) => updateReference(index, { name: text })}
+                  placeholder="Full name"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Relationship</Text>
+                <View style={styles.pickerContainer}>
+                  {REFERENCE_RELATIONSHIPS.map((rel) => (
+                    <TouchableOpacity
+                      key={rel}
+                      style={[
+                        styles.pickerOption,
+                        reference.relationship === rel && styles.pickerOptionSelected,
+                      ]}
+                      onPress={() =>
+                        updateReference(index, {
+                          relationship: rel as ReferenceRelationshipValue,
+                        })
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.pickerOptionText,
+                          reference.relationship === rel && styles.pickerOptionTextSelected,
+                        ]}
+                      >
+                        {capitalize(rel)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.row}>
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>Phone</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={reference.phone}
+                    onChangeText={(text) => updateReference(index, { phone: text })}
+                    placeholder="Phone number"
+                    keyboardType="phone-pad"
+                  />
+                </View>
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>Email</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={reference.email}
+                    onChangeText={(text) => updateReference(index, { email: text })}
+                    placeholder="Email address"
+                    keyboardType="email-address"
+                  />
+                </View>
+              </View>
+            </View>
+          ))}
+        </View>
+      );
+
+    case 'rental-history':
+      return (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Rental History</Text>
+            <TouchableOpacity style={styles.addButton} onPress={addRentalHistory}>
+              <Text style={styles.addButtonText}>+ Add History</Text>
+            </TouchableOpacity>
+          </View>
+
+          {rentalHistory.map((history, index) => (
+            <View key={index} style={styles.referenceCard}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>Rental {index + 1}</Text>
+                <TouchableOpacity onPress={() => removeRentalHistory(index)}>
+                  <Text style={styles.removeButton}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Address</Text>
+                <TextInput
+                  style={styles.input}
+                  value={history.address}
+                  onChangeText={(text) => updateRentalHistory(index, { address: text })}
+                  placeholder="Full address"
+                />
+              </View>
+
+              <View style={styles.row}>
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>Start Date</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={history.startDate}
+                    onChangeText={(text) => updateRentalHistory(index, { startDate: text })}
+                    placeholder="YYYY-MM-DD"
+                  />
+                </View>
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>End Date</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={history.endDate}
+                    onChangeText={(text) => updateRentalHistory(index, { endDate: text })}
+                    placeholder="YYYY-MM-DD (optional)"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.row}>
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>Monthly Rent ($)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={history.monthlyRent}
+                    onChangeText={(text) => updateRentalHistory(index, { monthlyRent: text })}
+                    placeholder="e.g., 1500"
+                    keyboardType="numeric"
+                  />
+                </View>
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>Reason for Leaving</Text>
+                  <View style={styles.pickerContainer}>
+                    {REASONS_FOR_LEAVING.map((reason) => (
+                      <TouchableOpacity
+                        key={reason}
+                        style={[
+                          styles.pickerOption,
+                          history.reasonForLeaving === reason && styles.pickerOptionSelected,
+                        ]}
+                        onPress={() =>
+                          updateRentalHistory(index, {
+                            reasonForLeaving: reason as ReasonForLeavingValue,
+                          })
+                        }
+                      >
+                        <Text
+                          style={[
+                            styles.pickerOptionText,
+                            history.reasonForLeaving === reason &&
+                              styles.pickerOptionTextSelected,
+                          ]}
+                        >
+                          {titleizeUnderscore(reason)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Landlord Contact</Text>
+                <View style={styles.row}>
+                  <View style={[styles.inputGroup, styles.halfWidth]}>
+                    <TextInput
+                      style={styles.input}
+                      value={history.landlordContact.name}
+                      onChangeText={(text) =>
+                        updateRentalHistory(index, {
+                          landlordContact: { ...history.landlordContact, name: text },
+                        })
+                      }
+                      placeholder="Landlord name"
+                    />
+                  </View>
+                  <View style={[styles.inputGroup, styles.halfWidth]}>
+                    <TextInput
+                      style={styles.input}
+                      value={history.landlordContact.phone}
+                      onChangeText={(text) =>
+                        updateRentalHistory(index, {
+                          landlordContact: { ...history.landlordContact, phone: text },
+                        })
+                      }
+                      placeholder="Phone"
+                      keyboardType="phone-pad"
+                    />
+                  </View>
+                </View>
+                <TextInput
+                  style={styles.input}
+                  value={history.landlordContact.email}
+                  onChangeText={(text) =>
+                    updateRentalHistory(index, {
+                      landlordContact: { ...history.landlordContact, email: text },
+                    })
+                  }
+                  placeholder="Email"
+                  keyboardType="email-address"
+                />
+              </View>
+            </View>
+          ))}
+        </View>
+      );
+
+    case 'trust-score':
+      return (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Trust Score</Text>
+          <TrustScore
+            score={trustScoreData.score}
+            size="large"
+            showDetails={true}
+            factors={trustScoreData.factors}
+          />
+        </View>
+      );
+
+    case 'settings':
+      return (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Settings</Text>
+
+          <View style={styles.subsection}>
+            <Text style={styles.subsectionTitle}>Notifications</Text>
+            <View style={styles.switchGroup}>
+              <TouchableOpacity
+                style={[styles.switch, settings.notifications.email && styles.switchActive]}
+                onPress={() =>
+                  updateSettings({
+                    notifications: {
+                      ...settings.notifications,
+                      email: !settings.notifications.email,
+                    },
+                  })
+                }
+              >
+                <Text
+                  style={[
+                    styles.switchText,
+                    settings.notifications.email && styles.switchTextActive,
+                  ]}
+                >
+                  Email Notifications
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.switch, settings.notifications.push && styles.switchActive]}
+                onPress={() =>
+                  updateSettings({
+                    notifications: {
+                      ...settings.notifications,
+                      push: !settings.notifications.push,
+                    },
+                  })
+                }
+              >
+                <Text
+                  style={[
+                    styles.switchText,
+                    settings.notifications.push && styles.switchTextActive,
+                  ]}
+                >
+                  Push Notifications
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.subsection}>
+            <Text style={styles.subsectionTitle}>Privacy</Text>
+            <View style={styles.switchGroup}>
+              <TouchableOpacity
+                style={[styles.switch, settings.privacy.showContactInfo && styles.switchActive]}
+                onPress={() =>
+                  updateSettings({
+                    privacy: {
+                      ...settings.privacy,
+                      showContactInfo: !settings.privacy.showContactInfo,
+                    },
+                  })
+                }
+              >
+                <Text
+                  style={[
+                    styles.switchText,
+                    settings.privacy.showContactInfo && styles.switchTextActive,
+                  ]}
+                >
+                  Show Contact Info
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.switch, settings.privacy.showIncome && styles.switchActive]}
+                onPress={() =>
+                  updateSettings({
+                    privacy: { ...settings.privacy, showIncome: !settings.privacy.showIncome },
+                  })
+                }
+              >
+                <Text
+                  style={[
+                    styles.switchText,
+                    settings.privacy.showIncome && styles.switchTextActive,
+                  ]}
+                >
+                  Show Income
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.switch, settings.privacy.showRentalHistory && styles.switchActive]}
+                onPress={() =>
+                  updateSettings({
+                    privacy: {
+                      ...settings.privacy,
+                      showRentalHistory: !settings.privacy.showRentalHistory,
+                    },
+                  })
+                }
+              >
+                <Text
+                  style={[
+                    styles.switchText,
+                    settings.privacy.showRentalHistory && styles.switchTextActive,
+                  ]}
+                >
+                  Show Rental History
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.switch, settings.privacy.showReferences && styles.switchActive]}
+                onPress={() =>
+                  updateSettings({
+                    privacy: {
+                      ...settings.privacy,
+                      showReferences: !settings.privacy.showReferences,
+                    },
+                  })
+                }
+              >
+                <Text
+                  style={[
+                    styles.switchText,
+                    settings.privacy.showReferences && styles.switchTextActive,
+                  ]}
+                >
+                  Show References
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      );
+
+    default:
+      return null;
+  }
+}

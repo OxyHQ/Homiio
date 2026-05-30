@@ -7,7 +7,7 @@ import React, {
   useMemo,
   ReactNode,
 } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/sonner';
 import savedPropertyFolderService, {
   SavedPropertyFolder,
 } from '@/services/savedPropertyFolderService';

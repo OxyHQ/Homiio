@@ -1,7 +1,7 @@
 import { useCallback, useState, useEffect } from 'react';
 import { useLeaseStore, useLeaseSelectors } from '@/store/leaseStore';
 import { useOxy } from '@oxyhq/services';
-import { toast } from 'sonner';
+import { toast } from '@/lib/sonner';
 import { leaseService, Lease, LeaseFilters } from '@/services/leaseService';
 
 // Lease Zustand Hook

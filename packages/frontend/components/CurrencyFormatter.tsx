@@ -9,7 +9,6 @@ interface CurrencyFormatterProps extends TextProps {
   showCode?: boolean;
   showSymbol?: boolean;
   showConversion?: boolean; // Show original amount in parentheses if different currency
-  style?: any;
 }
 
 export const CurrencyFormatter: React.FC<CurrencyFormatterProps> = ({

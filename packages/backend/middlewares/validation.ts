@@ -59,6 +59,38 @@ const validateProperty = [
   body('squareFootage').optional().isFloat({ min: 0 }).withMessage('Square footage must be non-negative'),
   body('type').isIn(['apartment', 'house', 'room', 'studio', 'couchsurfing', 'roommates', 'coliving', 'hostel', 'guesthouse', 'campsite', 'boat', 'treehouse', 'yurt', 'other']).withMessage('Invalid property type'),
   body('housingType').optional().isIn(['private', 'public']).withMessage('Invalid housing type'),
+  // ---- Hybrid rental fields ----
+  body('rentMode').optional().isIn(['long_term', 'vacation', 'both']).withMessage('Invalid rent mode'),
+  body('instantBook').optional().isBoolean().withMessage('instantBook must be a boolean'),
+  body('cancellationPolicy').optional().isIn(['flexible', 'moderate', 'strict', 'super_strict']).withMessage('Invalid cancellation policy'),
+  body('minStay').optional().isInt({ min: 1 }).withMessage('minStay must be a positive integer'),
+  body('maxStay').optional().isInt({ min: 1 }).withMessage('maxStay must be a positive integer'),
+  body('maxStay').optional().custom((value, { req }) => {
+    const min = req.body?.minStay;
+    if (value !== undefined && min !== undefined && Number(value) < Number(min)) {
+      throw new Error('maxStay must be greater than or equal to minStay');
+    }
+    return true;
+  }),
+  body('maxGuests').optional().isInt({ min: 1 }).withMessage('maxGuests must be a positive integer'),
+  body('availabilityWindows').optional().isArray().withMessage('availabilityWindows must be an array'),
+  body('availabilityWindows.*.start').optional().isISO8601().withMessage('Each availability window start must be a valid ISO-8601 date'),
+  body('availabilityWindows.*.end').optional().isISO8601().withMessage('Each availability window end must be a valid ISO-8601 date'),
+  body('availabilityWindows.*.status').optional().isIn(['available', 'blocked', 'booked']).withMessage('Invalid availability window status'),
+  body('availabilityWindows').optional().custom((windows: unknown) => {
+    if (!Array.isArray(windows)) return true;
+    for (const window of windows) {
+      const w = window as { start?: string; end?: string };
+      if (w.start && w.end && new Date(w.end) <= new Date(w.start)) {
+        throw new Error('Each availability window end must be after start');
+      }
+    }
+    return true;
+  }),
+  body('priceBreakdown').optional().isObject().withMessage('priceBreakdown must be an object'),
+  body('priceBreakdown.cleaningFee').optional().isFloat({ min: 0 }).withMessage('cleaningFee must be non-negative'),
+  body('priceBreakdown.serviceFee').optional().isFloat({ min: 0 }).withMessage('serviceFee must be non-negative'),
+  body('priceBreakdown.taxesPercent').optional().isFloat({ min: 0, max: 100 }).withMessage('taxesPercent must be between 0 and 100'),
 ];
 
 /**
@@ -171,3 +203,65 @@ const validateViewingRequest = [
 ];
 
 export { validateViewingRequest };
+
+/**
+ * Reservation (vacation booking) validation rules
+ */
+const validateReservation = [
+  body('propertyId').isString().notEmpty().withMessage('Property ID is required'),
+  body('checkIn').isISO8601().withMessage('Valid check-in date is required'),
+  body('checkOut').isISO8601().withMessage('Valid check-out date is required'),
+  body('checkOut').custom((value, { req }) => {
+    if (value && req.body?.checkIn && new Date(value) <= new Date(req.body.checkIn)) {
+      throw new Error('Check-out must be after check-in');
+    }
+    return true;
+  }),
+  body('guestCount').isInt({ min: 1 }).withMessage('Guest count must be a positive integer'),
+  body('specialRequests').optional().isString().isLength({ max: 2000 }).withMessage('Special requests max length is 2000'),
+  handleValidationErrors
+];
+
+/**
+ * Reservation status update validation rules (PATCH)
+ */
+const validateReservationUpdate = [
+  param('id').isString().notEmpty().withMessage('Reservation ID is required'),
+  body('status').isIn(['confirmed', 'declined', 'cancelled']).withMessage('Invalid status transition'),
+  handleValidationErrors
+];
+
+/**
+ * Tenant application validation rules (POST)
+ *
+ * Documents may arrive either as a JSON array (when application/json) or as
+ * uploaded files under the `documents[]` multipart field. The controller
+ * normalises both shapes, so this validator only enforces the structural
+ * primary-key fields.
+ */
+const validateTenantApplication = [
+  body('propertyId').isString().notEmpty().withMessage('Property ID is required'),
+  body('moveInDate').isISO8601().withMessage('Valid move-in date is required'),
+  body('leaseTermMonths').isInt({ min: 1 }).withMessage('Lease term (months) must be a positive integer'),
+  body('monthlyIncome').isFloat({ min: 0 }).withMessage('Monthly income must be non-negative'),
+  body('employmentStatus').isIn(['employed', 'self_employed', 'student', 'retired', 'unemployed', 'other']).withMessage('Invalid employment status'),
+  body('notes').optional().isString().isLength({ max: 4000 }).withMessage('Notes max length is 4000'),
+  handleValidationErrors
+];
+
+/**
+ * Tenant application status update validation rules (PATCH)
+ */
+const validateTenantApplicationUpdate = [
+  param('id').isString().notEmpty().withMessage('Application ID is required'),
+  body('status').isIn(['reviewing', 'approved', 'rejected', 'withdrawn']).withMessage('Invalid status transition'),
+  body('notes').optional().isString().isLength({ max: 4000 }).withMessage('Notes max length is 4000'),
+  handleValidationErrors
+];
+
+export {
+  validateReservation,
+  validateReservationUpdate,
+  validateTenantApplication,
+  validateTenantApplicationUpdate,
+};

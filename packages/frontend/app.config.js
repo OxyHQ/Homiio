@@ -129,29 +129,6 @@ module.exports = function (config) {
             faceIDPermission: 'Allow $(PRODUCT_NAME) to access your Face ID biometric data.',
           },
         ],
-        [
-          'expo-font',
-          {
-            fonts: [
-              './assets/fonts/Cereal/Cereal_W_Lt.otf',
-              './assets/fonts/Cereal/Cereal_W_Bk.otf',
-              './assets/fonts/Cereal/Cereal_W_Blk.otf',
-              './assets/fonts/Cereal/Cereal_W_Md.otf',
-              './assets/fonts/Cereal/Cereal_W_XBd.otf',
-              './assets/fonts/Cereal/Cereal_W_Bd.otf',
-              './assets/fonts/inter/InterVariable.woff2',
-              './assets/fonts/inter/InterVariable-Italic.woff2',
-              // Android only
-              './assets/fonts/inter/Inter-Regular.otf',
-              './assets/fonts/inter/Inter-Italic.otf',
-              './assets/fonts/inter/Inter-SemiBold.otf',
-              './assets/fonts/inter/Inter-SemiBoldItalic.otf',
-              './assets/fonts/inter/Inter-ExtraBold.otf',
-              './assets/fonts/inter/Inter-ExtraBoldItalic.otf',
-              './assets/fonts/Phudu-VariableFont_wght.ttf',
-            ],
-          },
-        ],
         'react-native-compressor',
         [
           '@bitdrift/react-native',
@@ -163,12 +140,12 @@ module.exports = function (config) {
           'expo-build-properties',
           {
             ios: {
-              deploymentTarget: '15.1',
+              deploymentTarget: '16.4',
             },
             android: {
-              compileSdkVersion: 35,
-              targetSdkVersion: 35,
-              buildToolsVersion: '35.0.0',
+              compileSdkVersion: 36,
+              targetSdkVersion: 36,
+              buildToolsVersion: '36.0.0',
             },
           },
         ],

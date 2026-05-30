@@ -1,5 +1,5 @@
 const { Property } = require('../../models');
-const { paginationResponse, AppError } = require('../../middlewares/errorHandler');
+const { paginationResponse } = require('../../middlewares/errorHandler');
 
 export async function findNearbyProperties(req, res, next) {
   try {

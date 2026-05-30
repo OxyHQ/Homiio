@@ -3,8 +3,9 @@ import { StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { useTranslation } from 'react-i18next';
+import type { Property } from '@homiio/shared-types';
 
-interface Props { property: any }
+interface Props { property: Property | null }
 
 export const AvailabilitySection: React.FC<Props> = ({ property }) => {
     const { t } = useTranslation();

@@ -33,11 +33,11 @@ export function TrustScore({
   const { color, trustLevel, sizeStyle } = useMemo(() => {
     // Calculate the appropriate color based on the score
     const getColor = (score: number) => {
-      if (score >= 90) return '#4CAF50'; // Excellent
-      if (score >= 70) return '#8BC34A'; // Good
-      if (score >= 50) return '#FFC107'; // Average
-      if (score >= 30) return '#FF9800'; // Below Average
-      return '#F44336'; // Poor
+      if (score >= 90) return colors.success; // Excellent
+      if (score >= 70) return colors.success; // Good
+      if (score >= 50) return colors.warning; // Average
+      if (score >= 30) return colors.warning; // Below Average
+      return colors.danger; // Poor
     };
 
     const getTrustLevel = (score: number) => {
@@ -79,11 +79,11 @@ export function TrustScore({
   // Memoize factor color calculation
   const getFactorColor = useCallback((value: number, maxValue: number) => {
     const percentage = (value / maxValue) * 100;
-    if (percentage >= 80) return '#4CAF50';
-    if (percentage >= 60) return '#8BC34A';
-    if (percentage >= 40) return '#FFC107';
-    if (percentage >= 20) return '#FF9800';
-    return '#F44336';
+    if (percentage >= 80) return colors.success;
+    if (percentage >= 60) return colors.success;
+    if (percentage >= 40) return colors.warning;
+    if (percentage >= 20) return colors.warning;
+    return colors.danger;
   }, []);
 
   // Memoize recalculate handler
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scoreText: {
-    color: 'white',
+    color: colors.white,
     fontWeight: 'bold',
   },
   labelContainer: {
@@ -215,10 +215,9 @@ const styles = StyleSheet.create({
     borderRadius: 25,
   },
   recalculateButtonText: {
-    color: 'white',
+    color: colors.white,
     fontSize: 12,
     fontWeight: '600',
-    fontFamily: 'Phudu',
   },
   factorsContainer: {
     maxHeight: 300,

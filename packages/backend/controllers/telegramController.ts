@@ -4,7 +4,6 @@
  */
 
 import { telegramService } from '../services';
-import { logger } from '../middlewares/logging';
 import { AppError, successResponse } from '../middlewares/errorHandler';
 const { Property } = require('../models');
 import config from '../config';

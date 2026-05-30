@@ -1,64 +1,76 @@
-import { Text, type TextProps, StyleSheet } from 'react-native';
+/**
+ * ThemedText — thin shim over Bloom Typography that preserves the
+ * historical `type` API used across Homiio. The visual font identity is
+ * fully owned by `BloomThemeProvider` (display + sans tokens), so we no
+ * longer set `fontFamily` here. Sizes/weights remain to match the
+ * existing call sites.
+ */
+import React from 'react';
+import {
+  StyleSheet,
+  type StyleProp,
+  type TextProps,
+  type TextStyle,
+} from 'react-native';
 
+import { H1, H2, P, Text } from '@oxyhq/bloom/typography';
+import { colors } from '@/styles/colors';
+
+export type ThemedTextType =
+  | 'default'
+  | 'title'
+  | 'defaultSemiBold'
+  | 'subtitle'
+  | 'link';
 
 export type ThemedTextProps = TextProps & {
   lightColor?: string;
   darkColor?: string;
-  type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link';
+  type?: ThemedTextType;
 };
 
-export function ThemedText({
-  style,
-  lightColor,
-  darkColor,
-  type = 'default',
-  ...rest
-}: ThemedTextProps) {
-  const color = 'black'; // Temporarily disable theme color
-
-  return (
-    <Text
-      style={[
-        { color },
-        type === 'default' ? styles.default : undefined,
-        type === 'title' ? styles.title : undefined,
-        type === 'defaultSemiBold' ? styles.defaultSemiBold : undefined,
-        type === 'subtitle' ? styles.subtitle : undefined,
-        type === 'link' ? styles.link : undefined,
-        style,
-      ]}
-      {...rest}
-    />
-  );
-}
-
-const styles = StyleSheet.create({
+const typeStyles = StyleSheet.create({
   default: {
     fontSize: 16,
     lineHeight: 24,
-    fontFamily: 'Roboto-Regular',
   },
   defaultSemiBold: {
     fontSize: 16,
     lineHeight: 24,
-    fontFamily: 'Roboto-Medium',
     fontWeight: '600',
   },
   title: {
     fontSize: 32,
-    fontFamily: 'Roboto-Bold',
-    fontWeight: 'bold',
-    lineHeight: 32,
+    lineHeight: 36,
+    fontWeight: '700',
   },
   subtitle: {
     fontSize: 20,
-    fontFamily: 'Roboto-Medium',
-    fontWeight: 'bold',
+    lineHeight: 28,
+    fontWeight: '700',
   },
   link: {
-    lineHeight: 30,
     fontSize: 16,
-    fontFamily: 'Roboto-Regular',
-    color: '#0a7ea4',
+    lineHeight: 30,
+    color: colors.linkColor,
   },
 });
+
+export function ThemedText({
+  style,
+  type = 'default',
+  ...rest
+}: ThemedTextProps) {
+  const resolvedStyle: StyleProp<TextStyle> = [typeStyles[type], style];
+
+  if (type === 'title') {
+    return <H1 {...rest} style={resolvedStyle} />;
+  }
+  if (type === 'subtitle') {
+    return <H2 {...rest} style={resolvedStyle} />;
+  }
+  if (type === 'default') {
+    return <P {...rest} style={resolvedStyle} />;
+  }
+  return <Text {...rest} style={resolvedStyle} />;
+}

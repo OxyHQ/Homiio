@@ -4,8 +4,9 @@ import { ThemedText } from '@/components/ThemedText';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { colors } from '@/styles/colors';
 import { useTranslation } from 'react-i18next';
+import type { Property } from '@homiio/shared-types';
 
-interface Props { property: any }
+interface Props { property: Property | null }
 
 export const PropertyDetailsCard: React.FC<Props> = ({ property }) => {
     const { t } = useTranslation();

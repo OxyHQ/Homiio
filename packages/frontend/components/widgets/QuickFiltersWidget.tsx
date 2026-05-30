@@ -5,10 +5,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
-import Button from '../Button';
+import { Button } from '@oxyhq/bloom/button';
 
-// Type assertion for Ionicons compatibility
-const IconComponent = Ionicons as any;
 
 interface QuickFilter {
   id: string;
@@ -46,6 +44,9 @@ export function QuickFiltersWidget() {
 
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
 
+  // Curated per-category accent palette (decorative selected-pill tints). These
+  // are intentional distinct category colors, not Bloom status tokens, so they
+  // stay literal to preserve the original multi-hue look.
   const quickFilters: QuickFilter[] = [
     {
       id: 'eco',
@@ -98,11 +99,14 @@ export function QuickFiltersWidget() {
         </View>
 
         {selectedFilters.length > 0 && (
-          <Button style={styles.applyButton} onPress={handleApplyFilters}>
-            <IconComponent name="search" size={16} color="white" />
-            <Text style={styles.applyButtonText}>
-              {`${t('Search with')} ${selectedFilters.length} ${t('filters')}`}
-            </Text>
+          <Button
+            style={styles.applyButton}
+            textStyle={styles.applyButtonText}
+            onPress={handleApplyFilters}
+            icon={<Ionicons name="search" size={16} color={colors.white} />}
+            iconPosition="left"
+          >
+            {`${t('Search with')} ${selectedFilters.length} ${t('filters')}`}
           </Button>
         )}
 
@@ -128,9 +132,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 20,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
   },
   filterPillSelected: {
     backgroundColor: colors.primaryColor,
@@ -142,7 +146,7 @@ const styles = StyleSheet.create({
     fontWeight: 'normal',
   },
   filterPillTextSelected: {
-    color: 'white',
+    color: colors.white,
     fontWeight: '600',
   },
   applyButton: {
@@ -162,10 +166,9 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   applyButtonText: {
-    color: 'white',
+    color: colors.white,
     fontWeight: '600',
     fontSize: 14,
-    fontFamily: 'Phudu',
   },
   advancedButton: {
     backgroundColor: colors.primaryColor + '10',
@@ -179,6 +182,5 @@ const styles = StyleSheet.create({
     color: colors.primaryColor,
     fontWeight: '600',
     fontSize: 14,
-    fontFamily: 'Phudu',
   },
 });

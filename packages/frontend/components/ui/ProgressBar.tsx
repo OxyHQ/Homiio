@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, ViewStyle, TextStyle, StyleProp } from 'react-native';
 import { colors } from '@/styles/colors';
 
 type ProgressBarProps = {
@@ -13,7 +13,7 @@ type ProgressBarProps = {
   backgroundColor?: string;
   height?: number;
   style?: ViewStyle;
-  labelStyle?: any;
+  labelStyle?: StyleProp<TextStyle>;
 };
 
 export function ProgressBar({

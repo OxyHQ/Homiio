@@ -8,8 +8,6 @@ import { ThemedText } from '@/components/ThemedText';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { colors } from '@/styles/colors';
 
-// Type assertion for Ionicons compatibility
-const IconComponent = Ionicons as any;
 
 export function DonationWidget() {
     const { t } = useTranslation();
@@ -22,7 +20,7 @@ export function DonationWidget() {
     return (
         <BaseWidget
             title={t('donations.widget.title')}
-            icon={<IconComponent name="heart" size={20} color={colors.primaryColor} />}
+            icon={<Ionicons name="heart" size={20} color={colors.primaryColor} />}
         >
             <View style={styles.content}>
                 <ThemedText style={styles.description}>
@@ -31,21 +29,21 @@ export function DonationWidget() {
 
                 <View style={styles.impactSection}>
                     <View style={styles.impactItem}>
-                        <IconComponent name="home" size={16} color={colors.primaryColor} />
+                        <Ionicons name="home" size={16} color={colors.primaryColor} />
                         <ThemedText style={styles.impactText}>
                             {t('donations.page.impact.areas.development.title')}
                         </ThemedText>
                     </View>
 
                     <View style={styles.impactItem}>
-                        <IconComponent name="shield-checkmark" size={16} color={colors.primaryColor} />
+                        <Ionicons name="shield-checkmark" size={16} color={colors.primaryColor} />
                         <ThemedText style={styles.impactText}>
                             {t('donations.page.impact.areas.safety.title')}
                         </ThemedText>
                     </View>
 
                     <View style={styles.impactItem}>
-                        <IconComponent name="people" size={16} color={colors.primaryColor} />
+                        <Ionicons name="people" size={16} color={colors.primaryColor} />
                         <ThemedText style={styles.impactText}>
                             {t('donations.page.impact.areas.community.title')}
                         </ThemedText>

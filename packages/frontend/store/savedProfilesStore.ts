@@ -41,7 +41,7 @@ export function useSavedProfiles() {
 
   const refresh = async () => {
     if (!oxyServices || !activeSessionId) return;
-    const res = await api.get('/api/profiles/me/saved-profiles', { oxyServices, activeSessionId });
+    const res = await api.get('/api/profiles/me/saved-profiles');
     const profiles = res.data?.data || res.data || [];
     const ids = profiles.map((p: any) => String(p._id));
     setSavedProfileIds(ids);
@@ -52,11 +52,7 @@ export function useSavedProfiles() {
     setIsSaving(true);
     try {
       addSavedProfileId(profileId);
-      await api.post(
-        '/api/profiles/me/save-profile',
-        { profileId },
-        { oxyServices, activeSessionId },
-      );
+      await api.post('/api/profiles/me/save-profile', { profileId });
     } catch (e) {
       removeSavedProfileId(profileId);
       throw e;
@@ -70,10 +66,7 @@ export function useSavedProfiles() {
     setIsSaving(true);
     try {
       removeSavedProfileId(profileId);
-      await api.delete(`/api/profiles/me/saved-profiles/${profileId}`, {
-        oxyServices,
-        activeSessionId,
-      });
+      await api.delete(`/api/profiles/me/saved-profiles/${profileId}`);
     } catch (e) {
       addSavedProfileId(profileId);
       throw e;

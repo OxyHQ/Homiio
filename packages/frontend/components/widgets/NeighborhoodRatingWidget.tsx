@@ -1,16 +1,14 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
 import { useNeighborhood } from '@/hooks/useNeighborhood';
 import { useOxy } from '@oxyhq/services';
-import LoadingSpinner from '../LoadingSpinner';
-import Button from '../Button';
-
-// Type assertion for Ionicons compatibility with React 19
-const IconComponent = Ionicons as any;
+import { Loading } from '@oxyhq/bloom/loading';
+import { Button } from '@oxyhq/bloom/button';
+import type { NeighborhoodRating } from '@/services/neighborhoodService';
 
 interface NeighborhoodRatingWidgetProps {
   propertyId?: string;
@@ -26,16 +24,15 @@ export function NeighborhoodRatingWidget({
   state,
 }: NeighborhoodRatingWidgetProps = {}) {
   const { t } = useTranslation();
-  const { oxyServices, activeSessionId } = useOxy();
+  const { activeSessionId } = useOxy();
+  const isAuthenticated = Boolean(activeSessionId);
   const {
     currentNeighborhood,
     isLoading,
     error,
-    isAuthenticated,
     isDataStale,
     fetchByName,
     fetchByProperty,
-    setCurrent,
   } = useNeighborhood();
 
   // Default neighborhood data for when API is not available
@@ -48,34 +45,27 @@ export function NeighborhoodRatingWidget({
       { category: 'Transit', score: 4.3, icon: 'subway-outline' },
       { category: 'Nightlife', score: 4.0, icon: 'wine-outline' },
       { category: 'Shopping', score: 3.9, icon: 'bag-outline' },
-    ],
+    ] as NeighborhoodRating[],
   };
 
-  // Use current neighborhood data or fall back to default
-  const neighborhoodData = currentNeighborhood || defaultNeighborhood;
+  // The neighborhood store only persists the location/stats summary, so the
+  // rated categories and overall score always come from the curated defaults.
+  // When a neighborhood has been resolved we still prefer its real name.
   const displayName = currentNeighborhood?.name || defaultNeighborhood.name;
-  const overallScore = currentNeighborhood?.overallScore || defaultNeighborhood.overallScore;
-  const categories = currentNeighborhood?.ratings || defaultNeighborhood.ratings;
+  const overallScore = defaultNeighborhood.overallScore;
+  const categories = defaultNeighborhood.ratings;
 
   // Load neighborhood data on component mount if authenticated and data is stale
   useEffect(() => {
     if (isAuthenticated && (!currentNeighborhood || isDataStale())) {
       if (propertyId) {
         // If we have a property ID, fetch neighborhood data for that property
-        console.log('NeighborhoodRatingWidget: Fetching neighborhood for property:', propertyId);
         fetchByProperty(propertyId);
       } else if (neighborhoodName && city) {
         // If we have neighborhood name and city, fetch by name
-        console.log(
-          'NeighborhoodRatingWidget: Fetching neighborhood by name:',
-          neighborhoodName,
-          city,
-        );
         fetchByName(neighborhoodName, city, state);
-      } else {
-        // Fallback to default location
-        console.log('NeighborhoodRatingWidget: Using default neighborhood data');
       }
+      // Otherwise the curated default neighborhood data is used.
     }
   }, [
     isAuthenticated,
@@ -98,11 +88,11 @@ export function NeighborhoodRatingWidget({
     return (
       <View style={styles.starsContainer}>
         {[...Array(fullStars)].map((_, i) => (
-          <IconComponent key={`full-${i}`} name="star" size={14} color="#FFD700" />
+          <Ionicons key={`full-${i}`} name="star" size={14} color={colors.ratingStar} />
         ))}
-        {halfStar && <IconComponent name="star-half" size={14} color="#FFD700" />}
+        {halfStar && <Ionicons name="star-half" size={14} color={colors.ratingStar} />}
         {[...Array(emptyStars)].map((_, i) => (
-          <IconComponent key={`empty-${i}`} name="star-outline" size={14} color="#FFD700" />
+          <Ionicons key={`empty-${i}`} name="star-outline" size={14} color={colors.ratingStar} />
         ))}
         <Text style={styles.ratingNumber}>{rating.toFixed(1)}</Text>
       </View>
@@ -114,10 +104,10 @@ export function NeighborhoodRatingWidget({
     return (
       <BaseWidget
         title={t('Neighborhood')}
-        icon={<IconComponent name="location" size={22} color={colors.primaryColor} />}
+        icon={<Ionicons name="location" size={22} color={colors.primaryColor} />}
       >
         <View style={styles.loadingContainer}>
-          <LoadingSpinner size={16} showText={false} />
+          <Loading iconSize={16} showText={false} />
           <Text style={styles.loadingText}>{t('Loading neighborhood data...')}</Text>
         </View>
       </BaseWidget>
@@ -129,10 +119,10 @@ export function NeighborhoodRatingWidget({
     return (
       <BaseWidget
         title={t('Neighborhood')}
-        icon={<IconComponent name="location" size={22} color={colors.primaryColor} />}
+        icon={<Ionicons name="location" size={22} color={colors.primaryColor} />}
       >
         <View style={styles.errorContainer}>
-          <IconComponent name="alert-circle-outline" size={24} color={colors.COLOR_BLACK_LIGHT_4} />
+          <Ionicons name="alert-circle-outline" size={24} color={colors.COLOR_BLACK_LIGHT_4} />
           <Text style={styles.errorText}>{t('Unable to load neighborhood data')}</Text>
           <TouchableOpacity
             style={styles.retryButton}
@@ -156,7 +146,7 @@ export function NeighborhoodRatingWidget({
   return (
     <BaseWidget
       title={t('Neighborhood')}
-      icon={<IconComponent name="location" size={22} color={colors.primaryColor} />}
+      icon={<Ionicons name="location" size={22} color={colors.primaryColor} />}
     >
       <View style={styles.container}>
         <View style={styles.headerSection}>
@@ -168,7 +158,7 @@ export function NeighborhoodRatingWidget({
           {categories.map((category, index) => (
             <View key={index} style={styles.categoryItem}>
               <View style={styles.categoryInfo}>
-                <IconComponent name={category.icon as any} size={16} color={colors.primaryColor} />
+                <Ionicons name={category.icon as keyof typeof Ionicons.glyphMap} size={16} color={colors.primaryColor} />
                 <Text style={styles.categoryName}>{category.category}</Text>
               </View>
               {renderStars(category.score)}
@@ -217,7 +207,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   retryButtonText: {
-    color: 'white',
+    color: colors.white,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -262,7 +252,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   moreButton: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
     paddingVertical: 8,
     paddingHorizontal: 15,
     borderRadius: 20,

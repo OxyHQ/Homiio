@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import LoadingSpinner from '../LoadingSpinner';
+import { Loading } from '@oxyhq/bloom/loading';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { useOxy } from '@oxyhq/services';
@@ -49,17 +49,17 @@ export const TrustScoreWidget = React.memo(function TrustScoreWidget() {
 
   // Helper function to get color based on score percentage
   const getScoreColor = useCallback((score: number) => {
-    if (score >= 90) return '#4CAF50';
-    if (score >= 70) return '#8BC34A';
-    if (score >= 50) return '#FFC107';
-    if (score >= 30) return '#FF9800';
-    return '#F44336';
+    if (score >= 90) return colors.success;
+    if (score >= 70) return colors.success;
+    if (score >= 50) return colors.warning;
+    if (score >= 30) return colors.warning;
+    return colors.danger;
   }, []);
 
   // Memoize loading content
   const loadingContent = useMemo(() => (
     <View style={styles.loadingContainer}>
-      <LoadingSpinner size={16} showText={false} />
+      <Loading iconSize={16} showText={false} />
       <ThemedText style={styles.loadingText}>
         {profileType === 'agency'
           ? t('trust.loadingVerification', 'Loading verification status...')
@@ -254,7 +254,6 @@ const styles = StyleSheet.create({
     color: colors.primaryLight,
     fontSize: 14,
     fontWeight: '600',
-    fontFamily: 'Phudu',
   },
   noProfileContainer: {
     alignItems: 'center',
@@ -276,7 +275,6 @@ const styles = StyleSheet.create({
     color: colors.primaryLight,
     fontSize: 14,
     fontWeight: '600',
-    fontFamily: 'Phudu',
   },
   trustScoreText: {
     fontSize: 18,
@@ -345,7 +343,6 @@ const styles = StyleSheet.create({
     color: colors.primaryLight,
     fontSize: 13,
     fontWeight: 'bold',
-    fontFamily: 'Phudu',
   },
   improveButton: {
     backgroundColor: colors.primaryLight_1,
@@ -358,7 +355,6 @@ const styles = StyleSheet.create({
     color: colors.primaryLight,
     fontSize: 14,
     fontWeight: 'bold',
-    fontFamily: 'Phudu',
   },
   iconContainer: {
     width: 24,
@@ -381,7 +377,6 @@ const styles = StyleSheet.create({
   verificationPercentage: {
     fontSize: 20,
     fontWeight: 'bold',
-    fontFamily: 'Phudu',
   },
   verificationLabel: {
     fontSize: 12,

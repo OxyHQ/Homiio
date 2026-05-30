@@ -1,12 +1,14 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActionButton } from '@/components/ui/ActionButton';
+import { HousingType, type Profile, type Property } from '@homiio/shared-types';
+import { colors } from '@/styles/colors';
 
 interface Props {
-    property: any;
-    landlordProfile: any;
+    property: Property | null;
+    landlordProfile: Profile | null;
     canContact: boolean;
     canCall: boolean;
     onContact: () => void;
@@ -25,8 +27,8 @@ export const PropertyActionBar: React.FC<Props> = ({
 }) => {
     const { t } = useTranslation();
     if (!property) return null;
-    const isPublic = property?.housingType === 'public';
-    const isExternal = property?.isExternal;
+    const isPublic = property.housingType === HousingType.PUBLIC;
+    const isExternal = property.isExternal;
     return (
         <SafeAreaView edges={['bottom']} style={styles.bottomBar}>
             <View style={styles.bottomBarInner}>
@@ -77,18 +79,19 @@ export const PropertyActionBar: React.FC<Props> = ({
 };
 
 const styles = StyleSheet.create({
+    // RN-Web supports `position: 'sticky'`, absent from RN's ViewStyle.
     bottomBar: {
-        position: 'sticky' as any,
+        position: 'sticky',
         bottom: 0,
         left: 0,
         right: 0,
         zIndex: 1000,
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.white,
         borderTopWidth: 1,
-        borderTopColor: '#e9ecef',
+        borderTopColor: colors.border,
         paddingHorizontal: 16,
         paddingVertical: 12,
-    },
+    } as unknown as ViewStyle,
     bottomBarInner: {
         flexDirection: 'row',
         alignItems: 'center',

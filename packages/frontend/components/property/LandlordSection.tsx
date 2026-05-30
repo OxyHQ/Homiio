@@ -3,7 +3,7 @@ import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { SectionCard } from '@/components/ui/SectionCard';
 import ProfileAvatar from '@/components/ProfileAvatar';
-import Avatar from '@/components/Avatar';
+import { Avatar } from '@oxyhq/bloom/avatar';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { ActionButton } from '@/components/ui/ActionButton';
@@ -83,7 +83,7 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
 
         return (
             <Avatar
-                id={avatarSource}
+                source={avatarSource}
                 size={52}
                 style={styles.landlordAvatar}
             />
@@ -115,7 +115,7 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
                 <View style={styles.contentContainer}>
                     <View style={styles.landlordHeader}>
                         <View style={[styles.landlordAvatar, styles.governmentAvatar]}>
-                            <Ionicons name="library" size={26} color="white" />
+                            <Ionicons name="library" size={26} color={colors.white} />
                         </View>
                         <View style={styles.landlordInfo}>
                             <View style={styles.landlordNameRow}>
@@ -142,7 +142,7 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
                 <View style={styles.contentContainer}>
                     <TouchableOpacity
                         style={styles.landlordHeader}
-                        onPress={() => router.push(`/profile/${(landlordProfile as any)?._id || (landlordProfile as any)?.id}`)}
+                        onPress={() => router.push(`/profile/${landlordProfile?._id || landlordProfile?.id}`)}
                         activeOpacity={0.7}
                     >
                         {renderAvatar(landlordProfile)}
@@ -151,7 +151,7 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
                                 <ThemedText style={styles.landlordName}>{getLandlordDisplayName(landlordProfile)}</ThemedText>
                                 {landlordProfile?.isActive && (
                                     <View style={styles.verifiedBadge}>
-                                        <Ionicons name="checkmark" size={12} color="white" />
+                                        <Ionicons name="checkmark" size={12} color={colors.white} />
                                     </View>
                                 )}
                             </View>
@@ -170,9 +170,9 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
                                 loading={false}
                                 renderItem={(prop) => (
                                     <PropertyCard
-                                        property={prop as any}
+                                        property={prop}
                                         variant="compact"
-                                        onPress={() => router.push(`/properties/${(prop as any)._id || (prop as any).id}`)}
+                                        onPress={() => router.push(`/properties/${prop._id || prop.id}`)}
                                         showSaveButton={false}
                                         showVerifiedBadge={false}
                                         showRating={false}
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     },
     landlordAvatar: {
         marginRight: 12,
-        shadowColor: '#000',
+        shadowColor: colors.COLOR_BLACK,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
         shadowRadius: 2,
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     governmentAvatar: {
-        backgroundColor: '#1E40AF',
+        backgroundColor: colors.governmentBadge,
         borderRadius: 26,
         width: 52,
         height: 52,
@@ -234,18 +234,18 @@ const styles = StyleSheet.create({
     landlordName: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#1F2937',
+        color: colors.COLOR_BLACK_LIGHT_2,
         marginRight: 6,
         lineHeight: 20,
     },
     landlordSubtitle: {
         fontSize: 13,
-        color: '#6B7280',
+        color: colors.muted,
         fontWeight: '500',
         lineHeight: 16,
     },
     verifiedBadge: {
-        backgroundColor: '#10B981',
+        backgroundColor: colors.success,
         paddingHorizontal: 6,
         paddingVertical: 2,
         borderRadius: 10,
@@ -254,13 +254,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     governmentBadge: {
-        backgroundColor: '#1E40AF',
+        backgroundColor: colors.governmentBadge,
         paddingHorizontal: 8,
         paddingVertical: 2,
         borderRadius: 10,
     },
     verifiedText: {
-        color: 'white',
+        color: colors.white,
         fontSize: 11,
         fontWeight: '700',
     },
@@ -275,6 +275,6 @@ const styles = StyleSheet.create({
         marginTop: 12,
         paddingTop: 12,
         borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
+        borderTopColor: colors.mutedSubtle,
     },
 });

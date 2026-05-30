@@ -5,16 +5,22 @@ import { ThemedText } from '../ThemedText';
 import { Ionicons } from '@expo/vector-icons';
 import { BaseWidget } from './BaseWidget';
 import { useCreatePropertyFormStore } from '@/store/createPropertyFormStore';
+import {
+  Property,
+  PropertyType,
+  PropertyStatus,
+  PaymentFrequency,
+  UtilitiesIncluded,
+  type PropertyImage,
+} from '@homiio/shared-types';
 
 import { PropertyCard } from '../PropertyCard';
-
-const IconComponent = Ionicons as any;
 
 
 interface PreviewSection {
   id: string;
   title: string;
-  icon: string;
+  icon: keyof typeof Ionicons.glyphMap;
   isComplete: boolean;
   hasData: boolean;
 }
@@ -209,6 +215,80 @@ export function PropertyPreviewWidget() {
     });
   }, [formData?.amenities?.selectedAmenities]);
 
+  // Map the in-progress form data into a fully-typed Property so the live
+  // PropertyCard preview matches exactly what the published listing renders.
+  const previewProperty = useMemo<Property | null>(() => {
+    if (!formData) return null;
+
+    const { basicInfo, location, pricing, amenities, media } = formData;
+
+    const resolvedType = Object.values(PropertyType).includes(
+      basicInfo.propertyType as PropertyType,
+    )
+      ? (basicInfo.propertyType as PropertyType)
+      : PropertyType.APARTMENT;
+
+    const coordinates =
+      location.latitude || location.longitude
+        ? ({
+            type: 'Point' as const,
+            coordinates: [location.longitude, location.latitude] as [number, number],
+          })
+        : undefined;
+
+    const images: PropertyImage[] = (media.images ?? []).map((image) => ({
+      url: image.urls.medium,
+      caption: image.caption,
+      isPrimary: image.isPrimary,
+    }));
+
+    const now = new Date().toISOString();
+
+    return {
+      _id: 'preview',
+      address: {
+        street: location.address ?? '',
+        city: location.city ?? '',
+        state: location.state,
+        postal_code: location.postal_code ?? '',
+        country: location.country ?? '',
+        countryCode: location.countryCode ?? '',
+        number: location.number,
+        building_name: location.building_name,
+        block: location.block,
+        entrance: location.entrance,
+        floor: location.floor !== undefined ? String(location.floor) : undefined,
+        unit: location.unit,
+        subunit: location.subunit,
+        district: location.district,
+        neighborhood: location.neighborhood,
+        address_lines: location.address_lines,
+        po_box: location.po_box,
+        reference: location.reference,
+        coordinates,
+      },
+      type: resolvedType,
+      description: basicInfo.description,
+      squareFootage: basicInfo.squareFootage,
+      bedrooms: basicInfo.bedrooms,
+      bathrooms: basicInfo.bathrooms,
+      rent: {
+        amount: pricing.monthlyRent ?? 0,
+        currency: pricing.currency || 'USD',
+        paymentFrequency: PaymentFrequency.MONTHLY,
+        deposit: pricing.securityDeposit ?? 0,
+        utilities: UtilitiesIncluded.EXCLUDED,
+      },
+      amenities: amenities.selectedAmenities ?? [],
+      images,
+      status: PropertyStatus.DRAFT,
+      location: coordinates,
+      yearBuilt: basicInfo.yearBuilt,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }, [formData]);
+
   const yesNo = (val?: boolean) => (val === true ? 'Yes' : val === false ? 'No' : '-');
 
   if (!formData) {
@@ -223,7 +303,7 @@ export function PropertyPreviewWidget() {
       >
         <View style={styles.emptyContainer}>
           <View style={styles.emptyIconContainer}>
-            <IconComponent name="eye-outline" size={48} color={colors.COLOR_BLACK_LIGHT_3} />
+            <Ionicons name="eye-outline" size={48} color={colors.COLOR_BLACK_LIGHT_3} />
           </View>
           <ThemedText style={styles.emptyTitle}>Start Building Your Listing</ThemedText>
           <ThemedText style={styles.emptySubtitle}>
@@ -261,44 +341,25 @@ export function PropertyPreviewWidget() {
         </View>
 
         {/* Property Card Preview */}
-        <View style={styles.propertyCardContainer}>
-          <PropertyCard
-            property={{
-              _id: formData._id ?? 'preview-id',
-              address: formData.location?.address ?? '',
-              type: formData.basicInfo?.propertyType ?? '',
-              rent: formData.pricing?.rent ?? 0,
-              bedrooms: formData.basicInfo?.bedrooms ?? 0,
-              bathrooms: formData.basicInfo?.bathrooms ?? 0,
-              squareFootage: formData.basicInfo?.squareFootage ?? 0,
-              yearBuilt: formData.basicInfo?.yearBuilt,
-              images: formData.media?.images ?? [],
-              description: formData.basicInfo?.description ?? '',
-              amenities: formData.amenities ?? [],
-              location: formData.location ?? {},
-              colivingFeatures: formData.colivingFeatures ?? {},
-              // Add any other required fields with sensible defaults
-            }}
-            sizeUnit="sqft"
-            imageSource={
-              formData.media?.images && formData.media.images.length > 0
-                ? formData.media.images[0].urls.medium
-                : undefined
-            }
-            variant="default"
-            showFavoriteButton={false}
-            showVerifiedBadge={false}
-            showTypeIcon={true}
-            showFeatures={true}
-            showPrice={true}
-            showLocation={true}
-            showRating={false}
-            imageHeight={160}
-            titleLines={2}
-            locationLines={1}
-            onPress={() => { }} // No action needed for preview
-          />
-        </View>
+        {previewProperty && (
+          <View style={styles.propertyCardContainer}>
+            <PropertyCard
+              property={previewProperty}
+              variant="default"
+              showSaveButton={false}
+              showVerifiedBadge={false}
+              showTypeIcon={true}
+              showFeatures={true}
+              showPrice={true}
+              showLocation={true}
+              showRating={false}
+              imageHeight={160}
+              titleLines={2}
+              locationLines={1}
+              onPress={() => { }} // No action needed for preview
+            />
+          </View>
+        )}
 
         {/* Sections */}
         {sections.map((section) => (
@@ -312,7 +373,7 @@ export function PropertyPreviewWidget() {
                 <View
                   style={[styles.sectionIcon, section.isComplete && styles.sectionIconComplete]}
                 >
-                  <IconComponent
+                  <Ionicons
                     name={section.icon}
                     size={16}
                     color={section.isComplete ? colors.primaryLight : colors.COLOR_BLACK_LIGHT_3}
@@ -328,14 +389,14 @@ export function PropertyPreviewWidget() {
                       section.isComplete && styles.completionIndicatorComplete,
                     ]}
                   >
-                    <IconComponent
+                    <Ionicons
                       name={section.isComplete ? 'checkmark' : 'ellipse-outline'}
                       size={12}
                       color={section.isComplete ? colors.primaryLight : colors.COLOR_BLACK_LIGHT_3}
                     />
                   </View>
                 )}
-                <IconComponent
+                <Ionicons
                   name={expandedSections.has(section.id) ? 'chevron-up' : 'chevron-down'}
                   size={16}
                   color={colors.COLOR_BLACK_LIGHT_3}
@@ -394,11 +455,11 @@ export function PropertyPreviewWidget() {
                         <ThemedText style={styles.dataValue}>{formData.location.state}</ThemedText>
                       </View>
                     )}
-                    {formData.location?.zipCode && (
+                    {formData.location?.postal_code && (
                       <View style={styles.dataItem}>
                         <ThemedText style={styles.dataLabel}>ZIP Code:</ThemedText>
                         <ThemedText style={styles.dataValue}>
-                          {formData.location.zipCode}
+                          {formData.location.postal_code}
                         </ThemedText>
                       </View>
                     )}
@@ -465,7 +526,7 @@ export function PropertyPreviewWidget() {
                       <View style={styles.amenitiesGrid}>
                         {amenitiesDisplay.map((amenity: string, index: number) => (
                           <View key={index} style={styles.amenityTag}>
-                            <IconComponent
+                            <Ionicons
                               name="checkmark-circle"
                               size={12}
                               color={colors.primaryColor}
@@ -555,7 +616,7 @@ export function PropertyPreviewWidget() {
                 : styles.publishStatusIncomplete,
             ]}
           >
-            <IconComponent
+            <Ionicons
               name={completionPercentage >= 80 ? 'checkmark-circle' : 'alert-circle'}
               size={20}
               color={completionPercentage >= 80 ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3}

@@ -2,7 +2,7 @@ import { useCallback, useState, useEffect } from 'react';
 import { usePropertyStore, usePropertySelectors } from '@/store/propertyStore';
 import { Property, PropertyFilters, propertyService } from '@/services/propertyService';
 import { CreatePropertyData } from '@homiio/shared-types';
-import { toast } from 'sonner';
+import { toast } from '@/lib/sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 // Property Hooks

@@ -63,6 +63,55 @@ export enum PriceUnit {
   YEAR = 'year'
 }
 
+/**
+ * Rental mode for hybrid listings.
+ * - LONG_TERM: traditional rent (Idealista-style) — default
+ * - VACATION: short-term / vacation rental (Airbnb-style)
+ * - BOTH: same listing appears in both feeds; host accepts both flows
+ */
+export enum RentMode {
+  LONG_TERM = 'long_term',
+  VACATION = 'vacation',
+  BOTH = 'both'
+}
+
+/** Status of an availability window on the property calendar. */
+export enum AvailabilityWindowStatus {
+  AVAILABLE = 'available',
+  BLOCKED = 'blocked',
+  BOOKED = 'booked'
+}
+
+/** Vacation-rental cancellation policy presets (Airbnb-style). */
+export enum CancellationPolicy {
+  FLEXIBLE = 'flexible',
+  MODERATE = 'moderate',
+  STRICT = 'strict',
+  SUPER_STRICT = 'super_strict'
+}
+
+/** ISO-8601 timestamp string (e.g. `2026-05-28T12:34:56.000Z`). */
+export type ISODate = string;
+
+/**
+ * A single calendar window for a property. Empty arrays mean "always available".
+ * Windows MUST be inclusive of start and exclusive of end (half-open intervals)
+ * so that adjacent reservations don't collide.
+ */
+export interface AvailabilityWindow {
+  start: ISODate;
+  end: ISODate;
+  status: AvailabilityWindowStatus;
+}
+
+/** Vacation-mode breakdown fields used when computing a quote total. */
+export interface PriceBreakdown {
+  cleaningFee?: number;
+  serviceFee?: number;
+  /** Percentage 0-100, applied to (nightly * nights + cleaningFee + serviceFee) */
+  taxesPercent?: number;
+}
+
 export enum ProfileType {
   PERSONAL = 'personal',
   AGENCY = 'agency',

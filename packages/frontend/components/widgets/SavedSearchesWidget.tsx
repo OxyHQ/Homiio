@@ -19,7 +19,7 @@ import { webAlert } from '@/utils/api';
 import { emitApplySavedSearch } from '@/utils/searchEvents';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SavedSearchActionsBottomSheet } from '@/components/SavedSearchActionsBottomSheet';
-import Button from '../Button';
+import { Button } from '@oxyhq/bloom/button';
 
 // Define SavedSearch type locally since we're no longer using Redux
 interface SavedSearch {
@@ -39,9 +39,6 @@ interface SavedSearch {
   updatedAt: string;
   notificationsEnabled?: boolean;
 }
-
-// Type assertion for Ionicons compatibility
-const IconComponent = Ionicons as any;
 
 export function SavedSearchesWidget() {
   const { t } = useTranslation();
@@ -153,15 +150,20 @@ export function SavedSearchesWidget() {
   };
 
   const renderSearchItem = ({ item }: { item: SavedSearch }) => (
-    <TouchableOpacity style={styles.searchItem} onPress={() => navigateToSearch(item)}>
-      <View style={styles.searchInfo}>
+    <View style={styles.searchItem}>
+      <TouchableOpacity
+        style={styles.searchInfo}
+        onPress={() => navigateToSearch(item)}
+        accessibilityRole="button"
+        accessibilityLabel={item.name}
+      >
         <Text style={styles.searchName}>{item.name}</Text>
         <Text style={styles.searchCriteria}>{item.query}</Text>
-      </View>
+      </TouchableOpacity>
       <View style={styles.searchActions}>
         {item.notificationsEnabled && (
           <View style={styles.notificationBadge}>
-            <IconComponent name="notifications" size={12} color={colors.primaryColor} />
+            <Ionicons name="notifications" size={12} color={colors.primaryColor} />
           </View>
         )}
         <TouchableOpacity
@@ -169,17 +171,17 @@ export function SavedSearchesWidget() {
           onPress={() => handleShowActions(item)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <IconComponent name="ellipsis-vertical" size={16} color={colors.COLOR_BLACK_LIGHT_4} />
+          <Ionicons name="ellipsis-vertical" size={16} color={colors.COLOR_BLACK_LIGHT_4} />
         </TouchableOpacity>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 
   if (!isAuthenticated) {
     return (
       <BaseWidget
         title={t('Saved Searches')}
-        icon={<IconComponent name="bookmark" size={22} color={colors.primaryColor} />}
+        icon={<Ionicons name="bookmark" size={22} color={colors.primaryColor} />}
       >
         <View style={styles.container}>
           <Text style={styles.emptyText}>{t('Sign in to save searches')}</Text>
@@ -195,7 +197,7 @@ export function SavedSearchesWidget() {
     return (
       <BaseWidget
         title={t('Saved Searches')}
-        icon={<IconComponent name="bookmark" size={22} color={colors.primaryColor} />}
+        icon={<Ionicons name="bookmark" size={22} color={colors.primaryColor} />}
       >
         <View style={styles.container}>
           <Text style={styles.emptyText}>{t('No saved searches yet')}</Text>
@@ -211,7 +213,7 @@ export function SavedSearchesWidget() {
     <>
       <BaseWidget
         title={t('Saved Searches')}
-        icon={<IconComponent name="bookmark" size={22} color={colors.primaryColor} />}
+        icon={<Ionicons name="bookmark" size={22} color={colors.primaryColor} />}
       >
         <View style={styles.container}>
           <FlatList
@@ -240,11 +242,15 @@ export function SavedSearchesWidget() {
         animationType="fade"
         onRequestClose={() => setShowActionsModal(false)}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowActionsModal(false)}
-        >
+        <View style={styles.modalOverlay}>
+          {/* Dismiss backdrop is a sibling absolute layer, not a parent of the
+              action buttons — a TouchableOpacity wrapping the buttons would
+              nest <button> inside <button> on web. */}
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowActionsModal(false)}
+          />
           <View style={styles.actionsContainer}>
             {selectedSearch && (
               <>
@@ -252,7 +258,7 @@ export function SavedSearchesWidget() {
                   style={styles.actionItem}
                   onPress={() => handleEditSearch(selectedSearch)}
                 >
-                  <IconComponent name="create-outline" size={20} color={colors.primaryColor} />
+                  <Ionicons name="create-outline" size={20} color={colors.primaryColor} />
                   <Text style={styles.actionText}>{t('common.edit')}</Text>
                 </TouchableOpacity>
 
@@ -260,7 +266,7 @@ export function SavedSearchesWidget() {
                   style={styles.actionItem}
                   onPress={() => handleToggleSearchNotifications(selectedSearch)}
                 >
-                  <IconComponent
+                  <Ionicons
                     name={
                       selectedSearch.notificationsEnabled
                         ? 'notifications-off-outline'
@@ -280,13 +286,13 @@ export function SavedSearchesWidget() {
                   style={styles.actionItem}
                   onPress={() => handleDeleteSavedSearch(selectedSearch)}
                 >
-                  <IconComponent name="trash-outline" size={20} color="#ff4757" />
+                  <Ionicons name="trash-outline" size={20} color={colors.danger} />
                   <Text style={[styles.actionText, styles.deleteText]}>{t('common.delete')}</Text>
                 </TouchableOpacity>
               </>
             )}
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
 
       {/* Edit Search Modal */}
@@ -302,7 +308,7 @@ export function SavedSearchesWidget() {
             <View style={styles.editModalHeader}>
               <Text style={styles.editModalTitle}>{t('search.editSearch')}</Text>
               <TouchableOpacity onPress={handleEditClose} style={styles.closeButton}>
-                <IconComponent name="close" size={24} color={colors.COLOR_BLACK_LIGHT_3} />
+                <Ionicons name="close" size={24} color={colors.COLOR_BLACK_LIGHT_3} />
               </TouchableOpacity>
             </View>
 
@@ -354,7 +360,7 @@ export function SavedSearchesWidget() {
                     false: colors.COLOR_BLACK_LIGHT_5,
                     true: colors.primaryColor + '40',
                   }}
-                  thumbColor={editNotificationsEnabled ? colors.primaryColor : '#ffffff'}
+                  thumbColor={editNotificationsEnabled ? colors.primaryColor : colors.white}
                 />
               </View>
             </View>
@@ -365,7 +371,7 @@ export function SavedSearchesWidget() {
             <View style={styles.actionButtons}>
               <Button
                 onPress={handleEditClose}
-                textColor={colors.COLOR_BLACK_LIGHT_4}
+                textStyle={{ color: colors.COLOR_BLACK_LIGHT_4 }}
               >
                 {t('common.cancel')}
               </Button>
@@ -434,12 +440,19 @@ const styles = StyleSheet.create({
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: colors.overlay,
+  },
   actionsContainer: {
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 8,
     minWidth: 200,
@@ -458,18 +471,18 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   deleteText: {
-    color: '#ff4757',
+    color: colors.danger,
   },
   // Edit Modal Styles
   editModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   editModalContent: {
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 16,
     padding: 24,
     width: '100%',
@@ -508,7 +521,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.COLOR_BACKGROUND,
   },
   textInputError: {
-    borderColor: '#ff4757',
+    borderColor: colors.danger,
   },
   toggleSection: {
     marginBottom: 20,
@@ -534,7 +547,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   errorText: {
-    color: '#ff4757',
+    color: colors.danger,
     fontSize: 14,
     marginBottom: 16,
     textAlign: 'center',

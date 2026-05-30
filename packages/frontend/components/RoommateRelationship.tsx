@@ -2,11 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
-import type { RoommateRelationship } from '@/hooks/useRoommate';
+import type { RoommateRelationship, RoommateProfile } from '@/hooks/useRoommate';
 import { ActionButton } from '@/components/ui/ActionButton';
 
-// Type assertion for Ionicons compatibility
-const IconComponent = Ionicons as any;
 
 interface RoommateRelationshipProps {
   relationship: RoommateRelationship;
@@ -48,7 +46,7 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
     );
   };
 
-  const getDisplayName = (profile: any) => {
+  const getDisplayName = (profile: RoommateProfile) => {
     const personal = profile.personalProfile;
     // Try to get name from bio or use default
     if (personal?.personalInfo?.bio) {
@@ -142,13 +140,13 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
           >
             {/* Avatar placeholder since avatar is not in PersonalProfile type */}
             <View style={styles.avatarPlaceholder}>
-              <IconComponent name="person" size={20} color={colors.COLOR_BLACK_LIGHT_5} />
+              <Ionicons name="person" size={20} color={colors.COLOR_BLACK_LIGHT_5} />
             </View>
             <Text style={styles.profileName}>{getDisplayName(relationship.profile1)}</Text>
           </TouchableOpacity>
 
           <View style={styles.connectionLine}>
-            <IconComponent name="people" size={20} color={colors.primaryDark} />
+            <Ionicons name="people" size={20} color={colors.primaryDark} />
           </View>
 
           <TouchableOpacity
@@ -157,7 +155,7 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
           >
             {/* Avatar placeholder since avatar is not in PersonalProfile type */}
             <View style={styles.avatarPlaceholder}>
-              <IconComponent name="person" size={20} color={colors.COLOR_BLACK_LIGHT_5} />
+              <Ionicons name="person" size={20} color={colors.COLOR_BLACK_LIGHT_5} />
             </View>
             <Text style={styles.profileName}>{getDisplayName(relationship.profile2)}</Text>
           </TouchableOpacity>

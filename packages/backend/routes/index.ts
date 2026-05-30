@@ -21,6 +21,8 @@ const billing = require('./billing').default;
 const scraper = require('./scraper').default;
 const reviews = require('./reviews').default;
 const addresses = require('./addresses').default;
+const reservations = require('./reservations').default;
+const applications = require('./applications').default;
 
 export default function() {
   const propertyRoutes = properties();
@@ -39,12 +41,24 @@ export default function() {
   const scraperRoutes = scraper();
   const reviewRoutes = reviews();
   const addressRoutes = addresses;
+  const reservationRoutes = reservations();
+  const applicationRoutes = applications();
 
   const router = express.Router();
+
+  // Property availability (auth still required since mounted under oxy.auth() in server.ts).
+  // Returns host availability windows + booked ranges (vacation flow).
+  const reservationController = require('../controllers/reservationController');
+  router.get(
+    '/properties/:id/availability',
+    asyncHandler(reservationController.getPropertyAvailability)
+  );
 
   // Protected routes (authentication handled globally in server.ts)
   router.use('/properties', propertyRoutes);
   router.use('/viewings', viewingRoutes);
+  router.use('/reservations', reservationRoutes);
+  router.use('/applications', applicationRoutes);
   router.use('/rooms', roomRoutes);
   router.use('/leases', leaseRoutes);
   router.use('/notifications', notificationRoutes);

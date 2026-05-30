@@ -1,6 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
-const { Property } = require('../../models');
-import { successResponse, paginationResponse } from '../../middlewares/errorHandler';
+const { Property, Reservation } = require('../../models');
+import { paginationResponse } from '../../middlewares/errorHandler';
+const {
+  RentMode,
+  AvailabilityWindowStatus,
+  ReservationStatus
+} = require('@homiio/shared-types');
+
+const HYBRID_RENT_MODES = new Set([RentMode.LONG_TERM, RentMode.VACATION]);
 
 export const getProperties = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -49,7 +56,12 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       addressId,
       lat,
       lng,
-      radius
+      radius,
+      rentMode,
+      instantBook,
+      minGuests,
+      checkIn,
+      checkOut
     } = req.query as any;
 
     const pageNumber = Math.max(1, parseInt(String(page)) || 1);
@@ -193,12 +205,87 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       } catch { }
     }
 
-    // Exclude draft properties by default unless explicitly requested
+    // Exclude draft properties by default unless explicitly requested.
+    // When a `status` param is provided it has already been mapped to the
+    // canonical PropertyStatus enum above (e.g. `available` -> `published`),
+    // so we must NOT overwrite that mapping with the raw query value here.
     if (!req.query.includeDrafts && !req.query.status) {
       filters.status = { $ne: 'draft' };
-    } else if (req.query.status && req.query.status !== 'draft') {
-      // If status is specified and it's not 'draft', ensure it's not a draft
-      filters.status = req.query.status;
+    }
+
+    // ---- Hybrid rental-mode filters ----
+    // rentMode: long_term | vacation | both — also includes `both` listings
+    // when the user asks for a specific mode (a "both" listing should appear
+    // in both feeds).
+    if (rentMode) {
+      const requestedMode = String(rentMode);
+      if (HYBRID_RENT_MODES.has(requestedMode)) {
+        filters.rentMode = { $in: [requestedMode, RentMode.BOTH] };
+      } else if (requestedMode === RentMode.BOTH) {
+        filters.rentMode = RentMode.BOTH;
+      }
+    }
+
+    if (instantBook !== undefined) {
+      filters.instantBook = String(instantBook) === 'true';
+    }
+
+    if (minGuests !== undefined) {
+      const n = parseInt(String(minGuests), 10);
+      if (!Number.isNaN(n) && n > 0) {
+        filters.maxGuests = { ...(filters.maxGuests || {}), $gte: n };
+      }
+    }
+
+    // Date-range availability filter — exclude properties whose
+    // availabilityWindows have a blocked/booked overlap OR which have a
+    // confirmed Reservation overlapping the requested range.
+    let checkInDate: Date | null = null;
+    let checkOutDate: Date | null = null;
+    if (checkIn && checkOut) {
+      const parsedCheckIn = new Date(String(checkIn));
+      const parsedCheckOut = new Date(String(checkOut));
+      if (
+        !Number.isNaN(parsedCheckIn.getTime()) &&
+        !Number.isNaN(parsedCheckOut.getTime()) &&
+        parsedCheckOut.getTime() > parsedCheckIn.getTime()
+      ) {
+        checkInDate = parsedCheckIn;
+        checkOutDate = parsedCheckOut;
+      }
+    }
+
+    if (checkInDate && checkOutDate) {
+      // Block by host calendar windows (non-AVAILABLE windows that overlap).
+      // A window overlaps if window.start < checkOut AND window.end > checkIn.
+      filters.$nor = [
+        {
+          availabilityWindows: {
+            $elemMatch: {
+              status: { $ne: AvailabilityWindowStatus.AVAILABLE },
+              start: { $lt: checkOutDate },
+              end: { $gt: checkInDate }
+            }
+          }
+        }
+      ];
+
+      // Exclude properties with confirmed reservations overlapping the range.
+      const conflictingReservations = await Reservation.find({
+        status: ReservationStatus.CONFIRMED,
+        checkIn: { $lt: checkOutDate },
+        checkOut: { $gt: checkInDate }
+      })
+        .select('propertyId')
+        .lean();
+      const conflictingPropertyIds = conflictingReservations.map((r: any) => r.propertyId);
+      if (conflictingPropertyIds.length > 0) {
+        const existingNin = (filters._id && filters._id.$nin) || [];
+        filters._id = {
+          ...(filters._id || {}),
+          $nin: [...existingNin, ...conflictingPropertyIds]
+        };
+      }
     }
 
     const sortOptions: any = {};

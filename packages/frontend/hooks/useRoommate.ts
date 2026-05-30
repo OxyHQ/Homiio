@@ -46,65 +46,41 @@ export const useRoommate = () => {
   const { oxyServices, activeSessionId } = useOxy();
   const queryClient = useQueryClient();
 
-  // Queries (disabled by default; refetch on demand based on tab)
+  // Queries (disabled by default; refetch on demand based on tab).
+  // Store synchronization happens in the `fetch*` helpers below, using the
+  // `refetch()` result, since TanStack Query v5 removed the per-query
+  // `onSuccess` / `onError` callbacks.
   const profilesQuery = useQuery({
     queryKey: ['roommates', 'profiles'],
     queryFn: async () => {
-      const response = await roommateService.getRoommateProfiles(
-        undefined,
-        oxyServices!,
-        activeSessionId!,
-      );
+      const response = await roommateService.getRoommateProfiles();
       return response.profiles || [];
     },
     enabled: false,
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,
-    onSuccess: (data) => {
-      // Avoid setting store to an identical array reference to prevent re-renders
-      setRoommates(Array.isArray(data) ? [...data] : []);
-      setError(null);
-    },
-    onError: (err: any) => {
-      setError(err?.message || 'Failed to fetch profiles');
-    },
   });
 
   const requestsQuery = useQuery({
     queryKey: ['roommates', 'requests'],
     queryFn: async () => {
-      const response = await roommateService.getRoommateRequests(oxyServices!, activeSessionId!);
+      const response = await roommateService.getRoommateRequests();
       return response || { sent: [], received: [] };
     },
     enabled: false,
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,
-    onSuccess: (data) => {
-      const next = { sent: data.sent ?? [], received: data.received ?? [] };
-      setRequests({ sent: [...next.sent], received: [...next.received] });
-      setError(null);
-    },
-    onError: (err: any) => {
-      setError(err?.message || 'Failed to fetch requests');
-    },
   });
 
   const relationshipsQuery = useQuery({
     queryKey: ['roommates', 'relationships'],
     queryFn: async () => {
-      const response = await roommateService.getRoommateRelationships(oxyServices!, activeSessionId!);
+      const response = await roommateService.getRoommateRelationships();
       return response.data || [];
     },
     enabled: false,
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,
-    onSuccess: (data) => {
-      setRelationships(Array.isArray(data) ? [...data] : []);
-      setError(null);
-    },
-    onError: (err: any) => {
-      setError(err?.message || 'Failed to fetch relationships');
-    },
   });
 
   // Adapter functions to trigger refetch when requested by tabs/UI
@@ -113,11 +89,17 @@ export const useRoommate = () => {
     setLoading(true);
     setError(null);
     try {
-      await profilesQuery.refetch();
+      const result = await profilesQuery.refetch();
+      if (result.error) {
+        setError(result.error.message || 'Failed to fetch profiles');
+        return;
+      }
+      // Copy the array so the store never shares a reference with the query cache.
+      setRoommates(Array.isArray(result.data) ? [...result.data] : []);
     } finally {
       setLoading(false);
     }
-  }, [oxyServices, activeSessionId, profilesQuery, setLoading, setError]);
+  }, [oxyServices, activeSessionId, profilesQuery, setLoading, setError, setRoommates]);
 
   // Fetch roommate requests
   const fetchRequests = useCallback(async () => {
@@ -125,11 +107,17 @@ export const useRoommate = () => {
     setLoading(true);
     setError(null);
     try {
-      await requestsQuery.refetch();
+      const result = await requestsQuery.refetch();
+      if (result.error) {
+        setError(result.error.message || 'Failed to fetch requests');
+        return;
+      }
+      const data = result.data ?? { sent: [], received: [] };
+      setRequests({ sent: [...(data.sent ?? [])], received: [...(data.received ?? [])] });
     } finally {
       setLoading(false);
     }
-  }, [oxyServices, activeSessionId, requestsQuery, setLoading, setError]);
+  }, [oxyServices, activeSessionId, requestsQuery, setLoading, setError, setRequests]);
 
   // Fetch roommate relationships
   const fetchRelationships = useCallback(async () => {
@@ -142,16 +130,11 @@ export const useRoommate = () => {
   const sendRequestMutation = useMutation({
     mutationKey: ['roommates', 'sendRequest'],
     mutationFn: async (vars: { profileId: string; message?: string }) => {
-      await roommateService.sendRoommateRequest(
-        vars.profileId,
-        vars.message,
-        oxyServices!,
-        activeSessionId!,
-      );
+      await roommateService.sendRoommateRequest(vars.profileId, vars.message);
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['roommates', 'requests'] });
-      await requestsQuery.refetch();
+      await fetchRequests();
     },
     onError: (err: any) => setError(err?.message || 'Failed to send request'),
   });
@@ -177,19 +160,14 @@ export const useRoommate = () => {
   const acceptRequestMutation = useMutation({
     mutationKey: ['roommates', 'acceptRequest'],
     mutationFn: async (vars: { requestId: string; responseMessage?: string }) => {
-      await roommateService.acceptRoommateRequest(
-        vars.requestId,
-        vars.responseMessage,
-        oxyServices!,
-        activeSessionId!,
-      );
+      await roommateService.acceptRoommateRequest(vars.requestId, vars.responseMessage);
     },
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['roommates', 'requests'] }),
         queryClient.invalidateQueries({ queryKey: ['roommates', 'relationships'] }),
       ]);
-      await Promise.all([requestsQuery.refetch(), relationshipsQuery.refetch()]);
+      await Promise.all([fetchRequests(), fetchRelationships()]);
     },
     onError: (err: any) => setError(err?.message || 'Failed to accept request'),
   });
@@ -215,16 +193,11 @@ export const useRoommate = () => {
   const declineRequestMutation = useMutation({
     mutationKey: ['roommates', 'declineRequest'],
     mutationFn: async (vars: { requestId: string; responseMessage?: string }) => {
-      await roommateService.declineRoommateRequest(
-        vars.requestId,
-        vars.responseMessage,
-        oxyServices!,
-        activeSessionId!,
-      );
+      await roommateService.declineRoommateRequest(vars.requestId, vars.responseMessage);
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['roommates', 'requests'] });
-      await requestsQuery.refetch();
+      await fetchRequests();
     },
     onError: (err: any) => setError(err?.message || 'Failed to decline request'),
   });
@@ -250,15 +223,11 @@ export const useRoommate = () => {
   const endRelationshipMutation = useMutation({
     mutationKey: ['roommates', 'endRelationship'],
     mutationFn: async (vars: { relationshipId: string }) => {
-      await roommateService.endRoommateRelationship(
-        vars.relationshipId,
-        oxyServices!,
-        activeSessionId!,
-      );
+      await roommateService.endRoommateRelationship(vars.relationshipId);
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['roommates', 'relationships'] });
-      await relationshipsQuery.refetch();
+      await fetchRelationships();
     },
     onError: (err: any) => setError(err?.message || 'Failed to end relationship'),
   });

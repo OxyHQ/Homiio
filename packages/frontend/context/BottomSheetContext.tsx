@@ -1,11 +1,6 @@
-import React, { createContext, ReactNode, useRef, useCallback, useState } from 'react';
-import { StyleSheet } from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetView,
-  BottomSheetBackdrop,
-  BottomSheetBackdropProps,
-} from '@gorhom/bottom-sheet';
+import React, { createContext, ReactNode, useRef, useCallback, useState, useMemo } from 'react';
+import { StyleSheet, View } from 'react-native';
+import BottomSheet, { type BottomSheetRef } from '@oxyhq/bloom/bottom-sheet';
 import { SavedPropertiesProvider } from './SavedPropertiesContext';
 import { ProfileProvider } from './ProfileContext';
 import { I18nextProvider } from 'react-i18next';
@@ -15,14 +10,14 @@ interface BottomSheetContextProps {
   openBottomSheet: (content: ReactNode, options?: { hideHandle?: boolean }) => void;
   closeBottomSheet: () => void;
   isOpen: boolean;
-  bottomSheetRef: React.RefObject<BottomSheetModal | null>;
+  bottomSheetRef: React.RefObject<BottomSheetRef | null>;
 }
 
 export const BottomSheetContext = createContext<BottomSheetContextProps>({
   openBottomSheet: () => { },
   closeBottomSheet: () => { },
   isOpen: false,
-  bottomSheetRef: { current: null } as React.RefObject<BottomSheetModal | null>,
+  bottomSheetRef: { current: null },
 });
 
 // Wrapper component that provides all necessary contexts to bottom sheet content
@@ -39,32 +34,18 @@ const BottomSheetContentWrapper: React.FC<{ children: ReactNode }> = ({ children
 export const BottomSheetProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [content, setContent] = useState<ReactNode>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const [hideHandle, setHideHandle] = useState(false);
-
-  const renderBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop
-        {...props}
-        appearsOnIndex={0}
-        disappearsOnIndex={-1}
-        pressBehavior="close"
-      />
-    ),
-    [],
-  );
+  const bottomSheetRef = useRef<BottomSheetRef | null>(null);
 
   const openBottomSheet = useCallback((newContent: ReactNode, options?: { hideHandle?: boolean }) => {
     setContent(newContent);
     setHideHandle(!!options?.hideHandle);
     setIsOpen(true);
-    setTimeout(() => {
-      bottomSheetModalRef.current?.present();
-    }, 60);
+    bottomSheetRef.current?.present();
   }, []);
 
   const closeBottomSheet = useCallback(() => {
-    bottomSheetModalRef.current?.dismiss();
+    bottomSheetRef.current?.dismiss();
   }, []);
 
   const handleDismiss = useCallback(() => {
@@ -73,45 +54,31 @@ export const BottomSheetProvider: React.FC<{ children: ReactNode }> = ({ childre
     setHideHandle(false);
   }, []);
 
+  const contextValue = useMemo(
+    () => ({
+      openBottomSheet,
+      closeBottomSheet,
+      isOpen,
+      bottomSheetRef,
+    }),
+    [openBottomSheet, closeBottomSheet, isOpen],
+  );
+
   return (
-    <BottomSheetContext.Provider
-      value={{
-        openBottomSheet,
-        closeBottomSheet,
-        isOpen,
-        bottomSheetRef: bottomSheetModalRef,
-      }}
-    >
+    <BottomSheetContext.Provider value={contextValue}>
       {children}
-      <BottomSheetModal
-        ref={bottomSheetModalRef}
-        enableDynamicSizing
-        enablePanDownToClose={true}
-        enableDismissOnClose={true}
+      <BottomSheet
+        ref={bottomSheetRef}
+        enablePanDownToClose
         onDismiss={handleDismiss}
+        showHandle={!hideHandle}
         style={styles.contentContainer}
-        handleComponent={hideHandle ? () => null : undefined}
-        handleIndicatorStyle={hideHandle ? undefined : { backgroundColor: '#000', width: 40 }}
-        backdropComponent={renderBackdrop}
-        index={0}
-        keyboardBehavior="interactive"
-        keyboardBlurBehavior="restore"
-        android_keyboardInputMode="adjustResize"
-        enableOverDrag={false}
-        enableContentPanningGesture={true}
-        enableHandlePanningGesture={true}
-        overDragResistanceFactor={2.5}
-        enableBlurKeyboardOnGesture={true}
-        backgroundStyle={{
-          borderBottomLeftRadius: 0,
-          borderBottomRightRadius: 0,
-        }}
-        detached
+        scrollable={false}
       >
-        <BottomSheetView style={styles.contentView}>
+        <View style={styles.contentView}>
           <BottomSheetContentWrapper>{content}</BottomSheetContentWrapper>
-        </BottomSheetView>
-      </BottomSheetModal>
+        </View>
+      </BottomSheet>
     </BottomSheetContext.Provider>
   );
 };
@@ -119,7 +86,7 @@ export const BottomSheetProvider: React.FC<{ children: ReactNode }> = ({ childre
 const styles = StyleSheet.create({
   contentContainer: {
     maxWidth: 500,
-    margin: 'auto',
+    marginHorizontal: 'auto',
   },
   contentView: {
     flex: 1,

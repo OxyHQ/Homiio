@@ -23,7 +23,6 @@ import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkel
 
 const screenWidth = Dimensions.get('window').width;
 const isMobile = screenWidth < 600;
-const IconComponent = Ionicons as any;
 
 export default function RecentlyViewedScreen() {
   const { t } = useTranslation();
@@ -107,7 +106,7 @@ export default function RecentlyViewedScreen() {
         style={[styles.toggleButton, viewMode === 'grid' && styles.toggleButtonActive]}
         onPress={() => setViewMode('grid')}
       >
-        <IconComponent
+        <Ionicons
           name="grid-outline"
           size={20}
           color={viewMode === 'grid' ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
@@ -117,7 +116,7 @@ export default function RecentlyViewedScreen() {
         style={[styles.toggleButton, viewMode === 'list' && styles.toggleButtonActive]}
         onPress={() => setViewMode('list')}
       >
-        <IconComponent
+        <Ionicons
           name="list-outline"
           size={22}
           color={viewMode === 'list' ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
@@ -141,7 +140,7 @@ export default function RecentlyViewedScreen() {
           </View>
           {recentProperties.length > 0 && (
             <TouchableOpacity style={styles.clearButton} onPress={handleClearHistory}>
-              <IconComponent name="trash-outline" size={20} color="#ff4757" />
+              <Ionicons name="trash-outline" size={20} color={colors.danger} />
             </TouchableOpacity>
           )}
           {renderViewModeToggle()}
@@ -206,7 +205,7 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     padding: 8,
     borderWidth: 1,
-    borderColor: '#ff4757',
+    borderColor: colors.danger,
   },
   viewModeToggle: {
     flexDirection: 'row',

@@ -47,7 +47,7 @@ export default function HorizonPage() {
   ];
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <Header
         options={{
           showBackButton: true,
@@ -60,7 +60,7 @@ export default function HorizonPage() {
         {/* Hero Section */}
         <View style={styles.heroSection}>
           <View style={styles.heroOverlay}>
-            <Ionicons name="globe-outline" size={80} color="#FFD700" style={styles.heroIcon} />
+            <Ionicons name="globe-outline" size={80} color={colors.ratingStar} style={styles.heroIcon} />
             <Text style={styles.heroTitle}>{t('Global Housing Initiative')}</Text>
             <Text style={styles.heroSubtitle}>
               {t('Creating a world of ethical housing, healthcare, and mobility')}
@@ -90,7 +90,7 @@ export default function HorizonPage() {
           {benefitItems.map((item, index) => (
             <View key={index} style={styles.benefitItem}>
               <View style={styles.benefitIcon}>
-                <Ionicons name={item.icon} size={28} color="#FFD700" />
+                <Ionicons name={item.icon} size={28} color={colors.ratingStar} />
               </View>
               <View style={styles.benefitContent}>
                 <Text style={styles.benefitTitle}>{item.title}</Text>
@@ -229,20 +229,20 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.white,
     textAlign: 'center',
     marginBottom: 10,
   },
   heroSubtitle: {
     fontSize: 16,
-    color: 'white',
+    color: colors.white,
     textAlign: 'center',
     opacity: 0.9,
   },
   section: {
     padding: 20,
     borderBottomWidth: 8,
-    borderBottomColor: '#f5f5f5',
+    borderBottomColor: colors.surface,
   },
   sectionTitle: {
     fontSize: 22,
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#FFD700',
+    backgroundColor: colors.ratingStar,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   joinButton: {
-    backgroundColor: '#FFD700',
+    backgroundColor: colors.ratingStar,
     paddingVertical: 15,
     paddingHorizontal: 30,
     borderRadius: 30,
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK,
   },
   testimonialCard: {
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 15,
     padding: 20,
     marginBottom: 15,

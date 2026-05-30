@@ -1,614 +1,1085 @@
 import React from 'react';
 import {
-  Dimensions,
-  Platform,
-  Text,
   View,
-  ViewStyle,
-  StyleSheet,
   Pressable,
+  Platform,
+  Linking,
+  StyleSheet,
+  useWindowDimensions,
 } from 'react-native';
-import { usePathname, useRouter } from 'expo-router';
-import { useMediaQuery } from 'react-responsive';
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeOut,
+  SlideInLeft,
+  SlideOutLeft,
+} from 'react-native-reanimated';
+import { useRouter, usePathname } from 'expo-router';
+import { Portal } from '@oxyhq/bloom/portal';
 import { useTranslation } from 'react-i18next';
-import { SideBarItem } from './SideBarItem';
-import { SavedPropertyItem } from './SavedPropertyItem';
-import { SavedFolderItem } from './SavedFolderItem';
+import {
+  Home,
+  Search,
+  FileText,
+  BedDouble,
+  User,
+  Lightbulb,
+  Users,
+  CalendarClock,
+  Bookmark,
+  ChevronsLeft,
+  ChevronsRight,
+  ChevronRight,
+  X,
+  PlusCircle,
+  UserCircle,
+  Mail,
+  Settings,
+  ShieldCheck,
+  LogOut,
+  LogIn,
+  UserPlus,
+} from 'lucide-react-native';
+import type { LucideIcon } from 'lucide-react-native';
+import { Text } from '@oxyhq/bloom/typography';
+import { Button } from '@oxyhq/bloom/button';
+import { Avatar } from '@oxyhq/bloom/avatar';
+import { showSignInModal, useOxy } from '@oxyhq/services';
+import {
+  Menu,
+  MenuTrigger,
+  MenuOptions,
+  MenuOption,
+  renderers,
+} from 'react-native-popup-menu';
+
 import { colors } from '@/styles/colors';
-import { Button } from '@/components/SideBar/Button';
-import { Logo } from '@/components/Logo';
-import { Home, HomeActive } from '@/assets/icons/home-icon';
-import { Bookmark, BookmarkActive } from '@/assets/icons/bookmark-icon';
-import { Gear, GearActive } from '@/assets/icons/gear-icon';
-import { Hashtag, HashtagActive } from '@/assets/icons/hashtag-icon';
-import { Search, SearchActive } from '@/assets/icons/search-icon';
-import { Compose } from '@/assets/icons/compose-icon';
-import { Ionicons } from '@expo/vector-icons';
-import { useOxy, showSignInModal } from '@oxyhq/services';
-import { SindiIcon, SindiIconActive } from '@/assets/icons';
-import { ProfileIcon, ProfileIconActive } from '@/assets/icons/profile-icon';
-import { webAlert } from '@/utils/api';
-import { phuduFontWeights } from '@/styles/fonts';
+import { useRentalMode } from '@/context/RentalModeContext';
 import { useProfile } from '@/context/ProfileContext';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
+import { useHostStatus } from '@/hooks/useHostStatus';
+import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
+import { useUIStore } from '@/store/uiStore';
+import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
+import { webAlert } from '@/utils/api';
+import { getPropertyTitle } from '@/utils/propertyUtils';
+import { LogoIcon } from '@/assets/logo';
 
-const IconComponent = Ionicons as any;
+import { BaseSidebar } from './BaseSidebar';
+import { NavItem } from './NavItem';
+import { ModeToggle } from './ModeToggle';
+import { SectionHeader } from './SectionHeader';
+import { DateSeparator } from './DateSeparator';
+import { RecentPropertyItem } from './RecentPropertyItem';
+import { FolderRow } from './FolderSection';
 
-const WindowHeight = Dimensions.get('window').height;
+/** Width breakpoint above which the user is allowed to collapse the sidebar. */
+const LARGE_SCREEN_MIN_WIDTH = 768;
+
+/** Width of the collapsed icon-only rail. */
+const COLLAPSED_WIDTH = 48;
+
+/** Width of the expanded sidebar. */
+const EXPANDED_WIDTH = 240;
+
+/**
+ * Sliver of viewport kept to the right of the mobile overlay drawer so the
+ * panel never spans the full width on the narrowest phones and the underlying
+ * screen always peeks through behind the dimming scrim.
+ */
+const MOBILE_DRAWER_EDGE_GAP = 56;
+
+/**
+ * Dimming scrim painted over the whole viewport behind the mobile overlay
+ * drawer. Matches the `overlayColor` of the inbox app's `front`-type
+ * `expo-router/drawer` (`@react-navigation/drawer`) so the two apps share the
+ * same slide-in-over-content feel.
+ */
+const MOBILE_DRAWER_SCRIM = 'rgba(0, 0, 0, 0.3)';
+
+/**
+ * Slide / fade duration (ms) for the mobile overlay drawer. Mirrors the
+ * default transition timing of `@react-navigation/drawer`'s `front` drawer
+ * that the inbox app relies on.
+ */
+const MOBILE_DRAWER_DURATION = 250;
+
+/**
+ * Pressable that participates in Reanimated layout (entering/exiting)
+ * transitions — used for the fade-in scrim behind the mobile overlay drawer.
+ * Created once at module scope to keep the animated wrapper stable.
+ */
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+interface NavEntry {
+  key: string;
+  icon: LucideIcon;
+  iconActive: LucideIcon;
+  label: string;
+  route: string;
+  shortcut?: string;
+}
+
+interface FolderEntry {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+  propertyCount: number;
+  latestImages?: string[];
+}
+
+interface RecentEntry {
+  id: string;
+  title: string;
+  subtitle?: string;
+  imageUrl?: string;
+  /** Sortable timestamp (milliseconds since epoch). */
+  timestamp: number;
+}
+
+interface DateGroup {
+  label: string;
+  items: RecentEntry[];
+}
+
+const isToday = (timestamp: number): boolean => {
+  const date = new Date(timestamp);
+  const now = new Date();
+  return (
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear()
+  );
+};
+
+const isYesterday = (timestamp: number): boolean => {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  return (
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear()
+  );
+};
+
+const groupByDate = (
+  items: RecentEntry[],
+  labels: { today: string; yesterday: string; earlier: string },
+): DateGroup[] => {
+  const today: RecentEntry[] = [];
+  const yesterday: RecentEntry[] = [];
+  const earlier: RecentEntry[] = [];
+
+  for (const item of items) {
+    if (isToday(item.timestamp)) {
+      today.push(item);
+    } else if (isYesterday(item.timestamp)) {
+      yesterday.push(item);
+    } else {
+      earlier.push(item);
+    }
+  }
+
+  const groups: DateGroup[] = [];
+  if (today.length > 0) groups.push({ label: labels.today, items: today });
+  if (yesterday.length > 0)
+    groups.push({ label: labels.yesterday, items: yesterday });
+  if (earlier.length > 0)
+    groups.push({ label: labels.earlier, items: earlier });
+  return groups;
+};
+
+const TERMS_URL =
+  'https://oxy.so/company/transparency/policies/terms-of-service';
+const PRIVACY_URL = 'https://oxy.so/company/transparency/policies/privacy';
+
+/**
+ * Render the Homiio logo as the sidebar header brand mark. The icon-only
+ * variant keeps the rail width tight; the expanded variant adds breathing
+ * room before the collapse button.
+ */
+const SidebarBrand = React.memo(function SidebarBrand({
+  onPress,
+}: {
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel="Homiio"
+      className="p-1 mx-0.5 shrink-0 rounded-xl hover:bg-muted items-center justify-center"
+    >
+      <LogoIcon size={26} color={colors.primaryColor} />
+    </Pressable>
+  );
+});
 
 export function SideBar() {
-  const { t } = useTranslation();
   const router = useRouter();
+  const pathname = usePathname() || '/';
+  const { t } = useTranslation();
+  const { width } = useWindowDimensions();
+
+  const isSidebarVisible = useIsScreenNotMobile();
+  const isLargeScreen = width >= LARGE_SCREEN_MIN_WIDTH;
+
+  const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
+  const toggleSidebarCollapsed = useUIStore((s) => s.toggleSidebarCollapsed);
+  const mobileDrawerOpen = useUIStore((s) => s.mobileDrawerOpen);
+  const closeMobileDrawer = useUIStore((s) => s.closeMobileDrawer);
+  const savedFoldersOpen = useUIStore((s) => s.savedFoldersOpen);
+  const setSavedFoldersOpen = useUIStore((s) => s.setSavedFoldersOpen);
+  const recentPropertiesOpen = useUIStore((s) => s.recentPropertiesOpen);
+  const setRecentPropertiesOpen = useUIStore((s) => s.setRecentPropertiesOpen);
+
+  const { mode } = useRentalMode();
   const { canAccessRoommates } = useProfile();
-  const { isAuthenticated: _isAuthenticated, user, logout } = useOxy();
+  const { isHost } = useHostStatus();
+  const { isAuthenticated, user, logout } = useOxy();
 
-  // Use SavedPropertiesContext for consistent state with SaveButton
-  const { savedProperties, folders, isLoading: savedLoading } = useSavedPropertiesContext();
+  const { savedProperties, folders } = useSavedPropertiesContext();
+  const { properties: recentProperties, removeProperty } = useRecentlyViewed();
 
-  // Get all saved items (folders and properties) ordered by recency
-  const recentSavedItems = React.useMemo(() => {
-    const allItems: {
-      type: 'folder' | 'property';
-      id: string;
-      name: string;
-      subtitle?: string;
-      color?: string;
-      icon?: string;
-      propertyCount?: number;
-      imageUrl?: string;
-      latestImages?: string[];
-      href: string;
-      timestamp: number;
-    }[] = [];
+  // Only honor the user-chosen collapsed state on screens wide enough to
+  // expand again — below 768px we always render the expanded layout.
+  const isCollapsed = isLargeScreen && sidebarCollapsed;
 
-    const savedProps = Array.isArray(savedProperties) ? savedProperties : [];
-    const savedFolders = Array.isArray(folders) ? folders : [];
-
-    // Add folders with their most recent activity (excluding default folder)
-    savedFolders.forEach((folder: any) => {
-      // Skip the default folder
-      if (folder.isDefault) return;
-
-      // Get properties saved to this folder
-      const folderProperties = savedProps.filter((property: any) =>
-        property.folderId === folder._id
-      );
-
-      // Get the most recently saved property in this folder
-      const mostRecentProperty = folderProperties
-        .sort((a: any, b: any) =>
-          new Date((b as any).savedAt || b.updatedAt || b.createdAt).getTime() -
-          new Date((a as any).savedAt || a.updatedAt || a.createdAt).getTime()
-        )[0];
-
-      const latestImages = folderProperties
-        .sort((a: any, b: any) =>
-          new Date((b as any).savedAt || b.updatedAt || b.createdAt).getTime() -
-          new Date((a as any).savedAt || a.updatedAt || a.createdAt).getTime()
-        )
-        .slice(0, 2)
-        .map((property: any) => property.images?.[0]?.url)
-        .filter(Boolean);
-
-      // Use the timestamp of the most recently saved property, or fall back to folder's timestamp
-      const folderTimestamp = mostRecentProperty
-        ? new Date((mostRecentProperty as any).savedAt || mostRecentProperty.updatedAt || mostRecentProperty.createdAt).getTime()
-        : new Date(folder.updatedAt || folder.createdAt).getTime();
-
-      allItems.push({
-        type: 'folder',
-        id: folder._id,
-        name: folder.name,
-        color: folder.color,
-        icon: folder.icon,
-        propertyCount: folder.propertyCount || 0,
-        href: `/saved/${folder._id}`,
-        latestImages,
-        timestamp: folderTimestamp,
-      });
-    });
-
-    // Add properties (including those in default folder, excluding those in custom folders)
-    savedProps.forEach((property: any) => {
-      // Get the default folder
-      const defaultFolder = savedFolders.find((folder: any) => folder.isDefault);
-
-      // Skip properties that are saved to custom folders (but allow default folder)
-      if (property.folderId && property.folderId !== defaultFolder?._id) return;
-
-      allItems.push({
-        type: 'property',
-        id: property._id || property.id,
-        name: property.title || `${property.type} in ${property.address?.city || 'Unknown'}`,
-        subtitle: property.address?.city ? `${property.address.city}, ${property.address.state || ''}` : 'Location not specified',
-        imageUrl: property.images?.[0]?.url,
-        href: `/properties/${property._id || property.id}`,
-        timestamp: new Date((property as any).savedAt || property.updatedAt || property.createdAt).getTime(),
-      });
-    });
-
-    // Sort all items by timestamp (most recent first) and take the first 5
-    return allItems
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, 5);
-  }, [savedProperties, folders]);
-
-  const handleSignOut = () => {
-    webAlert(t('settings.signOut'), t('settings.signOutMessage'), [
+  /* --------------------------------------------------------------
+     Derived nav entries — mode-aware secondary item
+     -------------------------------------------------------------- */
+  const navEntries = React.useMemo<NavEntry[]>(() => {
+    const entries: NavEntry[] = [
       {
-        text: t('cancel'),
-        style: 'cancel',
+        key: 'home',
+        icon: Home,
+        iconActive: Home,
+        label: t('sidebar.navigation.home'),
+        route: '/',
       },
+      {
+        key: 'search',
+        icon: Search,
+        iconActive: Search,
+        label: t('sidebar.navigation.search'),
+        route: '/search',
+      },
+    ];
+
+    // Mode-dependent secondary nav: Applications for long-term tenants,
+    // Stays for vacation bookings. Both require auth.
+    if (isAuthenticated) {
+      if (mode === 'long_term') {
+        entries.push({
+          key: 'applications',
+          icon: FileText,
+          iconActive: FileText,
+          label: t('sidebar.navigation.applications', {
+            defaultValue: 'My applications',
+          }),
+          route: '/applications',
+        });
+      } else {
+        entries.push({
+          key: 'stays',
+          icon: BedDouble,
+          iconActive: BedDouble,
+          label: t('sidebar.navigation.stays', { defaultValue: 'Stays' }),
+          route: '/stays',
+        });
+      }
+    }
+
+    entries.push({
+      key: 'profile',
+      icon: User,
+      iconActive: User,
+      label: t('sidebar.navigation.profile'),
+      route: '/profile',
+    });
+
+    entries.push({
+      key: 'tips',
+      icon: Lightbulb,
+      iconActive: Lightbulb,
+      label: t('sidebar.navigation.tips', { defaultValue: 'Tips' }),
+      route: '/tips',
+    });
+
+    if (canAccessRoommates) {
+      entries.push({
+        key: 'roommates',
+        icon: Users,
+        iconActive: Users,
+        label: t('sidebar.navigation.roommates'),
+        route: '/roommates',
+      });
+    }
+
+    if (isHost) {
+      entries.push({
+        key: 'host-calendar',
+        icon: CalendarClock,
+        iconActive: CalendarClock,
+        label: t('sidebar.navigation.hostCalendar', {
+          defaultValue: 'Host calendar',
+        }),
+        route: '/host/calendar',
+      });
+    }
+
+    return entries;
+  }, [t, isAuthenticated, mode, canAccessRoommates, isHost]);
+
+  /* --------------------------------------------------------------
+     Folders — exclude default folder + empty folders, max 5
+     -------------------------------------------------------------- */
+  const folderEntries = React.useMemo<FolderEntry[]>(() => {
+    const safeFolders = Array.isArray(folders) ? folders : [];
+    const safeProps = Array.isArray(savedProperties) ? savedProperties : [];
+
+    return safeFolders
+      .filter((folder) => !folder.isDefault && (folder.propertyCount ?? 0) > 0)
+      .map((folder) => {
+        const folderProperties = safeProps.filter(
+          (property) => property.folderId === folder._id,
+        );
+        const latestImages = [...folderProperties]
+          .sort((a, b) => {
+            const aTs = new Date(
+              a.savedAt ?? a.updatedAt ?? a.createdAt,
+            ).getTime();
+            const bTs = new Date(
+              b.savedAt ?? b.updatedAt ?? b.createdAt,
+            ).getTime();
+            return bTs - aTs;
+          })
+          .slice(0, 2)
+          .map((property) => {
+            const firstImage = Array.isArray(property.images)
+              ? property.images[0]
+              : undefined;
+            if (typeof firstImage === 'string') return firstImage;
+            if (
+              firstImage &&
+              typeof firstImage === 'object' &&
+              'url' in firstImage
+            ) {
+              return firstImage.url;
+            }
+            return undefined;
+          })
+          .filter((url): url is string => Boolean(url));
+
+        return {
+          id: folder._id,
+          name: folder.name,
+          color: folder.color ?? colors.primaryColor,
+          icon: folder.icon ?? 'folder',
+          propertyCount: folder.propertyCount ?? 0,
+          latestImages: latestImages.length > 0 ? latestImages : undefined,
+        };
+      })
+      .slice(0, 5);
+  }, [folders, savedProperties]);
+
+  /* --------------------------------------------------------------
+     Recently viewed properties — max 10, sorted recent-first
+     -------------------------------------------------------------- */
+  const recentEntries = React.useMemo<RecentEntry[]>(() => {
+    const result: RecentEntry[] = [];
+    for (const property of recentProperties ?? []) {
+      if (!property) continue;
+      const id = property._id ?? property.id;
+      if (!id) continue;
+
+      const firstImage = Array.isArray(property.images)
+        ? property.images[0]
+        : undefined;
+      const imageUrl =
+        typeof firstImage === 'string'
+          ? firstImage
+          : firstImage &&
+              typeof firstImage === 'object' &&
+              'url' in firstImage
+            ? firstImage.url
+            : undefined;
+
+      const title = getPropertyTitle(property, 'short');
+      const subtitle = property.address?.city
+        ? property.address.state
+          ? `${property.address.city}, ${property.address.state}`
+          : property.address.city
+        : undefined;
+
+      const timestamp = property.updatedAt
+        ? new Date(property.updatedAt).getTime()
+        : property.createdAt
+          ? new Date(property.createdAt).getTime()
+          : Date.now();
+
+      result.push({ id, title, subtitle, imageUrl, timestamp });
+    }
+    return result.sort((a, b) => b.timestamp - a.timestamp).slice(0, 10);
+  }, [recentProperties]);
+
+  const dateGroups = React.useMemo(
+    () =>
+      groupByDate(recentEntries, {
+        today: t('sidebar.recent.today', { defaultValue: 'Today' }),
+        yesterday: t('sidebar.recent.yesterday', {
+          defaultValue: 'Yesterday',
+        }),
+        earlier: t('sidebar.recent.earlier', { defaultValue: 'Earlier' }),
+      }),
+    [recentEntries, t],
+  );
+
+  const activeRecentId = React.useMemo(() => {
+    const match = pathname.match(/^\/properties\/([^/]+)/);
+    return match ? match[1] : null;
+  }, [pathname]);
+
+  /* --------------------------------------------------------------
+     Auth / display helpers
+     -------------------------------------------------------------- */
+  const displayName = React.useMemo(() => {
+    if (!user) return t('common.user', { defaultValue: 'User' });
+    if (typeof user.name === 'string') return user.name;
+    return (
+      user.name?.full ||
+      user.name?.first ||
+      user.username ||
+      t('common.user', { defaultValue: 'User' })
+    );
+  }, [user, t]);
+
+  const avatarSource = React.useMemo<string | undefined>(() => {
+    if (!user) return undefined;
+    const candidate = (user as { avatar?: unknown }).avatar;
+    return typeof candidate === 'string' ? candidate : undefined;
+  }, [user]);
+
+  /* --------------------------------------------------------------
+     Handlers
+     -------------------------------------------------------------- */
+  const handleNavigate = React.useCallback(
+    (route: string) => {
+      // Dismiss the mobile overlay drawer on any navigation so the
+      // destination screen isn't hidden behind it. No-op on large screens
+      // where the drawer is never open.
+      closeMobileDrawer();
+      if (pathname !== route) router.push(route);
+    },
+    [pathname, router, closeMobileDrawer],
+  );
+
+  const handleHome = React.useCallback(() => handleNavigate('/'), [handleNavigate]);
+  const handleSettings = React.useCallback(
+    () => handleNavigate('/settings'),
+    [handleNavigate],
+  );
+  const handleProfile = React.useCallback(
+    () => handleNavigate('/profile'),
+    [handleNavigate],
+  );
+  const handleMailbox = React.useCallback(
+    () => handleNavigate('/mailbox'),
+    [handleNavigate],
+  );
+  const handleAddProperty = React.useCallback(
+    () => handleNavigate('/properties/create'),
+    [handleNavigate],
+  );
+  const handleSaved = React.useCallback(
+    () => handleNavigate('/saved'),
+    [handleNavigate],
+  );
+
+  const handleSignIn = React.useCallback(() => showSignInModal(), []);
+  const handleRegister = React.useCallback(() => showSignInModal(), []);
+
+  const handleSignOut = React.useCallback(() => {
+    webAlert(t('settings.signOut'), t('settings.signOutMessage'), [
+      { text: t('cancel'), style: 'cancel' },
       {
         text: t('settings.signOut'),
         style: 'destructive',
         onPress: async () => {
-          try {
-            await logout();
-            router.replace('/');
-          } catch (error) {
-            console.error('Logout failed:', error);
-          }
+          await logout();
+          router.replace('/');
         },
       },
     ]);
-  };
+  }, [t, logout, router]);
 
-  const sideBarData: {
-    title: string;
-    icon: React.ReactNode;
-    iconActive: React.ReactNode;
-    route: string;
-  }[] = [
-      {
-        title: t('sidebar.navigation.home'),
-        icon: <Home color={colors.COLOR_BLACK} />,
-        iconActive: <HomeActive />,
-        route: '/',
-      },
-      {
-        title: t('sidebar.navigation.search'),
-        icon: <Search color={colors.COLOR_BLACK} />,
-        iconActive: <SearchActive />,
-        route: '/search',
-      },
-      {
-        title: t('sidebar.navigation.saved'),
-        icon: <Bookmark color={colors.COLOR_BLACK} />,
-        iconActive: <BookmarkActive />,
-        route: '/saved',
-      },
-      {
-        title: t('sidebar.navigation.sindi'),
-        icon: <SindiIcon size={20} color={colors.COLOR_BLACK} />,
-        iconActive: <SindiIconActive size={20} color={colors.primaryColor} />,
-        route: '/sindi',
-      },
-
-      {
-        title: t('sidebar.navigation.profile'),
-        icon: <ProfileIcon size={20} color={colors.COLOR_BLACK} />,
-        iconActive: <ProfileIconActive size={20} color={colors.primaryColor} />,
-        route: '/profile',
-      },
-
-      // Viewings entry
-      {
-        title: t('viewings.title', { defaultValue: 'Viewings' }) as string,
-        icon: <IconComponent name="calendar-outline" size={20} color={colors.COLOR_BLACK} />,
-        iconActive: <IconComponent name="calendar" size={20} color={colors.primaryColor} />,
-        route: '/viewings',
-      },
-
-      // Only show roommates for personal profiles
-      ...(canAccessRoommates
-        ? [
-          {
-            title: t('sidebar.navigation.roommates'),
-            icon: <Hashtag color={colors.COLOR_BLACK} />,
-            iconActive: <HashtagActive />,
-            route: '/roommates',
-          },
-        ]
-        : []),
-      {
-        title: t('sidebar.navigation.settings'),
-        icon: <Gear color={colors.COLOR_BLACK} />,
-        iconActive: <GearActive />,
-        route: '/settings',
-      },
-    ];
-
-  const pathname = usePathname();
-  const isSideBarVisible = useMediaQuery({ minWidth: 500 });
-  const [isExpanded, setIsExpanded] = React.useState(false);
-  const hoverCollapseTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(
-    null
+  const handleRemoveRecent = React.useCallback(
+    (id: string) => {
+      void removeProperty(id);
+    },
+    [removeProperty],
   );
 
-  const handleHoverIn = React.useCallback(() => {
-    if (hoverCollapseTimeout.current) {
-      clearTimeout(hoverCollapseTimeout.current);
-      hoverCollapseTimeout.current = null;
-    }
-    setIsExpanded(true);
+  const handleSelectRecent = React.useCallback(() => {
+    // RecentPropertyItem handles navigation internally.
   }, []);
 
-  const handleHoverOut = React.useCallback(() => {
-    if (hoverCollapseTimeout.current) {
-      clearTimeout(hoverCollapseTimeout.current);
-    }
-    hoverCollapseTimeout.current = setTimeout(() => setIsExpanded(false), 200);
+  const toggleSavedFolders = React.useCallback(
+    () => setSavedFoldersOpen(!savedFoldersOpen),
+    [savedFoldersOpen, setSavedFoldersOpen],
+  );
+
+  const toggleRecentProperties = React.useCallback(
+    () => setRecentPropertiesOpen(!recentPropertiesOpen),
+    [recentPropertiesOpen, setRecentPropertiesOpen],
+  );
+
+  const handleOpenTerms = React.useCallback(() => {
+    void Linking.openURL(TERMS_URL);
   }, []);
 
-  if (!isSideBarVisible) return null;
+  const handleOpenPrivacy = React.useCallback(() => {
+    void Linking.openURL(PRIVACY_URL);
+  }, []);
 
-  if (isSideBarVisible) {
+  /* --------------------------------------------------------------
+     Below the sidebar breakpoint the native bottom tab bar (the `(tabs)`
+     group's `NativeTabs`) takes over primary navigation and the sidebar
+     becomes an on-demand slide-in overlay drawer. Nothing is rendered
+     inline at this breakpoint — the expanded content is rendered through
+     Bloom's root Portal at the bottom of this component so it overlays the
+     whole viewport.
+     -------------------------------------------------------------- */
+  const isMobile = !isSidebarVisible;
+
+  /* ==============================================================
+     COLLAPSED LAYOUT (icon-only rail, 48px wide) — large screens only
+     ============================================================== */
+  if (!isMobile && isCollapsed) {
     return (
-      <Pressable
-        {...({ onHoverIn: handleHoverIn, onHoverOut: handleHoverOut } as any)}
+      <View
+        className="flex flex-col bg-background border-r border-border items-center"
         style={[
-          styles.container,
-          {
-            width: isExpanded ? 240 : 60,
-            padding: 6,
-            ...(Platform.select({
-              web: {
-                transition: 'width 220ms cubic-bezier(0.2, 0, 0, 1)',
-                willChange: 'width',
-              },
-            }) as ViewStyle),
-            ...(pathname === '/search' ? {
-              shadowColor: colors.primaryDark,
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.25,
-              shadowRadius: 3.84,
-              elevation: 5,
-            } : {}),
-          },
+          { width: COLLAPSED_WIDTH },
+          Platform.OS === 'web'
+            ? ({
+                position: 'sticky',
+                top: 0,
+                alignSelf: 'flex-start',
+                height: '100vh',
+                maxHeight: '100vh',
+              } as object)
+            : { flex: 1, height: '100%' },
         ]}
       >
-        <View style={styles.inner}>
-          <View style={styles.headerSection}>
-            <Logo />
-          </View>
-          <View style={styles.navigationSection}>
-            {sideBarData.map(({ title, icon, iconActive, route }) => (
-              <SideBarItem
-                href={route}
-                key={title}
-                icon={pathname === route ? iconActive : icon}
-                text={title}
-                isActive={pathname === route}
-                isExpanded={isExpanded}
-                onHoverExpand={handleHoverIn}
-              />
-            ))}
-
-            <View style={styles.addPropertyButtonContainer}>
-              <Button
-                href="/properties/create"
-                renderText={() => (
-                  <Text style={[
-                    styles.addPropertyButtonText,
-                    {
-                      opacity: isExpanded ? 1 : 0,
-                      width: isExpanded ? 'auto' : 0,
-                      overflow: 'hidden',
-                      whiteSpace: 'nowrap',
-                      ...(Platform.select({
-                        web: {
-                          transition: 'opacity 220ms cubic-bezier(0.2, 0, 0, 1), width 220ms cubic-bezier(0.2, 0, 0, 1)',
-                          willChange: 'opacity, width',
-                        },
-                      }) as any),
-                    }
-                  ]}>
-                    {t('sidebar.actions.addProperty')}
-                  </Text>
-                )}
-                renderIcon={() => (
-                  <View style={{
-                    opacity: isExpanded ? 0 : 1,
-                    position: isExpanded ? 'absolute' : 'relative',
-                    left: isExpanded ? '50%' : 'auto',
-                    top: isExpanded ? '50%' : 'auto',
-                    transform: isExpanded ? 'translate(-50%, -50%)' : 'none',
-                    ...(Platform.select({
-                      web: {
-                        transition: 'opacity 220ms cubic-bezier(0.2, 0, 0, 1)',
-                        willChange: 'opacity',
-                      },
-                    }) as any),
-                  }}>
-                    <Compose size={20} color={colors.primaryLight} />
-                  </View>
-                )}
-                containerStyle={() => ({
-                  ...styles.addPropertyButton,
-                  height: isExpanded ? 40 : 48,
-                  width: isExpanded ? '100%' : 48,
-                  alignSelf: isExpanded ? 'stretch' : 'center',
-                  ...(Platform.select({
-                    web: {
-                      transition: 'width 220ms cubic-bezier(0.2, 0, 0, 1), height 220ms cubic-bezier(0.2, 0, 0, 1)',
-                      willChange: 'width, height',
-                    },
-                  }) as ViewStyle),
-                })}
-              />
-            </View>
-          </View>
-
-          {/* Recently Saved Section */}
-          {user && user.id && (
-            <View style={styles.recentlySavedSection}>
-              <Text style={[
-                styles.sectionTitle,
-                {
-                  opacity: isExpanded ? 1 : 0,
-                  ...(Platform.select({
-                    web: {
-                      transition: 'opacity 220ms cubic-bezier(0.2, 0, 0, 1)',
-                      willChange: 'opacity',
-                    },
-                  }) as any),
-                }
-              ]}>
-                {t('sidebar.savedProperties.title', { defaultValue: 'Saved Properties' })}
-              </Text>
-              <View style={styles.recentlySavedList}>
-                {recentSavedItems.map((item, _index) => {
-                  if (item.type === 'folder') {
-                    // Only show folder if it has properties
-                    if (!item.propertyCount || item.propertyCount === 0) return null;
-                    return (
-                      <SavedFolderItem
-                        key={item.id}
-                        name={item.name}
-                        color={item.color || '#000000'}
-                        icon={item.icon || 'folder'}
-                        propertyCount={item.propertyCount || 0}
-                        href={item.href}
-                        isExpanded={isExpanded}
-                        onHoverExpand={handleHoverIn}
-                        latestImages={item.latestImages}
-                      />
-                    );
-                  } else {
-                    return (
-                      <SavedPropertyItem
-                        key={item.id}
-                        imageUrl={item.imageUrl || ''}
-                        title={item.name}
-                        subtitle={item.subtitle || ''}
-                        href={item.href}
-                        isExpanded={isExpanded}
-                        onHoverExpand={handleHoverIn}
-                      />
-                    );
-                  }
-                })}
-                {recentSavedItems.filter(item => item.type !== 'folder' || (item.propertyCount && item.propertyCount > 0)).length === 0 && !savedLoading && isExpanded && (
-                  <View style={styles.emptyRecentlySaved}>
-                    <Text style={styles.emptyRecentlySavedText}>
-                      {t('sidebar.savedProperties.empty', { defaultValue: 'No saved properties or folders' })}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </View>
-          )}
-
-          <View style={styles.footer}>
-            {user && user.id ? (
-              <SideBarItem
-                isActive={false}
-                icon={<IconComponent name="log-out-outline" size={20} color={colors.COLOR_BLACK} />}
-                text={t('settings.signOut')}
-                isExpanded={isExpanded}
-                onHoverExpand={handleHoverIn}
-                onPress={handleSignOut}
-              />
-            ) : (
-              <SideBarItem
-                isActive={false}
-                icon={<IconComponent name="log-in-outline" size={20} color={colors.COLOR_BLACK} />}
-                text={t('sidebar.actions.signIn')}
-                isExpanded={isExpanded}
-                onHoverExpand={handleHoverIn}
-                onPress={() => showSignInModal()}
-              />
-            )}
-          </View>
+        <View className="h-14 items-center justify-center shrink-0">
+          <SidebarBrand onPress={handleHome} />
         </View>
-      </Pressable>
+
+        <View className="flex flex-col items-center gap-1 py-1 shrink-0">
+          {navEntries.map((entry) => (
+            <NavItem
+              key={entry.key}
+              icon={entry.icon}
+              iconActive={entry.iconActive}
+              label={entry.label}
+              onPress={() => handleNavigate(entry.route)}
+              isActive={pathname === entry.route}
+              collapsed
+            />
+          ))}
+        </View>
+
+        <View className="mx-2 border-t border-border/30 w-8 my-1" />
+
+        <View className="flex flex-col items-center gap-1 py-1 shrink-0">
+          <NavItem
+            icon={Bookmark}
+            iconActive={Bookmark}
+            label={t('sidebar.navigation.saved')}
+            onPress={handleSaved}
+            isActive={pathname.startsWith('/saved')}
+            collapsed
+          />
+        </View>
+
+        <View style={{ flex: 1 }} />
+
+        <View className="flex flex-col items-center gap-2 p-2 pt-1 shrink-0">
+          <Pressable
+            onPress={toggleSidebarCollapsed}
+            accessibilityRole="button"
+            accessibilityLabel={t('sidebar.expand', {
+              defaultValue: 'Expand sidebar',
+            })}
+            className="h-10 w-10 rounded-xl items-center justify-center hover:bg-muted active:bg-muted/80"
+          >
+            <ChevronsRight size={18} color={colors.primaryDark_2} />
+          </Pressable>
+          {isAuthenticated ? (
+            <Pressable
+              onPress={handleProfile}
+              accessibilityRole="button"
+              accessibilityLabel={displayName}
+              className="rounded-full h-10 w-10 items-center justify-center"
+            >
+              <Avatar source={avatarSource} name={displayName} size={32} />
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={handleSignIn}
+              accessibilityRole="button"
+              accessibilityLabel={t('sidebar.actions.signIn')}
+              className="h-10 w-10 rounded-full items-center justify-center"
+              style={{ backgroundColor: `${colors.primaryColor}1A` }}
+            >
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: '700',
+                  color: colors.primaryColor,
+                }}
+              >
+                {(
+                  t('sidebar.actions.signIn', { defaultValue: 'Sign in' })[0] ??
+                  'S'
+                ).toUpperCase()}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
     );
   }
 
-  return null;
+  /* ==============================================================
+     EXPANDED LAYOUT (240px wide)
+     ============================================================== */
+  const header = (
+    <View className="flex flex-col shrink-0">
+      <View className="h-14 flex-row items-center shrink-0 px-2">
+        <SidebarBrand onPress={handleHome} />
+        {isMobile ? (
+          <View className="ms-auto shrink-0">
+            <Pressable
+              onPress={closeMobileDrawer}
+              accessibilityRole="button"
+              accessibilityLabel={t('sidebar.close', {
+                defaultValue: 'Close menu',
+              })}
+              className="h-10 w-10 rounded-xl items-center justify-center hover:bg-muted active:bg-muted/80"
+            >
+              <X size={20} color={colors.primaryDark_2} />
+            </Pressable>
+          </View>
+        ) : isLargeScreen ? (
+          <View className="ms-auto shrink-0">
+            <Pressable
+              onPress={toggleSidebarCollapsed}
+              accessibilityRole="button"
+              accessibilityLabel={t('sidebar.collapse', {
+                defaultValue: 'Collapse sidebar',
+              })}
+              className="h-10 w-10 rounded-xl items-center justify-center hover:bg-muted active:bg-muted/80"
+            >
+              <ChevronsLeft size={18} color={colors.primaryDark_2} />
+            </Pressable>
+          </View>
+        ) : null}
+      </View>
+
+      <View className="shrink-0 px-2 pb-1">
+        <ModeToggle />
+      </View>
+
+      <View className="shrink-0">
+        {navEntries.map((entry) => (
+          <NavItem
+            key={entry.key}
+            icon={entry.icon}
+            iconActive={entry.iconActive}
+            label={entry.label}
+            onPress={() => handleNavigate(entry.route)}
+            isActive={pathname === entry.route}
+            shortcut={entry.shortcut}
+          />
+        ))}
+      </View>
+
+      <View className="mx-2 border-t border-border/30 my-1" />
+    </View>
+  );
+
+  const middle = (
+    <>
+      <SectionHeader
+        label={t('sidebar.savedProperties.title', {
+          defaultValue: 'Saved folders',
+        })}
+        isOpen={savedFoldersOpen}
+        onToggle={toggleSavedFolders}
+        action={
+          <Pressable
+            onPress={handleSaved}
+            accessibilityRole="button"
+            accessibilityLabel={t('sidebar.savedProperties.viewAll', {
+              defaultValue: 'View all',
+            })}
+            className="h-6 w-6 items-center justify-center rounded-md hover:bg-muted"
+          >
+            <ChevronRight size={14} color={colors.primaryDark_2} />
+          </Pressable>
+        }
+      />
+      {savedFoldersOpen && (
+        <View className="px-1.5">
+          {folderEntries.length === 0 ? (
+            <View className="px-3 py-3">
+              <Text
+                style={{ fontSize: 12, color: colors.primaryDark_2 }}
+                numberOfLines={2}
+              >
+                {t('sidebar.savedProperties.empty', {
+                  defaultValue: 'No saved folders yet',
+                })}
+              </Text>
+            </View>
+          ) : (
+            folderEntries.map((folder) => (
+              <FolderRow
+                key={folder.id}
+                id={folder.id}
+                name={folder.name}
+                color={folder.color}
+                icon={folder.icon}
+                propertyCount={folder.propertyCount}
+                latestImages={folder.latestImages}
+              />
+            ))
+          )}
+        </View>
+      )}
+
+      <SectionHeader
+        label={t('sidebar.recent.title', { defaultValue: 'Recently viewed' })}
+        isOpen={recentPropertiesOpen}
+        onToggle={toggleRecentProperties}
+      />
+      {recentPropertiesOpen && (
+        <View className="px-1.5">
+          {recentEntries.length === 0 ? (
+            <View className="px-3 py-3">
+              <Text
+                style={{ fontSize: 12, color: colors.primaryDark_2 }}
+                numberOfLines={2}
+              >
+                {t('sidebar.recent.empty', {
+                  defaultValue: 'Properties you view will appear here',
+                })}
+              </Text>
+            </View>
+          ) : (
+            dateGroups.map((group) => (
+              <View key={group.label}>
+                <DateSeparator label={group.label} />
+                {group.items.map((item) => (
+                  <RecentPropertyItem
+                    key={item.id}
+                    id={item.id}
+                    title={item.title}
+                    subtitle={item.subtitle}
+                    imageUrl={item.imageUrl}
+                    isActive={item.id === activeRecentId}
+                    onSelect={handleSelectRecent}
+                    onRemove={handleRemoveRecent}
+                  />
+                ))}
+              </View>
+            ))
+          )}
+        </View>
+      )}
+    </>
+  );
+
+  const footer = (
+    <View className="flex flex-col gap-2 shrink-0 p-2 pt-1 w-full">
+      {isAuthenticated ? (
+        <Menu
+          renderer={renderers.Popover}
+          rendererProps={{ placement: 'top' }}
+        >
+          <MenuTrigger>
+            <View
+              accessibilityLabel="Account menu"
+              accessibilityRole="button"
+              className="rounded-full h-10 w-10 p-1 items-center justify-center"
+            >
+              <Avatar source={avatarSource} name={displayName} size={32} />
+            </View>
+          </MenuTrigger>
+          <MenuOptions
+            customStyles={{
+              optionsContainer: {
+                borderRadius: 12,
+                padding: 6,
+                minWidth: 220,
+              },
+            }}
+          >
+            {Platform.OS === 'web' && (
+              <View className="flex-row items-center gap-2.5 px-2 py-2">
+                <Avatar
+                  source={avatarSource}
+                  name={displayName}
+                  size={36}
+                />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: '600',
+                      color: colors.primaryDark,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {displayName}
+                  </Text>
+                  {user?.username ? (
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: colors.primaryDark_2,
+                      }}
+                      numberOfLines={1}
+                    >
+                      @{user.username}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            )}
+            {Platform.OS === 'web' && (
+              <View className="h-px bg-border my-1 mx-1" />
+            )}
+            <MenuOption onSelect={handleAddProperty}>
+              <View className="flex-row items-center gap-2 py-1.5 px-2">
+                <PlusCircle size={16} color={colors.primaryDark} />
+                <Text style={{ fontSize: 13, color: colors.primaryDark }}>
+                  {t('sidebar.actions.addProperty')}
+                </Text>
+              </View>
+            </MenuOption>
+            <MenuOption onSelect={handleProfile}>
+              <View className="flex-row items-center gap-2 py-1.5 px-2">
+                <UserCircle size={16} color={colors.primaryDark} />
+                <Text style={{ fontSize: 13, color: colors.primaryDark }}>
+                  {t('sidebar.menu.account', { defaultValue: 'Account' })}
+                </Text>
+              </View>
+            </MenuOption>
+            <MenuOption onSelect={handleMailbox}>
+              <View className="flex-row items-center gap-2 py-1.5 px-2">
+                <Mail size={16} color={colors.primaryDark} />
+                <Text style={{ fontSize: 13, color: colors.primaryDark }}>
+                  {t('sidebar.menu.mailbox', {
+                    defaultValue: 'Mailbox',
+                  })}
+                </Text>
+              </View>
+            </MenuOption>
+            <MenuOption onSelect={handleSettings}>
+              <View className="flex-row items-center gap-2 py-1.5 px-2">
+                <Settings size={16} color={colors.primaryDark} />
+                <Text style={{ fontSize: 13, color: colors.primaryDark }}>
+                  {t('sidebar.navigation.settings')}
+                </Text>
+              </View>
+            </MenuOption>
+            <View className="h-px bg-border my-1 mx-1" />
+            <MenuOption onSelect={handleOpenTerms}>
+              <View className="flex-row items-center gap-2 py-1.5 px-2">
+                <FileText size={16} color={colors.primaryDark_2} />
+                <Text style={{ fontSize: 13, color: colors.primaryDark_2 }}>
+                  {t('sidebar.menu.terms', {
+                    defaultValue: 'Terms of service',
+                  })}
+                </Text>
+              </View>
+            </MenuOption>
+            <MenuOption onSelect={handleOpenPrivacy}>
+              <View className="flex-row items-center gap-2 py-1.5 px-2">
+                <ShieldCheck size={16} color={colors.primaryDark_2} />
+                <Text style={{ fontSize: 13, color: colors.primaryDark_2 }}>
+                  {t('sidebar.menu.privacy', {
+                    defaultValue: 'Privacy policy',
+                  })}
+                </Text>
+              </View>
+            </MenuOption>
+            <View className="h-px bg-border my-1 mx-1" />
+            <MenuOption onSelect={handleSignOut}>
+              <View className="flex-row items-center gap-2 py-1.5 px-2">
+                <LogOut size={16} color={colors.busy} />
+                <Text style={{ fontSize: 13, color: colors.busy }}>
+                  {t('settings.signOut')}
+                </Text>
+              </View>
+            </MenuOption>
+          </MenuOptions>
+        </Menu>
+      ) : (
+        <View className="gap-2 w-full">
+          <Button
+            onPress={handleSignIn}
+            variant="primary"
+            size="medium"
+            style={{ borderRadius: 999, width: '100%' }}
+            icon={<LogIn size={16} color={colors.primaryLight} />}
+            iconPosition="left"
+          >
+            <Text
+              style={{
+                fontSize: 13,
+                fontWeight: '600',
+                color: colors.primaryLight,
+              }}
+            >
+              {t('sidebar.actions.signIn')}
+            </Text>
+          </Button>
+          <Button
+            onPress={handleRegister}
+            variant="secondary"
+            size="medium"
+            style={{ borderRadius: 999, width: '100%' }}
+            icon={<UserPlus size={16} color={colors.primaryDark} />}
+            iconPosition="left"
+          >
+            <Text
+              style={{
+                fontSize: 13,
+                fontWeight: '600',
+                color: colors.primaryDark,
+              }}
+            >
+              {t('sidebar.actions.signUp')}
+            </Text>
+          </Button>
+          {Platform.OS === 'web' && (
+            <View className="flex-row items-center justify-center gap-1 mt-1">
+              <Pressable onPress={handleOpenPrivacy}>
+                <Text
+                  style={{
+                    fontSize: 10,
+                    color: colors.primaryDark_2,
+                    textDecorationLine: 'underline',
+                  }}
+                >
+                  {t('sidebar.menu.privacy', {
+                    defaultValue: 'Privacy policy',
+                  })}
+                </Text>
+              </Pressable>
+              <Text style={{ fontSize: 10, color: colors.primaryDark_2 }}>
+                ·
+              </Text>
+              <Pressable onPress={handleOpenTerms}>
+                <Text
+                  style={{
+                    fontSize: 10,
+                    color: colors.primaryDark_2,
+                    textDecorationLine: 'underline',
+                  }}
+                >
+                  {t('sidebar.menu.terms', {
+                    defaultValue: 'Terms of service',
+                  })}
+                </Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+      )}
+    </View>
+  );
+
+  /* ==============================================================
+     MOBILE OVERLAY DRAWER (small screens)
+     Mirrors the inbox app's `front`-type `expo-router/drawer`: the panel
+     slides in from the left over the current screen and a full-viewport
+     dimming scrim sits behind it as a tap-to-dismiss target. Mounted only
+     while open so it occupies no layout when closed (the native bottom tab
+     bar drives navigation at this breakpoint). One responsive component —
+     the same nav content is reused; only the chrome differs from the rail.
+     ============================================================== */
+  if (isMobile) {
+    // Cap the panel width to the viewport so it never overflows on the
+    // narrowest phones, leaving a tap-target sliver of scrim on the right.
+    const drawerWidth = Math.min(EXPANDED_WIDTH, width - MOBILE_DRAWER_EDGE_GAP);
+    const slideIn = SlideInLeft.duration(MOBILE_DRAWER_DURATION).easing(
+      Easing.out(Easing.cubic),
+    );
+    const slideOut = SlideOutLeft.duration(MOBILE_DRAWER_DURATION).easing(
+      Easing.in(Easing.cubic),
+    );
+
+    // Rendered through Bloom's root Portal so the overlay escapes the layout
+    // scroll container and covers the whole viewport — the same way the inbox
+    // app's `front` drawer overlays the entire screen. The Portal host stays
+    // mounted while on mobile so Reanimated can play the exit (slide-out +
+    // fade) when `mobileDrawerOpen` flips to false; only the scrim + panel
+    // mount/unmount. `box-none` lets touches pass through when closed.
+    return (
+      <Portal>
+        <View
+          className="flex-row"
+          style={StyleSheet.absoluteFill}
+          pointerEvents="box-none"
+        >
+          {mobileDrawerOpen && (
+            <>
+              <AnimatedPressable
+                entering={FadeIn.duration(MOBILE_DRAWER_DURATION)}
+                exiting={FadeOut.duration(MOBILE_DRAWER_DURATION)}
+                accessibilityRole="button"
+                accessibilityLabel={t('sidebar.close', {
+                  defaultValue: 'Close menu',
+                })}
+                onPress={closeMobileDrawer}
+                style={[
+                  StyleSheet.absoluteFill,
+                  { backgroundColor: MOBILE_DRAWER_SCRIM },
+                ]}
+              />
+              <Animated.View
+                entering={slideIn}
+                exiting={slideOut}
+                style={{ width: drawerWidth }}
+                className="h-full bg-background border-r border-border"
+              >
+                <BaseSidebar header={header} footer={footer}>
+                  {middle}
+                </BaseSidebar>
+              </Animated.View>
+            </>
+          )}
+        </View>
+      </Portal>
+    );
+  }
+
+  return (
+    <View
+      style={{ width: EXPANDED_WIDTH }}
+      className="h-full border-r border-border"
+    >
+      <BaseSidebar header={header} footer={footer}>
+        {middle}
+      </BaseSidebar>
+    </View>
+  );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.primaryLight,
-    padding: 12,
-    ...(Platform.select({
-      web: {
-        position: 'sticky' as any,
-        overflow: 'hidden',
-        height: '100vh' as any,
-        cursor: 'initial',
-      },
-      default: {
-        height: WindowHeight,
-      },
-    }) as ViewStyle),
-    top: 0,
-    zIndex: 1000,
-  },
-  inner: {
-    flex: 1,
-    width: '100%',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-  },
-  headerSection: {
-    marginBottom: 8,
-  },
-  content: {
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-    width: '100%',
-  },
-  heroSection: {
-    marginTop: 8,
-  },
-  heroTagline: {
-    color: colors.COLOR_BLACK,
-    fontSize: 20,
-    fontWeight: 'bold',
-    fontFamily: 'Phudu',
-    flexWrap: 'wrap',
-    textAlign: 'left',
-    maxWidth: 200,
-    lineHeight: 24,
-  },
-  authButtonsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 12,
-    gap: 8,
-  },
-  signUpButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.COLOR_BLACK,
-    borderRadius: 25,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  signUpButtonText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: 'bold',
-    fontFamily: 'Phudu',
-  },
-  signInButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.primaryColor,
-    borderRadius: 25,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  signInButtonText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: 'bold',
-    fontFamily: 'Phudu',
-  },
-  navigationSection: {
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-    width: '100%',
-    marginTop: 8,
-    gap: 2,
-    paddingLeft: 0,
-    paddingRight: 0,
-  },
-  addPropertyButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.primaryColor,
-    borderRadius: 100,
-    display: 'flex',
-    alignSelf: 'flex-start',
-    marginTop: 4,
-  },
-  addPropertyButtonContainer: {
-    minHeight: 60,
-    width: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addPropertyButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    margin: 0,
-    fontFamily: 'Phudu',
-  },
-  footer: {
-    flexDirection: 'column',
-    justifyContent: 'flex-end',
-    alignItems: 'flex-start',
-    width: '100%',
-    marginTop: 'auto',
-  },
-  recentlySavedSection: {
-    marginTop: 20,
-    marginBottom: 20,
-    width: '100%',
-    ...(Platform.select({
-      web: {
-        transition: 'all 220ms cubic-bezier(0.2, 0, 0, 1)',
-        willChange: 'margin',
-      },
-    }) as any),
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primaryDark,
-    marginBottom: 4,
-    paddingHorizontal: 8,
-    fontFamily: 'Phudu',
-    ...(Platform.select({
-      web: {
-        whiteSpace: 'nowrap',
-      },
-    }) as any),
-  },
-  recentlySavedList: {
-    width: '100%',
-    ...(Platform.select({
-      web: {
-        transition: 'gap 220ms cubic-bezier(0.2, 0, 0, 1)',
-        willChange: 'gap',
-      },
-    }) as any),
-  },
-  emptyRecentlySaved: {
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyRecentlySavedText: {
-    fontSize: 12,
-    color: colors.primaryDark_2,
-    fontFamily: 'Phudu',
-    textAlign: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontFamily: phuduFontWeights.bold,
-    color: colors.primaryDark,
-    marginBottom: 16,
-  },
-  menuItemText: {
-    fontSize: 16,
-    fontFamily: phuduFontWeights.medium,
-    color: colors.primaryDark,
-    marginLeft: 12,
-  },
-  footerText: {
-    fontSize: 14,
-    fontFamily: phuduFontWeights.regular,
-    color: colors.primaryDark_2,
-    textAlign: 'center',
-  },
-});
-

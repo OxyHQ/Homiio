@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useTrustScoreStore } from '@/store/trustScoreStore';
 import profileService from '@/services/profileService';
+import { colors } from '@/styles/colors';
 
 export const useTrustScore = (profileId?: string) => {
   const {
@@ -213,7 +214,7 @@ export const useTrustScore = (profileId?: string) => {
     })),
     history,
     type: profileType,
-    color: score >= 80 ? '#4CAF50' : score >= 60 ? '#FF9800' : '#F44336',
+    color: score >= 80 ? colors.success : score >= 60 ? colors.warning : colors.danger,
     level: score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : score >= 40 ? 'Fair' : 'Poor',
   };
 

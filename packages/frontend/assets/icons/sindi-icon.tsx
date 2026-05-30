@@ -4,7 +4,7 @@ import Svg, { Path } from 'react-native-svg';
 import { IconProps } from './types';
 import { colors } from '@/styles/colors';
 
-export const SindiIcon: React.FC<IconProps> = ({ size = 24, color = '#5baaff' }) => {
+export const SindiIcon: React.FC<IconProps> = ({ size = 24, color = colors.primaryColor }) => {
   return (
     <View style={{ width: size, height: size }}>
       <Svg width={size} height={size} viewBox="0 0 154.91 193.94" fill="none">

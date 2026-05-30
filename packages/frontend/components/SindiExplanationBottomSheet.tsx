@@ -1,17 +1,35 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, Animated, Easing, LayoutChangeEvent, NativeSyntheticEvent, NativeScrollEvent, Platform, UIManager, Image } from 'react-native';
-import AnimatedRe, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Dimensions,
+  LayoutChangeEvent,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  Platform,
+  UIManager,
+  Image,
+} from 'react-native';
+import Animated, {
+  Easing,
+  interpolate,
+  interpolateColor,
+  runOnJS,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { colors } from '@/styles/colors';
-import Button from '@/components/Button';
-
-const IconComponent = Ionicons as any;
+import { Button } from '@oxyhq/bloom/button';
 
 // Apple-style colors
-const APPLE_CARD_BACKGROUND = '#ffffff';
-const APPLE_TEXT_PRIMARY = '#1f2937';
-const APPLE_TEXT_SECONDARY = '#6b7280';
-const MINIMAL_BORDER = '#e5e7eb';
+const APPLE_CARD_BACKGROUND = colors.white;
+const APPLE_TEXT_PRIMARY = colors.COLOR_BLACK_LIGHT_2;
+const APPLE_TEXT_SECONDARY = colors.muted;
+const MINIMAL_BORDER = colors.border;
 
 interface SindiExplanationBottomSheetProps {
   onClose: () => void;
@@ -24,16 +42,21 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
   const [layoutWidth, setLayoutWidth] = useState(Dimensions.get('window').width);
   // dynamic height
   const [containerHeight, setContainerHeight] = useState<number>(0);
-  const heightsRef = useRef<number[]>(Array(TOTAL_STEPS).fill(0));
+  // Per-step measured heights live on a SharedValue (not a plain ref) so the
+  // scroll worklet can read them on the UI thread by reference. Reading a plain
+  // JS ref/array inside a worklet would capture and freeze it, breaking the
+  // worklet runtime (see reanimated serializable freezing in dev).
+  const heights = useSharedValue<number[]>(Array(TOTAL_STEPS).fill(0));
   const navVisibility = useSharedValue(1); // 1 visible, 0 hidden
   const navContentHeight = useSharedValue(0); // measured height of nav for collapse
 
-  const scrollX = useRef(new Animated.Value(0)).current;
-  const slideUp = useRef(new Animated.Value(40)).current;
-  const sheetOpacity = useRef(new Animated.Value(0)).current;
-  const heightAnim = useRef(new Animated.Value(0)).current;
+  const scrollX = useSharedValue(0);
+  const slideUp = useSharedValue(40);
+  const sheetOpacity = useSharedValue(0);
+  const heightAnim = useSharedValue(0);
   const isScrollingRef = useRef(false);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<Animated.ScrollView>(null);
+
   // Enable LayoutAnimation on Android
   useEffect(() => {
     if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -42,21 +65,8 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
   }, []);
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.spring(slideUp, {
-        toValue: 0,
-        useNativeDriver: true,
-        damping: 14,
-        stiffness: 140,
-        mass: 0.7,
-      }),
-      Animated.timing(sheetOpacity, {
-        toValue: 1,
-        duration: 220,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }),
-    ]).start();
+    slideUp.value = withSpring(0, { damping: 14, stiffness: 140, mass: 0.7 });
+    sheetOpacity.value = withTiming(1, { duration: 220, easing: Easing.out(Easing.quad) });
   }, [slideUp, sheetOpacity]);
 
   const handleSkip = useCallback(() => {
@@ -72,65 +82,60 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
       const w = e.nativeEvent.layout.width;
       if (w && Math.abs(w - layoutWidth) > 1) setLayoutWidth(w);
     },
-    [layoutWidth]
+    [layoutWidth],
   );
 
-  const updateInterpolatedHeight = useCallback((offsetX: number) => {
-    if (layoutWidth <= 0) return;
-    const rawIndex = offsetX / layoutWidth;
-    const base = Math.floor(rawIndex);
-    const progress = rawIndex - base;
-    const h1 = heightsRef.current[base];
-    const h2 = heightsRef.current[Math.min(base + 1, TOTAL_STEPS - 1)];
-    if (h1 && h2) {
-      heightAnim.setValue(h1 + (h2 - h1) * progress);
-    } else if (h1) {
-      heightAnim.setValue(h1);
-    }
-  }, [layoutWidth, heightAnim]);
+  const handleStepChange = useCallback((nearest: number) => {
+    setCurrentStep((prev) => (prev === nearest ? prev : nearest));
+  }, []);
 
-  const onScroll = useCallback((e: any) => {
-    const offsetX = e.nativeEvent.contentOffset.x;
-    scrollX.setValue(offsetX);
-    updateInterpolatedHeight(offsetX);
-    if (layoutWidth > 0) {
-      const nearest = Math.round(offsetX / layoutWidth);
-      if (nearest !== currentStep && nearest >= 0 && nearest < TOTAL_STEPS) {
-        setCurrentStep(nearest);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      const offsetX = event.contentOffset.x;
+      scrollX.value = offsetX;
+      if (layoutWidth > 0) {
+        const rawIndex = offsetX / layoutWidth;
+        const base = Math.floor(rawIndex);
+        const progress = rawIndex - base;
+        const stepHeights = heights.value;
+        const h1 = stepHeights[base];
+        const h2 = stepHeights[Math.min(base + 1, TOTAL_STEPS - 1)];
+        if (h1 && h2) {
+          heightAnim.value = h1 + (h2 - h1) * progress;
+        } else if (h1) {
+          heightAnim.value = h1;
+        }
+        const nearest = Math.round(offsetX / layoutWidth);
+        if (nearest >= 0 && nearest < TOTAL_STEPS) {
+          runOnJS(handleStepChange)(nearest);
+        }
+        const fadeStart = TOTAL_STEPS - 2; // start fading on second-to-last step
+        const progressToLast = rawIndex - fadeStart; // 0 -> begin fade
+        if (progressToLast <= 0) {
+          navVisibility.value = 1;
+        } else {
+          navVisibility.value = 1 - Math.min(1, progressToLast);
+        }
       }
-    }
-    // continuous nav visibility fade when approaching last step
-    if (layoutWidth > 0) {
-      const rawIndex = offsetX / layoutWidth;
-      const fadeStart = TOTAL_STEPS - 2; // start fading on second-to-last step
-      const progressToLast = rawIndex - fadeStart; // 0 -> begin fade
-      if (progressToLast <= 0) {
-        navVisibility.value = 1;
-      } else {
-        const v = 1 - Math.min(1, progressToLast); // linear fade over one step
-        navVisibility.value = v;
-      }
-    }
-  }, [scrollX, updateInterpolatedHeight, layoutWidth, currentStep, navVisibility]);
+    },
+  });
 
   // Animate container height when current step height updates outside active swipe
   useEffect(() => {
     if (isScrollingRef.current) return;
     if (!containerHeight) return;
-    Animated.timing(heightAnim, {
-      toValue: containerHeight,
+    heightAnim.value = withTiming(containerHeight, {
       duration: 180,
       easing: Easing.out(Easing.quad),
-      useNativeDriver: false,
-    }).start();
+    });
   }, [containerHeight, heightAnim]);
 
   // Reset cached heights when width changes (e.g., orientation)
   useEffect(() => {
-    heightsRef.current = Array(TOTAL_STEPS).fill(0);
+    heights.value = Array(TOTAL_STEPS).fill(0);
     setContainerHeight(0);
-    heightAnim.setValue(0);
-  }, [layoutWidth, heightAnim]);
+    heightAnim.value = 0;
+  }, [layoutWidth, heightAnim, heights]);
 
   const handleScrollEnd = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -138,19 +143,20 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
       const index = Math.round(offsetX / Math.max(1, layoutWidth));
       if (index !== currentStep) {
         setCurrentStep(index);
-        const h = heightsRef.current[index] || containerHeight;
+        const h = heights.value[index] || containerHeight;
         setContainerHeight(h);
       }
       // ensure final snap animation to exact measured height
-      const hFinal = heightsRef.current[index] || containerHeight;
-      Animated.timing(heightAnim, {
-        toValue: hFinal,
-        duration: 160,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: false,
-      }).start(() => { isScrollingRef.current = false; });
+      const hFinal = heights.value[index] || containerHeight;
+      heightAnim.value = withTiming(
+        hFinal,
+        { duration: 160, easing: Easing.out(Easing.quad) },
+        () => {
+          isScrollingRef.current = false;
+        },
+      );
     },
-    [layoutWidth, currentStep, heightAnim, containerHeight]
+    [layoutWidth, currentStep, heightAnim, containerHeight, heights],
   );
 
   const handlePrevious = useCallback(() => {
@@ -158,11 +164,11 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
     const target = Math.max(0, currentStep - 1);
     if (target !== currentStep) {
       setCurrentStep(target);
-      const h = heightsRef.current[target] || containerHeight;
+      const h = heights.value[target] || containerHeight;
       setContainerHeight(h);
     }
     scrollRef.current.scrollTo({ x: target * layoutWidth, animated: true });
-  }, [currentStep, layoutWidth, containerHeight]);
+  }, [currentStep, layoutWidth, containerHeight, heights]);
 
   const handleNext = useCallback(() => {
     if (currentStep >= TOTAL_STEPS - 1) {
@@ -173,11 +179,11 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
     const target = Math.min(TOTAL_STEPS - 1, currentStep + 1);
     if (target !== currentStep) {
       setCurrentStep(target);
-      const h = heightsRef.current[target] || containerHeight;
+      const h = heights.value[target] || containerHeight;
       setContainerHeight(h);
     }
     scrollRef.current.scrollTo({ x: target * layoutWidth, animated: true });
-  }, [currentStep, layoutWidth, handleStart, containerHeight]);
+  }, [currentStep, layoutWidth, handleStart, containerHeight, heights]);
 
   // animated style for bottom nav: fade + translate + height collapse using measured height
   const bottomNavAnimatedStyle = useAnimatedStyle(() => {
@@ -194,248 +200,261 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
     };
   });
 
-  const onPageLayout = useCallback((index: number, h: number) => {
-    if (!h) return;
-    if (heightsRef.current[index] === h) return;
-    heightsRef.current[index] = h;
-    if (index === 0 && !containerHeight) {
-      setContainerHeight(h);
-      heightAnim.setValue(h);
-    }
-    if (index === currentStep) setContainerHeight(h);
-  }, [currentStep, containerHeight, heightAnim]);
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: slideUp.value }],
+    opacity: sheetOpacity.value,
+  }));
+
+  const heightContainerStyle = useAnimatedStyle(() => ({
+    width: '100%',
+    height: heightAnim.value,
+    overflow: 'hidden',
+  }));
+
+  const onPageLayout = useCallback(
+    (index: number, h: number) => {
+      if (!h) return;
+      if (heights.value[index] === h) return;
+      // Assign a fresh array rather than mutating the existing one in place:
+      // the array is shared with the UI thread, and in-place mutation of a
+      // value already passed to a worklet is unsupported.
+      const next = heights.value.slice();
+      next[index] = h;
+      heights.value = next;
+      if (index === 0 && !containerHeight) {
+        setContainerHeight(h);
+        heightAnim.value = h;
+      }
+      if (index === currentStep) setContainerHeight(h);
+    },
+    [currentStep, containerHeight, heightAnim, heights],
+  );
+
+  const onNavLayout = useCallback(
+    (e: LayoutChangeEvent) => {
+      if (navContentHeight.value === 0) {
+        navContentHeight.value = e.nativeEvent.layout.height;
+      }
+    },
+    [navContentHeight],
+  );
 
   return (
-    <Animated.View
-      onLayout={onLayout}
-      style={[
-        styles.container,
-        {
-          transform: [{ translateY: slideUp }],
-          opacity: sheetOpacity,
-        },
-      ]}
-    >
+    <Animated.View onLayout={onLayout} style={[styles.container, sheetStyle]}>
       {/* Progress Indicator */}
       <View style={styles.progressContainer}>
-        {Array.from({ length: TOTAL_STEPS }).map((_, index) => {
-          const inputRange = [
-            (index - 1) * layoutWidth,
-            index * layoutWidth,
-            (index + 1) * layoutWidth,
-          ];
-          const w = scrollX.interpolate({
-            inputRange,
-            outputRange: [8, 24, 8],
-            extrapolate: 'clamp',
-          });
-          const bg = scrollX.interpolate({
-            inputRange,
-            outputRange: [MINIMAL_BORDER, colors.primaryColor, MINIMAL_BORDER],
-            extrapolate: 'clamp',
-          });
-          return <Animated.View key={index} style={[styles.progressDot, { width: w, backgroundColor: bg }]} />;
-        })}
+        {Array.from({ length: TOTAL_STEPS }).map((_, index) => (
+          <ProgressDot
+            key={index}
+            index={index}
+            scrollX={scrollX}
+            layoutWidth={layoutWidth}
+          />
+        ))}
       </View>
 
       {/* Content: horizontal swipeable story (animated height per step) */}
-      <Animated.View style={{ width: '100%', height: heightAnim, overflow: 'hidden' }}>
+      <Animated.View style={heightContainerStyle}>
         <Animated.ScrollView
           ref={scrollRef}
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
-          onScroll={onScroll}
+          onScroll={scrollHandler}
           scrollEventThrottle={16}
-          onScrollBeginDrag={() => { isScrollingRef.current = true; }}
+          onScrollBeginDrag={() => {
+            isScrollingRef.current = true;
+          }}
           style={styles.content}
-          contentContainerStyle={[styles.hScrollContainer, { width: layoutWidth * TOTAL_STEPS }]}
+          contentContainerStyle={[
+            styles.hScrollContainer,
+            { width: layoutWidth * TOTAL_STEPS },
+          ]}
           onMomentumScrollEnd={handleScrollEnd}
           onScrollEndDrag={handleScrollEnd}
         >
           {/* Step 1 — Identity */}
-          <Animated.View
-            style={[
-              styles.page,
-              { width: layoutWidth },
-              {
-                opacity: scrollX.interpolate({
-                  inputRange: [-1 * layoutWidth, 0 * layoutWidth, 1 * layoutWidth],
-                  outputRange: [0, 1, 0],
-                }),
-                transform: [
-                  {
-                    translateX: scrollX.interpolate({
-                      inputRange: [-1 * layoutWidth, 0 * layoutWidth, 1 * layoutWidth],
-                      outputRange: [40, 0, -40],
-                    }),
-                  },
-                ],
-              },
-            ]}
+          <StoryPage
+            index={0}
+            scrollX={scrollX}
+            layoutWidth={layoutWidth}
             onLayout={(e) => onPageLayout(0, e.nativeEvent.layout.height)}
           >
             <StepCard>
-              <Text style={[styles.stepTitle, { fontSize: 34 }]}>Hi, welcome to Sindi!</Text>
-              <Text style={styles.stepDescription}>Sindi is your AI ally for tenant rights.</Text>
-              <Image source={require('@/assets/images/illustrations/welcome.png')} style={styles.heroImage} />
+              <Text style={[styles.stepTitle, { fontSize: 34 }]}>
+                Hi, welcome to Sindi!
+              </Text>
+              <Text style={styles.stepDescription}>
+                Sindi is your AI ally for tenant rights.
+              </Text>
+              <Image
+                source={require('@/assets/images/illustrations/welcome.png')}
+                style={styles.heroImage}
+              />
             </StepCard>
-          </Animated.View>
+          </StoryPage>
 
           {/* Step 2 — The pain (dark) */}
-          <Animated.View
-            style={[
-              styles.page,
-              { width: layoutWidth },
-              {
-                opacity: scrollX.interpolate({
-                  inputRange: [0 * layoutWidth, 1 * layoutWidth, 2 * layoutWidth],
-                  outputRange: [0, 1, 0],
-                }),
-                transform: [
-                  {
-                    translateX: scrollX.interpolate({
-                      inputRange: [0 * layoutWidth, 1 * layoutWidth, 2 * layoutWidth],
-                      outputRange: [40, 0, -40],
-                    }),
-                  },
-                ],
-              },
-            ]}
+          <StoryPage
+            index={1}
+            scrollX={scrollX}
+            layoutWidth={layoutWidth}
             onLayout={(e) => onPageLayout(1, e.nativeEvent.layout.height)}
           >
             <StepCard>
-              <Image source={require('@/assets/images/illustrations/sign-contract.png')} style={styles.heroImage} />
+              <Image
+                source={require('@/assets/images/illustrations/sign-contract.png')}
+                style={styles.heroImage}
+              />
               <Text style={styles.stepTitle}>Renting can feel unfair.</Text>
               <Text style={styles.stepDescription}>
                 Hidden clauses, confusing contracts, landlords with tricks…
               </Text>
             </StepCard>
-          </Animated.View>
+          </StoryPage>
 
           {/* Step 3 — The promise */}
-          <Animated.View
-            style={[
-              styles.page,
-              { width: layoutWidth },
-              {
-                opacity: scrollX.interpolate({
-                  inputRange: [1 * layoutWidth, 2 * layoutWidth, 3 * layoutWidth],
-                  outputRange: [0, 1, 0],
-                }),
-                transform: [
-                  {
-                    translateX: scrollX.interpolate({
-                      inputRange: [1 * layoutWidth, 2 * layoutWidth, 3 * layoutWidth],
-                      outputRange: [40, 0, -40],
-                    }),
-                  },
-                ],
-              },
-            ]}
+          <StoryPage
+            index={2}
+            scrollX={scrollX}
+            layoutWidth={layoutWidth}
             onLayout={(e) => onPageLayout(2, e.nativeEvent.layout.height)}
           >
             <StepCard>
-              <Image source={require('@/assets/images/illustrations/relax.png')} style={styles.heroImage} />
+              <Image
+                source={require('@/assets/images/illustrations/relax.png')}
+                style={styles.heroImage}
+              />
               <Text style={styles.stepTitle}>We’ve got your back.</Text>
               <Text style={styles.stepDescription}>
                 We scan your contract, explain your rights, and spot abuses.
               </Text>
             </StepCard>
-          </Animated.View>
+          </StoryPage>
 
           {/* Step 4 — The process */}
-          <Animated.View
-            style={[
-              styles.page,
-              { width: layoutWidth },
-              {
-                opacity: scrollX.interpolate({
-                  inputRange: [2 * layoutWidth, 3 * layoutWidth, 4 * layoutWidth],
-                  outputRange: [0, 1, 0],
-                }),
-                transform: [
-                  {
-                    translateX: scrollX.interpolate({
-                      inputRange: [2 * layoutWidth, 3 * layoutWidth, 4 * layoutWidth],
-                      outputRange: [40, 0, -40],
-                    }),
-                  },
-                ],
-              },
-            ]}
+          <StoryPage
+            index={3}
+            scrollX={scrollX}
+            layoutWidth={layoutWidth}
             onLayout={(e) => onPageLayout(3, e.nativeEvent.layout.height)}
           >
             <StepCard>
               <ProcessVisual />
             </StepCard>
-          </Animated.View>
+          </StoryPage>
 
           {/* Step 5 — The invitation */}
-          <Animated.View
-            style={[
-              styles.page,
-              { width: layoutWidth },
-              {
-                opacity: scrollX.interpolate({
-                  inputRange: [3 * layoutWidth, 4 * layoutWidth, 5 * layoutWidth],
-                  outputRange: [0, 1, 0],
-                }),
-                transform: [
-                  {
-                    translateX: scrollX.interpolate({
-                      inputRange: [3 * layoutWidth, 4 * layoutWidth, 5 * layoutWidth],
-                      outputRange: [40, 0, -40],
-                    }),
-                  },
-                ],
-              },
-            ]}
+          <StoryPage
+            index={4}
+            scrollX={scrollX}
+            layoutWidth={layoutWidth}
             onLayout={(e) => onPageLayout(4, e.nativeEvent.layout.height)}
           >
             <StepCard>
               <Text style={styles.stepTitle}>Ready to stand stronger?</Text>
-              <Text style={styles.stepDescription}>Start your first conversation with Sindi.</Text>
+              <Text style={styles.stepDescription}>
+                Start your first conversation with Sindi.
+              </Text>
               <View style={styles.inviteButtons}>
-                <Button onPress={handleStart}>
-                  Start with Sindi
-                </Button>
-                <Button onPress={handlePrevious} backgroundColor="transparent" textColor={APPLE_TEXT_SECONDARY}>
+                <Button onPress={handleStart}>Start with Sindi</Button>
+                <Button
+                  onPress={handlePrevious}
+                  variant="ghost"
+                  style={{ backgroundColor: 'transparent' }}
+                  textStyle={{ color: APPLE_TEXT_SECONDARY }}
+                >
                   Previous
                 </Button>
               </View>
               {/* Confetti removed */}
             </StepCard>
-          </Animated.View>
+          </StoryPage>
         </Animated.ScrollView>
       </Animated.View>
       {/* Bottom navigation */}
-      <AnimatedRe.View
+      <Animated.View
         style={[styles.bottomNav, bottomNavAnimatedStyle]}
         pointerEvents={currentStep === TOTAL_STEPS - 1 ? 'none' : 'auto'}
-        onLayout={(e) => {
-          if (navContentHeight.value === 0) {
-            navContentHeight.value = e.nativeEvent.layout.height;
-          }
-        }}
+        onLayout={onNavLayout}
       >
         <Button
           onPress={currentStep === 0 ? handleSkip : handlePrevious}
-          backgroundColor={APPLE_CARD_BACKGROUND}
-          textColor={APPLE_TEXT_PRIMARY}
-          style={{ flex: 1 }}
+          variant="secondary"
+          style={{ flex: 1, backgroundColor: APPLE_CARD_BACKGROUND }}
+          textStyle={{ color: APPLE_TEXT_PRIMARY }}
         >
           {currentStep === 0 ? 'Skip' : 'Previous'}
         </Button>
         <Button
           onPress={handleNext}
-          backgroundColor={colors.primaryColor}
-          textColor={'#fff'}
-          style={{ flex: 1 }}
+          style={{ flex: 1, backgroundColor: colors.primaryColor }}
+          textStyle={{ color: colors.white }}
         >
           {currentStep === TOTAL_STEPS - 1 ? 'Start' : 'Next'}
         </Button>
-      </AnimatedRe.View>
+      </Animated.View>
+    </Animated.View>
+  );
+}
+
+interface ProgressDotProps {
+  index: number;
+  scrollX: ReturnType<typeof useSharedValue<number>>;
+  layoutWidth: number;
+}
+
+function ProgressDot({ index, scrollX, layoutWidth }: ProgressDotProps) {
+  const animatedStyle = useAnimatedStyle(() => {
+    const inputRange = [
+      (index - 1) * layoutWidth,
+      index * layoutWidth,
+      (index + 1) * layoutWidth,
+    ];
+    const width = interpolate(scrollX.value, inputRange, [8, 24, 8], 'clamp');
+    const backgroundColor = interpolateColor(
+      scrollX.value,
+      inputRange,
+      [MINIMAL_BORDER, colors.primaryColor, MINIMAL_BORDER],
+    );
+    return { width, backgroundColor };
+  });
+
+  return <Animated.View style={[styles.progressDot, animatedStyle]} />;
+}
+
+interface StoryPageProps {
+  index: number;
+  scrollX: ReturnType<typeof useSharedValue<number>>;
+  layoutWidth: number;
+  onLayout: (e: LayoutChangeEvent) => void;
+  children: React.ReactNode;
+}
+
+function StoryPage({
+  index,
+  scrollX,
+  layoutWidth,
+  onLayout,
+  children,
+}: StoryPageProps) {
+  const animatedStyle = useAnimatedStyle(() => {
+    const inputRange = [
+      (index - 1) * layoutWidth,
+      index * layoutWidth,
+      (index + 1) * layoutWidth,
+    ];
+    const opacity = interpolate(scrollX.value, inputRange, [0, 1, 0]);
+    const translateX = interpolate(scrollX.value, inputRange, [40, 0, -40]);
+    return { opacity, transform: [{ translateX }] };
+  });
+
+  return (
+    <Animated.View
+      style={[styles.page, { width: layoutWidth }, animatedStyle]}
+      onLayout={onLayout}
+    >
+      {children}
     </Animated.View>
   );
 }
@@ -475,7 +494,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: APPLE_TEXT_PRIMARY,
     textAlign: 'center',
-    fontFamily: 'Phudu',
   },
   stepDescription: {
     fontSize: 16,
@@ -484,8 +502,8 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     paddingHorizontal: 16,
   },
-  darkTitle: { color: '#f9fafb' },
-  darkDescription: { color: '#cbd5e1' },
+  darkTitle: { color: colors.surface },
+  darkDescription: { color: colors.border },
   stepContent: {
     marginHorizontal: 20,
     paddingVertical: 28,
@@ -495,7 +513,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   stepContentDark: {
-    backgroundColor: '#0f172a',
+    backgroundColor: colors.COLOR_BLACK_LIGHT_1,
     borderRadius: 28,
     paddingVertical: 32,
     paddingHorizontal: 12,
@@ -520,7 +538,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: APPLE_TEXT_PRIMARY,
     textAlign: 'center',
-    fontFamily: 'Phudu',
   },
   inviteButtons: {
     width: '100%',
@@ -564,7 +581,7 @@ const styles = StyleSheet.create({
   },
   nextText: {
     fontSize: 16,
-    color: '#fff',
+    color: colors.white,
     fontWeight: '700',
   },
   heroImage: {
@@ -576,32 +593,43 @@ const styles = StyleSheet.create({
 
 // Process visual with three pictograms
 function ProcessVisual() {
-  const scale1 = useRef(new Animated.Value(0.8)).current;
-  const scale2 = useRef(new Animated.Value(0.8)).current;
-  const scale3 = useRef(new Animated.Value(0.8)).current;
+  const scale1 = useSharedValue(0.8);
+  const scale2 = useSharedValue(0.8);
+  const scale3 = useSharedValue(0.8);
+
   useEffect(() => {
-    Animated.stagger(
-      120,
-      [scale1, scale2, scale3].map((s) =>
-        Animated.spring(s, { toValue: 1, useNativeDriver: true, damping: 10 })
-      )
-    ).start();
+    scale1.value = withSpring(1, { damping: 10 });
+    const t2 = setTimeout(() => {
+      scale2.value = withSpring(1, { damping: 10 });
+    }, 120);
+    const t3 = setTimeout(() => {
+      scale3.value = withSpring(1, { damping: 10 });
+    }, 240);
+    return () => {
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
   }, [scale1, scale2, scale3]);
+
+  const style1 = useAnimatedStyle(() => ({ transform: [{ scale: scale1.value }] }));
+  const style2 = useAnimatedStyle(() => ({ transform: [{ scale: scale2.value }] }));
+  const style3 = useAnimatedStyle(() => ({ transform: [{ scale: scale3.value }] }));
+
   return (
-    <View style={{ width: '100%', gap: 12, }}>
+    <View style={{ width: '100%', gap: 12 }}>
       <View style={{ alignItems: 'center', gap: 6 }}>
         <Text style={styles.stepTitle}>How it works</Text>
       </View>
       <View style={styles.processRow}>
-        <Animated.View style={[styles.processItem, { transform: [{ scale: scale1 }] }]}>
+        <Animated.View style={[styles.processItem, style1]}>
           <Text style={{ fontSize: 34, lineHeight: 38 }}>📄</Text>
           <Text style={styles.processLabel}>Upload contract</Text>
         </Animated.View>
-        <Animated.View style={[styles.processItem, { transform: [{ scale: scale2 }] }]}>
+        <Animated.View style={[styles.processItem, style2]}>
           <Text style={{ fontSize: 34, lineHeight: 38 }}>💬</Text>
           <Text style={styles.processLabel}>Sindi explains</Text>
         </Animated.View>
-        <Animated.View style={[styles.processItem, { transform: [{ scale: scale3 }] }]}>
+        <Animated.View style={[styles.processItem, style3]}>
           <Text style={{ fontSize: 34, lineHeight: 38 }}>💪</Text>
           <Text style={styles.processLabel}>You act</Text>
         </Animated.View>
@@ -611,21 +639,34 @@ function ProcessVisual() {
 }
 
 // Plain step wrapper (card chrome removed)
-function StepCard({ children, dark, onLayout }: { children: React.ReactNode; dark?: boolean; onLayout?: (e: LayoutChangeEvent) => void }) {
-  const y = useRef(new Animated.Value(10)).current;
-  const o = useRef(new Animated.Value(0)).current;
+function StepCard({
+  children,
+  dark,
+  onLayout,
+}: {
+  children: React.ReactNode;
+  dark?: boolean;
+  onLayout?: (e: LayoutChangeEvent) => void;
+}) {
+  const y = useSharedValue(10);
+  const opacity = useSharedValue(0);
+
   useEffect(() => {
-    Animated.parallel([
-      Animated.spring(y, { toValue: 0, useNativeDriver: true, damping: 12 }),
-      Animated.timing(o, { toValue: 1, duration: 220, useNativeDriver: true }),
-    ]).start();
-  }, [y, o]);
+    y.value = withSpring(0, { damping: 12 });
+    opacity.value = withTiming(1, { duration: 220 });
+  }, [y, opacity]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: y.value }],
+    opacity: opacity.value,
+    width: '100%',
+  }));
+
   return (
-    <Animated.View
-      onLayout={onLayout}
-      style={{ transform: [{ translateY: y }], opacity: o, width: '100%' }}
-    >
-      <View style={[styles.stepContent, dark && styles.stepContentDark]}>{children}</View>
+    <Animated.View onLayout={onLayout} style={animatedStyle}>
+      <View style={[styles.stepContent, dark && styles.stepContentDark]}>
+        {children}
+      </View>
     </Animated.View>
   );
 }

@@ -1,13 +1,14 @@
 // Reusable UI Components
 export { StatusBadge, type StatusType } from './StatusBadge';
 export { ActionButton, type ActionButtonVariant } from './ActionButton';
-export { FilterChip } from './FilterChip';
+export { CardSurface, type CardSurfaceProps } from './CardSurface';
 export { EmptyState } from './EmptyState';
+export { ErrorState } from './ErrorState';
+export { ListSkeleton, type ListSkeletonProps } from './ListSkeleton';
 export { ProgressBar } from './ProgressBar';
 export { SectionCard } from './SectionCard';
+export { SectionEyebrow } from './SectionEyebrow';
 
 // Existing UI Components
-export { default as ExpandableMenu } from './ExpandableMenu';
-export { Menu } from './Menu';
 export { IconSymbol } from './IconSymbol';
 export { default as TabBarBackground } from './TabBarBackground';

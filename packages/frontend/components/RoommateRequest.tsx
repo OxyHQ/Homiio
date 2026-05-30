@@ -2,12 +2,10 @@ import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Alert, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
-import type { RoommateRequest } from '@/hooks/useRoommate';
+import type { RoommateRequest, RoommateProfile } from '@/hooks/useRoommate';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { ThemedText } from './ThemedText';
 
-// Type assertion for Ionicons compatibility
-const IconComponent = Ionicons as any;
 
 interface RoommateRequestProps {
   request: RoommateRequest;
@@ -74,7 +72,7 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
     }
   };
 
-  const getDisplayName = (profile: any) => {
+  const getDisplayName = (profile: RoommateProfile) => {
     const personal = profile.personalProfile;
     // Try to get name from bio or use default
     if (personal?.personalInfo?.bio) {
@@ -89,13 +87,13 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'accepted':
-        return '#00C853'; // Green for success
+        return colors.success; // Green for success
       case 'declined':
-        return '#FF3B30'; // Red for error
+        return colors.danger; // Red for error
       case 'expired':
         return colors.COLOR_BLACK_LIGHT_5;
       default:
-        return '#FFCC00'; // Yellow for warning
+        return colors.warning; // Yellow for warning
     }
   };
 
@@ -129,7 +127,7 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
         >
           {/* Avatar placeholder since avatar is not in PersonalProfile type */}
           <View style={styles.avatarPlaceholder}>
-            <IconComponent name="person" size={24} color={colors.COLOR_BLACK_LIGHT_5} />
+            <Ionicons name="person" size={24} color={colors.COLOR_BLACK_LIGHT_5} />
           </View>
         </TouchableOpacity>
 
@@ -207,7 +205,7 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
             style={styles.viewProfileButton}
             onPress={() => onViewProfile(otherProfile.id)}
           >
-            <IconComponent name="eye-outline" size={16} color={colors.primaryDark} />
+            <Ionicons name="eye-outline" size={16} color={colors.primaryDark} />
             <ThemedText style={styles.viewProfileText}>View Profile</ThemedText>
           </TouchableOpacity>
         </View>

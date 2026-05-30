@@ -1,14 +1,17 @@
-import React, { useEffect, useState, ReactNode, useRef } from 'react';
-import { StyleSheet, View, ViewStyle, Platform, Animated, Pressable } from 'react-native';
+import React, { useEffect, useState, ReactNode } from 'react';
+import { StyleSheet, View, ViewStyle, Platform, Pressable } from 'react-native';
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { useRouter } from 'expo-router';
-import { phuduFontWeights } from '@/styles/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from './ThemedText';
 import { useLayoutScroll } from '@/context/LayoutScrollContext';
-
-const IconComponent = Ionicons as any;
 
 interface Props {
   style?: ViewStyle;
@@ -22,7 +25,7 @@ interface Props {
     transparent?: boolean;
     scrollThreshold?: number;
   };
-  scrollY?: Animated.Value;
+  scrollY?: SharedValue<number>;
 }
 
 export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) => {
@@ -30,51 +33,53 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
   const router = useRouter();
   const [canGoBack, setCanGoBack] = useState(false);
   const insets = useSafeAreaInsets();
-  const internalScrollYRef = useRef(new Animated.Value(0));
-  const scrollY = externalScrollY || layoutScroll?.scrollY || internalScrollYRef.current;
+  const internalScrollY = useSharedValue(0);
+  const scrollY = externalScrollY ?? layoutScroll?.scrollY ?? internalScrollY;
 
   const titlePosition = options?.titlePosition || 'left';
   const isTransparent = options?.transparent || false;
   const scrollThreshold = options?.scrollThreshold || 20;
 
   useEffect(() => {
-    // Check if we can go back
     setCanGoBack(router.canGoBack());
   }, [router]);
 
   useEffect(() => {
-    if (Platform.OS === 'web' && !externalScrollY && !layoutScroll?.scrollY) {
-      const handleScroll = () => {
-        const scrollPosition = window.scrollY;
-        scrollY.setValue(scrollPosition);
+    if (Platform.OS !== 'web' || externalScrollY || layoutScroll?.scrollY) return;
+    const handleScroll = () => {
+      scrollY.value = window.scrollY;
+    };
+    document.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      document.removeEventListener('scroll', handleScroll);
+    };
+  }, [scrollY, externalScrollY, layoutScroll]);
 
-        // When no external scrollY is provided, derive basic threshold state internally if needed
-      };
-
-      document.addEventListener('scroll', handleScroll, { passive: true });
-      return () => {
-        document.removeEventListener('scroll', handleScroll);
-      };
+  const backgroundStyle = useAnimatedStyle(() => {
+    if (!isTransparent) {
+      return { opacity: 1, shadowOpacity: 0.1, elevation: 3 };
     }
-  }, [scrollY, scrollThreshold, externalScrollY, layoutScroll]);
-
-  // Animated values for transparent mode
-  const backgroundColorOpacity = scrollY.interpolate({
-    inputRange: [0, scrollThreshold],
-    outputRange: isTransparent ? [0, 1] : [1, 1],
-    extrapolate: 'clamp',
-  });
-
-  const shadowOpacity = scrollY.interpolate({
-    inputRange: [0, scrollThreshold],
-    outputRange: isTransparent ? [0, 0.1] : [0.1, 0.1],
-    extrapolate: 'clamp',
-  });
-
-  const elevation = scrollY.interpolate({
-    inputRange: [0, scrollThreshold],
-    outputRange: isTransparent ? [0, 3] : [3, 3],
-    extrapolate: 'clamp',
+    const progress = interpolate(
+      scrollY.value,
+      [0, scrollThreshold],
+      [0, 1],
+      'clamp',
+    );
+    return {
+      opacity: progress,
+      shadowOpacity: interpolate(
+        scrollY.value,
+        [0, scrollThreshold],
+        [0, 0.1],
+        'clamp',
+      ),
+      elevation: interpolate(
+        scrollY.value,
+        [0, scrollThreshold],
+        [0, 3],
+        'clamp',
+      ),
+    };
   });
 
   return (
@@ -85,18 +90,16 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
           styles.backgroundOverlay,
           {
             backgroundColor: colors.primaryLight,
-            opacity: isTransparent ? backgroundColorOpacity : 1,
             shadowColor: colors.COLOR_BLACK,
             shadowOffset: {
               width: 0,
               height: 2,
             },
-            shadowOpacity: shadowOpacity,
             shadowRadius: 3,
-            elevation: elevation,
             borderBottomWidth: 0.01,
             borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
           },
+          backgroundStyle,
         ]}
       />
 
@@ -105,7 +108,7 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
         <View style={styles.leftContainer}>
           {options?.showBackButton && canGoBack && (
             <Pressable onPress={() => router.back()} style={styles.backButton}>
-              <IconComponent name="arrow-back" size={24} color={colors.COLOR_BLACK} />
+              <Ionicons name="arrow-back" size={24} color={colors.COLOR_BLACK} />
             </Pressable>
           )}
           {options?.leftComponents?.map((component, index) => (
@@ -117,7 +120,6 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
                 <ThemedText
                   style={[
                     styles.topRowText,
-                    { fontFamily: phuduFontWeights.bold },
                     options?.subtitle && { fontSize: 14 },
                   ]}
                 >
@@ -136,7 +138,6 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
               <ThemedText
                 style={[
                   styles.topRowText,
-                  { fontFamily: phuduFontWeights.bold },
                   options?.subtitle && { fontSize: 14 },
                 ]}
               >

@@ -12,8 +12,6 @@ import { colors } from '@/styles/colors';
 import type { RoommateProfile } from '@/hooks/useRoommate';
 import { ActionButton } from '@/components/ui/ActionButton';
 
-// Type assertion for Ionicons compatibility
-const IconComponent = Ionicons as any;
 
 interface RoommateMatchProps {
   profile: RoommateProfile;
@@ -64,9 +62,9 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
   };
 
   const getMatchScoreColor = (score: number) => {
-    if (score >= 80) return '#00C853'; // Green for success
-    if (score >= 60) return '#FFCC00'; // Yellow for warning
-    return '#FF3B30'; // Red for error
+    if (score >= 80) return colors.success; // Green for success
+    if (score >= 60) return colors.warning; // Yellow for warning
+    return colors.danger; // Red for error
   };
 
   const getMatchScoreText = (score: number) => {
@@ -82,7 +80,7 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
         <TouchableOpacity style={styles.avatarContainer} onPress={() => onViewProfile(profile.id)}>
           {/* Avatar placeholder since avatar is not in PersonalProfile type */}
           <View style={styles.avatarPlaceholder}>
-            <IconComponent name="person" size={24} color={colors.COLOR_BLACK_LIGHT_5} />
+            <Ionicons name="person" size={24} color={colors.COLOR_BLACK_LIGHT_5} />
           </View>
         </TouchableOpacity>
 
@@ -117,19 +115,19 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
           <Text style={styles.sectionTitle}>Preferences</Text>
           <View style={styles.preferencesGrid}>
             <View style={styles.preferenceItem}>
-              <IconComponent name="cash-outline" size={16} color={colors.COLOR_BLACK_LIGHT_5} />
+              <Ionicons name="cash-outline" size={16} color={colors.COLOR_BLACK_LIGHT_5} />
               <Text style={styles.preferenceText}>
                 ${profile.personalProfile.settings.roommate.preferences.budget?.max || 0}/mo
               </Text>
             </View>
             <View style={styles.preferenceItem}>
-              <IconComponent name="calendar-outline" size={16} color={colors.COLOR_BLACK_LIGHT_5} />
+              <Ionicons name="calendar-outline" size={16} color={colors.COLOR_BLACK_LIGHT_5} />
               <Text style={styles.preferenceText}>
                 {profile.personalProfile.settings.roommate.preferences.moveInDate || 'Flexible'}
               </Text>
             </View>
             <View style={styles.preferenceItem}>
-              <IconComponent name="home-outline" size={16} color={colors.COLOR_BLACK_LIGHT_5} />
+              <Ionicons name="home-outline" size={16} color={colors.COLOR_BLACK_LIGHT_5} />
               <Text style={styles.preferenceText}>
                 {profile.personalProfile.settings.roommate.preferences.leaseDuration || 'Flexible'}
               </Text>
@@ -159,7 +157,7 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
           style={styles.viewProfileButton}
           onPress={() => onViewProfile(profile.id)}
         >
-          <IconComponent name="eye-outline" size={20} color={colors.primaryDark} />
+          <Ionicons name="eye-outline" size={20} color={colors.primaryDark} />
           <Text style={styles.viewProfileText}>View Profile</Text>
         </TouchableOpacity>
 

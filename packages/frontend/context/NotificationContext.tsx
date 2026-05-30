@@ -7,10 +7,11 @@ import React, {
     useRef,
     ReactNode,
 } from 'react';
-import { AppState, AppStateStatus, Platform } from 'react-native';
+import { AppState, AppStateStatus, NativeEventSubscription, Platform } from 'react-native';
+import type { EventSubscription } from 'expo-modules-core';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { toast } from '@/lib/sonner';
 
 import {
     requestNotificationPermissions,
@@ -152,9 +153,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     });
 
     // Refs
-    const notificationListener = useRef<any>();
-    const responseListener = useRef<any>();
-    const appStateListener = useRef<any>();
+    const notificationListener = useRef<EventSubscription | null>(null);
+    const responseListener = useRef<EventSubscription | null>(null);
+    const appStateListener = useRef<NativeEventSubscription | null>(null);
 
     // Initialize notifications
     const initializeNotifications = useCallback(async () => {
@@ -435,8 +436,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             const { data } = notification.request.content;
 
             // Handle notification based on type
-            if (data?.type === 'property' && data?.propertyId) {
-                router.push(`/properties/${data.propertyId}`);
+            const propertyId = data?.propertyId;
+            if (data?.type === 'property' && typeof propertyId === 'string') {
+                router.push(`/properties/${propertyId}`);
             } else if (data?.type === 'message' && data?.messageId) {
                 router.push('/messages');
             }
@@ -449,12 +451,14 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
             const { data } = response.notification.request.content;
 
-            if (data?.screen) {
-                router.push(data.screen);
+            const screen = data?.screen;
+            if (typeof screen === 'string') {
+                router.push(screen);
             }
 
-            if (data?.id) {
-                markAsRead(data.id);
+            const id = data?.id;
+            if (typeof id === 'string') {
+                markAsRead(id);
             }
         });
 
@@ -468,10 +472,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
         return () => {
             if (notificationListener.current) {
-                Notifications.removeNotificationSubscription(notificationListener.current);
+                notificationListener.current.remove();
             }
             if (responseListener.current) {
-                Notifications.removeNotificationSubscription(responseListener.current);
+                responseListener.current.remove();
             }
             if (appStateListener.current) {
                 appStateListener.current.remove();

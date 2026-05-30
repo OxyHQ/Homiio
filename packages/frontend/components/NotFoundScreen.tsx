@@ -33,7 +33,7 @@ const styles = StyleSheet.create({
   },
   message: {
     fontSize: 16,
-    color: '#666666',
+    color: colors.muted,
     textAlign: 'center',
     marginBottom: 24,
   },
@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 16,
     fontWeight: 'bold',
   },

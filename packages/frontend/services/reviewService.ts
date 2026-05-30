@@ -120,10 +120,7 @@ class ReviewService {
     activeSessionId?: string
   ): Promise<ApiResponse<{ review: ReviewData }>> {
     try {
-      const response = await api.post('/api/reviews', reviewData, {
-        oxyServices,
-        activeSessionId,
-      });
+      const response = await api.post('/api/reviews', reviewData);
 
       return {
         success: true,

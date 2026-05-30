@@ -1,9 +1,15 @@
 import { api } from '@/utils/api';
 import { OxyServices } from '@oxyhq/core';
-import { Profile, PersonalProfile, RoommatePreferences, LeaseDuration } from '@homiio/shared-types';
+import { Profile, PersonalProfile, RoommatePreferences } from '@homiio/shared-types';
 
 // Re-export the types for backward compatibility
 export type { Profile, PersonalProfile, RoommatePreferences };
+
+/**
+ * The roommate matching preference values nested inside
+ * `RoommatePreferences.preferences` (budget, lifestyle, schedule, etc.).
+ */
+export type RoommateMatchingPreferences = NonNullable<RoommatePreferences['preferences']>;
 
 export interface RoommateFilters {
   minMatchPercentage?: number;
@@ -19,14 +25,42 @@ export interface RoommateFilters {
   location?: string;
 }
 
+/**
+ * Oxy account fields the backend may attach to a profile to enrich roommate
+ * results (name, bio, location). Not part of the persisted profile model, so
+ * it is modelled as an optional extension of {@link Profile}.
+ */
+interface EnrichedProfile extends Profile {
+  userData?: {
+    fullName?: string;
+    bio?: string;
+    location?: string;
+  };
+}
+
+/** Response shape for the roommate-matching toggle endpoint. */
+interface ToggleMatchingResponse {
+  enabled?: boolean;
+  message?: string;
+}
+
+/**
+ * Roommate matching API.
+ *
+ * Auth is resolved internally by the shared `api` client (via `oxyClient`
+ * access tokens), so the optional `oxyServices` / `activeSessionId` arguments
+ * accepted by the methods below are no longer forwarded to the transport.
+ * They are retained on the public signatures so existing call sites that still
+ * pass an Oxy session context continue to type-check during the migration.
+ */
 class RoommateService {
   private baseUrl = '/api/roommates';
 
   // Get all available roommate profiles (personal profiles with roommate enabled)
   async getRoommateProfiles(
     filters?: RoommateFilters,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
+    _oxyServices?: OxyServices,
+    _activeSessionId?: string,
   ): Promise<{
     profiles: Profile[];
     total: number;
@@ -34,11 +68,7 @@ class RoommateService {
     totalPages: number;
   }> {
     try {
-      const response = await api.get(this.baseUrl, {
-        params: filters,
-        oxyServices,
-        activeSessionId,
-      });
+      const response = await api.get(this.baseUrl, { params: filters });
       const data = response.data;
       if (Array.isArray(data?.profiles)) {
         data.profiles = data.profiles.map((p: any) => ({
@@ -54,14 +84,11 @@ class RoommateService {
 
   // Get current user's roommate preferences
   async getMyRoommatePreferences(
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
+    _oxyServices?: OxyServices,
+    _activeSessionId?: string,
   ): Promise<RoommatePreferences | null> {
     try {
-      const response = await api.get(`${this.baseUrl}/preferences`, {
-        oxyServices,
-        activeSessionId,
-      });
+      const response = await api.get(`${this.baseUrl}/preferences`);
       return response.data.data;
     } catch (error) {
       return null;
@@ -70,14 +97,11 @@ class RoommateService {
 
   // Get current user's roommate matching status (enabled flag)
   async getMyRoommateStatus(
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
+    _oxyServices?: OxyServices,
+    _activeSessionId?: string,
   ): Promise<{ hasRoommateMatching: boolean } | null> {
     try {
-      const response = await api.get(`${this.baseUrl}/status`, {
-        oxyServices,
-        activeSessionId,
-      });
+      const response = await api.get(`${this.baseUrl}/status`);
       return { hasRoommateMatching: Boolean(response.data.hasRoommateMatching) };
     } catch (error) {
       return null;
@@ -87,14 +111,11 @@ class RoommateService {
   // Update roommate preferences
   async updateRoommatePreferences(
     preferences: RoommatePreferences,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
+    _oxyServices?: OxyServices,
+    _activeSessionId?: string,
   ): Promise<RoommatePreferences> {
     try {
-      const response = await api.put(`${this.baseUrl}/preferences`, preferences, {
-        oxyServices,
-        activeSessionId,
-      });
+      const response = await api.put(`${this.baseUrl}/preferences`, preferences);
       return response.data.data;
     } catch (error) {
       throw error;
@@ -104,22 +125,15 @@ class RoommateService {
   // Enable/disable roommate matching for current profile
   async toggleRoommateMatching(
     enabled: boolean,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
+    _oxyServices?: OxyServices,
+    _activeSessionId?: string,
   ): Promise<{ enabled: boolean; message: string }> {
     try {
-      const response = await api.patch(
-        `${this.baseUrl}/toggle`,
-        { enabled },
-        {
-          oxyServices,
-          activeSessionId,
-        },
-      );
-      const data = response.data as any;
+      const response = await api.patch<ToggleMatchingResponse>(`${this.baseUrl}/toggle`, { enabled });
+      const data = response.data;
       // Fallback if backend doesn't include enabled for some reason
       return {
-        enabled: typeof data.enabled === 'boolean' ? data.enabled : !!enabled,
+        enabled: typeof data.enabled === 'boolean' ? data.enabled : enabled,
         message: data.message ?? `Roommate matching ${enabled ? 'enabled' : 'disabled'} successfully`,
       };
     } catch (error) {
@@ -131,18 +145,11 @@ class RoommateService {
   async sendRoommateRequest(
     profileId: string,
     message?: string,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
+    _oxyServices?: OxyServices,
+    _activeSessionId?: string,
   ): Promise<void> {
     try {
-      await api.post(
-        `${this.baseUrl}/${profileId}/request`,
-        { message },
-        {
-          oxyServices,
-          activeSessionId,
-        },
-      );
+      await api.post(`${this.baseUrl}/${profileId}/request`, { message });
     } catch (error) {
       throw error;
     }
@@ -150,17 +157,14 @@ class RoommateService {
 
   // Get roommate requests (sent and received)
   async getRoommateRequests(
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
+    _oxyServices?: OxyServices,
+    _activeSessionId?: string,
   ): Promise<{
     sent: any[];
     received: any[];
   }> {
     try {
-      const response = await api.get(`${this.baseUrl}/requests`, {
-        oxyServices,
-        activeSessionId,
-      });
+      const response = await api.get(`${this.baseUrl}/requests`);
       const data = response.data.data;
       if (Array.isArray(data?.sent)) {
         data.sent = data.sent.map((r: any) => ({
@@ -184,18 +188,11 @@ class RoommateService {
   async declineRoommateRequest(
     requestId: string,
     responseMessage?: string,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
+    _oxyServices?: OxyServices,
+    _activeSessionId?: string,
   ): Promise<void> {
     try {
-      await api.post(
-        `${this.baseUrl}/requests/${requestId}/decline`,
-        { responseMessage },
-        {
-          oxyServices,
-          activeSessionId,
-        },
-      );
+      await api.post(`${this.baseUrl}/requests/${requestId}/decline`, { responseMessage });
     } catch (error) {
       throw error;
     }
@@ -205,18 +202,11 @@ class RoommateService {
   async acceptRoommateRequest(
     requestId: string,
     responseMessage?: string,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
+    _oxyServices?: OxyServices,
+    _activeSessionId?: string,
   ): Promise<void> {
     try {
-      await api.post(
-        `${this.baseUrl}/requests/${requestId}/accept`,
-        { responseMessage },
-        {
-          oxyServices,
-          activeSessionId,
-        },
-      );
+      await api.post(`${this.baseUrl}/requests/${requestId}/accept`, { responseMessage });
     } catch (error) {
       throw error;
     }
@@ -234,14 +224,11 @@ class RoommateService {
   // End roommate relationship
   async endRoommateRelationship(
     relationshipId: string,
-    oxyServices?: OxyServices,
-    activeSessionId?: string,
+    _oxyServices?: OxyServices,
+    _activeSessionId?: string,
   ): Promise<void> {
     try {
-      await api.delete(`${this.baseUrl}/relationships/${relationshipId}`, {
-        oxyServices,
-        activeSessionId,
-      });
+      await api.delete(`${this.baseUrl}/relationships/${relationshipId}`);
     } catch (error) {
       throw error;
     }
@@ -252,9 +239,10 @@ class RoommateService {
     return profile.personalProfile?.settings?.roommate?.enabled || false;
   }
 
-  // Get roommate preferences from a profile
-  getRoommatePreferencesFromProfile(profile: Profile): RoommatePreferences | null {
-    return profile.personalProfile?.settings?.roommate?.preferences || null;
+  // Get the roommate matching preferences (budget, lifestyle, schedule, ...)
+  // nested inside a profile's roommate settings.
+  getRoommatePreferencesFromProfile(profile: Profile): RoommateMatchingPreferences | null {
+    return profile.personalProfile?.settings?.roommate?.preferences ?? null;
   }
 
   // Calculate match percentage between two profiles
@@ -322,7 +310,7 @@ class RoommateService {
     const roommatePrefs = personal?.settings?.roommate?.preferences;
 
     // Use enriched Oxy user data if available
-    const userData = (profile as any).userData;
+    const userData = (profile as EnrichedProfile).userData;
 
     // Try to extract name from various possible sources
     let name = 'User';

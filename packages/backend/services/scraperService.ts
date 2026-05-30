@@ -1,4 +1,4 @@
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 // API responses are now in the correct format, no transformer needed
 // CommonJS export, use require
 const Property = require('../models/schemas/PropertySchema');

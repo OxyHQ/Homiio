@@ -1,18 +1,34 @@
+/**
+ * EmptyState — single empty UI used across the app whenever a list or
+ * grid has nothing to show. Sits in place of the list content. Pattern:
+ *
+ *   icon
+ *   title
+ *   one-line subtitle
+ *   action button (optional)
+ *
+ * Use this everywhere instead of inline "Nothing here yet" Text. Pairs
+ * with ErrorState (network/fetch failure) and Skeleton.Box (loading).
+ */
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { StyleSheet, View, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '@/styles/colors';
-import { ActionButton } from './ActionButton';
 
-// Type assertion for Ionicons compatibility
-const IconComponent = Ionicons as any;
+import { Button } from '@oxyhq/bloom/button';
+import { H3, Text as BloomText } from '@oxyhq/bloom/typography';
+
+import { colors } from '@/styles/colors';
+import { spacing } from '@/constants/styles';
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 type EmptyStateProps = {
-  icon?: string;
+  icon?: IoniconName;
   title: string;
   description?: string;
   actionText?: string;
-  actionIcon?: string;
+  /** Optional Ionicon name shown inside the action button. */
+  actionIcon?: IoniconName;
   onAction?: () => void;
   style?: ViewStyle;
   iconSize?: number;
@@ -24,30 +40,40 @@ export function EmptyState({
   title,
   description,
   actionText,
-  actionIcon = 'add',
+  actionIcon,
   onAction,
   style,
-  iconSize = 64,
+  iconSize = 28,
   iconColor = colors.COLOR_BLACK_LIGHT_3,
 }: EmptyStateProps) {
   return (
     <View style={[styles.container, style]}>
-      <IconComponent name={icon} size={iconSize} color={iconColor} style={styles.icon} />
+      <View style={styles.iconCircle}>
+        <Ionicons name={icon} size={iconSize} color={iconColor} />
+      </View>
 
-      <Text style={styles.title}>{title}</Text>
+      <H3 style={styles.title}>{title}</H3>
 
-      {description && <Text style={styles.description}>{description}</Text>}
+      {description ? (
+        <BloomText style={styles.description}>{description}</BloomText>
+      ) : null}
 
-      {actionText && onAction && (
-        <ActionButton
-          icon={actionIcon}
-          text={actionText}
-          onPress={onAction}
-          variant="primary"
-          size="medium"
-          style={styles.actionButton}
-        />
-      )}
+      {actionText && onAction ? (
+        <View style={styles.action}>
+          <Button
+            onPress={onAction}
+            variant="primary"
+            size="medium"
+            icon={
+              actionIcon ? (
+                <Ionicons name={actionIcon} size={16} color={colors.white} />
+              ) : undefined
+            }
+          >
+            {actionText}
+          </Button>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -57,28 +83,34 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
-    minHeight: 200,
+    paddingVertical: spacing['4xl'],
+    paddingHorizontal: spacing['2xl'],
+    minHeight: 240,
   },
-  icon: {
-    marginBottom: 16,
+  iconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
   },
   title: {
     fontSize: 18,
-    fontWeight: '600',
-    color: colors.primaryDark,
+    fontWeight: '700',
+    color: colors.COLOR_BLACK,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   description: {
     fontSize: 14,
-    color: colors.primaryDark_1,
+    color: colors.COLOR_BLACK_LIGHT_3,
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 24,
-    maxWidth: 280,
+    maxWidth: 320,
   },
-  actionButton: {
-    marginTop: 8,
+  action: {
+    marginTop: spacing.xl,
   },
 });

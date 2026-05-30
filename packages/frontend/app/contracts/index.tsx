@@ -1,255 +1,317 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-} from 'react-native';
+/**
+ * Contracts inbox — leases the user signs (tenant) or holds (landlord).
+ *
+ * Stream Q polish:
+ *   - Bloom Chip filter row, Bloom Button "New contract" CTA in the header.
+ *   - withShadow('sm') ContractCard list with radius.lg.
+ *   - Bloom Skeleton + shared EmptyState / ErrorState.
+ *   - Bloom Typography (H2, Text) and SectionEyebrow for hierarchy.
+ */
+import React, { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Button } from '@oxyhq/bloom/button';
+import { Chip } from '@oxyhq/bloom/chip';
+import * as Skeleton from '@oxyhq/bloom/skeleton';
+import { H2, Text as BloomText } from '@oxyhq/bloom/typography';
 import { Header } from '@/components/Header';
 import { ContractCard, ContractStatus } from '@/components/ContractCard';
-import { colors } from '@/styles/colors';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useUserLeases, useHasRentalProperties } from '@/hooks/useLeaseQueries';
 import type { Lease } from '@/services/leaseService';
-import { EmptyState } from '@/components/ui/EmptyState';
+import type { Profile } from '@homiio/shared-types';
+import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
+import { radius, spacing, withShadow } from '@/constants/styles';
+import { colors } from '@/styles/colors';
 
-type FilterOptions = 'all' | 'active' | 'pending_signature' | 'expired' | 'draft';
+/**
+ * Derive a human-readable name from a Homiio Profile. Profiles do not carry a
+ * raw person name; the displayable identity depends on the profile type
+ * (matches the derivation used in LandlordSection / HostStatsCard).
+ */
+const profileDisplayName = (profile?: Profile): string => {
+  if (!profile) return 'Unknown';
+  switch (profile.profileType) {
+    case 'agency':
+      return profile.agencyProfile?.legalCompanyName || profile.oxyUserId || 'Real Estate Agency';
+    case 'business':
+      return profile.businessProfile?.legalCompanyName || profile.oxyUserId || 'Property Management';
+    case 'cooperative':
+      return profile.cooperativeProfile?.legalName || profile.oxyUserId || 'Housing Cooperative';
+    case 'personal':
+    default:
+      return profile.oxyUserId || 'Unknown';
+  }
+};
+
+/**
+ * Build a display title for the property a lease is attached to. Properties
+ * have no `title` field, so derive one from the address/type.
+ */
+const leasePropertyTitle = (property?: Lease['property']): string => {
+  if (!property) return 'Property';
+  return generatePropertyTitle({
+    type: property.type,
+    address: property.address,
+    bedrooms: property.bedrooms,
+    bathrooms: property.bathrooms,
+  });
+};
+
+type FilterOption = 'all' | 'active' | 'pending_signature' | 'expired' | 'draft';
+
+const FILTERS: { id: FilterOption; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'active', label: 'Active' },
+  { id: 'pending_signature', label: 'Pending' },
+  { id: 'expired', label: 'Expired' },
+  { id: 'draft', label: 'Drafts' },
+];
+
+const ContractsSkeleton: React.FC = () => (
+  <View style={styles.listWrap}>
+    {Array.from({ length: 3 }).map((_, idx) => (
+      <View key={idx} style={styles.skeletonCard}>
+        <View style={styles.skeletonHeader}>
+          <Skeleton.Text style={{ width: 180, lineHeight: 20 }} />
+          <Skeleton.Pill size={22} />
+        </View>
+        <Skeleton.Text style={{ width: 220, lineHeight: 14 }} />
+        <Skeleton.Box width="100%" height={56} borderRadius={radius.md} />
+        <Skeleton.Text style={{ width: 140, lineHeight: 14 }} />
+      </View>
+    ))}
+  </View>
+);
 
 export default function ContractsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [filter, setFilter] = useState<FilterOptions>('all');
+  const [filter, setFilter] = useState<FilterOption>('all');
 
-  // Get user's leases and check if they have rental properties
-  const { data: leasesData, isLoading: leasesLoading } = useUserLeases();
-  const { hasRentalProperties, isLoading: hasPropertiesLoading } = useHasRentalProperties();
+  const {
+    data: leasesData,
+    isLoading: leasesLoading,
+    error: leasesError,
+    refetch: refetchLeases,
+  } = useUserLeases();
+  const { hasRentalProperties, isLoading: hasPropertiesLoading } =
+    useHasRentalProperties();
 
-  // If user has no rental properties, show empty state
-  if (!hasPropertiesLoading && !hasRentalProperties) {
-    return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <Header
-          options={{
-            title: t('Rental Contracts'),
-            titlePosition: 'center',
-          }}
-        />
-        <EmptyState
-          icon="document-text-outline"
-          title={t('No rental contracts')}
-          description={t(
-            "You don't have any rental properties yet. Start by browsing available properties or listing your own.",
-          )}
-          actionText={t('Browse Properties')}
-          actionIcon="home"
-          onAction={() => router.push('/')}
-        />
-      </SafeAreaView>
-    );
-  }
+  const contracts = useMemo(() => {
+    if (!leasesData?.leases) return [];
+    return leasesData.leases.map((lease: Lease) => {
+      const propertyTitle = leasePropertyTitle(lease.property);
+      return {
+        id: lease.id,
+        title: propertyTitle,
+        propertyId: lease.propertyId,
+        propertyName: propertyTitle,
+        startDate: lease.startDate,
+        endDate: lease.endDate,
+        status: lease.status as ContractStatus,
+        landlordName: profileDisplayName(lease.landlord),
+        tenantName: profileDisplayName(lease.tenant),
+        monthlyRent: lease.rent.amount,
+        currency: lease.rent.currency,
+      };
+    });
+  }, [leasesData]);
 
-  // Convert lease data to contract format for the ContractCard component
-  const contracts =
-    leasesData?.leases.map((lease: Lease) => ({
-      id: lease.id,
-      title: lease.property?.title || `Lease for ${lease.property?.address?.street || 'Property'}`,
-      propertyId: lease.propertyId,
-      propertyName:
-        lease.property?.title ||
-        `${lease.property?.address?.street}, ${lease.property?.address?.city}`,
-      startDate: lease.startDate,
-      endDate: lease.endDate,
-      status: lease.status as ContractStatus,
-      landlordName: lease.landlord
-        ? `${lease.landlord.firstName} ${lease.landlord.lastName}`
-        : 'Unknown',
-      tenantName: lease.tenant ? `${lease.tenant.firstName} ${lease.tenant.lastName}` : 'Unknown',
-      monthlyRent: lease.rent.amount,
-      currency: lease.rent.currency,
-    })) || [];
-
-  // Filter contracts based on the selected filter
-  const filteredContracts = contracts.filter((contract) => {
-    if (filter === 'all') return true;
-    return contract.status === filter;
-  });
+  const filteredContracts = useMemo(() => {
+    if (filter === 'all') return contracts;
+    return contracts.filter((contract) => contract.status === filter);
+  }, [contracts, filter]);
 
   const handleContractPress = (contractId: string) => {
     router.push(`/contracts/${contractId}`);
-  };
-
-  const handleSharePress = (contractId: string) => {
-    // In a real app, this would open a share dialog
-  };
-
-  const handleDownloadPress = (contractId: string) => {
-    // In a real app, this would download the contract document
   };
 
   const handleAddNewContract = () => {
     router.push('/contracts/new');
   };
 
-  const renderFilterButton = (label: string, value: FilterOptions) => (
-    <TouchableOpacity
-      style={[styles.filterButton, filter === value && styles.filterButtonActive]}
-      onPress={() => setFilter(value)}
-    >
-      <Text style={[styles.filterButtonText, filter === value && styles.filterButtonTextActive]}>
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
-
-  if (leasesLoading || hasPropertiesLoading) {
+  if (!hasPropertiesLoading && !hasRentalProperties) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.root}>
         <Header
           options={{
             title: t('Rental Contracts'),
             titlePosition: 'center',
           }}
         />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primaryColor} />
-          <Text style={styles.loadingText}>{t('Loading contracts...')}</Text>
-        </View>
-      </SafeAreaView>
+        <SafeAreaView edges={['bottom']} style={styles.safeArea}>
+          <EmptyState
+            icon="document-text-outline"
+            title={t('No rental contracts')}
+            description={t(
+              "You don't have any rental properties yet. Start by browsing available properties or listing your own.",
+            )}
+            actionText={t('Browse properties')}
+            actionIcon="home"
+            onAction={() => router.push('/')}
+          />
+        </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <View style={styles.root}>
       <Header
         options={{
           title: t('Rental Contracts'),
           titlePosition: 'center',
-          rightComponents: [
-            <TouchableOpacity key="add" style={styles.headerButton} onPress={handleAddNewContract}>
-              <Ionicons name="add-circle-outline" size={24} color={colors.COLOR_BLACK} />
-            </TouchableOpacity>,
-          ],
         }}
       />
+      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
+        <ScrollView contentContainerStyle={styles.content}>
+          <View style={styles.titleBlock}>
+            <SectionEyebrow>Agreements</SectionEyebrow>
+            <H2 style={styles.title}>{t('Rental Contracts')}</H2>
+            <BloomText style={styles.subtitle}>
+              {t(
+                'Track every lease you sign or issue and pull up key terms in seconds.',
+              )}
+            </BloomText>
+          </View>
 
-      <View style={styles.filterContainer}>
-        {renderFilterButton(t('All'), 'all')}
-        {renderFilterButton(t('Active'), 'active')}
-        {renderFilterButton(t('Pending'), 'pending_signature')}
-        {renderFilterButton(t('Expired'), 'expired')}
-        {renderFilterButton(t('Drafts'), 'draft')}
-      </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterRow}
+          >
+            {FILTERS.map((entry) => {
+              const isActive = filter === entry.id;
+              return (
+                <Chip
+                  key={entry.id}
+                  onPress={() => setFilter(entry.id)}
+                  variant={isActive ? 'solid' : 'outlined'}
+                  color={isActive ? 'primary' : 'default'}
+                  selected={isActive}
+                >
+                  {t(entry.label)}
+                </Chip>
+              );
+            })}
+          </ScrollView>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {filteredContracts.length === 0 ? (
-          <EmptyState
-            icon="document-text-outline"
-            title={t('No contracts found')}
-            description={
-              filter === 'all'
-                ? t("You don't have any rental contracts yet")
-                : t(`You don't have any ${filter} contracts`)
-            }
-            actionText={t('Create New Contract')}
-            actionIcon="add"
-            onAction={handleAddNewContract}
-          />
-        ) : (
-          filteredContracts.map((contract) => (
-            <ContractCard
-              key={contract.id}
-              {...contract}
-              onPress={() => handleContractPress(contract.id)}
-              onSharePress={() => handleSharePress(contract.id)}
-              onDownloadPress={() => handleDownloadPress(contract.id)}
+          {leasesLoading || hasPropertiesLoading ? <ContractsSkeleton /> : null}
+
+          {leasesError ? (
+            <ErrorState
+              icon="cloud-offline-outline"
+              title={t("Couldn't load contracts")}
+              description={String(leasesError) || t('Please try again.')}
+              onRetry={() => refetchLeases()}
             />
-          ))
-        )}
-      </ScrollView>
+          ) : null}
 
-      <View style={styles.bottomButtonContainer}>
-        <TouchableOpacity style={styles.addButton} onPress={handleAddNewContract}>
-          <Ionicons name="add" size={24} color="white" />
-          <Text style={styles.addButtonText}>{t('New Contract')}</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+          {!leasesLoading && !leasesError && filteredContracts.length === 0 ? (
+            <View style={styles.emptyWrap}>
+              <EmptyState
+                icon="document-text-outline"
+                title={t('No contracts found')}
+                description={
+                  filter === 'all'
+                    ? t("You don't have any rental contracts yet")
+                    : t(`No ${filter.replace('_', ' ')} contracts to show`)
+                }
+                actionText={t('Create new contract')}
+                actionIcon="add"
+                onAction={handleAddNewContract}
+              />
+            </View>
+          ) : null}
+
+          {filteredContracts.length > 0 ? (
+            <View style={styles.listWrap}>
+              {filteredContracts.map((contract) => (
+                <ContractCard
+                  key={contract.id}
+                  {...contract}
+                  onPress={() => handleContractPress(contract.id)}
+                />
+              ))}
+            </View>
+          ) : null}
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <Button
+            variant="primary"
+            size="large"
+            onPress={handleAddNewContract}
+            icon={<Ionicons name="add" size={20} color={colors.white} />}
+            style={styles.footerButton}
+          >
+            {t('New contract')}
+          </Button>
+        </View>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.surface,
   },
-  headerButton: {
-    padding: 8,
+  safeArea: {
+    flex: 1,
   },
-  filterContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    backgroundColor: colors.primaryLight,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.COLOR_BLACK_LIGHT_5,
+  content: {
+    padding: spacing.lg,
+    gap: spacing.lg,
+    paddingBottom: spacing['4xl'],
   },
-  filterButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    marginHorizontal: 4,
+  titleBlock: {
+    gap: spacing.xs,
   },
-  filterButtonActive: {
-    backgroundColor: colors.primaryColor,
+  title: {
+    letterSpacing: -0.5,
   },
-  filterButtonText: {
+  subtitle: {
     fontSize: 14,
-    color: colors.primaryDark_1,
+    color: colors.muted,
   },
-  filterButtonTextActive: {
-    color: 'white',
-    fontWeight: '500',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingVertical: 12,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: colors.primaryDark_1,
-  },
-
-  bottomButtonContainer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: colors.COLOR_BLACK_LIGHT_5,
-  },
-  addButton: {
-    backgroundColor: colors.primaryColor,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 24,
+  filterRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  emptyWrap: {
+    flex: 1,
     justifyContent: 'center',
   },
-  addButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 16,
-    marginLeft: 8,
+  listWrap: {
+    gap: spacing.md,
+  },
+  skeletonCard: {
+    backgroundColor: colors.surfaceElevated,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    gap: spacing.sm,
+    ...withShadow('sm'),
+  },
+  skeletonHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  footer: {
+    padding: spacing.lg,
+    backgroundColor: colors.surfaceElevated,
+    ...withShadow('sm'),
+  },
+  footerButton: {
+    alignSelf: 'stretch',
   },
 });

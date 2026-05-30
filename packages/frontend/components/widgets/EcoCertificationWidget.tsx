@@ -3,7 +3,8 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { BaseWidget } from './BaseWidget';
-import Button from '../Button';
+import { Button } from '@oxyhq/bloom/button';
+import { colors } from '@/styles/colors';
 
 export function EcoCertificationWidget() {
   const { t } = useTranslation();
@@ -22,7 +23,7 @@ export function EcoCertificationWidget() {
         </Text>
         <Button
           style={styles.learnMoreButton}
-          textColor="green"
+          textStyle={styles.learnMoreButtonText}
         >
           {t('home.horizon.learnMore', 'Learn More')}
         </Button>
@@ -42,6 +43,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   learnMoreButton: {
-    backgroundColor: '#e7f4e4',
+    backgroundColor: colors.successSubtle,
+  },
+  learnMoreButtonText: {
+    color: colors.success,
   },
 });

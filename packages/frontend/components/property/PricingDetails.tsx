@@ -1,42 +1,115 @@
+/**
+ * PricingDetails — "Pricing & Costs" block on the property detail.
+ *
+ * Migrated to Bloom Typography + Divider so the values inherit the
+ * canonical type scale and the row separators are the canonical
+ * hairline.
+ */
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
-import { colors } from '@/styles/colors';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-interface Props { property: any }
+import { Divider } from '@oxyhq/bloom/divider';
+import { H2, Text as BloomText } from '@oxyhq/bloom/typography';
+
+import { colors } from '@/styles/colors';
+import { spacing } from '@/constants/styles';
+
+interface Property {
+  rent?: { amount?: number; paymentFrequency?: string };
+  priceUnit?: string;
+}
+
+interface Props {
+  property: Property | null | undefined;
+}
+
+interface Row {
+  label: string;
+  value: string;
+}
 
 export const PricingDetails: React.FC<Props> = ({ property }) => {
-    const { t } = useTranslation();
-    const rentAmount = property?.rent?.amount;
-    const rentFrequency = property?.priceUnit || property?.rent?.paymentFrequency;
-    const deposit = property?.rent?.deposit;
-    const utilitiesIncluded = property?.rent?.utilities === 'included';
-    if (rentAmount === undefined && deposit === undefined && utilitiesIncluded === undefined) return null;
-    return (
-        <View style={styles.container}>
-            <ThemedText style={styles.sectionTitle}>{t('Pricing & Costs')}</ThemedText>
-            <View style={styles.card}>
-                {rentAmount !== undefined && (
-                    <ThemedText style={styles.item}>{t('Rent')}: <ThemedText style={styles.value}>${rentAmount}{rentFrequency ? `/${rentFrequency}` : ''}</ThemedText></ThemedText>
-                )}
-                {deposit !== undefined && (
-                    <ThemedText style={styles.item}>{t('Deposit')}: <ThemedText style={styles.value}>${deposit}</ThemedText></ThemedText>
-                )}
-                {utilitiesIncluded !== undefined && (
-                    <ThemedText style={styles.item}>{t('Utilities Included')}: <ThemedText style={styles.value}>{utilitiesIncluded ? t('Yes') : t('No')}</ThemedText></ThemedText>
-                )}
+  const { t } = useTranslation();
+  const rentAmount = property?.rent?.amount;
+  const rentFrequency = property?.priceUnit ?? property?.rent?.paymentFrequency;
+  const deposit = (property as { rent?: { deposit?: number } })?.rent?.deposit;
+  const utilitiesIncluded =
+    (property as { rent?: { utilities?: string } })?.rent?.utilities === 'included';
+
+  if (
+    rentAmount === undefined &&
+    deposit === undefined &&
+    utilitiesIncluded === undefined
+  ) {
+    return null;
+  }
+
+  const rows: Row[] = [];
+  if (rentAmount !== undefined) {
+    rows.push({
+      label: t('Rent', 'Rent') || 'Rent',
+      value: `$${rentAmount}${rentFrequency ? `/${rentFrequency}` : ''}`,
+    });
+  }
+  if (deposit !== undefined) {
+    rows.push({
+      label: t('Deposit', 'Deposit') || 'Deposit',
+      value: `$${deposit}`,
+    });
+  }
+  if (utilitiesIncluded !== undefined) {
+    rows.push({
+      label: t('Utilities Included', 'Utilities Included') || 'Utilities Included',
+      value: utilitiesIncluded ? (t('Yes', 'Yes') || 'Yes') : (t('No', 'No') || 'No'),
+    });
+  }
+
+  return (
+    <View style={styles.section}>
+      <H2 style={styles.title}>{t('Pricing & Costs', 'Pricing & Costs')}</H2>
+      <View>
+        {rows.map((row, idx) => (
+          <React.Fragment key={row.label}>
+            <View style={styles.row}>
+              <BloomText style={styles.label}>{row.label}</BloomText>
+              <BloomText style={styles.value}>{row.value}</BloomText>
             </View>
-        </View>
-    );
+            {idx !== rows.length - 1 ? <Divider /> : null}
+          </React.Fragment>
+        ))}
+      </View>
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
-    container: { marginBottom: 20 },
-    sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15 },
-    card: { padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#e9ecef' },
-    item: { fontSize: 14, marginBottom: 8 },
-    value: { fontWeight: '600', color: colors.primaryColor },
+  section: {
+    marginTop: spacing['3xl'],
+    marginBottom: spacing['3xl'],
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.COLOR_BLACK,
+    marginBottom: spacing.lg,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    gap: spacing.lg,
+  },
+  label: {
+    fontSize: 15,
+    color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  value: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.COLOR_BLACK,
+  },
 });
 
 export default PricingDetails;

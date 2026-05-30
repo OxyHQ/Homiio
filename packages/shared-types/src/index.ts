@@ -24,4 +24,10 @@ export * from './city';
 export * from './lease';
 
 // Review types
-export * from './review'; 
+export * from './review';
+
+// Reservation types (vacation/short-term bookings)
+export * from './reservation';
+
+// Tenant application types (long-term rent flow)
+export * from './application';

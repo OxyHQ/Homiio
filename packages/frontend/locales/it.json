@@ -90,9 +90,29 @@
   "error.signup.missing_fields": "Compila tutti i campi",
   "error.signup.failed": "Registrazione fallita:",
   "error.signup.password_mismatch": "Le password non corrispondono",
-  "error.boundary.title": "Ops! Qualcosa è andato storto",
-  "error.boundary.message": "Ci scusiamo per l'inconveniente. Riprova.",
+  "error.boundary.title": "Qualcosa è andato storto",
+  "error.boundary.message": "Un problema inatteso ha interrotto quello che stavi facendo. Puoi riprovare o inviarci una segnalazione rapida così possiamo indagare.",
   "error.boundary.retry": "Riprova",
+  "error.boundary.reportIssue": "Segnala il problema",
+  "error.boundary.errorId": "ID errore",
+  "error.boundary.copyIdHint": "Tocca per copiare l'ID",
+  "error.boundary.copiedToClipboard": "Copiato negli appunti",
+  "error.boundary.showDetails": "Mostra dettagli tecnici",
+  "error.boundary.hideDetails": "Nascondi dettagli tecnici",
+  "error.boundary.technicalDetails": "Dettagli tecnici",
+  "error.boundary.maxRetriesTitle": "Continua a non funzionare",
+  "error.boundary.maxRetriesMessage": "Hai raggiunto il limite di tentativi. Segnala il problema così possiamo dargli un'occhiata.",
+  "error.boundary.forceRetry": "Forza riprova",
+  "error.boundary.reportCopiedTitle": "Segnalazione copiata",
+  "error.boundary.reportCopiedMessage": "La segnalazione dell'errore è stata copiata negli appunti.",
+  "error.boundary.reportFailedTitle": "Non è stato possibile copiare",
+  "error.boundary.reportFailedMessage": "Non siamo riusciti a copiare la segnalazione negli appunti. Riprova.",
+  "error.boundary.errorMessage": "Messaggio di errore",
+  "error.boundary.errorType": "Tipo di errore",
+  "error.boundary.stackTrace": "Stack trace",
+  "error.boundary.componentStack": "Stack dei componenti",
+  "error.boundary.deviceInformation": "Informazioni dispositivo",
+  "mailbox.title": "Posta",
   "notification.welcome.title": "Benvenuto su Homiio! 👋",
   "notification.welcome.body": "Grazie per aver provato la nostra app. Inizia a esplorare ora!",
   "success.signup": "Registrazione completata",
@@ -718,7 +738,13 @@
       "profile": "Profilo",
       "payments": "Pagamenti",
       "roommates": "Coinquilini",
-      "settings": "Impostazioni"
+      "settings": "Impostazioni",
+      "applications": "Le mie candidature",
+      "stays": "Soggiorni",
+      "tips": "Consigli",
+      "hostCalendar": "Calendario host",
+      "hostReservations": "Prenotazioni host",
+      "landlordApplications": "Casella candidature"
     },
     "actions": {
       "addProperty": "Aggiungi Proprietà",
@@ -730,7 +756,34 @@
     },
     "footer": {
       "brandName": "Homiio - Piattaforma Abitativa Etica"
-    }
+    },
+    "mode": {
+      "longTerm": "Lunga durata",
+      "vacation": "Vacanza"
+    },
+    "savedProperties": {
+      "title": "Cartelle salvate",
+      "empty": "Nessuna cartella salvata",
+      "viewAll": "Visualizza tutto"
+    },
+    "recent": {
+      "title": "Visti di recente",
+      "today": "Oggi",
+      "yesterday": "Ieri",
+      "earlier": "Prima",
+      "empty": "Le proprietà che visualizzi appariranno qui",
+      "remove": "Rimuovi dai recenti"
+    },
+    "menu": {
+      "account": "Account",
+      "mailbox": "Posta",
+      "terms": "Termini del servizio",
+      "privacy": "Politica sulla privacy"
+    },
+    "collapse": "Comprimi barra laterale",
+    "expand": "Espandi barra laterale",
+    "open": "Apri menu",
+    "close": "Chiudi menu"
   },
   "saved": {
     "title": "Proprietà Salvate",

@@ -1,17 +1,52 @@
+/**
+ * Settings — top-level personal preferences screen.
+ *
+ * Stream P polish: switched the hand-rolled grouped TouchableOpacity rows
+ * to Bloom `SettingsListGroup` + `SettingsListItem`. Sections follow the
+ * Clarity sidebar pattern: Account → Preferences → Notifications → Data
+ * → Support → About → Sign out. Switches now use Bloom Switch; sign-out
+ * uses Bloom Button via the destructive variant on SettingsListItem.
+ */
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, Switch } from 'react-native';
-import { useOxy } from '@oxyhq/services';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-
+import { useOxy } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import { useRouter } from 'expo-router';
-import { colors } from '@/styles/colors';
-import { LogoIcon } from '@/assets/logo';
-import { useCurrency } from '@/hooks/useCurrency';
+import { toast } from '@/lib/sonner';
 
-// Type assertion for Ionicons compatibility with React 19
-const IconComponent = Ionicons as any;
+import { Switch } from '@oxyhq/bloom/switch';
+import {
+  SettingsListGroup,
+  SettingsListItem,
+} from '@oxyhq/bloom/settings-list';
+
+import { Header } from '@/components/Header';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { useCurrency } from '@/hooks/useCurrency';
+import { colors } from '@/styles/colors';
+import { spacing } from '@/constants/styles';
+import { LogoIcon } from '@/assets/logo';
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+interface RowIconProps {
+  name: IoniconName;
+  destructive?: boolean;
+}
+
+/**
+ * Small icon wrapper that matches Bloom SettingsListItem's leading slot
+ * (20×20). Keeps icon color in sync with `destructive` semantics.
+ */
+const RowIcon: React.FC<RowIconProps> = ({ name, destructive }) => (
+  <Ionicons
+    name={name}
+    size={20}
+    color={destructive ? colors.danger : colors.muted}
+  />
+);
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
@@ -19,597 +54,274 @@ export default function SettingsScreen() {
   const { user, showBottomSheet, logout } = useOxy();
   const { getCurrentCurrency } = useCurrency();
 
-  // Settings state
   const [notifications, setNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
   const [autoSync, setAutoSync] = useState(true);
   const [offlineMode, setOfflineMode] = useState(false);
 
-  const handleSignOut = () => {
-    Alert.alert(t('settings.signOut'), t('settings.signOutMessage'), [
-      {
-        text: t('common.cancel'),
-        style: 'cancel',
-      },
-      {
-        text: t('settings.signOut'),
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await logout();
-            router.replace('/');
-          } catch (error) {
-            console.error('Logout failed:', error);
-          }
-        },
-      },
-    ]);
+  const [pendingDialog, setPendingDialog] = useState<
+    'signOut' | 'clearCache' | 'export' | null
+  >(null);
+  const [dialogLoading, setDialogLoading] = useState(false);
+
+  const userDisplayName =
+    typeof user?.name === 'string'
+      ? user.name
+      : user?.name?.full || user?.name?.first || user?.username || 'User';
+  const currentCurrencyInfo = getCurrentCurrency();
+
+  const handleSignOut = async () => {
+    try {
+      setDialogLoading(true);
+      await logout();
+      router.replace('/');
+      toast.success(t('settings.signOutSuccess', 'Signed out'));
+    } catch {
+      toast.error(t('settings.signOutFailed', 'Failed to sign out'));
+    } finally {
+      setDialogLoading(false);
+      setPendingDialog(null);
+    }
   };
 
-  const handleClearCache = () => {
-    Alert.alert(t('settings.data.clearCache'), t('settings.data.clearCacheMessage'), [
-      {
-        text: t('common.cancel'),
-        style: 'cancel',
-      },
-      {
-        text: t('common.clear'),
-        style: 'destructive',
-        onPress: () => {
-          // Implementation would clear app cache
-          Alert.alert(t('common.success'), t('settings.data.clearCacheSuccess'));
-        },
-      },
-    ]);
+  const handleClearCache = async () => {
+    try {
+      setDialogLoading(true);
+      // Implementation would clear app cache here.
+      toast.success(t('settings.data.clearCacheSuccess'));
+    } catch {
+      toast.error(t('common.error', 'Something went wrong'));
+    } finally {
+      setDialogLoading(false);
+      setPendingDialog(null);
+    }
   };
 
-  const handleExportData = () => {
-    Alert.alert(t('settings.data.exportData'), t('settings.data.exportDataMessage'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('common.export'),
-        onPress: () => {
-          Alert.alert(t('common.success'), t('settings.data.exportDataSuccess'));
-        },
-      },
-    ]);
+  const handleExportData = async () => {
+    try {
+      setDialogLoading(true);
+      toast.success(t('settings.data.exportDataSuccess'));
+    } catch {
+      toast.error(t('common.error', 'Something went wrong'));
+    } finally {
+      setDialogLoading(false);
+      setPendingDialog(null);
+    }
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{t('settings.title')}</Text>
-      </View>
-
-      <View style={styles.content}>
-        {/* User Info */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('settings.sections.account')}</Text>
-
-          <TouchableOpacity
-            style={[styles.settingItem, styles.firstSettingItem, styles.lastSettingItem]}
+    <View style={styles.root}>
+      <Header
+        options={{
+          title: t('settings.title'),
+          showBackButton: true,
+        }}
+      />
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <SettingsListGroup title={t('settings.sections.account')}>
+          <SettingsListItem
+            icon={<RowIcon name="person" />}
+            title={userDisplayName}
+            description={user?.username ?? ''}
             onPress={() => showBottomSheet?.('AccountSettings')}
-          >
-            <View style={styles.userIcon}>
-              <IconComponent name="person" size={24} color="#fff" />
-            </View>
-            <View style={styles.settingInfo}>
-              <View>
-                <Text style={styles.settingLabel}>
-                  {user
-                    ? typeof user.name === 'string'
-                      ? user.name
-                      : user.name?.full || user.name?.first || user.username
-                    : 'User'}
-                </Text>
-                <Text style={styles.settingDescription}>{user?.username || 'Username'}</Text>
-              </View>
-            </View>
-            <IconComponent name="chevron-forward" size={16} color="#ccc" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.settingItem, styles.firstSettingItem, styles.lastSettingItem]}
+          />
+          <SettingsListItem
+            icon={<RowIcon name="folder" />}
+            title={t('settings.account.files', 'Files')}
+            description={t(
+              'settings.account.filesDescription',
+              'Manage uploaded documents',
+            )}
             onPress={() => showBottomSheet?.('FileManagement')}
-          >
-            <View style={styles.userIcon}>
-              <IconComponent name="person" size={24} color="#fff" />
-            </View>
-            <View style={styles.settingInfo}>
-              <View>
-                <Text style={styles.settingLabel}>
-                  {user
-                    ? typeof user.name === 'string'
-                      ? user.name
-                      : user.name?.full || user.name?.first || user.username
-                    : 'User'}
-                </Text>
-                <Text style={styles.settingDescription}>{user?.username || 'Username'}</Text>
-              </View>
-            </View>
-            <IconComponent name="chevron-forward" size={16} color="#ccc" />
-          </TouchableOpacity>
-        </View>
+          />
+        </SettingsListGroup>
 
-        {/* About Homiio */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('settings.sections.aboutHomiio')}</Text>
-
-          {/* App Title and Version */}
-          <View style={[styles.settingItem, styles.firstSettingItem]}>
-            <View style={styles.settingInfo}>
-              <LogoIcon size={24} color={colors.primaryColor} style={styles.settingIcon} />
-              <View>
-                <Text style={styles.settingLabel}>{t('settings.aboutHomiio.appName')}</Text>
-                <Text style={styles.settingDescription}>
-                  {t('settings.aboutHomiio.version', {
-                    version: Constants.expoConfig?.version || '1.0.0',
-                  })}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Build Info */}
-          <View style={styles.settingItem}>
-            <View style={styles.settingInfo}>
-              <IconComponent name="hammer" size={20} color="#666" style={styles.settingIcon} />
-              <View>
-                <Text style={styles.settingLabel}>{t('settings.aboutHomiio.build')}</Text>
-                <Text style={styles.settingDescription}>
-                  {typeof Constants.expoConfig?.runtimeVersion === 'string'
-                    ? Constants.expoConfig.runtimeVersion
-                    : t('settings.aboutHomiio.buildVersion')}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Platform Info */}
-          <View style={styles.settingItem}>
-            <View style={styles.settingInfo}>
-              <IconComponent
-                name="phone-portrait"
-                size={20}
-                color="#666"
-                style={styles.settingIcon}
-              />
-              <View>
-                <Text style={styles.settingLabel}>{t('settings.aboutHomiio.platform')}</Text>
-                <Text style={styles.settingDescription}>
-                  {Constants.platform?.ios
-                    ? 'iOS'
-                    : Constants.platform?.android
-                      ? 'Android'
-                      : 'Web'}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Oxy SDK */}
-          <TouchableOpacity style={styles.settingItem} onPress={() => showBottomSheet?.('AppInfo')}>
-            <View style={styles.settingInfo}>
-              <IconComponent name="code-slash" size={20} color="#666" style={styles.settingIcon} />
-              <View>
-                <Text style={styles.settingLabel}>{t('settings.aboutHomiio.oxySDK')}</Text>
-                <Text style={styles.settingDescription}>{Constants.oxyVersion || 'Unknown'}</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-
-          {/* Expo SDK */}
-          <View style={[styles.settingItem, styles.lastSettingItem]}>
-            <View style={styles.settingInfo}>
-              <IconComponent name="code-slash" size={20} color="#666" style={styles.settingIcon} />
-              <View>
-                <Text style={styles.settingLabel}>{t('settings.aboutHomiio.expoSDK')}</Text>
-                <Text style={styles.settingDescription}>{Constants.expoVersion || 'Unknown'}</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Support & Feedback */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('settings.sections.supportFeedback')}</Text>
-
-          <TouchableOpacity
-            style={[styles.settingItem, styles.firstSettingItem]}
-            onPress={() => {
-              Alert.alert(
-                t('settings.supportFeedback.helpSupport'),
-                t('settings.supportFeedback.helpSupportMessage'),
-                [{ text: t('common.ok') }],
-              );
-            }}
-          >
-            <View style={styles.settingInfo}>
-              <IconComponent name="help-circle" size={20} color="#666" style={styles.settingIcon} />
-              <View>
-                <Text style={styles.settingLabel}>{t('settings.supportFeedback.helpSupport')}</Text>
-                <Text style={styles.settingDescription}>
-                  {t('settings.supportFeedback.helpSupportDesc')}
-                </Text>
-              </View>
-            </View>
-            <IconComponent name="chevron-forward" size={16} color="#ccc" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={() => {
-              Alert.alert(
-                t('settings.supportFeedback.sendFeedback'),
-                t('settings.supportFeedback.sendFeedbackMessage'),
-                [
-                  { text: t('common.cancel'), style: 'cancel' },
-                  {
-                    text: t('common.sendFeedback'),
-                    onPress: () => {
-                      Alert.alert(
-                        t('common.success'),
-                        t('settings.supportFeedback.sendFeedbackThankYou'),
-                      );
-                    },
-                  },
-                ],
-              );
-            }}
-          >
-            <View style={styles.settingInfo}>
-              <IconComponent name="chatbubble" size={20} color="#666" style={styles.settingIcon} />
-              <View>
-                <Text style={styles.settingLabel}>
-                  {t('settings.supportFeedback.sendFeedback')}
-                </Text>
-                <Text style={styles.settingDescription}>
-                  {t('settings.supportFeedback.sendFeedbackDesc')}
-                </Text>
-              </View>
-            </View>
-            <IconComponent name="chevron-forward" size={16} color="#ccc" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.settingItem, styles.lastSettingItem]}
-            onPress={() => {
-              Alert.alert(
-                t('settings.supportFeedback.rateApp'),
-                t('settings.supportFeedback.rateAppMessage'),
-                [
-                  { text: t('common.maybeLater'), style: 'cancel' },
-                  {
-                    text: t('common.rateNow'),
-                    onPress: () => {
-                      Alert.alert(
-                        t('common.success'),
-                        t('settings.supportFeedback.rateAppThankYou'),
-                      );
-                    },
-                  },
-                ],
-              );
-            }}
-          >
-            <View style={styles.settingInfo}>
-              <IconComponent name="star" size={20} color="#666" style={styles.settingIcon} />
-              <View>
-                <Text style={styles.settingLabel}>{t('settings.supportFeedback.rateApp')}</Text>
-                <Text style={styles.settingDescription}>
-                  {t('settings.supportFeedback.rateAppDesc')}
-                </Text>
-              </View>
-            </View>
-            <IconComponent name="chevron-forward" size={16} color="#ccc" />
-          </TouchableOpacity>
-        </View>
-
-        {/* App Preferences */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('settings.sections.preferences')}</Text>
-
-          {/* Language Selection */}
-          <TouchableOpacity
-            style={[styles.settingItem, styles.firstSettingItem]}
+        <SettingsListGroup title={t('settings.sections.preferences')}>
+          <SettingsListItem
+            icon={<RowIcon name="language" />}
+            title={t('Language')}
+            value={t('Select your preferred language')}
             onPress={() => router.push('/settings/language')}
-          >
-            <View style={styles.settingInfo}>
-              <IconComponent name="language" size={20} color="#666" style={styles.settingIcon} />
-              <View>
-                <Text style={styles.settingLabel}>{t('Language')}</Text>
-                <Text style={styles.settingDescription}>{t('Select your preferred language')}</Text>
-              </View>
-            </View>
-            <IconComponent name="chevron-forward" size={16} color="#ccc" />
-          </TouchableOpacity>
-
-          {/* Currency Selection */}
-          <TouchableOpacity
-            style={styles.settingItem}
+          />
+          <SettingsListItem
+            icon={<RowIcon name="cash" />}
+            title={t('settings.preferences.currency', 'Currency')}
+            value={`${currentCurrencyInfo.symbol} ${currentCurrencyInfo.code}`}
             onPress={() => router.push('/settings/currency')}
-          >
-            <View style={styles.settingInfo}>
-              <IconComponent name="cash" size={20} color="#666" style={styles.settingIcon} />
-              <View>
-                <Text style={styles.settingLabel}>
-                  {t('settings.preferences.currency', 'Currency')}
-                </Text>
-                <Text style={styles.settingDescription}>
-                  {(() => {
-                    const currency = getCurrentCurrency();
-                    return `${currency.symbol} ${currency.name} (${currency.code})`;
-                  })()}
-                </Text>
-              </View>
-            </View>
-            <IconComponent name="chevron-forward" size={16} color="#ccc" />
-          </TouchableOpacity>
+          />
+          {/*
+            Dark mode toggle intentionally omitted: the app currently renders a
+            single light theme (static `colors.ts` is light-only; Bloom is pinned
+            to light in app/_layout.tsx). A live toggle would be misleading until
+            the reactive color migration lands. Re-add a wired Switch here once
+            components consume `useColors()` for live light/dark values.
+          */}
+        </SettingsListGroup>
 
-          <View style={styles.settingItem}>
-            <View style={styles.settingInfo}>
-              <IconComponent
-                name="notifications"
-                size={20}
-                color="#666"
-                style={styles.settingIcon}
-              />
-              <View>
-                <Text style={styles.settingLabel}>{t('settings.preferences.notifications')}</Text>
-                <Text style={styles.settingDescription}>
-                  {t('settings.preferences.notificationsDesc')}
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={notifications}
-              onValueChange={setNotifications}
-              trackColor={{ false: '#f0f0f0', true: colors.primaryColor }}
-              thumbColor={notifications ? '#ffffff' : '#d1d5db'}
-              ios_backgroundColor="#f0f0f0"
-            />
-          </View>
+        <SettingsListGroup title={t('settings.sections.notifications', 'Notifications')}>
+          <SettingsListItem
+            icon={<RowIcon name="notifications" />}
+            title={t('settings.preferences.notifications')}
+            description={t('settings.preferences.notificationsDesc')}
+            rightElement={
+              <Switch value={notifications} onValueChange={setNotifications} />
+            }
+          />
+          <SettingsListItem
+            icon={<RowIcon name="options-outline" />}
+            title={t('settings.notifications.detail', 'Notification categories')}
+            description={t(
+              'settings.notifications.detailDesc',
+              'Choose which alerts you receive',
+            )}
+            onPress={() => router.push('/settings/notifications')}
+          />
+        </SettingsListGroup>
 
-          <View style={styles.settingItem}>
-            <View style={styles.settingInfo}>
-              <IconComponent name="moon" size={20} color="#666" style={styles.settingIcon} />
-              <View>
-                <Text style={styles.settingLabel}>{t('settings.preferences.darkMode')}</Text>
-                <Text style={styles.settingDescription}>
-                  {t('settings.preferences.darkModeDesc')}
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={darkMode}
-              onValueChange={setDarkMode}
-              trackColor={{ false: '#f0f0f0', true: colors.primaryColor }}
-              thumbColor={darkMode ? '#ffffff' : '#d1d5db'}
-              ios_backgroundColor="#f0f0f0"
-            />
-          </View>
+        <SettingsListGroup title={t('settings.sections.data')}>
+          <SettingsListItem
+            icon={<RowIcon name="sync" />}
+            title={t('settings.preferences.autoSync')}
+            description={t('settings.preferences.autoSyncDesc')}
+            rightElement={
+              <Switch value={autoSync} onValueChange={setAutoSync} />
+            }
+          />
+          <SettingsListItem
+            icon={<RowIcon name="cloud-offline" />}
+            title={t('settings.preferences.offlineMode')}
+            description={t('settings.preferences.offlineModeDesc')}
+            rightElement={
+              <Switch value={offlineMode} onValueChange={setOfflineMode} />
+            }
+          />
+          <SettingsListItem
+            icon={<RowIcon name="download" />}
+            title={t('settings.data.exportData')}
+            description={t('settings.data.exportDataDesc')}
+            onPress={() => setPendingDialog('export')}
+          />
+          <SettingsListItem
+            icon={<RowIcon name="trash" destructive />}
+            title={t('settings.data.clearCache')}
+            description={t('settings.data.clearCacheDesc')}
+            destructive
+            onPress={() => setPendingDialog('clearCache')}
+          />
+        </SettingsListGroup>
 
-          <View style={styles.settingItem}>
-            <View style={styles.settingInfo}>
-              <IconComponent name="sync" size={20} color="#666" style={styles.settingIcon} />
-              <View>
-                <Text style={styles.settingLabel}>{t('settings.preferences.autoSync')}</Text>
-                <Text style={styles.settingDescription}>
-                  {t('settings.preferences.autoSyncDesc')}
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={autoSync}
-              onValueChange={setAutoSync}
-              trackColor={{ false: '#f0f0f0', true: colors.primaryColor }}
-              thumbColor={autoSync ? '#ffffff' : '#d1d5db'}
-              ios_backgroundColor="#f0f0f0"
-            />
-          </View>
+        <SettingsListGroup title={t('settings.sections.supportFeedback')}>
+          <SettingsListItem
+            icon={<RowIcon name="help-circle" />}
+            title={t('settings.supportFeedback.helpSupport')}
+            description={t('settings.supportFeedback.helpSupportDesc')}
+            onPress={() => toast(t('settings.supportFeedback.helpSupportMessage'))}
+          />
+          <SettingsListItem
+            icon={<RowIcon name="chatbubble" />}
+            title={t('settings.supportFeedback.sendFeedback')}
+            description={t('settings.supportFeedback.sendFeedbackDesc')}
+            onPress={() => toast(t('settings.supportFeedback.sendFeedbackMessage'))}
+          />
+          <SettingsListItem
+            icon={<RowIcon name="star" />}
+            title={t('settings.supportFeedback.rateApp')}
+            description={t('settings.supportFeedback.rateAppDesc')}
+            onPress={() => toast(t('settings.supportFeedback.rateAppMessage'))}
+          />
+        </SettingsListGroup>
 
-          <View style={[styles.settingItem, styles.lastSettingItem]}>
-            <View style={styles.settingInfo}>
-              <IconComponent
-                name="cloud-offline"
-                size={20}
-                color="#666"
-                style={styles.settingIcon}
-              />
-              <View>
-                <Text style={styles.settingLabel}>{t('settings.preferences.offlineMode')}</Text>
-                <Text style={styles.settingDescription}>
-                  {t('settings.preferences.offlineModeDesc')}
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={offlineMode}
-              onValueChange={setOfflineMode}
-              trackColor={{ false: '#f0f0f0', true: colors.primaryColor }}
-              thumbColor={offlineMode ? '#ffffff' : '#d1d5db'}
-              ios_backgroundColor="#f0f0f0"
-            />
-          </View>
-        </View>
+        <SettingsListGroup title={t('settings.sections.aboutHomiio')}>
+          <SettingsListItem
+            icon={<LogoIcon size={20} color={colors.primaryColor} />}
+            title={t('settings.aboutHomiio.appName')}
+            value={t('settings.aboutHomiio.version', {
+              version: Constants.expoConfig?.version || '1.0.0',
+            })}
+          />
+          <SettingsListItem
+            icon={<RowIcon name="hammer" />}
+            title={t('settings.aboutHomiio.build')}
+            value={
+              typeof Constants.expoConfig?.runtimeVersion === 'string'
+                ? Constants.expoConfig.runtimeVersion
+                : t('settings.aboutHomiio.buildVersion')
+            }
+          />
+          <SettingsListItem
+            icon={<RowIcon name="phone-portrait" />}
+            title={t('settings.aboutHomiio.platform')}
+            value={
+              Constants.platform?.ios
+                ? 'iOS'
+                : Constants.platform?.android
+                  ? 'Android'
+                  : 'Web'
+            }
+          />
+          <SettingsListItem
+            icon={<RowIcon name="code-slash" />}
+            title={t('settings.aboutHomiio.oxySDK')}
+            value={(Constants as unknown as { oxyVersion?: string }).oxyVersion || 'Unknown'}
+            onPress={() => showBottomSheet?.('AppInfo')}
+          />
+        </SettingsListGroup>
 
-        {/* Quick Actions */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('settings.sections.quickActions')}</Text>
+        <SettingsListGroup>
+          <SettingsListItem
+            icon={<RowIcon name="log-out" destructive />}
+            title={t('settings.signOut')}
+            description={t('settings.signOutDesc')}
+            destructive
+            onPress={() => setPendingDialog('signOut')}
+          />
+        </SettingsListGroup>
 
-          <TouchableOpacity
-            style={[styles.settingItem, styles.firstSettingItem]}
-            onPress={() => router.push('/properties/create')}
-          >
-            <View style={styles.settingInfo}>
-              <IconComponent name="add" size={20} color="#666" style={styles.settingIcon} />
-              <View>
-                <Text style={styles.settingLabel}>{t('settings.quickActions.createProperty')}</Text>
-                <Text style={styles.settingDescription}>
-                  {t('settings.quickActions.createPropertyDesc')}
-                </Text>
-              </View>
-            </View>
-            <IconComponent name="chevron-forward" size={16} color="#ccc" />
-          </TouchableOpacity>
+        <View style={styles.bottomPadding} />
+      </ScrollView>
 
-          <TouchableOpacity
-            style={[styles.settingItem, styles.lastSettingItem]}
-            onPress={() => router.push('/search')}
-          >
-            <View style={styles.settingInfo}>
-              <IconComponent name="search" size={20} color="#666" style={styles.settingIcon} />
-              <View>
-                <Text style={styles.settingLabel}>
-                  {t('settings.quickActions.searchProperties')}
-                </Text>
-                <Text style={styles.settingDescription}>
-                  {t('settings.quickActions.searchPropertiesDesc')}
-                </Text>
-              </View>
-            </View>
-            <IconComponent name="chevron-forward" size={16} color="#ccc" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Data Management */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('settings.sections.data')}</Text>
-
-          <TouchableOpacity
-            style={[styles.settingItem, styles.firstSettingItem]}
-            onPress={handleExportData}
-          >
-            <View style={styles.settingInfo}>
-              <IconComponent name="download" size={20} color="#666" style={styles.settingIcon} />
-              <View>
-                <Text style={styles.settingLabel}>{t('settings.data.exportData')}</Text>
-                <Text style={styles.settingDescription}>{t('settings.data.exportDataDesc')}</Text>
-              </View>
-            </View>
-            <IconComponent name="chevron-forward" size={16} color="#ccc" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.settingItem, styles.lastSettingItem]}
-            onPress={handleClearCache}
-          >
-            <View style={styles.settingInfo}>
-              <IconComponent name="trash" size={20} color="#ff4757" style={styles.settingIcon} />
-              <View>
-                <Text style={[styles.settingLabel, { color: '#ff4757' }]}>
-                  {t('settings.data.clearCache')}
-                </Text>
-                <Text style={styles.settingDescription}>{t('settings.data.clearCacheDesc')}</Text>
-              </View>
-            </View>
-            <IconComponent name="chevron-forward" size={16} color="#ccc" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Sign Out */}
-        <View style={styles.section}>
-          <TouchableOpacity
-            style={[
-              styles.settingItem,
-              styles.firstSettingItem,
-              styles.lastSettingItem,
-              styles.signOutButton,
-            ]}
-            onPress={handleSignOut}
-          >
-            <View style={styles.settingInfo}>
-              <IconComponent name="log-out" size={20} color="#ff4757" style={styles.settingIcon} />
-              <View>
-                <Text style={[styles.settingLabel, { color: '#ff4757' }]}>
-                  {t('settings.signOut')}
-                </Text>
-                <Text style={styles.settingDescription}>{t('settings.signOutDesc')}</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <ConfirmDialog
+        visible={pendingDialog === 'signOut'}
+        title={t('settings.signOut')}
+        message={t('settings.signOutMessage')}
+        confirmLabel={t('settings.signOut')}
+        confirmDestructive
+        loading={dialogLoading}
+        onConfirm={handleSignOut}
+        onCancel={() => setPendingDialog(null)}
+      />
+      <ConfirmDialog
+        visible={pendingDialog === 'clearCache'}
+        title={t('settings.data.clearCache')}
+        message={t('settings.data.clearCacheMessage')}
+        confirmLabel={t('common.clear')}
+        confirmDestructive
+        loading={dialogLoading}
+        onConfirm={handleClearCache}
+        onCancel={() => setPendingDialog(null)}
+      />
+      <ConfirmDialog
+        visible={pendingDialog === 'export'}
+        title={t('settings.data.exportData')}
+        message={t('settings.data.exportDataMessage')}
+        confirmLabel={t('common.export')}
+        loading={dialogLoading}
+        onConfirm={handleExportData}
+        onCancel={() => setPendingDialog(null)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#f2f2f2',
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  content: {
-    padding: 16,
-  },
-  userIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primaryColor,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
-  },
-  settingItem: {
-    backgroundColor: '#fff',
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 2,
-  },
-  firstSettingItem: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    marginBottom: 2,
-  },
-  lastSettingItem: {
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    marginBottom: 8,
-  },
-  settingInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  root: {
     flex: 1,
+    backgroundColor: colors.surface,
   },
-  settingIcon: {
-    marginRight: 12,
+  scroll: {
+    paddingTop: spacing.lg,
+    paddingBottom: spacing['4xl'],
   },
-  settingLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 2,
-  },
-  settingDescription: {
-    fontSize: 14,
-    color: '#666',
-  },
-  signOutButton: {
-    borderWidth: 1,
-    borderColor: '#ff4757',
+  bottomPadding: {
+    height: spacing['4xl'],
   },
 });

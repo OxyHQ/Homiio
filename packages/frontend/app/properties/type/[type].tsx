@@ -1,18 +1,20 @@
 import React, { useEffect, useState, useMemo, useCallback, useContext } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useProperties } from '@/hooks';
 import { PropertyCard } from '@/components/PropertyCard';
 import { ThemedText } from '@/components/ThemedText';
 import { colors } from '@/styles/colors';
-import { phuduFontWeights } from '@/styles/fonts';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { FiltersBar } from '@/components/FiltersBar';
 import { FiltersBottomSheet, FilterSection, FilterValue } from '@/components/FiltersBar/FiltersBottomSheet';
 import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
 
 import { Property as BaseProperty } from '@homiio/shared-types';
+import { logger } from '@/utils/logger';
+import { spacing } from '@/constants/styles';
 
 interface Property extends Omit<BaseProperty, '_id'> {
     _id?: string;
@@ -23,6 +25,7 @@ export default function PropertyTypeScreen() {
     const { type } = useLocalSearchParams();
     const { t } = useTranslation();
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const [refreshing, setRefreshing] = useState(false);
     const { openBottomSheet, closeBottomSheet } = useContext(BottomSheetContext);
     const [filters, setFilters] = useState({
@@ -179,8 +182,8 @@ export default function PropertyTypeScreen() {
                 status: 'published',
                 type: type as string,
             });
-        } catch (error) {
-            console.error('Error refreshing data:', error);
+        } catch (error: unknown) {
+            logger.error('Error refreshing data:', error);
         } finally {
             setRefreshing(false);
         }
@@ -204,7 +207,7 @@ export default function PropertyTypeScreen() {
             style={styles.container}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: insets.top + spacing.lg }]}>
                 <ThemedText style={styles.title}>
                     {t('properties.type.title', { type: getTypeName(type as string) })}
                 </ThemedText>
@@ -281,7 +284,7 @@ export default function PropertyTypeScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: colors.white,
     },
     header: {
         padding: 16,
@@ -290,7 +293,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 28,
         color: colors.COLOR_BLACK,
-        fontFamily: phuduFontWeights.bold,
+        fontWeight: '700',
         marginBottom: 8,
     },
     subtitle: {

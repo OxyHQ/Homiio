@@ -19,10 +19,11 @@ import { useProperty } from '@/hooks';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { PropertyType } from '@homiio/shared-types';
 import { useOxy } from '@oxyhq/services';
-import ViewingService from '@/services/viewingService';
+import ViewingService, { type ViewingRequest } from '@/services/viewingService';
 import { ApiError } from '@/utils/api';
-import { toast } from 'sonner';
+import { toast } from '@/lib/sonner';
 import { useQueryClient } from '@tanstack/react-query';
+import { logger } from '@/utils/logger';
 
 type PropertyData = {
   id: string;
@@ -31,6 +32,15 @@ type PropertyData = {
   landlordName: string;
   landlordRating: number;
 };
+
+/** Loosely-typed shape of an API error payload as surfaced on `ApiError.response`. */
+interface ApiErrorResponse {
+  code?: string;
+  message?: string;
+  error?: string | { code?: string; message?: string };
+  data?: { message?: string; error?: string };
+  details?: { message?: string }[];
+}
 
 export default function BookViewingPage() {
   const { t } = useTranslation();
@@ -44,7 +54,7 @@ export default function BookViewingPage() {
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [message, setMessage] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
-  const [_existingViewing, setExistingViewing] = useState<any>(null);
+  const [_existingViewing, setExistingViewing] = useState<ViewingRequest | null>(null);
 
   // Check if we're in modify mode
   const isModifyMode = Boolean(modifyViewingId);
@@ -61,16 +71,19 @@ export default function BookViewingPage() {
   }, [id, loadProperty]);
 
   const extractErrorMessage = (err: unknown): string => {
-    let fallback = t('viewings.error.generic');
+    const fallback = t('viewings.error.generic');
     try {
       if (err instanceof ApiError) {
-        const resp: any = err.response;
-        const code = (resp?.error?.code || resp?.code || resp?.error) as string | undefined;
+        const resp = (err.response ?? undefined) as ApiErrorResponse | undefined;
+        const errorObject =
+          resp?.error && typeof resp.error === 'object' ? resp.error : undefined;
+        const errorString = typeof resp?.error === 'string' ? resp.error : undefined;
+        const code = errorObject?.code || resp?.code || errorString;
         let msg: string | undefined;
-        if (typeof resp?.error?.message === 'string') msg = resp.error.message;
+        if (typeof errorObject?.message === 'string') msg = errorObject.message;
         else if (typeof resp?.message === 'string') msg = resp.message;
         else if (typeof resp?.data?.message === 'string') msg = resp.data.message;
-        else if (typeof resp?.error === 'string') msg = resp.error;
+        else if (errorString) msg = errorString;
         else if (typeof resp?.data?.error === 'string') msg = resp.data.error;
         else if (Array.isArray(resp?.details) && resp.details.length > 0) {
           const first = resp.details[0];
@@ -83,16 +96,20 @@ export default function BookViewingPage() {
         if (code === 'EXTERNAL_PROPERTY') return t('viewings.error.externalProperty', 'Cannot book viewings for external properties');
         if (msg) return msg;
         if (err.message) return err.message;
+      } else if (err instanceof Error) {
+        return err.message;
       } else if (err && typeof err === 'object') {
-        const anyErr: any = err as any;
-        if (typeof anyErr.message === 'string') return anyErr.message;
         try {
-          return JSON.stringify(anyErr);
-        } catch { }
+          return JSON.stringify(err);
+        } catch (stringifyError: unknown) {
+          logger.error('Failed to stringify viewing error:', stringifyError);
+        }
       } else if (typeof err === 'string') {
         return err;
       }
-    } catch { }
+    } catch (parseError: unknown) {
+      logger.error('Failed to parse viewing error:', parseError);
+    }
     return fallback;
   };
 
@@ -145,8 +162,6 @@ export default function BookViewingPage() {
         // Get user's viewing requests and find the one we're modifying
         const response = await ViewingService.listMyViewingRequests(
           { page: 1, limit: 50 },
-          oxyServices,
-          activeSessionId,
         );
 
         const viewings = Array.isArray(response?.data) ? response.data : [];
@@ -166,8 +181,8 @@ export default function BookViewingPage() {
           setSelectedTime(timeStr);
           setMessage(viewing.message || '');
         }
-      } catch (error) {
-        console.error('Failed to load existing viewing:', error);
+      } catch (error: unknown) {
+        logger.error('Failed to load existing viewing:', error);
         toast.error(t('viewings.error.generic'));
       }
     };
@@ -221,8 +236,6 @@ export default function BookViewingPage() {
         await ViewingService.update(
           modifyViewingIdString,
           { date: selectedDate, time: selectedTime, message: message?.trim() || undefined },
-          oxyServices,
-          activeSessionId,
         );
         toast.success(t('viewings.success.modified'));
         // Invalidate both the viewing list and the specific viewing
@@ -231,8 +244,6 @@ export default function BookViewingPage() {
         await ViewingService.createViewingRequest(
           property.id,
           { date: selectedDate, time: selectedTime, message: message?.trim() || undefined },
-          oxyServices,
-          activeSessionId,
         );
         toast.success(t('viewings.success.created'));
         // Invalidate the viewing list
@@ -250,7 +261,7 @@ export default function BookViewingPage() {
 
   if (loading || !property) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
         <Header
           options={{
             showBackButton: true,
@@ -267,7 +278,7 @@ export default function BookViewingPage() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <Header
         options={{
           showBackButton: true,
@@ -291,7 +302,7 @@ export default function BookViewingPage() {
             <View style={styles.landlordDetails}>
               <Text style={styles.landlordName}>{property.landlordName}</Text>
               <View style={styles.ratingContainer}>
-                <Ionicons name="star" size={14} color="#FFD700" />
+                <Ionicons name="star" size={14} color={colors.ratingStar} />
                 <Text style={styles.ratingText}>{property.landlordRating}</Text>
               </View>
             </View>
@@ -348,7 +359,7 @@ export default function BookViewingPage() {
                 </Text>
 
                 {selectedTime === time && (
-                  <Ionicons name="checkmark-circle" size={18} color="white" />
+                  <Ionicons name="checkmark-circle" size={18} color={colors.white} />
                 )}
               </TouchableOpacity>
             ))}
@@ -408,10 +419,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: colors.COLOR_BLACK_LIGHT_3,
-    fontFamily: 'Phudu',
   },
   propertyCard: {
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 15,
     padding: 15,
     marginBottom: 20,
@@ -436,7 +446,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: colors.COLOR_BLACK_LIGHT_6,
     paddingTop: 15,
   },
   landlordAvatar: {
@@ -452,7 +462,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: colors.primaryColor,
-    fontFamily: 'Phudu',
   },
   landlordDetails: {
     flex: 1,
@@ -462,7 +471,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.COLOR_BLACK,
     marginBottom: 3,
-    fontFamily: 'Phudu',
   },
   ratingContainer: {
     flexDirection: 'row',
@@ -481,7 +489,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.COLOR_BLACK,
     marginBottom: 15,
-    fontFamily: 'Phudu',
   },
   datesContainer: {
     flexDirection: 'row',
@@ -489,7 +496,7 @@ const styles = StyleSheet.create({
   dateCard: {
     width: 70,
     height: 90,
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 12,
     marginRight: 10,
     alignItems: 'center',
@@ -513,14 +520,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.COLOR_BLACK,
     marginBottom: 5,
-    fontFamily: 'Phudu',
   },
   dateMonth: {
     fontSize: 12,
     color: colors.COLOR_BLACK_LIGHT_3,
   },
   activeDateText: {
-    color: 'white',
+    color: colors.white,
   },
   timeSlotsContainer: {
     flexDirection: 'row',
@@ -529,7 +535,7 @@ const styles = StyleSheet.create({
   },
   timeSlot: {
     minWidth: 100,
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 10,
     padding: 15,
     alignItems: 'center',
@@ -550,12 +556,11 @@ const styles = StyleSheet.create({
     marginRight: 5,
   },
   selectedSlotText: {
-    color: 'white',
+    color: colors.white,
     fontWeight: '600',
-    fontFamily: 'Phudu',
   },
   notesInput: {
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderRadius: 10,
     padding: 15,
     marginBottom: 10,
@@ -564,7 +569,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.COLOR_BLACK,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
   },
   policyContainer: {
     flexDirection: 'row',

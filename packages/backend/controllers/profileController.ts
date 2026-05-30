@@ -1,6 +1,6 @@
 const { Profile } = require("../models");
 const { successResponse } = require("../middlewares/errorHandler");
-const { ProfileType, EmploymentStatus, LeaseDuration } = require("@homiio/shared-types");
+const { ProfileType } = require("@homiio/shared-types");
 const { Saved, SavedPropertyFolder, SavedSearch, RecentlyViewed, Property } = require("../models");
 
 // Create a simple errorResponse function since it's not exported from errorHandler

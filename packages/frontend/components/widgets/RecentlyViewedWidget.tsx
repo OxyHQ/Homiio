@@ -1,17 +1,16 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
-import LoadingSpinner from '../LoadingSpinner';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { Loading } from '@oxyhq/bloom/loading';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
+import type { Property } from '@homiio/shared-types';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useOxy } from '@oxyhq/services';
 import { BaseWidget } from './BaseWidget';
 import { PropertyCard } from '@/components/PropertyCard';
 import { colors } from '@/styles/colors';
 
-// Type assertion for Ionicons compatibility with React 19
-const IconComponent = Ionicons as any;
 
 export function RecentlyViewedWidget() {
   const { t } = useTranslation();
@@ -55,7 +54,7 @@ export function RecentlyViewedWidget() {
     }
   };
 
-  const handleScroll = (event: any) => {
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
     const scrollPosition = contentOffset.x;
     const maxScroll = contentSize.width - layoutMeasurement.width;
@@ -67,7 +66,7 @@ export function RecentlyViewedWidget() {
 
 
 
-  const navigateToProperty = (property: any) => {
+  const navigateToProperty = (property: Property) => {
     router.push(`/properties/${property._id || property.id}`);
   };
 
@@ -80,7 +79,7 @@ export function RecentlyViewedWidget() {
     return (
       <BaseWidget
         title={t('home.recentlyViewed.title')}
-        icon={<IconComponent name="time-outline" size={22} color={colors.primaryColor} />}
+        icon={<Ionicons name="time-outline" size={22} color={colors.primaryColor} />}
       >
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error || 'Failed to load properties'}</Text>
@@ -94,7 +93,7 @@ export function RecentlyViewedWidget() {
   return (
     <BaseWidget
       title={t('home.recentlyViewed.title')}
-      icon={<IconComponent name="time-outline" size={22} color={colors.primaryColor} />}
+      icon={<Ionicons name="time-outline" size={22} color={colors.primaryColor} />}
       noPadding={true}
     >
       <View style={styles.widgetContent}>
@@ -102,7 +101,7 @@ export function RecentlyViewedWidget() {
           <>
             {canScrollLeft && (
               <TouchableOpacity style={[styles.arrowButton, styles.leftArrow]} onPress={scrollLeft}>
-                <IconComponent name="chevron-back" size={20} color={colors.primaryColor} />
+                <Ionicons name="chevron-back" size={20} color={colors.primaryColor} />
               </TouchableOpacity>
             )}
             {canScrollRight && (
@@ -110,7 +109,7 @@ export function RecentlyViewedWidget() {
                 style={[styles.arrowButton, styles.rightArrow]}
                 onPress={scrollRight}
               >
-                <IconComponent name="chevron-forward" size={20} color={colors.primaryColor} />
+                <Ionicons name="chevron-forward" size={20} color={colors.primaryColor} />
               </TouchableOpacity>
             )}
           </>
@@ -126,11 +125,11 @@ export function RecentlyViewedWidget() {
         >
           {isLoading ? (
             <View style={styles.loadingContainer}>
-              <LoadingSpinner size={16} showText={false} />
+              <Loading iconSize={16} showText={false} />
             </View>
           ) : recentProperties.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <IconComponent name="time-outline" size={32} color={colors.COLOR_BLACK_LIGHT_4} />
+              <Ionicons name="time-outline" size={32} color={colors.COLOR_BLACK_LIGHT_4} />
               <Text style={styles.emptyText}>{t('home.recentlyViewed.noProperties')}</Text>
               <Text style={styles.emptySubtext}>
                 {t('home.recentlyViewed.noPropertiesDescription')}
@@ -155,7 +154,7 @@ export function RecentlyViewedWidget() {
             onPress={() => router.push('/properties/recently-viewed')}
           >
             <Text style={styles.viewAllText}>{t('home.viewAll')}</Text>
-            <IconComponent name="chevron-forward" size={16} color={colors.primaryColor} />
+            <Ionicons name="chevron-forward" size={16} color={colors.primaryColor} />
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -188,7 +187,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: colors.COLOR_BLACK,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 4,

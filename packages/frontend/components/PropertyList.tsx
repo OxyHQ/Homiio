@@ -1,10 +1,17 @@
 import React from 'react';
-import { View, StyleSheet, FlatList, ViewStyle, Dimensions } from 'react-native';
+import { View, StyleSheet, FlatList, ViewStyle, ViewProps, FlatListProps, Dimensions, Platform } from 'react-native';
 import { PropertyCard } from './PropertyCard';
 import { Property } from '@/services/propertyService';
 
 const { width: screenWidth } = Dimensions.get('window');
 const AIRBNB_CARD_WIDTH = 180;
+
+// Web-only pointer handlers. RN's ViewProps omits mouse events, but RN-Web
+// forwards them; spreading the object keeps the View typings intact.
+type WebHoverHandlers = {
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+};
 
 type PropertyListProps = {
   properties: Property[];
@@ -14,7 +21,7 @@ type PropertyListProps = {
   horizontal?: boolean;
   style?: ViewStyle;
   contentContainerStyle?: ViewStyle;
-  ItemSeparatorComponent?: React.ComponentType<any>;
+  ItemSeparatorComponent?: FlatListProps<Property>['ItemSeparatorComponent'];
   variant?: 'default' | 'compact' | 'featured' | 'saved';
 };
 
@@ -42,14 +49,16 @@ export function PropertyList({
       ...(horizontal ? styles.horizontalCard : {}),
     };
 
-    const Wrapper: React.ComponentType<any> = ({ children, ...props }) => (
-      <View
-        {...props}
-        // @ts-ignore - web-only events
-        onMouseEnter={onItemHover ? () => onItemHover(item) : undefined}
-        // @ts-ignore - web-only events
-        onMouseLeave={onItemHover ? () => onItemHover(null) : undefined}
-      >
+    const hoverHandlers: WebHoverHandlers =
+      Platform.OS === 'web' && onItemHover
+        ? {
+          onMouseEnter: () => onItemHover(item),
+          onMouseLeave: () => onItemHover(null),
+        }
+        : {};
+
+    const Wrapper: React.FC<ViewProps> = ({ children, ...props }) => (
+      <View {...props} {...hoverHandlers}>
         {children}
       </View>
     );

@@ -32,6 +32,70 @@ export interface UseAddressSearchReturn {
   setSuggestions: (suggestions: AddressSuggestion[]) => void;
 }
 
+/** Public OpenStreetMap Nominatim geocoder (free, no API key required). */
+const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search';
+
+interface NominatimSearchResult {
+  place_id?: number | string;
+  display_name?: string;
+  lat?: string;
+  lon?: string;
+  address?: {
+    road?: string;
+    city?: string;
+    town?: string;
+    village?: string;
+    state?: string;
+    country?: string;
+    postcode?: string;
+  };
+}
+
+/**
+ * One-shot forward geocode against Nominatim, returning normalized
+ * suggestions. Shared by `useAddressSearch` and callers that need a single
+ * resolve-and-go lookup (e.g. applying a saved search).
+ */
+export const geocodeAddress = async (
+  query: string,
+  options: { maxResults?: number; includeAddressDetails?: boolean } = {},
+): Promise<AddressSuggestion[]> => {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+
+  const { maxResults = 5, includeAddressDetails = true } = options;
+  const params = new URLSearchParams({
+    format: 'json',
+    q: trimmed,
+    limit: maxResults.toString(),
+    ...(includeAddressDetails && { addressdetails: '1' }),
+  });
+
+  const response = await fetch(`${NOMINATIM_SEARCH_URL}?${params.toString()}`);
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: Failed to fetch address suggestions`);
+  }
+
+  const data = (await response.json()) as NominatimSearchResult[];
+  return data.map((result, index): AddressSuggestion => ({
+    id: result.place_id?.toString() || index.toString(),
+    text: result.display_name ?? '',
+    icon: 'location-outline',
+    lat: result.lat ? parseFloat(result.lat) : undefined,
+    lon: result.lon ? parseFloat(result.lon) : undefined,
+    address: includeAddressDetails
+      ? {
+          street: result.address?.road || '',
+          city:
+            result.address?.city || result.address?.town || result.address?.village || '',
+          state: result.address?.state || '',
+          country: result.address?.country || '',
+          postcode: result.address?.postcode || '',
+        }
+      : undefined,
+  }));
+};
+
 /**
  * Reusable hook for address search using OpenStreetMap Nominatim API
  *
@@ -79,48 +143,13 @@ export const useAddressSearch = (options: AddressSearchOptions = {}): UseAddress
       setError(null);
 
       try {
-        // Build the API URL with parameters
-        const params = new URLSearchParams({
-          format: 'json',
-          q: query.trim(),
-          limit: maxResults.toString(),
-          ...(includeAddressDetails && { addressdetails: '1' }),
+        const transformedSuggestions = await geocodeAddress(query, {
+          maxResults,
+          includeAddressDetails,
         });
-
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?${params.toString()}`,
-        );
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: Failed to fetch address suggestions`);
-        }
-
-        const data = await response.json();
-
-        // Transform the API response to our format
-        const transformedSuggestions: AddressSuggestion[] = data.map(
-          (result: any, index: number) => ({
-            id: result.place_id?.toString() || index.toString(),
-            text: result.display_name,
-            icon: 'location-outline',
-            lat: parseFloat(result.lat),
-            lon: parseFloat(result.lon),
-            address: includeAddressDetails
-              ? {
-                  street: result.address?.road || '',
-                  city:
-                    result.address?.city || result.address?.town || result.address?.village || '',
-                  state: result.address?.state || '',
-                  country: result.address?.country || '',
-                  postcode: result.address?.postcode || '',
-                }
-              : undefined,
-          }),
-        );
-
         setSuggestions(transformedSuggestions);
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch address suggestions');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch address suggestions');
         setSuggestions([]);
       } finally {
         setLoading(false);

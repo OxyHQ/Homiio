@@ -1,302 +1,124 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, Alert, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+/**
+ * Settings → Sindi (assistant preferences).
+ *
+ * Stream P polish: Bloom SettingsList primitives for rows + toggles, shared
+ * ConfirmDialog for destructive flows. The previous version imported a
+ * `sindiApi` member that does not exist in `@/utils/api`; the chat-history
+ * UI is removed until a real service ships. The behaviour toggles and the
+ * "reset" affordance remain available.
+ */
+import React, { useCallback, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
+import { toast } from '@/lib/sonner';
+
+import { Switch } from '@oxyhq/bloom/switch';
+import {
+  SettingsListGroup,
+  SettingsListItem,
+} from '@oxyhq/bloom/settings-list';
+
+import { Header } from '@/components/Header';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { SindiIcon } from '@/assets/icons';
 import { colors } from '@/styles/colors';
-import { useTranslation } from 'react-i18next';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons as IoniconsRaw } from '@expo/vector-icons';
-import { useOxy } from '@oxyhq/services';
-import { sindiApi } from '@/utils/api';
-import Button from '@/components/Button';
+import { spacing } from '@/constants/styles';
 
-const Ionicons = IoniconsRaw as any;
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+const RowIcon: React.FC<{ name: IoniconName; destructive?: boolean }> = ({
+  name,
+  destructive,
+}) => (
+  <Ionicons
+    name={name}
+    size={20}
+    color={destructive ? colors.danger : colors.muted}
+  />
+);
 
 export default function SindiSettingsScreen() {
-  const router = useRouter();
   const { t } = useTranslation();
-  const { oxyServices, activeSessionId } = useOxy();
   const [showTips, setShowTips] = useState(true);
-  const [history, setHistory] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [clearing, setClearing] = useState(false);
+  const [pendingDialog, setPendingDialog] = useState<'reset' | null>(null);
 
-  const fetchHistory = async () => {
-    if (!oxyServices || !activeSessionId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await sindiApi.getSindiChatHistory(oxyServices, activeSessionId);
-      setHistory(res.history || []);
-    } catch {
-      setError(t('sindi.settings.historyError', 'Failed to load chat history.'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchHistory();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [oxyServices, activeSessionId]);
-
-  const handleClearHistory = () => {
-    Alert.alert(
-      t('sindi.settings.clearHistoryTitle', 'Clear Chat History?'),
-      t('sindi.settings.clearHistoryMessage', 'This will remove all your Sindi chat history.'),
-      [
-        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
-        {
-          text: t('common.clear', 'Clear'),
-          style: 'destructive',
-          onPress: async () => {
-            if (!oxyServices || !activeSessionId) return;
-            setClearing(true);
-            try {
-              await sindiApi.clearSindiChatHistory(oxyServices, activeSessionId);
-              setHistory([]);
-              Alert.alert(
-                t('common.success', 'Success'),
-                t('sindi.settings.cleared', 'Chat history cleared.'),
-              );
-            } catch {
-              Alert.alert(t('sindi.settings.historyError', 'Failed to clear chat history.'));
-            } finally {
-              setClearing(false);
-            }
-          },
-        },
-      ],
-    );
-  };
-
-  const handleResetDefaults = () => {
-    Alert.alert(
-      t('sindi.settings.resetTitle', 'Reset Sindi?'),
-      t('sindi.settings.resetMessage', 'This will reset all Sindi preferences to their defaults.'),
-      [
-        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
-        {
-          text: t('common.reset', 'Reset'),
-          style: 'destructive',
-          onPress: () => {
-            setShowTips(true);
-            Alert.alert(
-              t('common.success', 'Success'),
-              t('sindi.settings.resetDone', 'Sindi preferences reset.'),
-            );
-          },
-        },
-      ],
-    );
-  };
+  const handleResetDefaults = useCallback((): void => {
+    setShowTips(true);
+    toast.success(t('sindi.settings.resetDone', 'Sindi preferences reset.'));
+    setPendingDialog(null);
+  }, [t]);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-          accessibilityLabel="Back"
-        >
-          <Ionicons name="arrow-back" size={22} color={colors.sindiColor} />
-        </TouchableOpacity>
-        <SindiIcon size={32} color={colors.sindiColor} />
-        <Text style={styles.headerTitle}>{t('sindi.settings.title', 'Sindi Preferences')}</Text>
-      </View>
-      <View style={styles.content}>
-        {/* Show Tips & Hints */}
-        <View style={styles.settingRow}>
-          <Text style={styles.settingLabel}>{t('sindi.settings.tips', 'Show Tips & Hints')}</Text>
-          <Switch
-            value={showTips}
-            onValueChange={setShowTips}
-            thumbColor={showTips ? colors.sindiColor : '#ccc'}
-            trackColor={{ true: '#b3d8ff', false: '#eee' }}
-          />
-        </View>
-        {/* Chat History Section */}
-        <View style={styles.historySection}>
-          <Text style={styles.historyTitle}>
-            {t('sindi.settings.chatHistory', 'Sindi Chat History')}
-          </Text>
-          {loading ? (
-            <View style={{ width: 20, height: 20, justifyContent: 'center', alignItems: 'center' }}>
-              <View style={{ 
-                width: 16, 
-                height: 16, 
-                borderWidth: 2, 
-                borderColor: colors.sindiColor, 
-                borderTopColor: 'transparent',
-                borderRadius: 8 
-              }} />
-            </View>
-          ) : error ? (
-            <Text style={{ color: 'red', marginBottom: 8 }}>{error}</Text>
-          ) : history.length === 0 ? (
-            <Text style={{ color: '#7f8c8d' }}>
-              {t('sindi.settings.noHistory', 'No chat history yet.')}
-            </Text>
-          ) : (
-            <ScrollView style={{ maxHeight: 200 }}>
-              {history.map((msg, idx) => (
-                <View key={idx} style={styles.historyMsgRow}>
-                  <Text
-                    style={[
-                      styles.historyMsgRole,
-                      { color: msg.role === 'user' ? colors.sindiColor : '#2c3e50' },
-                    ]}
-                  >
-                    {msg.role}
-                  </Text>
-                  <Text style={styles.historyMsgContent}>{msg.content}</Text>
-                  <Text style={styles.historyMsgTime}>
-                    {new Date(msg.timestamp).toLocaleString()}
-                  </Text>
-                </View>
-              ))}
-            </ScrollView>
+    <View style={styles.root}>
+      <Header
+        options={{
+          title: t('sindi.settings.title', 'Sindi preferences'),
+          showBackButton: true,
+          titlePosition: 'center',
+          leftComponents: [
+            <View key="logo" style={styles.headerIcon}>
+              <SindiIcon size={20} color={colors.sindiColor} />
+            </View>,
+          ],
+        }}
+      />
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <SettingsListGroup
+          title={t('sindi.settings.behavior', 'Behavior')}
+          footer={t(
+            'sindi.settings.behaviorFooter',
+            'Tune how Sindi behaves while you browse properties.',
           )}
-        </View>
-        {/* Clear Chat History */}
-        <Button
-          onPress={handleClearHistory}
-          disabled={clearing || loading}
-          style={styles.actionButton}
-          backgroundColor="#fff"
-          textColor={colors.sindiColor}
-          accessibilityLabel={t('sindi.settings.clearHistory', 'Clear Sindi Chat History')}
         >
-          <View style={styles.actionButtonContent}>
-            <Ionicons
-              name="trash-outline"
-              size={18}
-              color={colors.sindiColor}
-              style={{ marginRight: 8 }}
-            />
-            <Text style={styles.actionText}>
-              {t('sindi.settings.clearHistory', 'Clear Sindi Chat History')}
-            </Text>
-          </View>
-        </Button>
-        {/* Reset to Defaults */}
-        <Button
-          onPress={handleResetDefaults}
-          style={styles.actionButton}
-          backgroundColor="#fff"
-          textColor={colors.sindiColor}
-          accessibilityLabel={t('sindi.settings.reset', 'Reset Sindi to Defaults')}
-        >
-          <View style={styles.actionButtonContent}>
-            <Ionicons
-              name="refresh-outline"
-              size={18}
-              color={colors.sindiColor}
-              style={{ marginRight: 8 }}
-            />
-            <Text style={styles.actionText}>
-              {t('sindi.settings.reset', 'Reset Sindi to Defaults')}
-            </Text>
-          </View>
-        </Button>
-      </View>
-    </SafeAreaView>
+          <SettingsListItem
+            icon={<RowIcon name="information-circle-outline" />}
+            title={t('sindi.settings.tips', 'Show tips & hints')}
+            description={t(
+              'sindi.settings.tipsDescription',
+              'Surface inline guidance while you chat.',
+            )}
+            rightElement={
+              <Switch value={showTips} onValueChange={setShowTips} />
+            }
+          />
+        </SettingsListGroup>
+
+        <SettingsListGroup title={t('sindi.settings.actions', 'Actions')}>
+          <SettingsListItem
+            icon={<RowIcon name="refresh-outline" />}
+            title={t('sindi.settings.reset', 'Reset Sindi to defaults')}
+            onPress={() => setPendingDialog('reset')}
+          />
+        </SettingsListGroup>
+      </ScrollView>
+
+      <ConfirmDialog
+        visible={pendingDialog === 'reset'}
+        title={t('sindi.settings.resetTitle', 'Reset Sindi?')}
+        message={t(
+          'sindi.settings.resetMessage',
+          'This will reset all Sindi preferences to their defaults.',
+        )}
+        confirmLabel={t('common.reset', 'Reset')}
+        confirmDestructive
+        onConfirm={handleResetDefaults}
+        onCancel={() => setPendingDialog(null)}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    backgroundColor: '#f7fbff',
+    backgroundColor: colors.surface,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
-    backgroundColor: 'rgba(255,255,255,0.85)',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e3f0ff',
+  scroll: {
+    paddingTop: spacing.lg,
+    paddingBottom: spacing['4xl'],
   },
-  backButton: {
-    marginRight: 8,
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.sindiColor,
-    marginLeft: 8,
-  },
-  content: {
-    flex: 1,
-    padding: 24,
-  },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  settingLabel: {
-    fontSize: 16,
-    color: '#2c3e50',
-    flex: 1,
-    marginRight: 12,
-  },
-  historySection: {
-    marginBottom: 24,
-  },
-  historyTitle: {
-    fontSize: 16,
-    color: colors.sindiColor,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  historyMsgRow: {
-    marginBottom: 10,
-    padding: 8,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e3f0ff',
-  },
-  historyMsgRole: {
-    fontWeight: 'bold',
-    marginBottom: 2,
-    textTransform: 'capitalize',
-  },
-  historyMsgContent: {
-    fontSize: 15,
-    color: '#2c3e50',
-    marginBottom: 2,
-  },
-  historyMsgTime: {
-    fontSize: 12,
-    color: '#7f8c8d',
-    textAlign: 'right',
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 0,
-    borderWidth: 1,
-    borderColor: '#e3f0ff',
-  },
-  actionButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  actionText: {
-    color: colors.sindiColor,
-    fontWeight: 'bold',
-    fontSize: 15,
+  headerIcon: {
+    marginLeft: spacing.xs,
   },
 });

@@ -3,8 +3,9 @@ import { View, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { colors } from '@/styles/colors';
 import { useTranslation } from 'react-i18next';
+import type { Property } from '@homiio/shared-types';
 
-interface Props { property: any }
+interface Props { property: Property | null }
 
 export const HouseRules: React.FC<Props> = ({ property }) => {
     const { t } = useTranslation();
@@ -28,7 +29,7 @@ export const HouseRules: React.FC<Props> = ({ property }) => {
 const styles = StyleSheet.create({
     container: { marginBottom: 20 },
     sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15 },
-    card: { padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#e9ecef' },
+    card: { padding: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
     item: { fontSize: 14, marginBottom: 8 },
     value: { fontWeight: '600', color: colors.primaryColor },
 });

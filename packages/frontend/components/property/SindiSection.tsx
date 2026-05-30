@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { colors } from '@/styles/colors';
 import { ThemedText } from '@/components/ThemedText';
-import Button from '@/components/Button';
+import { Button } from '@oxyhq/bloom/button';
 import { SindiIcon } from '@/assets/icons';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SindiChatBottomSheet } from './SindiChatBottomSheet';
@@ -40,7 +40,7 @@ export function SindiSection({ property }: SindiSectionProps) {
             <View style={styles.bannerContent}>
                 <View style={styles.leftSection}>
                     <View style={styles.iconContainer}>
-                        <SindiIcon size={32} color="#fff" />
+                        <SindiIcon size={32} color={colors.white} />
                     </View>
                     <View style={styles.textContainer}>
                         <ThemedText style={styles.title}>Ask Sindi AI</ThemedText>
@@ -53,8 +53,8 @@ export function SindiSection({ property }: SindiSectionProps) {
                 <View style={styles.rightSection}>
                     <Button
                         onPress={handleChatNowPress}
-                        backgroundColor="#fff"
-                        textColor={colors.primaryColor}
+                        variant="inverse"
+                        textStyle={{ color: colors.primaryColor }}
                         accessibilityLabel="Start conversation with Sindi AI assistant"
                     >
                         Chat Now
@@ -68,7 +68,7 @@ export function SindiSection({ property }: SindiSectionProps) {
                         key={index}
                         onPress={() => handleOpenSindi(suggestion.text)}
                         style={{
-                            backgroundColor: '#f5f5f5',
+                            backgroundColor: colors.surface,
                             paddingHorizontal: 8,
                             paddingVertical: 4,
                             borderRadius: 16,
@@ -79,7 +79,7 @@ export function SindiSection({ property }: SindiSectionProps) {
                         <ThemedText
                             style={{
                                 fontSize: 12,
-                                color: '#333'
+                                color: colors.COLOR_BLACK_LIGHT_3
                             }}
                         >
                             {suggestion.text}
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
         padding: 0,
         marginBottom: 16,
         overflow: 'hidden',
-        shadowColor: '#000',
+        shadowColor: colors.COLOR_BLACK,
         shadowOffset: {
             width: 0,
             height: 4,
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 20,
         fontWeight: '700',
-        color: '#fff',
+        color: colors.white,
         marginBottom: 2,
     },
     subtitle: {
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.4)',
-        shadowColor: '#000',
+        shadowColor: colors.COLOR_BLACK,
         shadowOffset: {
             width: 0,
             height: 2,

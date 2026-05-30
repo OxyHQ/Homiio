@@ -1,393 +1,433 @@
 /**
- * ReviewsSection Component
- * Displays building-level reviews for a property with option to see all reviews
+ * ReviewsSection — Airbnb-style "Reviews" block for the property detail.
+ *
+ * Layout:
+ *  - Large rating number + summary line (e.g. "4.8 · 124 reviews").
+ *  - 2-column grid of review cards on web, 1-column on mobile.
+ *  - "Show all N reviews" Bloom Button when more than `maxVisible`
+ *    exist.
+ *
+ * Migrated to Bloom Typography, Bloom Button, Bloom Skeleton for
+ * the loading state. The actual review-card rendering still uses
+ * the shared `ReviewCard` component.
  */
-
-import React, { useState, useEffect, useCallback } from 'react';
-import {
-    View,
-    StyleSheet,
-    ActivityIndicator,
-    Alert,
-} from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { ThemedText } from '../ThemedText';
-import { ReviewCard, ReviewData } from '../ReviewCard';
-import Button from '../Button';
-import { colors } from '@/styles/colors';
-import { useOxy } from '@oxyhq/services';
+
+import { Button } from '@oxyhq/bloom/button';
+import * as Skeleton from '@oxyhq/bloom/skeleton';
+import { H1, H2, Text as BloomText } from '@oxyhq/bloom/typography';
+
+import { ReviewCard, type ReviewData } from '@/components/ReviewCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { api } from '@/utils/api';
+import { colors } from '@/styles/colors';
+import { cardShadow, hairline, radius, spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
 
 interface ReviewsSectionProps {
-    property: Property;
-    variant?: 'full' | 'preview';
+  property: Property;
+  variant?: 'full' | 'preview';
 }
 
-export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
-    property,
-    variant = 'preview'
-}) => {
-    const router = useRouter();
-    const { oxyServices, activeSessionId } = useOxy();
-    const [reviews, setReviews] = useState<ReviewData[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [aggregatedStats, setAggregatedStats] = useState<{
-        averageRating: number;
-        totalReviews: number;
-        recommendationPercentage: number;
-    } | null>(null);
+interface AggregatedStats {
+  averageRating: number;
+  totalReviews: number;
+  recommendationPercentage: number;
+  verifiedCount: number;
+  withEvidenceCount: number;
+}
 
-    const isPreview = variant === 'preview';
-    const maxReviewsToShow = isPreview ? 3 : 10;
+type ReviewsResponse = {
+  success?: boolean;
+  buildingReviews?: ReviewData[];
+  unitReviews?: ReviewData[];
+  data?: {
+    buildingReviews?: ReviewData[];
+    unitReviews?: ReviewData[];
+  };
+};
 
-    // Get address ID from property
-    const addressId = (property?.address as any)?._id || (property?.address as any)?.id;
+const normalizeReview = (raw: ReviewData): ReviewData => ({
+  ...raw,
+  positiveComment: raw.positiveComment ?? '',
+  negativeComment: raw.negativeComment ?? '',
+  images: raw.images ?? [],
+  services: raw.services ?? [],
+  isAnonymous: raw.isAnonymous ?? true,
+  confidenceScore: raw.confidenceScore ?? 75,
+  evidenceAttached: raw.evidenceAttached ?? false,
+  flaggedIssues: raw.flaggedIssues ?? [],
+  karmaScore: raw.karmaScore ?? 0,
+  replyAllowed: raw.replyAllowed ?? true,
+  moderationStatus: raw.moderationStatus ?? 'approved',
+  helpfulVotes: raw.helpfulVotes ?? 0,
+  unhelpfulVotes: raw.unhelpfulVotes ?? 0,
+  reportCount: raw.reportCount ?? 0,
+  evidenceCount: raw.evidenceCount ?? 0,
+});
 
-    console.log('ReviewsSection - Component props:', {
-        hasProperty: !!property,
-        addressId,
-        propertyAddress: property?.address,
-        hasAuth: !!(oxyServices && activeSessionId)
-    });
+const computeStats = (reviews: ReviewData[]): AggregatedStats | null => {
+  if (reviews.length === 0) return null;
+  const avg = reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length;
+  const recommended = reviews.filter((r) => (r.rating || 0) >= 4).length;
+  return {
+    averageRating: avg,
+    totalReviews: reviews.length,
+    recommendationPercentage: (recommended / reviews.length) * 100,
+    verifiedCount: reviews.filter((r) => r.verified).length,
+    withEvidenceCount: reviews.filter((r) => r.evidenceAttached).length,
+  };
+};
 
-    const fetchPropertyReviews = useCallback(async () => {
-        if (!addressId) return;
+interface RatingHeaderProps {
+  stats: AggregatedStats;
+}
 
-        if (!oxyServices || !activeSessionId) {
-            setError('Please sign in to view reviews');
-            setLoading(false);
-            return;
-        }
-
-        try {
-            setLoading(true);
-            const response = await api.get(`/api/reviews/address/${addressId}`, {
-                oxyServices,
-                activeSessionId
-            });
-
-            // Handle hierarchical response structure
-            const data = response.data;
-            console.log('ReviewsSection - API Response:', data);
-
-            // Handle both nested and direct response formats
-            const responseData = data.success ? data : data.data || data;
-            const buildingReviews = responseData.buildingReviews || [];
-            const unitReviews = responseData.unitReviews || [];
-            const allReviews = [...buildingReviews, ...unitReviews];
-
-            console.log('ReviewsSection - Extracted reviews:', {
-                buildingReviews: buildingReviews.length,
-                unitReviews: unitReviews.length,
-                totalReviews: allReviews.length,
-                reviews: allReviews
-            });
-
-            // Add default values for any missing fields that ReviewCard might need
-            const processedReviews = allReviews.map(review => ({
-                ...review,
-                // Ensure all optional fields have defaults
-                positiveComment: review.positiveComment || '',
-                negativeComment: review.negativeComment || '',
-                images: review.images || [],
-                services: review.services || [],
-                // Ethical review system defaults
-                isAnonymous: review.isAnonymous ?? true,
-                confidenceScore: review.confidenceScore ?? 75,
-                evidenceAttached: review.evidenceAttached ?? false,
-                flaggedIssues: review.flaggedIssues ?? [],
-                karmaScore: review.karmaScore ?? 0,
-                replyAllowed: review.replyAllowed ?? true,
-                moderationStatus: review.moderationStatus ?? 'approved',
-                helpfulVotes: review.helpfulVotes ?? 0,
-                unhelpfulVotes: review.unhelpfulVotes ?? 0,
-                reportCount: review.reportCount ?? 0,
-                evidenceCount: review.evidenceCount ?? 0
-            }));
-
-            setReviews(processedReviews);
-
-            // Calculate aggregated stats
-            if (allReviews.length > 0) {
-                const avgRating = allReviews.reduce((sum: number, review: any) => sum + (review.rating || 0), 0) / allReviews.length;
-                const recommendedCount = allReviews.filter((review: any) => review.rating >= 4).length;
-
-                setAggregatedStats({
-                    averageRating: avgRating,
-                    totalReviews: allReviews.length,
-                    recommendationPercentage: (recommendedCount / allReviews.length) * 100
-                });
-            }
-        } catch (error) {
-            console.error('Error fetching property reviews:', error);
-            setError('Failed to load reviews');
-        } finally {
-            setLoading(false);
-        }
-    }, [addressId, oxyServices, activeSessionId]);
-
-    useEffect(() => {
-        fetchPropertyReviews();
-    }, [fetchPropertyReviews]);
-
-    const handleViewAllReviews = () => {
-        if (addressId) {
-            router.push(`/addresses/${addressId}?tab=reviews`);
-        }
-    };
-
-    const handleWriteReview = () => {
-        if (addressId) {
-            router.push(`/reviews/write?addressId=${addressId}`);
-        }
-    };
-
-    const handleReviewHelpful = (_reviewId: string) => {
-        Alert.alert('Thank you', 'Your feedback has been recorded.');
-    };
-
-    const handleReviewReport = (_reviewId: string) => {
-        Alert.alert(
-            'Report Review',
-            'Are you sure you want to report this review for inappropriate content?',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Report',
-                    style: 'destructive',
-                    onPress: () => {
-                        Alert.alert('Reported', 'This review has been reported to our moderation team.');
-                    }
-                }
-            ]
-        );
-    };
-
-    const handleReviewReply = (_reviewId: string) => {
-        Alert.alert(
-            'Reply to Review',
-            'Reply functionality will allow landlords and property managers to respond to reviews.',
-            [{ text: 'OK' }]
-        );
-    };
-
-    if (!addressId) {
-        return null;
-    }
-
-    // Don't show the section if there are no reviews and not loading
-    if (!loading && !error && reviews.length === 0) {
-        return null;
-    }
-
-    const reviewsToShow = reviews.slice(0, maxReviewsToShow);
-    const hasMoreReviews = reviews.length > maxReviewsToShow;
-
-    return (
-        <View style={styles.container}>
-            <ThemedText style={styles.sectionTitle}>Building Reviews</ThemedText>
-            <ThemedText style={styles.disclaimer}>
-                These are ethical, community-verified reviews about the building itself, not this specific property.
-                They provide helpful insights from residents who have lived in the same building, though experiences may vary by unit.
-            </ThemedText>
-
-            <View style={styles.card}>
-                {/* Loading State */}
-                {loading && (
-                    <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="small" color={colors.primaryColor} />
-                        <ThemedText style={styles.loadingText}>Loading reviews...</ThemedText>
-                    </View>
-                )}
-
-                {/* Error State */}
-                {error && (
-                    <View style={styles.errorContainer}>
-                        <Ionicons name="alert-circle-outline" size={24} color={colors.COLOR_BLACK_LIGHT_4} />
-                        <ThemedText style={styles.errorText}>{error}</ThemedText>
-                        <Button onPress={fetchPropertyReviews}>
-                            Retry
-                        </Button>
-                    </View>
-                )}
-
-                {/* Reviews Content */}
-                {!loading && !error && (
-                    <>
-                        {/* Rating Summary */}
-                        {aggregatedStats && (
-                            <View style={styles.ratingContainer}>
-                                <View style={styles.starsContainer}>
-                                    {[...Array(5)].map((_, i) => (
-                                        <Ionicons
-                                            key={i}
-                                            name={i < Math.floor(aggregatedStats.averageRating) ? "star" : "star-outline"}
-                                            size={16}
-                                            color="#FFD700"
-                                        />
-                                    ))}
-                                </View>
-                                <ThemedText style={styles.ratingText}>
-                                    {aggregatedStats.averageRating.toFixed(1)} ({aggregatedStats.totalReviews} reviews)
-                                </ThemedText>
-                            </View>
-                        )}
-
-                        {/* Reviews List */}
-                        <View style={styles.reviewsList}>
-                            {reviewsToShow.map((review) => (
-                                <ReviewCard
-                                    key={review._id}
-                                    review={review}
-                                    onHelpful={handleReviewHelpful}
-                                    onReport={handleReviewReport}
-                                    onReply={handleReviewReply}
-                                    variant={isPreview ? 'compact' : 'default'}
-                                    showActions={!isPreview}
-                                />
-                            ))}
-                        </View>
-
-                        {/* View All Button */}
-                        {isPreview && (hasMoreReviews || reviews.length > 0) && (
-                            <Button
-                                onPress={handleViewAllReviews}
-                                backgroundColor={colors.primaryLight_2}
-                                textColor={colors.primaryColor}
-                            >
-                                View All Reviews ({reviews.length}) →
-                            </Button>
-                        )}
-
-                        {/* Trust Summary */}
-                        {aggregatedStats && isPreview && (
-                            <View style={styles.trustSummary}>
-                                <View style={styles.trustMetric}>
-                                    <ThemedText style={styles.trustMetricValue}>
-                                        {Math.round(aggregatedStats.recommendationPercentage)}%
-                                    </ThemedText>
-                                    <ThemedText style={styles.trustMetricLabel}>Recommend</ThemedText>
-                                </View>
-                                <View style={styles.trustMetric}>
-                                    <ThemedText style={styles.trustMetricValue}>
-                                        {reviews.filter(r => r.verified).length}
-                                    </ThemedText>
-                                    <ThemedText style={styles.trustMetricLabel}>Verified</ThemedText>
-                                </View>
-                                <View style={styles.trustMetric}>
-                                    <ThemedText style={styles.trustMetricValue}>
-                                        {reviews.filter(r => r.evidenceAttached).length}
-                                    </ThemedText>
-                                    <ThemedText style={styles.trustMetricLabel}>With Evidence</ThemedText>
-                                </View>
-                            </View>
-                        )}
-
-                        {/* Write Review Button */}
-                        <Button
-                            onPress={handleWriteReview}
-                            backgroundColor={colors.primaryLight_2}
-                            textColor={colors.primaryColor}
-                        >
-                            ✏️ Write Review
-                        </Button>
-                    </>
-                )}
-            </View>
+const RatingHeader: React.FC<RatingHeaderProps> = ({ stats }) => {
+  const { t } = useTranslation();
+  return (
+    <View style={styles.ratingHeader}>
+      <View style={styles.ratingNumberWrap}>
+        <Ionicons name="star" size={28} color={colors.COLOR_BLACK} />
+        <H1 style={styles.ratingNumber}>{stats.averageRating.toFixed(1)}</H1>
+        <BloomText style={styles.ratingMeta}>
+          · {stats.totalReviews}{' '}
+          {t('property.reviews.count', 'reviews') || 'reviews'}
+        </BloomText>
+      </View>
+      <View style={styles.statsRow}>
+        <View style={styles.statItem}>
+          <BloomText style={styles.statValue}>
+            {Math.round(stats.recommendationPercentage)}%
+          </BloomText>
+          <BloomText style={styles.statLabel}>
+            {t('property.reviews.recommend', 'Recommend') || 'Recommend'}
+          </BloomText>
         </View>
-    );
+        <View style={styles.statItem}>
+          <BloomText style={styles.statValue}>{stats.verifiedCount}</BloomText>
+          <BloomText style={styles.statLabel}>
+            {t('property.reviews.verified', 'Verified') || 'Verified'}
+          </BloomText>
+        </View>
+        <View style={styles.statItem}>
+          <BloomText style={styles.statValue}>
+            {stats.withEvidenceCount}
+          </BloomText>
+          <BloomText style={styles.statLabel}>
+            {t('property.reviews.evidence', 'With evidence') || 'With evidence'}
+          </BloomText>
+        </View>
+      </View>
+    </View>
+  );
+};
+
+export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
+  property,
+  variant = 'preview',
+}) => {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const [reviews, setReviews] = useState<ReviewData[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const isPreview = variant === 'preview';
+  const maxVisible = isPreview ? 6 : 10;
+
+  // Defensive type extraction — address can land in a few shapes
+  // depending on whether the property was hydrated from list vs detail
+  // endpoint.
+  const addressId = useMemo<string | undefined>(() => {
+    const address = property?.address;
+    if (!address) return undefined;
+    if (typeof address === 'object' && '_id' in address) {
+      const id = (address as { _id?: unknown })._id;
+      if (typeof id === 'string') return id;
+    }
+    if (typeof address === 'object' && 'id' in address) {
+      const id = (address as { id?: unknown }).id;
+      if (typeof id === 'string') return id;
+    }
+    return undefined;
+  }, [property?.address]);
+
+  const fetchReviews = useCallback(async () => {
+    if (!addressId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.get<ReviewsResponse>(
+        `/api/reviews/address/${addressId}`,
+      );
+      const payload = response.data;
+      const responseData = payload?.success ? payload : payload?.data ?? payload;
+      const buildingReviews = responseData?.buildingReviews ?? [];
+      const unitReviews = responseData?.unitReviews ?? [];
+      const all = [...buildingReviews, ...unitReviews].map(normalizeReview);
+      setReviews(all);
+    } catch (e) {
+      const message =
+        e instanceof Error ? e.message : 'Unable to load reviews';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }, [addressId]);
+
+  useEffect(() => {
+    fetchReviews();
+  }, [fetchReviews]);
+
+  const stats = useMemo(() => computeStats(reviews), [reviews]);
+
+  const visibleReviews = useMemo(
+    () => reviews.slice(0, maxVisible),
+    [reviews, maxVisible],
+  );
+
+  if (!addressId) return null;
+
+  const handleViewAll = () => {
+    router.push(`/addresses/${addressId}?tab=reviews`);
+  };
+
+  const handleWriteReview = () => {
+    router.push(`/reviews/write?addressId=${addressId}`);
+  };
+
+  return (
+    <View style={styles.section}>
+      <H2 style={styles.title}>
+        {t('property.reviews.title', 'Reviews') || 'Reviews'}
+      </H2>
+      <BloomText style={styles.disclaimer}>
+        {t(
+          'property.reviews.disclaimer',
+          'Community-verified reviews about the building. Experiences may vary by unit.',
+        ) ||
+          'Community-verified reviews about the building. Experiences may vary by unit.'}
+      </BloomText>
+
+      {loading ? (
+        <View style={styles.skeletonGrid}>
+          {Array.from({ length: 4 }).map((_, idx) => (
+            <View key={idx} style={[styles.skeletonCard, cardShadow.sm]}>
+              <Skeleton.Box width="60%" height={14} borderRadius={4} />
+              <Skeleton.Box
+                width="100%"
+                height={12}
+                borderRadius={4}
+                style={styles.skeletonLine}
+              />
+              <Skeleton.Box
+                width="85%"
+                height={12}
+                borderRadius={4}
+                style={styles.skeletonLine}
+              />
+              <Skeleton.Box
+                width="70%"
+                height={12}
+                borderRadius={4}
+                style={styles.skeletonLine}
+              />
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {error ? (
+        <ErrorState
+          icon="chatbubbles-outline"
+          title={
+            t('property.reviews.errorTitle', 'Could not load reviews') ||
+            'Could not load reviews'
+          }
+          description={error}
+          retryLabel={t('common.tryAgain', 'Try again') || 'Try again'}
+          onRetry={fetchReviews}
+        />
+      ) : null}
+
+      {!loading && !error && reviews.length === 0 ? (
+        <EmptyState
+          icon="chatbubbles-outline"
+          title={
+            t('property.reviews.emptyTitle', 'No reviews yet') ||
+            'No reviews yet'
+          }
+          description={
+            t(
+              'property.reviews.emptyDescription',
+              'Be the first to share what it was like to live here.',
+            ) || 'Be the first to share what it was like to live here.'
+          }
+          actionText={
+            t('property.reviews.writeAction', 'Write a review') ||
+            'Write a review'
+          }
+          actionIcon="create-outline"
+          onAction={handleWriteReview}
+        />
+      ) : null}
+
+      {!loading && !error && reviews.length > 0 ? (
+        <>
+          {stats ? <RatingHeader stats={stats} /> : null}
+          <View style={styles.grid}>
+            {visibleReviews.map((review) => (
+              <View key={review._id} style={styles.gridCell}>
+                <ReviewCard
+                  review={review}
+                  variant={isPreview ? 'compact' : 'default'}
+                  showActions={!isPreview}
+                />
+              </View>
+            ))}
+          </View>
+          <View style={styles.actionsRow}>
+            {reviews.length > maxVisible ? (
+              <Button
+                onPress={handleViewAll}
+                variant="secondary"
+                size="medium"
+                accessibilityLabel={
+                  t(
+                    'property.reviews.showAll',
+                    `Show all ${reviews.length} reviews`,
+                  ) || `Show all ${reviews.length} reviews`
+                }
+              >
+                {t(
+                  'property.reviews.showAll',
+                  `Show all ${reviews.length} reviews`,
+                ) || `Show all ${reviews.length} reviews`}
+              </Button>
+            ) : null}
+            <Button
+              onPress={handleWriteReview}
+              variant="ghost"
+              size="medium"
+              icon={
+                <Ionicons
+                  name="create-outline"
+                  size={16}
+                  color={colors.COLOR_BLACK}
+                />
+              }
+              iconPosition="left"
+              accessibilityLabel={
+                t('property.reviews.writeAction', 'Write a review') ||
+                'Write a review'
+              }
+            >
+              {t('property.reviews.writeAction', 'Write a review') ||
+                'Write a review'}
+            </Button>
+          </View>
+        </>
+      ) : null}
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        marginBottom: 20,
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 15,
-    },
-    disclaimer: {
-        fontSize: 12,
-        fontStyle: 'italic',
-        marginBottom: 12,
-        color: colors.COLOR_BLACK_LIGHT_3,
-    },
-    card: {
-        padding: 16,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#e9ecef',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 3,
-        elevation: 1,
-    },
-    ratingContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 16,
-    },
-    starsContainer: {
-        flexDirection: 'row',
-        gap: 2,
-    },
-    ratingText: {
-        fontSize: 14,
-        color: colors.COLOR_BLACK_LIGHT_3,
-    },
-    loadingContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 32,
-        gap: 8,
-    },
-    loadingText: {
-        fontSize: 14,
-        color: colors.COLOR_BLACK_LIGHT_4,
-    },
-    errorContainer: {
-        alignItems: 'center',
-        paddingVertical: 32,
-        gap: 8,
-    },
-    errorText: {
-        fontSize: 14,
-        color: colors.COLOR_BLACK_LIGHT_4,
-        textAlign: 'center',
-    },
-    reviewsList: {
-        gap: 12,
-        marginBottom: 16,
-    },
-    trustSummary: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        marginTop: 16,
-        paddingTop: 16,
-        borderTopWidth: 1,
-        borderTopColor: colors.COLOR_BLACK_LIGHT_6,
-    },
-    trustMetric: {
-        alignItems: 'center',
-    },
-    trustMetricValue: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: colors.primaryColor,
-        marginBottom: 4,
-    },
-    trustMetricLabel: {
-        fontSize: 12,
-        color: colors.COLOR_BLACK_LIGHT_4,
-        textAlign: 'center',
-    },
+  section: {
+    marginTop: spacing['3xl'],
+    marginBottom: spacing['3xl'],
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.COLOR_BLACK,
+    marginBottom: spacing.sm,
+  },
+  disclaimer: {
+    fontSize: 13,
+    color: colors.COLOR_BLACK_LIGHT_3,
+    marginBottom: spacing.xl,
+    lineHeight: 18,
+  },
+  ratingHeader: {
+    gap: spacing.lg,
+    marginBottom: spacing.xl,
+    paddingVertical: spacing.lg,
+    borderBottomWidth: hairline.width,
+    borderBottomColor: hairline.color,
+  },
+  ratingNumberWrap: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: spacing.sm,
+  },
+  ratingNumber: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: colors.COLOR_BLACK,
+    letterSpacing: -0.5,
+  },
+  ratingMeta: {
+    fontSize: 15,
+    color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: spacing['4xl'],
+  },
+  statItem: {
+    gap: 2,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.COLOR_BLACK,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.lg,
+  },
+  gridCell: {
+    width: Platform.OS === 'web' ? '48%' : '100%',
+    minWidth: 240,
+    flexGrow: 1,
+  },
+  skeletonGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.lg,
+    marginBottom: spacing.xl,
+  },
+  skeletonCard: {
+    width: Platform.OS === 'web' ? '48%' : '100%',
+    minWidth: 240,
+    flexGrow: 1,
+    padding: spacing.lg,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.lg,
+    gap: spacing.sm,
+  },
+  skeletonLine: {
+    marginTop: spacing.xs,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.xl,
+    flexWrap: 'wrap',
+  },
 });
 
 export default ReviewsSection;

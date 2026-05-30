@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { BaseWidget } from './BaseWidget';
 import { ThemedText } from '../ThemedText';
-import Button from '../Button';
+import { Button } from '@oxyhq/bloom/button';
+import { colors } from '@/styles/colors';
 
 export function HorizonInitiativeWidget() {
   const { t } = useTranslation();
@@ -12,7 +13,7 @@ export function HorizonInitiativeWidget() {
   return (
     <BaseWidget
       title={t('horizon.title', 'Horizon Initiative')}
-      icon={<Ionicons name="star" size={22} color="#FFD700" />}
+      icon={<Ionicons name="star" size={22} color={colors.ratingStar} />}
     >
       <ThemedText style={styles.membershipText}>
         {t(
@@ -22,7 +23,7 @@ export function HorizonInitiativeWidget() {
       </ThemedText>
       <Button
         style={styles.joinButton}
-        textColor="#002646"
+        textStyle={styles.joinButtonText}
         onPress={() => {
           const url = 'https://oxy.so/horizon';
           window.open(url, '_blank');
@@ -40,6 +41,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   joinButton: {
-    backgroundColor: '#c2e3ff',
+    backgroundColor: colors.primaryLight_1,
+  },
+  joinButtonText: {
+    color: colors.primarySubtleForeground,
   },
 });

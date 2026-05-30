@@ -51,9 +51,28 @@
   "error.message.delete_timeout": "Delete timeout. Please try again.",
   "error.signup.missing_fields": "Please fill in all fields",
   "error.signup.failed": "Signup failed:",
-  "error.boundary.title": "Oops! Something went wrong",
-  "error.boundary.message": "We apologize for the inconvenience. Please try again.",
-  "error.boundary.retry": "Retry",
+  "error.boundary.title": "Something went wrong",
+  "error.boundary.message": "An unexpected issue interrupted what you were doing. You can try again, or send us a quick report so we can investigate.",
+  "error.boundary.retry": "Try again",
+  "error.boundary.reportIssue": "Report issue",
+  "error.boundary.errorId": "Error ID",
+  "error.boundary.copyIdHint": "Tap to copy ID",
+  "error.boundary.copiedToClipboard": "Copied to clipboard",
+  "error.boundary.showDetails": "Show technical details",
+  "error.boundary.hideDetails": "Hide technical details",
+  "error.boundary.technicalDetails": "Technical details",
+  "error.boundary.maxRetriesTitle": "Still not working",
+  "error.boundary.maxRetriesMessage": "You've reached the retry limit. Please report the issue so we can take a look.",
+  "error.boundary.forceRetry": "Force retry",
+  "error.boundary.reportCopiedTitle": "Report copied",
+  "error.boundary.reportCopiedMessage": "The error report has been copied to your clipboard.",
+  "error.boundary.reportFailedTitle": "Couldn't copy",
+  "error.boundary.reportFailedMessage": "We couldn't copy the report to your clipboard. Please try again.",
+  "error.boundary.errorMessage": "Error message",
+  "error.boundary.errorType": "Error type",
+  "error.boundary.stackTrace": "Stack trace",
+  "error.boundary.componentStack": "Component stack",
+  "error.boundary.deviceInformation": "Device information",
   "error.file_selection": "Error processing selected files. Please try again.",
   "error.login_required": "Please login to manage files",
   "error.load_notifications": "Error loading notifications",
@@ -69,6 +88,7 @@
   "error.chat.load_failed": "Failed to load messages",
   "error.data.fetch_failed": "Error fetching data: {{message}}",
   "error.users.fetch_failed": "Error fetching users: {{message}}",
+  "mailbox.title": "Mailbox",
   "notification.welcome.title": "Welcome to Homiio! 👋",
   "notification.welcome.body": "Thanks for trying out our app. Start exploring now!",
   "notification.search.placeholder": "Search notifications...",
@@ -894,7 +914,13 @@
       "profile": "Profile",
       "payments": "Payments",
       "roommates": "Roommates",
-      "settings": "Settings"
+      "settings": "Settings",
+      "applications": "My applications",
+      "stays": "Stays",
+      "tips": "Tips",
+      "hostCalendar": "Host calendar",
+      "hostReservations": "Host reservations",
+      "landlordApplications": "Applicant inbox"
     },
     "actions": {
       "addProperty": "Add Property",
@@ -906,7 +932,34 @@
     },
     "footer": {
       "brandName": "Homiio - Ethical Housing Platform"
-    }
+    },
+    "mode": {
+      "longTerm": "Long-term",
+      "vacation": "Vacation"
+    },
+    "savedProperties": {
+      "title": "Saved folders",
+      "empty": "No saved folders yet",
+      "viewAll": "View all"
+    },
+    "recent": {
+      "title": "Recently viewed",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "earlier": "Earlier",
+      "empty": "Properties you view will appear here",
+      "remove": "Remove from recent"
+    },
+    "menu": {
+      "account": "Account",
+      "mailbox": "Mailbox",
+      "terms": "Terms of service",
+      "privacy": "Privacy policy"
+    },
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar",
+    "open": "Open menu",
+    "close": "Close menu"
   },
   "saved": {
     "header": "Saved",

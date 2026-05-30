@@ -1,8 +1,8 @@
-import React, { createContext, useContext } from 'react';
-import { Animated } from 'react-native';
+import { createContext, useContext } from 'react';
+import type { SharedValue } from 'react-native-reanimated';
 
 type LayoutScrollContextValue = {
-    scrollY: Animated.Value;
+    scrollY: SharedValue<number>;
 };
 
 const LayoutScrollContext = createContext<LayoutScrollContextValue | null>(null);
@@ -14,5 +14,3 @@ export function useLayoutScroll(): LayoutScrollContextValue | null {
 }
 
 export default LayoutScrollContext;
-
-

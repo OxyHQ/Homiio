@@ -11,10 +11,12 @@ import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { Header } from '@/components/Header';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { PropertyList } from '@/components/PropertyList';
 import { useProperties } from '@/hooks';
 import { SearchBar } from '@/components/SearchBar';
-import Button from '@/components/Button';
+import { Button } from '@oxyhq/bloom/button';
 import { Property } from '@homiio/shared-types';
 import { Ionicons } from '@expo/vector-icons';
 import { useSavedProperties } from '@/hooks/useSavedProperties';
@@ -22,10 +24,12 @@ import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { useOxy } from '@oxyhq/services';
 import { ThemedText } from '@/components/ThemedText';
 import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
+import { spacing } from '@/constants/styles';
 
 const screenWidth = Dimensions.get('window').width;
 const isMobile = screenWidth < 600;
-const IconComponent = Ionicons as any;
+
+type PropertyWithSavedStatus = Property & { isSaved?: boolean };
 
 export default function PropertiesScreen() {
   const { t } = useTranslation();
@@ -45,11 +49,11 @@ export default function PropertiesScreen() {
   const { isInitialized } = useSavedPropertiesContext();
 
   // Combine properties with saved status
-  const propertiesWithSavedStatus = allProperties.map((property) => ({
+  const propertiesWithSavedStatus: PropertyWithSavedStatus[] = allProperties.map((property) => ({
     ...property,
     isSaved: isInitialized
       ? isSaved(property._id || property.id || '')
-      : (property as any)?.isSaved,
+      : (property as PropertyWithSavedStatus).isSaved,
   }));
 
   useEffect(() => {
@@ -87,7 +91,7 @@ export default function PropertiesScreen() {
       style={styles.filterButton}
       onPress={() => router.push('/properties/filters')}
     >
-      <IconComponent name="filter" size={20} color={colors.COLOR_BLACK} />
+      <Ionicons name="filter" size={20} color={colors.COLOR_BLACK} />
     </TouchableOpacity>
   );
 
@@ -96,13 +100,13 @@ export default function PropertiesScreen() {
       style={styles.recentlyViewedButton}
       onPress={() => router.push('/properties/recently-viewed')}
     >
-      <IconComponent name="time" size={20} color={colors.COLOR_BLACK} />
+      <Ionicons name="time" size={20} color={colors.COLOR_BLACK} />
     </TouchableOpacity>
   );
 
   const renderViewModeToggle = () => (
     <TouchableOpacity style={styles.viewModeToggle} onPress={toggleViewMode}>
-      <IconComponent
+      <Ionicons
         name={viewMode === 'grid' ? 'list' : 'grid'}
         size={20}
         color={colors.COLOR_BLACK}
@@ -111,25 +115,28 @@ export default function PropertiesScreen() {
   );
 
   const renderFAB = () => (
-    <TouchableOpacity style={styles.fab} onPress={() => router.push('/properties/create')}>
-      <IconComponent name="add" size={24} color="white" />
+    <TouchableOpacity
+      style={[styles.fab, { bottom: insets.bottom + spacing['3xl'] }]}
+      onPress={() => router.push('/properties/create')}
+    >
+      <Ionicons name="add" size={24} color={colors.white} />
     </TouchableOpacity>
   );
 
   const renderErrorState = () => (
-    <View style={styles.errorState}>
-      <IconComponent name="alert-circle" size={48} color={colors.COLOR_BLACK_LIGHT_4} />
-      <ThemedText style={styles.errorTitle}>{error}</ThemedText>
-      <Button onPress={() => loadProperties()}>Try Again</Button>
-    </View>
+    <ErrorState
+      title={error || 'Something went wrong'}
+      retryLabel="Try again"
+      onRetry={() => loadProperties()}
+    />
   );
 
   const renderEmptyState = () => (
-    <View style={styles.emptyState}>
-      <IconComponent name="home-outline" size={48} color={colors.COLOR_BLACK_LIGHT_4} />
-      <ThemedText style={styles.emptyTitle}>No properties found</ThemedText>
-      <ThemedText style={styles.emptyDescription}>Try adjusting your search criteria</ThemedText>
-    </View>
+    <EmptyState
+      icon="home-outline"
+      title="No properties found"
+      description="Try adjusting your search criteria"
+    />
   );
 
   return (
@@ -284,7 +291,7 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#ff4757',
+    color: colors.danger,
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -301,14 +308,13 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 24,
-    bottom: 32,
     backgroundColor: colors.primaryColor,
     borderRadius: 32,
     width: 56,
     height: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
+    shadowColor: colors.COLOR_BLACK,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,

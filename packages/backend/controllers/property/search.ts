@@ -1,208 +1,199 @@
-const { Property } = require('../../models');
-const { AppError, paginationResponse } = require('../../middlewares/errorHandler');
+/**
+ * Public property search controller
+ *
+ * Powers the Airbnb-style search/listing UI. Public (no auth) so anonymous
+ * visitors can browse. Supports free-text/city queries, a geo bounding box (or
+ * center+radius), structured filters, sorting and pagination.
+ *
+ * Geo model: coordinates live on the referenced Address (GeoJSON Point with a
+ * `2dsphere` index), so geo filtering resolves matching Address ids first and
+ * then constrains properties by `addressId`. Each returned property is
+ * populated with its address, exposing `address.coordinates.coordinates`
+ * ([lng, lat]) so the frontend can place map pins.
+ */
 
-// Core search builder utils could be shared later
+import type { Request, Response, NextFunction } from 'express';
+import { Types, type Model } from 'mongoose';
+import type { IProperty } from '../../models/Property';
+import type { IAddress } from '../../models/Address';
+import {
+  buildSearchPlan,
+  buildSort,
+  boundingBoxToAddressQuery,
+  centerRadiusToAddressQuery,
+  escapeRegExp,
+  GeoParamError,
+  type PropertyFilter,
+} from './searchQueryBuilder';
 
-export async function searchProperties(req, res, next) {
+const models = require('../../models');
+const Property: Model<IProperty> = models.Property;
+const Address: Model<IAddress> = models.Address;
+const { paginationResponse } = require('../../middlewares/errorHandler');
+const { logger } = require('../../middlewares/logging');
+
+/** Address subset selected for id-resolution lookups. */
+type AddressIdLean = { _id: Types.ObjectId };
+
+/**
+ * Resolve the set of Address ids that satisfy the geo and text/city
+ * constraints. Returns:
+ *  - `null` when no address-scoped constraint is active (no narrowing needed)
+ *  - an array of ObjectIds otherwise (possibly empty => no matches)
+ *
+ * When several address-scoped constraints are present (e.g. a bounding box AND
+ * a city), they are intersected so all conditions hold.
+ */
+async function resolveAddressIds(
+  params: ReturnType<typeof buildSearchPlan>['params']
+): Promise<Types.ObjectId[] | null> {
+  const addressConditions: Record<string, unknown>[] = [];
+
+  if (params.boundingBox) {
+    addressConditions.push(boundingBoxToAddressQuery(params.boundingBox));
+  } else if (params.centerRadius) {
+    addressConditions.push(centerRadiusToAddressQuery(params.centerRadius));
+  }
+
+  // Explicit city/state filters narrow by address location.
+  if (params.city) {
+    addressConditions.push({ city: new RegExp(escapeRegExp(params.city), 'i') });
+  }
+  if (params.state) {
+    addressConditions.push({ state: new RegExp(escapeRegExp(params.state), 'i') });
+  }
+
+  if (addressConditions.length === 0) {
+    return null;
+  }
+
+  const addressFilter = addressConditions.length === 1 ? addressConditions[0] : { $and: addressConditions };
+  const matches = await Address.find(addressFilter).select('_id').lean<AddressIdLean[]>();
+  return matches.map((a) => a._id);
+}
+
+/**
+ * Find Address ids whose human-readable fields match a free-text query. Used
+ * as a fallback so a search like "Barcelona" also matches by city/street even
+ * when the property title/description text index does not.
+ */
+async function resolveTextAddressIds(text: string): Promise<Types.ObjectId[]> {
+  const regex = new RegExp(escapeRegExp(text), 'i');
+  const matches = await Address.find({
+    $or: [{ city: regex }, { state: regex }, { street: regex }, { neighborhood: regex }],
+  })
+    .select('_id')
+    .lean<AddressIdLean[]>();
+  return matches.map((a) => a._id);
+}
+
+/**
+ * Build the public search response envelope. Combines the shared
+ * `paginationResponse` shape (nested `pagination`) with the flat
+ * `total`/`page`/`limit`/`totalPages`/`hasMore` aliases the frontend search
+ * hook reads directly. Used by every exit path so the contract is identical.
+ */
+function buildSearchResponse(
+  data: unknown[],
+  page: number,
+  limit: number,
+  total: number,
+  message: string
+): Record<string, unknown> {
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const hasMore = (page - 1) * limit + data.length < total;
+  return {
+    ...paginationResponse(data, page, limit, total, message),
+    total,
+    page,
+    limit,
+    totalPages,
+    hasMore,
+  };
+}
+
+/** Merge a resolved address-id set into the property filter under `addressId`. */
+function constrainByAddressIds(filter: PropertyFilter, ids: Types.ObjectId[]): void {
+  const existing = filter.addressId;
+  if (existing && typeof existing === 'object' && '$in' in existing && Array.isArray(existing.$in)) {
+    // Intersect with any previously-applied address constraint.
+    const previous = new Set(existing.$in.map((id: Types.ObjectId) => id.toString()));
+    filter.addressId = { $in: ids.filter((id) => previous.has(id.toString())) };
+  } else {
+    filter.addressId = { $in: ids };
+  }
+}
+
+export async function searchProperties(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { query, type, minRent, maxRent, city, state, bedrooms, bathrooms, minBedrooms, maxBedrooms, minBathrooms, maxBathrooms, minSquareFootage, maxSquareFootage, minYearBuilt, maxYearBuilt, amenities, available, status, hasPhotos, verified, eco, housingType, layoutType, furnishedStatus, petFriendly, utilitiesIncluded, parkingType, petPolicy, leaseTerm, priceUnit, proximityToTransport, proximityToSchools, proximityToShopping, availableFromBefore, availableFromAfter, excludeIds, lat, lng, radius, bounds, budgetFriendly, addressId, page = 1, limit = 10 } = req.query;
-    const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const andConditions = [];
-    if (type) andConditions.push({ type });
-    
-    // Handle direct addressId filter
-    if (addressId) {
-      const mongoose = require('mongoose');
-      if (mongoose.Types.ObjectId.isValid(String(addressId))) {
-        andConditions.push({ addressId: new mongoose.Types.ObjectId(String(addressId)) });
-      } else {
-        return res.json(paginationResponse([], parseInt(page), parseInt(limit), 0, 'Invalid address ID provided'));
+    // Parse + validate the request. Geo parsing can reject malformed params
+    // with a GeoParamError, which maps to a clean 400 rather than a 500.
+    let plan: ReturnType<typeof buildSearchPlan>;
+    let addressIds: Types.ObjectId[] | null;
+    try {
+      plan = buildSearchPlan(req.query as Record<string, string | string[] | undefined>);
+      // --- Resolve geo + city/state address constraints ---
+      addressIds = await resolveAddressIds(plan.params);
+    } catch (error) {
+      if (error instanceof GeoParamError) {
+        res.status(400).json({ success: false, message: error.message, error: 'INVALID_GEO_PARAMS' });
+        return;
       }
+      throw error;
     }
-    
-    // Handle city and state filters with Address lookup
-    if (city || state) {
-      const { Address } = require('../../models');
-      const addressQuery: any = {};
-      if (city) addressQuery.city = new RegExp(String(city), 'i');
-      if (state) addressQuery.state = new RegExp(String(state), 'i');
-      
-      const matchingAddresses = await Address.find(addressQuery).select('_id');
-      const addressIds = matchingAddresses.map((addr: any) => addr._id);
+    const { filter, params } = plan;
 
+    if (addressIds !== null) {
       if (addressIds.length === 0) {
-        // No matching addresses found, return empty result
-        return res.json(paginationResponse([], parseInt(page), parseInt(limit), 0, 'No properties found for the specified location'));
+        // A location constraint was given but matched no addresses.
+        res.json(buildSearchResponse([], params.page, params.limit, 0, 'No properties found for the specified location'));
+        return;
       }
-      
-      andConditions.push({ addressId: { $in: addressIds } });
+      constrainByAddressIds(filter, addressIds);
     }
-    if (minRent || maxRent) {
-      const rentFilter = {} as any; if (minRent) rentFilter.$gte = parseInt(String(minRent)); if (maxRent) rentFilter.$lte = parseInt(String(maxRent)); andConditions.push({ 'rent.amount': rentFilter });
-    }
-    if (minBedrooms || maxBedrooms) { const br:any={}; if (minBedrooms) br.$gte=parseInt(String(minBedrooms)); if (maxBedrooms) br.$lte=parseInt(String(maxBedrooms)); andConditions.push({ bedrooms: br }); } else if (bedrooms) andConditions.push({ bedrooms: parseInt(String(bedrooms)) });
-    if (minBathrooms || maxBathrooms) { const ba:any={}; if (minBathrooms) ba.$gte=parseInt(String(minBathrooms)); if (maxBathrooms) ba.$lte=parseInt(String(maxBathrooms)); andConditions.push({ bathrooms: ba }); } else if (bathrooms) andConditions.push({ bathrooms: parseInt(String(bathrooms)) });
-    if (minSquareFootage || maxSquareFootage) { const sf:any={}; if (minSquareFootage) sf.$gte=parseInt(String(minSquareFootage)); if (maxSquareFootage) sf.$lte=parseInt(String(maxSquareFootage)); andConditions.push({ squareFootage: sf }); }
-    if (minYearBuilt || maxYearBuilt) { const yb:any={}; if (minYearBuilt) yb.$gte=parseInt(String(minYearBuilt)); if (maxYearBuilt) yb.$lte=parseInt(String(maxYearBuilt)); andConditions.push({ yearBuilt: yb }); }
-    if (amenities) { const list = String(amenities).split(',').map(a=>a.trim()).filter(Boolean); andConditions.push({ amenities: { $in: list } }); }
-    if (hasPhotos==='true') andConditions.push({ 'images.url': { $exists:true, $nin:[null,''] }});
-    if (verified==='true') andConditions.push({ isVerified: true });
-    if (eco==='true') andConditions.push({ isEcoFriendly: true });
-    if (housingType) andConditions.push({ housingType: String(housingType) });
-    if (layoutType) andConditions.push({ layoutType: String(layoutType) });
-    if (furnishedStatus) andConditions.push({ furnishedStatus: String(furnishedStatus) });
-    if (petPolicy) andConditions.push({ petPolicy: String(petPolicy) });
-    if (leaseTerm) andConditions.push({ leaseTerm: String(leaseTerm) });
-    if (priceUnit) andConditions.push({ priceUnit: String(priceUnit) });
-    if (parkingType) andConditions.push({ parkingType: String(parkingType) });
-    if (petFriendly!==undefined) andConditions.push({ petFriendly: String(petFriendly)==='true' });
-    if (utilitiesIncluded!==undefined) andConditions.push({ utilitiesIncluded: String(utilitiesIncluded)==='true' });
-    if (proximityToTransport!==undefined) andConditions.push({ proximityToTransport: String(proximityToTransport)==='true' });
-    if (proximityToSchools!==undefined) andConditions.push({ proximityToSchools: String(proximityToSchools)==='true' });
-    if (proximityToShopping!==undefined) andConditions.push({ proximityToShopping: String(proximityToShopping)==='true' });
-    if (availableFromBefore || availableFromAfter) { const af:any={}; if (availableFromAfter){ const d=new Date(String(availableFromAfter)); if(!isNaN(d.getTime())) af.$gte=d;} if (availableFromBefore){ const d=new Date(String(availableFromBefore)); if(!isNaN(d.getTime())) af.$lte=d;} if(Object.keys(af).length) andConditions.push({ availableFrom: af }); }
-    
-    // Handle status parameter (preferred approach)
-    if (status) {
-      const statusValue = String(status).toLowerCase();
-      if (statusValue === 'available') {
-        andConditions.push({ 'availability.isAvailable': true });
-        andConditions.push({ status: 'published' }); // Published and available for rent
-      } else if (statusValue === 'rented') {
-        andConditions.push({ status: 'rented' });
-      } else if (statusValue === 'reserved') {
-        andConditions.push({ status: 'reserved' });
-      } else if (statusValue === 'sold') {
-        andConditions.push({ status: 'sold' });
-      } else if (statusValue === 'inactive') {
-        andConditions.push({ status: 'inactive' });
-      } else if (statusValue === 'draft') {
-        andConditions.push({ status: 'draft' });
-      } else if (statusValue === 'published') {
-        andConditions.push({ status: 'published' });
-      } else {
-        andConditions.push({ status: statusValue });
-      }
-    } else {
-      // Legacy available parameter support and default behavior
-      const effAvailable = available!==undefined ? available==='true': undefined; 
-      if (effAvailable!==undefined) andConditions.push({ 'availability.isAvailable': effAvailable }); 
-      else andConditions.push({ 'availability.isAvailable': true });
-      andConditions.push({ status: 'published' }); // Use published instead of active
-    }
-    
-    // Exclude draft properties by default unless explicitly requested
-    if (!req.query.includeDrafts && (!status || status !== 'draft')) {
-      andConditions.push({ status: { $ne: 'draft' } });
-    }
-    if (excludeIds) { try { const mongoose = require('mongoose'); const list = String(excludeIds).split(',').map((s)=>s.trim()).filter(Boolean).filter((id)=>mongoose.Types.ObjectId.isValid(id)).map((id)=> new mongoose.Types.ObjectId(id)); if (list.length) andConditions.push({ _id: { $nin: list } }); } catch {} }
-    // Handle geospatial search with Address lookup
-    if (lat && lng && radius) { 
-      const latitude=parseFloat(lat); 
-      const longitude=parseFloat(lng); 
-      const radiusInMeters=parseFloat(radius); 
-      if (latitude<-90||latitude>90||longitude<-180||longitude>180) return res.status(400).json({ success:false, message:'Invalid coordinates provided', error:'INVALID_COORDINATES'}); 
-      
-      // Find addresses within the radius first
-      const { Address } = require('../../models');
-      const nearbyAddresses = await Address.find({
-        coordinates: { 
-          $near: { 
-            $geometry: { type:'Point', coordinates:[longitude, latitude]}, 
-            $maxDistance: radiusInMeters 
-          }
-        }
-      }).select('_id');
-      
-      const addressIds = nearbyAddresses.map(addr => addr._id);
-      if (addressIds.length === 0) {
-        return res.json(paginationResponse([], parseInt(page), parseInt(limit), 0, 'No properties found within the specified radius'));
-      }
-      
-      andConditions.push({ addressId: { $in: addressIds } });
-    }
-    // For now, don't filter by coordinates when bounds are provided
-    // This will return all properties so we can see if there are any properties at all
-    // We can add geospatial filtering back once we confirm properties exist
-    const skip = (parseInt(page)-1)*parseInt(limit);
-    const baseFilter = andConditions.length? { $and: andConditions }: {};
-    
-    const runQuery = async (filter, useTextSort) => {
-      
-      const q = Property.find(filter).populate('addressId').skip(skip).limit(parseInt(limit)); 
-      const effBudget = (String(budgetFriendly).toLowerCase()==='true'); 
-      if (useTextSort) { 
-        if (effBudget) q.sort({ score:{ $meta:'textScore'}, 'rent.amount':1 }).select({ score:{ $meta:'textScore'} }); 
-        else q.sort({ score:{ $meta:'textScore'} }).select({ score:{ $meta:'textScore'} }); 
-      } else { 
-        if (effBudget) q.sort({ 'rent.amount':1 }); 
-        else q.sort({ createdAt:-1 }); 
-      } 
-      const [items,count]= await Promise.all([q.lean(), Property.countDocuments(filter)]);
 
-      return { items, count }; 
-    };
-    let resultItems=[]; let resultTotal=0;
-    if (query) { 
-      const textFilter = { ...baseFilter, $text: { $search: String(query) } }; 
-      const textRes = await runQuery(textFilter, true); 
-      if (textRes.count>0){ 
-        resultItems=textRes.items; 
-        resultTotal=textRes.count;
-      } else { 
-        const safe=escapeRegExp(String(query)); 
-        const regex=new RegExp(safe,'i'); 
-        
-        // For address field searches, we need to find matching addresses first
-        const { Address } = require('../../models');
-        const addressMatches = await Address.find({
-          $or: [
-            { city: regex },
-            { state: regex }, 
-            { street: regex }
-          ]
-        }).select('_id');
-        
-        const addressIds = addressMatches.map(addr => addr._id);
-        
-        // Build regex filter with address ID lookup when needed
-        let regexOrConditions: any[] = [
-          { title: regex }, 
-          { description: regex }, 
-          { amenities: regex }
-        ];
-        
-        if (addressIds.length > 0) {
-          regexOrConditions.push({ addressId: { $in: addressIds } });
-        }
-        
-        const regexFilter = { ...baseFilter, $or: regexOrConditions }; 
-        const regexRes = await runQuery(regexFilter,false); 
-        resultItems=regexRes.items; 
-        resultTotal=regexRes.count; 
+    // --- Free-text query: prefer the title/description text index, fall back
+    //     to address (city/street) matches so location words still work. ---
+    let useTextScore = false;
+    if (params.text) {
+      const textIds = await resolveTextAddressIds(params.text);
+      const textOr: PropertyFilter[] = [{ $text: { $search: params.text } }];
+      if (textIds.length > 0) {
+        textOr.push({ addressId: { $in: textIds } });
       }
-    } else { 
-      const baseRes = await runQuery(baseFilter,false); 
-      resultItems=baseRes.items; 
-      resultTotal=baseRes.count; 
-      
-      // If no results and we have bounds, try without geospatial filter
-      if (resultItems.length === 0 && bounds) {
-        const fallbackFilter = { ...baseFilter };
-        // Remove any geospatial conditions from addressId lookups
-        if (fallbackFilter.$and) {
-          fallbackFilter.$and = fallbackFilter.$and.filter(condition => {
-            // Keep all conditions except those that might be geospatial address lookups
-            // Since we've already converted to addressId lookups, this is less of a concern
-            return true; 
-          });
-        }
-        const fallbackRes = await runQuery(fallbackFilter, false);
-        resultItems = fallbackRes.items;
-        resultTotal = fallbackRes.count;
+      // Combine the text OR-branch with the structured filter. When a geo/city
+      // address constraint is already present we must keep both: the address
+      // text match is restricted to that constraint via the base filter's
+      // own addressId clause already merged above.
+      if (Array.isArray(filter.$and)) {
+        filter.$and.push({ $or: textOr });
+      } else {
+        filter.$and = [{ $or: textOr }];
       }
+      useTextScore = true;
     }
-    
-    res.json(paginationResponse(resultItems, parseInt(page), parseInt(limit), resultTotal, 'Search completed successfully'));
-  } catch (error) { next(error); }
+
+    const sort = buildSort(params, useTextScore);
+    const skip = (params.page - 1) * params.limit;
+
+    const projection = useTextScore ? { score: { $meta: 'textScore' } } : undefined;
+
+    const [properties, total] = await Promise.all([
+      Property.find(filter, projection)
+        .populate('addressId')
+        .sort(sort)
+        .skip(skip)
+        .limit(params.limit)
+        .lean(),
+      Property.countDocuments(filter),
+    ]);
+
+    res.json(buildSearchResponse(properties, params.page, params.limit, total, 'Search completed successfully'));
+  } catch (error) {
+    logger.error('Property search failed', {
+      message: error instanceof Error ? error.message : String(error),
+      query: req.query,
+    });
+    next(error);
+  }
 }

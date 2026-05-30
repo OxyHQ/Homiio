@@ -12,13 +12,21 @@ export const cronConfig: CronConfig = {
 
 /**
  * Scrape sources configuration
+ *
+ * NOTE: The Fotocasa scraper depends on an external proxy service running at
+ * the configured FOTOCASA_ENDPOINT (defaults to a local sidecar at
+ * http://localhost:3000). When that service is absent or its credentials are
+ * misconfigured the upstream returns 401/403, the cron loop fires every 30
+ * seconds, and the backend log fills with noise. To avoid that the source is
+ * OPT-IN: set `FOTOCASA_ENABLED=true` AND provide a working endpoint to turn
+ * it back on. See `services/scraper-notes.md` for the long-term plan.
  */
 export const scrapeSources: ScrapeSource[] = [
   {
     source: 'fotocasa',
     endpoint: process.env.FOTOCASA_ENDPOINT || 'http://localhost:3000/search/all/barcelona',
     pages: parseInt(process.env.FOTOCASA_PAGES || '1', 10),
-    enabled: process.env.FOTOCASA_ENABLED !== 'false',
+    enabled: process.env.FOTOCASA_ENABLED === 'true',
     timeout: parseInt(process.env.FOTOCASA_TIMEOUT || '30000', 10),
     maxRetries: parseInt(process.env.FOTOCASA_MAX_RETRIES || '3', 10),
     batchSize: parseInt(process.env.FOTOCASA_BATCH_SIZE || '25', 10),

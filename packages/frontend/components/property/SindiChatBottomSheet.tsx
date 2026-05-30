@@ -4,13 +4,14 @@ import {
     Dimensions,
     Platform,
 } from 'react-native';
-import { ChatContent } from '@/app/sindi/[conversationId]';
+import { ChatContent } from '@/components/sindi/ChatContent';
 import { Property } from '@homiio/shared-types';
 import { useOxy } from '@oxyhq/services';
 import { useConversationStore } from '@/store/conversationStore';
 import type { Conversation } from '@/store/conversationStore';
 import { fetch as expoFetch } from 'expo/fetch';
 import { ScrollView } from 'react-native-gesture-handler';
+import { colors } from '@/styles/colors';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -69,9 +70,13 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
                 ...(body !== null && { body }),
             };
 
-            // Use appropriate fetch implementation
-            const fetchImpl: typeof globalThis.fetch = Platform.OS === 'web' ? globalThis.fetch : (expoFetch as any);
-            return fetchImpl(url, fetchOptions as any);
+            // Use appropriate fetch implementation. Expo's fetch is runtime-compatible
+            // with the DOM fetch the caller expects, but its types diverge structurally.
+            const fetchImpl: typeof globalThis.fetch =
+                Platform.OS === 'web'
+                    ? globalThis.fetch
+                    : (expoFetch as unknown as typeof globalThis.fetch);
+            return fetchImpl(url, fetchOptions);
         },
         [oxyServices, activeSessionId],
     );
@@ -131,7 +136,6 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
                     }
 
                     // Set the message immediately - no timeout needed
-                    console.log('Setting initial message:', messageToSend);
                     setInitialMessageToSend(messageToSend);
                 } else {
                     console.error('Failed to create conversation: Invalid response');
@@ -153,13 +157,6 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
     // Check if user is authenticated
     const isAuthenticated = !!oxyServices && !!activeSessionId;
 
-    console.log('SindiChatBottomSheet render:', {
-        conversationId,
-        hasConversation: !!currentConversation,
-        hasInitialMessage: !!initialMessageToSend,
-        isAuthenticated
-    });
-
     return (
         <ScrollView style={styles.container}>
             <ChatContent
@@ -178,6 +175,6 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
 const styles = StyleSheet.create({
     container: {
         maxHeight: screenHeight * 0.9,
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.white,
     },
 });

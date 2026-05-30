@@ -51,3 +51,35 @@ packages/
 ## Dependencies
 
 - `@oxyhq/core` (1.11.4), `@oxyhq/services` (6.9.12) — Oxy platform integration
+
+## Frontend Gotchas
+
+### NativeWind v4 breaks `Pressable` function-form `style`
+NativeWind v4 (`react-native-css-interop`, wired via `nativewind/babel`) rewrites
+the `style` prop of every JSX element to merge `className`-derived styles. It does
+**NOT support React Native's function form** `style={({ pressed }) => [...]}` — the
+function is swallowed and the `Pressable`/`Touchable` renders with **no style at
+all** (no `flex`, no `backgroundColor`, no width/height). The children (Text/Icon)
+still render with their own styles, which masks the bug.
+
+**Fix:** use a static style array (css-interop merges arrays fine) and drive the
+pressed/hovered visual with `onPressIn`/`onPressOut` + `useState`:
+
+```tsx
+const [pressed, setPressed] = useState(false);
+<Pressable
+  onPressIn={() => setPressed(true)}
+  onPressOut={() => setPressed(false)}
+  style={[styles.x, pressed && styles.xPressed]} // cond && style is valid + typed in RN arrays
+>
+```
+
+- If the function only returned a base style (no pressed branch), use the static
+  style directly: `style={styles.x}` — no state needed.
+- For web hover (`({ pressed, hovered }) =>`), keep hovered via `onHoverIn`/`onHoverOut` + state.
+- Hooks can't run inside `.map()`, so when a function-form `Pressable` lives in a
+  map, extract a small row/button component that owns its own `useState`.
+- Canonical template: `packages/frontend/components/search/SearchSummaryBar.tsx`
+  (`PillColumn` + `searchButton`).
+- Audit: `grep -rn "style={({" app components --include=*.tsx` must return ZERO
+  (outside the explanatory comment in `SearchSummaryBar.tsx`).

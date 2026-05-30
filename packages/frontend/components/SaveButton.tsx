@@ -27,16 +27,16 @@
  *   property={propertyObject} 
  *   showCount={true}
  *   countDisplayMode="badge"
- *   countBadgeStyle={{ backgroundColor: '#ff0000' }}
+ *   countBadgeStyle={{ backgroundColor: colors.danger }}
  * />
  * ```
  */
 
 import React, { useState, useContext } from 'react';
-import { TouchableOpacity, StyleSheet, ViewStyle, View, Platform } from 'react-native';
+import { TouchableOpacity, StyleSheet, ViewStyle, View, Platform, StyleProp } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
-import LoadingSpinner from './LoadingSpinner';
+import { Loading } from '@oxyhq/bloom/loading';
 import { SaveToFolderBottomSheet } from './SaveToFolderBottomSheet';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { Property } from '@homiio/shared-types';
@@ -45,7 +45,6 @@ import { getPropertyTitle } from '@/utils/propertyUtils';
 import { ThemedText } from '@/components/ThemedText';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 
-const IconComponent = Ionicons as any;
 
 interface SaveButtonProps {
   isSaved?: boolean; // Made optional since we'll determine this from React Query
@@ -64,7 +63,7 @@ interface SaveButtonProps {
   // For saving profiles instead of properties
   profileId?: string;
   showCount?: boolean;
-  countBadgeStyle?: any;
+  countBadgeStyle?: StyleProp<ViewStyle>;
   countDisplayMode?: 'badge' | 'inline';
 }
 
@@ -76,8 +75,8 @@ export function SaveButton({
   style,
   disabled = false,
   variant = 'heart',
-  color = '#ccc',
-  activeColor = '#EF4444',
+  color = colors.border,
+  activeColor = colors.error,
   showLoading = true,
   isLoading = false,
   // Only need the property object
@@ -108,7 +107,7 @@ export function SaveButton({
   const initialSavedState =
     typeof propIsSaved === 'boolean'
       ? propIsSaved
-      : (property as any)?.isSaved;
+      : (property as Property & { isSaved?: boolean })?.isSaved;
 
   // Use context state when initialized, otherwise fall back to initial state
   const isSaved = propertyId
@@ -285,10 +284,10 @@ export function SaveButton({
         }}
       >
         {showLoading && (isLoading || (propertyId && isPropertySaving(propertyId))) ? (
-          <LoadingSpinner size={sizeAll} color={getIconColor()} showText={false} />
+          <Loading iconSize={sizeAll} color={getIconColor()} showText={false} />
         ) : (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: sizeAll / 4 }}>
-            <IconComponent name={getIconName()} size={sizeAll} color={getIconColor()} />
+            <Ionicons name={getIconName()} size={sizeAll} color={getIconColor()} />
             {renderInlineCount()}
           </View>
         )}
@@ -317,7 +316,7 @@ export function SaveButton({
         >
           <ThemedText
             style={{
-              color: '#fff',
+              color: colors.white,
               fontSize: 10,
               fontWeight: 'bold',
               textAlign: 'center',
@@ -334,7 +333,7 @@ export function SaveButton({
 const webShadow = Platform.select({
   web: { boxShadow: '0 2px 8px rgba(0,0,0,0.08)' },
   default: {
-    shadowColor: '#000',
+    shadowColor: colors.COLOR_BLACK,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,

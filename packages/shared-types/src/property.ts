@@ -2,16 +2,19 @@
  * Property-related types shared across Homiio frontend and backend
  */
 
-import { 
-  PropertyType, 
-  PropertyStatus, 
-  HousingType, 
-  LayoutType, 
-  PaymentFrequency, 
-  UtilitiesIncluded, 
+import {
+  PropertyType,
+  PropertyStatus,
+  HousingType,
+  LayoutType,
+  PaymentFrequency,
+  UtilitiesIncluded,
   PriceUnit,
   GeoJSONPoint,
-
+  RentMode,
+  AvailabilityWindow,
+  CancellationPolicy,
+  PriceBreakdown,
   DeepPartial
 } from './common';
 import { Address } from './address';
@@ -139,6 +142,25 @@ export interface Property {
   smokingAllowed?: boolean;
   partiesAllowed?: boolean;
   guestsAllowed?: boolean;
+  // Hybrid rental mode (long-term / vacation / both)
+  rentMode?: RentMode;
+  /**
+   * Calendar windows for vacation/short-term mode.
+   * Empty array (or undefined) = always available.
+   * NOTE: persisted server-side as `availabilityWindows` to avoid colliding
+   * with the legacy `availability` object subschema on the Property document.
+   */
+  availabilityWindows?: AvailabilityWindow[];
+  /** Minimum number of nights guests can book. */
+  minStay?: number;
+  /** Maximum number of nights guests can book. */
+  maxStay?: number;
+  /** Vacation-mode cancellation policy. */
+  cancellationPolicy?: CancellationPolicy;
+  /** When true, vacation bookings confirm without host approval. */
+  instantBook?: boolean;
+  /** Optional vacation-mode fee breakdown. */
+  priceBreakdown?: PriceBreakdown;
   // Flags
   isVerified?: boolean;
   isEcoFriendly?: boolean;
@@ -197,6 +219,14 @@ export interface CreatePropertyData {
   smokingAllowed?: boolean;
   partiesAllowed?: boolean;
   guestsAllowed?: boolean;
+  // Hybrid rental mode
+  rentMode?: RentMode;
+  availabilityWindows?: AvailabilityWindow[];
+  minStay?: number;
+  maxStay?: number;
+  cancellationPolicy?: CancellationPolicy;
+  instantBook?: boolean;
+  priceBreakdown?: PriceBreakdown;
   // Accommodation-specific details
   accommodationDetails?: {
     sleepingArrangement?: 'couch' | 'air_mattress' | 'floor' | 'tent' | 'hammock';
@@ -240,6 +270,16 @@ export interface PropertyFilters {
   parking?: boolean;
   verified?: boolean;
   eco?: boolean;
+  // Hybrid filters
+  /** Filter by rent mode. `'both'` listings match either `long_term` or `vacation` requests. */
+  rentMode?: RentMode;
+  instantBook?: boolean;
+  /** Check-in date for vacation availability filtering (ISO-8601). */
+  checkIn?: string;
+  /** Check-out date for vacation availability filtering (ISO-8601). */
+  checkOut?: string;
+  /** Required number of guests the listing must accommodate. */
+  guests?: number;
 }
 
 export interface PropertyStructuredData {

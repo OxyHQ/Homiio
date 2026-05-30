@@ -62,9 +62,28 @@
   "error.message.delete_timeout": "Temps d'espera per eliminar. Torna-ho a provar.",
   "error.signup.missing_fields": "Si us plau, omple tots els camps",
   "error.signup.failed": "Error en el registre:",
-  "error.boundary.title": "Ups! Alguna cosa ha anat malament",
-  "error.boundary.message": "Ens disculpem per les molèsties. Si us plau, torna-ho a provar.",
-  "error.boundary.retry": "Tornar a provar",
+  "error.boundary.title": "Alguna cosa ha anat malament",
+  "error.boundary.message": "Un problema inesperat ha interromput el que estaves fent. Pots tornar-ho a provar o enviar-nos un informe ràpid perquè ho investiguem.",
+  "error.boundary.retry": "Torna-ho a provar",
+  "error.boundary.reportIssue": "Informar del problema",
+  "error.boundary.errorId": "ID d'error",
+  "error.boundary.copyIdHint": "Toca per copiar l'ID",
+  "error.boundary.copiedToClipboard": "Copiat al porta-retalls",
+  "error.boundary.showDetails": "Mostrar detalls tècnics",
+  "error.boundary.hideDetails": "Amagar detalls tècnics",
+  "error.boundary.technicalDetails": "Detalls tècnics",
+  "error.boundary.maxRetriesTitle": "Segueix sense funcionar",
+  "error.boundary.maxRetriesMessage": "Has assolit el límit de reintents. Si us plau, informa del problema perquè ho puguem revisar.",
+  "error.boundary.forceRetry": "Forçar reintent",
+  "error.boundary.reportCopiedTitle": "Informe copiat",
+  "error.boundary.reportCopiedMessage": "L'informe d'error s'ha copiat al porta-retalls.",
+  "error.boundary.reportFailedTitle": "No s'ha pogut copiar",
+  "error.boundary.reportFailedMessage": "No hem pogut copiar l'informe al porta-retalls. Torna-ho a provar.",
+  "error.boundary.errorMessage": "Missatge d'error",
+  "error.boundary.errorType": "Tipus d'error",
+  "error.boundary.stackTrace": "Traça de pila",
+  "error.boundary.componentStack": "Pila de components",
+  "error.boundary.deviceInformation": "Informació del dispositiu",
   "error.file_selection": "Error processant els arxius seleccionats. Si us plau, torna-ho a provar.",
   "error.login_required": "Si us plau, inicia sessió per gestionar arxius",
   "error.load_notifications": "Error carregant notificacions",
@@ -80,6 +99,7 @@
   "error.chat.load_failed": "Error carregant missatges",
   "error.data.fetch_failed": "Error obtenint dades: {{message}}",
   "error.users.fetch_failed": "Error obtenint usuaris: {{message}}",
+  "mailbox.title": "Bústia",
   "notification.welcome.title": "Benvingut a Homiio! 👋",
   "notification.welcome.body": "Gràcies per provar la nostra aplicació. Comença a explorar ara!",
   "success.signup": "Registre exitós",
@@ -859,7 +879,13 @@
       "profile": "Perfil",
       "payments": "Pagaments",
       "roommates": "Companys de Pis",
-      "settings": "Configuració"
+      "settings": "Configuració",
+      "applications": "Les meves sol·licituds",
+      "stays": "Estades",
+      "tips": "Consells",
+      "hostCalendar": "Calendari d'amfitrió",
+      "hostReservations": "Reserves d'amfitrió",
+      "landlordApplications": "Safata de sol·licituds"
     },
     "actions": {
       "addProperty": "Afegir Propietat",
@@ -871,7 +897,34 @@
     },
     "footer": {
       "brandName": "Homiio - Plataforma d'Habitatge Ètic"
-    }
+    },
+    "mode": {
+      "longTerm": "Llarga estada",
+      "vacation": "Vacances"
+    },
+    "savedProperties": {
+      "title": "Carpetes desades",
+      "empty": "Encara no hi ha carpetes desades",
+      "viewAll": "Veure-ho tot"
+    },
+    "recent": {
+      "title": "Vistes recentment",
+      "today": "Avui",
+      "yesterday": "Ahir",
+      "earlier": "Abans",
+      "empty": "Les propietats que vegeu apareixeran aquí",
+      "remove": "Treure de recents"
+    },
+    "menu": {
+      "account": "Compte",
+      "mailbox": "Bústia",
+      "terms": "Termes del servei",
+      "privacy": "Política de privacitat"
+    },
+    "collapse": "Contraure barra lateral",
+    "expand": "Expandir barra lateral",
+    "open": "Obrir menú",
+    "close": "Tancar menú"
   },
   "saved": {
     "header": "Desats",

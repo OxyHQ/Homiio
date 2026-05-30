@@ -7,15 +7,17 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
 const { transformAddressFields } = require('../../utils/helpers');
-const { 
-  PropertyType, 
-  PropertyStatus, 
-  HousingType, 
-  LayoutType, 
-  PaymentFrequency, 
-  UtilitiesIncluded, 
-  PriceUnit,
-  LeaseDuration
+const {
+  PropertyType,
+  PropertyStatus,
+  HousingType,
+  LayoutType,
+  PaymentFrequency,
+  UtilitiesIncluded,
+  LeaseDuration,
+  RentMode,
+  AvailabilityWindowStatus,
+  CancellationPolicy
 } = require('@homiio/shared-types');
 
 const rentSchema = new mongoose.Schema({
@@ -105,6 +107,48 @@ const availabilitySchema = new mongoose.Schema({
     type: Number,
     min: [1, 'Maximum stay must be at least 1 month'],
     default: 12
+  }
+}, { _id: false });
+
+// Half-open calendar windows for vacation/short-term listings.
+// Stored on Property.availabilityWindows. Empty array = always available.
+const availabilityWindowSchema = new mongoose.Schema({
+  start: {
+    type: Date,
+    required: [true, 'Availability window start is required']
+  },
+  end: {
+    type: Date,
+    required: [true, 'Availability window end is required'],
+    validate: {
+      validator: function(this: any, value: Date) {
+        return value instanceof Date && value > this.start;
+      },
+      message: 'Availability window end must be after start'
+    }
+  },
+  status: {
+    type: String,
+    enum: Object.values(AvailabilityWindowStatus),
+    required: true,
+    default: AvailabilityWindowStatus.AVAILABLE
+  }
+}, { _id: false });
+
+// Vacation-mode fee breakdown.
+const priceBreakdownSchema = new mongoose.Schema({
+  cleaningFee: {
+    type: Number,
+    min: [0, 'Cleaning fee cannot be negative']
+  },
+  serviceFee: {
+    type: Number,
+    min: [0, 'Service fee cannot be negative']
+  },
+  taxesPercent: {
+    type: Number,
+    min: [0, 'Taxes percent cannot be negative'],
+    max: [100, 'Taxes percent cannot exceed 100']
   }
 }, { _id: false });
 
@@ -283,6 +327,38 @@ const propertySchema = new mongoose.Schema({
     min: [1, 'Maximum guests must be at least 1'],
     default: 1
   },
+  // ---- Hybrid rental (long-term + vacation) fields ----
+  rentMode: {
+    type: String,
+    enum: Object.values(RentMode),
+    default: RentMode.LONG_TERM,
+    index: true
+  },
+  availabilityWindows: {
+    type: [availabilityWindowSchema],
+    default: []
+  },
+  minStay: {
+    type: Number,
+    min: [1, 'Minimum stay must be at least 1 night']
+  },
+  maxStay: {
+    type: Number,
+    min: [1, 'Maximum stay must be at least 1 night']
+  },
+  cancellationPolicy: {
+    type: String,
+    enum: Object.values(CancellationPolicy)
+  },
+  instantBook: {
+    type: Boolean,
+    default: false
+  },
+  priceBreakdown: {
+    type: priceBreakdownSchema,
+    default: undefined
+  },
+  // ----------------------------------------------------
   proximityToTransport: {
     type: Boolean,
     default: false
@@ -479,6 +555,16 @@ propertySchema.index({
   title: 'text',
   description: 'text'
 });
+// ---- Hybrid rental indexes ----
+// Mode-aware feed queries: list properties for a given rent mode, city and status.
+// addressId is denormalized into a separate join, so the cheapest compound that
+// still scopes the listing feed is (rentMode, status, type).
+propertySchema.index({ rentMode: 1, status: 1, type: 1 });
+// Calendar range queries: find listings with windows overlapping a request range.
+propertySchema.index({ 'availabilityWindows.start': 1 });
+propertySchema.index({ 'availabilityWindows.end': 1 });
+// Vacation feed sort: highlight instant-book listings.
+propertySchema.index({ rentMode: 1, instantBook: 1, status: 1 });
 
 // Virtual for full address (requires population)
 propertySchema.virtual('fullAddress').get(function() {

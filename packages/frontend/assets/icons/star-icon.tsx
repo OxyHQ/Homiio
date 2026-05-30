@@ -1,10 +1,11 @@
+import { colors } from '@/styles/colors';
 interface StarIconProps {
   size?: number;
   color?: string;
   style?: any;
 }
 
-export const StarIcon = ({ size = 24, color = '#000', style = {} }: StarIconProps) => {
+export const StarIcon = ({ size = 24, color = colors.COLOR_BLACK, style = {} }: StarIconProps) => {
   return (
     <svg
       className="svgIcon"

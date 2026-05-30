@@ -47,7 +47,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, onOpen, t })
                             onPress={() => handleImagePress(index)}
                             activeOpacity={0.8}
                         >
-                            <Image source={getPropertyImageSource(image as any)} style={styles.galleryImage} resizeMode="cover" />
+                            <Image source={getPropertyImageSource(image)} style={styles.galleryImage} resizeMode="cover" />
                             {index === 4 && images.length > 5 && (
                                 <View style={styles.moreImagesOverlay}>
                                     <ThemedText style={styles.moreImagesText}>+{images.length - 5}</ThemedText>
@@ -95,9 +95,9 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         marginRight: 12,
         overflow: 'hidden',
-        backgroundColor: '#f0f0f0',
+        backgroundColor: colors.COLOR_BLACK_LIGHT_6,
     },
-    galleryImage: { width: '100%', height: '100%' } as any,
+    galleryImage: { width: '100%', height: '100%' },
     moreImagesOverlay: {
         position: 'absolute',
         top: 0,
@@ -109,5 +109,5 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    moreImagesText: { color: 'white', fontSize: 16, fontWeight: '600' },
+    moreImagesText: { color: colors.white, fontSize: 16, fontWeight: '600' },
 });
