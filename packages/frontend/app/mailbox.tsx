@@ -365,7 +365,7 @@ export default function MailboxScreen() {
                 }
                 ListEmptyComponent={renderEmptyState}
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.listContainer}
+                contentContainerStyle={[styles.listContainer, { paddingBottom: insets.bottom }]}
             />
 
             {/* Error State */}

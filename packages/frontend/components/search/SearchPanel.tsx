@@ -20,6 +20,7 @@
  */
 import React, { useCallback, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -85,6 +86,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
 }) => {
   const { t } = useTranslation();
   const isWide = useIsScreenNotMobile();
+  const insets = useSafeAreaInsets();
   const addRecentSearch = useRecentSearchesStore((s) => s.addSearch);
 
   // Local draft, seeded once from `initialQuery`. The panel early-returns
@@ -255,7 +257,14 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
   );
 
   const footer = (
-    <View style={styles.footer}>
+    <View
+      style={[
+        styles.footer,
+        // Full-screen (narrow) path pins this footer to the bottom edge, so the
+        // CTA must clear the home indicator. The wide path is an inline card.
+        isWide ? null : { paddingBottom: spacing.md + insets.bottom },
+      ]}
+    >
       <Button
         variant="text"
         size="small"

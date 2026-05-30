@@ -1,6 +1,7 @@
 import React, { type MutableRefObject } from 'react';
 import { Modal, View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/styles/colors';
 import { ThemedText } from '@/components/ThemedText';
 import Map, { type MapApi, type AddressData } from '@/components/Map';
@@ -25,6 +26,7 @@ export function FullscreenMapModal({
   onClose,
   onAddressSelect,
 }: FullscreenMapModalProps) {
+  const insets = useSafeAreaInsets();
   return (
     <Modal
       visible={visible}
@@ -33,7 +35,7 @@ export function FullscreenMapModal({
       onRequestClose={onClose}
     >
       <View style={styles.fullscreenMapContainer}>
-        <View style={styles.fullscreenMapHeader}>
+        <View style={[styles.fullscreenMapHeader, { paddingTop: insets.top + 12 }]}>
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <Ionicons name="close" size={24} color={colors.primaryDark} />
           </TouchableOpacity>

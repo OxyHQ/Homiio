@@ -24,6 +24,7 @@ import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { useOxy } from '@oxyhq/services';
 import { ThemedText } from '@/components/ThemedText';
 import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
+import { spacing } from '@/constants/styles';
 
 const screenWidth = Dimensions.get('window').width;
 const isMobile = screenWidth < 600;
@@ -114,7 +115,10 @@ export default function PropertiesScreen() {
   );
 
   const renderFAB = () => (
-    <TouchableOpacity style={styles.fab} onPress={() => router.push('/properties/create')}>
+    <TouchableOpacity
+      style={[styles.fab, { bottom: insets.bottom + spacing['3xl'] }]}
+      onPress={() => router.push('/properties/create')}
+    >
       <Ionicons name="add" size={24} color={colors.white} />
     </TouchableOpacity>
   );
@@ -304,7 +308,6 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 24,
-    bottom: 32,
     backgroundColor: colors.primaryColor,
     borderRadius: 32,
     width: 56,

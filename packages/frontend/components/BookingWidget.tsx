@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -61,6 +62,7 @@ const isVacationCapable = (property: Property): boolean => {
 
 export const BookingWidget: React.FC<BookingWidgetProps> = ({ property }) => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { oxyServices, activeSessionId } = useOxy();
   const propertyId = property._id || property.id || '';
   const [sheet, setSheet] = useState<SheetVariant>(null);
@@ -224,7 +226,15 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ property }) => {
         onRequestClose={closeSheet}
       >
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalSurface}>
+          <View
+            style={[
+              styles.modalSurface,
+              // Native presents this surface as a bottom sheet pinned to the
+              // bottom edge, so its content must clear the home indicator. On
+              // web it is a centered card and needs no inset.
+              Platform.OS === 'web' ? null : { paddingBottom: 16 + insets.bottom },
+            ]}
+          >
             <View style={styles.modalHeader}>
               <H3 style={styles.modalTitle}>
                 {sheet === 'calendar' ? 'Select dates' : 'Guests'}

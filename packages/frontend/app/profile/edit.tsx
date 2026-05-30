@@ -112,7 +112,7 @@ export default function ProfileEditScreen() {
   return (
     <SafeAreaView
       style={styles.safeArea}
-      edges={['top']}
+      edges={['bottom']}
       key={`edit-${activeProfile?.id}-${profileType}`}
     >
       <Header

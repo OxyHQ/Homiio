@@ -10,8 +10,6 @@
     "start": "ts-node --transpile-only server.ts",
     "dev": "nodemon --watch \"**/*.ts\" --exec ts-node --transpile-only server.ts",
     "build": "tsc",
-    "migrate": "ts-node --transpile-only scripts/migrate.ts",
-    "migrate:dev": "NODE_ENV=development ts-node --transpile-only scripts/migrate.ts",
     "migrate:billing": "node scripts/migrate-billing-field.js",
     "migrate:hybrid": "ts-node --transpile-only scripts/migrate-hybrid-rental.ts",
     "seed:properties": "ts-node --transpile-only scripts/seedProperties.ts",

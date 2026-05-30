@@ -14,6 +14,7 @@ import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkel
 
 import { Property as BaseProperty } from '@homiio/shared-types';
 import { logger } from '@/utils/logger';
+import { spacing } from '@/constants/styles';
 
 interface Property extends Omit<BaseProperty, '_id'> {
     _id?: string;
@@ -206,7 +207,7 @@ export default function PropertyTypeScreen() {
             style={styles.container}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
-            <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+            <View style={[styles.header, { paddingTop: insets.top + spacing.lg }]}>
                 <ThemedText style={styles.title}>
                     {t('properties.type.title', { type: getTypeName(type as string) })}
                 </ThemedText>

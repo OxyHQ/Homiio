@@ -261,7 +261,7 @@ export default function BookViewingPage() {
 
   if (loading || !property) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
         <Header
           options={{
             showBackButton: true,
@@ -278,7 +278,7 @@ export default function BookViewingPage() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <Header
         options={{
           showBackButton: true,

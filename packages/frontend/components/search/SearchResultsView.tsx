@@ -19,6 +19,7 @@
  */
 import React, { useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -132,6 +133,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
 }) => {
   const { t } = useTranslation();
   const isWide = useIsScreenNotMobile();
+  const insets = useSafeAreaInsets();
   const bottomSheet = useContext(BottomSheetContext);
 
   const mapRef = useRef<MapApi>(null);
@@ -477,7 +479,16 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         </View>
       ) : null}
       {selectedProperty ? (
-        <View style={[styles.popoverWrap, isWide ? styles.popoverWrapWide : null]}>
+        <View
+          style={[
+            styles.popoverWrap,
+            isWide
+              ? styles.popoverWrapWide
+              : // Narrow: the popover floats over the full-screen map above the
+                // home indicator and the MapFab toggle.
+                { bottom: spacing['2xl'] + insets.bottom },
+          ]}
+        >
           <MapMarkerPopover
             property={selectedProperty}
             onPress={() => onPropertyPress(selectedProperty)}
@@ -521,6 +532,9 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
             : t('search.fab.map', 'Map') || 'Map'
         }
         icon={showMobileMap ? 'list' : 'map'}
+        // Lift the floating toggle above the home indicator (the FAB's default
+        // bottom offset is measured from the screen edge).
+        style={{ bottom: spacing['2xl'] + insets.bottom }}
       />
     </View>
   );

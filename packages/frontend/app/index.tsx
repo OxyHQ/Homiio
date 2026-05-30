@@ -397,7 +397,7 @@ export default function HomePage() {
         scrollEventThrottle={16}
       >
         {/* === Hero canvas === */}
-        <View style={[styles.heroSection, { paddingTop: insets.top + (isWide ? 32 : 56) }]}>
+        <View style={[styles.heroSection, { paddingTop: insets.top + (isWide ? spacing['3xl'] : spacing['5xl']) }]}>
           <Animated.View style={[styles.heroImageWrap, heroParallaxStyle]}>
             <Image
               source={require('@/assets/images/hero.jpg')}

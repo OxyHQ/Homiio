@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { InsightsSkeleton } from '@/components/ui/skeletons/InsightsSkeleton';
 import type { Property } from '@homiio/shared-types';
 import { logger } from '@/utils/logger';
+import { spacing } from '@/constants/styles';
 
 // Chart width will adapt to 100% of available content width
 
@@ -101,7 +102,7 @@ export default function InsightsScreen() {
             <LinearGradient
                 colors={[colors.primaryColor, colors.secondaryLight, colors.primaryLight]}
                 locations={[0, 0.85, 1]}
-                style={[styles.header, { paddingTop: insets.top + 32 }]}
+                style={[styles.header, { paddingTop: insets.top + spacing['3xl'] }]}
             >
                 <ThemedText style={styles.title}>Insights</ThemedText>
                 <ThemedText style={styles.subtitle}>Marketplace overview for rentals</ThemedText>
