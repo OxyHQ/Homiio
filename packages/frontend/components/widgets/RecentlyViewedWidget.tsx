@@ -142,6 +142,9 @@ export function RecentlyViewedWidget() {
                 <PropertyCard
                   property={property}
                   variant="featured"
+                  // Horizontal widget scroller — an in-card photo pager would
+                  // fight the row swipe, so keep the single cover image here.
+                  enableImageCarousel={false}
                   onPress={() => navigateToProperty(property)}
                   showFeatures={false}
                   showTypeIcon={false}

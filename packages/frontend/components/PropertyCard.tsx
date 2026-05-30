@@ -2,8 +2,6 @@ import React, { useCallback, useMemo } from 'react';
 import { View, Image, StyleSheet, Pressable, TouchableOpacity, ViewStyle, Platform } from 'react-native';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
-
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 import { Property, PriceUnit, RentMode } from '@homiio/shared-types';
 import { getPropertyTitle, getPropertyImageSource } from '@/utils/propertyUtils';
 
@@ -12,12 +10,15 @@ import { useRentalMode } from '@/context/RentalModeContext';
 
 import { SaveButton } from './SaveButton';
 import { CurrencyFormatter } from './CurrencyFormatter';
+import { PropertyImageCarousel } from './property/PropertyImageCarousel';
 import { ThemedText } from '@/components/ThemedText';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { prefetchProperty, prefetchPropertyStats } from '@/utils/queryPrefetch';
 import { PropertyCardSkeleton } from './ui/skeletons/PropertyCardSkeleton';
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 /**
  * Derive the displayed price unit for a property based on the user's
@@ -67,6 +68,14 @@ type PropertyCardProps = {
   showRating?: boolean;
   showSaveCount?: boolean;
   saveCountDisplayMode?: 'badge' | 'inline';
+  /**
+   * Render the photo box as a swipeable image carousel (Airbnb-style) when the
+   * listing has more than one photo. Only applies to vertical orientation — the
+   * horizontal thumbnail variant always shows the single cover image. Defaults
+   * to `true`; pass `false` for surfaces where an in-card horizontal pager would
+   * fight an enclosing horizontal scroller.
+   */
+  enableImageCarousel?: boolean;
 
   // State
   isSelected?: boolean;
@@ -168,6 +177,7 @@ export function PropertyCard({
   showRating = true,
   showSaveCount = false,
   saveCountDisplayMode = 'badge',
+  enableImageCarousel = true,
 
   // State
   isSelected = false,
@@ -269,6 +279,17 @@ export function PropertyCard({
    */
   const gridAspectRatio = mode === 'vacation' ? 4 / 3 : 1;
 
+  /**
+   * The swipeable in-card carousel only makes sense for the full-bleed,
+   * vertical photo box. Horizontal rows show a small square thumbnail and the
+   * tiny `compact` tile is too small to page through, so both keep the single
+   * cover image. The carousel itself renders a static photo when the listing
+   * has 0–1 images, so this gate is purely about *where* a pager belongs.
+   */
+  const useCarousel =
+    enableImageCarousel && orientation === 'vertical' && variant !== 'compact';
+  const mediaAspectRatio = isGrid ? gridAspectRatio : 1;
+
   // Get variant-specific styles
   const variantStyles = getVariantStyles(variant);
 
@@ -281,6 +302,171 @@ export function PropertyCard({
   const finalTitleLines = titleLines !== undefined ? titleLines : variantStyles.titleLines;
   const finalLocationLines = locationLines !== undefined ? locationLines : variantStyles.locationLines;
 
+  /**
+   * Badge chrome that floats over the photo (rating, eco/verified, instant
+   * book, type, external source, plus any caller-supplied badge/overlay).
+   * Shared verbatim by the carousel media (as `children`) and the static-image
+   * media so the overlays read identically regardless of which path renders.
+   * Every node here is a non-interactive `View`, so it never introduces a
+   * nested `<button>` on web.
+   */
+  const mediaBadges = (
+    <>
+      {/* Rating - moved to top-left (hidden in grid variant for photo-first feel) */}
+      {finalShowRating && propertyData.rating && !isGrid && (
+        <View style={styles.ratingBadge}>
+          <ThemedText style={styles.ratingBadgeText}>{propertyData.rating.toFixed(1)}</ThemedText>
+          <Ionicons name="star" size={12} color={colors.ratingStar} />
+        </View>
+      )}
+
+      {/* Status badges — suppressed in grid variant to keep cards photo-first */}
+      {!isGrid && (
+        <>
+          {/* Eco Badge */}
+          {isEco && (
+            <View style={[styles.ecoBadge, styles.statusChip, { backgroundColor: colors.successSubtle }]}>
+              <Ionicons name="leaf-outline" size={16} color={colors.success} />
+            </View>
+          )}
+
+          {/* Verified Badge */}
+          {showVerifiedBadge && propertyData.isVerified && (
+            <View style={[styles.verifiedBadge, styles.statusChip, { backgroundColor: colors.primaryColor }]}>
+              <Ionicons name="shield-checkmark" size={14} color={colors.white} />
+            </View>
+          )}
+
+          {/* Instant Book badge (vacation mode only) */}
+          {showInstantBook && (
+            <View style={styles.instantBookBadge}>
+              <Ionicons name="flash" size={12} color={colors.white} />
+              <ThemedText style={styles.instantBookBadgeText}>Instant book</ThemedText>
+            </View>
+          )}
+
+          {/* Type Icon */}
+          {finalShowTypeIcon && propertyData.type && (
+            <View style={[styles.typeIcon, styles.statusChip, { backgroundColor: 'rgba(0, 0, 0, 0.6)' }]}>
+              <Ionicons
+                name={(propertyData.type === 'house' ? 'home-outline' : 'business-outline') as IoniconName}
+                size={16}
+                color={colors.white}
+              />
+            </View>
+          )}
+
+          {/* External Source Badge */}
+          {property.isExternal && property.source && property.source !== 'internal' && variant !== 'compact' && (
+            <View style={styles.sourceBadge}>
+              <ThemedText style={styles.sourceBadgeText}>
+                {property.source.charAt(0).toUpperCase() + property.source.slice(1)}
+              </ThemedText>
+            </View>
+          )}
+        </>
+      )}
+
+      {/* Custom Badge Content */}
+      {badgeContent && <View style={styles.customBadge}>{badgeContent as React.ReactNode}</View>}
+
+      {/* Overlay Content */}
+      {overlayContent && <View style={styles.overlay}>{overlayContent as React.ReactNode}</View>}
+    </>
+  );
+
+  const textContent = (
+    <View
+      style={[
+        styles.content,
+        orientation === 'horizontal' ? styles.horizontalContent : null,
+        isGrid ? styles.gridContent : null,
+      ]}
+    >
+      {/* Title */}
+      <ThemedText
+        style={[
+          styles.title,
+          isFeatured ? styles.featuredTitle : null,
+          isGrid ? styles.gridTitle : null,
+        ]}
+        numberOfLines={orientation === 'horizontal' ? undefined : finalTitleLines}
+      >
+        {propertyData.title}
+      </ThemedText>
+
+      {/* Location */}
+      {showLocation && propertyData.location && (
+        <ThemedText
+          style={[
+            styles.location,
+            isFeatured ? styles.featuredLocation : null,
+            orientation === 'horizontal' ? styles.horizontalLocation : null,
+            isGrid ? styles.gridLocation : null,
+          ]}
+          numberOfLines={finalLocationLines}
+        >
+          {propertyData.location}
+        </ThemedText>
+      )}
+
+      {/* Features — suppressed in grid variant to keep cards photo-first */}
+      {finalShowFeatures && !isGrid && (
+        <View style={styles.features}>
+          <View style={styles.feature}>
+            <ThemedText style={styles.featureText}>
+              {`${propertyData.bedrooms} bed${propertyData.bedrooms !== 1 ? 's' : ''}`}
+            </ThemedText>
+          </View>
+          <ThemedText style={styles.featureSeparator}>•</ThemedText>
+          <View style={styles.feature}>
+            <ThemedText style={styles.featureText}>
+              {`${propertyData.bathrooms} bath${propertyData.bathrooms !== 1 ? 's' : ''}`}
+            </ThemedText>
+          </View>
+          {propertyData.size && propertyData.size > 0 && (
+            <>
+              <ThemedText style={styles.featureSeparator}>•</ThemedText>
+              <View style={styles.feature}>
+                <ThemedText style={styles.featureText}>
+                  {`${propertyData.size} ${propertyData.sizeUnit}`}
+                </ThemedText>
+              </View>
+            </>
+          )}
+          {variant === 'compact' && propertyData.type && (
+            <>
+              <ThemedText style={styles.featureSeparator}>•</ThemedText>
+              <ThemedText style={styles.featureText}>{propertyData.type}</ThemedText>
+            </>
+          )}
+        </View>
+      )}
+
+      {/* Price */}
+      {finalShowPrice && propertyData.price && (
+        <View style={[styles.priceContainer, isGrid ? styles.gridPriceContainer : null]}>
+          <BloomText
+            style={[
+              styles.price,
+              isFeatured ? styles.featuredPrice : null,
+              isGrid ? styles.gridPrice : null,
+            ]}
+          >
+            <CurrencyFormatter
+              amount={propertyData.price}
+              originalCurrency={propertyData.currency}
+              showConversion={false}
+            />
+            <BloomText style={[styles.priceUnit, isGrid ? styles.gridPriceUnit : null]}>
+              {' / '}{propertyData.priceUnit}
+            </BloomText>
+          </BloomText>
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <View
       style={[
@@ -289,184 +475,68 @@ export function PropertyCard({
         isProcessing ? { opacity: 0.7 } : null,
       ]}
     >
-      <Pressable
-        style={[
-          styles.body,
-          orientation === 'horizontal' ? styles.horizontalBody : null,
-        ]}
-        onPress={onPress}
-        onPressIn={handlePressIn}
-        onLongPress={onLongPress}
-        accessibilityRole="button"
-        accessibilityLabel={propertyData.title}
-      >
-        <View
-          style={[
-            styles.imageContainer,
-            isGrid ? styles.gridImageContainer : null,
-            orientation === 'horizontal' ? styles.horizontalImageContainer : null,
-            isSelected ? styles.selectedImage : null,
-            orientation === 'horizontal'
-              ? { height: finalImageHeight, width: finalImageHeight }
-              : isGrid
-                ? { width: '100%', aspectRatio: gridAspectRatio }
-                : { width: '100%', aspectRatio: 1 },
-          ]}
-        >
-          <Image source={propertyData.imageSource} style={styles.image} resizeMode="cover" />
-
-          {/* Rating - moved to top-left (hidden in grid variant for photo-first feel) */}
-          {finalShowRating && propertyData.rating && !isGrid && (
-            <View style={styles.ratingBadge}>
-              <ThemedText style={styles.ratingBadgeText}>{propertyData.rating.toFixed(1)}</ThemedText>
-              <Ionicons name="star" size={12} color={colors.ratingStar} />
-            </View>
-          )}
-
-        {/* Status badges — suppressed in grid variant to keep cards photo-first */}
-        {!isGrid && (
-          <>
-            {/* Eco Badge */}
-            {isEco && (
-              <View style={[styles.ecoBadge, styles.statusChip, { backgroundColor: colors.successSubtle }]}>
-                <Ionicons name="leaf-outline" size={16} color={colors.success} />
-              </View>
-            )}
-
-            {/* Verified Badge */}
-            {showVerifiedBadge && propertyData.isVerified && (
-              <View style={[styles.verifiedBadge, styles.statusChip, { backgroundColor: colors.primaryColor }]}>
-                <Ionicons name="shield-checkmark" size={14} color={colors.white} />
-              </View>
-            )}
-
-            {/* Instant Book badge (vacation mode only) */}
-            {showInstantBook && (
-              <View style={styles.instantBookBadge}>
-                <Ionicons name="flash" size={12} color={colors.white} />
-                <ThemedText style={styles.instantBookBadgeText}>Instant book</ThemedText>
-              </View>
-            )}
-
-            {/* Type Icon */}
-            {finalShowTypeIcon && propertyData.type && (
-              <View style={[styles.typeIcon, styles.statusChip, { backgroundColor: 'rgba(0, 0, 0, 0.6)' }]}>
-                <Ionicons
-                  name={(propertyData.type === 'house' ? 'home-outline' : 'business-outline') as IoniconName}
-                  size={16}
-                  color={colors.white}
-                />
-              </View>
-            )}
-
-            {/* External Source Badge */}
-            {property.isExternal && property.source && property.source !== 'internal' && variant !== 'compact' && (
-              <View style={styles.sourceBadge}>
-                <ThemedText style={styles.sourceBadgeText}>
-                  {property.source.charAt(0).toUpperCase() + property.source.slice(1)}
-                </ThemedText>
-              </View>
-            )}
-          </>
-        )}
-
-        {/* Custom Badge Content */}
-        {badgeContent && <View style={styles.customBadge}>{badgeContent as React.ReactNode}</View>}
-
-        {/* Overlay Content */}
-        {overlayContent && <View style={styles.overlay}>{overlayContent as React.ReactNode}</View>}
-      </View>
-
-      <View
-        style={[
-          styles.content,
-          orientation === 'horizontal' ? styles.horizontalContent : null,
-          isGrid ? styles.gridContent : null,
-        ]}
-      >
-        {/* Title */}
-        <ThemedText
-          style={[
-            styles.title,
-            isFeatured ? styles.featuredTitle : null,
-            isGrid ? styles.gridTitle : null,
-          ]}
-          numberOfLines={orientation === 'horizontal' ? undefined : finalTitleLines}
-        >
-          {propertyData.title}
-        </ThemedText>
-
-        {/* Location */}
-        {showLocation && propertyData.location && (
-          <ThemedText
-            style={[
-              styles.location,
-              isFeatured ? styles.featuredLocation : null,
-              orientation === 'horizontal' ? styles.horizontalLocation : null,
-              isGrid ? styles.gridLocation : null,
-            ]}
-            numberOfLines={finalLocationLines}
+      {useCarousel ? (
+        // Carousel path: the swipeable media is its OWN tap target (its pages
+        // forward `onPress`), and the text block below is a SIBLING tap target.
+        // Keeping them as siblings (rather than nesting the carousel inside an
+        // outer body button) avoids nested <button> elements on web while still
+        // making the whole card open the detail screen on tap.
+        <View style={styles.body}>
+          <PropertyImageCarousel
+            images={property.images}
+            coverIndex={property.coverImageIndex}
+            aspectRatio={mediaAspectRatio}
+            borderRadius={isGrid ? radius.photo : radius.lg}
+            onPress={onPress}
+            onPressIn={handlePressIn}
+            onLongPress={onLongPress}
+            accessibilityLabel={propertyData.title}
           >
-            {propertyData.location}
-          </ThemedText>
-        )}
-
-        {/* Features — suppressed in grid variant to keep cards photo-first */}
-        {finalShowFeatures && !isGrid && (
-          <View style={styles.features}>
-            <View style={styles.feature}>
-              <ThemedText style={styles.featureText}>
-                {`${propertyData.bedrooms} bed${propertyData.bedrooms !== 1 ? 's' : ''}`}
-              </ThemedText>
-            </View>
-            <ThemedText style={styles.featureSeparator}>•</ThemedText>
-            <View style={styles.feature}>
-              <ThemedText style={styles.featureText}>
-                {`${propertyData.bathrooms} bath${propertyData.bathrooms !== 1 ? 's' : ''}`}
-              </ThemedText>
-            </View>
-            {propertyData.size && propertyData.size > 0 && (
-              <>
-                <ThemedText style={styles.featureSeparator}>•</ThemedText>
-                <View style={styles.feature}>
-                  <ThemedText style={styles.featureText}>
-                    {`${propertyData.size} ${propertyData.sizeUnit}`}
-                  </ThemedText>
-                </View>
-              </>
-            )}
-            {variant === 'compact' && propertyData.type && (
-              <>
-                <ThemedText style={styles.featureSeparator}>•</ThemedText>
-                <ThemedText style={styles.featureText}>{propertyData.type}</ThemedText>
-              </>
-            )}
-          </View>
-        )}
-
-        {/* Price */}
-        {finalShowPrice && propertyData.price && (
-          <View style={[styles.priceContainer, isGrid ? styles.gridPriceContainer : null]}>
-            <BloomText
-              style={[
-                styles.price,
-                isFeatured ? styles.featuredPrice : null,
-                isGrid ? styles.gridPrice : null,
-              ]}
-            >
-              <CurrencyFormatter
-                amount={propertyData.price}
-                originalCurrency={propertyData.currency}
-                showConversion={false}
-              />
-              <BloomText style={[styles.priceUnit, isGrid ? styles.gridPriceUnit : null]}>
-                {' / '}{propertyData.priceUnit}
-              </BloomText>
-            </BloomText>
-          </View>
-        )}
+            {mediaBadges}
+          </PropertyImageCarousel>
+          <Pressable
+            style={styles.contentPressable}
+            onPress={onPress}
+            onPressIn={handlePressIn}
+            onLongPress={onLongPress}
+            accessibilityRole="button"
+            accessibilityLabel={propertyData.title}
+          >
+            {textContent}
+          </Pressable>
         </View>
-      </Pressable>
+      ) : (
+        <Pressable
+          style={[
+            styles.body,
+            orientation === 'horizontal' ? styles.horizontalBody : null,
+          ]}
+          onPress={onPress}
+          onPressIn={handlePressIn}
+          onLongPress={onLongPress}
+          accessibilityRole="button"
+          accessibilityLabel={propertyData.title}
+        >
+          <View
+            style={[
+              styles.imageContainer,
+              isGrid ? styles.gridImageContainer : null,
+              orientation === 'horizontal' ? styles.horizontalImageContainer : null,
+              isSelected ? styles.selectedImage : null,
+              orientation === 'horizontal'
+                ? { height: finalImageHeight, width: finalImageHeight }
+                : isGrid
+                  ? { width: '100%', aspectRatio: gridAspectRatio }
+                  : { width: '100%', aspectRatio: 1 },
+            ]}
+          >
+            <Image source={propertyData.imageSource} style={styles.image} resizeMode="cover" />
+            {mediaBadges}
+          </View>
+
+          {textContent}
+        </Pressable>
+      )}
 
       {/* Save Button — lives in an absolutely-positioned overlay that mirrors
           the photo box, as a SIBLING of the body Pressable. This keeps the
@@ -545,6 +615,12 @@ const styles = StyleSheet.create({
   body: {
     width: '100%',
     gap: spacing.sm,
+  },
+  // The text block under the carousel media. Its own tap target (a sibling of
+  // the carousel, not nested inside it) so the whole card opens the detail
+  // without nesting a <button> in a <button> on web.
+  contentPressable: {
+    width: '100%',
   },
   horizontalBody: {
     flexDirection: 'row',

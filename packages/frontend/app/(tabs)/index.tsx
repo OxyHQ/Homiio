@@ -489,6 +489,9 @@ export default function HomePage() {
                 <PropertyCard
                   property={property}
                   variant="featured"
+                  // Home rows are themselves horizontal scrollers; an in-card
+                  // photo pager would fight the row swipe, so keep one photo here.
+                  enableImageCarousel={false}
                   onPress={() => router.push(`/properties/${property._id || property.id}`)}
                 />
               )}
@@ -533,6 +536,9 @@ export default function HomePage() {
                 <PropertyCard
                   property={property}
                   variant="featured"
+                  // Home rows are themselves horizontal scrollers; an in-card
+                  // photo pager would fight the row swipe, so keep one photo here.
+                  enableImageCarousel={false}
                   onPress={() => router.push(`/properties/${property._id || property.id}`)}
                 />
               )}
@@ -551,6 +557,9 @@ export default function HomePage() {
                 <PropertyCard
                   property={property}
                   variant="featured"
+                  // Home rows are themselves horizontal scrollers; an in-card
+                  // photo pager would fight the row swipe, so keep one photo here.
+                  enableImageCarousel={false}
                   onPress={() => router.push(`/properties/${property._id || property.id}`)}
                 />
               )}
@@ -573,6 +582,9 @@ export default function HomePage() {
                   <PropertyCard
                     property={property}
                     variant="featured"
+                    // Home rows are themselves horizontal scrollers; an in-card
+                    // photo pager would fight the row swipe, so keep one photo here.
+                    enableImageCarousel={false}
                     onPress={() => router.push(`/properties/${property._id || property.id}`)}
                   />
                 )}
