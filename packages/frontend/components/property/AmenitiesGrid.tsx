@@ -38,8 +38,8 @@ import {
 
 /** Fraction of the viewport the sheet's scroll body may occupy at most. */
 const SHEET_MAX_HEIGHT_RATIO = 0.62;
-/** Icon size for amenity rows (line-weight, Airbnb scale). */
-const AMENITY_ICON_SIZE = 24;
+/** Icon size for amenity rows (line-weight, Airbnb scale; compact grid). */
+const AMENITY_ICON_SIZE = 22;
 /** Fallback glyph when an amenity id has no catalog icon. */
 const FALLBACK_ICON: React.ComponentProps<typeof Ionicons>['name'] =
   'checkmark-circle-outline';
@@ -217,19 +217,21 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    columnGap: spacing['2xl'],
-    rowGap: spacing.lg,
+    columnGap: spacing.xl,
+    rowGap: spacing.xs,
   },
   cell: {
-    width: '46%',
-    minWidth: 220,
+    // ~3 columns on tablet/web, 2 on a phone (the minWidth floor keeps a
+    // single short amenity label from truncating before the row wraps).
+    width: '31%',
+    minWidth: 150,
     flexGrow: 1,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.md,
-    gap: spacing.lg,
+    paddingVertical: spacing.sm,
+    gap: spacing.md,
   },
   rowDivided: {
     borderTopWidth: hairline.width,
@@ -241,8 +243,8 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     flex: 1,
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 20,
     color: colors.COLOR_BLACK,
   },
   actionAnchor: {

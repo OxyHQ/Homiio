@@ -58,7 +58,7 @@ const SERVICE_META: Record<
 };
 
 /** Icon size for service rows — matches the amenity grid (line weight). */
-const SERVICE_ICON_SIZE = 24;
+const SERVICE_ICON_SIZE = 22;
 /** Metres in one kilometre — distances at/above this switch to a km label. */
 const METRES_PER_KM = 1000;
 /** Em-dash shown for absent categories (no distance). */
@@ -201,25 +201,30 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    columnGap: spacing['2xl'],
-    rowGap: spacing.lg,
+    columnGap: spacing.xl,
+    rowGap: spacing.xs,
   },
   skeletonGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    columnGap: spacing['2xl'],
-    rowGap: spacing.lg,
+    columnGap: spacing.xl,
+    rowGap: spacing.xs,
   },
   cell: {
-    width: '46%',
-    minWidth: 220,
+    // 2-col on a phone, expanding to ~3-col on tablet/web. The minWidth floor
+    // reserves room for the trailing distance (e.g. "Pharmacy · 97 m") yet is
+    // low enough that two columns still fit a normal phone; the label's
+    // `flexShrink` then absorbs the longest names. A touch wider than the
+    // amenity grid (which carries no distance) so columns stay aligned.
+    width: '31%',
+    minWidth: 165,
     flexGrow: 1,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.md,
-    gap: spacing.lg,
+    paddingVertical: spacing.sm,
+    gap: spacing.md,
   },
   rowIcon: {
     width: SERVICE_ICON_SIZE,
@@ -234,23 +239,23 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     flexShrink: 1,
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 20,
     color: colors.COLOR_BLACK,
   },
   rowLabelMuted: {
     flexShrink: 1,
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 20,
     color: colors.COLOR_BLACK_LIGHT_5,
   },
   rowDistance: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.COLOR_BLACK_LIGHT_3,
   },
   rowDistanceMuted: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.COLOR_BLACK_LIGHT_5,
   },
   partialNote: {
