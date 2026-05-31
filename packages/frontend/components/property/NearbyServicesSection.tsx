@@ -17,11 +17,12 @@
  * IS present, but if EVERYTHING is absent under `partial` we hide the section
  * rather than imply "nothing nearby". A subtle note caveats partial data.
  *
- * Flat Airbnb-2026 aesthetic via the shared `Section` primitive and the same
- * 2-column responsive grid as `AmenitiesGrid` — no cards, no shadows.
+ * Flat Airbnb-2026 aesthetic via the shared `Section` primitive and the shared
+ * `DetailIconGrid` (the same 2-column responsive grid + icon/label row as
+ * `AmenitiesGrid`) — no cards, no shadows.
  */
 import React, { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -29,6 +30,12 @@ import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { Section } from '@/components/property/Section';
+import {
+  DETAIL_ICON_SIZE,
+  DetailIconCell,
+  DetailIconGrid,
+  DetailIconRow,
+} from '@/components/property/DetailIconGrid';
 import { useNearbyServices } from '@/hooks';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
@@ -57,8 +64,6 @@ const SERVICE_META: Record<
   gym: { icon: 'barbell-outline', labelKey: 'property.nearbyServices.labels.gym' },
 };
 
-/** Icon size for service rows — matches the amenity grid (line weight). */
-const SERVICE_ICON_SIZE = 22;
 /** Metres in one kilometre — distances at/above this switch to a km label. */
 const METRES_PER_KM = 1000;
 /** Em-dash shown for absent categories (no distance). */
@@ -85,26 +90,24 @@ interface ServiceRowProps {
  * One service row: icon + label + nearest distance. Present categories render
  * in full strength (brand icon, dark label, dark distance); absent categories
  * are muted (greyed icon/label + em-dash) so the absence is legible but quiet.
+ * Delegates the layout to the shared `DetailIconRow` (with a trailing distance)
+ * so it can't drift from the amenity grid; only the icon tint stays local.
  */
 const ServiceRow: React.FC<ServiceRowProps> = ({ category, label, distanceLabel }) => {
   const { present } = category;
   return (
-    <View style={styles.row}>
-      <Ionicons
-        name={SERVICE_META[category.key].icon}
-        size={SERVICE_ICON_SIZE}
-        color={present ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_5}
-        style={styles.rowIcon}
-      />
-      <View style={styles.rowText}>
-        <BloomText style={present ? styles.rowLabel : styles.rowLabelMuted}>
-          {label}
-        </BloomText>
-        <BloomText style={present ? styles.rowDistance : styles.rowDistanceMuted}>
-          {distanceLabel}
-        </BloomText>
-      </View>
-    </View>
+    <DetailIconRow
+      icon={
+        <Ionicons
+          name={SERVICE_META[category.key].icon}
+          size={DETAIL_ICON_SIZE}
+          color={present ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_5}
+        />
+      }
+      label={label}
+      trailing={distanceLabel}
+      muted={!present}
+    />
   );
 };
 
@@ -120,13 +123,13 @@ export const NearbyServicesSection: React.FC<NearbyServicesSectionProps> = ({
   if (loading) {
     return (
       <Section title={t('property.nearbyServices.title')}>
-        <View style={styles.skeletonGrid}>
+        <DetailIconGrid reserveTrailing>
           {SKELETON_ROWS.map((key) => (
-            <View key={key} style={styles.cell}>
+            <DetailIconCell key={key}>
               <Skeleton.Box width="80%" height={20} borderRadius={radius.md} />
-            </View>
+            </DetailIconCell>
           ))}
-        </View>
+        </DetailIconGrid>
       </Section>
     );
   }
@@ -174,17 +177,17 @@ const NearbyServicesContent: React.FC<NearbyServicesContentProps> = ({ t, data }
 
   return (
     <Section title={t('property.nearbyServices.title')} subtitle={subtitle}>
-      <View style={styles.grid}>
+      <DetailIconGrid reserveTrailing>
         {ordered.map((category) => (
-          <View key={category.key} style={styles.cell}>
+          <DetailIconCell key={category.key}>
             <ServiceRow
               category={category}
               label={t(SERVICE_META[category.key].labelKey)}
               distanceLabel={formatDistance(category.nearestM)}
             />
-          </View>
+          </DetailIconCell>
         ))}
-      </View>
+      </DetailIconGrid>
       {partial ? (
         <BloomText style={styles.partialNote}>
           {t('property.nearbyServices.partialNote')}
@@ -198,66 +201,6 @@ const NearbyServicesContent: React.FC<NearbyServicesContentProps> = ({ t, data }
 const SKELETON_ROWS = ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8'] as const;
 
 const styles = StyleSheet.create({
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    columnGap: spacing.xl,
-    rowGap: spacing.xs,
-  },
-  skeletonGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    columnGap: spacing.xl,
-    rowGap: spacing.xs,
-  },
-  cell: {
-    // 2-col on a phone, expanding to ~3-col on tablet/web. The minWidth floor
-    // reserves room for the trailing distance (e.g. "Pharmacy · 97 m") yet is
-    // low enough that two columns still fit a normal phone; the label's
-    // `flexShrink` then absorbs the longest names. A touch wider than the
-    // amenity grid (which carries no distance) so columns stay aligned.
-    width: '31%',
-    minWidth: 165,
-    flexGrow: 1,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    gap: spacing.md,
-  },
-  rowIcon: {
-    width: SERVICE_ICON_SIZE,
-    textAlign: 'center',
-  },
-  rowText: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  rowLabel: {
-    flexShrink: 1,
-    fontSize: 15,
-    lineHeight: 20,
-    color: colors.COLOR_BLACK,
-  },
-  rowLabelMuted: {
-    flexShrink: 1,
-    fontSize: 15,
-    lineHeight: 20,
-    color: colors.COLOR_BLACK_LIGHT_5,
-  },
-  rowDistance: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  rowDistanceMuted: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_5,
-  },
   partialNote: {
     marginTop: spacing.lg,
     fontSize: 12,

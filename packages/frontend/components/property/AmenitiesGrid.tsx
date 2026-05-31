@@ -26,8 +26,14 @@ import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { Section, SectionHeader } from '@/components/property/Section';
+import {
+  DETAIL_ICON_SIZE,
+  DetailIconCell,
+  DetailIconGrid,
+  DetailIconRow,
+} from '@/components/property/DetailIconGrid';
 import { colors } from '@/styles/colors';
-import { hairline, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 import {
   type Amenity,
   type AmenityGroup,
@@ -38,8 +44,6 @@ import {
 
 /** Fraction of the viewport the sheet's scroll body may occupy at most. */
 const SHEET_MAX_HEIGHT_RATIO = 0.62;
-/** Icon size for amenity rows (line-weight, Airbnb scale; compact grid). */
-const AMENITY_ICON_SIZE = 22;
 /** Fallback glyph when an amenity id has no catalog icon. */
 const FALLBACK_ICON: React.ComponentProps<typeof Ionicons>['name'] =
   'checkmark-circle-outline';
@@ -79,18 +83,21 @@ interface AmenityRowProps {
 
 /**
  * One amenity line: icon + label. Flat by default; the sheet variant adds a
- * top hairline so items in a category read as a clean list.
+ * top hairline so items in a category read as a clean list. Delegates the
+ * layout to the shared `DetailIconRow` so it can't drift from the nearby grid.
  */
 const AmenityRow: React.FC<AmenityRowProps> = ({ entry, label, divided = false }) => (
-  <View style={[styles.row, divided && styles.rowDivided]}>
-    <Ionicons
-      name={resolveIcon(entry.amenity)}
-      size={AMENITY_ICON_SIZE}
-      color={colors.COLOR_BLACK_LIGHT_1}
-      style={styles.rowIcon}
-    />
-    <BloomText style={styles.rowLabel}>{label}</BloomText>
-  </View>
+  <DetailIconRow
+    icon={
+      <Ionicons
+        name={resolveIcon(entry.amenity)}
+        size={DETAIL_ICON_SIZE}
+        color={colors.COLOR_BLACK_LIGHT_1}
+      />
+    }
+    label={label}
+    divided={divided}
+  />
 );
 
 interface AmenitiesSheetProps {
@@ -190,13 +197,13 @@ export const AmenitiesGrid: React.FC<AmenitiesGridProps> = ({
 
   return (
     <Section title={t('property.amenities.title', 'What this place offers')}>
-      <View style={styles.grid}>
+      <DetailIconGrid>
         {previewEntries.map((entry, idx) => (
-          <View key={`${entry.id}-${idx}`} style={styles.cell}>
+          <DetailIconCell key={`${entry.id}-${idx}`}>
             <AmenityRow entry={entry} label={resolveLabel(entry)} />
-          </View>
+          </DetailIconCell>
         ))}
-      </View>
+      </DetailIconGrid>
       {hasMore ? (
         <View style={styles.actionAnchor}>
           <Button
@@ -214,39 +221,6 @@ export const AmenitiesGrid: React.FC<AmenitiesGridProps> = ({
 };
 
 const styles = StyleSheet.create({
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    columnGap: spacing.xl,
-    rowGap: spacing.xs,
-  },
-  cell: {
-    // ~3 columns on tablet/web, 2 on a phone (the minWidth floor keeps a
-    // single short amenity label from truncating before the row wraps).
-    width: '31%',
-    minWidth: 150,
-    flexGrow: 1,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    gap: spacing.md,
-  },
-  rowDivided: {
-    borderTopWidth: hairline.width,
-    borderTopColor: hairline.color,
-  },
-  rowIcon: {
-    width: AMENITY_ICON_SIZE,
-    textAlign: 'center',
-  },
-  rowLabel: {
-    flex: 1,
-    fontSize: 15,
-    lineHeight: 20,
-    color: colors.COLOR_BLACK,
-  },
   actionAnchor: {
     marginTop: spacing['2xl'],
     alignSelf: 'flex-start',
