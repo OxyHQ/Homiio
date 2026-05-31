@@ -2,7 +2,7 @@ import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react'
 import { View, Animated } from 'react-native';
 import { LogoIcon } from '@/assets/logo';
 import { Loading } from '@oxyhq/bloom/loading';
-import { colors, brandBlue } from '@/styles/colors';
+import { colors } from '@/styles/colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import { cssInterop } from 'nativewind';
 
@@ -68,9 +68,10 @@ const AppSplashScreen: React.FC<AppSplashScreenProps> = ({ onFadeComplete, start
   const spinnerContainerStyle = useMemo(() => ({ marginTop: 32 }), []);
 
   // Memoize gradient colors to prevent array recreation. The splash keeps its
-  // signature brand blue→cream gradient (with the gold logo/spinner) regardless
-  // of the app's runtime accent — so it's NOT tied to the yellow primary.
-  const gradientColors = useMemo(() => [brandBlue, colors.secondaryLight] as const, []);
+  // signature blue→cream gradient (with the gold logo/spinner) via Bloom's
+  // `info` blue — a fixed semantic token across presets, so it's NOT tied to
+  // the runtime accent (now the yellow primary).
+  const gradientColors = useMemo(() => [colors.info, colors.secondaryLight] as const, []);
 
   return (
     <Animated.View style={containerStyle}>
