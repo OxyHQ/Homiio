@@ -334,7 +334,11 @@
       "viewEcoProperties": "Visualizza Proprietà Eco"
     },
     "featured": {
-      "title": "Proprietà in Evidenza"
+      "title": "Proprietà in Evidenza",
+      "gridLongTerm": "Monolocali a Barcellona",
+      "gridVacation": "Appartamenti al mare a València",
+      "gridBuy": "Case in vendita a Barcellona",
+      "gridExchange": "Scambi di casa in Spagna"
     },
     "recentlyViewed": {
       "title": "Visualizzate di Recente",
@@ -434,6 +438,13 @@
     },
     "filters": {
       "listingType": "Tipo di annuncio"
+    },
+    "mode": {
+      "label": "Modalità di ricerca",
+      "longTerm": "Lunga durata",
+      "vacation": "Vacanza",
+      "buy": "Acquista",
+      "exchange": "Scambio"
     }
   },
   "profile": {
@@ -908,7 +919,9 @@
     },
     "mode": {
       "longTerm": "Lunga durata",
-      "vacation": "Vacanza"
+      "vacation": "Vacanza",
+      "buy": "Acquista",
+      "exchange": "Scambio"
     },
     "savedProperties": {
       "title": "Cartelle salvate",

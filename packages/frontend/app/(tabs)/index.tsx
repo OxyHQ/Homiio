@@ -47,7 +47,7 @@ import * as Location from 'expo-location';
 
 import { H1, P } from '@oxyhq/bloom/typography';
 
-import { RentMode, type Property } from '@homiio/shared-types';
+import { ListingIntent, RentMode, type Property, type PropertyFilters } from '@homiio/shared-types';
 
 // Real data hooks
 import { useProperties } from '@/hooks';
@@ -172,7 +172,7 @@ export default function HomePage() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { mode } = useRentalMode();
+  const { mode, intent: browseIntent } = useRentalMode();
   const [refreshing, setRefreshing] = useState(false);
   const [cities, setCities] = useState<CityListResponseItem[]>([]);
   const [userLocation, setUserLocation] = useState<{
@@ -196,15 +196,17 @@ export default function HomePage() {
   // tapped column; tapping the pill as a whole defaults to 'where'.
   const [searchPanelStep, setSearchPanelStep] = useState<SearchStep>('where');
 
-  // Seed the panel from the active query, overriding the rental mode with the
-  // user's current selection so opening the hero search respects the
-  // Long-term/Vacation toggle they last picked.
+  // Seed the panel from the active query, overriding the rental mode + listing
+  // intent with the user's current global browse selection so opening the hero
+  // search respects the Rent / Buy / Exchange (and Long-term/Vacation) mode they
+  // last picked in the sidebar or hero toggle.
   const heroSearchSeed = useMemo<SearchQuery>(
     () => ({
       ...activeQuery,
       rentMode: mode === 'vacation' ? RentMode.VACATION : RentMode.LONG_TERM,
+      intent: browseIntent,
     }),
-    [activeQuery, mode],
+    [activeQuery, mode, browseIntent],
   );
 
   const handleOpenSearchPanel = useCallback(() => {
@@ -302,9 +304,23 @@ export default function HomePage() {
   const { properties: recentlyViewedProperties } = useRecentlyViewed();
   const { savedProperties, isLoading: savedLoading } = useSavedPropertiesContext();
 
+  // Scope the home feed to the active browse mode so switching Rent / Buy /
+  // Exchange reloads with the matching listings (reusing the SAME `intent` +
+  // `rentMode` the search endpoint filters on — no forked logic). `intent`
+  // stays undefined for the rent modes so legacy rent-only listings surface.
+  const feedFilters = useMemo<PropertyFilters>(
+    () => ({
+      limit: 12,
+      status: 'published',
+      rentMode: mode === 'vacation' ? RentMode.VACATION : RentMode.LONG_TERM,
+      ...(browseIntent ? { intent: browseIntent } : {}),
+    }),
+    [mode, browseIntent],
+  );
+
   useEffect(() => {
     Promise.all([
-      loadProperties({ limit: 12, status: 'published' }),
+      loadProperties(feedFilters),
       cityService
         .getPopularCities(8)
         .then((r) => (r.data || []) as CityListResponseItem[])
@@ -312,7 +328,7 @@ export default function HomePage() {
     ]).then(([, citiesData]) => {
       setCities(citiesData);
     });
-  }, [loadProperties]);
+  }, [loadProperties, feedFilters]);
 
   const featuredProperties = useMemo<Property[]>(() => {
     if (!properties) return [];
@@ -327,11 +343,11 @@ export default function HomePage() {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await loadProperties({ limit: 12, status: 'published' });
+      await loadProperties(feedFilters);
     } finally {
       setRefreshing(false);
     }
-  }, [loadProperties]);
+  }, [loadProperties, feedFilters]);
 
   const layoutScroll = useLayoutScroll();
   const localScrollY = useSharedValue(0);
@@ -364,17 +380,23 @@ export default function HomePage() {
   const sectionGap = resolveSectionSpacing(isWide);
 
   /**
-   * Featured grid title leans on the current rental mode: long-term
-   * users see "Studios in Barcelona", vacation users see "Beach
-   * apartments". Both fall back to a neutral, short, brand-tone copy
-   * if no translation is set.
+   * Featured grid title leans on the current browse mode: buy users see homes
+   * for sale, exchange users see home swaps, vacation users see beach stays,
+   * and long-term users see the default city studios. Each falls back to a
+   * neutral, short, brand-tone copy if no translation is set.
    */
   const featuredGridTitle = useMemo(() => {
+    if (browseIntent === ListingIntent.SALE) {
+      return t('home.featured.gridBuy', 'Homes for sale in Barcelona');
+    }
+    if (browseIntent === ListingIntent.EXCHANGE) {
+      return t('home.featured.gridExchange', 'Home exchanges in Spain');
+    }
     if (mode === 'vacation') {
       return t('home.featured.gridVacation', 'Beach apartments in València');
     }
     return t('home.featured.gridLongTerm', 'Studios in Barcelona');
-  }, [mode, t]);
+  }, [browseIntent, mode, t]);
 
   const handleNavigateToCity = useCallback(
     (item: CityShowcaseItem) => {

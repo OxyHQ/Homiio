@@ -184,7 +184,11 @@
     },
     "featured": {
       "title": "Propietats Destacades",
-      "empty": "No hi ha propietats destacades disponibles en aquest moment"
+      "empty": "No hi ha propietats destacades disponibles en aquest moment",
+      "gridLongTerm": "Estudis a Barcelona",
+      "gridVacation": "Apartaments de platja a València",
+      "gridBuy": "Habitatges en venda a Barcelona",
+      "gridExchange": "Intercanvis de casa a Espanya"
     },
     "viewAll": "Veure Tot",
     "recentlyViewed": {
@@ -287,6 +291,13 @@
     "Search with": "Cercar amb",
     "filters": {
       "listingType": "Tipus d'anunci"
+    },
+    "mode": {
+      "label": "Mode de cerca",
+      "longTerm": "Llarga estada",
+      "vacation": "Vacances",
+      "buy": "Comprar",
+      "exchange": "Intercanvi"
     },
     "Advanced Filters": "Filtres Avançats",
     "types": {
@@ -1022,7 +1033,9 @@
     },
     "mode": {
       "longTerm": "Llarga estada",
-      "vacation": "Vacances"
+      "vacation": "Vacances",
+      "buy": "Comprar",
+      "exchange": "Intercanvi"
     },
     "savedProperties": {
       "title": "Carpetes desades",

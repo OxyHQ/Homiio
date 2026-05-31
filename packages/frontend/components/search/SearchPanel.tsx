@@ -38,12 +38,31 @@ import { WhereStep } from './steps/WhereStep';
 import { TypeStep } from './steps/TypeStep';
 import { PriceStep } from './steps/PriceStep';
 import { DatesStep } from './steps/DatesStep';
-import type {
-  SearchDateRange,
-  SearchLocation,
-  SearchQuery,
-  SearchStep,
+import {
+  BROWSE_MODE_MAP,
+  browseModeFromAxes,
+  type BrowseMode,
+  type SearchDateRange,
+  type SearchLocation,
+  type SearchQuery,
+  type SearchStep,
 } from './types';
+
+/** The four top-level browse modes, in display order, for the panel toggle. */
+const BROWSE_MODE_ORDER: readonly BrowseMode[] = [
+  'long_term',
+  'vacation',
+  'buy',
+  'exchange',
+];
+
+/** i18n key + fallback label for each browse mode in the panel toggle. */
+const BROWSE_MODE_LABELS: Record<BrowseMode, { key: string; fallback: string }> = {
+  long_term: { key: 'search.mode.longTerm', fallback: 'Long-term' },
+  vacation: { key: 'search.mode.vacation', fallback: 'Vacation' },
+  buy: { key: 'search.mode.buy', fallback: 'Buy' },
+  exchange: { key: 'search.mode.exchange', fallback: 'Exchange' },
+};
 
 /** Ordered steps per rental mode. Long-term never includes `dates`. */
 const LONG_TERM_STEPS: readonly SearchStep[] = ['where', 'type', 'price'];
@@ -122,14 +141,26 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
   const stepIndex = Math.max(0, steps.indexOf(step));
   const isLastStep = stepIndex === steps.length - 1;
 
-  const handleRentMode = useCallback((mode: RentMode) => {
+  // The toggle's current value is derived from the draft's two axes rather than
+  // stored separately, so the panel keeps a single source of truth (the draft).
+  const draftBrowseMode = browseModeFromAxes(draft.rentMode, draft.intent);
+
+  const handleBrowseMode = useCallback((next: BrowseMode) => {
+    const axes = BROWSE_MODE_MAP[next];
     setDraft((prev) => ({
       ...prev,
-      rentMode: mode,
-      ...(mode === RentMode.LONG_TERM ? { dates: undefined, guests: undefined } : {}),
+      rentMode: axes.rentMode,
+      intent: axes.intent,
+      // Vacation-only fields are meaningless outside the vacation experience.
+      ...(axes.rentMode === RentMode.LONG_TERM
+        ? { dates: undefined, guests: undefined }
+        : {}),
     }));
-    // Leaving vacation while on the dates step would strand the user.
-    setStep((prev) => (mode === RentMode.LONG_TERM && prev === 'dates' ? 'price' : prev));
+    // Leaving the vacation experience while on the dates step would strand the
+    // user (long-term/buy/exchange have no calendar step).
+    setStep((prev) =>
+      axes.rentMode === RentMode.LONG_TERM && prev === 'dates' ? 'price' : prev,
+    );
   }, []);
 
   const handleSelectLocation = useCallback((location: SearchLocation) => {
@@ -249,23 +280,21 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
         <Ionicons name="close" size={22} color={colors.COLOR_BLACK} />
       </Pressable>
       <View style={styles.modeToggle}>
-        <SegmentedControl.Root<RentMode>
-          label={t('search.mode.label', 'Rental mode') || 'Rental mode'}
+        <SegmentedControl.Root<BrowseMode>
+          label={t('search.mode.label', 'Browse mode') || 'Browse mode'}
           type="tabs"
           size="small"
-          value={draft.rentMode}
-          onChange={handleRentMode}
+          value={draftBrowseMode}
+          onChange={handleBrowseMode}
         >
-          <SegmentedControl.Item value={RentMode.LONG_TERM}>
-            <SegmentedControl.ItemText>
-              {t('search.mode.longTerm', 'Long-term') || 'Long-term'}
-            </SegmentedControl.ItemText>
-          </SegmentedControl.Item>
-          <SegmentedControl.Item value={RentMode.VACATION}>
-            <SegmentedControl.ItemText>
-              {t('search.mode.vacation', 'Vacation') || 'Vacation'}
-            </SegmentedControl.ItemText>
-          </SegmentedControl.Item>
+          {BROWSE_MODE_ORDER.map((browseMode) => (
+            <SegmentedControl.Item key={browseMode} value={browseMode}>
+              <SegmentedControl.ItemText>
+                {t(BROWSE_MODE_LABELS[browseMode].key, BROWSE_MODE_LABELS[browseMode].fallback) ||
+                  BROWSE_MODE_LABELS[browseMode].fallback}
+              </SegmentedControl.ItemText>
+            </SegmentedControl.Item>
+          ))}
         </SegmentedControl.Root>
       </View>
       <View style={styles.headerClose} />
@@ -401,7 +430,9 @@ const styles = StyleSheet.create({
   },
   modeToggle: {
     flex: 1,
-    maxWidth: 280,
+    // Wide enough for the four browse segments (Long-term / Vacation / Buy /
+    // Exchange) to read on one line each at the small segmented size.
+    maxWidth: 380,
     alignItems: 'center',
   },
   scroll: {

@@ -187,7 +187,11 @@
     },
     "featured": {
       "title": "Propiedades Destacadas",
-      "empty": "No hay propiedades destacadas disponibles en este momento"
+      "empty": "No hay propiedades destacadas disponibles en este momento",
+      "gridLongTerm": "Estudios en Barcelona",
+      "gridVacation": "Apartamentos de playa en València",
+      "gridBuy": "Viviendas en venta en Barcelona",
+      "gridExchange": "Intercambios de casa en España"
     },
     "viewAll": "Ver Todo",
     "recentlyViewed": {
@@ -265,6 +269,13 @@
     "Search with": "Buscar con",
     "filters": {
       "listingType": "Tipo de anuncio"
+    },
+    "mode": {
+      "label": "Modo de búsqueda",
+      "longTerm": "Larga estancia",
+      "vacation": "Vacaciones",
+      "buy": "Comprar",
+      "exchange": "Intercambio"
     },
     "Advanced Filters": "Filtros Avanzados",
     "types": {
@@ -1003,7 +1014,9 @@
     },
     "mode": {
       "longTerm": "Larga estancia",
-      "vacation": "Vacaciones"
+      "vacation": "Vacaciones",
+      "buy": "Comprar",
+      "exchange": "Intercambio"
     },
     "savedProperties": {
       "title": "Carpetas guardadas",

@@ -252,7 +252,11 @@
     },
     "featured": {
       "title": "Featured Properties",
-      "empty": "No featured properties available at the moment"
+      "empty": "No featured properties available at the moment",
+      "gridLongTerm": "Studios in Barcelona",
+      "gridVacation": "Beach apartments in València",
+      "gridBuy": "Homes for sale in Barcelona",
+      "gridExchange": "Home exchanges in Spain"
     },
     "viewAll": "View All",
     "recentlyViewed": {
@@ -365,6 +369,13 @@
     "Search with": "Search with",
     "filters": {
       "listingType": "Listing type"
+    },
+    "mode": {
+      "label": "Browse mode",
+      "longTerm": "Long-term",
+      "vacation": "Vacation",
+      "buy": "Buy",
+      "exchange": "Exchange"
     },
     "Advanced Filters": "Advanced Filters",
     "types": {
@@ -955,7 +966,9 @@
     },
     "mode": {
       "longTerm": "Long-term",
-      "vacation": "Vacation"
+      "vacation": "Vacation",
+      "buy": "Buy",
+      "exchange": "Exchange"
     },
     "savedProperties": {
       "title": "Saved folders",

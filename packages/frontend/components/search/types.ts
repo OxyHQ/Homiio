@@ -7,7 +7,8 @@
  * data (no React) so both the Zustand stores and the components can depend on
  * them without a cycle.
  */
-import type { ListingIntent, PropertyType, RentMode } from '@homiio/shared-types';
+import { ListingIntent, RentMode } from '@homiio/shared-types';
+import type { PropertyType } from '@homiio/shared-types';
 
 /**
  * A geographic bounding box in the same `{ west, south, east, north }` shape the
@@ -93,3 +94,61 @@ export interface SearchQuery {
 
 /** The ordered steps the panel walks through (Dates only in vacation mode). */
 export type SearchStep = 'where' | 'type' | 'dates' | 'price';
+
+/**
+ * The single top-level "what am I browsing for" selection the global mode
+ * toggle (sidebar + hero) drives. It unifies the two axes the app already
+ * filters on — the rent experience ({@link RentMode}: long-term | vacation) and
+ * the listing {@link ListingIntent} (rent / sale / exchange) — into one typed
+ * value, WITHOUT forking the filtering logic: a `BrowseMode` is just a named
+ * alias over a `(rentMode, intent)` pair (see {@link BROWSE_MODE_MAP}).
+ *
+ *  - `long_term` / `vacation` → rent intent left undefined ("any", so legacy
+ *    rent-only listings still surface), keeping today's behaviour unchanged.
+ *  - `buy`      → `sale` intent.
+ *  - `exchange` → `exchange` intent.
+ *
+ * Pure data (no React) so the search store, the `RentalModeContext`, the
+ * sidebar toggle, and the `SearchPanel` can all share one mapping.
+ */
+export type BrowseMode = 'long_term' | 'vacation' | 'buy' | 'exchange';
+
+/** The two filter axes a {@link BrowseMode} decomposes into. */
+export interface BrowseModeAxes {
+  /** Rent experience (drives price unit + vacation-only fields). */
+  rentMode: RentMode;
+  /**
+   * Listing intent to scope to. `undefined` for the rent modes so legacy
+   * rent-only listings (no stored `intents`) still surface; `sale`/`exchange`
+   * for the dedicated buy/exchange browse modes.
+   */
+  intent: ListingIntent | undefined;
+}
+
+/**
+ * Canonical decomposition of every {@link BrowseMode} into its
+ * `(rentMode, intent)` axes. The ONE source of truth shared by the toggle, the
+ * context, the search store, and the panel.
+ */
+export const BROWSE_MODE_MAP: Record<BrowseMode, BrowseModeAxes> = {
+  long_term: { rentMode: RentMode.LONG_TERM, intent: undefined },
+  vacation: { rentMode: RentMode.VACATION, intent: undefined },
+  buy: { rentMode: RentMode.LONG_TERM, intent: ListingIntent.SALE },
+  exchange: { rentMode: RentMode.LONG_TERM, intent: ListingIntent.EXCHANGE },
+};
+
+/**
+ * Invert {@link BROWSE_MODE_MAP}: pick the {@link BrowseMode} implied by a
+ * `(rentMode, intent)` pair. Intent wins when set (`sale` ⇒ buy, `exchange` ⇒
+ * exchange); otherwise the rent experience selects long-term vs vacation. Used
+ * by the `SearchPanel` toggle, whose draft stores the two axes rather than a
+ * browse mode.
+ */
+export function browseModeFromAxes(
+  rentMode: RentMode,
+  intent: ListingIntent | undefined,
+): BrowseMode {
+  if (intent === ListingIntent.SALE) return 'buy';
+  if (intent === ListingIntent.EXCHANGE) return 'exchange';
+  return rentMode === RentMode.VACATION ? 'vacation' : 'long_term';
+}
