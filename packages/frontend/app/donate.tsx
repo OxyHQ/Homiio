@@ -225,7 +225,7 @@ export default function DonatePage() {
                     colors={[colors.primaryColor, colors.primaryColor + '90']}
                     style={styles.heroSection}
                 >
-                    <Ionicons name="heart" size={48} color={colors.white} />
+                    <Ionicons name="heart" size={48} color={colors.primaryForeground} />
                     <ThemedText style={styles.heroTitle}>
                         {t('donations.page.subtitle')}
                     </ThemedText>
@@ -304,13 +304,13 @@ const styles = StyleSheet.create({
     heroTitle: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: colors.white,
+        color: colors.primaryForeground,
         textAlign: 'center',
         marginTop: 16,
     },
     heroDescription: {
         fontSize: 16,
-        color: colors.white,
+        color: colors.primaryForeground,
         textAlign: 'center',
         marginTop: 12,
         opacity: 0.9,

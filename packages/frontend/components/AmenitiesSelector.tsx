@@ -49,7 +49,7 @@ export function AmenitiesSelector({
                 <Ionicons
                   name={amenity.icon}
                   size={16}
-                  color={isSelected ? colors.white : colors.primaryColor}
+                  color={isSelected ? colors.primaryForeground : colors.primaryColor}
                 />
                 <ThemedText
                   style={[styles.pickerOptionText, isSelected && styles.pickerOptionTextSelected]}
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
   },
   pickerOptionTextSelected: {
-    color: colors.white,
+    color: colors.primaryForeground,
     fontWeight: '600',
   },
   amenityOptionContent: {

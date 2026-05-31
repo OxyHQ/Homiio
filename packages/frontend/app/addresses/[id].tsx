@@ -699,7 +699,7 @@ export default function AddressDetailsPage() {
                     <Ionicons
                       name="create-outline"
                       size={16}
-                      color={colors.white}
+                      color={colors.primaryForeground}
                     />
                   }
                 >
@@ -862,7 +862,7 @@ const styles = StyleSheet.create({
     color: colors.muted,
   },
   reviewTabLabelActive: {
-    color: colors.white,
+    color: colors.primaryForeground,
   },
   reviewsList: {
     gap: spacing.md,

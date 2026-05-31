@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     },
     primaryBadgeText: {
         fontSize: 10,
-        color: colors.white,
+        color: colors.primaryForeground,
         fontWeight: 'bold',
     },
     imageActions: {

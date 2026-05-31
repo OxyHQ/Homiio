@@ -185,7 +185,7 @@ export default function MyPropertiesScreen() {
             variant="primary"
             size="small"
             onPress={handleCreateProperty}
-            icon={<Ionicons name="add" size={18} color={colors.white} />}
+            icon={<Ionicons name="add" size={18} color={colors.primaryForeground} />}
             accessibilityLabel={t('properties.my.createFirst')}
           >
             {t('common.add')}

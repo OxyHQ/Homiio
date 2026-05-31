@@ -103,7 +103,7 @@ export default function SharedConversationView() {
           end={{ x: 1, y: 1 }}
         >
           <View style={styles.errorContent}>
-            <Ionicons name="alert-circle" size={48} color={colors.white} />
+            <Ionicons name="alert-circle" size={48} color={colors.primaryForeground} />
             <Text style={styles.errorText}>{error}</Text>
             <Text style={styles.errorSubtext}>{t('sindi.shared.error.description')}</Text>
           </View>
@@ -165,7 +165,7 @@ export default function SharedConversationView() {
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
-          <Ionicons name="share-outline" size={16} color={colors.white} />
+          <Ionicons name="share-outline" size={16} color={colors.primaryForeground} />
           <Text style={styles.sharedBadgeText}>{t('sindi.shared.badge')}</Text>
         </LinearGradient>
       </View>
@@ -184,7 +184,7 @@ export default function SharedConversationView() {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <SindiIcon size={48} color={colors.white} />
+              <SindiIcon size={48} color={colors.primaryForeground} />
               <Text style={styles.emptyTitle}>{t('sindi.shared.empty.title')}</Text>
               <Text style={styles.emptySubtitle}>{t('sindi.shared.empty.subtitle')}</Text>
             </LinearGradient>
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
   },
   sharedBadgeText: {
     fontSize: 12,
-    color: colors.white,
+    color: colors.primaryForeground,
     fontWeight: '500',
     marginLeft: 4,
   },
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: colors.white,
+    color: colors.primaryForeground,
     marginTop: 16,
     marginBottom: 8,
   },
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   userText: {
-    color: colors.white,
+    color: colors.primaryForeground,
   },
   assistantText: {
     color: colors.COLOR_BLACK_LIGHT_2,
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 12,
-    color: colors.white,
+    color: colors.primaryForeground,
     textAlign: 'center',
   },
   errorContainer: {
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: colors.white,
+    color: colors.primaryForeground,
     marginTop: 16,
     marginBottom: 8,
   },

@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.COLOR_BLACK_LIGHT_5,
     },
     saveText: {
-        color: colors.white,
+        color: colors.primaryForeground,
         fontWeight: '600',
     },
 });

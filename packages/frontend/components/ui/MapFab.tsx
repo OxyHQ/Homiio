@@ -39,7 +39,7 @@ export const MapFab: React.FC<MapFabProps> = ({
         onPress={onPress}
         variant="primary"
         size="medium"
-        icon={<Ionicons name={icon} size={18} color={colors.white} />}
+        icon={<Ionicons name={icon} size={18} color={colors.primaryForeground} />}
         iconPosition="left"
         accessibilityLabel={label}
       >

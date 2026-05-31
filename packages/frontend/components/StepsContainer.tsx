@@ -37,7 +37,7 @@ export function StepsContainer({ steps, currentStep }: StepsContainerProps) {
                                 ]}
                             >
                                 {index < currentStep ? (
-                                    <Ionicons name="checkmark" size={14} color={colors.white} />
+                                    <Ionicons name="checkmark" size={14} color={colors.primaryForeground} />
                                 ) : (
                                     <ThemedText style={[styles.stepNumber, index === currentStep && styles.stepNumberActive]}>
                                         {index + 1}
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
         color: colors.COLOR_BLACK_LIGHT_4,
     },
     stepNumberActive: {
-        color: colors.white,
+        color: colors.primaryForeground,
     },
     stepLabel: {
         fontSize: 12,

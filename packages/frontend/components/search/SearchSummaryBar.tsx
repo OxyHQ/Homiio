@@ -377,7 +377,7 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
           accessibilityLabel={t('searchBar.search', 'Search') || 'Search'}
           style={[styles.searchButton, searchPressed && styles.searchButtonPressed]}
         >
-          <Ionicons name="search" size={SEARCH_ICON_SIZE} color={colors.white} />
+          <Ionicons name="search" size={SEARCH_ICON_SIZE} color={colors.primaryForeground} />
         </Pressable>
       </View>
     );

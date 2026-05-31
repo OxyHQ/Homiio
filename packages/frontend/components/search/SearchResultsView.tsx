@@ -566,7 +566,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
               onPress={handleSearchThisArea}
               variant="primary"
               size="small"
-              icon={<Ionicons name="refresh" size={16} color={colors.white} />}
+              icon={<Ionicons name="refresh" size={16} color={colors.primaryForeground} />}
               iconPosition="left"
               accessibilityLabel={
                 t('search.actions.searchArea', 'Search this area') || 'Search this area'

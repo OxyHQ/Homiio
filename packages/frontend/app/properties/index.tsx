@@ -362,7 +362,7 @@ export default function PropertiesScreen() {
           onPress={() => router.push('/properties/create')}
           variant="primary"
           style={styles.fabButton}
-          icon={<Ionicons name="add" size={24} color={colors.white} />}
+          icon={<Ionicons name="add" size={24} color={colors.primaryForeground} />}
           accessibilityLabel={t('properties.actions.create', 'Add property') || 'Add property'}
         />
       </View>

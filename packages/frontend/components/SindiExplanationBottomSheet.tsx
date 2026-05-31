@@ -389,7 +389,7 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
         <Button
           onPress={handleNext}
           style={{ flex: 1, backgroundColor: colors.primaryColor }}
-          textStyle={{ color: colors.white }}
+          textStyle={{ color: colors.primaryForeground }}
         >
           {currentStep === TOTAL_STEPS - 1 ? 'Start' : 'Next'}
         </Button>
@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
   },
   nextText: {
     fontSize: 16,
-    color: colors.white,
+    color: colors.primaryForeground,
     fontWeight: '700',
   },
   heroImage: {

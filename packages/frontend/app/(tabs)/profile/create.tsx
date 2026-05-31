@@ -180,7 +180,7 @@ export default function ProfileCreateScreen() {
           disabled={!selectedType || isCreating || isCreatingMut}
         >
           {isCreating || isCreatingMut ? (
-            <Ionicons name="refresh" size={20} color={colors.white} />
+            <Ionicons name="refresh" size={20} color={colors.primaryForeground} />
           ) : (
             <ThemedText style={styles.createButtonText}>Create</ThemedText>
           )}
@@ -665,7 +665,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
   },
   createButtonText: {
-    color: colors.white,
+    color: colors.primaryForeground,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -773,7 +773,7 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_3,
   },
   radioButtonTextSelected: {
-    color: colors.white,
+    color: colors.primaryForeground,
   },
   checkboxGroup: {
     flexDirection: 'row',
@@ -797,7 +797,7 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_3,
   },
   checkboxTextSelected: {
-    color: colors.white,
+    color: colors.primaryForeground,
   },
   infoContent: {
     flex: 1,

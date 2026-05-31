@@ -296,12 +296,12 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     title: {
-        color: colors.white,
+        color: colors.primaryForeground,
         fontSize: 24,
         fontWeight: 'bold',
     },
     subtitle: {
-        color: colors.white,
+        color: colors.primaryForeground,
         opacity: 0.9,
         marginTop: 4,
     },

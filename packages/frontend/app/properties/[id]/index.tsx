@@ -611,7 +611,7 @@ export default function PropertyDetailPage() {
                       />
                       {hasActiveViewing ? (
                         <View style={styles.viewingBadge}>
-                          <Ionicons name="checkmark" size={12} color={colors.white} />
+                          <Ionicons name="checkmark" size={12} color={colors.primaryForeground} />
                         </View>
                       ) : null}
                     </View>

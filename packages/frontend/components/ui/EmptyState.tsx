@@ -66,7 +66,7 @@ export function EmptyState({
             size="medium"
             icon={
               actionIcon ? (
-                <Ionicons name={actionIcon} size={16} color={colors.white} />
+                <Ionicons name={actionIcon} size={16} color={colors.primaryForeground} />
               ) : undefined
             }
           >

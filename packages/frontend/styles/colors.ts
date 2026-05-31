@@ -1,8 +1,8 @@
 /**
  * Bloom is the single source of truth for Homiio's colors.
  *
- * The static `colors` object below is DERIVED from Bloom's `blue` preset via
- * `buildTheme('blue', …)` so brand, text, background, border and status colors
+ * The static `colors` object below is DERIVED from Bloom's `yellow` preset via
+ * `buildTheme('yellow', …)` so brand, text, background, border and status colors
  * always track Bloom. `buildTheme` is a pure function (it only reads
  * `Platform.OS` inside its adaptive branch, which we never enable), so it is
  * safe to call at module load — even though `styles/colors.ts` is imported in
@@ -26,9 +26,9 @@
 import { buildTheme } from '@oxyhq/bloom/theme';
 import type { ThemeColors } from '@oxyhq/bloom/theme';
 
-/** Bloom `blue` resolved palettes — the single source of truth. */
-export const BLOOM_LIGHT: ThemeColors = buildTheme('blue', 'light').colors;
-export const BLOOM_DARK: ThemeColors = buildTheme('blue', 'dark').colors;
+/** Bloom `yellow` resolved palettes — the single source of truth. */
+export const BLOOM_LIGHT: ThemeColors = buildTheme('yellow', 'light').colors;
+export const BLOOM_DARK: ThemeColors = buildTheme('yellow', 'dark').colors;
 
 const channelToHex = (value: number): string =>
   Math.round(Math.max(0, Math.min(255, value)))
@@ -67,10 +67,15 @@ const toHex = (value: string): string => {
   return value;
 };
 
-/** Bloom `blue` light palette converted to hex for the legacy static `colors` map. */
+/** Bloom `yellow` light palette converted to hex for the legacy static `colors` map. */
 const L = (key: keyof ThemeColors): string => toHex(BLOOM_LIGHT[key]);
 
-/** Pure white — Bloom's primary-foreground for the `blue` preset. */
+/**
+ * Pure white — a LITERAL white fill, used for white-on-dark / on-image / on-overlay
+ * icons + text and white surfaces. This is NO LONGER the primary foreground: on the
+ * `yellow` preset, readable text on the brand fill is BLACK, so anything sitting on a
+ * primary-colored fill must use `colors.primaryForeground` (Bloom-sourced) instead.
+ */
 const WHITE = '#ffffff';
 /** Pure black — used for true black icon/text fills. */
 const BLACK = '#000000';
@@ -123,12 +128,12 @@ export type DomainColorKey = keyof typeof DomainColors.light;
 /**
  * Static color map kept for backwards compatibility with the ~1700 legacy
  * `colors.X` call sites. Every key is preserved; values are derived from
- * Bloom's `blue` light palette by ROLE (what each key is actually used for in
+ * Bloom's `yellow` light palette by ROLE (what each key is actually used for in
  * the app), so appearance is preserved except for the intended brand-primary
- * shift to Bloom blue. The grayscale ramp is Homiio's neutral domain.
+ * shift to Bloom yellow. The grayscale ramp is Homiio's neutral domain.
  */
 export const colors = {
-  // --- Brand (now Bloom `blue` #1D9BF0) ---
+  // --- Brand (now Bloom `yellow` #ffc300) ---
   primaryColor: L('primary'),
   /**
    * Page/content surface (the white panel behind app content). Tracks Bloom's
@@ -142,12 +147,14 @@ export const colors = {
   primaryDark: L('text'),
   primaryDark_1: L('textSecondary'),
   primaryDark_2: L('textTertiary'),
+  /** Readable foreground on primary-colored fills — black on the yellow preset, white on blue. Bloom-sourced. */
+  primaryForeground: L('primaryForeground'),
   secondaryColor: DomainColors.light.secondaryColor,
   secondaryLight: DomainColors.light.secondaryLight,
   overlay: BLOOM_LIGHT.overlay,
   shadow: BLOOM_LIGHT.shadow,
 
-  // --- Neutral grayscale ramp (now derived BY ROLE from Bloom `blue` light
+  // --- Neutral grayscale ramp (now derived BY ROLE from Bloom `yellow` light
   //     neutrals, darkest → lightest). Bloom models fewer neutral steps than
   //     this legacy 9-stop ramp and uses one value for textSecondary/textTertiary,
   //     so adjacent stops can coincide; the ordering stays monotonic
@@ -174,7 +181,7 @@ export const colors = {
   // --- Messaging / chat (Homiio inbox domain) ---
   messageBubbleSent: L('primary'),
   messageBubbleReceived: DomainColors.light.messageBubbleReceived,
-  messageTextSent: WHITE,
+  messageTextSent: L('primaryForeground'),
   messageTextReceived: DomainColors.light.messageTextReceived,
   messageTimestamp: DomainColors.light.messageTimestamp,
   messageSeparator: DomainColors.light.messageSeparator,

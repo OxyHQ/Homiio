@@ -305,7 +305,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
             variant="primary"
             size="medium"
             onPress={handleSubmit}
-            icon={<Ionicons name="search" size={16} color={colors.white} />}
+            icon={<Ionicons name="search" size={16} color={colors.primaryForeground} />}
             iconPosition="left"
             accessibilityLabel={t('search.actions.search', 'Search') || 'Search'}
           >

@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_5,
   },
   cellTextEndpoint: {
-    color: colors.white,
+    color: colors.primaryForeground,
     fontWeight: '700',
   },
 });

@@ -257,7 +257,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
               accessibilityRole="button"
               accessibilityLabel={t('searchBar.search', 'Search') || 'Search'}
             >
-              <Ionicons name="search" size={20} color={colors.white} />
+              <Ionicons name="search" size={20} color={colors.primaryForeground} />
             </Pressable>
           ) : null}
         </View>

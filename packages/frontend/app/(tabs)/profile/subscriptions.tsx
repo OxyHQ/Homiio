@@ -195,7 +195,7 @@ export default function SubscriptionsScreen() {
                 <View style={[styles.card, styles.highlightedCard]}>
                     {plusActive && (
                         <View style={styles.activeBadge}>
-                            <Icon name="checkmark-circle" size={16} color={colors.white} />
+                            <Icon name="checkmark-circle" size={16} color={colors.primaryForeground} />
                             <Text style={styles.activeBadgeText}>Active subscription</Text>
                         </View>
                     )}
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
         alignSelf: 'flex-start'
     },
     activeBadgeText: {
-        color: colors.white,
+        color: colors.primaryForeground,
         fontSize: 12,
         fontWeight: '700',
         marginLeft: 8
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     primaryBtnText: {
-        color: colors.white,
+        color: colors.primaryForeground,
         fontWeight: '700',
         fontSize: 16
     },

@@ -39,8 +39,8 @@ export function ActionButton({
             backgroundColor: colors.primaryColor,
             borderColor: colors.primaryColor,
           },
-          text: { color: colors.white },
-          icon: { color: colors.white },
+          text: { color: colors.primaryForeground },
+          icon: { color: colors.primaryForeground },
         };
       case 'secondary':
         return {
@@ -85,8 +85,8 @@ export function ActionButton({
             backgroundColor: colors.primaryColor,
             borderColor: colors.primaryColor,
           },
-          text: { color: colors.white },
-          icon: { color: colors.white },
+          text: { color: colors.primaryForeground },
+          icon: { color: colors.primaryForeground },
         };
     }
   };

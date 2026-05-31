@@ -42,7 +42,7 @@ export function SindiSection({ property }: SindiSectionProps) {
             <View style={styles.bannerContent}>
                 <View style={styles.leftSection}>
                     <View style={styles.iconContainer}>
-                        <SindiIcon size={32} color={colors.white} />
+                        <SindiIcon size={32} color={colors.primaryForeground} />
                     </View>
                     <View style={styles.textContainer}>
                         <ThemedText style={styles.title}>Ask Sindi AI</ThemedText>
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 20,
         fontWeight: '700',
-        color: colors.white,
+        color: colors.primaryForeground,
         marginBottom: 2,
     },
     subtitle: {

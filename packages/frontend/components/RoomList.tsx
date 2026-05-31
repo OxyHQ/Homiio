@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
     },
     matchScoreText: {
-        color: colors.white,
+        color: colors.primaryForeground,
         fontSize: 12,
         fontWeight: '600',
     },

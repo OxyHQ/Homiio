@@ -15,7 +15,7 @@ export const SindiAnalysis: React.FC<SindiAnalysisProps> = ({ property }) => pro
     <View style={styles.sindiContainer}>
         <View style={styles.sindiHeader}>
             <View style={styles.sindiIconContainer}>
-                <SindiIcon size={32} color={colors.white} />
+                <SindiIcon size={32} color={colors.primaryForeground} />
             </View>
             <View style={styles.sindiTextContainer}>
                 <ThemedText style={styles.sindiTitle}>Sindi personally analyzed this property</ThemedText>
@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
         position: 'relative',
     },
     sindiTextContainer: { flex: 1, gap: spacing.xs },
-    sindiTitle: { fontSize: 16, fontWeight: '700', color: colors.white },
+    sindiTitle: { fontSize: 16, fontWeight: '700', color: colors.primaryForeground },
     sindiDescription: { fontSize: 14, color: 'rgba(255, 255, 255, 0.9)', lineHeight: 20 },
 });
 

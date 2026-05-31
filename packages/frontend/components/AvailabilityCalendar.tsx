@@ -607,7 +607,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   daySelectedText: {
-    color: colors.white,
+    color: colors.primaryForeground,
     fontSize: 14,
     fontWeight: '700',
   },

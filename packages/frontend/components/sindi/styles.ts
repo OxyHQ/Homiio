@@ -208,7 +208,7 @@ export const sindiStyles = StyleSheet.create({
   errorText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: colors.white,
+    color: colors.primaryForeground,
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
@@ -261,7 +261,7 @@ export const sindiStyles = StyleSheet.create({
     fontStyle: 'italic',
   },
   userText: {
-    color: colors.white,
+    color: colors.primaryForeground,
   },
   assistantText: {
     color: colors.text,

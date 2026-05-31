@@ -198,7 +198,7 @@ export default function RootLayout() {
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <GestureHandlerRootView style={{ flex: 1 }}>
           {/*
-            Pin Bloom to the BLUE preset in LIGHT mode. `mode="light"` stops Bloom
+            Pin Bloom to the YELLOW preset in LIGHT mode. `mode="light"` stops Bloom
             from following the OS into dark — Homiio's static `colors.ts` is a
             light-only palette, so following the OS produced a light-static /
             dark-Bloom mismatch. This provider owns the splash screen + font
@@ -207,7 +207,7 @@ export default function RootLayout() {
             identical CSS vars instead of clobbering them with its `oxy`/`system`
             defaults — see OxyProvider's note that any outer provider is shadowed.
           */}
-          <BloomThemeProvider mode="light" colorPreset="blue" fonts onFontsLoading={<AppSplashScreen />}>
+          <BloomThemeProvider mode="light" colorPreset="yellow" fonts onFontsLoading={<AppSplashScreen />}>
           {!appIsReady ? (
             <AppSplashScreen
               startFade={startFade}
@@ -216,7 +216,7 @@ export default function RootLayout() {
           ) : (
               <QueryClientProvider client={queryClient}>
                 <RentalModeProvider>
-                <OxyProvider baseURL={OXY_BASE_URL} themeMode="light" colorPreset="blue">
+                <OxyProvider baseURL={OXY_BASE_URL} themeMode="light" colorPreset="yellow">
                   <ProfileProvider>
                     <SavedPropertiesProvider>
                       <NotificationProvider>

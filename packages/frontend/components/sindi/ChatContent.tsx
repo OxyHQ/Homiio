@@ -91,7 +91,7 @@ export function ChatContent({
           end={{ x: 1, y: 1 }}
         >
           <View style={sindiStyles.errorContent}>
-            <Ionicons name="alert-circle" size={48} color={colors.white} />
+            <Ionicons name="alert-circle" size={48} color={colors.primaryForeground} />
             <Text style={sindiStyles.errorText}>{t('sindi.errors.connection')}</Text>
             <Text style={sindiStyles.errorSubtext}>{t('sindi.errors.connectionMessage')}</Text>
           </View>

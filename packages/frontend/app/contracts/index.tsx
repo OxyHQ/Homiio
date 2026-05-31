@@ -248,7 +248,7 @@ export default function ContractsScreen() {
             variant="primary"
             size="large"
             onPress={handleAddNewContract}
-            icon={<Ionicons name="add" size={20} color={colors.white} />}
+            icon={<Ionicons name="add" size={20} color={colors.primaryForeground} />}
             style={styles.footerButton}
           >
             {t('New contract')}

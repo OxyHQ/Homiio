@@ -607,7 +607,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   activeFilterChipText: {
-    color: colors.white,
+    color: colors.primaryForeground,
   },
 
   // Properties List

@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
   countText: {
     fontSize: 10,
     fontWeight: '700',
-    color: colors.white,
+    color: colors.primaryForeground,
     lineHeight: 13,
   },
 });

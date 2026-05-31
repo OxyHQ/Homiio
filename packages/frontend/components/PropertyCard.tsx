@@ -357,7 +357,7 @@ export function PropertyCard({
           {/* Verified Badge */}
           {showVerifiedBadge && propertyData.isVerified && (
             <View style={[styles.verifiedBadge, styles.statusChip, { backgroundColor: colors.primaryColor }]}>
-              <Ionicons name="shield-checkmark" size={14} color={colors.white} />
+              <Ionicons name="shield-checkmark" size={14} color={colors.primaryForeground} />
             </View>
           )}
 

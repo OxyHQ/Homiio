@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
         color: colors.COLOR_BLACK,
     },
     chipTextSelected: {
-        color: colors.white,
+        color: colors.primaryForeground,
     },
     rangeContainer: {
         flexDirection: 'row',
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     applyButtonText: {
-        color: colors.white,
+        color: colors.primaryForeground,
         fontSize: 14,
         fontWeight: '600',
     },

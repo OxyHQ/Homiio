@@ -356,7 +356,7 @@ export default function BookViewingPage() {
                 </Text>
 
                 {selectedTime === time && (
-                  <Ionicons name="checkmark-circle" size={18} color={colors.white} />
+                  <Ionicons name="checkmark-circle" size={18} color={colors.primaryForeground} />
                 )}
               </TouchableOpacity>
             ))}
@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_3,
   },
   activeDateText: {
-    color: colors.white,
+    color: colors.primaryForeground,
   },
   timeSlotsContainer: {
     flexDirection: 'row',
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
     marginRight: 5,
   },
   selectedSlotText: {
-    color: colors.white,
+    color: colors.primaryForeground,
     fontWeight: '600',
   },
   notesInput: {
