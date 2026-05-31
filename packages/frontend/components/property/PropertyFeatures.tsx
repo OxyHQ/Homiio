@@ -1,11 +1,35 @@
+/**
+ * PropertyFeatures — property-detail "Property Features".
+ *
+ * Mirrors the "What this place offers" (AmenitiesGrid) look exactly: a flat,
+ * hairline-free `DetailIconGrid` of "icon + label" rows, each rendering the
+ * amenity's isometric PNG (via `getAmenityImage`) when art exists, else its
+ * Ionicons line glyph — both centered in a fixed `FEATURE_IMAGE_SIZE` box so
+ * PNG rows and line-icon rows align identically. No pills.
+ *
+ * Rows list what the place HAS (like amenities), not present/absent toggles:
+ *   - Furnished   always shown when `furnishedStatus` is defined (label varies
+ *                 by status). Ionicons `cube` (no PNG yet).
+ *   - Balcony     shown only when `hasBalcony`. PNG `balcony`, fallback `home`.
+ *   - Garden      shown only when `hasGarden`. Ionicons `leaf` (no PNG yet).
+ *   - Elevator    shown only when `hasElevator`. PNG `elevator`, fallback
+ *                 `arrow-up-circle`.
+ * No rows → renders nothing.
+ */
 import React, { useMemo } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { ThemedText } from '@/components/ThemedText';
+
 import { Section } from '@/components/property/Section';
+import {
+    DETAIL_ICON_SIZE,
+    DetailIconCell,
+    DetailIconGrid,
+    DetailIconRow,
+} from '@/components/property/DetailIconGrid';
 import { colors } from '@/styles/colors';
-import { spacing } from '@/constants/styles';
+import { getAmenityImage } from '@/constants/amenities';
 
 type FurnishedStatus = 'furnished' | 'partially_furnished' | 'unfurnished';
 
@@ -18,43 +42,55 @@ interface Props {
     } | null;
 }
 
-const AMBER = colors.warning;
+/**
+ * Edge length of a feature's isometric PNG — matches AmenitiesGrid's
+ * `AMENITY_IMAGE_SIZE` so the two sections read identically. Both the PNG and
+ * the Ionicons fallback are centered in a box of this size so rows align.
+ */
+const FEATURE_IMAGE_SIZE = 32;
 
-const ICONS = {
-    furnished: ['cube', 'cube-outline'] as const, // filled = furnished, outline = not
-    balcony: ['home', 'home-outline'] as const,
-    garden: ['leaf', 'leaf-outline'] as const,
-    elevator: ['arrow-up-circle', 'arrow-up-circle-outline'] as const,
-};
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
-function FeatureChip({
-    k,
-    label,
-    active,
-    warn,
-}: {
-    k: keyof typeof ICONS;
+interface FeatureRow {
+    key: string;
     label: string;
-    active: boolean;
-    warn?: boolean;
-}) {
-    const icon = ICONS[k][active ? 0 : 1];
-    const tint = warn ? AMBER : active ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4;
-    const bg = active ? colors.primaryLight_1 : colors.white;
-    const border = active ? colors.primaryLight_2 : colors.border;
-
-    return (
-        <View style={[styles.chip, { backgroundColor: bg, borderColor: border }]}>
-            <View style={styles.iconWrap}>
-                <Ionicons name={icon} size={22} color={tint} />
-                {warn && <View style={styles.warnDot} />}
-            </View>
-            <ThemedText numberOfLines={1} style={[styles.chipText, { color: tint }]}>
-                {label}
-            </ThemedText>
-        </View>
-    );
+    /** Amenity catalog id to resolve a PNG; `undefined` ⇒ always use the glyph. */
+    imageId?: string;
+    /** Fallback (or sole) Ionicons glyph when no PNG resolves. */
+    icon: IoniconName;
 }
+
+/**
+ * One feature line: PNG-or-Ionicons + label. Mirrors AmenitiesGrid's
+ * `AmenityRow` (same icon box + fallback) and delegates layout to the shared
+ * `DetailIconRow` so it can't drift from the amenities grid.
+ */
+const FeatureIconRow: React.FC<FeatureRow> = ({ label, imageId, icon }) => {
+    const image = imageId ? getAmenityImage(imageId) : undefined;
+    return (
+        <DetailIconRow
+            icon={
+                <View style={styles.iconBox}>
+                    {image ? (
+                        <Image
+                            source={image}
+                            style={styles.iconImage}
+                            resizeMode="contain"
+                            accessible={false}
+                        />
+                    ) : (
+                        <Ionicons
+                            name={icon}
+                            size={DETAIL_ICON_SIZE}
+                            color={colors.COLOR_BLACK_LIGHT_1}
+                        />
+                    )}
+                </View>
+            }
+            label={label}
+        />
+    );
+};
 
 export const PropertyFeatures: React.FC<Props> = ({ property }) => {
     const { t } = useTranslation();
@@ -63,78 +99,62 @@ export const PropertyFeatures: React.FC<Props> = ({ property }) => {
     const hasGarden = property?.hasGarden;
     const hasElevator = property?.hasElevator;
 
-    const hasAny =
-        furnishedStatus !== undefined ||
-        hasBalcony !== undefined ||
-        hasGarden !== undefined ||
-        hasElevator !== undefined;
+    const rows = useMemo<FeatureRow[]>(() => {
+        const next: FeatureRow[] = [];
 
-    const furnishedChip = useMemo(() => {
-        if (furnishedStatus === undefined) return null;
-        const isFurnished = furnishedStatus === 'furnished';
-        const isPartial = furnishedStatus === 'partially_furnished';
-        return (
-            <FeatureChip
-                k="furnished"
-                active={isFurnished}
-                warn={isPartial}
-                label={
-                    isFurnished
-                        ? t('Furnished')
-                        : isPartial
-                            ? t('Partially Furnished')
-                            : t('Unfurnished')
-                }
-            />
-        );
-    }, [furnishedStatus, t]);
+        if (furnishedStatus !== undefined) {
+            const label =
+                furnishedStatus === 'furnished'
+                    ? t('Furnished')
+                    : furnishedStatus === 'partially_furnished'
+                        ? t('Partially Furnished')
+                        : t('Unfurnished');
+            next.push({ key: 'furnished', label, icon: 'cube' });
+        }
+        if (hasBalcony === true) {
+            next.push({ key: 'balcony', label: t('Balcony'), imageId: 'balcony', icon: 'home' });
+        }
+        if (hasGarden === true) {
+            next.push({ key: 'garden', label: t('Garden'), icon: 'leaf' });
+        }
+        if (hasElevator === true) {
+            next.push({
+                key: 'elevator',
+                label: t('Elevator'),
+                imageId: 'elevator',
+                icon: 'arrow-up-circle',
+            });
+        }
 
-    if (!hasAny) return null;
+        return next;
+    }, [furnishedStatus, hasBalcony, hasGarden, hasElevator, t]);
+
+    if (rows.length === 0) return null;
 
     return (
         <Section title={t('Property Features')}>
-            <View style={styles.grid}>
-                {furnishedChip}
-                {hasBalcony !== undefined && (
-                    <FeatureChip k="balcony" active={!!hasBalcony} label={t('Balcony')} />
-                )}
-                {hasGarden !== undefined && (
-                    <FeatureChip k="garden" active={!!hasGarden} label={t('Garden')} />
-                )}
-                {hasElevator !== undefined && (
-                    <FeatureChip k="elevator" active={!!hasElevator} label={t('Elevator')} />
-                )}
-            </View>
+            <DetailIconGrid>
+                {rows.map((row) => (
+                    <DetailIconCell key={row.key}>
+                        <FeatureIconRow {...row} />
+                    </DetailIconCell>
+                ))}
+            </DetailIconGrid>
         </Section>
     );
 };
 
 const styles = StyleSheet.create({
-    grid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: spacing.sm,
-    },
-    chip: {
-        flexDirection: 'row',
+    iconBox: {
+        width: FEATURE_IMAGE_SIZE,
+        height: FEATURE_IMAGE_SIZE,
         alignItems: 'center',
-        gap: spacing.sm,
-        paddingVertical: spacing.sm,
-        paddingHorizontal: spacing.md,
-        borderRadius: 999,
-        borderWidth: 1,
+        justifyContent: 'center',
     },
-    iconWrap: { position: 'relative', alignItems: 'center', justifyContent: 'center' },
-    warnDot: {
-        position: 'absolute',
-        top: -2,
-        right: -2,
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: AMBER,
+    iconImage: {
+        width: FEATURE_IMAGE_SIZE,
+        height: FEATURE_IMAGE_SIZE,
     },
-    chipText: { fontSize: 13, fontWeight: '600' },
 });
 
 export default PropertyFeatures;
