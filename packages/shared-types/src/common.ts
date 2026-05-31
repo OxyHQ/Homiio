@@ -82,6 +82,41 @@ export enum AvailabilityWindowStatus {
   BOOKED = 'booked'
 }
 
+/**
+ * Ways a single listing can be offered. A listing may carry MULTIPLE intents
+ * at once (e.g. `[RENT, SALE]` for "rent + sell"). Legacy listings with no
+ * stored intents are treated as rent-only.
+ * - RENT: traditional/short-term rental (the existing flow)
+ * - SALE: property is for sale (buy)
+ * - EXCHANGE: home swap and/or free hosting
+ */
+export enum ListingIntent {
+  RENT = 'rent',
+  SALE = 'sale',
+  EXCHANGE = 'exchange'
+}
+
+/**
+ * How an EXCHANGE listing is offered.
+ * - SWAP: reciprocal home swap (each party stays in the other's home)
+ * - HOST: one-way free hosting (guest stays, no reciprocity required)
+ * - BOTH: host accepts either a swap or a hosting arrangement
+ */
+export enum ExchangeMode {
+  SWAP = 'swap',
+  HOST = 'host',
+  BOTH = 'both'
+}
+
+/** Lifecycle of an exchange (home-swap / hosting) request. */
+export enum ExchangeRequestStatus {
+  PENDING = 'pending',
+  CONFIRMED = 'confirmed',
+  DECLINED = 'declined',
+  CANCELLED = 'cancelled',
+  COMPLETED = 'completed'
+}
+
 /** Vacation-rental cancellation policy presets (Airbnb-style). */
 export enum CancellationPolicy {
   FLEXIBLE = 'flexible',

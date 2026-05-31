@@ -17,6 +17,7 @@ class PropertyController { }
   'findPropertiesInRadius',
   'getPropertyStats',
   'getAreaInsights',
+  'getPropertyNearbyServices',
   'getPropertiesByIds',
   'getPropertiesByOwner'
 ].forEach(name => {

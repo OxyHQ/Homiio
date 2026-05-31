@@ -1,8 +1,10 @@
 /**
- * Review-related types shared across Homiio frontend and backend
+ * Review-related types shared across Homiio frontend and backend.
+ *
+ * Ids are plain `string`s: shared-types MUST NOT depend on mongoose. The
+ * backend Review model declares its own `IReview` with `ObjectId` fields and
+ * Mongoose transparently casts these string ids to `ObjectId` at the DB layer.
  */
-
-import { Types } from 'mongoose';
 
 // Rating enums
 export enum TemperatureRating {
@@ -174,16 +176,16 @@ export enum PetsRating {
 // Core review interface
 export interface Review {
   // Address hierarchy
-  addressId: string | Types.ObjectId; // Reference to the specific address level (building or unit)
+  addressId: string; // Reference to the specific address level (building or unit)
   addressLevel: 'BUILDING' | 'UNIT'; // Level at which review is attached
-  
+
   // Hierarchical address references for aggregation
-  streetLevelId: string | Types.ObjectId; // Reference to street-level address
-  buildingLevelId: string | Types.ObjectId; // Reference to building-level address  
-  unitLevelId?: string | Types.ObjectId; // Reference to unit-level address (only for UNIT level reviews)
-  
+  streetLevelId: string; // Reference to street-level address
+  buildingLevelId: string; // Reference to building-level address
+  unitLevelId?: string; // Reference to unit-level address (only for UNIT level reviews)
+
   // User reference
-  profileId: string | Types.ObjectId;
+  profileId: string;
   
   // Basic information
   greenHouse?: string;
@@ -251,7 +253,7 @@ export interface Review {
   // Community interaction
   helpfulVotes?: number;
   unhelpfulVotes?: number;
-  replies?: Types.ObjectId[];
+  replies?: string[];
 }
 
 export interface ReviewDocument extends Review {

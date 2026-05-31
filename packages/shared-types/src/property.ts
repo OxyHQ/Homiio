@@ -15,6 +15,8 @@ import {
   AvailabilityWindow,
   CancellationPolicy,
   PriceBreakdown,
+  ListingIntent,
+  ExchangeMode,
   DeepPartial
 } from './common';
 import { Address } from './address';
@@ -30,6 +32,57 @@ export interface PropertyRent {
   hasUtilitiesIncluded?: boolean;
   hasReducedDeposit?: boolean;
 }
+
+/**
+ * Sale pricing for a listing offered with the SALE intent (buy flow).
+ * `pricePerSqm` is derived server-side from `price / squareFootage` when both
+ * are known. `estimatedYield` is an optional gross rental-yield percentage.
+ */
+export interface PropertySale {
+  price: number;
+  currency: string;
+  pricePerSqm?: number;
+  estimatedYield?: number;
+  isPriceReduced?: boolean;
+  chainStatus?: 'no_chain' | 'chain' | 'unknown';
+}
+
+/**
+ * Home-exchange offer for a listing with the EXCHANGE intent (swap / hosting).
+ * Reuses the same {@link AvailabilityWindow} type as vacation rentals so the
+ * calendar primitives stay consistent across intents.
+ */
+export interface PropertyExchange {
+  mode: ExchangeMode;
+  availabilityWindows: AvailabilityWindow[];
+  /** Minimum number of nights for an exchange stay. */
+  minStay?: number;
+  /** Maximum number of nights for an exchange stay. */
+  maxStay?: number;
+  welcomeNote?: string;
+  languages?: string[];
+  mealsIncluded?: boolean;
+  /** When true, the host expects a reciprocal stay (true swap, not one-way hosting). */
+  requiresReciprocity?: boolean;
+}
+
+/**
+ * Defaults that drive the mortgage affordability calculator on sale listings.
+ * `defaultAnnualRate`/`defaultDownPaymentFraction` are fractions (e.g. 0.035 =
+ * 3.5%, 0.20 = 20%); `termOptions` are mortgage lengths in years.
+ */
+export interface MortgageConfig {
+  defaultAnnualRate: number;
+  termOptions: number[];
+  defaultDownPaymentFraction: number;
+}
+
+/** Canonical mortgage-calculator defaults shared by frontend and backend. */
+export const DEFAULT_MORTGAGE_CONFIG: MortgageConfig = {
+  defaultAnnualRate: 0.035,
+  termOptions: [10, 15, 20, 25, 30],
+  defaultDownPaymentFraction: 0.20
+};
 
 export interface PropertyImage {
   url: string;
@@ -161,6 +214,14 @@ export interface Property {
   instantBook?: boolean;
   /** Optional vacation-mode fee breakdown. */
   priceBreakdown?: PriceBreakdown;
+  // Multi-intent platform (rent / sale / exchange). All additive & optional;
+  // a listing with no `intents` is treated as rent-only for back-compat.
+  /** Ways this listing is offered. Defaults to `['rent']` when absent. */
+  intents?: ListingIntent[];
+  /** Sale pricing, present when `intents` includes `'sale'`. */
+  sale?: PropertySale;
+  /** Home-exchange offer, present when `intents` includes `'exchange'`. */
+  exchange?: PropertyExchange;
   // Flags
   isVerified?: boolean;
   isEcoFriendly?: boolean;
@@ -227,6 +288,10 @@ export interface CreatePropertyData {
   cancellationPolicy?: CancellationPolicy;
   instantBook?: boolean;
   priceBreakdown?: PriceBreakdown;
+  // Multi-intent platform (rent / sale / exchange)
+  intents?: ListingIntent[];
+  sale?: PropertySale;
+  exchange?: PropertyExchange;
   // Accommodation-specific details
   accommodationDetails?: {
     sleepingArrangement?: 'couch' | 'air_mattress' | 'floor' | 'tent' | 'hammock';
@@ -280,6 +345,15 @@ export interface PropertyFilters {
   checkOut?: string;
   /** Required number of guests the listing must accommodate. */
   guests?: number;
+  // Multi-intent filters
+  /** Restrict to listings carrying this intent (matches arrays containing it). */
+  intent?: ListingIntent;
+  /** Minimum sale price (only meaningful with `intent === 'sale'`). */
+  minSalePrice?: number;
+  /** Maximum sale price (only meaningful with `intent === 'sale'`). */
+  maxSalePrice?: number;
+  /** Exchange mode filter. A `'both'` listing matches a `swap` or `host` request. */
+  exchangeMode?: ExchangeMode;
 }
 
 export interface PropertyStructuredData {
@@ -430,4 +504,62 @@ export interface PropertyAreaInsights {
   neighborhoodVsCity: AreaNeighborhoodVsCity | null;
   /** Up to 12 nearest comparable listings, EXCLUDING the target property. */
   comparables: Property[];
+}
+
+/**
+ * The fixed set of everyday-amenity categories the "nearby services" section
+ * reports on. The endpoint ALWAYS returns every key (with `present: false`
+ * when nothing of that kind is found nearby), so the frontend can render a
+ * "not nearby" state without inferring which categories were checked.
+ */
+export type NearbyServiceKey =
+  | 'pharmacy'
+  | 'school'
+  | 'hospital'
+  | 'police'
+  | 'fire_station'
+  | 'supermarket'
+  | 'transit'
+  | 'park'
+  | 'bank'
+  | 'restaurant'
+  | 'gym';
+
+/**
+ * Presence summary for a single service category near a property.
+ *
+ * This is deliberately aggregate-only (presence + count + nearest distance) and
+ * never exposes individual place names: the section answers "is there a
+ * pharmacy nearby?", not "which pharmacy?".
+ */
+export interface NearbyServiceCategory {
+  key: NearbyServiceKey;
+  /** Whether at least one place of this category exists within the radius. */
+  present: boolean;
+  /** Number of matching places found within the radius (0 when absent). */
+  count: number;
+  /** Straight-line distance, in metres, to the nearest match; null when absent. */
+  nearestM: number | null;
+}
+
+/**
+ * Payload returned by `GET /api/properties/:propertyId/nearby-services`.
+ *
+ * Reports, for a fixed set of everyday services (pharmacy, school, transit, …),
+ * whether each is NEAR the property's coordinates — presence, count and the
+ * distance to the nearest one — sourced from OpenStreetMap's Overpass API.
+ *
+ * `categories` ALWAYS contains every `NearbyServiceKey` (absent ones have
+ * `present: false`). `partial` is true when the upstream lookup timed out or
+ * failed (or the property has no coordinates) and the result is therefore a
+ * degraded/empty snapshot rather than a confirmed "nothing nearby"; consumers
+ * should treat a `partial` all-absent result as "unknown", not "none".
+ */
+export interface PropertyNearbyServices {
+  /** Search radius, in metres, used around the property's coordinates. */
+  radiusM: number;
+  /** One entry per `NearbyServiceKey`; `present: false` when none were found. */
+  categories: NearbyServiceCategory[];
+  /** True when the lookup degraded (upstream failure/timeout or no coordinates). */
+  partial: boolean;
 }

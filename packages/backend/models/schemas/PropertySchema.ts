@@ -17,8 +17,22 @@ const {
   LeaseDuration,
   RentMode,
   AvailabilityWindowStatus,
-  CancellationPolicy
+  CancellationPolicy,
+  ListingIntent,
+  ExchangeMode
 } = require('@homiio/shared-types');
+
+/**
+ * Back-compat: every listing predating the multi-intent model has no stored
+ * `intents`. Surface those (and any empty array) as rent-only so the field is
+ * always present and meaningful on every read path (lean queries, toJSON,
+ * toObject). Mutates the passed plain object in place.
+ */
+function normalizeIntents(ret: any): void {
+  if (ret && (!Array.isArray(ret.intents) || ret.intents.length === 0)) {
+    ret.intents = [ListingIntent.RENT];
+  }
+}
 
 const rentSchema = new mongoose.Schema({
   amount: {
@@ -152,6 +166,74 @@ const priceBreakdownSchema = new mongoose.Schema({
   }
 }, { _id: false });
 
+// Sale pricing for listings carrying the SALE intent (buy flow).
+const saleSchema = new mongoose.Schema({
+  price: {
+    type: Number,
+    min: [0, 'Sale price cannot be negative']
+  },
+  currency: {
+    type: String,
+    uppercase: true,
+    minlength: 3,
+    maxlength: 3
+  },
+  pricePerSqm: {
+    type: Number,
+    min: [0, 'Price per square metre cannot be negative']
+  },
+  estimatedYield: {
+    type: Number,
+    min: [0, 'Estimated yield cannot be negative']
+  },
+  isPriceReduced: {
+    type: Boolean,
+    default: false
+  },
+  chainStatus: {
+    type: String,
+    enum: ['no_chain', 'chain', 'unknown']
+  }
+}, { _id: false });
+
+// Home-exchange offer for listings carrying the EXCHANGE intent (swap / hosting).
+// Reuses availabilityWindowSchema so exchange calendars match vacation calendars.
+const exchangeSchema = new mongoose.Schema({
+  mode: {
+    type: String,
+    enum: Object.values(ExchangeMode)
+  },
+  availabilityWindows: {
+    type: [availabilityWindowSchema],
+    default: []
+  },
+  minStay: {
+    type: Number,
+    min: [1, 'Minimum stay must be at least 1 night']
+  },
+  maxStay: {
+    type: Number,
+    min: [1, 'Maximum stay must be at least 1 night']
+  },
+  welcomeNote: {
+    type: String,
+    trim: true,
+    maxlength: [2000, 'Welcome note cannot exceed 2000 characters']
+  },
+  languages: [{
+    type: String,
+    trim: true
+  }],
+  mealsIncluded: {
+    type: Boolean,
+    default: false
+  },
+  requiresReciprocity: {
+    type: Boolean,
+    default: false
+  }
+}, { _id: false });
+
 const propertySchema = new mongoose.Schema({
   profileId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -264,7 +346,15 @@ const propertySchema = new mongoose.Schema({
   },
   rent: {
     type: rentSchema,
-    required: true
+    // Not unconditionally required: a sale-only listing (intents includes 'sale'
+    // with a sale price) may legitimately omit rent. The `hasTransactablePrice`
+    // path validator below still guarantees the listing is transactable.
+    required: function(this: any) {
+      const intents = Array.isArray(this.intents) ? this.intents : [];
+      const isSaleOnly = intents.includes(ListingIntent.SALE) && !intents.includes(ListingIntent.RENT);
+      const hasSalePrice = typeof this.sale?.price === 'number' && this.sale.price > 0;
+      return !(isSaleOnly && hasSalePrice);
+    }
   },
   amenities: [{
     type: String,
@@ -356,6 +446,20 @@ const propertySchema = new mongoose.Schema({
   },
   priceBreakdown: {
     type: priceBreakdownSchema,
+    default: undefined
+  },
+  // ---- Multi-intent platform (rent / sale / exchange) ----
+  // A listing may carry several intents at once; empty/missing reads as rent-only.
+  intents: {
+    type: [{ type: String, enum: Object.values(ListingIntent) }],
+    default: [ListingIntent.RENT]
+  },
+  sale: {
+    type: saleSchema,
+    default: undefined
+  },
+  exchange: {
+    type: exchangeSchema,
     default: undefined
   },
   // ----------------------------------------------------
@@ -516,23 +620,29 @@ const propertySchema = new mongoose.Schema({
   }
 }, {
   timestamps: true,
-  toJSON: { 
+  toJSON: {
     virtuals: true,
     transform: function(doc, ret) {
       ret.id = ret._id;
-      
+
+      // Back-compat: legacy listings predate `intents`; surface them as rent-only.
+      normalizeIntents(ret);
+
       // Apply address field transformation
       transformAddressFields(ret);
-      
+
       return ret;
     }
   },
-  toObject: { 
+  toObject: {
     virtuals: true,
     transform: function(doc, ret) {
+      // Back-compat: legacy listings predate `intents`; surface them as rent-only.
+      normalizeIntents(ret);
+
       // Apply address field transformation (used by lean queries)
       transformAddressFields(ret);
-      
+
       return ret;
     }
   }
@@ -565,6 +675,34 @@ propertySchema.index({ 'availabilityWindows.start': 1 });
 propertySchema.index({ 'availabilityWindows.end': 1 });
 // Vacation feed sort: highlight instant-book listings.
 propertySchema.index({ rentMode: 1, instantBook: 1, status: 1 });
+// ---- Multi-intent indexes (rent / sale / exchange) ----
+// Intent-scoped feed queries (intents is an array; the index matches membership).
+propertySchema.index({ intents: 1, status: 1 });
+// Sale price range filtering and salePrice sort.
+propertySchema.index({ 'sale.price': 1 });
+// Exchange feed queries scoped by intent + exchange mode + status.
+propertySchema.index({ intents: 1, 'exchange.mode': 1, status: 1 });
+
+/**
+ * A listing is valid when it can actually be transacted: either it has a rent
+ * amount, or it is offered for sale with a sale price. This keeps the `rent`
+ * field present (so downstream `property.rent` access never throws) while
+ * letting sale-only listings skip a meaningful rent. Legacy rent docs pass.
+ */
+function hasTransactablePrice(this: any): boolean {
+  const rentAmount = this.rent?.amount;
+  if (typeof rentAmount === 'number' && rentAmount > 0) {
+    return true;
+  }
+  const intents = Array.isArray(this.intents) ? this.intents : [];
+  const salePrice = this.sale?.price;
+  return intents.includes(ListingIntent.SALE) && typeof salePrice === 'number' && salePrice > 0;
+}
+
+propertySchema.path('rent').validate(
+  hasTransactablePrice,
+  'A listing must have a rent amount or, for sale listings, a sale price'
+);
 
 // Virtual for full address (requires population)
 propertySchema.virtual('fullAddress').get(function() {
@@ -594,17 +732,22 @@ propertySchema.virtual('primaryImage').get(function() {
   return primary || this.images[0] || null;
 });
 
-// Post-query hook for lean queries — only transform when addressId is populated as object
+// Post-query hook for lean queries: lean() bypasses the toJSON/toObject
+// transforms, so normalize intents (back-compat) and the address shape here so
+// every read path is consistent. Address transform only runs when populated.
 propertySchema.post(['find', 'findOne'], function(docs) {
   if (!docs) return;
-  if (Array.isArray(docs)) {
-    for (const doc of docs) {
-      if (doc && doc.addressId && typeof doc.addressId === 'object') {
-        transformAddressFields(doc);
-      }
+  const apply = (doc: any) => {
+    if (!doc) return;
+    normalizeIntents(doc);
+    if (doc.addressId && typeof doc.addressId === 'object') {
+      transformAddressFields(doc);
     }
-  } else if (docs.addressId && typeof docs.addressId === 'object') {
-    transformAddressFields(docs);
+  };
+  if (Array.isArray(docs)) {
+    for (const doc of docs) apply(doc);
+  } else {
+    apply(docs);
   }
 });
 

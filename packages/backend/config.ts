@@ -84,6 +84,23 @@ export interface Config {
     /** Optional Referer header, also accepted by the OSM usage policy. */
     referer?: string;
   };
+  overpass: {
+    /**
+     * Endpoint URL of the Overpass API instance used to look up nearby
+     * points of interest. Defaults to the public OSM Overpass endpoint,
+     * which is free and requires no API key. Like Nominatim it is rate-limited
+     * and REQUIRES a descriptive User-Agent; results are cached aggressively to
+     * stay within the usage policy.
+     * See https://wiki.openstreetmap.org/wiki/Overpass_API
+     */
+    apiUrl: string;
+    /**
+     * Descriptive User-Agent sent with every Overpass request. Reuses the
+     * geocoding User-Agent by default so all OSM-bound traffic identifies the
+     * same way.
+     */
+    userAgent: string;
+  };
 }
 
 const config: Config = {
@@ -210,6 +227,13 @@ const config: Config = {
     // OSM requires a descriptive, identifying User-Agent on every request.
     userAgent: process.env.GEOCODING_USER_AGENT || 'Homiio/1.0 (+https://homiio.com)',
     referer: process.env.GEOCODING_REFERER || 'https://homiio.com',
+  },
+
+  // Overpass Configuration (OpenStreetMap POI lookup — free, no API key)
+  overpass: {
+    apiUrl: process.env.OVERPASS_API_URL || 'https://overpass-api.de/api/interpreter',
+    // OSM requires a descriptive, identifying User-Agent on every request.
+    userAgent: process.env.OVERPASS_USER_AGENT || process.env.GEOCODING_USER_AGENT || 'Homiio/1.0 (+https://homiio.com)',
   }
 };
 

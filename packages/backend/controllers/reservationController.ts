@@ -16,40 +16,52 @@ const { Property, Reservation, Profile } = require('../models');
 const { logger } = require('../middlewares/logging');
 const { AppError, successResponse, paginationResponse } = require('../middlewares/errorHandler');
 const { ReservationStatus, CancellationPolicy, RentMode, AvailabilityWindowStatus } = require('@homiio/shared-types');
+const { hasConflict } = require('../utils/availabilityUtils');
+import type { DateWindow } from '../utils/availabilityUtils';
 
 const ACTIVE_RESERVATION_STATUSES = [ReservationStatus.PENDING, ReservationStatus.CONFIRMED];
+
+/** Number of milliseconds in one day, used to derive nights from a date range. */
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+/**
+ * Raw shape of a stored availability window. At rest the dates are ISO strings,
+ * but a hydrated Mongoose document exposes them as `Date`, so both are accepted.
+ */
+interface RawAvailabilityWindow {
+  start?: Date | string;
+  end?: Date | string;
+  status?: string;
+}
 
 /**
  * Compute nights between two dates (half-open: checkOut exclusive).
  */
 function computeNights(checkIn: Date, checkOut: Date): number {
   const ms = checkOut.getTime() - checkIn.getTime();
-  return Math.round(ms / (1000 * 60 * 60 * 24));
-}
-
-/**
- * Two half-open intervals [aStart, aEnd) and [bStart, bEnd) overlap iff
- * aStart < bEnd AND bStart < aEnd.
- */
-function rangesOverlap(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
-  return aStart.getTime() < bEnd.getTime() && bStart.getTime() < aEnd.getTime();
+  return Math.round(ms / MS_PER_DAY);
 }
 
 /**
  * Determine whether a property's availability windows BLOCK the requested
  * range. A request is blocked if any window with status `blocked` or `booked`
  * overlaps it.
+ *
+ * Available windows and windows with malformed dates are dropped before the
+ * shared half-open overlap check (`hasConflict`) is applied, so they can never
+ * block a valid request.
  */
-function isBlockedByWindows(windows: any[], checkIn: Date, checkOut: Date): boolean {
+function isBlockedByWindows(windows: RawAvailabilityWindow[], checkIn: Date, checkOut: Date): boolean {
   if (!Array.isArray(windows) || windows.length === 0) return false;
+  const blocking: DateWindow[] = [];
   for (const window of windows) {
     if (window?.status === AvailabilityWindowStatus.AVAILABLE) continue;
-    const wStart = window?.start instanceof Date ? window.start : new Date(window?.start);
-    const wEnd = window?.end instanceof Date ? window.end : new Date(window?.end);
+    const wStart = window?.start instanceof Date ? window.start : new Date(String(window?.start));
+    const wEnd = window?.end instanceof Date ? window.end : new Date(String(window?.end));
     if (Number.isNaN(wStart.getTime()) || Number.isNaN(wEnd.getTime())) continue;
-    if (rangesOverlap(checkIn, checkOut, wStart, wEnd)) return true;
+    blocking.push({ start: wStart, end: wEnd });
   }
-  return false;
+  return hasConflict({ start: checkIn, end: checkOut }, blocking);
 }
 
 /**

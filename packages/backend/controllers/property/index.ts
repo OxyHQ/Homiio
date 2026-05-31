@@ -5,5 +5,6 @@ export * from './search';
 export * from './geospatial';
 export * from './stats';
 export * from './areaInsights';
+export * from './nearbyServices';
 export * from './batch';
 export * from './list';

@@ -265,3 +265,68 @@ export {
   validateTenantApplication,
   validateTenantApplicationUpdate,
 };
+
+/**
+ * Exchange request validation rules (POST /api/exchanges)
+ *
+ * Only the structural primary fields are enforced here; the controller owns the
+ * business rules (intent/mode compatibility, ownership, future-dated window,
+ * conflict detection). `offered*` are optional at this layer because they only
+ * apply to a swap — the controller requires them for `mode === 'swap'`.
+ */
+const validateExchangeRequest = [
+  body('propertyId').isString().notEmpty().withMessage('Property ID is required'),
+  body('mode').isIn(['swap', 'host']).withMessage('Exchange mode must be "swap" or "host"'),
+  body('requestedWindow.start').isISO8601().withMessage('Valid requested window start is required'),
+  body('requestedWindow.end').isISO8601().withMessage('Valid requested window end is required'),
+  body('requestedWindow.end').custom((value, { req }) => {
+    const start = req.body?.requestedWindow?.start;
+    if (value && start && new Date(value) <= new Date(start)) {
+      throw new Error('Requested window end must be after start');
+    }
+    return true;
+  }),
+  body('offeredPropertyId').optional().isString().withMessage('Offered property ID must be a string'),
+  body('offeredWindow.start').optional().isISO8601().withMessage('Offered window start must be a valid date'),
+  body('offeredWindow.end').optional().isISO8601().withMessage('Offered window end must be a valid date'),
+  body('offeredWindow.end').optional().custom((value, { req }) => {
+    const start = req.body?.offeredWindow?.start;
+    if (value && start && new Date(value) <= new Date(start)) {
+      throw new Error('Offered window end must be after start');
+    }
+    return true;
+  }),
+  body('message').optional().isString().isLength({ max: 2000 }).withMessage('Message max length is 2000'),
+  handleValidationErrors
+];
+
+/**
+ * Exchange status update validation rules (PATCH /api/exchanges/:id)
+ */
+const validateExchangeUpdate = [
+  param('id').isString().notEmpty().withMessage('Exchange request ID is required'),
+  body('status').isIn(['confirmed', 'declined', 'cancelled', 'completed']).withMessage('Invalid status transition'),
+  body('message').optional().isString().isLength({ max: 2000 }).withMessage('Message max length is 2000'),
+  handleValidationErrors
+];
+
+/**
+ * Exchange review validation rules (POST /api/exchanges/:id/reviews)
+ */
+const validateExchangeReview = [
+  param('id').isString().notEmpty().withMessage('Exchange request ID is required'),
+  body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be an integer between 1 and 5'),
+  body('comment').optional().isString().isLength({ max: 2000 }).withMessage('Comment max length is 2000'),
+  body('categories').optional().isObject().withMessage('Categories must be an object'),
+  body('categories.communication').optional().isInt({ min: 1, max: 5 }).withMessage('communication must be 1-5'),
+  body('categories.cleanliness').optional().isInt({ min: 1, max: 5 }).withMessage('cleanliness must be 1-5'),
+  body('categories.accuracy').optional().isInt({ min: 1, max: 5 }).withMessage('accuracy must be 1-5'),
+  body('categories.hospitality').optional().isInt({ min: 1, max: 5 }).withMessage('hospitality must be 1-5'),
+  handleValidationErrors
+];
+
+export {
+  validateExchangeRequest,
+  validateExchangeUpdate,
+  validateExchangeReview,
+};

@@ -14,6 +14,8 @@ const BillingModel = require('./schemas/BillingSchema');
 const ReservationModel = require('./schemas/ReservationSchema');
 const TenantApplicationModel = require('./schemas/TenantApplicationSchema');
 const NotificationModel = require('./schemas/NotificationSchema');
+const ExchangeRequestModel = require('./schemas/ExchangeRequestSchema');
+const ExchangeReviewModel = require('./schemas/ExchangeReviewSchema');
 
 // Import the Review model as TypeScript model
 const ReviewModel = require('./Review').Review;
@@ -35,5 +37,7 @@ module.exports = {
   Billing: BillingModel,
   Reservation: ReservationModel,
   TenantApplication: TenantApplicationModel,
-  Notification: NotificationModel
+  Notification: NotificationModel,
+  ExchangeRequest: ExchangeRequestModel,
+  ExchangeReview: ExchangeReviewModel
 };

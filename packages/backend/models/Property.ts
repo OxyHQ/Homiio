@@ -12,7 +12,9 @@ import {
   LeaseDuration,
   RentMode,
   AvailabilityWindowStatus,
-  CancellationPolicy
+  CancellationPolicy,
+  ListingIntent,
+  ExchangeMode
 } from '@homiio/shared-types';
 
 // Define the Property interface
@@ -81,6 +83,30 @@ export interface IProperty extends Document {
     cleaningFee?: number;
     serviceFee?: number;
     taxesPercent?: number;
+  };
+  // Multi-intent platform (rent / sale / exchange)
+  intents?: ListingIntent[];
+  sale?: {
+    price: number;
+    currency: string;
+    pricePerSqm?: number;
+    estimatedYield?: number;
+    isPriceReduced?: boolean;
+    chainStatus?: 'no_chain' | 'chain' | 'unknown';
+  };
+  exchange?: {
+    mode: ExchangeMode;
+    availabilityWindows: Array<{
+      start: Date;
+      end: Date;
+      status: AvailabilityWindowStatus;
+    }>;
+    minStay?: number;
+    maxStay?: number;
+    welcomeNote?: string;
+    languages?: string[];
+    mealsIncluded?: boolean;
+    requiresReciprocity?: boolean;
   };
   isVerified?: boolean;
   isEcoFriendly?: boolean;
@@ -339,6 +365,43 @@ const PropertySchema = new Schema({
     serviceFee: { type: Number, min: 0 },
     taxesPercent: { type: Number, min: 0, max: 100 }
   },
+  // ---- Multi-intent platform (rent / sale / exchange) ----
+  // A listing may carry several intents at once; empty/missing reads as rent-only.
+  intents: {
+    type: [{ type: String, enum: Object.values(ListingIntent) }],
+    default: [ListingIntent.RENT]
+  },
+  sale: {
+    price: { type: Number, min: [0, 'Sale price cannot be negative'] },
+    currency: { type: String, uppercase: true, minlength: 3, maxlength: 3 },
+    pricePerSqm: { type: Number, min: [0, 'Price per sqm cannot be negative'] },
+    estimatedYield: { type: Number, min: [0, 'Estimated yield cannot be negative'] },
+    isPriceReduced: { type: Boolean, default: false },
+    chainStatus: { type: String, enum: ['no_chain', 'chain', 'unknown'] }
+  },
+  exchange: {
+    mode: { type: String, enum: Object.values(ExchangeMode) },
+    availabilityWindows: {
+      type: [{
+        start: { type: Date, required: true },
+        end: { type: Date, required: true },
+        status: {
+          type: String,
+          enum: Object.values(AvailabilityWindowStatus),
+          default: AvailabilityWindowStatus.AVAILABLE,
+          required: true
+        },
+        _id: false
+      }],
+      default: []
+    },
+    minStay: { type: Number, min: [1, 'Minimum stay must be at least 1 night'] },
+    maxStay: { type: Number, min: [1, 'Maximum stay must be at least 1 night'] },
+    welcomeNote: { type: String, maxlength: [2000, 'Welcome note cannot exceed 2000 characters'] },
+    languages: [{ type: String }],
+    mealsIncluded: { type: Boolean, default: false },
+    requiresReciprocity: { type: Boolean, default: false }
+  },
   isVerified: {
     type: Boolean,
     default: false
@@ -374,10 +437,14 @@ const PropertySchema = new Schema({
   }
 }, {
   timestamps: true,
-  toJSON: { 
+  toJSON: {
     virtuals: true,
     transform: function(doc: any, ret: any) {
       ret.id = ret._id;
+      // Back-compat: legacy listings predate `intents`; surface them as rent-only.
+      if (!Array.isArray(ret.intents) || ret.intents.length === 0) {
+        ret.intents = [ListingIntent.RENT];
+      }
       // Transform addressId to address if populated
       if (ret.addressId && typeof ret.addressId === 'object' && ret.addressId._id) {
         ret.address = { ...ret.addressId };
@@ -413,6 +480,31 @@ PropertySchema.index({ rentMode: 1, status: 1, type: 1 });
 PropertySchema.index({ 'availabilityWindows.start': 1 });
 PropertySchema.index({ 'availabilityWindows.end': 1 });
 PropertySchema.index({ rentMode: 1, instantBook: 1, status: 1 });
+// Multi-intent indexes
+PropertySchema.index({ intents: 1, status: 1 });
+PropertySchema.index({ 'sale.price': 1 });
+PropertySchema.index({ intents: 1, 'exchange.mode': 1, status: 1 });
+
+/**
+ * A listing is valid when it can actually be transacted: either it has a
+ * rent amount, or it is offered for sale with a sale price. This keeps the
+ * `rent` field present (so `property.rent` access never throws) while letting
+ * sale-only listings skip a meaningful rent. Legacy rent docs always pass.
+ */
+function hasTransactablePrice(this: IProperty): boolean {
+  const rentAmount = this.rent?.amount;
+  if (typeof rentAmount === 'number' && rentAmount > 0) {
+    return true;
+  }
+  const intents = Array.isArray(this.intents) ? this.intents : [];
+  const salePrice = this.sale?.price;
+  return intents.includes(ListingIntent.SALE) && typeof salePrice === 'number' && salePrice > 0;
+}
+
+PropertySchema.path('rent').validate(
+  hasTransactablePrice,
+  'A listing must have a rent amount or, for sale listings, a sale price'
+);
 
 // Pre-save hook to update lastSaved
 PropertySchema.pre('save', function(this: IProperty) {

@@ -13,7 +13,7 @@
  */
 
 import { Types, type FilterQuery, type SortOrder } from 'mongoose';
-import { PropertyType, PropertyStatus, RentMode } from '@homiio/shared-types';
+import { PropertyType, PropertyStatus, RentMode, ListingIntent, ExchangeMode } from '@homiio/shared-types';
 
 // ---- Pagination / limit constants ----
 export const DEFAULT_PAGE = 1;
@@ -36,10 +36,15 @@ export const MAX_RADIUS_METERS = 200_000;
 
 // ---- Sort constants ----
 export const SORT_PRICE = 'price';
+export const SORT_SALE_PRICE = 'salePrice';
 export const SORT_CREATED_AT = 'createdAt';
 export const SORT_RELEVANCE = 'relevance';
-export type SortField = typeof SORT_PRICE | typeof SORT_CREATED_AT | typeof SORT_RELEVANCE;
-const SORT_FIELDS: ReadonlySet<string> = new Set([SORT_PRICE, SORT_CREATED_AT, SORT_RELEVANCE]);
+export type SortField =
+  | typeof SORT_PRICE
+  | typeof SORT_SALE_PRICE
+  | typeof SORT_CREATED_AT
+  | typeof SORT_RELEVANCE;
+const SORT_FIELDS: ReadonlySet<string> = new Set([SORT_PRICE, SORT_SALE_PRICE, SORT_CREATED_AT, SORT_RELEVANCE]);
 
 export const SORT_ASC = 'asc';
 export const SORT_DESC = 'desc';
@@ -47,6 +52,12 @@ export type SortDirection = typeof SORT_ASC | typeof SORT_DESC;
 
 /** Rent modes a caller may explicitly request (excludes the `both` storage value). */
 const REQUESTABLE_HYBRID_MODES: ReadonlySet<string> = new Set([RentMode.LONG_TERM, RentMode.VACATION]);
+
+/** Listing intents a caller may filter by. */
+const LISTING_INTENT_VALUES: ReadonlySet<string> = new Set(Object.values(ListingIntent));
+
+/** All valid exchange modes (used to validate the `exchangeMode` filter). */
+const EXCHANGE_MODE_VALUES: ReadonlySet<string> = new Set(Object.values(ExchangeMode));
 
 /** Property document fields, keyed for type-safe filter construction. */
 interface PropertyDoc {
@@ -66,6 +77,10 @@ interface PropertyDoc {
   createdAt: Date;
   rent: { amount: number };
   availability: { isAvailable: boolean };
+  // Multi-intent (rent / sale / exchange)
+  intents: ListingIntent[];
+  sale: { price: number };
+  exchange: { mode: ExchangeMode };
 }
 
 export type PropertyFilter = FilterQuery<PropertyDoc>;
@@ -270,6 +285,33 @@ function applyStatusFilter(filter: PropertyFilter, statusRaw: string | undefined
   filter['availability.isAvailable'] = true;
 }
 
+/**
+ * Constrain the filter to listings carrying a given intent.
+ *
+ * `intents` is an array, so equality matches membership. Crucially, legacy
+ * listings predate the field and are rent-only by definition — so a `rent`
+ * query must ALSO match documents where `intents` is missing or empty (the
+ * same set the read-time back-compat transform surfaces as `['rent']`). The
+ * rent branch is merged under `$and` so it composes with the text-search
+ * `$or` the controller may add later.
+ */
+function applyIntentFilter(filter: PropertyFilter, intent: ListingIntent): void {
+  if (intent !== ListingIntent.RENT) {
+    filter.intents = intent;
+    return;
+  }
+  const rentOr: PropertyFilter[] = [
+    { intents: ListingIntent.RENT },
+    { intents: { $exists: false } },
+    { intents: { $size: 0 } },
+  ];
+  if (Array.isArray(filter.$and)) {
+    filter.$and.push({ $or: rentOr });
+  } else {
+    filter.$and = [{ $or: rentOr }];
+  }
+}
+
 export interface ParsedSearchParams {
   page: number;
   limit: number;
@@ -282,6 +324,15 @@ export interface ParsedSearchParams {
   centerRadius?: CenterRadius;
   sortField: SortField;
   sortDirection: SortDirection;
+  // Multi-intent filters (mirror the `filter` clauses for downstream visibility).
+  /** Listing intent the query was scoped to, when valid. */
+  intent?: ListingIntent;
+  /** Minimum sale price applied to `sale.price`, when present. */
+  minSalePrice?: number;
+  /** Maximum sale price applied to `sale.price`, when present. */
+  maxSalePrice?: number;
+  /** Exchange mode the query was scoped to, when valid. */
+  exchangeMode?: ExchangeMode;
 }
 
 /**
@@ -305,10 +356,23 @@ export function buildSearchPlan(
     filter.type = { $in: typeList };
   }
 
+  // --- Listing intent (rent / sale / exchange). Parsed early because the rent
+  //     price-range guard below depends on whether this is a sale query. ---
+  const intentRaw = asString(query.intent)?.toLowerCase();
+  const intent = intentRaw && LISTING_INTENT_VALUES.has(intentRaw)
+    ? (intentRaw as ListingIntent)
+    : undefined;
+  if (intent !== undefined) {
+    applyIntentFilter(filter, intent);
+  }
+
   // --- Price range (accept Airbnb-style priceMin/priceMax and legacy minRent/maxRent) ---
+  // RISK guard: when filtering for SALE listings the price range refers to the
+  // SALE price (applied via minSalePrice/maxSalePrice below), so do NOT also
+  // constrain `rent.amount` — sale-only listings may have no meaningful rent.
   const priceMin = parseFloatParam(query.priceMin) ?? parseFloatParam(query.minRent);
   const priceMax = parseFloatParam(query.priceMax) ?? parseFloatParam(query.maxRent);
-  if (priceMin !== undefined || priceMax !== undefined) {
+  if ((priceMin !== undefined || priceMax !== undefined) && intent !== ListingIntent.SALE) {
     const rentFilter: { $gte?: number; $lte?: number } = {};
     if (priceMin !== undefined) rentFilter.$gte = priceMin;
     if (priceMax !== undefined) rentFilter.$lte = priceMax;
@@ -357,6 +421,26 @@ export function buildSearchPlan(
     }
   }
 
+  // --- Sale price range (only meaningful for sale listings) ---
+  const minSalePrice = parseFloatParam(query.minSalePrice);
+  const maxSalePrice = parseFloatParam(query.maxSalePrice);
+  if (minSalePrice !== undefined || maxSalePrice !== undefined) {
+    const saleFilter: { $gte?: number; $lte?: number } = {};
+    if (minSalePrice !== undefined) saleFilter.$gte = minSalePrice;
+    if (maxSalePrice !== undefined) saleFilter.$lte = maxSalePrice;
+    filter['sale.price'] = saleFilter;
+  }
+
+  // --- Exchange mode (a `both` listing matches a swap or host request) ---
+  const exchangeMode = asString(query.exchangeMode)?.toLowerCase();
+  if (exchangeMode && EXCHANGE_MODE_VALUES.has(exchangeMode)) {
+    if (exchangeMode === ExchangeMode.BOTH) {
+      filter['exchange.mode'] = ExchangeMode.BOTH;
+    } else {
+      filter['exchange.mode'] = { $in: [exchangeMode, ExchangeMode.BOTH] };
+    }
+  }
+
   // --- Exclude ids ---
   const excludeIds = parseList(query.excludeIds)
     .filter((id) => Types.ObjectId.isValid(id))
@@ -376,6 +460,10 @@ export function buildSearchPlan(
     : SORT_CREATED_AT;
   const sortDirection: SortDirection = asString(query.sortOrder)?.toLowerCase() === SORT_ASC ? SORT_ASC : SORT_DESC;
 
+  const exchangeModeParam = exchangeMode && EXCHANGE_MODE_VALUES.has(exchangeMode)
+    ? (exchangeMode as ExchangeMode)
+    : undefined;
+
   return {
     filter,
     params: {
@@ -388,6 +476,10 @@ export function buildSearchPlan(
       centerRadius: parseCenterRadius(query),
       sortField,
       sortDirection,
+      intent,
+      minSalePrice,
+      maxSalePrice,
+      exchangeMode: exchangeModeParam,
     },
   };
 }
@@ -404,6 +496,9 @@ export function buildSort(
 
   if (params.sortField === SORT_PRICE) {
     return { 'rent.amount': direction };
+  }
+  if (params.sortField === SORT_SALE_PRICE) {
+    return { 'sale.price': direction };
   }
   if (params.sortField === SORT_RELEVANCE && hasTextScore) {
     return { score: { $meta: 'textScore' }, createdAt: -1 };

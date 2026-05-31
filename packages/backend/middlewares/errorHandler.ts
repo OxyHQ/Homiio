@@ -194,7 +194,8 @@ const paginationResponse = (
   page: number,
   limit: number,
   total: number,
-  message = 'Success'
+  message = 'Success',
+  meta: Record<string, unknown> = {}
 ) => {
   const totalPages = Math.ceil(total / limit);
   const hasNext = page < totalPages;
@@ -215,7 +216,8 @@ const paginationResponse = (
       prevPage: hasPrev ? page - 1 : null
     },
     meta: {
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      ...meta
     }
   };
 };

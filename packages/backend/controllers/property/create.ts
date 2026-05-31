@@ -1,4 +1,5 @@
 import { ProfileType } from '@homiio/shared-types';
+import { applyIntentRules, IntentValidationError } from './intentValidation';
 const { Property } = require('../../models');
 const { telegramService } = require('../../services');
 const { logger, businessLogger } = require('../../middlewares/logging');
@@ -90,7 +91,11 @@ export async function createProperty(req, res, next) {
     }
 
     const propertyData = { ...req.body, profileId: req.body.profileId };
-    
+
+    // Validate & normalize multi-intent fields (defaults intents to ['rent'],
+    // enforces sale/exchange required sub-payloads, derives sale.pricePerSqm).
+    applyIntentRules(propertyData, true);
+
     // Handle address creation or reference
     let addressId;
     if (req.body.address) {
@@ -151,6 +156,9 @@ export async function createProperty(req, res, next) {
     });
     res.status(201).json(successResponse(savedProperty.toJSON(), 'Property created successfully'));
   } catch (error) {
+    if (error instanceof IntentValidationError) {
+      return next(new AppError(error.message, 400, error.code));
+    }
     if (error.name === 'ValidationError') {
       const validationErrors = Object.values(error.errors).map((err: any) => err.message);
       const validationError: any = new AppError('Property validation failed', 400, 'VALIDATION_ERROR');

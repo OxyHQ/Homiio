@@ -5,6 +5,7 @@
 
 import express from "express";
 const profileController = require("../controllers/profileController");
+const exchangeReviewController = require("../controllers/exchangeReviewController");
 import { asyncHandler } from "../middlewares";
 import performanceMonitor from "../middlewares/performance";
 
@@ -100,6 +101,8 @@ export default function () {
   router.get("/me/saved-profiles/:profileId", asyncHandler(profileController.isProfileSaved));
   router.get("/me/properties", asyncHandler(profileController.getProfileProperties));
   router.get("/me/:profileType", asyncHandler(profileController.getProfileByType));
+  // Home-exchange reviews where this profile is the subject (newest first, paginated, with avg).
+  router.get("/:profileId/exchange-reviews", asyncHandler(exchangeReviewController.getProfileExchangeReviews));
   router.get("/:profileId", asyncHandler(profileController.getProfileById));
   router.put("/:profileId", asyncHandler(profileController.updateProfile));
   router.delete("/:profileId", asyncHandler(profileController.deleteProfile));

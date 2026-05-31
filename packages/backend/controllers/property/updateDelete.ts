@@ -1,3 +1,4 @@
+import { applyIntentRules, IntentValidationError } from './intentValidation';
 const { Property } = require('../../models');
 const { AppError, successResponse } = require('../../middlewares/errorHandler');
 
@@ -5,6 +6,12 @@ export async function updateProperty(req, res, next) {
   try {
     const { propertyId } = req.params;
     const updateData = { ...req.body };
+
+    // Validate & normalize multi-intent fields on the update body. `false`:
+    // a partial update that omits `intents` leaves the stored value untouched
+    // (required sub-payload checks only fire when `intents` is in the body),
+    // but sale.pricePerSqm is still derived when price + area are provided.
+    applyIntentRules(updateData, false);
     const oxyUserId = req.user?.id || req.user?._id || req.userId;
     if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
     const { Profile } = require('../../models');
@@ -48,7 +55,12 @@ export async function updateProperty(req, res, next) {
     
     if (!updatedProperty) return next(new AppError('Failed to update property', 500, 'UPDATE_FAILED'));
     res.json(successResponse(updatedProperty.toJSON(), 'Property updated successfully'));
-  } catch (error) { next(error); }
+  } catch (error) {
+    if (error instanceof IntentValidationError) {
+      return next(new AppError(error.message, 400, error.code));
+    }
+    next(error);
+  }
 }
 
 export async function deleteProperty(req, res, next) {
