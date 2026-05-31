@@ -11,3 +11,4 @@ export * from './NeighborhoodRatingWidget';
 export * from './RecentlyViewedWidget';
 export * from './QuickFiltersWidget';
 export * from './PropertyPreviewWidget';
+export * from './PropertyBookingWidget';

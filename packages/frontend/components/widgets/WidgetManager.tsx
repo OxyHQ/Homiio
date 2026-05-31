@@ -10,6 +10,7 @@ import { NeighborhoodRatingWidget } from './NeighborhoodRatingWidget';
 import { RecentlyViewedWidget } from './RecentlyViewedWidget';
 import { QuickFiltersWidget } from './QuickFiltersWidget';
 import { PropertyPreviewWidget } from './PropertyPreviewWidget';
+import { PropertyBookingWidget } from './PropertyBookingWidget';
 import { DonationWidget } from './DonationWidget';
 
 // Feature flag: controls whether the Neighborhood widget is rendered
@@ -74,6 +75,7 @@ export const WidgetManager = React.memo(function WidgetManager({
         <EcoCertificationWidget key="eco-cert" />,
       ],
       'property-details': [
+        <PropertyBookingWidget key="booking" propertyId={propertyId} />,
         <NeighborhoodRatingWidget
           key="neighborhood"
           propertyId={propertyId}

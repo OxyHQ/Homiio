@@ -50,8 +50,9 @@ import { useLayoutScroll } from '@/context/LayoutScrollContext';
 import { useAreaInsights, useNearbyServices, useProperty } from '@/hooks';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useRentalMode } from '@/context/RentalModeContext';
+import { useIsRightBarVisible } from '@/hooks/useOptimizedMediaQuery';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
-import { resolvePrimaryOffering } from '@/utils/propertyUtils';
+import { resolveHeadlinePrice } from '@/utils/propertyPricing';
 import { propertyService } from '@/services/propertyService';
 import profileService, { type Profile } from '@/services/profileService';
 import ViewingService from '@/services/viewingService';
@@ -100,7 +101,6 @@ interface PropertyDetailViewModel {
   title: string;
   location: string;
   price: string;
-  priceUnit: 'day' | 'night' | 'week' | 'month' | 'year';
   bedrooms: number;
   bathrooms: number;
   size: number;
@@ -117,6 +117,10 @@ export default function PropertyDetailPage() {
   const layoutScrollContext = useLayoutScroll();
   const { mode: rentalMode } = useRentalMode();
   const { addProperty } = useRecentlyViewed();
+  // On wide screens the booking/apply card lives in the app shell's right
+  // column (RightBar → PropertyBookingWidget). When the RightBar is hidden
+  // (mobile/narrow), the screen inlines the card instead — gated below.
+  const isRightBarVisible = useIsRightBarVisible();
 
   const propertyIdParam = typeof id === 'string' ? id : '';
 
@@ -214,44 +218,18 @@ export default function PropertyDetailPage() {
   const property = useMemo<PropertyDetailViewModel | null>(() => {
     if (!apiProperty) return null;
     const propertyId = apiProperty._id || apiProperty.id || '';
-    const currency = apiProperty.rent?.currency || '⊜';
 
-    let priceUnit: PropertyDetailViewModel['priceUnit'] = 'month';
-    if (apiProperty.priceUnit) {
-      priceUnit = apiProperty.priceUnit;
-    } else if (apiProperty.rent?.paymentFrequency) {
-      switch (apiProperty.rent.paymentFrequency) {
-        case 'daily':
-          priceUnit = 'day';
-          break;
-        case 'weekly':
-          priceUnit = 'week';
-          break;
-        case 'monthly':
-          priceUnit = 'month';
-          break;
-        default:
-          priceUnit = 'month';
-      }
-    }
-    // Intent-aware headline price for the sticky header + desktop booking card.
-    // Centralised in `resolvePrimaryOffering` (rent → sale → exchange) so a sale
-    // listing shows its asking price (no per-unit suffix) instead of the blank a
-    // rent-only formatter produced, an exchange listing shows the "Free" label,
+    // Intent-aware headline price + location subtitle for the sticky header and
+    // the right-column booking card. Centralised in `resolveHeadlinePrice`
+    // (rent → sale → exchange) so the screen, sticky header, and
+    // PropertyBookingWidget all share one rule: a sale listing shows its asking
+    // price (no per-unit suffix), an exchange listing shows the "Free" label,
     // and rent keeps its exact `${currency}${amount}/${priceUnit}` display.
-    const offering = resolvePrimaryOffering(
+    const { priceLabel, priceSubtitle } = resolveHeadlinePrice(
       apiProperty,
       rentalMode,
-      t('listing.exchange.free', 'Free'),
+      t,
     );
-    let price: string;
-    if (offering.kind === 'exchange') {
-      price = offering.label;
-    } else if (offering.kind === 'sale') {
-      price = offering.amount > 0 ? `${offering.currency}${offering.amount}` : '';
-    } else {
-      price = apiProperty.rent ? `${currency}${apiProperty.rent.amount}/${priceUnit}` : '';
-    }
 
     const generatedTitle = generatePropertyTitle({
       type: Object.values(PropertyType).includes(apiProperty.type as PropertyType)
@@ -264,9 +242,8 @@ export default function PropertyDetailPage() {
     return {
       id: propertyId,
       title: generatedTitle,
-      location: `${apiProperty.address?.city || ''}, ${apiProperty.address?.country || ''}`,
-      price,
-      priceUnit,
+      location: priceSubtitle,
+      price: priceLabel,
       bedrooms: apiProperty.bedrooms || 0,
       bathrooms: apiProperty.bathrooms || 0,
       size: apiProperty.squareFootage || 0,
@@ -538,13 +515,18 @@ export default function PropertyDetailPage() {
   );
   const exchangeData = isExchangeListing ? apiProperty?.exchange : undefined;
 
+  // On wide screens the booking/apply card is rendered in the app shell's
+  // right column (RightBar → PropertyBookingWidget), so the inline card only
+  // shows when the RightBar is hidden (mobile/narrow). The screen stays
+  // single-column either way.
   const showBookingWidget =
-    rentalMode === 'vacation' && isVacationRentable;
+    rentalMode === 'vacation' && isVacationRentable && !isRightBarVisible;
 
   const showApplyCTA =
     apiProperty &&
     rentalMode === 'long_term' &&
-    apiProperty.rentMode !== RentMode.VACATION;
+    apiProperty.rentMode !== RentMode.VACATION &&
+    !isRightBarVisible;
 
   const showSleepArrangement =
     rentalMode === 'vacation' && isVacationRentable;
