@@ -79,6 +79,61 @@ function resolveOxyUserId(req: Request): string | undefined {
   return user.user?.id || user.user?._id || user.userId;
 }
 
+/** A confirmed-exchange row projected for conflict detection (both roles). */
+interface ConflictRow {
+  _id: unknown;
+  propertyId?: unknown;
+  offeredPropertyId?: unknown;
+  requestedWindow?: ExchangeWindow;
+  offeredWindow?: ExchangeWindow;
+}
+
+/**
+ * Detect whether a committed (CONFIRMED) exchange already occupies `propertyId`
+ * for any time overlapping `window`. A property can be committed in BOTH roles:
+ *  - as the TARGET of a confirmed exchange (`propertyId` + `requestedWindow`), or
+ *  - as the OFFERED home of a confirmed SWAP (`offeredPropertyId` + `offeredWindow`).
+ *
+ * Both roles are checked so a swap can never double-book the home a requester
+ * offers in return. `excludeRequestId` omits a specific request from the scan
+ * (used at confirm time so a request never conflicts with itself).
+ */
+async function hasPropertyConflict(
+  propertyId: unknown,
+  window: { start: Date; end: Date },
+  excludeRequestId?: unknown
+): Promise<boolean> {
+  const baseQuery: Record<string, unknown> = {
+    status: { $in: BLOCKING_EXCHANGE_STATUSES },
+    $or: [{ propertyId }, { offeredPropertyId: propertyId }],
+  };
+  if (excludeRequestId !== undefined) {
+    baseQuery._id = { $ne: excludeRequestId };
+  }
+
+  const committed: ConflictRow[] = await ExchangeRequest.find(baseQuery)
+    .select('propertyId offeredPropertyId requestedWindow offeredWindow')
+    .lean();
+
+  const target = String(propertyId);
+  return committed.some((row) => {
+    // Compare against whichever window pins THIS property in the existing row.
+    if (String(row.propertyId) === target) {
+      const other = parseWindow(row.requestedWindow);
+      if (other && windowsOverlap(window.start, window.end, other.start, other.end)) {
+        return true;
+      }
+    }
+    if (String(row.offeredPropertyId) === target) {
+      const other = parseWindow(row.offeredWindow);
+      if (other && windowsOverlap(window.start, window.end, other.start, other.end)) {
+        return true;
+      }
+    }
+    return false;
+  });
+}
+
 class ExchangeController {
   /**
    * POST /api/exchanges
@@ -121,13 +176,14 @@ class ExchangeController {
         return next(new AppError('You cannot request an exchange with your own property', 403, 'FORBIDDEN'));
       }
 
-      // Validate requested window: start < end, in the future.
+      // Validate requested window: start < end, not in the past. A window
+      // starting exactly now is allowed (`<`, not `<=`).
       const requested = parseWindow(requestedWindow);
       if (!requested) {
         return next(new AppError('Invalid requested window', 400, 'INVALID_WINDOW'));
       }
       const now = new Date();
-      if (requested.start.getTime() <= now.getTime()) {
+      if (requested.start.getTime() < now.getTime()) {
         return next(new AppError('Requested window must start in the future', 400, 'DATE_IN_PAST'));
       }
 
@@ -153,27 +209,29 @@ class ExchangeController {
         if (!offered) {
           return next(new AppError('A swap requires a valid offered window', 400, 'OFFERED_WINDOW_REQUIRED'));
         }
+        // Same future guard as the requested window: the offered stay cannot
+        // start in the past (start === now is allowed).
+        if (offered.start.getTime() < now.getTime()) {
+          return next(new AppError('Offered window must start in the future', 400, 'DATE_IN_PAST'));
+        }
         resolvedOfferedPropertyId = offeredProperty._id;
         resolvedOfferedWindow = offered;
       }
 
-      // Conflict: an already-CONFIRMED exchange on this property overlapping the
-      // requested window. (Pending requests do not block — only committed ones.)
-      const confirmedExchanges = await ExchangeRequest.find({
-        propertyId,
-        status: { $in: BLOCKING_EXCHANGE_STATUSES },
-      })
-        .select('requestedWindow')
-        .lean();
-
-      const conflict = confirmedExchanges.some((existing: { requestedWindow?: ExchangeWindow }) => {
-        if (!existing.requestedWindow) return false;
-        const other = parseWindow(existing.requestedWindow);
-        if (!other) return false;
-        return windowsOverlap(requested.start, requested.end, other.start, other.end);
-      });
-      if (conflict) {
+      // Conflict: a committed (CONFIRMED) exchange already occupies the TARGET
+      // property over the requested window. `hasPropertyConflict` checks both
+      // roles the property may be committed in (target + offered). Pending
+      // requests never block — only committed ones.
+      if (await hasPropertyConflict(propertyId, requested)) {
         return next(new AppError('Requested dates conflict with a confirmed exchange', 409, 'DATE_CONFLICT'));
+      }
+
+      // For a SWAP, the OFFERED home must also be free over its offered window —
+      // otherwise a requester could double-book the home they offer in return.
+      if (mode === ExchangeMode.SWAP && resolvedOfferedPropertyId && resolvedOfferedWindow) {
+        if (await hasPropertyConflict(resolvedOfferedPropertyId, resolvedOfferedWindow)) {
+          return next(new AppError('Offered dates conflict with a confirmed exchange', 409, 'OFFERED_DATE_CONFLICT'));
+        }
       }
 
       const exchangeRequest = await ExchangeRequest.create({
@@ -317,21 +375,40 @@ class ExchangeController {
           return next(new AppError('Only pending requests can be confirmed or declined', 400, 'INVALID_STATE'));
         }
         if (nextStatus === ExchangeRequestStatus.CONFIRMED) {
-          // Re-check conflicts before committing.
-          const confirmedExchanges = await ExchangeRequest.find({
-            _id: { $ne: exchangeRequest._id },
-            propertyId: exchangeRequest.propertyId,
-            status: { $in: BLOCKING_EXCHANGE_STATUSES },
-          })
-            .select('requestedWindow')
-            .lean();
+          // Re-validate the listing at confirm time: it may have dropped the
+          // exchange intent or changed/cleared its mode since the request was
+          // made. Confirming against a listing that no longer offers this
+          // exchange/mode is rejected.
+          const targetProperty = await Property.findById(exchangeRequest.propertyId).lean();
+          if (!targetProperty) {
+            return next(new AppError('Property no longer exists', 404, 'NOT_FOUND'));
+          }
+          if (!hasExchangeIntent(targetProperty)) {
+            return next(new AppError('This property is no longer open to home exchange', 409, 'NOT_EXCHANGEABLE'));
+          }
+          const listingMode = targetProperty.exchange?.mode;
+          if (!listingMode || !modeAccepts(listingMode, exchangeRequest.mode)) {
+            return next(new AppError(`This listing no longer accepts "${exchangeRequest.mode}" exchanges`, 409, 'MODE_NOT_ACCEPTED'));
+          }
+
+          // Re-check conflicts before committing, excluding this request so it
+          // never collides with itself. Check the TARGET (requested window)…
           const requested = parseWindow(exchangeRequest.requestedWindow);
-          const conflict = !!requested && confirmedExchanges.some((existing: { requestedWindow?: ExchangeWindow }) => {
-            const other = parseWindow(existing.requestedWindow);
-            return !!other && windowsOverlap(requested.start, requested.end, other.start, other.end);
-          });
-          if (conflict) {
+          if (!requested) {
+            return next(new AppError('Invalid requested window', 400, 'INVALID_WINDOW'));
+          }
+          if (await hasPropertyConflict(exchangeRequest.propertyId, requested, exchangeRequest._id)) {
             return next(new AppError('Another confirmed exchange now conflicts with this one', 409, 'DATE_CONFLICT'));
+          }
+          // …and, for a SWAP, the OFFERED home (offered window).
+          if (exchangeRequest.mode === ExchangeMode.SWAP) {
+            const offered = parseWindow(exchangeRequest.offeredWindow);
+            if (!offered) {
+              return next(new AppError('Invalid offered window', 400, 'INVALID_WINDOW'));
+            }
+            if (await hasPropertyConflict(exchangeRequest.offeredPropertyId, offered, exchangeRequest._id)) {
+              return next(new AppError('The offered home now conflicts with a confirmed exchange', 409, 'OFFERED_DATE_CONFLICT'));
+            }
           }
         }
         exchangeRequest.status = nextStatus;
@@ -357,6 +434,15 @@ class ExchangeController {
         const requested = parseWindow(exchangeRequest.requestedWindow);
         if (!requested || requested.end.getTime() > now.getTime()) {
           return next(new AppError('An exchange can only be completed after the stay window has passed', 400, 'STAY_NOT_ENDED'));
+        }
+        // A SWAP only completes once BOTH legs have ended: the offered stay must
+        // also be in the past. Host-mode requests have no offered window and so
+        // keep the requested-only check above.
+        if (exchangeRequest.mode === ExchangeMode.SWAP) {
+          const offered = parseWindow(exchangeRequest.offeredWindow);
+          if (!offered || offered.end.getTime() > now.getTime()) {
+            return next(new AppError('A swap can only be completed after both stay windows have passed', 400, 'STAY_NOT_ENDED'));
+          }
         }
         exchangeRequest.status = ExchangeRequestStatus.COMPLETED;
       } else {

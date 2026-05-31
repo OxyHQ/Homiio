@@ -421,19 +421,29 @@ export function buildSearchPlan(
     }
   }
 
-  // --- Sale price range (only meaningful for sale listings) ---
+  // --- Sale price range (ONLY applied for an explicit SALE query) ---
+  // `sale.price` lives in an intent-scoped sub-doc that can linger on a listing
+  // whose `sale` intent was later removed. Applying the range without the intent
+  // would match those stale sub-docs (and could stack a rent AND a sale range on
+  // the same query), so the filter is gated on `intent === SALE`. The values are
+  // still echoed in `params` regardless, for downstream visibility.
   const minSalePrice = parseFloatParam(query.minSalePrice);
   const maxSalePrice = parseFloatParam(query.maxSalePrice);
-  if (minSalePrice !== undefined || maxSalePrice !== undefined) {
+  if ((minSalePrice !== undefined || maxSalePrice !== undefined) && intent === ListingIntent.SALE) {
     const saleFilter: { $gte?: number; $lte?: number } = {};
     if (minSalePrice !== undefined) saleFilter.$gte = minSalePrice;
     if (maxSalePrice !== undefined) saleFilter.$lte = maxSalePrice;
     filter['sale.price'] = saleFilter;
   }
 
-  // --- Exchange mode (a `both` listing matches a swap or host request) ---
+  // --- Exchange mode (ONLY applied for an explicit EXCHANGE query) ---
+  // Same rationale as the sale range: a stale `exchange.mode` sub-doc can survive
+  // the removal of the `exchange` intent, so the mode filter is gated on
+  // `intent === EXCHANGE`. The `applyIntentFilter` call above already constrains
+  // the query to listings carrying the exchange intent. A `both` listing matches
+  // a swap or host request.
   const exchangeMode = asString(query.exchangeMode)?.toLowerCase();
-  if (exchangeMode && EXCHANGE_MODE_VALUES.has(exchangeMode)) {
+  if (exchangeMode && EXCHANGE_MODE_VALUES.has(exchangeMode) && intent === ListingIntent.EXCHANGE) {
     if (exchangeMode === ExchangeMode.BOTH) {
       filter['exchange.mode'] = ExchangeMode.BOTH;
     } else {

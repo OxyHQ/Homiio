@@ -175,8 +175,10 @@ const saleSchema = new mongoose.Schema({
   currency: {
     type: String,
     uppercase: true,
-    minlength: 3,
-    maxlength: 3
+    // Same currency set as `rentSchema.currency` so rent/sale codes stay
+    // consistent. Note 'FAIR' is 4 chars, so no minlength/maxlength constraint
+    // (a length cap would wrongly reject 'FAIR' which rent accepts).
+    enum: ['USD', 'EUR', 'GBP', 'CAD', 'FAIR']
   },
   pricePerSqm: {
     type: Number,
@@ -346,14 +348,15 @@ const propertySchema = new mongoose.Schema({
   },
   rent: {
     type: rentSchema,
-    // Not unconditionally required: a sale-only listing (intents includes 'sale'
-    // with a sale price) may legitimately omit rent. The `hasTransactablePrice`
-    // path validator below still guarantees the listing is transactable.
+    // Not unconditionally required: a listing that does NOT carry the RENT
+    // intent (sale-only or exchange-only) may legitimately omit the rent block.
+    // The `hasTransactablePrice` path validator below still guarantees the
+    // listing is transactable via its sale price / exchange offer.
     required: function(this: any) {
       const intents = Array.isArray(this.intents) ? this.intents : [];
-      const isSaleOnly = intents.includes(ListingIntent.SALE) && !intents.includes(ListingIntent.RENT);
-      const hasSalePrice = typeof this.sale?.price === 'number' && this.sale.price > 0;
-      return !(isSaleOnly && hasSalePrice);
+      // Empty/missing intents read as rent-only (back-compat) → rent required.
+      if (intents.length === 0) return true;
+      return intents.includes(ListingIntent.RENT);
     }
   },
   amenities: [{
@@ -684,10 +687,16 @@ propertySchema.index({ 'sale.price': 1 });
 propertySchema.index({ intents: 1, 'exchange.mode': 1, status: 1 });
 
 /**
- * A listing is valid when it can actually be transacted: either it has a rent
- * amount, or it is offered for sale with a sale price. This keeps the `rent`
- * field present (so downstream `property.rent` access never throws) while
- * letting sale-only listings skip a meaningful rent. Legacy rent docs pass.
+ * A listing is valid when at least one of its declared intents can actually be
+ * fulfilled:
+ *  - RENT: a positive `rent.amount`,
+ *  - SALE: the SALE intent + a positive `sale.price`,
+ *  - EXCHANGE: the EXCHANGE intent + a valid `exchange.mode` (a swap/hosting
+ *    offer carries no price — its "value" is the exchange itself).
+ *
+ * This keeps the `rent` field present (so downstream `property.rent` access
+ * never throws) while letting sale-only and exchange-only listings skip a
+ * meaningful rent. Legacy rent docs (rent > 0) always pass.
  */
 function hasTransactablePrice(this: any): boolean {
   const rentAmount = this.rent?.amount;
@@ -696,12 +705,20 @@ function hasTransactablePrice(this: any): boolean {
   }
   const intents = Array.isArray(this.intents) ? this.intents : [];
   const salePrice = this.sale?.price;
-  return intents.includes(ListingIntent.SALE) && typeof salePrice === 'number' && salePrice > 0;
+  if (intents.includes(ListingIntent.SALE) && typeof salePrice === 'number' && salePrice > 0) {
+    return true;
+  }
+  const exchangeMode = this.exchange?.mode;
+  return (
+    intents.includes(ListingIntent.EXCHANGE) &&
+    typeof exchangeMode === 'string' &&
+    Object.values(ExchangeMode).includes(exchangeMode)
+  );
 }
 
 propertySchema.path('rent').validate(
   hasTransactablePrice,
-  'A listing must have a rent amount or, for sale listings, a sale price'
+  'A listing must be transactable: a rent amount, a sale price (sale listings), or an exchange mode (exchange listings)'
 );
 
 // Virtual for full address (requires population)

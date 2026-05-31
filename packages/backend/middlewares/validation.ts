@@ -46,13 +46,19 @@ const validateProperty = [
   body('address.street').notEmpty().withMessage('Street address is required'),
   body('address.city').notEmpty().withMessage('City is required'),
   body('address.state').notEmpty().withMessage('State is required'),
-  body('address').custom((value) => {
-    if (!value.postal_code && !value.zipCode) {
+  body('address').custom((value: { postal_code?: unknown; zipCode?: unknown } | undefined) => {
+    // `value` is undefined when the body carries an `addressId` instead of an
+    // inline `address`; guard so this produces a clean 400 (not a TypeError 500).
+    if (!value || (!value.postal_code && !value.zipCode)) {
       throw new Error('Postal code is required');
     }
     return true;
   }),
-  body('rent.amount').isFloat({ min: 0.01 }).withMessage('Rent amount must be greater than 0'),
+  // Rent is OPTIONAL at this layer: a sale-only listing legitimately omits rent
+  // (or sends amount 0). The "rent OR sale price" rule is enforced by the
+  // schema's `hasTransactablePrice` path validator, not here. When present, the
+  // amount must be non-negative (matching the schema's `min: 0`).
+  body('rent.amount').optional().isFloat({ min: 0 }).withMessage('Rent amount must be non-negative'),
   body('rent.currency').optional().isIn(['USD', 'EUR', 'GBP', 'CAD', 'FAIR']).withMessage('Invalid currency'),
   body('bedrooms').optional().isInt({ min: 0 }).withMessage('Bedrooms must be a non-negative integer'),
   body('bathrooms').optional().isFloat({ min: 0 }).withMessage('Bathrooms must be non-negative'),
@@ -91,6 +97,7 @@ const validateProperty = [
   body('priceBreakdown.cleaningFee').optional().isFloat({ min: 0 }).withMessage('cleaningFee must be non-negative'),
   body('priceBreakdown.serviceFee').optional().isFloat({ min: 0 }).withMessage('serviceFee must be non-negative'),
   body('priceBreakdown.taxesPercent').optional().isFloat({ min: 0, max: 100 }).withMessage('taxesPercent must be between 0 and 100'),
+  handleValidationErrors
 ];
 
 /**

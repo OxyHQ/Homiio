@@ -80,8 +80,17 @@ export function applyIntentRules(data: IntentBearingPayload, applyDefault: boole
 
   const effectiveIntents = intents ?? [];
 
-  // SALE requires a price and currency.
-  if (effectiveIntents.includes(ListingIntent.SALE)) {
+  // On a partial UPDATE (applyDefault=false) the stored sale/exchange blocks
+  // persist when omitted from the body, so an intent declared WITHOUT its
+  // sub-block is a legitimate edit (e.g. PATCH intents only). We therefore only
+  // validate a sub-block when it is PRESENT in the body. On CREATE
+  // (applyDefault=true) the sub-block is required whenever its intent is set.
+  const salePresent = data.sale !== undefined && data.sale !== null;
+  const exchangePresent = data.exchange !== undefined && data.exchange !== null;
+
+  // SALE requires a price and currency — on create always, on update only when
+  // the `sale` block is being written.
+  if (effectiveIntents.includes(ListingIntent.SALE) && (applyDefault || salePresent)) {
     if (!isPositiveNumber(data.sale?.price)) {
       throw new IntentValidationError('A sale listing requires sale.price (a positive number)');
     }
@@ -90,8 +99,9 @@ export function applyIntentRules(data: IntentBearingPayload, applyDefault: boole
     }
   }
 
-  // EXCHANGE requires a mode (availabilityWindows default to []).
-  if (effectiveIntents.includes(ListingIntent.EXCHANGE)) {
+  // EXCHANGE requires a mode (availabilityWindows default to []) — on create
+  // always, on update only when the `exchange` block is being written.
+  if (effectiveIntents.includes(ListingIntent.EXCHANGE) && (applyDefault || exchangePresent)) {
     const mode = data.exchange?.mode;
     if (typeof mode !== 'string' || !VALID_EXCHANGE_MODES.has(mode)) {
       throw new IntentValidationError('An exchange listing requires a valid exchange.mode');

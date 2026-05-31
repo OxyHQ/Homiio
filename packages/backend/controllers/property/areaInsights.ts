@@ -25,6 +25,7 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import { Types, type Model } from 'mongoose';
+import { ListingIntent } from '@homiio/shared-types';
 import type {
   PropertyAreaInsights,
   AreaPriceVerdict,
@@ -56,10 +57,28 @@ const BEDROOM_TOLERANCE = 1;
 const BUCKET_COUNT = 8;
 /** Maximum number of full comparable property documents returned (nearest first). */
 const COMPARABLES_LIMIT = 12;
+/**
+ * Over-fetch factor for the comparables-list query. `scopeAddressIds` is
+ * distance-ordered, so we slice it to `COMPARABLES_LIMIT * this` before the
+ * `find` (rather than fetching the entire scope and slicing in memory). The
+ * cushion absorbs addresses that have 0/multiple matching comparables so we
+ * still surface ~COMPARABLES_LIMIT nearest docs without scanning hundreds.
+ */
+const COMPARABLES_OVERFETCH_FACTOR = 3;
 /** Percent thresholds (target-vs-average) that map a price difference to a verdict. */
 const VERDICT_GOOD_DEAL_MAX = -7;
 const VERDICT_BELOW_AVG_MAX = -2;
 const VERDICT_AVERAGE_MAX = 2;
+
+/**
+ * Mongo field paths the comparison can be denominated in. A rent comparison
+ * uses `rent.amount`; a sale comparison uses `sale.price`. Threaded through the
+ * filter + aggregations so a sale-only listing (rent 0) is never compared
+ * against rentals (which produced a bogus "-100% / good deal").
+ */
+const PRICE_FIELD_RENT = 'rent.amount';
+const PRICE_FIELD_SALE = 'sale.price';
+type PriceField = typeof PRICE_FIELD_RENT | typeof PRICE_FIELD_SALE;
 
 /** Rent-mode literals as stored on the Property (`RentMode` enum values). */
 const RENT_MODE_LONG_TERM = 'long_term';
@@ -110,7 +129,15 @@ interface TargetContext {
   rentMode: string;
   priceUnit: string;
   currency: string;
+  /** The target's own price in the comparison basis (rent.amount or sale.price). */
   price: number;
+  /**
+   * Which price the comparison is denominated in. A SALE-basis target (sale
+   * intent + positive sale price and no positive rent) compares `sale.price`
+   * against sale comparables; everything else compares `rent.amount` against
+   * rentals.
+   */
+  priceField: PriceField;
   squareFootage: number;
   longitude: number;
   latitude: number;
@@ -140,11 +167,17 @@ function compatibleRentModes(targetRentMode: string): string[] {
  * Base comparable filter (everything except the geo / city scope).
  *
  * Comparable = a published, available listing that is NOT the target, within
- * ±BEDROOM_TOLERANCE bedrooms, sharing the target's `priceUnit` (like-for-like
- * pricing) and a compatible `rentMode` (see `compatibleRentModes`).
+ * ±BEDROOM_TOLERANCE bedrooms, with a positive price in the comparison basis.
+ *
+ *  - RENT basis: also shares the target's `priceUnit` (like-for-like pricing)
+ *    and a compatible `rentMode` (see `compatibleRentModes`), and requires
+ *    `rent.amount > 0`.
+ *  - SALE basis: requires the `sale` intent and `sale.price > 0`; `priceUnit`
+ *    and `rentMode` are rent concepts and so are NOT applied (a sale price is a
+ *    single total, not a per-period rate).
  */
 function buildBaseComparableFilter(target: TargetContext): Record<string, unknown> {
-  return {
+  const base: Record<string, unknown> = {
     _id: { $ne: target.id },
     status: 'published',
     'availability.isAvailable': true,
@@ -152,10 +185,18 @@ function buildBaseComparableFilter(target: TargetContext): Record<string, unknow
       $gte: target.bedrooms - BEDROOM_TOLERANCE,
       $lte: target.bedrooms + BEDROOM_TOLERANCE,
     },
-    priceUnit: target.priceUnit,
-    rentMode: { $in: compatibleRentModes(target.rentMode) },
-    'rent.amount': { $gt: 0 },
   };
+
+  if (target.priceField === PRICE_FIELD_SALE) {
+    base.intents = ListingIntent.SALE;
+    base[PRICE_FIELD_SALE] = { $gt: 0 };
+    return base;
+  }
+
+  base.priceUnit = target.priceUnit;
+  base.rentMode = { $in: compatibleRentModes(target.rentMode) };
+  base[PRICE_FIELD_RENT] = { $gt: 0 };
+  return base;
 }
 
 /**
@@ -218,39 +259,42 @@ function roundInt(value: number): number {
 }
 
 /**
- * Run the comparable price-stats aggregation over the given address-id scope.
- * Returns null when the scope yields no comparables. Uses the `$median`
- * accumulator (MongoDB 7.0+) and also keeps the sorted price array so the
- * histogram can be built without a second pass.
+ * Run the comparable price-stats aggregation over the given address-id scope,
+ * denominated in `priceField` (`rent.amount` or `sale.price`). Returns null when
+ * the scope yields no comparables. Uses the `$median` accumulator (MongoDB 7.0+)
+ * and also keeps the sorted price array so the histogram can be built without a
+ * second pass.
  *
  * `avgPricePerSqm` is folded into this same `$group` (same `$match` scope) to
- * avoid a separate Mongo round-trip: it averages `rent.amount / squareFootage`
+ * avoid a separate Mongo round-trip: it averages `<priceField> / squareFootage`
  * over comparables with `squareFootage > 0`, mapping the rest to `$$REMOVE` so
  * the `$avg` ignores them — yielding the identical value a `squareFootage > 0`
  * `$match` would. `$avg` returns `null` when every comparable is removed.
  */
 async function aggregatePriceStats(
   baseFilter: Record<string, unknown>,
-  addressIds: Types.ObjectId[]
+  addressIds: Types.ObjectId[],
+  priceField: PriceField
 ): Promise<PriceStatsRow | null> {
   if (addressIds.length === 0) return null;
+  const priceRef = `$${priceField}`;
   const rows = await Property.aggregate<PriceStatsRow>([
     { $match: { ...baseFilter, addressId: { $in: addressIds } } },
-    { $sort: { 'rent.amount': 1 } },
+    { $sort: { [priceField]: 1 } },
     {
       $group: {
         _id: null,
         count: { $sum: 1 },
-        min: { $min: '$rent.amount' },
-        max: { $max: '$rent.amount' },
-        avg: { $avg: '$rent.amount' },
-        median: { $median: { input: '$rent.amount', method: 'approximate' } },
-        prices: { $push: '$rent.amount' },
+        min: { $min: priceRef },
+        max: { $max: priceRef },
+        avg: { $avg: priceRef },
+        median: { $median: { input: priceRef, method: 'approximate' } },
+        prices: { $push: priceRef },
         avgPricePerSqm: {
           $avg: {
             $cond: [
               { $gt: ['$squareFootage', 0] },
-              { $divide: ['$rent.amount', '$squareFootage'] },
+              { $divide: [priceRef, '$squareFootage'] },
               '$$REMOVE',
             ],
           },
@@ -263,15 +307,16 @@ async function aggregatePriceStats(
   return row;
 }
 
-/** Average rent over a scope; returns null when the scope is empty. */
+/** Average price (in `priceField`) over a scope; returns null when empty. */
 async function aggregateAvg(
   baseFilter: Record<string, unknown>,
-  addressIds: Types.ObjectId[]
+  addressIds: Types.ObjectId[],
+  priceField: PriceField
 ): Promise<number | null> {
   if (addressIds.length === 0) return null;
   const rows = await Property.aggregate<AvgRow>([
     { $match: { ...baseFilter, addressId: { $in: addressIds } } },
-    { $group: { _id: null, avg: { $avg: '$rent.amount' }, count: { $sum: 1 } } },
+    { $group: { _id: null, avg: { $avg: `$${priceField}` }, count: { $sum: 1 } } },
   ]);
   const row = rows[0];
   if (!row || row.count === 0) return null;
@@ -403,8 +448,49 @@ function buildNeighborhoodVsCity(
   };
 }
 
-/** Build the target context from the populated property document. */
-function buildTargetContext(property: IProperty): TargetContext | null {
+/**
+ * Resolve the comparison BASIS for a target listing.
+ *
+ * Precedence: a positive `rent.amount` makes it a RENT comparison (it is
+ * "primarily rent", even if it is ALSO for sale). Otherwise, a SALE listing
+ * with a positive `sale.price` is a SALE comparison. A listing with neither a
+ * positive rent nor a positive sale price has no basis at all (the caller then
+ * returns `sampleSize: 0` rather than comparing against a 0 basis).
+ */
+function resolvePriceBasis(
+  property: IProperty
+): { priceField: PriceField; price: number; currency: string } | null {
+  const rentAmount = property.rent?.amount;
+  if (typeof rentAmount === 'number' && rentAmount > 0) {
+    return {
+      priceField: PRICE_FIELD_RENT,
+      price: rentAmount,
+      currency: property.rent?.currency ?? 'EUR',
+    };
+  }
+  const intents = Array.isArray(property.intents) ? property.intents : [];
+  const salePrice = property.sale?.price;
+  if (intents.includes(ListingIntent.SALE) && typeof salePrice === 'number' && salePrice > 0) {
+    return {
+      priceField: PRICE_FIELD_SALE,
+      price: salePrice,
+      currency: property.sale?.currency ?? property.rent?.currency ?? 'EUR',
+    };
+  }
+  return null;
+}
+
+/**
+ * Build the target context from the populated property document.
+ *
+ * Returns null when the property lacks usable address coordinates (the caller
+ * maps this to a 422) OR when it has no positive price in either basis (the
+ * caller maps this to a graceful `sampleSize: 0` response). The two cases are
+ * distinguished by `reason`.
+ */
+function buildTargetContext(
+  property: IProperty
+): { context: TargetContext } | { reason: 'no_coordinates' | 'no_price' } {
   // After `.populate('addressId').lean()`, the schema's post-find hook runs
   // `transformAddressFields`, which renames the populated `addressId` to
   // `address` (and deletes `addressId`). Read `address` first, then fall back
@@ -412,21 +498,28 @@ function buildTargetContext(property: IProperty): TargetContext | null {
   const populated = property as unknown as { address?: IAddress; addressId?: IAddress };
   const address = populated.address ?? populated.addressId ?? null;
   const coords = address?.coordinates?.coordinates;
-  if (!address || !Array.isArray(coords) || coords.length !== 2) return null;
+  if (!address || !Array.isArray(coords) || coords.length !== 2) return { reason: 'no_coordinates' };
   const [longitude, latitude] = coords;
-  if (typeof longitude !== 'number' || typeof latitude !== 'number') return null;
+  if (typeof longitude !== 'number' || typeof latitude !== 'number') return { reason: 'no_coordinates' };
+
+  const basis = resolvePriceBasis(property);
+  if (!basis) return { reason: 'no_price' };
+
   return {
-    id: property._id,
-    bedrooms: typeof property.bedrooms === 'number' ? property.bedrooms : 0,
-    rentMode: property.rentMode ?? 'long_term',
-    priceUnit: property.priceUnit ?? 'month',
-    currency: property.rent?.currency ?? 'EUR',
-    price: property.rent?.amount ?? 0,
-    squareFootage: typeof property.squareFootage === 'number' ? property.squareFootage : 0,
-    longitude,
-    latitude,
-    city: address.city,
-    neighborhood: address.neighborhood ?? null,
+    context: {
+      id: property._id,
+      bedrooms: typeof property.bedrooms === 'number' ? property.bedrooms : 0,
+      rentMode: property.rentMode ?? 'long_term',
+      priceUnit: property.priceUnit ?? 'month',
+      currency: basis.currency,
+      price: basis.price,
+      priceField: basis.priceField,
+      squareFootage: typeof property.squareFootage === 'number' ? property.squareFootage : 0,
+      longitude,
+      latitude,
+      city: address.city,
+      neighborhood: address.neighborhood ?? null,
+    },
   };
 }
 
@@ -463,10 +556,32 @@ async function buildNeighborhoodContrast(
   if (neighborhoodAddressIds.length === 0 || neighborhoodIsWholeCity) return null;
 
   const [neighborhoodAvg, cityAvg] = await Promise.all([
-    aggregateAvg(baseFilter, neighborhoodAddressIds),
-    aggregateAvg(baseFilter, cityAddressIdsForContrast),
+    aggregateAvg(baseFilter, neighborhoodAddressIds, target.priceField),
+    aggregateAvg(baseFilter, cityAddressIdsForContrast, target.priceField),
   ]);
   return buildNeighborhoodVsCity(target, neighborhoodAvg, cityAvg);
+}
+
+/**
+ * Build the graceful empty (`sampleSize: 0`) payload for a listing that has no
+ * positive price in any basis. Reuses the same null-stats comparison/distribution
+ * shape as the "no comparables found" path so the frontend's "not enough data"
+ * state renders identically. No queries are issued.
+ */
+function buildEmptyInsights(property: IProperty): AreaInsightsResponse {
+  return {
+    basis: 'city',
+    radiusKm: RADIUS_KM,
+    areaLabel: '',
+    currency: property.rent?.currency ?? property.sale?.currency ?? 'EUR',
+    priceUnit: property.priceUnit ?? 'month',
+    sampleSize: 0,
+    comparison: buildComparison(null, 0),
+    pricePerSqm: null,
+    distribution: buildDistribution(null, 0),
+    neighborhoodVsCity: null,
+    comparables: [],
+  };
 }
 
 /**
@@ -489,10 +604,19 @@ export async function getAreaInsights(req: Request, res: Response, next: NextFun
       return next(new AppError('Property not found', 404, 'NOT_FOUND'));
     }
 
-    const target = buildTargetContext(property);
-    if (!target) {
-      return next(new AppError('Property is missing address coordinates', 422, 'MISSING_COORDINATES'));
+    const targetResult = buildTargetContext(property);
+    if ('reason' in targetResult) {
+      if (targetResult.reason === 'no_coordinates') {
+        return next(new AppError('Property is missing address coordinates', 422, 'MISSING_COORDINATES'));
+      }
+      // `no_price`: no positive rent and no positive sale price — there is no
+      // meaningful basis to compare against, so return a graceful empty result
+      // (sampleSize 0) rather than a comparison against a 0 basis. The frontend
+      // hides the section when sampleSize === 0.
+      res.json(successResponse(buildEmptyInsights(property), 'Area insights retrieved successfully'));
+      return;
     }
+    const target = targetResult.context;
 
     const baseFilter = buildBaseComparableFilter(target);
 
@@ -502,7 +626,7 @@ export async function getAreaInsights(req: Request, res: Response, next: NextFun
     // operates on. Price-per-sqm is folded into `aggregatePriceStats`, so this
     // is the only stats round-trip per scope.
     const radiusAddressIds = await resolveRadiusAddressIds(target, RADIUS_KM);
-    const radiusStats = await aggregatePriceStats(baseFilter, radiusAddressIds);
+    const radiusStats = await aggregatePriceStats(baseFilter, radiusAddressIds, target.priceField);
     const radiusCount = radiusStats?.count ?? 0;
 
     // --- Fallback to the whole city when the radius scope is too sparse ---
@@ -518,7 +642,7 @@ export async function getAreaInsights(req: Request, res: Response, next: NextFun
     } else {
       basis = 'city';
       scopeAddressIds = await resolveCityAddressIds(target);
-      stats = await aggregatePriceStats(baseFilter, scopeAddressIds);
+      stats = await aggregatePriceStats(baseFilter, scopeAddressIds, target.priceField);
     }
 
     const areaLabel =
@@ -561,19 +685,28 @@ export async function getAreaInsights(req: Request, res: Response, next: NextFun
 
 /**
  * Fetch up to COMPARABLES_LIMIT full comparable property documents, ordered
- * nearest-first. `scopeAddressIds` is distance-ordered; we query the matching
- * comparables and then re-sort them to honour that ordering (a `$in` query does
- * not preserve array order on its own).
+ * nearest-first.
+ *
+ * `scopeAddressIds` is distance-ordered, so we cap the query to the nearest
+ * `COMPARABLES_LIMIT * COMPARABLES_OVERFETCH_FACTOR` addresses (the cushion
+ * absorbs addresses with 0/multiple comparables) instead of fetching+populating
+ * the ENTIRE scope and slicing to 12 in memory. We then re-sort the returned
+ * docs to honour the distance ordering (a `$in` query does not preserve array
+ * order on its own) and slice to COMPARABLES_LIMIT. The full-scope STATS
+ * aggregation is unaffected — only this comparables-list fetch is capped.
  */
 async function fetchComparables(
   baseFilter: Record<string, unknown>,
   scopeAddressIds: Types.ObjectId[]
 ): Promise<Record<string, unknown>[]> {
   if (scopeAddressIds.length === 0) return [];
+  // Over-fetch only the nearest slice of the distance-ordered scope.
+  const nearestAddressIds = scopeAddressIds.slice(0, COMPARABLES_LIMIT * COMPARABLES_OVERFETCH_FACTOR);
   const orderById = new Map<string, number>();
-  scopeAddressIds.forEach((id, index) => orderById.set(id.toString(), index));
+  nearestAddressIds.forEach((id, index) => orderById.set(id.toString(), index));
 
-  const docs = await Property.find({ ...baseFilter, addressId: { $in: scopeAddressIds } })
+  const docs = await Property.find({ ...baseFilter, addressId: { $in: nearestAddressIds } })
+    .limit(COMPARABLES_LIMIT * COMPARABLES_OVERFETCH_FACTOR)
     .populate('addressId')
     .lean<Record<string, unknown>[]>();
 
