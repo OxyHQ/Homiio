@@ -54,19 +54,40 @@ export const DETAIL_ICON_SIZE = 22;
 const DETAIL_ICON_BOX_SIZE = 32;
 
 /**
+ * Opacity for a `muted` ("absent") PNG — dimmed so it reads as quiet/disabled
+ * while still showing the same isometric art as its present counterpart, so the
+ * present/absent distinction stays legible without swapping the glyph.
+ */
+const MUTED_ICON_OPACITY = 0.4;
+
+/**
  * The shared "PNG-or-Ionicons" leading icon used by the amenity and feature
  * grids: a centered box that shows `image` when art exists, else `fallbackIcon`
  * as a tinted Ionicons glyph. Pass the result as `DetailIconRow`'s `icon`.
+ *
+ * `muted` (for "absent"/disabled rows) dims the PNG via opacity and tints the
+ * Ionicons fallback with the muted glyph color; off by default so the amenity
+ * and feature callers keep their full-strength look unchanged.
  */
 export const DetailIcon: React.FC<{
   image?: ImageSourcePropType;
   fallbackIcon: React.ComponentProps<typeof Ionicons>['name'];
-}> = ({ image, fallbackIcon }) => (
+  muted?: boolean;
+}> = ({ image, fallbackIcon, muted = false }) => (
   <View style={styles.detailIconBox}>
     {image ? (
-      <Image source={image} style={styles.detailIconImage} resizeMode="contain" accessible={false} />
+      <Image
+        source={image}
+        style={[styles.detailIconImage, muted && styles.detailIconImageMuted]}
+        resizeMode="contain"
+        accessible={false}
+      />
     ) : (
-      <Ionicons name={fallbackIcon} size={DETAIL_ICON_SIZE} color={colors.COLOR_BLACK_LIGHT_1} />
+      <Ionicons
+        name={fallbackIcon}
+        size={DETAIL_ICON_SIZE}
+        color={muted ? colors.COLOR_BLACK_LIGHT_5 : colors.COLOR_BLACK_LIGHT_1}
+      />
     )}
   </View>
 );
@@ -181,6 +202,9 @@ const styles = StyleSheet.create({
   detailIconImage: {
     width: DETAIL_ICON_BOX_SIZE,
     height: DETAIL_ICON_BOX_SIZE,
+  },
+  detailIconImageMuted: {
+    opacity: MUTED_ICON_OPACITY,
   },
   grid: {
     flexDirection: 'row',

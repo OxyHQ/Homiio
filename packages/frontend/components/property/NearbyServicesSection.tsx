@@ -9,8 +9,9 @@
  *
  * We render EVERY category so the user can see what IS and ISN'T nearby (the
  * whole point is to answer "is there a school nearby?"). Present categories
- * come first — brand-tinted icon + label + nearest distance ("Pharmacy ·
- * 153 m"). Absent categories follow, muted (greyed icon + label + em-dash).
+ * come first — full-color isometric icon + label + nearest distance ("Pharmacy
+ * · 153 m"). Absent categories follow, muted (dimmed icon + greyed label +
+ * em-dash).
  *
  * Fails soft: hides itself on error. A `partial` payload (upstream timeout or
  * the property has no coordinates) is treated as "unknown" — we still show what
@@ -22,7 +23,7 @@
  * `AmenitiesGrid`) — no cards, no shadows.
  */
 import React, { useMemo } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, type ImageSourcePropType } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -31,7 +32,7 @@ import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { Section } from '@/components/property/Section';
 import {
-  DETAIL_ICON_SIZE,
+  DetailIcon,
   DetailIconCell,
   DetailIconGrid,
   DetailIconRow,
@@ -45,23 +46,74 @@ interface NearbyServicesSectionProps {
   propertyId: string;
 }
 
-/** Icon + i18n label for each service category. Keyed by `NearbyServiceKey`
- *  so every key is covered exhaustively (a missing entry is a type error). */
+/** Isometric PNG art + Ionicons fallback + i18n label for each service
+ *  category. Keyed by `NearbyServiceKey` so every key is covered exhaustively
+ *  (a missing entry is a type error). The PNG renders via the shared
+ *  `DetailIcon` (full-color when present, dimmed when absent); the Ionicons
+ *  glyph is the fallback when art fails to load. */
 const SERVICE_META: Record<
   NearbyServiceKey,
-  { icon: React.ComponentProps<typeof Ionicons>['name']; labelKey: string }
+  {
+    icon: React.ComponentProps<typeof Ionicons>['name'];
+    labelKey: string;
+    image: ImageSourcePropType;
+  }
 > = {
-  pharmacy: { icon: 'medkit-outline', labelKey: 'property.nearbyServices.labels.pharmacy' },
-  school: { icon: 'school-outline', labelKey: 'property.nearbyServices.labels.school' },
-  hospital: { icon: 'medical-outline', labelKey: 'property.nearbyServices.labels.hospital' },
-  police: { icon: 'shield-outline', labelKey: 'property.nearbyServices.labels.police' },
-  fire_station: { icon: 'flame-outline', labelKey: 'property.nearbyServices.labels.fire_station' },
-  supermarket: { icon: 'cart-outline', labelKey: 'property.nearbyServices.labels.supermarket' },
-  transit: { icon: 'bus-outline', labelKey: 'property.nearbyServices.labels.transit' },
-  park: { icon: 'leaf-outline', labelKey: 'property.nearbyServices.labels.park' },
-  bank: { icon: 'card-outline', labelKey: 'property.nearbyServices.labels.bank' },
-  restaurant: { icon: 'restaurant-outline', labelKey: 'property.nearbyServices.labels.restaurant' },
-  gym: { icon: 'barbell-outline', labelKey: 'property.nearbyServices.labels.gym' },
+  pharmacy: {
+    icon: 'medkit-outline',
+    labelKey: 'property.nearbyServices.labels.pharmacy',
+    image: require('@/assets/nearby/pharmacy.png'),
+  },
+  school: {
+    icon: 'school-outline',
+    labelKey: 'property.nearbyServices.labels.school',
+    image: require('@/assets/nearby/school.png'),
+  },
+  hospital: {
+    icon: 'medical-outline',
+    labelKey: 'property.nearbyServices.labels.hospital',
+    image: require('@/assets/nearby/hospital.png'),
+  },
+  police: {
+    icon: 'shield-outline',
+    labelKey: 'property.nearbyServices.labels.police',
+    image: require('@/assets/nearby/police.png'),
+  },
+  fire_station: {
+    icon: 'flame-outline',
+    labelKey: 'property.nearbyServices.labels.fire_station',
+    image: require('@/assets/nearby/fire_station.png'),
+  },
+  supermarket: {
+    icon: 'cart-outline',
+    labelKey: 'property.nearbyServices.labels.supermarket',
+    image: require('@/assets/nearby/supermarket.png'),
+  },
+  transit: {
+    icon: 'bus-outline',
+    labelKey: 'property.nearbyServices.labels.transit',
+    image: require('@/assets/nearby/transit.png'),
+  },
+  park: {
+    icon: 'leaf-outline',
+    labelKey: 'property.nearbyServices.labels.park',
+    image: require('@/assets/nearby/park.png'),
+  },
+  bank: {
+    icon: 'card-outline',
+    labelKey: 'property.nearbyServices.labels.bank',
+    image: require('@/assets/nearby/bank.png'),
+  },
+  restaurant: {
+    icon: 'restaurant-outline',
+    labelKey: 'property.nearbyServices.labels.restaurant',
+    image: require('@/assets/nearby/restaurant.png'),
+  },
+  gym: {
+    icon: 'barbell-outline',
+    labelKey: 'property.nearbyServices.labels.gym',
+    image: require('@/assets/nearby/gym.png'),
+  },
 };
 
 /** Metres in one kilometre — distances at/above this switch to a km label. */
@@ -88,20 +140,21 @@ interface ServiceRowProps {
 
 /**
  * One service row: icon + label + nearest distance. Present categories render
- * in full strength (brand icon, dark label, dark distance); absent categories
- * are muted (greyed icon/label + em-dash) so the absence is legible but quiet.
- * Delegates the layout to the shared `DetailIconRow` (with a trailing distance)
- * so it can't drift from the amenity grid; only the icon tint stays local.
+ * in full strength (full-color PNG, dark label, dark distance); absent
+ * categories are muted (dimmed PNG + greyed label + em-dash) so the absence is
+ * legible but quiet. Delegates both the leading icon (the shared `DetailIcon`,
+ * with the same `muted` state) and the layout (`DetailIconRow`, with a trailing
+ * distance) to the shared primitives so it can't drift from the amenity grid.
  */
 const ServiceRow: React.FC<ServiceRowProps> = ({ category, label, distanceLabel }) => {
   const { present } = category;
   return (
     <DetailIconRow
       icon={
-        <Ionicons
-          name={SERVICE_META[category.key].icon}
-          size={DETAIL_ICON_SIZE}
-          color={present ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_5}
+        <DetailIcon
+          image={SERVICE_META[category.key].image}
+          fallbackIcon={SERVICE_META[category.key].icon}
+          muted={!present}
         />
       }
       label={label}
