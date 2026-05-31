@@ -1,5 +1,11 @@
 import { api } from '@/utils/api';
-import { PropertyType, PropertyFilters, Property, PropertyImage } from '@homiio/shared-types';
+import {
+  PropertyType,
+  PropertyFilters,
+  Property,
+  PropertyImage,
+  PropertyAreaInsights,
+} from '@homiio/shared-types';
 
 // Re-export types for use in other files
 export { Property, PropertyFilters, PropertyType } from '@homiio/shared-types';
@@ -308,6 +314,24 @@ class PropertyService {
     } catch (error) {
       return null;
     }
+  }
+
+  /**
+   * Area price-insights for a property: how its price compares to similar
+   * homes nearby (range, average, median, verdict, distribution, comparable
+   * listings). Backed by `GET /api/properties/:id/area-insights`.
+   *
+   * Unwraps the `{ data }` envelope and lets transport/HTTP errors propagate
+   * so the calling React Query hook owns the loading/error/empty states (and
+   * the detail screen can fail soft by hiding the section).
+   */
+  async getAreaInsights(
+    propertyId: string,
+  ): Promise<PropertyAreaInsights> {
+    const response = await api.get<{ data: PropertyAreaInsights }>(
+      `${this.baseUrl}/${propertyId}/area-insights`,
+    );
+    return response.data.data;
   }
 
   // Create property

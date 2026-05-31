@@ -216,31 +216,8 @@
       "noFolderItems": "No hi ha propietats en aquesta carpeta",
       "noFolderItemsDescription": "Desa propietats en aquesta carpeta per veure-les aquí"
     },
-    "viewAll": "Veure Tot",
     "tips": {
-      "title": "Consells i Guies de Lloguer",
-      "categories": {
-        "search": "Cerca",
-        "safety": "Seguretat",
-        "legal": "Legal",
-        "inspection": "Inspecció"
-      },
-      "firstTimeRenting": {
-        "title": "Primera vegada llogant? Aquí tens la teva guia completa",
-        "description": "Tot el que necessites saber sobre trobar, veure i assegurar la teva primera propietat de lloguer."
-      },
-      "avoidScams": {
-        "title": "Com evitar estafes de lloguer: Senyals d'advertència",
-        "description": "Aprèn a identificar estafes comunes de lloguer i protegeix-te del frau en buscar una nova casa."
-      },
-      "rentalAgreement": {
-        "title": "Entenent el teu contracte de lloguer: Termes clau explicats",
-        "description": "Descomposa termes legals complexos i entén el que estàs signant abans de comprometre't amb un lloguer."
-      },
-      "propertyInspection": {
-        "title": "Llista de verificació d'inspecció de propietats: Què buscar",
-        "description": "Una guia completa per inspeccionar propietats de lloguer potencials i identificar possibles problemes."
-      }
+      "article": "Article"
     },
     "faq": {
       "title": "Preguntes Freqüents",
@@ -260,9 +237,6 @@
         "question": "Quins són els requisits de la sol·licitud de lloguer?",
         "answer": "Els requisits varien segons la propietat, però típicament inclouen comprovant d'ingressos, historial de lloguer, verificació de crèdit i referències. Cada llistat especificarà els requisits exactes necessaris."
       }
-    },
-    "tips": {
-      "article": "Article"
     }
   },
   "search": {
@@ -311,7 +285,6 @@
     "popularAreas": "Àrees Populars",
     "quickFilters": "Filtres Ràpids",
     "searchingAddresses": "Cercant adreces...",
-    "propertyTypes": "Tipus de Propietats",
     "propertyType": {
       "apartments": "Apartaments",
       "houses": "Cases",
@@ -412,7 +385,16 @@
   },
   "properties": {
     "title": "Propietats",
-    "filters": "Filtres",
+    "filters": {
+      "priceRange": "Rang de Preus",
+      "propertyType": "Tipus de Propietat",
+      "bedrooms": "Habitacions",
+      "bathrooms": "Banys",
+      "amenities": "Comoditats",
+      "availability": "Disponibilitat",
+      "apply": "Aplicar Filtres",
+      "clear": "Netejar Tot"
+    },
     "sort": "Ordenar",
     "view": "Veure",
     "save": "Guardar",
@@ -447,16 +429,6 @@
       "photos": "Fotos",
       "map": "Mapa",
       "contactInfo": "Informació de Contacte"
-    },
-    "filters": {
-      "priceRange": "Rang de Preus",
-      "propertyType": "Tipus de Propietat",
-      "bedrooms": "Habitacions",
-      "bathrooms": "Banys",
-      "amenities": "Comoditats",
-      "availability": "Disponibilitat",
-      "apply": "Aplicar Filtres",
-      "clear": "Netejar Tot"
     },
     "titles": {
       "forRent": "en lloguer a",
@@ -517,6 +489,66 @@
       "errorTitle": "No s'han pogut carregar les notes de la comunitat",
       "emptyTitle": "Encara no hi ha notes de la comunitat",
       "emptyDescription": "Sigues la primera persona a explicar com va ser viure aquí."
+    },
+    "areaInsights": {
+      "title": "Preus en aquesta zona",
+      "subtitleRadius_one": "Habitatge d'{{count}} hab. a menys de {{radiusKm}} km",
+      "subtitleRadius_other": "Habitatges de {{count}} hab. a menys de {{radiusKm}} km",
+      "subtitleStudioRadius": "Estudis a menys de {{radiusKm}} km",
+      "subtitleCity_one": "Habitatge d'{{count}} hab. a {{areaLabel}}",
+      "subtitleCity_other": "Habitatges de {{count}} hab. a {{areaLabel}}",
+      "subtitleStudioCity": "Estudis a {{areaLabel}}",
+      "verdict": {
+        "good_deal": "Bon preu",
+        "below_average": "Per sota de la mitjana",
+        "average": "Preu típic",
+        "above_average": "Per sobre de la mitjana"
+      },
+      "vsAvgCheaper": "{{percent}}% per sota de la mitjana",
+      "vsAvgPricier": "{{percent}}% per sobre de la mitjana",
+      "vsAvgSame": "Just a la mitjana",
+      "thisHome": "Aquest habitatge",
+      "rangeMarkerLabel": "{{price}} · {{deltaLabel}}",
+      "average": "Mitjana {{avg}}",
+      "perSqm": "{{price}}/m² vs zona {{areaPrice}}/m²",
+      "samples_one": "{{count}} habitatge",
+      "samples_other": "{{count}} habitatges",
+      "statLine": "{{average}} · {{samples}}",
+      "statLineWithSqm": "{{average}} · {{perSqm}} · {{samples}}",
+      "neighborhoodPricier": "{{neighborhood}} és ~{{percent}}% més car que {{city}}",
+      "neighborhoodCheaper": "{{neighborhood}} és ~{{percent}}% més barat que {{city}}",
+      "neighborhoodSame": "{{neighborhood}} té preus semblants a {{city}}",
+      "distributionLabel": "Distribució de preus d'habitatges propers",
+      "lowDataNote": "Encara no hi ha prou anuncis propers per comparar.",
+      "lowSampleCaveat": "Basat en només {{count}} anunci proper: pren-ho com a orientació.",
+      "lowSampleCaveat_other": "Basat en només {{count}} anuncis propers: pren-ho com a orientació.",
+      "errorRetry": "No s'han pogut carregar els preus de la zona."
+    },
+    "similarHomes": {
+      "title": "Habitatges semblants a prop",
+      "subtitle": "Anuncis comparables a menys de {{radiusKm}} km"
+    },
+    "moveInCost": {
+      "title": "Cost d'entrada",
+      "rent": "Lloguer",
+      "deposit": "Fiança",
+      "fees": "Despeses",
+      "cleaningFee": "Despeses de neteja",
+      "serviceFee": "Despeses de servei",
+      "taxes": "Impostos",
+      "total": "Total per entrar",
+      "totalUpfront": "Total inicial",
+      "summary": "{{rent}} + {{deposit}} = {{total}} per entrar",
+      "summaryWithFees": "{{rent}} + {{deposit}} + {{fees}} = {{total}} per entrar",
+      "note": "Cost inicial estimat. El propietari confirma els imports finals."
+    },
+    "demand": {
+      "listedToday": "Publicat avui",
+      "listedYesterday": "Publicat ahir",
+      "listedDaysAgo_one": "Publicat fa {{count}} dia",
+      "listedDaysAgo_other": "Publicat fa {{count}} dies",
+      "saved_one": "{{count}} desat",
+      "saved_other": "{{count}} desats"
     }
   },
   "viewings": {

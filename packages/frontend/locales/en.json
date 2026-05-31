@@ -259,7 +259,6 @@
       "noFolderItems": "No properties in this folder",
       "noFolderItemsDescription": "Save properties to this folder to see them here"
     },
-    "viewAll": "View All",
     "tips": {
       "title": "Rental Tips & Guides",
       "categories": {
@@ -328,9 +327,8 @@
     "searchQuery": "Search Query",
     "searchName": "Search Name",
     "searchNamePlaceholder": "Enter a name for this search",
-    "enableNotifications": "Enable Notifications",
-    "notificationsDescription": "Get notified when new properties match this search",
     "enableNotifications": "Enable notifications",
+    "notificationsDescription": "Get notified when new properties match this search",
     "disableNotifications": "Disable notifications",
     "withFilters": "With filters",
     "error": "Error",
@@ -365,7 +363,6 @@
     "popularAreas": "Popular Areas",
     "quickFilters": "Quick Filters",
     "searchingAddresses": "Searching addresses...",
-    "propertyTypes": "Property Types",
     "propertyType": {
       "apartments": "Apartments",
       "houses": "Houses",
@@ -486,7 +483,16 @@
       }
     },
     "title": "Properties",
-    "filters": "Filters",
+    "filters": {
+      "priceRange": "Price Range",
+      "propertyType": "Property Type",
+      "bedrooms": "Bedrooms",
+      "bathrooms": "Bathrooms",
+      "amenities": "Amenities",
+      "availability": "Availability",
+      "apply": "Apply Filters",
+      "clear": "Clear All"
+    },
     "sort": "Sort",
     "view": "View",
     "save": "Save",
@@ -521,16 +527,6 @@
       "photos": "Photos",
       "map": "Map",
       "contactInfo": "Contact Information"
-    },
-    "filters": {
-      "priceRange": "Price Range",
-      "propertyType": "Property Type",
-      "bedrooms": "Bedrooms",
-      "bathrooms": "Bathrooms",
-      "amenities": "Amenities",
-      "availability": "Availability",
-      "apply": "Apply Filters",
-      "clear": "Clear All"
     },
     "titles": {
       "forRent": "for rent in",
@@ -972,14 +968,6 @@
       "noted": "With Notes",
       "quickSaves": "Quick Saves",
       "folders": "Folders",
-      "profiles": "Profiles"
-    },
-    "tabs": {
-      "all": "All",
-      "recent": "Recent",
-      "noted": "With Notes",
-      "quickSaves": "Quick Saves",
-      "folders": "Folders",
       "profiles": "Profiles",
       "searches": "Saved Searches"
     },
@@ -1101,6 +1089,66 @@
       "errorTitle": "Could not load community notes",
       "emptyTitle": "No community notes yet",
       "emptyDescription": "Be the first to share what it was like to live here."
+    },
+    "areaInsights": {
+      "title": "Prices in this area",
+      "subtitleRadius_one": "{{count}}-bed home within {{radiusKm}} km",
+      "subtitleRadius_other": "{{count}}-bed homes within {{radiusKm}} km",
+      "subtitleStudioRadius": "Studios within {{radiusKm}} km",
+      "subtitleCity_one": "{{count}}-bed home in {{areaLabel}}",
+      "subtitleCity_other": "{{count}}-bed homes in {{areaLabel}}",
+      "subtitleStudioCity": "Studios in {{areaLabel}}",
+      "verdict": {
+        "good_deal": "Good deal",
+        "below_average": "Below average",
+        "average": "Typical price",
+        "above_average": "Above average"
+      },
+      "vsAvgCheaper": "{{percent}}% below average",
+      "vsAvgPricier": "{{percent}}% above average",
+      "vsAvgSame": "Right at the average",
+      "thisHome": "This home",
+      "rangeMarkerLabel": "{{price}} · {{deltaLabel}}",
+      "average": "Average {{avg}}",
+      "perSqm": "{{price}}/m² vs area {{areaPrice}}/m²",
+      "samples_one": "{{count}} home",
+      "samples_other": "{{count}} homes",
+      "statLine": "{{average}} · {{samples}}",
+      "statLineWithSqm": "{{average}} · {{perSqm}} · {{samples}}",
+      "neighborhoodPricier": "{{neighborhood}} is ~{{percent}}% pricier than {{city}}",
+      "neighborhoodCheaper": "{{neighborhood}} is ~{{percent}}% cheaper than {{city}}",
+      "neighborhoodSame": "{{neighborhood}} is priced in line with {{city}}",
+      "distributionLabel": "Price distribution of nearby homes",
+      "lowDataNote": "Not enough nearby listings to compare yet.",
+      "lowSampleCaveat": "Based on just {{count}} nearby listing — treat as a rough guide.",
+      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide.",
+      "errorRetry": "Couldn't load area prices."
+    },
+    "similarHomes": {
+      "title": "Similar homes nearby",
+      "subtitle": "Comparable listings within {{radiusKm}} km"
+    },
+    "moveInCost": {
+      "title": "Cost to move in",
+      "rent": "Rent",
+      "deposit": "Deposit",
+      "fees": "Fees",
+      "cleaningFee": "Cleaning fee",
+      "serviceFee": "Service fee",
+      "taxes": "Taxes",
+      "total": "Total to move in",
+      "totalUpfront": "Upfront total",
+      "summary": "{{rent}} + {{deposit}} = {{total}} to move in",
+      "summaryWithFees": "{{rent}} + {{deposit}} + {{fees}} = {{total}} to move in",
+      "note": "Estimated upfront cost. Final amounts are confirmed by the host."
+    },
+    "demand": {
+      "listedToday": "Listed today",
+      "listedYesterday": "Listed yesterday",
+      "listedDaysAgo_one": "Listed {{count}} day ago",
+      "listedDaysAgo_other": "Listed {{count}} days ago",
+      "saved_one": "{{count}} saved",
+      "saved_other": "{{count}} saved"
     }
   },
   "viewings": {
@@ -1170,7 +1218,7 @@
         },
         "founder": {
           "title": "Founder supporter",
-          "subtitle": "Join our founding supporters", 
+          "subtitle": "Join our founding supporters",
           "button": "Become a Founder"
         }
       },
@@ -1190,7 +1238,7 @@
             "description": "Sindi legal support and transparent contracts"
           },
           "innovation": {
-            "title": "Innovation", 
+            "title": "Innovation",
             "description": "FairCoin payments and energy monitoring"
           },
           "community": {
@@ -1204,7 +1252,7 @@
         "description": "We're building more than just a rental platform—we're creating a complete ecosystem for ethical housing. Your support helps us:",
         "goals": [
           "Fight against rental abuse and hidden fees",
-          "Create transparent processes for tenants and landlords", 
+          "Create transparent processes for tenants and landlords",
           "Integrate innovative payment methods like FairCoin",
           "Provide legal support through our Sindi integration",
           "Build sustainable, community-driven solutions"

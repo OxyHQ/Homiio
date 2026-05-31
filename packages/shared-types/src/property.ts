@@ -346,4 +346,88 @@ export interface PropertyDraft {
   lastSaved: Date;
 }
 
-export type UpdatePropertyData = DeepPartial<Property>; 
+export type UpdatePropertyData = DeepPartial<Property>;
+
+/**
+ * Verdict assigned to a listing's price relative to comparable homes in its
+ * area. Mirrors the thresholds applied server-side in the area-insights
+ * controller (negative percent = cheaper than the local average).
+ */
+export type AreaPriceVerdict =
+  | 'good_deal'
+  | 'below_average'
+  | 'average'
+  | 'above_average';
+
+/** Scope the area comparison was computed against. */
+export type AreaInsightsBasis = 'radius' | 'city';
+
+/** Aggregate price comparison of the target listing against its comparables. */
+export interface AreaPriceComparison {
+  min: number;
+  max: number;
+  avg: number;
+  median: number;
+  /** The target property's own price (in the shared `priceUnit`). */
+  thisPrice: number;
+  /** Integer percent difference of `thisPrice` vs `avg` (negative = cheaper). */
+  percentDiffFromAvg: number;
+  verdict: AreaPriceVerdict;
+}
+
+/** A single bar in the area price-distribution histogram. */
+export interface AreaPriceDistributionBucket {
+  min: number;
+  max: number;
+  count: number;
+}
+
+/** Price-distribution histogram plus the bucket the target falls in. */
+export interface AreaPriceDistribution {
+  buckets: AreaPriceDistributionBucket[];
+  /** Index of the bucket containing the target price, or -1 if outside range. */
+  thisBucketIndex: number;
+}
+
+/** Target vs area average price-per-square-metre (only when both are known). */
+export interface AreaPricePerSqm {
+  this: number;
+  areaAvg: number;
+}
+
+/** Neighborhood-vs-city average contrast (only when a distinct neighborhood exists). */
+export interface AreaNeighborhoodVsCity {
+  neighborhood: string;
+  city: string;
+  neighborhoodAvg: number;
+  cityAvg: number;
+  /** Integer percent difference of neighborhood vs city (positive = pricier). */
+  percentDiff: number;
+}
+
+/**
+ * Payload returned by `GET /api/properties/:propertyId/area-insights`.
+ *
+ * Compares the target listing's price to similar homes nearby (same
+ * `priceUnit`, compatible `rentMode`, ±1 bedroom). `sampleSize === 0` signals
+ * that no comparables were found — consumers must render a graceful
+ * "not enough data" state rather than a fabricated range.
+ */
+export interface PropertyAreaInsights {
+  basis: AreaInsightsBasis;
+  /** Radius (km) used for the neighborhood-scale comparison. */
+  radiusKm: number;
+  /** Human label for the compared area (neighborhood for radius, city for fallback). */
+  areaLabel: string;
+  currency: string;
+  /** Price unit the comparison is denominated in (e.g. `'month'`, `'night'`). */
+  priceUnit: string;
+  /** Number of comparable homes (excludes the target); can be 0. */
+  sampleSize: number;
+  comparison: AreaPriceComparison;
+  pricePerSqm: AreaPricePerSqm | null;
+  distribution: AreaPriceDistribution;
+  neighborhoodVsCity: AreaNeighborhoodVsCity | null;
+  /** Up to 12 nearest comparable listings, EXCLUDING the target property. */
+  comparables: Property[];
+}

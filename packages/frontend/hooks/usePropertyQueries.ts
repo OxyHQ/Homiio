@@ -1,9 +1,15 @@
 import { useCallback, useState, useEffect } from 'react';
 import { usePropertyStore, usePropertySelectors } from '@/store/propertyStore';
 import { Property, PropertyFilters, propertyService } from '@/services/propertyService';
-import { CreatePropertyData } from '@homiio/shared-types';
+import { CreatePropertyData, PropertyAreaInsights } from '@homiio/shared-types';
 import { toast } from '@/lib/sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+
+/** Area-insights cache is comparatively expensive to compute server-side and
+ *  changes slowly (it aggregates a whole neighborhood), so we keep it fresh
+ *  longer than the per-property detail query. */
+const AREA_INSIGHTS_STALE_TIME = 1000 * 60 * 5;
+const AREA_INSIGHTS_GC_TIME = 1000 * 60 * 30;
 
 // Property Hooks
 export const useProperties = () => {
@@ -122,6 +128,29 @@ export const usePropertyStats = (id: string) => {
     loading: isLoading,
     error: error instanceof Error ? error.message : null,
     loadStats: refetch,
+  };
+};
+
+/**
+ * Area price-insights for a property (price-transparency block on the detail
+ * screen). Read-only, so it lives entirely in React Query — no Zustand sync.
+ * Fails soft: callers hide the section on `error` and render a graceful empty
+ * state when `sampleSize === 0`.
+ */
+export const useAreaInsights = (propertyId: string) => {
+  const { data, isLoading, error, refetch } = useQuery<PropertyAreaInsights>({
+    queryKey: ['areaInsights', propertyId],
+    queryFn: async () => propertyService.getAreaInsights(propertyId),
+    enabled: Boolean(propertyId),
+    staleTime: AREA_INSIGHTS_STALE_TIME,
+    gcTime: AREA_INSIGHTS_GC_TIME,
+  });
+
+  return {
+    insights: data ?? null,
+    loading: isLoading,
+    error: error instanceof Error ? error.message : null,
+    refetch,
   };
 };
 

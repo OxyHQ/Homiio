@@ -28,6 +28,7 @@ export default function () {
   router.get('/properties/radius', asyncHandler(propertyController.findPropertiesInRadius));
   router.get('/properties/:propertyId', asyncHandler(propertyController.getPropertyById));
   router.get('/properties/:propertyId/stats', asyncHandler(propertyController.getPropertyStats));
+  router.get('/properties/:propertyId/area-insights', asyncHandler(propertyController.getAreaInsights));
 
   // Public geocoding routes
   router.get('/geocoding/reverse', asyncHandler(geocodingController.reverseGeocode));

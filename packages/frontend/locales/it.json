@@ -400,7 +400,6 @@
     "popularAreas": "Aree Popolari",
     "quickFilters": "Filtri Rapidi",
     "searchingAddresses": "Cercando indirizzi...",
-    "propertyTypes": "Tipi di Proprietà",
     "propertyType": {
       "apartments": "Appartamenti",
       "houses": "Case",
@@ -447,7 +446,16 @@
   },
   "properties": {
     "title": "Proprietà",
-    "filters": "Filtri",
+    "filters": {
+      "priceRange": "Fascia di Prezzo",
+      "propertyType": "Tipo di Proprietà",
+      "bedrooms": "Camere da letto",
+      "bathrooms": "Bagni",
+      "amenities": "Servizi",
+      "availability": "Disponibilità",
+      "apply": "Applica Filtri",
+      "clear": "Cancella Tutto"
+    },
     "sort": "Ordina",
     "view": "Visualizza",
     "save": "Salva",
@@ -479,16 +487,6 @@
       "photos": "Foto",
       "map": "Mappa",
       "contactInfo": "Informazioni di Contatto"
-    },
-    "filters": {
-      "priceRange": "Fascia di Prezzo",
-      "propertyType": "Tipo di Proprietà",
-      "bedrooms": "Camere da letto",
-      "bathrooms": "Bagni",
-      "amenities": "Servizi",
-      "availability": "Disponibilità",
-      "apply": "Applica Filtri",
-      "clear": "Cancella Tutto"
     },
     "titles": {
       "forRent": "in affitto a",
@@ -549,6 +547,66 @@
       "errorTitle": "Impossibile caricare le note della community",
       "emptyTitle": "Ancora nessuna nota della community",
       "emptyDescription": "Sii il primo a raccontare com'è stato vivere qui."
+    },
+    "areaInsights": {
+      "title": "Prezzi in questa zona",
+      "subtitleRadius_one": "Casa con {{count}} camera entro {{radiusKm}} km",
+      "subtitleRadius_other": "Case con {{count}} camere entro {{radiusKm}} km",
+      "subtitleStudioRadius": "Monolocali entro {{radiusKm}} km",
+      "subtitleCity_one": "Casa con {{count}} camera a {{areaLabel}}",
+      "subtitleCity_other": "Case con {{count}} camere a {{areaLabel}}",
+      "subtitleStudioCity": "Monolocali a {{areaLabel}}",
+      "verdict": {
+        "good_deal": "Buon affare",
+        "below_average": "Sotto la media",
+        "average": "Prezzo nella media",
+        "above_average": "Sopra la media"
+      },
+      "vsAvgCheaper": "{{percent}}% sotto la media",
+      "vsAvgPricier": "{{percent}}% sopra la media",
+      "vsAvgSame": "In linea con la media",
+      "thisHome": "Questa casa",
+      "rangeMarkerLabel": "{{price}} · {{deltaLabel}}",
+      "average": "Media {{avg}}",
+      "perSqm": "{{price}}/m² vs zona {{areaPrice}}/m²",
+      "samples_one": "{{count}} casa",
+      "samples_other": "{{count}} case",
+      "statLine": "{{average}} · {{samples}}",
+      "statLineWithSqm": "{{average}} · {{perSqm}} · {{samples}}",
+      "neighborhoodPricier": "{{neighborhood}} è ~{{percent}}% più caro di {{city}}",
+      "neighborhoodCheaper": "{{neighborhood}} è ~{{percent}}% più economico di {{city}}",
+      "neighborhoodSame": "{{neighborhood}} ha prezzi in linea con {{city}}",
+      "distributionLabel": "Distribuzione dei prezzi delle case vicine",
+      "lowDataNote": "Non ci sono ancora abbastanza annunci vicini per confrontare.",
+      "lowSampleCaveat": "Basato su solo {{count}} annuncio vicino: usalo come riferimento.",
+      "lowSampleCaveat_other": "Basato su solo {{count}} annunci vicini: usalo come riferimento.",
+      "errorRetry": "Impossibile caricare i prezzi della zona."
+    },
+    "similarHomes": {
+      "title": "Case simili nelle vicinanze",
+      "subtitle": "Annunci comparabili entro {{radiusKm}} km"
+    },
+    "moveInCost": {
+      "title": "Costo per entrare",
+      "rent": "Affitto",
+      "deposit": "Cauzione",
+      "fees": "Spese",
+      "cleaningFee": "Spese di pulizia",
+      "serviceFee": "Spese di servizio",
+      "taxes": "Tasse",
+      "total": "Totale per entrare",
+      "totalUpfront": "Totale iniziale",
+      "summary": "{{rent}} + {{deposit}} = {{total}} per entrare",
+      "summaryWithFees": "{{rent}} + {{deposit}} + {{fees}} = {{total}} per entrare",
+      "note": "Costo iniziale stimato. Gli importi finali sono confermati dall'host."
+    },
+    "demand": {
+      "listedToday": "Pubblicato oggi",
+      "listedYesterday": "Pubblicato ieri",
+      "listedDaysAgo_one": "Pubblicato {{count}} giorno fa",
+      "listedDaysAgo_other": "Pubblicato {{count}} giorni fa",
+      "saved_one": "{{count}} salvato",
+      "saved_other": "{{count}} salvati"
     }
   },
   "viewings": {

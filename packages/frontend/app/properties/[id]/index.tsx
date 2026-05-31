@@ -48,7 +48,7 @@ import { SaveButton } from '@/components/SaveButton';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { useIsDesktop } from '@/hooks/useOptimizedMediaQuery';
 import { useLayoutScroll } from '@/context/LayoutScrollContext';
-import { useProperty } from '@/hooks';
+import { useAreaInsights, useProperty } from '@/hooks';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
@@ -79,7 +79,10 @@ import { PropertyOverview } from '@/components/property/PropertyOverview';
 import { NeighborhoodInfo } from '@/components/property/NeighborhoodInfo';
 import { AvailabilitySection } from '@/components/property/AvailabilitySection';
 import { AmenitiesSection } from '@/components/property/AmenitiesSection';
-import { ReviewsSection } from '@/components/property/ReviewsSection';
+import { CommunityNotesSection } from '@/components/property/CommunityNotesSection';
+import { PriceRangeSection } from '@/components/property/PriceRangeSection';
+import { SimilarHomesSection } from '@/components/property/SimilarHomesSection';
+import { DemandSignal } from '@/components/property/DemandSignal';
 import { PropertyActionBar } from '@/components/property/PropertyActionBar';
 import { StickyPropertyHeader } from '@/components/property/StickyPropertyHeader';
 import { SECTION_GUTTER } from '@/components/property/Section';
@@ -120,6 +123,24 @@ export default function PropertyDetailPage() {
     error,
     loadProperty,
   } = useProperty(propertyIdParam);
+
+  // Area price-insights drive the "Prices in this area" + "Similar homes"
+  // block. We read it here (the child sections share the same React Query
+  // cache key, so this does not duplicate the request) to decide whether to
+  // render each section's flat wrapper — keeping us from leaving a bare
+  // hairline divider when a section fails soft or has no comparables.
+  const {
+    insights: areaInsights,
+    loading: areaInsightsLoading,
+    error: areaInsightsError,
+  } = useAreaInsights(propertyIdParam);
+
+  const showPriceRangeSection =
+    !areaInsightsError && (areaInsightsLoading || Boolean(areaInsights));
+  const showSimilarHomesSection =
+    !areaInsightsError &&
+    !areaInsightsLoading &&
+    (areaInsights?.comparables.length ?? 0) > 0;
 
   const hasViewedRef = useRef(false);
   const [hasActiveViewing, setHasActiveViewing] = useState(false);
@@ -571,6 +592,12 @@ export default function PropertyDetailPage() {
                   property={apiProperty}
                   landlordProfile={landlordProfile}
                 />
+                <View style={styles.demandRow}>
+                  <DemandSignal
+                    propertyId={property.id}
+                    createdAt={apiProperty.createdAt}
+                  />
+                </View>
               </View>
             ) : null}
 
@@ -641,11 +668,31 @@ export default function PropertyDetailPage() {
             </View>
 
             <View style={[styles.section, styles.divider]}>
-              <ReviewsSection
+              <CommunityNotesSection
                 property={apiProperty as Property}
                 variant="preview"
               />
             </View>
+
+            {/* Area context: how this listing's price compares to similar
+                homes nearby, plus a carousel of those comparables. Grouped
+                between Community Notes and the landlord's own listings. Each
+                wrapper is gated so a fail-soft/empty section never leaves a
+                bare hairline divider behind. */}
+            {showPriceRangeSection ? (
+              <View style={[styles.section, styles.divider]}>
+                <PriceRangeSection
+                  propertyId={property.id}
+                  bedrooms={property.bedrooms}
+                />
+              </View>
+            ) : null}
+
+            {showSimilarHomesSection ? (
+              <View style={[styles.section, styles.divider]}>
+                <SimilarHomesSection propertyId={property.id} />
+              </View>
+            ) : null}
 
             {apiProperty ? (
               <View style={[styles.section, styles.divider]}>
@@ -753,6 +800,11 @@ const styles = StyleSheet.create({
   // primitive (third-party widgets inlined on mobile).
   gutter: {
     paddingHorizontal: SECTION_GUTTER,
+  },
+  // Demand signal sits just under the host card, sharing its gutter.
+  demandRow: {
+    paddingHorizontal: SECTION_GUTTER,
+    marginTop: spacing.md,
   },
   divider: {
     borderTopWidth: hairline.width,

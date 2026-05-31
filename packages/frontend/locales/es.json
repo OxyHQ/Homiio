@@ -194,31 +194,8 @@
       "noFolderItems": "No hay propiedades en esta carpeta",
       "noFolderItemsDescription": "Guarda propiedades en esta carpeta para verlas aquí"
     },
-    "viewAll": "Ver Todo",
     "tips": {
-      "title": "Consejos y Guías de Alquiler",
-      "categories": {
-        "search": "Búsqueda",
-        "safety": "Seguridad",
-        "legal": "Legal",
-        "inspection": "Inspección"
-      },
-      "firstTimeRenting": {
-        "title": "¿Primera vez alquilando? Aquí tienes tu guía completa",
-        "description": "Todo lo que necesitas saber sobre encontrar, ver y asegurar tu primera propiedad de alquiler."
-      },
-      "avoidScams": {
-        "title": "Cómo evitar estafas de alquiler: Señales de advertencia",
-        "description": "Aprende a identificar estafas comunes de alquiler y protégete del fraude al buscar una nueva casa."
-      },
-      "rentalAgreement": {
-        "title": "Entendiendo tu contrato de alquiler: Términos clave explicados",
-        "description": "Desglosa términos legales complejos y entiende lo que estás firmando antes de comprometerte con un alquiler."
-      },
-      "propertyInspection": {
-        "title": "Lista de verificación de inspección de propiedades: Qué buscar",
-        "description": "Una guía completa para inspeccionar propiedades de alquiler potenciales e identificar posibles problemas."
-      }
+      "article": "Artículo"
     },
     "faq": {
       "title": "Preguntas Frecuentes",
@@ -238,9 +215,6 @@
         "question": "¿Cuáles son los requisitos de la aplicación de alquiler?",
         "answer": "Los requisitos varían según la propiedad, pero típicamente incluyen comprobante de ingresos, historial de alquiler, verificación de crédito y referencias. Cada listado especificará los requisitos exactos necesarios."
       }
-    },
-    "tips": {
-      "article": "Artículo"
     }
   },
   "search": {
@@ -289,7 +263,6 @@
     "popularAreas": "Áreas Populares",
     "quickFilters": "Filtros Rápidos",
     "searchingAddresses": "Buscando direcciones...",
-    "propertyTypes": "Tipos de Propiedad",
     "propertyType": {
       "apartments": "Apartamentos",
       "houses": "Casas",
@@ -390,7 +363,16 @@
   },
   "properties": {
     "title": "Propiedades",
-    "filters": "Filtros",
+    "filters": {
+      "priceRange": "Rango de Precio",
+      "propertyType": "Tipo de Propiedad",
+      "bedrooms": "Habitaciones",
+      "bathrooms": "Baños",
+      "amenities": "Comodidades",
+      "availability": "Disponibilidad",
+      "apply": "Aplicar Filtros",
+      "clear": "Limpiar Todo"
+    },
     "sort": "Ordenar",
     "view": "Ver",
     "save": "Guardar",
@@ -425,16 +407,6 @@
       "photos": "Fotos",
       "map": "Mapa",
       "contactInfo": "Información de Contacto"
-    },
-    "filters": {
-      "priceRange": "Rango de Precio",
-      "propertyType": "Tipo de Propiedad",
-      "bedrooms": "Habitaciones",
-      "bathrooms": "Baños",
-      "amenities": "Comodidades",
-      "availability": "Disponibilidad",
-      "apply": "Aplicar Filtros",
-      "clear": "Limpiar Todo"
     },
     "titles": {
       "forRent": "en alquiler en",
@@ -495,6 +467,66 @@
       "errorTitle": "No se pudieron cargar las notas de la comunidad",
       "emptyTitle": "Aún no hay notas de la comunidad",
       "emptyDescription": "Sé la primera persona en contar cómo fue vivir aquí."
+    },
+    "areaInsights": {
+      "title": "Precios en esta zona",
+      "subtitleRadius_one": "Vivienda de {{count}} hab. a menos de {{radiusKm}} km",
+      "subtitleRadius_other": "Viviendas de {{count}} hab. a menos de {{radiusKm}} km",
+      "subtitleStudioRadius": "Estudios a menos de {{radiusKm}} km",
+      "subtitleCity_one": "Vivienda de {{count}} hab. en {{areaLabel}}",
+      "subtitleCity_other": "Viviendas de {{count}} hab. en {{areaLabel}}",
+      "subtitleStudioCity": "Estudios en {{areaLabel}}",
+      "verdict": {
+        "good_deal": "Buen precio",
+        "below_average": "Por debajo de la media",
+        "average": "Precio típico",
+        "above_average": "Por encima de la media"
+      },
+      "vsAvgCheaper": "{{percent}}% por debajo de la media",
+      "vsAvgPricier": "{{percent}}% por encima de la media",
+      "vsAvgSame": "Justo en la media",
+      "thisHome": "Esta vivienda",
+      "rangeMarkerLabel": "{{price}} · {{deltaLabel}}",
+      "average": "Media {{avg}}",
+      "perSqm": "{{price}}/m² vs zona {{areaPrice}}/m²",
+      "samples_one": "{{count}} vivienda",
+      "samples_other": "{{count}} viviendas",
+      "statLine": "{{average}} · {{samples}}",
+      "statLineWithSqm": "{{average}} · {{perSqm}} · {{samples}}",
+      "neighborhoodPricier": "{{neighborhood}} es ~{{percent}}% más caro que {{city}}",
+      "neighborhoodCheaper": "{{neighborhood}} es ~{{percent}}% más barato que {{city}}",
+      "neighborhoodSame": "{{neighborhood}} tiene precios similares a {{city}}",
+      "distributionLabel": "Distribución de precios de viviendas cercanas",
+      "lowDataNote": "Aún no hay suficientes anuncios cercanos para comparar.",
+      "lowSampleCaveat": "Basado en solo {{count}} anuncio cercano: tómalo como orientación.",
+      "lowSampleCaveat_other": "Basado en solo {{count}} anuncios cercanos: tómalo como orientación.",
+      "errorRetry": "No se pudieron cargar los precios de la zona."
+    },
+    "similarHomes": {
+      "title": "Viviendas similares cerca",
+      "subtitle": "Anuncios comparables a menos de {{radiusKm}} km"
+    },
+    "moveInCost": {
+      "title": "Coste de entrada",
+      "rent": "Alquiler",
+      "deposit": "Fianza",
+      "fees": "Gastos",
+      "cleaningFee": "Gastos de limpieza",
+      "serviceFee": "Gastos de servicio",
+      "taxes": "Impuestos",
+      "total": "Total para entrar",
+      "totalUpfront": "Total inicial",
+      "summary": "{{rent}} + {{deposit}} = {{total}} para entrar",
+      "summaryWithFees": "{{rent}} + {{deposit}} + {{fees}} = {{total}} para entrar",
+      "note": "Coste inicial estimado. El propietario confirma los importes finales."
+    },
+    "demand": {
+      "listedToday": "Publicado hoy",
+      "listedYesterday": "Publicado ayer",
+      "listedDaysAgo_one": "Publicado hace {{count}} día",
+      "listedDaysAgo_other": "Publicado hace {{count}} días",
+      "saved_one": "{{count}} guardado",
+      "saved_other": "{{count}} guardados"
     }
   },
   "viewings": {
@@ -1047,7 +1079,7 @@
         },
         "founder": {
           "title": "Apoyo fundador",
-          "subtitle": "Únete a nuestros seguidores fundadores", 
+          "subtitle": "Únete a nuestros seguidores fundadores",
           "button": "Conviértete en Fundador"
         }
       },
@@ -1067,7 +1099,7 @@
             "description": "Soporte legal de Sindi y contratos transparentes"
           },
           "innovation": {
-            "title": "Innovación", 
+            "title": "Innovación",
             "description": "Pagos con FairCoin y monitoreo de energía"
           },
           "community": {
@@ -1081,7 +1113,7 @@
         "description": "Estamos construyendo más que solo una plataforma de alquiler: estamos creando un ecosistema completo para la vivienda ética. Tu apoyo nos ayuda a:",
         "goals": [
           "Luchar contra el abuso de alquiler y las tarifas ocultas",
-          "Crear procesos transparentes para inquilinos y propietarios", 
+          "Crear procesos transparentes para inquilinos y propietarios",
           "Integrar métodos de pago innovadores como FairCoin",
           "Proporcionar soporte legal a través de nuestra integración con Sindi",
           "Construir soluciones sostenibles impulsadas por la comunidad"
