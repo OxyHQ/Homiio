@@ -3,6 +3,7 @@ import {
     View,
     StyleSheet,
     FlatList,
+    Image,
     RefreshControl,
     TouchableOpacity,
     TextInput,
@@ -250,7 +251,12 @@ export default function InboxScreen() {
     // Render empty state
     const renderEmptyState = useCallback(() => (
         <View style={styles.emptyState}>
-            <Ionicons name="notifications-outline" size={64} color={colors.COLOR_BLACK_LIGHT_5} />
+            <Image
+                source={require('@/assets/illustrations/empty-inbox.png')}
+                style={styles.emptyStateIllustration}
+                resizeMode="contain"
+                accessible={false}
+            />
             <ThemedText style={styles.emptyStateTitle}>
                 {t('notification.empty.title', 'No notifications')}
             </ThemedText>
@@ -557,6 +563,10 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         paddingVertical: 64,
+    },
+    emptyStateIllustration: {
+        width: 144,
+        height: 144,
     },
     emptyStateTitle: {
         fontSize: 18,
