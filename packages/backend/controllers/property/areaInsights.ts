@@ -25,6 +25,16 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import { Types, type Model } from 'mongoose';
+import type {
+  PropertyAreaInsights,
+  AreaPriceVerdict,
+  AreaInsightsBasis,
+  AreaPriceComparison,
+  AreaPriceDistribution,
+  AreaPriceDistributionBucket,
+  AreaPricePerSqm,
+  AreaNeighborhoodVsCity,
+} from '@homiio/shared-types';
 import type { IProperty } from '../../models/Property';
 import type { IAddress } from '../../models/Address';
 
@@ -51,61 +61,21 @@ const VERDICT_GOOD_DEAL_MAX = -7;
 const VERDICT_BELOW_AVG_MAX = -2;
 const VERDICT_AVERAGE_MAX = 2;
 
-type Basis = 'radius' | 'city';
-type Verdict = 'good_deal' | 'below_average' | 'average' | 'above_average';
-
 /** Rent-mode literals as stored on the Property (`RentMode` enum values). */
 const RENT_MODE_LONG_TERM = 'long_term';
 const RENT_MODE_VACATION = 'vacation';
 const RENT_MODE_BOTH = 'both';
 
-interface PriceComparison {
-  min: number;
-  max: number;
-  avg: number;
-  median: number;
-  thisPrice: number;
-  percentDiffFromAvg: number;
-  verdict: Verdict;
-}
-
-interface DistributionBucket {
-  min: number;
-  max: number;
-  count: number;
-}
-
-interface PriceDistribution {
-  buckets: DistributionBucket[];
-  thisBucketIndex: number;
-}
-
-interface PricePerSqm {
-  this: number;
-  areaAvg: number;
-}
-
-interface NeighborhoodVsCity {
-  neighborhood: string;
-  city: string;
-  neighborhoodAvg: number;
-  cityAvg: number;
-  percentDiff: number;
-}
-
-interface AreaInsightsResponse {
-  basis: Basis;
-  radiusKm: number;
-  areaLabel: string;
-  currency: string;
-  priceUnit: string;
-  sampleSize: number;
-  comparison: PriceComparison;
-  pricePerSqm: PricePerSqm | null;
-  distribution: PriceDistribution;
-  neighborhoodVsCity: NeighborhoodVsCity | null;
+/**
+ * Outgoing response shape. Field-for-field the shared `PropertyAreaInsights`
+ * contract, except `comparables`: the shared type exposes full `Property[]`,
+ * while this controller returns lean projections (`Record<string, unknown>[]`)
+ * to avoid eagerly materialising Mongoose documents. The boundary is narrowed
+ * here rather than loosening the shared type.
+ */
+type AreaInsightsResponse = Omit<PropertyAreaInsights, 'comparables'> & {
   comparables: Record<string, unknown>[];
-}
+};
 
 /** Aggregation row produced by the comparable price-stats pipeline. */
 interface PriceStatsRow {
@@ -115,17 +85,18 @@ interface PriceStatsRow {
   avg: number;
   median: number | null;
   prices: number[];
+  /**
+   * Average of `rent.amount / squareFootage` over the SAME scope, restricted to
+   * comparables with `squareFootage > 0` (others are mapped to `$$REMOVE` so the
+   * `$avg` ignores them). `null` when no comparable in scope exposes a usable
+   * square footage — folded into this pipeline to save a Mongo round-trip.
+   */
+  avgPricePerSqm: number | null;
 }
 
 /** Aggregation row produced by an average-only pipeline. */
 interface AvgRow {
   avg: number;
-  count: number;
-}
-
-/** Aggregation row produced by the price-per-sqm pipeline. */
-interface SqmRow {
-  avgPricePerSqm: number;
   count: number;
 }
 
@@ -251,6 +222,12 @@ function roundInt(value: number): number {
  * Returns null when the scope yields no comparables. Uses the `$median`
  * accumulator (MongoDB 7.0+) and also keeps the sorted price array so the
  * histogram can be built without a second pass.
+ *
+ * `avgPricePerSqm` is folded into this same `$group` (same `$match` scope) to
+ * avoid a separate Mongo round-trip: it averages `rent.amount / squareFootage`
+ * over comparables with `squareFootage > 0`, mapping the rest to `$$REMOVE` so
+ * the `$avg` ignores them — yielding the identical value a `squareFootage > 0`
+ * `$match` would. `$avg` returns `null` when every comparable is removed.
  */
 async function aggregatePriceStats(
   baseFilter: Record<string, unknown>,
@@ -269,6 +246,15 @@ async function aggregatePriceStats(
         avg: { $avg: '$rent.amount' },
         median: { $median: { input: '$rent.amount', method: 'approximate' } },
         prices: { $push: '$rent.amount' },
+        avgPricePerSqm: {
+          $avg: {
+            $cond: [
+              { $gt: ['$squareFootage', 0] },
+              { $divide: ['$rent.amount', '$squareFootage'] },
+              '$$REMOVE',
+            ],
+          },
+        },
       },
     },
   ]);
@@ -292,32 +278,8 @@ async function aggregateAvg(
   return row.avg;
 }
 
-/**
- * Average price-per-sqm over comparables that have a usable `squareFootage`.
- * Returns null when none of the comparables expose square footage.
- */
-async function aggregateAreaPricePerSqm(
-  baseFilter: Record<string, unknown>,
-  addressIds: Types.ObjectId[]
-): Promise<number | null> {
-  if (addressIds.length === 0) return null;
-  const rows = await Property.aggregate<SqmRow>([
-    { $match: { ...baseFilter, addressId: { $in: addressIds }, squareFootage: { $gt: 0 } } },
-    {
-      $group: {
-        _id: null,
-        avgPricePerSqm: { $avg: { $divide: ['$rent.amount', '$squareFootage'] } },
-        count: { $sum: 1 },
-      },
-    },
-  ]);
-  const row = rows[0];
-  if (!row || row.count === 0) return null;
-  return row.avgPricePerSqm;
-}
-
 /** Map a percent difference from the average to a verdict. */
-function classifyVerdict(percentDiffFromAvg: number): Verdict {
+function classifyVerdict(percentDiffFromAvg: number): AreaPriceVerdict {
   if (percentDiffFromAvg <= VERDICT_GOOD_DEAL_MAX) return 'good_deal';
   if (percentDiffFromAvg <= VERDICT_BELOW_AVG_MAX) return 'below_average';
   if (percentDiffFromAvg <= VERDICT_AVERAGE_MAX) return 'average';
@@ -325,7 +287,7 @@ function classifyVerdict(percentDiffFromAvg: number): Verdict {
 }
 
 /** Build the comparison block from the stats row (or the target alone when sparse). */
-function buildComparison(stats: PriceStatsRow | null, thisPrice: number): PriceComparison {
+function buildComparison(stats: PriceStatsRow | null, thisPrice: number): AreaPriceComparison {
   if (!stats) {
     // No comparables at all — describe the target against itself so the
     // frontend can render a graceful "not enough data" state without special-casing.
@@ -369,13 +331,13 @@ function medianFromSorted(sorted: number[]): number {
  * reflects where the target sits among its peers. When min == max (all equal,
  * or a single data point) a single bucket is used.
  */
-function buildDistribution(stats: PriceStatsRow | null, thisPrice: number): PriceDistribution {
+function buildDistribution(stats: PriceStatsRow | null, thisPrice: number): AreaPriceDistribution {
   const prices = stats ? [...stats.prices, thisPrice] : [thisPrice];
   const min = stats ? Math.min(stats.min, thisPrice) : thisPrice;
   const max = stats ? Math.max(stats.max, thisPrice) : thisPrice;
 
   if (min === max) {
-    const single: DistributionBucket = {
+    const single: AreaPriceDistributionBucket = {
       min: roundInt(min),
       max: roundInt(max),
       count: prices.length,
@@ -385,7 +347,7 @@ function buildDistribution(stats: PriceStatsRow | null, thisPrice: number): Pric
 
   const span = max - min;
   const step = span / BUCKET_COUNT;
-  const buckets: DistributionBucket[] = [];
+  const buckets: AreaPriceDistributionBucket[] = [];
   for (let i = 0; i < BUCKET_COUNT; i += 1) {
     const bucketMin = min + step * i;
     const bucketMax = i === BUCKET_COUNT - 1 ? max : min + step * (i + 1);
@@ -411,7 +373,7 @@ function buildPricePerSqm(
   targetSqm: number,
   targetPrice: number,
   areaAvgPricePerSqm: number | null
-): PricePerSqm | null {
+): AreaPricePerSqm | null {
   if (targetSqm <= 0 || areaAvgPricePerSqm === null) return null;
   return {
     this: roundInt(targetPrice / targetSqm),
@@ -429,7 +391,7 @@ function buildNeighborhoodVsCity(
   target: TargetContext,
   neighborhoodAvg: number | null,
   cityAvg: number | null
-): NeighborhoodVsCity | null {
+): AreaNeighborhoodVsCity | null {
   if (!target.neighborhood || neighborhoodAvg === null || cityAvg === null) return null;
   const percentDiff = cityAvg > 0 ? roundInt(((neighborhoodAvg - cityAvg) / cityAvg) * 100) : 0;
   return {
@@ -469,6 +431,45 @@ function buildTargetContext(property: IProperty): TargetContext | null {
 }
 
 /**
+ * Compute the neighborhood-vs-city contrast block (or null).
+ *
+ * Returns null without issuing ANY query when the target has no neighborhood —
+ * so neighborhood-less listings never pay for an unbounded city `$near` scan
+ * whose result would only be discarded. Otherwise resolves the neighborhood
+ * scope and the city-wide contrast scope (reusing `cityScopeAddressIds` when
+ * the chosen scope already IS the city), and returns null when the neighborhood
+ * is effectively the whole city (no distinct contrast) or either sample is
+ * empty.
+ *
+ * `cityScopeAddressIds` is the already-resolved city scope when `basis==='city'`
+ * (so the contrast reuses it instead of re-querying); null on the radius path,
+ * where the contrast city scope is resolved here on demand.
+ */
+async function buildNeighborhoodContrast(
+  target: TargetContext,
+  baseFilter: Record<string, unknown>,
+  cityScopeAddressIds: Types.ObjectId[] | null
+): Promise<AreaNeighborhoodVsCity | null> {
+  if (!target.neighborhood) return null;
+
+  const [neighborhoodAddressIds, cityAddressIdsForContrast] = await Promise.all([
+    resolveNeighborhoodAddressIds(target),
+    cityScopeAddressIds ? Promise.resolve(cityScopeAddressIds) : resolveCityAddressIds(target),
+  ]);
+
+  const neighborhoodIsWholeCity =
+    neighborhoodAddressIds.length > 0 &&
+    neighborhoodAddressIds.length === cityAddressIdsForContrast.length;
+  if (neighborhoodAddressIds.length === 0 || neighborhoodIsWholeCity) return null;
+
+  const [neighborhoodAvg, cityAvg] = await Promise.all([
+    aggregateAvg(baseFilter, neighborhoodAddressIds),
+    aggregateAvg(baseFilter, cityAddressIdsForContrast),
+  ]);
+  return buildNeighborhoodVsCity(target, neighborhoodAvg, cityAvg);
+}
+
+/**
  * GET /api/properties/:propertyId/area-insights
  *
  * Returns price context (range, average, median, verdict, distribution and
@@ -496,13 +497,17 @@ export async function getAreaInsights(req: Request, res: Response, next: NextFun
     const baseFilter = buildBaseComparableFilter(target);
 
     // --- Primary scope: comparables within RADIUS_KM (neighborhood scale) ---
+    // Inherently sequential: the radius price-stats decide whether the radius
+    // scope is dense enough, which in turn decides the scope everything below
+    // operates on. Price-per-sqm is folded into `aggregatePriceStats`, so this
+    // is the only stats round-trip per scope.
     const radiusAddressIds = await resolveRadiusAddressIds(target, RADIUS_KM);
     const radiusStats = await aggregatePriceStats(baseFilter, radiusAddressIds);
     const radiusCount = radiusStats?.count ?? 0;
 
     // --- Fallback to the whole city when the radius scope is too sparse ---
     const useRadius = radiusCount >= MIN_RADIUS_SAMPLE;
-    let basis: Basis;
+    let basis: AreaInsightsBasis;
     let scopeAddressIds: Types.ObjectId[];
     let stats: PriceStatsRow | null;
 
@@ -520,32 +525,17 @@ export async function getAreaInsights(req: Request, res: Response, next: NextFun
       basis === 'radius' ? target.neighborhood ?? target.city : target.city;
     const sampleSize = stats?.count ?? 0;
 
-    // --- Price-per-sqm over the chosen scope ---
-    const areaPricePerSqm = await aggregateAreaPricePerSqm(baseFilter, scopeAddressIds);
-
-    // --- Neighborhood vs city contrast (independent of the chosen scope) ---
-    // Only meaningful when the listing has a neighborhood AND the neighborhood
-    // is a strict subset of the city (otherwise the two averages are identical).
-    const neighborhoodAddressIds = await resolveNeighborhoodAddressIds(target);
-    const cityAddressIdsForContrast =
-      basis === 'city' ? scopeAddressIds : await resolveCityAddressIds(target);
-    const neighborhoodIsWholeCity =
-      neighborhoodAddressIds.length > 0 &&
-      neighborhoodAddressIds.length === cityAddressIdsForContrast.length;
-
-    let neighborhoodVsCity: NeighborhoodVsCity | null = null;
-    if (target.neighborhood && neighborhoodAddressIds.length > 0 && !neighborhoodIsWholeCity) {
-      const [neighborhoodAvg, cityAvg] = await Promise.all([
-        aggregateAvg(baseFilter, neighborhoodAddressIds),
-        aggregateAvg(baseFilter, cityAddressIdsForContrast),
-      ]);
-      neighborhoodVsCity = buildNeighborhoodVsCity(target, neighborhoodAvg, cityAvg);
-    }
-
-    // --- Comparable documents (nearest first, excluding the target) ---
-    // scopeAddressIds is already distance-ordered (via `$near`); preserve that
-    // order so the closest comparables come first.
-    const comparables = await fetchComparables(baseFilter, scopeAddressIds);
+    // --- Independent work, run concurrently once the scope is fixed ---
+    //  - comparable documents over the chosen scope (nearest-first ordering is
+    //    preserved by `fetchComparables`, since `$in` does not honour the
+    //    distance-ordered `scopeAddressIds`); and
+    //  - the neighborhood-vs-city contrast, which resolves its own scopes
+    //    (reusing `scopeAddressIds` on the city path).
+    // Neither depends on the other, so they overlap on the wire.
+    const [comparables, neighborhoodVsCity] = await Promise.all([
+      fetchComparables(baseFilter, scopeAddressIds),
+      buildNeighborhoodContrast(target, baseFilter, basis === 'city' ? scopeAddressIds : null),
+    ]);
 
     const response: AreaInsightsResponse = {
       basis,
@@ -555,7 +545,9 @@ export async function getAreaInsights(req: Request, res: Response, next: NextFun
       priceUnit: target.priceUnit,
       sampleSize,
       comparison: buildComparison(stats, target.price),
-      pricePerSqm: buildPricePerSqm(target.squareFootage, target.price, areaPricePerSqm),
+      // Price-per-sqm comes from the folded `avgPricePerSqm` accumulator on the
+      // chosen scope's stats row (null when the scope is empty or sqm-less).
+      pricePerSqm: buildPricePerSqm(target.squareFootage, target.price, stats?.avgPricePerSqm ?? null),
       distribution: buildDistribution(stats, target.price),
       neighborhoodVsCity,
       comparables,
