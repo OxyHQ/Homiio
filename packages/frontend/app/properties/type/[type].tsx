@@ -328,7 +328,7 @@ export default function PropertyTypeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
   },
   scroll: Platform.select<ViewStyle>({
     web: { flex: 1, overflow: 'auto' } as unknown as ViewStyle,

@@ -533,7 +533,7 @@ export default function RoommatesPage() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
   },
   headerWrap: {
     backgroundColor: colors.surfaceElevated,

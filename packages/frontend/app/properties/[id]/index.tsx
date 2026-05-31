@@ -899,7 +899,7 @@ export default function PropertyDetailPage() {
 }
 
 const styles = StyleSheet.create({
-  scrollContainer: { flex: 1, backgroundColor: colors.surface },
+  scrollContainer: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: spacing['6xl'] },
   errorRoot: { flex: 1 },

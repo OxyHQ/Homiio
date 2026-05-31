@@ -750,7 +750,7 @@ export default function AddressDetailsPage() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
   },
   safeArea: {
     flex: 1,

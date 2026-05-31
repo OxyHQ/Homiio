@@ -156,7 +156,7 @@ export default function TipsScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
   },
   content: {
     padding: spacing.lg,

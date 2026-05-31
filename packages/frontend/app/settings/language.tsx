@@ -103,7 +103,7 @@ export default function LanguageSettingsScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
   },
   scroll: {
     paddingTop: spacing.lg,

@@ -424,7 +424,7 @@ export default function CityPropertiesPage() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
   },
   container: {
     flex: 1,

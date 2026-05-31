@@ -362,7 +362,7 @@ export default function SubscriptionsScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.surface },
+    container: { flex: 1, backgroundColor: colors.background },
     scrollView: { flex: 1 },
     header: {
         paddingHorizontal: 16,

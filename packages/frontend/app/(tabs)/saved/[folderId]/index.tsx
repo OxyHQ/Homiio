@@ -227,7 +227,7 @@ export default function SavedFolderScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
   },
   centerWrap: {
     flex: 1,

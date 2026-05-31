@@ -634,7 +634,7 @@ export default function ProfileCreateScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.mutedSubtle,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',

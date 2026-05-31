@@ -403,7 +403,7 @@ export default function PublicProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
   },
   list: {
     padding: 16,

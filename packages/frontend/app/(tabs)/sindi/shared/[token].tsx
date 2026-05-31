@@ -240,7 +240,7 @@ export default function SharedConversationView() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
