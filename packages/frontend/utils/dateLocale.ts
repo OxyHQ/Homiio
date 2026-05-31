@@ -16,7 +16,7 @@
  * / `notifications`) so the helper works outside React components too.
  */
 import i18next from 'i18next';
-import { format, type Locale } from 'date-fns';
+import { format, formatDistanceToNowStrict, type Locale } from 'date-fns';
 import { ca, enUS, es, it } from 'date-fns/locale';
 
 /**
@@ -51,4 +51,19 @@ export function getDateFnsLocale(): Locale {
  */
 export function formatLocalized(date: Date | number, formatStr: string): string {
   return format(date, formatStr, { locale: getDateFnsLocale() });
+}
+
+/**
+ * Locale-aware "time ago" label (e.g. "5 min ago", "hace 5 min", "3 h",
+ * "2 d"). Wraps `date-fns` `formatDistanceToNowStrict` with the active UI
+ * locale and `addSuffix`, so relative timestamps in lists (inbox, activity
+ * feeds) follow the user's selected language instead of silently rendering in
+ * English. Centralised here so screens stop re-rolling their own
+ * `diffInSeconds` ladders.
+ */
+export function formatRelativeTime(date: Date | number): string {
+  return formatDistanceToNowStrict(date, {
+    addSuffix: true,
+    locale: getDateFnsLocale(),
+  });
 }
