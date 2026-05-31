@@ -80,6 +80,7 @@ import { NeighborhoodInfo } from '@/components/property/NeighborhoodInfo';
 import { AvailabilitySection } from '@/components/property/AvailabilitySection';
 import { AmenitiesSection } from '@/components/property/AmenitiesSection';
 import { CommunityNotesSection } from '@/components/property/CommunityNotesSection';
+import { ReviewsSection } from '@/components/property/ReviewsSection';
 import { PriceRangeSection } from '@/components/property/PriceRangeSection';
 import { SimilarHomesSection } from '@/components/property/SimilarHomesSection';
 import { DemandSignal } from '@/components/property/DemandSignal';
@@ -453,12 +454,19 @@ export default function PropertyDetailPage() {
     );
   }
 
-  const showBookingWidgetMobile =
-    !isDesktop &&
+  // Whether this listing can be booked as a short-stay (Airbnb-style).
+  // VACATION or BOTH qualify; pure LONG_TERM does not. This capability is a
+  // property of the listing itself, independent of the currently-selected
+  // rentalMode toggle, so it also decides Reviews (vacation) vs Community
+  // Notes (long-term) further down.
+  const isVacationRentable = Boolean(
     apiProperty &&
-    rentalMode === 'vacation' &&
-    (apiProperty.rentMode === RentMode.VACATION ||
-      apiProperty.rentMode === RentMode.BOTH);
+      (apiProperty.rentMode === RentMode.VACATION ||
+        apiProperty.rentMode === RentMode.BOTH),
+  );
+
+  const showBookingWidgetMobile =
+    !isDesktop && rentalMode === 'vacation' && isVacationRentable;
 
   const showApplyCTAMobile =
     !isDesktop &&
@@ -467,10 +475,7 @@ export default function PropertyDetailPage() {
     apiProperty.rentMode !== RentMode.VACATION;
 
   const showSleepArrangement =
-    apiProperty &&
-    rentalMode === 'vacation' &&
-    (apiProperty.rentMode === RentMode.VACATION ||
-      apiProperty.rentMode === RentMode.BOTH);
+    rentalMode === 'vacation' && isVacationRentable;
 
   return (
     <View style={styles.scrollContainer}>
@@ -667,12 +672,23 @@ export default function PropertyDetailPage() {
               />
             </View>
 
+            {/* Community Notes — community-verified notes about the building —
+                shown on every listing. */}
             <View style={[styles.section, styles.divider]}>
               <CommunityNotesSection
                 property={apiProperty as Property}
                 variant="preview"
               />
             </View>
+
+            {/* Reviews — Airbnb-style guest reviews — shown ADDITIONALLY on
+                short-stay (vacation/both) listings. Reviews and Community Notes
+                are distinct features that coexist; reviews don't replace notes. */}
+            {isVacationRentable ? (
+              <View style={[styles.section, styles.divider]}>
+                <ReviewsSection property={apiProperty as Property} />
+              </View>
+            ) : null}
 
             {/* Area context: how this listing's price compares to similar
                 homes nearby, plus a carousel of those comparables. Grouped
