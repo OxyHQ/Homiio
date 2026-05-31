@@ -30,7 +30,8 @@
  *     icon BOX size (width + centering) so columns align.
  */
 import React from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Image, StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
@@ -43,6 +44,32 @@ import { hairline, spacing } from '@/constants/styles';
  * the primitive reserves for it.
  */
 export const DETAIL_ICON_SIZE = 22;
+
+/**
+ * Edge length of the box every detail-grid icon sits in. An isometric PNG fills
+ * the box (full-color, larger than the line glyph so it reads); the Ionicons
+ * fallback is centered in the same box at `DETAIL_ICON_SIZE`. Sizing both to one
+ * box keeps PNG rows and line-icon rows aligned (the row hugs the icon's width).
+ */
+const DETAIL_ICON_BOX_SIZE = 32;
+
+/**
+ * The shared "PNG-or-Ionicons" leading icon used by the amenity and feature
+ * grids: a centered box that shows `image` when art exists, else `fallbackIcon`
+ * as a tinted Ionicons glyph. Pass the result as `DetailIconRow`'s `icon`.
+ */
+export const DetailIcon: React.FC<{
+  image?: ImageSourcePropType;
+  fallbackIcon: React.ComponentProps<typeof Ionicons>['name'];
+}> = ({ image, fallbackIcon }) => (
+  <View style={styles.detailIconBox}>
+    {image ? (
+      <Image source={image} style={styles.detailIconImage} resizeMode="contain" accessible={false} />
+    ) : (
+      <Ionicons name={fallbackIcon} size={DETAIL_ICON_SIZE} color={colors.COLOR_BLACK_LIGHT_1} />
+    )}
+  </View>
+);
 
 interface DetailIconGridProps {
   children: React.ReactNode;
@@ -78,8 +105,6 @@ interface DetailIconCellProps {
    * room for trailing text. Not set directly by callers.
    */
   reserveTrailing?: boolean;
-  /** Extra style for the cell (rarely needed). */
-  style?: StyleProp<ViewStyle>;
 }
 
 /**
@@ -89,9 +114,8 @@ interface DetailIconCellProps {
 export const DetailIconCell: React.FC<DetailIconCellProps> = ({
   children,
   reserveTrailing = false,
-  style,
 }) => (
-  <View style={[styles.cell, reserveTrailing && styles.cellReserveTrailing, style]}>
+  <View style={[styles.cell, reserveTrailing && styles.cellReserveTrailing]}>
     {children}
   </View>
 );
@@ -148,6 +172,16 @@ export const DetailIconRow: React.FC<DetailIconRowProps> = ({
 );
 
 const styles = StyleSheet.create({
+  detailIconBox: {
+    width: DETAIL_ICON_BOX_SIZE,
+    height: DETAIL_ICON_BOX_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailIconImage: {
+    width: DETAIL_ICON_BOX_SIZE,
+    height: DETAIL_ICON_BOX_SIZE,
+  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

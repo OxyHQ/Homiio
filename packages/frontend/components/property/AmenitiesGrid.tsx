@@ -17,7 +17,7 @@
  * rest of the app. Chrome (typography, button, section header) is Bloom.
  */
 import React, { useCallback, useContext, useMemo } from 'react';
-import { Image, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -27,7 +27,7 @@ import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { Section, SectionHeader } from '@/components/property/Section';
 import {
-  DETAIL_ICON_SIZE,
+  DetailIcon,
   DetailIconCell,
   DetailIconGrid,
   DetailIconRow,
@@ -38,7 +38,7 @@ import {
   type Amenity,
   type AmenityGroup,
   type ResolvedAmenity,
-  getAmenityImage,
+  getIconArt,
   groupAmenitiesByCategory,
   UNCATEGORIZED_AMENITY_ID,
 } from '@/constants/amenities';
@@ -48,14 +48,6 @@ const SHEET_MAX_HEIGHT_RATIO = 0.62;
 /** Fallback glyph when an amenity id has no catalog icon. */
 const FALLBACK_ICON: React.ComponentProps<typeof Ionicons>['name'] =
   'checkmark-circle-outline';
-/**
- * Edge length of an amenity's isometric PNG. Larger than the line-icon
- * `DETAIL_ICON_SIZE` so the full-color render reads. Both the PNG and the
- * Ionicons fallback are centered in a box of this size so PNG rows and
- * line-icon rows align identically (the shared `DetailIconRow` hugs the icon
- * node's width).
- */
-const AMENITY_IMAGE_SIZE = 32;
 
 interface AmenitiesGridProps {
   property: { amenities?: string[] | null };
@@ -95,33 +87,13 @@ interface AmenityRowProps {
  * top hairline so items in a category read as a clean list. Delegates the
  * layout to the shared `DetailIconRow` so it can't drift from the nearby grid.
  */
-const AmenityRow: React.FC<AmenityRowProps> = ({ entry, label, divided = false }) => {
-  const image = getAmenityImage(entry.id);
-  return (
-    <DetailIconRow
-      icon={
-        <View style={styles.iconBox}>
-          {image ? (
-            <Image
-              source={image}
-              style={styles.iconImage}
-              resizeMode="contain"
-              accessible={false}
-            />
-          ) : (
-            <Ionicons
-              name={resolveIcon(entry.amenity)}
-              size={DETAIL_ICON_SIZE}
-              color={colors.COLOR_BLACK_LIGHT_1}
-            />
-          )}
-        </View>
-      }
-      label={label}
-      divided={divided}
-    />
-  );
-};
+const AmenityRow: React.FC<AmenityRowProps> = ({ entry, label, divided = false }) => (
+  <DetailIconRow
+    icon={<DetailIcon image={getIconArt(entry.id)} fallbackIcon={resolveIcon(entry.amenity)} />}
+    label={label}
+    divided={divided}
+  />
+);
 
 interface AmenitiesSheetProps {
   ids: string[];
@@ -244,16 +216,6 @@ export const AmenitiesGrid: React.FC<AmenitiesGridProps> = ({
 };
 
 const styles = StyleSheet.create({
-  iconBox: {
-    width: AMENITY_IMAGE_SIZE,
-    height: AMENITY_IMAGE_SIZE,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconImage: {
-    width: AMENITY_IMAGE_SIZE,
-    height: AMENITY_IMAGE_SIZE,
-  },
   actionAnchor: {
     marginTop: spacing['2xl'],
     alignSelf: 'flex-start',

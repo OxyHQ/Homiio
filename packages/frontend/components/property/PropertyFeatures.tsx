@@ -2,14 +2,14 @@
  * PropertyFeatures — property-detail "Property Features".
  *
  * Mirrors the "What this place offers" (AmenitiesGrid) look exactly: a flat,
- * hairline-free `DetailIconGrid` of "icon + label" rows, each rendering the
- * amenity's isometric PNG (via `getAmenityImage`) when art exists, else its
- * Ionicons line glyph — both centered in a fixed `FEATURE_IMAGE_SIZE` box so
- * PNG rows and line-icon rows align identically. No pills.
+ * hairline-free `DetailIconGrid` of "icon + label" rows, each rendering an
+ * isometric PNG (via `getIconArt`) when art exists, else its Ionicons line
+ * glyph — both via the shared `DetailIcon`, so PNG rows and line-icon rows
+ * align identically. No pills.
  *
  * Rows list what the place HAS (like amenities), not present/absent toggles:
  *   - Furnished   always shown when `furnishedStatus` is defined (label varies
- *                 by status). Ionicons `cube` (no PNG yet).
+ *                 by status). PNG `furnished`, fallback `cube`.
  *   - Balcony     shown only when `hasBalcony`. PNG `balcony`, fallback `home`.
  *   - Garden      shown only when `hasGarden`. Ionicons `leaf` (no PNG yet).
  *   - Elevator    shown only when `hasElevator`. PNG `elevator`, fallback
@@ -17,19 +17,17 @@
  * No rows → renders nothing.
  */
 import React, { useMemo } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { Section } from '@/components/property/Section';
 import {
-    DETAIL_ICON_SIZE,
+    DetailIcon,
     DetailIconCell,
     DetailIconGrid,
     DetailIconRow,
 } from '@/components/property/DetailIconGrid';
-import { colors } from '@/styles/colors';
-import { getAmenityImage } from '@/constants/amenities';
+import { getIconArt } from '@/constants/amenities';
 
 type FurnishedStatus = 'furnished' | 'partially_furnished' | 'unfurnished';
 
@@ -41,13 +39,6 @@ interface Props {
         hasElevator?: boolean;
     } | null;
 }
-
-/**
- * Edge length of a feature's isometric PNG — matches AmenitiesGrid's
- * `AMENITY_IMAGE_SIZE` so the two sections read identically. Both the PNG and
- * the Ionicons fallback are centered in a box of this size so rows align.
- */
-const FEATURE_IMAGE_SIZE = 32;
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -65,32 +56,12 @@ interface FeatureRow {
  * `AmenityRow` (same icon box + fallback) and delegates layout to the shared
  * `DetailIconRow` so it can't drift from the amenities grid.
  */
-const FeatureIconRow: React.FC<FeatureRow> = ({ label, imageId, icon }) => {
-    const image = imageId ? getAmenityImage(imageId) : undefined;
-    return (
-        <DetailIconRow
-            icon={
-                <View style={styles.iconBox}>
-                    {image ? (
-                        <Image
-                            source={image}
-                            style={styles.iconImage}
-                            resizeMode="contain"
-                            accessible={false}
-                        />
-                    ) : (
-                        <Ionicons
-                            name={icon}
-                            size={DETAIL_ICON_SIZE}
-                            color={colors.COLOR_BLACK_LIGHT_1}
-                        />
-                    )}
-                </View>
-            }
-            label={label}
-        />
-    );
-};
+const FeatureIconRow: React.FC<FeatureRow> = ({ label, imageId, icon }) => (
+    <DetailIconRow
+        icon={<DetailIcon image={imageId ? getIconArt(imageId) : undefined} fallbackIcon={icon} />}
+        label={label}
+    />
+);
 
 export const PropertyFeatures: React.FC<Props> = ({ property }) => {
     const { t } = useTranslation();
@@ -109,7 +80,7 @@ export const PropertyFeatures: React.FC<Props> = ({ property }) => {
                     : furnishedStatus === 'partially_furnished'
                         ? t('Partially Furnished')
                         : t('Unfurnished');
-            next.push({ key: 'furnished', label, icon: 'cube' });
+            next.push({ key: 'furnished', label, imageId: 'furnished', icon: 'cube' });
         }
         if (hasBalcony === true) {
             next.push({ key: 'balcony', label: t('Balcony'), imageId: 'balcony', icon: 'home' });
@@ -143,18 +114,5 @@ export const PropertyFeatures: React.FC<Props> = ({ property }) => {
         </Section>
     );
 };
-
-const styles = StyleSheet.create({
-    iconBox: {
-        width: FEATURE_IMAGE_SIZE,
-        height: FEATURE_IMAGE_SIZE,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    iconImage: {
-        width: FEATURE_IMAGE_SIZE,
-        height: FEATURE_IMAGE_SIZE,
-    },
-});
 
 export default PropertyFeatures;

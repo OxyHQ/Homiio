@@ -1199,10 +1199,11 @@ export const getAmenityById = (id: string): Amenity | undefined => {
 };
 
 /**
- * Isometric PNG art per amenity id (bnbicons). Amenities without an entry fall
- * back to their Ionicons line glyph. More will be added as art is produced.
+ * Isometric PNG art keyed by id — catalog amenity ids (wifi, balcony, …) plus a
+ * few property-feature ids (e.g. `furnished`) that aren't catalog amenities. Ids
+ * without art fall back to an Ionicons glyph.
  */
-export const AMENITY_IMAGES: Partial<Record<string, ImageSourcePropType>> = {
+export const ICON_ART: Partial<Record<string, ImageSourcePropType>> = {
   wifi: require('@/assets/amenities/wifi.png'),
   heating: require('@/assets/amenities/heating.png'),
   washing_machine: require('@/assets/amenities/washing_machine.png'),
@@ -1219,10 +1220,11 @@ export const AMENITY_IMAGES: Partial<Record<string, ImageSourcePropType>> = {
   rooftop_deck: require('@/assets/amenities/rooftop_deck.png'),
   refrigerator: require('@/assets/amenities/refrigerator.png'),
   pet_friendly: require('@/assets/amenities/pet_friendly.png'),
+  furnished: require('@/assets/amenities/furnished.png'),
 };
 
-export const getAmenityImage = (id: string): ImageSourcePropType | undefined =>
-  AMENITY_IMAGES[id];
+export const getIconArt = (id: string): ImageSourcePropType | undefined =>
+  ICON_ART[id];
 
 /**
  * A resolved amenity entry for display: keeps the raw id (so unknown ids still
