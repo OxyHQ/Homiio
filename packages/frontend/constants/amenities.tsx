@@ -350,6 +350,17 @@ export const AMENITIES: Amenity[] = [
 
   // Kitchen & Dining - Basic appliances for nutrition and health
   {
+    id: 'kitchen',
+    name: 'Kitchen',
+    icon: 'restaurant',
+    category: 'kitchen',
+    description: 'Full kitchen for preparing meals',
+    essential: true,
+    maxFairValue: 0,
+    ethicalNotes: 'A usable kitchen is essential for nutrition and dignified living',
+    environmental: 'neutral',
+  },
+  {
     id: 'refrigerator',
     name: 'Full-Size Refrigerator',
     icon: 'snow',
@@ -1202,6 +1213,12 @@ export const AMENITY_IMAGES: Partial<Record<string, ImageSourcePropType>> = {
   gym: require('@/assets/amenities/gym.png'),
   secure_entry: require('@/assets/amenities/secure_entry.png'),
   parking_space: require('@/assets/amenities/parking_space.png'),
+  kitchen: require('@/assets/amenities/kitchen.png'),
+  swimming_pool: require('@/assets/amenities/swimming_pool.png'),
+  smart_home: require('@/assets/amenities/smart_home.png'),
+  rooftop_deck: require('@/assets/amenities/rooftop_deck.png'),
+  refrigerator: require('@/assets/amenities/refrigerator.png'),
+  pet_friendly: require('@/assets/amenities/pet_friendly.png'),
 };
 
 export const getAmenityImage = (id: string): ImageSourcePropType | undefined =>
