@@ -1245,6 +1245,16 @@
       "subtitle": "Support the future of ethical housing",
       "description": "Your contribution helps us build a transparent, fair, and ethical housing platform that benefits everyone in the rental ecosystem.",
       "chooseContribution": "Choose Your Contribution",
+      "frequency": {
+        "label": "Donation frequency",
+        "monthly": "Monthly",
+        "oneTime": "One-time",
+        "perMonth": "/mo"
+      },
+      "error": {
+        "title": "Something went wrong",
+        "generic": "Unable to process your donation. Please try again later."
+      },
       "tiers": {
         "supporter": {
           "title": "One-time donation",

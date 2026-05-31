@@ -1,460 +1,360 @@
-import React, { useState } from 'react';
-import {
-    View,
-    StyleSheet,
-    ScrollView,
-    Alert,
-    Linking,
-} from 'react-native';
+/**
+ * Donate screen — Airbnb-2026 layout.
+ *
+ * The HERO (the rounded `LinearGradient` pill at the top) is intentionally
+ * preserved. Everything BELOW it is flat, image-forward, and sits directly on
+ * the app `colors.background` (no cardy shadows / borders):
+ *
+ *  - Contribution picker: a frequency `SegmentedControl` (one-time / monthly)
+ *    + a flat selectable tier list (radio rows, not 3 bordered cards), driving
+ *    a SINGLE primary Bloom `Button` CTA whose label tracks the selection.
+ *  - "What your support enables": a flat `DetailIconGrid` icon list (reused
+ *    from the property-detail design system) — no grey card.
+ *  - Mission: one concise lead line + a flat checklist of goals.
+ *
+ * Each tier maps 1:1 to a billing product (`file` / `plus` / `founder`); the
+ * CTA opens the existing Stripe checkout session for the selected product. The
+ * checkout endpoint is `/api/billing/checkout` (the same one the subscription
+ * store uses) — the previous `/api/billing/create-checkout-session` path was
+ * never mounted, so the old flow 404'd.
+ */
+import React, { useMemo, useState } from 'react';
+import { Alert, Linking, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
+import { Button } from '@oxyhq/bloom/button';
+import * as SegmentedControl from '@oxyhq/bloom/segmented-control';
+import { Text as BloomText } from '@oxyhq/bloom/typography';
+
 import { Header } from '@/components/Header';
-import { ThemedText } from '@/components/ThemedText';
-import { ActionButton } from '@/components/ui/ActionButton';
-import { Chip } from '@oxyhq/bloom/chip';
+import { Section } from '@/components/property/Section';
+import {
+  DetailIconGrid,
+  DetailIconCell,
+  DetailIconRow,
+  DETAIL_ICON_SIZE,
+} from '@/components/property/DetailIconGrid';
+import { TierRow } from '@/components/donate/TierRow';
 import { colors } from '@/styles/colors';
+import { hairline, radius, spacing, tracker } from '@/constants/styles';
 import { api } from '@/utils/api';
 import { logger } from '@/utils/logger';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
+/** Donation frequency — drives which tiers are offered. */
+type DonationFrequency = 'one-time' | 'monthly';
+
+/** Billing products the checkout endpoint accepts (1:1 with a tier). */
+type DonationProduct = 'file' | 'plus' | 'founder';
+
 type DonationTier = {
-    id: string;
-    title: string;
-    description: string;
-    amount: number;
-    currency: string;
-    type: 'one-time' | 'monthly' | 'founder';
-    icon: IoniconName;
-    benefits: string[];
-    popular?: boolean;
+  id: string;
+  product: DonationProduct;
+  frequency: DonationFrequency;
+  title: string;
+  subtitle: string;
+  amount: number;
+  currency: string;
+  ctaLabel: string;
+};
+
+type ImpactArea = {
+  icon: IoniconName;
+  title: string;
 };
 
 export default function DonatePage() {
-    const { t } = useTranslation();
-    const _router = useRouter();
-    const [loading, setLoading] = useState(false);
+  const { t } = useTranslation();
+  const [loading, setLoading] = useState(false);
+  const [frequency, setFrequency] = useState<DonationFrequency>('monthly');
 
-    const donationTiers: DonationTier[] = [
-        {
-            id: 'one-time-5',
-            title: t('donations.page.tiers.supporter.title'),
-            description: t('donations.page.tiers.supporter.subtitle'),
-            amount: 5,
-            currency: '€',
-            type: 'one-time',
-            icon: 'heart',
-            benefits: [
-                t('donations.page.impact.areas.development.title'),
-                t('donations.page.impact.areas.safety.title'),
-                t('donations.page.impact.areas.community.title'),
-            ],
-        },
-        {
-            id: 'monthly-10',
-            title: t('donations.page.tiers.monthly.title'),
-            description: t('donations.page.tiers.monthly.subtitle'),
-            amount: 10,
-            currency: '€',
-            type: 'monthly',
-            icon: 'heart',
-            popular: true,
-            benefits: [
-                t('donations.page.impact.areas.development.title'),
-                t('donations.page.impact.areas.safety.title'),
-                t('donations.page.impact.areas.legal.title'),
-                t('donations.page.impact.areas.innovation.title'),
-            ],
-        },
-        {
-            id: 'founder-25',
-            title: t('donations.page.tiers.founder.title'),
-            description: t('donations.page.tiers.founder.subtitle'),
-            amount: 25,
-            currency: '€',
-            type: 'founder',
-            icon: 'star',
-            benefits: [
-                t('donations.page.impact.areas.development.title'),
-                t('donations.page.impact.areas.safety.title'),
-                t('donations.page.impact.areas.legal.title'),
-                t('donations.page.impact.areas.innovation.title'),
-                t('donations.page.impact.areas.community.title'),
-            ],
-        },
-    ];
+  const tiers = useMemo<DonationTier[]>(
+    () => [
+      {
+        id: 'one-time-5',
+        product: 'file',
+        frequency: 'one-time',
+        title: t('donations.page.tiers.supporter.title'),
+        subtitle: t('donations.page.tiers.supporter.subtitle'),
+        amount: 5,
+        currency: '€',
+        ctaLabel: t('donations.page.tiers.supporter.button'),
+      },
+      {
+        id: 'monthly-10',
+        product: 'plus',
+        frequency: 'monthly',
+        title: t('donations.page.tiers.monthly.title'),
+        subtitle: t('donations.page.tiers.monthly.subtitle'),
+        amount: 10,
+        currency: '€',
+        ctaLabel: t('donations.page.tiers.monthly.button'),
+      },
+      {
+        id: 'founder-25',
+        product: 'founder',
+        frequency: 'monthly',
+        title: t('donations.page.tiers.founder.title'),
+        subtitle: t('donations.page.tiers.founder.subtitle'),
+        amount: 25,
+        currency: '€',
+        ctaLabel: t('donations.page.tiers.founder.button'),
+      },
+    ],
+    [t],
+  );
 
-    const impactAreas: { icon: IoniconName; title: string; description: string }[] = [
-        {
-            icon: 'construct',
-            title: t('donations.page.impact.areas.development.title'),
-            description: t('donations.page.impact.areas.development.description'),
-        },
-        {
-            icon: 'shield-checkmark',
-            title: t('donations.page.impact.areas.safety.title'),
-            description: t('donations.page.impact.areas.safety.description'),
-        },
-        {
-            icon: 'document-text',
-            title: t('donations.page.impact.areas.legal.title'),
-            description: t('donations.page.impact.areas.legal.description'),
-        },
-        {
-            icon: 'bulb',
-            title: t('donations.page.impact.areas.innovation.title'),
-            description: t('donations.page.impact.areas.innovation.description'),
-        },
-        {
-            icon: 'people',
-            title: t('donations.page.impact.areas.community.title'),
-            description: t('donations.page.impact.areas.community.description'),
-        },
-    ];
+  const impactAreas = useMemo<ImpactArea[]>(
+    () => [
+      { icon: 'construct-outline', title: t('donations.page.impact.areas.development.title') },
+      { icon: 'shield-checkmark-outline', title: t('donations.page.impact.areas.safety.title') },
+      { icon: 'document-text-outline', title: t('donations.page.impact.areas.legal.title') },
+      { icon: 'bulb-outline', title: t('donations.page.impact.areas.innovation.title') },
+      { icon: 'people-outline', title: t('donations.page.impact.areas.community.title') },
+    ],
+    [t],
+  );
 
-    const handleDonation = async (tier: DonationTier) => {
-        try {
-            setLoading(true);
+  const missionGoals = useMemo<string[]>(
+    () => t('donations.page.mission.goals', { returnObjects: true }) as string[],
+    [t],
+  );
 
-            // Map tier types to billing products
-            const productMap = {
-                'one-time': 'file', // Using existing file product for one-time payments
-                'monthly': 'plus', // Using existing plus product for monthly
-                'founder': 'founder', // Using existing founder product
-            };
+  const visibleTiers = useMemo(
+    () => tiers.filter((tier) => tier.frequency === frequency),
+    [tiers, frequency],
+  );
 
-            const product = productMap[tier.type];
+  // Keep the selection valid for the active frequency. When the segmented
+  // control flips, default to the first tier of that frequency (derived, no
+  // effect needed).
+  const [selectedTierId, setSelectedTierId] = useState<string>('monthly-10');
+  const selectedTier =
+    visibleTiers.find((tier) => tier.id === selectedTierId) ?? visibleTiers[0];
 
-            const response = await api.post('/api/billing/create-checkout-session', {
-                product,
-            });
+  const handleFrequencyChange = (next: DonationFrequency) => {
+    setFrequency(next);
+    const firstOfNext = tiers.find((tier) => tier.frequency === next);
+    if (firstOfNext) setSelectedTierId(firstOfNext.id);
+  };
 
-            if (response.data.success && response.data.url) {
-                await Linking.openURL(response.data.url);
-            } else {
-                throw new Error(response.data.error?.message || 'Failed to create checkout session');
-            }
-        } catch (error: unknown) {
-            logger.error('Donation error:', error);
-            const message =
-                error instanceof Error
-                    ? error.message
-                    : 'Unable to process donation. Please try again later.';
-            Alert.alert('Error', message);
-        } finally {
-            setLoading(false);
-        }
-    };
+  const handleDonate = async () => {
+    if (!selectedTier) return;
+    try {
+      setLoading(true);
+      const { data } = await api.post<{ success: boolean; url?: string; error?: { message?: string } }>(
+        '/api/billing/checkout',
+        { product: selectedTier.product },
+      );
+      if (data?.success && data.url) {
+        await Linking.openURL(data.url);
+      } else {
+        throw new Error(data?.error?.message || t('donations.page.error.generic'));
+      }
+    } catch (error: unknown) {
+      logger.error('Donation error:', error);
+      const message = error instanceof Error ? error.message : t('donations.page.error.generic');
+      Alert.alert(t('donations.page.error.title'), message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const renderDonationTier = (tier: DonationTier) => (
-        <View key={tier.id} style={[styles.tierCard, tier.popular && styles.popularTier]}>
-            {tier.popular && (
-                <Chip
-                    selected
-                    disabled
-                    variant="solid"
-                    size="small"
-                    style={styles.popularBadge}
-                >
-                    Most Popular
-                </Chip>
-            )}
+  return (
+    <View style={styles.root}>
+      <Header
+        options={{
+          title: t('donations.page.title'),
+          showBackButton: true,
+        }}
+      />
 
-            <View style={styles.tierHeader}>
-                <Ionicons
-                    name={tier.icon}
-                    size={24}
-                    color={tier.popular ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
-                />
-                <ThemedText style={[styles.tierTitle, tier.popular && styles.popularTierTitle]}>
-                    {tier.title}
-                </ThemedText>
-            </View>
+      <SafeAreaView style={styles.flex} edges={['bottom']}>
+        <ScrollView
+          style={styles.flex}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Hero — preserved. */}
+          <LinearGradient colors={[colors.info, colors.info + '90']} style={styles.heroSection}>
+            <Ionicons name="heart" size={48} color={colors.white} />
+            <BloomText style={styles.heroTitle}>{t('donations.page.subtitle')}</BloomText>
+            <BloomText style={styles.heroDescription}>{t('donations.page.description')}</BloomText>
+          </LinearGradient>
 
-            <ThemedText style={styles.tierDescription}>{tier.description}</ThemedText>
+          {/* Contribution picker — frequency toggle + flat tier list. */}
+          <View style={[styles.section, styles.firstSection]}>
+            <Section
+              title={t('donations.page.chooseContribution')}
+              bodyStyle={styles.pickerBody}
+            >
+              <SegmentedControl.Root<DonationFrequency>
+                label={t('donations.page.frequency.label')}
+                type="tabs"
+                value={frequency}
+                onChange={handleFrequencyChange}
+              >
+                <SegmentedControl.Item value="monthly">
+                  <SegmentedControl.ItemText>
+                    {t('donations.page.frequency.monthly')}
+                  </SegmentedControl.ItemText>
+                </SegmentedControl.Item>
+                <SegmentedControl.Item value="one-time">
+                  <SegmentedControl.ItemText>
+                    {t('donations.page.frequency.oneTime')}
+                  </SegmentedControl.ItemText>
+                </SegmentedControl.Item>
+              </SegmentedControl.Root>
 
-            <View style={styles.amountContainer}>
-                <ThemedText style={[styles.currency, tier.popular && styles.popularCurrency]}>
-                    {tier.currency}
-                </ThemedText>
-                <ThemedText style={[styles.amount, tier.popular && styles.popularAmount]}>
-                    {tier.amount}
-                </ThemedText>
-                {tier.type !== 'one-time' && (
-                    <ThemedText style={styles.period}>/{tier.type === 'monthly' ? 'mo' : 'mo'}</ThemedText>
-                )}
-            </View>
-
-            <View style={styles.benefitsList}>
-                {tier.benefits.map((benefit, index) => (
-                    <View key={index} style={styles.benefitItem}>
-                        <Ionicons name="checkmark" size={16} color={colors.primaryColor} />
-                        <ThemedText style={styles.benefitText}>{benefit}</ThemedText>
-                    </View>
+              <View style={styles.tierList}>
+                {visibleTiers.map((tier) => (
+                  <TierRow
+                    key={tier.id}
+                    title={tier.title}
+                    subtitle={tier.subtitle}
+                    amount={tier.amount}
+                    currency={tier.currency}
+                    periodLabel={
+                      tier.frequency === 'monthly' ? t('donations.page.frequency.perMonth') : undefined
+                    }
+                    selected={selectedTier?.id === tier.id}
+                    onSelect={() => setSelectedTierId(tier.id)}
+                  />
                 ))}
-            </View>
+              </View>
 
-            <ActionButton
-                icon="heart"
-                text={tier.type === 'one-time' ? t('donations.page.tiers.supporter.button') :
-                    tier.type === 'monthly' ? t('donations.page.tiers.monthly.button') :
-                        t('donations.page.tiers.founder.button')}
-                onPress={() => handleDonation(tier)}
-                disabled={loading}
-                variant={tier.popular ? 'primary' : 'secondary'}
-            />
-        </View>
-    );
+              <Button
+                variant="primary"
+                size="large"
+                onPress={handleDonate}
+                loading={loading}
+                disabled={!selectedTier}
+                style={styles.cta}
+                icon={<Ionicons name="heart" size={18} color={colors.primaryForeground} />}
+              >
+                {selectedTier?.ctaLabel ?? t('donations.page.tiers.monthly.button')}
+              </Button>
+            </Section>
+          </View>
 
-    return (
-        <SafeAreaView style={styles.container} edges={['bottom']}>
-            <Header
-                options={{
-                    title: t('donations.page.title'),
-                    showBackButton: true,
-                }}
-            />
+          {/* What your support enables — flat icon list. */}
+          <View style={[styles.section, styles.divider]}>
+            <Section title={t('donations.page.impact.title')}>
+              <DetailIconGrid>
+                {impactAreas.map((area) => (
+                  <DetailIconCell key={area.title}>
+                    <DetailIconRow
+                      icon={
+                        <Ionicons
+                          name={area.icon}
+                          size={DETAIL_ICON_SIZE}
+                          color={colors.COLOR_BLACK_LIGHT_1}
+                        />
+                      }
+                      label={area.title}
+                    />
+                  </DetailIconCell>
+                ))}
+              </DetailIconGrid>
+            </Section>
+          </View>
 
-            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                {/* Hero Section */}
-                <LinearGradient
-                    colors={[colors.info, colors.info + '90']}
-                    style={styles.heroSection}
-                >
-                    <Ionicons name="heart" size={48} color={colors.white} />
-                    <ThemedText style={styles.heroTitle}>
-                        {t('donations.page.subtitle')}
-                    </ThemedText>
-                    <ThemedText style={styles.heroDescription}>
-                        {t('donations.page.description')}
-                    </ThemedText>
-                </LinearGradient>
-
-                {/* Donation Tiers */}
-                <View style={styles.tiersSection}>
-                    <ThemedText style={styles.sectionTitle}>
-                        {t('donations.page.chooseContribution')}
-                    </ThemedText>
-
-                    {donationTiers.map(renderDonationTier)}
-                </View>
-
-                {/* Impact Section */}
-                <View style={styles.impactSection}>
-                    <ThemedText style={styles.sectionTitle}>
-                        {t('donations.page.impact.title')}
-                    </ThemedText>
-
-                    {impactAreas.map((area, index) => (
-                        <View key={index} style={styles.impactItem}>
-                            <View style={styles.impactIcon}>
-                                <Ionicons name={area.icon} size={20} color={colors.primaryColor} />
-                            </View>
-                            <View style={styles.impactContent}>
-                                <ThemedText style={styles.impactTitle}>{area.title}</ThemedText>
-                                <ThemedText style={styles.impactDescription}>{area.description}</ThemedText>
-                            </View>
-                        </View>
-                    ))}
-                </View>
-
-                {/* Why Support Section */}
-                <View style={styles.whySection}>
-                    <ThemedText style={styles.sectionTitle}>
-                        {t('donations.page.mission.title')}
-                    </ThemedText>
-                    <ThemedText style={styles.whyDescription}>
-                        {t('donations.page.mission.description')}
-                    </ThemedText>
-
-                    <View style={styles.whyList}>
-                        {(t('donations.page.mission.goals', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                            <View key={index} style={styles.whyItem}>
-                                <Ionicons name="arrow-forward" size={16} color={colors.primaryColor} />
-                                <ThemedText style={styles.whyItemText}>{item}</ThemedText>
-                            </View>
-                        ))}
-                    </View>
-                </View>
-            </ScrollView>
-        </SafeAreaView>
-    );
+          {/* Mission — concise lead + flat checklist. */}
+          <View style={[styles.section, styles.divider]}>
+            <Section
+              title={t('donations.page.mission.title')}
+              subtitle={t('donations.page.mission.description')}
+            >
+              <View style={styles.goalList}>
+                {missionGoals.map((goal) => (
+                  <View key={goal} style={styles.goalRow}>
+                    <Ionicons name="checkmark-circle" size={20} color={colors.primaryColor} />
+                    <BloomText style={styles.goalText}>{goal}</BloomText>
+                  </View>
+                ))}
+              </View>
+            </Section>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: colors.primaryLight,
-    },
-    content: {
-        flex: 1,
-    },
-    heroSection: {
-        padding: 24,
-        alignItems: 'center',
-        marginHorizontal: 16,
-        marginTop: 16,
-        borderRadius: 200,
-        paddingHorizontal: 35,
-    },
-    heroTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: colors.white,
-        textAlign: 'center',
-        marginTop: 16,
-    },
-    heroDescription: {
-        fontSize: 16,
-        color: colors.white,
-        textAlign: 'center',
-        marginTop: 12,
-        opacity: 0.9,
-        lineHeight: 22,
-    },
-    tiersSection: {
-        padding: 16,
-        gap: 16,
-    },
-    sectionTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        marginBottom: 8,
-    },
-    tierCard: {
-        backgroundColor: colors.primaryLight,
-        borderRadius: 16,
-        padding: 20,
-        borderWidth: 1,
-        borderColor: colors.COLOR_BLACK_LIGHT_6,
-        position: 'relative',
-    },
-    popularTier: {
-        borderColor: colors.primaryColor,
-        borderWidth: 2,
-    },
-    popularBadge: {
-        position: 'absolute',
-        top: -1,
-        left: 20,
-    },
-    tierHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        marginTop: 8,
-    },
-    tierTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-    },
-    popularTierTitle: {
-        color: colors.primaryColor,
-    },
-    tierDescription: {
-        fontSize: 14,
-        color: colors.COLOR_BLACK_LIGHT_4,
-        marginTop: 8,
-    },
-    amountContainer: {
-        flexDirection: 'row',
-        alignItems: 'baseline',
-        marginTop: 16,
-        marginBottom: 16,
-    },
-    currency: {
-        fontSize: 16,
-        color: colors.COLOR_BLACK_LIGHT_4,
-    },
-    popularCurrency: {
-        color: colors.primaryColor,
-    },
-    amount: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        marginLeft: 2,
-    },
-    popularAmount: {
-        color: colors.primaryColor,
-    },
-    period: {
-        fontSize: 16,
-        color: colors.COLOR_BLACK_LIGHT_4,
-        marginLeft: 2,
-    },
-    benefitsList: {
-        gap: 8,
-        marginBottom: 20,
-    },
-    benefitItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    benefitText: {
-        fontSize: 14,
-        color: colors.COLOR_BLACK_LIGHT_3,
-        flex: 1,
-    },
-    impactSection: {
-        padding: 16,
-        gap: 16,
-    },
-    impactItem: {
-        flexDirection: 'row',
-        gap: 12,
-        alignItems: 'flex-start',
-    },
-    impactIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: colors.primaryLight_2,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    impactContent: {
-        flex: 1,
-    },
-    impactTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        marginBottom: 4,
-    },
-    impactDescription: {
-        fontSize: 14,
-        color: colors.COLOR_BLACK_LIGHT_4,
-        lineHeight: 20,
-    },
-    whySection: {
-        padding: 16,
-        backgroundColor: colors.COLOR_BLACK_LIGHT_8,
-        marginHorizontal: 16,
-        borderRadius: 16,
-        marginBottom: 16,
-    },
-    whyDescription: {
-        fontSize: 14,
-        color: colors.COLOR_BLACK_LIGHT_4,
-        lineHeight: 20,
-        marginBottom: 16,
-    },
-    whyList: {
-        gap: 12,
-    },
-    whyItem: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: 8,
-    },
-    whyItemText: {
-        fontSize: 14,
-        color: colors.COLOR_BLACK_LIGHT_3,
-        flex: 1,
-        lineHeight: 20,
-    },
+  root: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  flex: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: spacing['6xl'],
+  },
+  // Hero — preserved from the previous design.
+  heroSection: {
+    padding: spacing['2xl'],
+    alignItems: 'center',
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    borderRadius: 200,
+    paddingHorizontal: 35,
+  },
+  heroTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.white,
+    textAlign: 'center',
+    marginTop: spacing.lg,
+  },
+  heroDescription: {
+    fontSize: 16,
+    color: colors.white,
+    textAlign: 'center',
+    marginTop: spacing.md,
+    opacity: 0.9,
+    lineHeight: 22,
+  },
+  // Flat section rhythm — matches the property-detail page: equal vertical
+  // breathing room, a single hairline between blocks, content on the page bg.
+  section: {
+    paddingVertical: spacing['2xl'],
+  },
+  firstSection: {
+    paddingTop: spacing['3xl'],
+  },
+  divider: {
+    borderTopWidth: hairline.width,
+    borderTopColor: hairline.color,
+  },
+  pickerBody: {
+    gap: spacing.xl,
+  },
+  tierList: {
+    gap: spacing.sm,
+  },
+  cta: {
+    width: '100%',
+    borderRadius: radius.pill,
+  },
+  goalList: {
+    gap: spacing.md,
+  },
+  goalRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  goalText: {
+    flex: 1,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.COLOR_BLACK_LIGHT_2,
+    letterSpacing: tracker.normal,
+  },
 });

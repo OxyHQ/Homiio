@@ -1106,6 +1106,16 @@
       "subtitle": "Apoya el futuro de la vivienda ética",
       "description": "Tu contribución nos ayuda a construir una plataforma de vivienda transparente, justa y ética que beneficia a todos en el ecosistema de alquiler.",
       "chooseContribution": "Elige Tu Contribución",
+      "frequency": {
+        "label": "Frecuencia de donación",
+        "monthly": "Mensual",
+        "oneTime": "Única",
+        "perMonth": "/mes"
+      },
+      "error": {
+        "title": "Algo salió mal",
+        "generic": "No se pudo procesar tu donación. Inténtalo de nuevo más tarde."
+      },
       "tiers": {
         "supporter": {
           "title": "Donación única",
