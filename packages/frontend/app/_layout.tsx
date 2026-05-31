@@ -112,9 +112,8 @@ export default function RootLayout() {
     mainContentWrapper: {
       flex: isScreenNotMobile ? 2.2 : 1,
       ...(isScreenNotMobile ? {
-        borderLeftWidth: 0.5,
-        borderRightWidth: 0.5,
-        borderColor: colors.border,
+        borderRightWidth: StyleSheet.hairlineWidth,
+        borderRightColor: colors.border,
       } : {}),
       backgroundColor: colors.primaryLight,
     },
