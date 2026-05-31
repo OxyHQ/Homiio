@@ -68,7 +68,6 @@ import { SleepArrangement } from '@/components/property/SleepArrangement';
 import { StickyBookingCard } from '@/components/property/StickyBookingCard';
 import { LandlordSection } from '@/components/property/LandlordSection';
 import { SindiSection } from '@/components/property/SindiSection';
-import { SindiAnalysis } from '@/components/property/SindiAnalysis';
 import { FraudWarning } from '@/components/property/FraudWarning';
 import { BasicInfoSection } from '@/components/property/BasicInfoSection';
 import { PropertyDetailsCard } from '@/components/property/PropertyDetailsCard';
@@ -841,11 +840,6 @@ export default function PropertyDetailPage() {
             {apiProperty ? (
               <View style={[styles.section, styles.divider]}>
                 <SindiSection property={apiProperty} />
-              </View>
-            ) : null}
-            {apiProperty ? (
-              <View style={[styles.section, styles.divider]}>
-                <SindiAnalysis property={apiProperty} />
               </View>
             ) : null}
             <View style={[styles.section, styles.divider]}>

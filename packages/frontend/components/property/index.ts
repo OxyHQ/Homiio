@@ -1,7 +1,6 @@
 export { HeaderSection } from './HeaderSection';
 export { PhotoGallery } from './PhotoGallery';
 export { LandlordSection } from './LandlordSection';
-export { SindiAnalysis } from './SindiAnalysis';
 export { FraudWarning } from './FraudWarning';
 export { BasicInfoSection } from './BasicInfoSection';
 export { PropertyDetailsCard } from './PropertyDetailsCard';
