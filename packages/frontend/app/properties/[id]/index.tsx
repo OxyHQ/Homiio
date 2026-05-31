@@ -46,7 +46,6 @@ import { useOxy, showSignInModal } from '@oxyhq/services';
 import { Header } from '@/components/Header';
 import { SaveButton } from '@/components/SaveButton';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { useIsDesktop } from '@/hooks/useOptimizedMediaQuery';
 import { useLayoutScroll } from '@/context/LayoutScrollContext';
 import { useAreaInsights, useNearbyServices, useProperty } from '@/hooks';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
@@ -65,7 +64,6 @@ import { PhotoGrid } from '@/components/property/PhotoGrid';
 import { HeaderSection } from '@/components/property/HeaderSection';
 import { HostStatsCard } from '@/components/property/HostStatsCard';
 import { SleepArrangement } from '@/components/property/SleepArrangement';
-import { StickyBookingCard } from '@/components/property/StickyBookingCard';
 import { LandlordSection } from '@/components/property/LandlordSection';
 import { SindiSection } from '@/components/property/SindiSection';
 import { FraudWarning } from '@/components/property/FraudWarning';
@@ -95,7 +93,7 @@ import { SECTION_GUTTER } from '@/components/property/Section';
 import { ApplyToRentCTA } from '@/components/property/ApplyToRentCTA';
 
 import { colors } from '@/styles/colors';
-import { contentClamp, hairline, spacing } from '@/constants/styles';
+import { hairline, spacing } from '@/constants/styles';
 
 interface PropertyDetailViewModel {
   id: string;
@@ -118,7 +116,6 @@ export default function PropertyDetailPage() {
   const { oxyServices, activeSessionId } = useOxy();
   const layoutScrollContext = useLayoutScroll();
   const { mode: rentalMode } = useRentalMode();
-  const isDesktop = useIsDesktop();
   const { addProperty } = useRecentlyViewed();
 
   const propertyIdParam = typeof id === 'string' ? id : '';
@@ -541,11 +538,10 @@ export default function PropertyDetailPage() {
   );
   const exchangeData = isExchangeListing ? apiProperty?.exchange : undefined;
 
-  const showBookingWidgetMobile =
-    !isDesktop && rentalMode === 'vacation' && isVacationRentable;
+  const showBookingWidget =
+    rentalMode === 'vacation' && isVacationRentable;
 
-  const showApplyCTAMobile =
-    !isDesktop &&
+  const showApplyCTA =
     apiProperty &&
     rentalMode === 'long_term' &&
     apiProperty.rentMode !== RentMode.VACATION;
@@ -663,205 +659,192 @@ export default function PropertyDetailPage() {
           t={(key) => t(key) || key}
         />
 
-        <View
-          style={isDesktop ? styles.twoColumnContainer : styles.infoContainer}
-        >
-          <View style={isDesktop ? styles.mainColumn : undefined}>
-            {apiProperty ? (
-              <View style={styles.section}>
-                <HostStatsCard
-                  property={apiProperty}
-                  landlordProfile={landlordProfile}
-                />
-                <View style={styles.demandRow}>
-                  <DemandSignal
-                    propertyId={property.id}
-                    createdAt={apiProperty.createdAt}
-                  />
-                </View>
-              </View>
-            ) : null}
-
-            <View style={[styles.section, styles.divider]}>
-              <BasicInfoSection
+        <View style={styles.infoContainer}>
+          {apiProperty ? (
+            <View style={styles.section}>
+              <HostStatsCard
                 property={apiProperty}
-                hasActiveViewing={hasActiveViewing}
-                onViewingsPress={() => router.push('/viewings')}
+                landlordProfile={landlordProfile}
               />
-            </View>
-
-            {showBookingWidgetMobile ? (
-              <View style={[styles.section, styles.gutter, styles.divider]}>
-                <BookingWidget property={apiProperty as Property} />
-              </View>
-            ) : null}
-
-            {showApplyCTAMobile ? (
-              <View style={[styles.section, styles.gutter, styles.divider]}>
-                <ApplyToRentCTA
-                  propertyId={String(apiProperty?._id ?? apiProperty?.id ?? '')}
-                />
-              </View>
-            ) : null}
-
-            <View style={[styles.section, styles.divider]}>
-              <PropertyDetailsCard property={apiProperty} />
-            </View>
-
-            <View style={[styles.section, styles.divider]}>
-              <PropertyFeatures property={apiProperty} />
-            </View>
-
-            {showSleepArrangement ? (
-              <View style={[styles.section, styles.divider]}>
-                <SleepArrangement property={apiProperty as Property} />
-              </View>
-            ) : null}
-
-            <View style={[styles.section, styles.divider]}>
-              <PricingDetails property={apiProperty} />
-            </View>
-
-            {/* Sale details + mortgage calculator — only for sale listings that
-                carry a sale block (gated together so neither leaves a bare
-                hairline divider behind). */}
-            {saleData ? (
-              <View style={[styles.section, styles.divider]}>
-                <SaleDetailsSection sale={saleData} />
-              </View>
-            ) : null}
-
-            {saleData ? (
-              <View style={[styles.section, styles.divider]}>
-                <MortgageCalculatorSection
-                  salePrice={saleData.price}
-                  currency={saleData.currency}
-                />
-              </View>
-            ) : null}
-
-            {/* Home exchange — only for exchange listings that carry an exchange
-                block. Gated like the sale section so it never leaves a bare
-                hairline divider. */}
-            {exchangeData ? (
-              <View style={[styles.section, styles.divider]}>
-                <ExchangeSection
-                  exchange={exchangeData}
-                  onRequestExchange={handleRequestExchange}
-                />
-              </View>
-            ) : null}
-
-            <View style={[styles.section, styles.divider]}>
-              <HouseRules property={apiProperty} />
-            </View>
-
-            <View style={[styles.section, styles.divider]}>
-              <LocationDisplay property={apiProperty as Property} />
-            </View>
-
-            <View style={[styles.section, styles.divider]}>
-              <PropertyOverview property={apiProperty} />
-            </View>
-
-            <View style={[styles.section, styles.divider]}>
-              <NeighborhoodInfo property={apiProperty} />
-            </View>
-
-            {/* What's nearby — everyday services (pharmacy, school, transit, …)
-                near this listing. Gated so a fail-soft / degraded-empty section
-                never leaves a bare hairline divider behind. */}
-            {showNearbyServicesSection ? (
-              <View style={[styles.section, styles.divider]}>
-                <NearbyServicesSection propertyId={property.id} />
-              </View>
-            ) : null}
-
-            <View style={[styles.section, styles.divider]}>
-              <AvailabilitySection property={apiProperty} />
-            </View>
-
-            <View style={[styles.section, styles.divider]}>
-              <AmenitiesSection
-                property={apiProperty as { amenities?: string[] | null }}
-              />
-            </View>
-
-            {/* Community Notes — community-verified notes about the building —
-                shown on every listing. */}
-            <View style={[styles.section, styles.divider]}>
-              <CommunityNotesSection
-                property={apiProperty as Property}
-                variant="preview"
-              />
-            </View>
-
-            {/* Reviews — Airbnb-style guest reviews — shown ADDITIONALLY on
-                short-stay (vacation/both) listings. Reviews and Community Notes
-                are distinct features that coexist; reviews don't replace notes. */}
-            {isVacationRentable ? (
-              <View style={[styles.section, styles.divider]}>
-                <ReviewsSection property={apiProperty as Property} />
-              </View>
-            ) : null}
-
-            {/* Area context: how this listing's price compares to similar
-                homes nearby, plus a carousel of those comparables. Grouped
-                between Community Notes and the landlord's own listings. Each
-                wrapper is gated so a fail-soft/empty section never leaves a
-                bare hairline divider behind. */}
-            {showPriceRangeSection ? (
-              <View style={[styles.section, styles.divider]}>
-                <PriceRangeSection
+              <View style={styles.demandRow}>
+                <DemandSignal
                   propertyId={property.id}
-                  bedrooms={property.bedrooms}
+                  createdAt={apiProperty.createdAt}
                 />
               </View>
-            ) : null}
-
-            {showSimilarHomesSection ? (
-              <View style={[styles.section, styles.divider]}>
-                <SimilarHomesSection propertyId={property.id} />
-              </View>
-            ) : null}
-
-            {apiProperty ? (
-              <View style={[styles.section, styles.divider]}>
-                <LandlordSection
-                  property={apiProperty}
-                  landlordProfile={landlordProfile}
-                  ownerProperties={ownerProperties}
-                  onApplyPublic={handlePublicHousingApply}
-                  t={(k, d) => t(k, d ?? '') || (d ?? k)}
-                />
-              </View>
-            ) : null}
-
-            {apiProperty ? (
-              <View style={[styles.section, styles.divider]}>
-                <SindiSection property={apiProperty} />
-              </View>
-            ) : null}
-            <View style={[styles.section, styles.divider]}>
-              <FraudWarning
-                text={
-                  t(
-                    'Never pay or transfer funds outside the Homio platform',
-                    'Never pay or transfer funds outside the Homio platform',
-                  ) || 'Never pay or transfer funds outside the Homio platform'
-                }
-              />
             </View>
+          ) : null}
+
+          <View style={[styles.section, styles.divider]}>
+            <BasicInfoSection
+              property={apiProperty}
+              hasActiveViewing={hasActiveViewing}
+              onViewingsPress={() => router.push('/viewings')}
+            />
           </View>
-          {isDesktop && apiProperty ? (
-            <View style={styles.sideColumn}>
-              <StickyBookingCard
-                property={apiProperty as Property}
-                priceLabel={property.price}
-                priceSubtitle={property.location}
+
+          {showBookingWidget ? (
+            <View style={[styles.section, styles.gutter, styles.divider]}>
+              <BookingWidget property={apiProperty as Property} />
+            </View>
+          ) : null}
+
+          {showApplyCTA ? (
+            <View style={[styles.section, styles.gutter, styles.divider]}>
+              <ApplyToRentCTA
+                propertyId={String(apiProperty?._id ?? apiProperty?.id ?? '')}
               />
             </View>
           ) : null}
+
+          <View style={[styles.section, styles.divider]}>
+            <PropertyDetailsCard property={apiProperty} />
+          </View>
+
+          <View style={[styles.section, styles.divider]}>
+            <PropertyFeatures property={apiProperty} />
+          </View>
+
+          {showSleepArrangement ? (
+            <View style={[styles.section, styles.divider]}>
+              <SleepArrangement property={apiProperty as Property} />
+            </View>
+          ) : null}
+
+          <View style={[styles.section, styles.divider]}>
+            <PricingDetails property={apiProperty} />
+          </View>
+
+          {/* Sale details + mortgage calculator — only for sale listings that
+              carry a sale block (gated together so neither leaves a bare
+              hairline divider behind). */}
+          {saleData ? (
+            <View style={[styles.section, styles.divider]}>
+              <SaleDetailsSection sale={saleData} />
+            </View>
+          ) : null}
+
+          {saleData ? (
+            <View style={[styles.section, styles.divider]}>
+              <MortgageCalculatorSection
+                salePrice={saleData.price}
+                currency={saleData.currency}
+              />
+            </View>
+          ) : null}
+
+          {/* Home exchange — only for exchange listings that carry an exchange
+              block. Gated like the sale section so it never leaves a bare
+              hairline divider. */}
+          {exchangeData ? (
+            <View style={[styles.section, styles.divider]}>
+              <ExchangeSection
+                exchange={exchangeData}
+                onRequestExchange={handleRequestExchange}
+              />
+            </View>
+          ) : null}
+
+          <View style={[styles.section, styles.divider]}>
+            <HouseRules property={apiProperty} />
+          </View>
+
+          <View style={[styles.section, styles.divider]}>
+            <LocationDisplay property={apiProperty as Property} />
+          </View>
+
+          <View style={[styles.section, styles.divider]}>
+            <PropertyOverview property={apiProperty} />
+          </View>
+
+          <View style={[styles.section, styles.divider]}>
+            <NeighborhoodInfo property={apiProperty} />
+          </View>
+
+          {/* What's nearby — everyday services (pharmacy, school, transit, …)
+              near this listing. Gated so a fail-soft / degraded-empty section
+              never leaves a bare hairline divider behind. */}
+          {showNearbyServicesSection ? (
+            <View style={[styles.section, styles.divider]}>
+              <NearbyServicesSection propertyId={property.id} />
+            </View>
+          ) : null}
+
+          <View style={[styles.section, styles.divider]}>
+            <AvailabilitySection property={apiProperty} />
+          </View>
+
+          <View style={[styles.section, styles.divider]}>
+            <AmenitiesSection
+              property={apiProperty as { amenities?: string[] | null }}
+            />
+          </View>
+
+          {/* Community Notes — community-verified notes about the building —
+              shown on every listing. */}
+          <View style={[styles.section, styles.divider]}>
+            <CommunityNotesSection
+              property={apiProperty as Property}
+              variant="preview"
+            />
+          </View>
+
+          {/* Reviews — Airbnb-style guest reviews — shown ADDITIONALLY on
+              short-stay (vacation/both) listings. Reviews and Community Notes
+              are distinct features that coexist; reviews don't replace notes. */}
+          {isVacationRentable ? (
+            <View style={[styles.section, styles.divider]}>
+              <ReviewsSection property={apiProperty as Property} />
+            </View>
+          ) : null}
+
+          {/* Area context: how this listing's price compares to similar
+              homes nearby, plus a carousel of those comparables. Grouped
+              between Community Notes and the landlord's own listings. Each
+              wrapper is gated so a fail-soft/empty section never leaves a
+              bare hairline divider behind. */}
+          {showPriceRangeSection ? (
+            <View style={[styles.section, styles.divider]}>
+              <PriceRangeSection
+                propertyId={property.id}
+                bedrooms={property.bedrooms}
+              />
+            </View>
+          ) : null}
+
+          {showSimilarHomesSection ? (
+            <View style={[styles.section, styles.divider]}>
+              <SimilarHomesSection propertyId={property.id} />
+            </View>
+          ) : null}
+
+          {apiProperty ? (
+            <View style={[styles.section, styles.divider]}>
+              <LandlordSection
+                property={apiProperty}
+                landlordProfile={landlordProfile}
+                ownerProperties={ownerProperties}
+                onApplyPublic={handlePublicHousingApply}
+                t={(k, d) => t(k, d ?? '') || (d ?? k)}
+              />
+            </View>
+          ) : null}
+
+          {apiProperty ? (
+            <View style={[styles.section, styles.divider]}>
+              <SindiSection property={apiProperty} />
+            </View>
+          ) : null}
+          <View style={[styles.section, styles.divider]}>
+            <FraudWarning
+              text={
+                t(
+                  'Never pay or transfer funds outside the Homio platform',
+                  'Never pay or transfer funds outside the Homio platform',
+                ) || 'Never pay or transfer funds outside the Homio platform'
+              }
+            />
+          </View>
         </View>
       </Animated.ScrollView>
 
@@ -904,28 +887,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  // Page containers are full-bleed (no horizontal padding) so
-  // horizontally-scrolling section bodies can run edge-to-edge. The
-  // horizontal gutter lives per-section (Section primitive + section
-  // roots, sourced from SECTION_GUTTER) instead. Desktop keeps the
-  // content clamp + column gap.
-  twoColumnContainer: {
-    flexDirection: 'row',
-    paddingTop: spacing.md,
-    gap: spacing['3xl'],
-    maxWidth: contentClamp.page,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  mainColumn: {
-    flex: 1,
-    minWidth: 0,
-  },
-  sideColumn: {
-    width: 380 + SECTION_GUTTER * 2,
-    paddingTop: spacing.xl,
-    paddingHorizontal: SECTION_GUTTER,
-  },
+  // Single-column content. The page columns (content + widgets) are owned
+  // by the app shell (app/_layout.tsx: mainContentWrapper + RightBar), so
+  // this screen only fills the content column. It's full-bleed (no
+  // horizontal padding) so horizontally-scrolling section bodies can run
+  // edge-to-edge; the horizontal gutter lives per-section (Section
+  // primitive + section roots, sourced from SECTION_GUTTER) instead.
   infoContainer: {
     width: '100%',
   },
