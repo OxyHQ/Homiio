@@ -26,10 +26,12 @@ import {
   RefreshControl,
   StyleSheet,
   View,
+  type ImageSourcePropType,
   type ListRenderItem,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import type * as Notifications from 'expo-notifications';
 
@@ -51,6 +53,12 @@ import type { Notification } from '@/services/notificationService';
 import { logger } from '@/utils/logger';
 
 type InboxFilter = 'all' | 'unread';
+
+/**
+ * Bundled illustration for the empty inbox. Resolved once at module load so
+ * the `<Image>` source identity is stable across renders.
+ */
+const EMPTY_INBOX_ILLUSTRATION: ImageSourcePropType = require('@/assets/illustrations/empty-inbox.png');
 
 /**
  * Safely reads the scheduled date from an Expo notification trigger. Only
@@ -399,27 +407,36 @@ export default function InboxScreen() {
             />
           }
           ListEmptyComponent={
-            <View style={styles.emptyWrap}>
-              <EmptyState
-                icon={isFiltered ? 'filter-outline' : 'notifications-outline'}
-                title={
-                  isFiltered
-                    ? t('notification.empty.filteredTitle', 'No matches')
-                    : t('notification.empty.title', 'No notifications')
-                }
-                description={
-                  isFiltered
-                    ? t(
-                        'notification.empty.filtered',
-                        'No notifications match your current filter',
-                      )
-                    : t(
-                        'notification.empty.message',
-                        "You're all caught up! New notifications will appear here.",
-                      )
-                }
-              />
-            </View>
+            isFiltered ? (
+              <View style={styles.emptyWrap}>
+                <EmptyState
+                  icon="filter-outline"
+                  title={t('notification.empty.filteredTitle', 'No matches')}
+                  description={t(
+                    'notification.empty.filtered',
+                    'No notifications match your current filter',
+                  )}
+                />
+              </View>
+            ) : (
+              <View style={styles.illustrationEmpty}>
+                <Image
+                  source={EMPTY_INBOX_ILLUSTRATION}
+                  style={styles.illustrationImage}
+                  contentFit="contain"
+                  accessibilityIgnoresInvertColors
+                />
+                <H3 style={styles.illustrationTitle}>
+                  {t('notification.empty.title', 'No notifications')}
+                </H3>
+                <BloomText style={styles.illustrationMessage}>
+                  {t(
+                    'notification.empty.message',
+                    "You're all caught up! New notifications will appear here.",
+                  )}
+                </BloomText>
+              </View>
+            )
           }
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
@@ -648,5 +665,33 @@ const styles = StyleSheet.create({
   },
   emptyWrap: {
     paddingVertical: spacing['4xl'],
+  },
+  // --- Illustration empty state (image-forward, hero) ---
+  illustrationEmpty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing['5xl'],
+    paddingHorizontal: spacing['2xl'],
+    minHeight: 320,
+  },
+  illustrationImage: {
+    width: 200,
+    height: 200,
+    marginBottom: spacing.xl,
+  },
+  illustrationTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  illustrationMessage: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    maxWidth: 320,
   },
 });
