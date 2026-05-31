@@ -474,7 +474,7 @@ export default function HomePage() {
         </View>
 
         {/* === Category strip (sticky on web) === */}
-        <View style={[styles.categoryStripWrap, { marginTop: isWide ? spacing['3xl'] : spacing.lg }]}>
+        <View style={[styles.categoryStripWrap, { marginTop: sectionGap }]}>
           <HomeCategoryStrip sticky />
         </View>
 
@@ -608,7 +608,7 @@ export default function HomePage() {
         </View>
 
         {/* === Footer trust strip === */}
-        <View style={{ marginTop: spacing['3xl'] }}>
+        <View style={{ marginTop: sectionGap }}>
           <HomeFooterStrip chunks={footerChunks} />
         </View>
       </Animated.ScrollView>

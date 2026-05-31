@@ -92,15 +92,15 @@ export const radius = {
 } as const;
 
 /**
- * Section spacing rhythm. Web is more generous; mobile keeps content
- * dense enough to avoid scroll fatigue but still breathes.
+ * Section spacing rhythm. Web is a touch more generous; mobile keeps
+ * content dense enough to avoid scroll fatigue but still breathes.
  *
- * Bumped web from 80 → 96 to give Airbnb-style rhythm between sections.
- * Mobile bumped from 48 → 56 to match.
+ * Tightened to an Airbnb-2026 rhythm (48 web / 32 mobile) — the prior
+ * 96/56 left too much dead air between feed sections.
  */
 export const sectionSpacing = {
-  web: 96,
-  mobile: 56,
+  web: 48,
+  mobile: 32,
 } as const;
 
 /**
