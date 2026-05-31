@@ -15,7 +15,7 @@ import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { format, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
 
 import { Button } from '@oxyhq/bloom/button';
 import { Loading } from '@oxyhq/bloom/loading';
@@ -40,6 +40,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { CardSurface } from '@/components/ui/CardSurface';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
+import { formatLocalized } from '@/utils/dateLocale';
 import { toast } from '@/lib/sonner';
 import { colors } from '@/styles/colors';
 import { radius, spacing, tracker } from '@/constants/styles';
@@ -50,7 +51,7 @@ const formatWindow = (window: ExchangeWindow): string => {
   const start = parseISO(window.start);
   const end = parseISO(window.end);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '';
-  return `${format(start, 'EEE, MMM d, yyyy')} → ${format(end, 'EEE, MMM d, yyyy')}`;
+  return `${formatLocalized(start, 'EEE, MMM d, yyyy')} → ${formatLocalized(end, 'EEE, MMM d, yyyy')}`;
 };
 
 export default function ExchangeRequestDetailScreen() {

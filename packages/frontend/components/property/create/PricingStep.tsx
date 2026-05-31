@@ -42,22 +42,22 @@ export function PricingStep({ formData, validationErrors, updateFormField }: Pro
         <View style={[styles.formGroup, styles.formGroupRight]}>
           <ThemedText style={styles.label}>Currency</ThemedText>
           <View style={styles.optionRow}>
-            {CURRENCY_OPTIONS.map((currency) => (
+            {CURRENCY_OPTIONS.map((option) => (
               <TouchableOpacity
-                key={currency}
+                key={option.value}
                 style={[
                   styles.propertyTypeButton,
-                  pricing.currency === currency && styles.propertyTypeButtonSelected,
+                  pricing.currency === option.value && styles.propertyTypeButtonSelected,
                 ]}
-                onPress={() => updateFormField('pricing', 'currency', currency)}
+                onPress={() => updateFormField('pricing', 'currency', option.value)}
               >
                 <ThemedText
                   style={[
                     styles.propertyTypeText,
-                    pricing.currency === currency && styles.propertyTypeTextSelected,
+                    pricing.currency === option.value && styles.propertyTypeTextSelected,
                   ]}
                 >
-                  {currency}
+                  {option.label}
                 </ThemedText>
               </TouchableOpacity>
             ))}

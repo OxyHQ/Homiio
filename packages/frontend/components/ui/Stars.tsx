@@ -37,8 +37,13 @@ export const Stars: React.FC<StarsProps> = ({
   size = DEFAULT_STAR_SIZE,
   color = colors.ratingStar,
 }) => {
-  const fullStars = Math.floor(rating);
-  const hasHalf = rating - fullStars >= HALF_STAR_THRESHOLD;
+  // Clamp to [0, STAR_COUNT] first: an out-of-range rating (e.g. > 5 or
+  // negative) would otherwise make `emptyStars` negative, and
+  // `Array.from({ length: negative })` throws a RangeError that unmounts the
+  // whole section. Clamping keeps the row safe for any incoming value.
+  const clampedRating = Math.max(0, Math.min(STAR_COUNT, rating));
+  const fullStars = Math.floor(clampedRating);
+  const hasHalf = clampedRating - fullStars >= HALF_STAR_THRESHOLD;
   const emptyStars = STAR_COUNT - fullStars - (hasHalf ? 1 : 0);
 
   return (

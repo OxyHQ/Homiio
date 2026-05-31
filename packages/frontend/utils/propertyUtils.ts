@@ -48,6 +48,37 @@ export function resolvePriceUnit(property: Property, mode: RentalMode): PriceUni
   return PriceUnit.MONTH;
 }
 
+/** A listing carries a usable sale price when it's for sale with a positive price. */
+function hasSalePrice(property: Property): boolean {
+  return (
+    hasIntent(property, ListingIntent.SALE) &&
+    typeof property.sale?.price === 'number' &&
+    property.sale.price > 0
+  );
+}
+
+/** The display-ready sale offering (no per-unit suffix). Caller guards validity. */
+function saleOffering(property: Property): PrimaryOffering {
+  return {
+    amount: property.sale?.price ?? 0,
+    currency: property.sale?.currency ?? '',
+    priceUnit: undefined,
+    label: '',
+    kind: 'sale',
+  };
+}
+
+/** The display-ready rent offering (mode-aware per-unit suffix). */
+function rentOffering(property: Property, mode: RentalMode): PrimaryOffering {
+  return {
+    amount: property.rent?.amount ?? 0,
+    currency: property.rent?.currency ?? 'EUR',
+    priceUnit: resolvePriceUnit(property, mode),
+    label: '',
+    kind: 'rent',
+  };
+}
+
 /**
  * Resolve the ONE primary price/offering a card or headline should display for
  * a (possibly multi-intent) listing. Priority is rent → sale → exchange:
@@ -56,7 +87,13 @@ export function resolvePriceUnit(property: Property, mode: RentalMode): PriceUni
  *    EXISTING behaviour exactly — rent amount + per-unit suffix (mode-aware).
  *    This guarantees rent listings, including "rent + sell" ones, are visually
  *    unchanged; the "For sale" badge communicates the secondary sale intent.
- *  - Sale-only listings show the sale price with NO per-unit suffix.
+ *    Exception: a rent listing with a non-positive rent that ALSO has a valid
+ *    sale price falls through to the sale price, so the card shows the real
+ *    asking price instead of a 0 the price gate would hide.
+ *  - Sale-only listings show the sale price with NO per-unit suffix. When the
+ *    sale block is missing or its price is non-positive, a neutral sale
+ *    offering (empty label, `amount: 0`) is returned so the card shows NO
+ *    misleading rent price rather than falling back to rent.
  *  - Exchange-only listings have no price → `label: 'Free'`, `kind: 'exchange'`.
  *
  * `freeLabel` is injected by the caller (i18n: `listing.exchange.free`) so this
@@ -69,25 +106,19 @@ export function resolvePrimaryOffering(
 ): PrimaryOffering {
   // Rent takes precedence so existing rent (and rent+sale) cards are unchanged.
   if (hasIntent(property, ListingIntent.RENT)) {
-    const amount = property.rent?.amount ?? 0;
-    const currency = property.rent?.currency ?? 'EUR';
-    return {
-      amount,
-      currency,
-      priceUnit: resolvePriceUnit(property, mode),
-      label: '',
-      kind: 'rent',
-    };
+    const rentAmount = property.rent?.amount ?? 0;
+    // A rent listing whose rent isn't set yet but which has a real sale price
+    // should surface that sale price, not a 0 the card would suppress.
+    if (rentAmount <= 0 && hasSalePrice(property)) {
+      return saleOffering(property);
+    }
+    return rentOffering(property, mode);
   }
 
-  if (hasIntent(property, ListingIntent.SALE) && property.sale) {
-    return {
-      amount: property.sale.price,
-      currency: property.sale.currency,
-      priceUnit: undefined,
-      label: '',
-      kind: 'sale',
-    };
+  if (hasIntent(property, ListingIntent.SALE)) {
+    // Sale-only: show the asking price when present; otherwise a neutral sale
+    // offering (no price) — never a rent-priced fallback for a sale listing.
+    return saleOffering(property);
   }
 
   if (hasIntent(property, ListingIntent.EXCHANGE)) {
@@ -96,13 +127,7 @@ export function resolvePrimaryOffering(
 
   // Fallback: treat as rent (back-compat with listings that somehow carry no
   // recognised intent), preserving the prior rent-amount display.
-  return {
-    amount: property.rent?.amount ?? 0,
-    currency: property.rent?.currency ?? 'EUR',
-    priceUnit: resolvePriceUnit(property, mode),
-    label: '',
-    kind: 'rent',
-  };
+  return rentOffering(property, mode);
 }
 
 /**

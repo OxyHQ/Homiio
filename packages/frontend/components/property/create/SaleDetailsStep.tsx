@@ -8,6 +8,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { CHAIN_STATUS_OPTIONS, CURRENCY_OPTIONS } from './constants';
 import { createPropertyStyles as styles } from './styles';
 import type { PropertyStepProps } from './types';
+import { parseLocaleNumber } from '@/utils/number';
 
 type ChainStatus = NonNullable<PropertySale['chainStatus']>;
 
@@ -29,7 +30,9 @@ export function SaleDetailsStep({
 
   const handlePriceChange = useCallback(
     (text: string) => {
-      const parsed = parseFloat(text);
+      // es/it/ca numeric keyboards emit a comma decimal; normalise before parse
+      // (shared with the mortgage calculator) so "1234,5" isn't truncated to 1234.
+      const parsed = parseLocaleNumber(text);
       updateFormField('offering', 'salePrice', Number.isNaN(parsed) ? undefined : parsed);
     },
     [updateFormField],
@@ -73,22 +76,22 @@ export function SaleDetailsStep({
         <View style={[styles.formGroup, styles.formGroupRight]}>
           <ThemedText style={styles.label}>{t('listing.sale.currency', 'Currency')}</ThemedText>
           <View style={styles.optionRow}>
-            {CURRENCY_OPTIONS.map((currency) => (
+            {CURRENCY_OPTIONS.map((option) => (
               <TouchableOpacity
-                key={currency}
+                key={option.value}
                 style={[
                   styles.propertyTypeButton,
-                  offering.saleCurrency === currency && styles.propertyTypeButtonSelected,
+                  offering.saleCurrency === option.value && styles.propertyTypeButtonSelected,
                 ]}
-                onPress={() => updateFormField('offering', 'saleCurrency', currency)}
+                onPress={() => updateFormField('offering', 'saleCurrency', option.value)}
               >
                 <ThemedText
                   style={[
                     styles.propertyTypeText,
-                    offering.saleCurrency === currency && styles.propertyTypeTextSelected,
+                    offering.saleCurrency === option.value && styles.propertyTypeTextSelected,
                   ]}
                 >
-                  {currency}
+                  {option.label}
                 </ThemedText>
               </TouchableOpacity>
             ))}

@@ -52,6 +52,7 @@ import { useAreaInsights, useNearbyServices, useProperty } from '@/hooks';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
+import { resolvePrimaryOffering } from '@/utils/propertyUtils';
 import { propertyService } from '@/services/propertyService';
 import profileService, { type Profile } from '@/services/profileService';
 import ViewingService from '@/services/viewingService';
@@ -237,9 +238,24 @@ export default function PropertyDetailPage() {
           priceUnit = 'month';
       }
     }
-    const price = apiProperty.rent
-      ? `${currency}${apiProperty.rent.amount}/${priceUnit}`
-      : '';
+    // Intent-aware headline price for the sticky header + desktop booking card.
+    // Centralised in `resolvePrimaryOffering` (rent → sale → exchange) so a sale
+    // listing shows its asking price (no per-unit suffix) instead of the blank a
+    // rent-only formatter produced, an exchange listing shows the "Free" label,
+    // and rent keeps its exact `${currency}${amount}/${priceUnit}` display.
+    const offering = resolvePrimaryOffering(
+      apiProperty,
+      rentalMode,
+      t('listing.exchange.free', 'Free'),
+    );
+    let price: string;
+    if (offering.kind === 'exchange') {
+      price = offering.label;
+    } else if (offering.kind === 'sale') {
+      price = offering.amount > 0 ? `${offering.currency}${offering.amount}` : '';
+    } else {
+      price = apiProperty.rent ? `${currency}${apiProperty.rent.amount}/${priceUnit}` : '';
+    }
 
     const generatedTitle = generatePropertyTitle({
       type: Object.values(PropertyType).includes(apiProperty.type as PropertyType)
@@ -260,7 +276,7 @@ export default function PropertyDetailPage() {
       size: apiProperty.squareFootage || 0,
       images: apiProperty.images || [],
     };
-  }, [apiProperty]);
+  }, [apiProperty, rentalMode, t]);
 
   // Track property view once per page load.
   useEffect(() => {

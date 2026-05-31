@@ -108,18 +108,27 @@ export interface PropertyOffering {
 }
 
 /**
- * Default offering: a new listing is rent-only until the host opts into more.
- * Exchange defaults are inert until the host adds the EXCHANGE intent — `both`
- * is the most permissive mode (accepts a swap or a hosting request).
+ * Build a fresh default offering: a new listing is rent-only until the host
+ * opts into more. Exchange defaults are inert until the host adds the EXCHANGE
+ * intent — `both` is the most permissive mode (accepts a swap or a hosting
+ * request).
+ *
+ * This is a FACTORY (not a shared constant) so the `intents`,
+ * `exchangeAvailabilityWindows`, and `exchangeLanguages` arrays are brand-new on
+ * every call. A shared object literal would hand the same nested array refs to
+ * the initial state and every `resetForm`, so an in-place mutation (e.g.
+ * `windows.push(...)`) on one listing could leak into the next.
  */
-export const DEFAULT_OFFERING: PropertyOffering = {
-  intents: [ListingIntent.RENT],
-  exchangeMode: ExchangeMode.BOTH,
-  exchangeAvailabilityWindows: [],
-  exchangeLanguages: [],
-  exchangeMealsIncluded: false,
-  exchangeRequiresReciprocity: false,
-};
+export function createDefaultOffering(): PropertyOffering {
+  return {
+    intents: [ListingIntent.RENT],
+    exchangeMode: ExchangeMode.BOTH,
+    exchangeAvailabilityWindows: [],
+    exchangeLanguages: [],
+    exchangeMealsIncluded: false,
+    exchangeRequiresReciprocity: false,
+  };
+}
 
 export interface CreatePropertyFormData {
   basicInfo: PropertyBasicInfo;
@@ -243,7 +252,7 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()((set
       sharedSpacesList: [],
       otherFeatures: '',
     },
-    offering: { ...DEFAULT_OFFERING },
+    offering: createDefaultOffering(),
   },
   currentStep: 0,
   isDirty: false,
@@ -351,8 +360,9 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()((set
         },
         // RISK 4: reset MUST re-seed offering to the rent-only default, or the
         // next listing inherits the previous one's intents + sale/exchange
-        // sub-fields (stale state). Spread so each reset gets a fresh array refs.
-        offering: { ...DEFAULT_OFFERING },
+        // sub-fields (stale state). The factory returns fresh array refs so no
+        // nested array is shared across resets.
+        offering: createDefaultOffering(),
       },
       currentStep: 0,
       isDirty: false,

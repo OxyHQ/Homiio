@@ -30,6 +30,7 @@ import * as SegmentedControl from '@oxyhq/bloom/segmented-control';
 
 import { Section } from '@/components/property/Section';
 import { CurrencyFormatter } from '@/components/CurrencyFormatter';
+import { parseLocaleNumber } from '@/utils/number';
 import { colors } from '@/styles/colors';
 import { hairline, radius, spacing } from '@/constants/styles';
 import { DEFAULT_MORTGAGE_CONFIG } from '@homiio/shared-types';
@@ -199,7 +200,8 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
   );
 
   const annualRate = useMemo(() => {
-    const parsed = parseFloat(annualRateText.replace(',', '.'));
+    // Comma-tolerant parse (es/it/ca keyboards), shared with the listing wizard.
+    const parsed = parseLocaleNumber(annualRateText);
     if (Number.isNaN(parsed) || parsed < 0) return 0;
     return parsed / PERCENT;
   }, [annualRateText]);

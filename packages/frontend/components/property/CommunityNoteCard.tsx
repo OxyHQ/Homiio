@@ -31,11 +31,11 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { format } from 'date-fns';
 
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { Stars } from '@/components/ui/Stars';
+import { formatLocalized } from '@/utils/dateLocale';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 
@@ -161,7 +161,7 @@ export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({
     ? t('property.communityNotes.anonymous')
     : t('property.communityNotes.verifiedResident');
 
-  const formattedDate = format(new Date(note.createdAt), 'MMMM yyyy');
+  const formattedDate = formatLocalized(new Date(note.createdAt), 'MMMM yyyy');
 
   // Measure once (collapsed) to decide whether "Read more" is needed; the
   // measurement only matters before expansion, so it's a no-op afterwards.

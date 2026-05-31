@@ -11,7 +11,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { format } from 'date-fns';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@oxyhq/bloom/button';
@@ -33,6 +32,7 @@ import { useProfile } from '@/context/ProfileContext';
 import { useCreateExchangeRequest } from '@/hooks/useExchangeQueries';
 import { useUserProperties } from '@/hooks/usePropertyQueries';
 import { getPropertyTitle } from '@/utils/propertyUtils';
+import { formatLocalized } from '@/utils/dateLocale';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
@@ -50,7 +50,7 @@ const MODAL_INSET_PADDING = 16;
 
 const formatRange = (range: AvailabilityCalendarRange | null): string =>
   range
-    ? `${format(range.checkIn, 'MMM d')} → ${format(range.checkOut, 'MMM d')}`
+    ? `${formatLocalized(range.checkIn, 'MMM d')} → ${formatLocalized(range.checkOut, 'MMM d')}`
     : '';
 
 const propertyId = (property: Property): string => property._id || property.id || '';

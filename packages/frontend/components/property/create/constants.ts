@@ -339,14 +339,29 @@ export const STATE_OPTIONS: readonly string[] = [
   'Other',
 ];
 
-export const CURRENCY_OPTIONS: readonly string[] = [
-  'USD',
-  'EUR',
-  'GBP',
-  'CAD',
-  'MXN',
-  'FAIR (FairCoin)',
-  'Other',
+/**
+ * A selectable currency: `value` is the canonical code persisted to the listing
+ * (`rent.currency` / `sale.currency`), `label` is the friendly display text.
+ */
+export interface CurrencyOption {
+  value: string;
+  label: string;
+}
+
+/**
+ * Currencies offered in the wizard. `value` is the canonical 3–4 letter code
+ * stored VERBATIM on the listing and validated by the backend — the friendly
+ * `label` is display-only and is never persisted. The set matches the backend
+ * rent/sale currency contract (USD, EUR, GBP, CAD, FAIR); display strings such
+ * as "Other" or non-set codes like "MXN" are intentionally excluded because the
+ * schema would reject them.
+ */
+export const CURRENCY_OPTIONS: readonly CurrencyOption[] = [
+  { value: 'USD', label: 'USD — US Dollar' },
+  { value: 'EUR', label: 'EUR — Euro' },
+  { value: 'GBP', label: 'GBP — British Pound' },
+  { value: 'CAD', label: 'CAD — Canadian Dollar' },
+  { value: 'FAIR', label: 'FAIR — FairCoin' },
 ];
 
 /**
