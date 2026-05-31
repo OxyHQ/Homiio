@@ -45,6 +45,23 @@
     "loading": "Loading...",
     "battery": "Battery"
   },
+  "amenities": {
+    "categories": {
+      "essential": "Essentials",
+      "accessibility": "Accessibility",
+      "comfort": "Heating & cooling",
+      "kitchen": "Kitchen & dining",
+      "eco": "Sustainability",
+      "outdoor": "Outdoor & views",
+      "wellness": "Health & wellness",
+      "technology": "Internet & office",
+      "security": "Home safety",
+      "storage": "Storage",
+      "transportation": "Parking & transport",
+      "community": "Community spaces",
+      "other": "More"
+    }
+  },
   "error.socket.not_connected": "Not connected to chat server",
   "error.message.send_timeout": "Message send timeout. Please try again.",
   "error.message.edit_timeout": "Edit timeout. Please try again.",
@@ -1044,6 +1061,10 @@
     "ethicalPricingWarning": "Your price exceeds the ethical maximum. Consider lowering it to make housing more accessible.",
     "warningBullet": "• {{warning}}",
     "ethicalPricing": "Ethical Pricing",
+    "amenities": {
+      "title": "What this place offers",
+      "showAll": "Show all {{count}} amenities"
+    },
     "communityNotes": {
       "title": "Community Notes",
       "subtitle": "Community-verified notes about the building. Experiences may vary by unit.",
@@ -1107,7 +1128,6 @@
       "vsAvgCheaper": "{{percent}}% below average",
       "vsAvgPricier": "{{percent}}% above average",
       "vsAvgSame": "Right at the average",
-      "thisHome": "This home",
       "rangeMarkerLabel": "{{price}} · {{deltaLabel}}",
       "average": "Average {{avg}}",
       "perSqm": "{{price}}/m² vs area {{areaPrice}}/m²",
@@ -1120,13 +1140,11 @@
       "neighborhoodSame": "{{neighborhood}} is priced in line with {{city}}",
       "distributionLabel": "Price distribution of nearby homes",
       "lowDataNote": "Not enough nearby listings to compare yet.",
-      "lowSampleCaveat": "Based on just {{count}} nearby listing — treat as a rough guide.",
-      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide.",
-      "errorRetry": "Couldn't load area prices."
+      "lowSampleCaveat_one": "Based on just {{count}} nearby listing — treat as a rough guide.",
+      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide."
     },
     "similarHomes": {
-      "title": "Similar homes nearby",
-      "subtitle": "Comparable listings within {{radiusKm}} km"
+      "title": "Similar homes nearby"
     },
     "moveInCost": {
       "title": "Cost to move in",
@@ -1138,8 +1156,6 @@
       "taxes": "Taxes",
       "total": "Total to move in",
       "totalUpfront": "Upfront total",
-      "summary": "{{rent}} + {{deposit}} = {{total}} to move in",
-      "summaryWithFees": "{{rent}} + {{deposit}} + {{fees}} = {{total}} to move in",
       "note": "Estimated upfront cost. Final amounts are confirmed by the host."
     },
     "demand": {

@@ -1,4 +1,21 @@
 {
+  "amenities": {
+    "categories": {
+      "essential": "Esenciales",
+      "accessibility": "Accesibilidad",
+      "comfort": "Calefacción y refrigeración",
+      "kitchen": "Cocina y comedor",
+      "eco": "Sostenibilidad",
+      "outdoor": "Exterior y vistas",
+      "wellness": "Salud y bienestar",
+      "technology": "Internet y trabajo",
+      "security": "Seguridad del hogar",
+      "storage": "Almacenamiento",
+      "transportation": "Aparcamiento y transporte",
+      "community": "Espacios comunes",
+      "other": "Más"
+    }
+  },
   "Home": "Inicio",
   "Search": "Buscar",
   "Notifications": "Notificaciones",
@@ -422,6 +439,10 @@
     }
   },
   "property": {
+    "amenities": {
+      "title": "Lo que ofrece este lugar",
+      "showAll": "Mostrar las {{count}} comodidades"
+    },
     "communityNotes": {
       "title": "Notas de la comunidad",
       "subtitle": "Notas verificadas por la comunidad sobre el edificio. La experiencia puede variar según la vivienda.",
@@ -485,7 +506,6 @@
       "vsAvgCheaper": "{{percent}}% por debajo de la media",
       "vsAvgPricier": "{{percent}}% por encima de la media",
       "vsAvgSame": "Justo en la media",
-      "thisHome": "Esta vivienda",
       "rangeMarkerLabel": "{{price}} · {{deltaLabel}}",
       "average": "Media {{avg}}",
       "perSqm": "{{price}}/m² vs zona {{areaPrice}}/m²",
@@ -498,13 +518,11 @@
       "neighborhoodSame": "{{neighborhood}} tiene precios similares a {{city}}",
       "distributionLabel": "Distribución de precios de viviendas cercanas",
       "lowDataNote": "Aún no hay suficientes anuncios cercanos para comparar.",
-      "lowSampleCaveat": "Basado en solo {{count}} anuncio cercano: tómalo como orientación.",
-      "lowSampleCaveat_other": "Basado en solo {{count}} anuncios cercanos: tómalo como orientación.",
-      "errorRetry": "No se pudieron cargar los precios de la zona."
+      "lowSampleCaveat_one": "Basado en solo {{count}} anuncio cercano: tómalo como orientación.",
+      "lowSampleCaveat_other": "Basado en solo {{count}} anuncios cercanos: tómalo como orientación."
     },
     "similarHomes": {
-      "title": "Viviendas similares cerca",
-      "subtitle": "Anuncios comparables a menos de {{radiusKm}} km"
+      "title": "Viviendas similares cerca"
     },
     "moveInCost": {
       "title": "Coste de entrada",
@@ -516,8 +534,6 @@
       "taxes": "Impuestos",
       "total": "Total para entrar",
       "totalUpfront": "Total inicial",
-      "summary": "{{rent}} + {{deposit}} = {{total}} para entrar",
-      "summaryWithFees": "{{rent}} + {{deposit}} + {{fees}} = {{total}} para entrar",
       "note": "Coste inicial estimado. El propietario confirma los importes finales."
     },
     "demand": {

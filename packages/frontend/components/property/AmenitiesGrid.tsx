@@ -1,87 +1,154 @@
 /**
- * AmenitiesGrid — Airbnb-style "What this place offers" 2-column grid.
+ * AmenitiesGrid — Airbnb-2026 "What this place offers".
  *
- * Shows up to `maxVisible` amenities (default 10) with an icon and
- * name. If the property has more, a Bloom Button reveals the full list
- * in a Bloom-based bottom sheet.
+ * In-page: a flat, hairline-free 2-column grid of amenities (line icon +
+ * label) capped at `maxVisible`. When the listing has more, a Bloom outline
+ * (`secondary`) button reveals the full list.
  *
- * All chrome — typography, button, divider — comes from Bloom. The
- * icons map to `Ionicons` via the shared `getAmenityById` helper so
- * the visual language matches the rest of the app.
+ * Show-all: a bottom sheet (via the app's `BottomSheetContext`, the same
+ * mechanism `SortControl` / `SearchFiltersBottomSheet` use) listing every
+ * amenity, grouped under category subheadings ("Kitchen & dining", "Internet
+ * & office", …) in catalog order. Because the provider mounts content with
+ * `scrollable={false}`, the sheet owns its own `ScrollView` so long lists
+ * scroll inside a bounded height.
+ *
+ * Icons + labels come from the shared amenity catalog (`getAmenityById`,
+ * `groupAmenitiesByCategory`) so the visual + textual language matches the
+ * rest of the app. Chrome (typography, button, section header) is Bloom.
  */
 import React, { useCallback, useContext, useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@oxyhq/bloom/button';
-import { Divider } from '@oxyhq/bloom/divider';
-import { H2, Text as BloomText } from '@oxyhq/bloom/typography';
+import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { BottomSheetContext } from '@/context/BottomSheetContext';
-import { Section } from '@/components/property/Section';
+import { Section, SectionHeader } from '@/components/property/Section';
 import { colors } from '@/styles/colors';
-import { sectionSpacing, spacing } from '@/constants/styles';
-import { getAmenityById } from '@/constants/amenities';
+import { hairline, spacing } from '@/constants/styles';
+import {
+  type Amenity,
+  type AmenityGroup,
+  type ResolvedAmenity,
+  groupAmenitiesByCategory,
+  UNCATEGORIZED_AMENITY_ID,
+} from '@/constants/amenities';
+
+/** Fraction of the viewport the sheet's scroll body may occupy at most. */
+const SHEET_MAX_HEIGHT_RATIO = 0.62;
+/** Icon size for amenity rows (line-weight, Airbnb scale). */
+const AMENITY_ICON_SIZE = 24;
+/** Fallback glyph when an amenity id has no catalog icon. */
+const FALLBACK_ICON: React.ComponentProps<typeof Ionicons>['name'] =
+  'checkmark-circle-outline';
 
 interface AmenitiesGridProps {
   property: { amenities?: string[] | null };
+  /** Max amenities shown in the in-page preview grid before "Show all". */
   maxVisible?: number;
 }
 
-interface AmenityRowProps {
-  id: string;
-  showDivider?: boolean;
+/** Resolve the localized, human label for a resolved amenity. */
+function useAmenityLabel(): (entry: ResolvedAmenity) => string {
+  const { t } = useTranslation();
+  return useCallback(
+    ({ id, amenity }: ResolvedAmenity): string => {
+      if (amenity?.nameKey) {
+        const translated = t(amenity.nameKey, amenity.name);
+        return translated || amenity.name || id;
+      }
+      return amenity?.name ?? id;
+    },
+    [t],
+  );
 }
 
-const AmenityRow: React.FC<AmenityRowProps> = ({ id, showDivider = false }) => {
-  const { t } = useTranslation();
-  const config = getAmenityById(id);
-  const label = config?.nameKey
-    ? t(config.nameKey, config.name ?? id) || (config.name ?? id)
-    : config?.name ?? id;
-  const iconName = (config?.icon as React.ComponentProps<typeof Ionicons>['name']) ?? 'checkmark-circle-outline';
+/** Map an amenity's catalog icon to an Ionicons glyph, with a safe fallback. */
+function resolveIcon(amenity?: Amenity): React.ComponentProps<typeof Ionicons>['name'] {
+  return amenity?.icon ?? FALLBACK_ICON;
+}
 
-  return (
-    <View style={styles.row}>
-      <View style={styles.rowContent}>
-        <Ionicons
-          name={iconName}
-          size={22}
-          color={colors.COLOR_BLACK_LIGHT_3}
-          style={styles.rowIcon}
-        />
-        <BloomText style={styles.rowLabel}>{label}</BloomText>
-      </View>
-      {showDivider ? <Divider style={styles.divider} /> : null}
-    </View>
+interface AmenityRowProps {
+  entry: ResolvedAmenity;
+  label: string;
+  /** Hairline above the row (used inside the show-all sheet, not the preview). */
+  divided?: boolean;
+}
+
+/**
+ * One amenity line: icon + label. Flat by default; the sheet variant adds a
+ * top hairline so items in a category read as a clean list.
+ */
+const AmenityRow: React.FC<AmenityRowProps> = ({ entry, label, divided = false }) => (
+  <View style={[styles.row, divided && styles.rowDivided]}>
+    <Ionicons
+      name={resolveIcon(entry.amenity)}
+      size={AMENITY_ICON_SIZE}
+      color={colors.COLOR_BLACK_LIGHT_1}
+      style={styles.rowIcon}
+    />
+    <BloomText style={styles.rowLabel}>{label}</BloomText>
+  </View>
+);
+
+interface AmenitiesSheetProps {
+  ids: string[];
+  maxScrollHeight: number;
+}
+
+/**
+ * Full amenity list for the bottom sheet — grouped by category with Airbnb-
+ * style subheadings. Owns its own scroll container (the provider mounts sheet
+ * content non-scrollable) bounded to `maxScrollHeight`.
+ */
+const AmenitiesSheet: React.FC<AmenitiesSheetProps> = ({ ids, maxScrollHeight }) => {
+  const { t } = useTranslation();
+  const resolveLabel = useAmenityLabel();
+  const groups = useMemo<AmenityGroup[]>(() => groupAmenitiesByCategory(ids), [ids]);
+
+  const resolveGroupTitle = useCallback(
+    (group: AmenityGroup): string => {
+      if (group.categoryId === UNCATEGORIZED_AMENITY_ID || !group.category) {
+        return t('amenities.categories.other', 'More');
+      }
+      const { nameKey, name } = group.category;
+      if (nameKey) {
+        const translated = t(nameKey, name);
+        return translated || name;
+      }
+      return name;
+    },
+    [t],
   );
-};
 
-const AmenitiesFullList: React.FC<{ amenities: string[]; onClose: () => void }> = ({
-  amenities,
-  onClose,
-}) => {
-  const { t } = useTranslation();
   return (
-    <View style={styles.sheetContent}>
-      <H2 style={styles.sheetTitle}>
-        {t('property.amenities.allTitle', 'What this place offers')}
-      </H2>
-      <View style={styles.sheetList}>
-        {amenities.map((id, idx) => (
-          <AmenityRow
-            key={`${id}-${idx}`}
-            id={id}
-            showDivider={idx !== amenities.length - 1}
-          />
+    <View style={styles.sheet}>
+      <View style={styles.sheetHeader}>
+        <SectionHeader title={t('property.amenities.title', 'What this place offers')} />
+      </View>
+      <ScrollView
+        style={[styles.sheetScroll, { maxHeight: maxScrollHeight }]}
+        contentContainerStyle={styles.sheetScrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {groups.map((group) => (
+          <View key={group.categoryId} style={styles.group}>
+            <BloomText style={styles.groupTitle}>{resolveGroupTitle(group)}</BloomText>
+            <View>
+              {group.amenities.map((entry, idx) => (
+                <AmenityRow
+                  key={`${entry.id}-${idx}`}
+                  entry={entry}
+                  label={resolveLabel(entry)}
+                  divided={idx > 0}
+                />
+              ))}
+            </View>
+          </View>
         ))}
-      </View>
-      <View style={styles.sheetActions}>
-        <Button onPress={onClose} variant="primary" size="medium">
-          {t('common.close', 'Close')}
-        </Button>
-      </View>
+      </ScrollView>
     </View>
   );
 };
@@ -92,32 +159,41 @@ export const AmenitiesGrid: React.FC<AmenitiesGridProps> = ({
 }) => {
   const { t } = useTranslation();
   const bottomSheet = useContext(BottomSheetContext);
+  const resolveLabel = useAmenityLabel();
+  const { height } = useWindowDimensions();
 
-  const amenities = useMemo(
-    () => (property?.amenities ?? []).filter(Boolean),
+  const ids = useMemo(
+    () => (property?.amenities ?? []).filter((id): id is string => Boolean(id)),
     [property?.amenities],
+  );
+
+  const previewEntries = useMemo<ResolvedAmenity[]>(
+    () => groupAmenitiesByCategory(ids).flatMap((group) => group.amenities).slice(0, maxVisible),
+    [ids, maxVisible],
+  );
+
+  const maxScrollHeight = useMemo(
+    () => Math.round(height * SHEET_MAX_HEIGHT_RATIO),
+    [height],
   );
 
   const handleShowAll = useCallback(() => {
     bottomSheet.openBottomSheet(
-      <AmenitiesFullList
-        amenities={amenities}
-        onClose={() => bottomSheet.closeBottomSheet()}
-      />,
+      <AmenitiesSheet ids={ids} maxScrollHeight={maxScrollHeight} />,
     );
-  }, [amenities, bottomSheet]);
+  }, [bottomSheet, ids, maxScrollHeight]);
 
-  if (amenities.length === 0) return null;
+  if (ids.length === 0) return null;
 
-  const visible = amenities.slice(0, maxVisible);
-  const hasMore = amenities.length > maxVisible;
+  const hasMore = ids.length > maxVisible;
+  const showAllLabel = t('property.amenities.showAll', { count: ids.length });
 
   return (
     <Section title={t('property.amenities.title', 'What this place offers')}>
       <View style={styles.grid}>
-        {visible.map((id, idx) => (
-          <View key={`${id}-${idx}`} style={styles.cell}>
-            <AmenityRow id={id} />
+        {previewEntries.map((entry, idx) => (
+          <View key={`${entry.id}-${idx}`} style={styles.cell}>
+            <AmenityRow entry={entry} label={resolveLabel(entry)} />
           </View>
         ))}
       </View>
@@ -126,13 +202,10 @@ export const AmenitiesGrid: React.FC<AmenitiesGridProps> = ({
           <Button
             onPress={handleShowAll}
             variant="secondary"
-            size="medium"
-            accessibilityLabel={t(
-              'property.amenities.showAll',
-              `Show all ${amenities.length} amenities`,
-            )}
+            size="large"
+            accessibilityLabel={showAllLabel}
           >
-            {t('property.amenities.showAll', `Show all ${amenities.length} amenities`)}
+            {showAllLabel}
           </Button>
         </View>
       ) : null}
@@ -144,55 +217,60 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.lg,
+    columnGap: spacing['2xl'],
+    rowGap: spacing.lg,
   },
   cell: {
-    width: '48%',
-    minWidth: 200,
+    width: '46%',
+    minWidth: 220,
     flexGrow: 1,
   },
   row: {
-    flexDirection: 'column',
-  },
-  rowContent: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.md,
-    gap: spacing.md,
+    gap: spacing.lg,
+  },
+  rowDivided: {
+    borderTopWidth: hairline.width,
+    borderTopColor: hairline.color,
   },
   rowIcon: {
-    width: 24,
+    width: AMENITY_ICON_SIZE,
     textAlign: 'center',
   },
   rowLabel: {
-    fontSize: 15,
-    color: colors.COLOR_BLACK,
     flex: 1,
-  },
-  divider: {
-    marginVertical: 0,
+    fontSize: 16,
+    lineHeight: 22,
+    color: colors.COLOR_BLACK,
   },
   actionAnchor: {
-    marginTop: spacing.xl,
+    marginTop: spacing['2xl'],
     alignSelf: 'flex-start',
   },
-  sheetContent: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
+  sheet: {
     paddingBottom: spacing['2xl'],
   },
-  sheetTitle: {
-    fontSize: 22,
-    fontWeight: '700',
+  sheetHeader: {
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.lg,
+  },
+  sheetScroll: {
+    paddingHorizontal: spacing.xl,
+  },
+  sheetScrollContent: {
+    paddingBottom: spacing.lg,
+  },
+  group: {
+    marginBottom: spacing['2xl'],
+  },
+  groupTitle: {
+    fontSize: 18,
+    fontWeight: '600',
     color: colors.COLOR_BLACK,
-    marginBottom: spacing.lg,
-  },
-  sheetList: {
-    marginBottom: spacing.xl,
-  },
-  sheetActions: {
-    alignItems: 'stretch',
-    marginTop: sectionSpacing.mobile / 4,
+    marginBottom: spacing.xs,
+    letterSpacing: -0.2,
   },
 });
 

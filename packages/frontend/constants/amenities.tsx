@@ -19,6 +19,7 @@ export interface Amenity {
 export interface AmenityCategory {
   id: string;
   name: string;
+  nameKey?: string; // Translation key for the category name
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
   ethicalPriority?: 'high' | 'medium' | 'low'; // How important this category is for ethical housing
@@ -41,84 +42,96 @@ export const ETHICAL_AMENITY_GUIDELINES = {
 export const AMENITY_CATEGORIES: AmenityCategory[] = [
   {
     id: 'essential',
-    name: 'Essential Services',
+    name: 'Essentials',
+    nameKey: 'amenities.categories.essential',
     icon: 'home',
     color: '#2563eb',
     ethicalPriority: 'high',
   },
   {
     id: 'accessibility',
-    name: 'Accessibility & Universal Design',
+    name: 'Accessibility',
+    nameKey: 'amenities.categories.accessibility',
     icon: 'accessibility',
     color: '#6366f1',
     ethicalPriority: 'high',
   },
   {
     id: 'comfort',
-    name: 'Comfort & Climate',
+    name: 'Heating & cooling',
+    nameKey: 'amenities.categories.comfort',
     icon: 'thermometer',
     color: '#dc2626',
     ethicalPriority: 'high',
   },
   {
     id: 'kitchen',
-    name: 'Kitchen & Dining',
+    name: 'Kitchen & dining',
+    nameKey: 'amenities.categories.kitchen',
     icon: 'restaurant',
     color: '#ea580c',
     ethicalPriority: 'medium',
   },
   {
     id: 'eco',
-    name: 'Environmental Sustainability',
+    name: 'Sustainability',
+    nameKey: 'amenities.categories.eco',
     icon: 'leaf',
     color: '#059669',
     ethicalPriority: 'high',
   },
   {
     id: 'outdoor',
-    name: 'Outdoor & Views',
+    name: 'Outdoor & views',
+    nameKey: 'amenities.categories.outdoor',
     icon: 'leaf',
     color: '#16a34a',
     ethicalPriority: 'medium',
   },
   {
     id: 'wellness',
-    name: 'Health & Wellness',
+    name: 'Health & wellness',
+    nameKey: 'amenities.categories.wellness',
     icon: 'fitness',
     color: '#7c3aed',
     ethicalPriority: 'medium',
   },
   {
     id: 'technology',
-    name: 'Digital Connectivity',
+    name: 'Internet & office',
+    nameKey: 'amenities.categories.technology',
     icon: 'wifi',
     color: '#0891b2',
     ethicalPriority: 'high',
   },
   {
     id: 'security',
-    name: 'Safety & Security',
+    name: 'Home safety',
+    nameKey: 'amenities.categories.security',
     icon: 'shield-checkmark',
     color: '#be123c',
     ethicalPriority: 'high',
   },
   {
     id: 'storage',
-    name: 'Storage & Organization',
+    name: 'Storage',
+    nameKey: 'amenities.categories.storage',
     icon: 'cube',
     color: '#7c2d12',
     ethicalPriority: 'low',
   },
   {
     id: 'transportation',
-    name: 'Transportation Access',
+    name: 'Parking & transport',
+    nameKey: 'amenities.categories.transportation',
     icon: 'car',
     color: '#374151',
     ethicalPriority: 'medium',
   },
   {
     id: 'community',
-    name: 'Community Spaces',
+    name: 'Community spaces',
+    nameKey: 'amenities.categories.community',
     icon: 'people',
     color: '#6366f1',
     ethicalPriority: 'medium',
@@ -1171,6 +1184,70 @@ export const AMENITIES: Amenity[] = [
 // Helper functions for ethical amenity management
 export const getAmenityById = (id: string): Amenity | undefined => {
   return AMENITIES.find((amenity) => amenity.id === id);
+};
+
+/**
+ * A resolved amenity entry for display: keeps the raw id (so unknown ids still
+ * render with a sensible fallback) alongside its catalog config when found.
+ */
+export interface ResolvedAmenity {
+  id: string;
+  amenity?: Amenity;
+}
+
+/** A display group of amenities sharing a category, in catalog order. */
+export interface AmenityGroup {
+  /** Category id (e.g. `kitchen`), or `other` for uncategorized ids. */
+  categoryId: string;
+  category?: AmenityCategory;
+  amenities: ResolvedAmenity[];
+}
+
+/** Synthetic category id used for amenities with no known catalog category. */
+export const UNCATEGORIZED_AMENITY_ID = 'other';
+
+/**
+ * Group a list of amenity ids into display groups by category, ordered to match
+ * {@link AMENITY_CATEGORIES}. Within each group, amenities preserve the input
+ * order. Ids with no resolvable category (unknown ids, or catalog entries whose
+ * category isn't in {@link AMENITY_CATEGORIES}) fall into a trailing `other`
+ * group so nothing is silently dropped.
+ *
+ * Used by the property-detail "What this place offers" sheet to render Airbnb-
+ * style category subheadings.
+ */
+export const groupAmenitiesByCategory = (ids: string[]): AmenityGroup[] => {
+  const byCategory = new Map<string, ResolvedAmenity[]>();
+
+  for (const id of ids) {
+    const amenity = getAmenityById(id);
+    const categoryId =
+      amenity && getCategoryById(amenity.category)
+        ? amenity.category
+        : UNCATEGORIZED_AMENITY_ID;
+    const bucket = byCategory.get(categoryId);
+    if (bucket) {
+      bucket.push({ id, amenity });
+    } else {
+      byCategory.set(categoryId, [{ id, amenity }]);
+    }
+  }
+
+  const groups: AmenityGroup[] = [];
+
+  for (const category of AMENITY_CATEGORIES) {
+    const amenities = byCategory.get(category.id);
+    if (amenities && amenities.length > 0) {
+      groups.push({ categoryId: category.id, category, amenities });
+    }
+  }
+
+  const other = byCategory.get(UNCATEGORIZED_AMENITY_ID);
+  if (other && other.length > 0) {
+    groups.push({ categoryId: UNCATEGORIZED_AMENITY_ID, amenities: other });
+  }
+
+  return groups;
 };
 
 export const getAmenitiesByCategory = (categoryId: string): Amenity[] => {

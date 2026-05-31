@@ -1,4 +1,21 @@
 {
+  "amenities": {
+    "categories": {
+      "essential": "Essenziali",
+      "accessibility": "Accessibilità",
+      "comfort": "Riscaldamento e climatizzazione",
+      "kitchen": "Cucina e sala da pranzo",
+      "eco": "Sostenibilità",
+      "outdoor": "Esterni e viste",
+      "wellness": "Salute e benessere",
+      "technology": "Internet e lavoro",
+      "security": "Sicurezza domestica",
+      "storage": "Spazio di archiviazione",
+      "transportation": "Parcheggio e trasporti",
+      "community": "Spazi comuni",
+      "other": "Altro"
+    }
+  },
   "Home": "Home",
   "Search": "Cerca",
   "Notifications": "Notifiche",
@@ -502,6 +519,10 @@
     }
   },
   "property": {
+    "amenities": {
+      "title": "Cosa offre questo alloggio",
+      "showAll": "Mostra tutti i {{count}} servizi"
+    },
     "communityNotes": {
       "title": "Note della community",
       "subtitle": "Note verificate dalla community sull'edificio. L'esperienza può variare da unità a unità.",
@@ -565,7 +586,6 @@
       "vsAvgCheaper": "{{percent}}% sotto la media",
       "vsAvgPricier": "{{percent}}% sopra la media",
       "vsAvgSame": "In linea con la media",
-      "thisHome": "Questa casa",
       "rangeMarkerLabel": "{{price}} · {{deltaLabel}}",
       "average": "Media {{avg}}",
       "perSqm": "{{price}}/m² vs zona {{areaPrice}}/m²",
@@ -578,13 +598,11 @@
       "neighborhoodSame": "{{neighborhood}} ha prezzi in linea con {{city}}",
       "distributionLabel": "Distribuzione dei prezzi delle case vicine",
       "lowDataNote": "Non ci sono ancora abbastanza annunci vicini per confrontare.",
-      "lowSampleCaveat": "Basato su solo {{count}} annuncio vicino: usalo come riferimento.",
-      "lowSampleCaveat_other": "Basato su solo {{count}} annunci vicini: usalo come riferimento.",
-      "errorRetry": "Impossibile caricare i prezzi della zona."
+      "lowSampleCaveat_one": "Basato su solo {{count}} annuncio vicino: usalo come riferimento.",
+      "lowSampleCaveat_other": "Basato su solo {{count}} annunci vicini: usalo come riferimento."
     },
     "similarHomes": {
-      "title": "Case simili nelle vicinanze",
-      "subtitle": "Annunci comparabili entro {{radiusKm}} km"
+      "title": "Case simili nelle vicinanze"
     },
     "moveInCost": {
       "title": "Costo per entrare",
@@ -596,8 +614,6 @@
       "taxes": "Tasse",
       "total": "Totale per entrare",
       "totalUpfront": "Totale iniziale",
-      "summary": "{{rent}} + {{deposit}} = {{total}} per entrare",
-      "summaryWithFees": "{{rent}} + {{deposit}} + {{fees}} = {{total}} per entrare",
       "note": "Costo iniziale stimato. Gli importi finali sono confermati dall'host."
     },
     "demand": {

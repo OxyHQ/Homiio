@@ -1,4 +1,21 @@
 {
+  "amenities": {
+    "categories": {
+      "essential": "Essencials",
+      "accessibility": "Accessibilitat",
+      "comfort": "Calefacció i refrigeració",
+      "kitchen": "Cuina i menjador",
+      "eco": "Sostenibilitat",
+      "outdoor": "Exterior i vistes",
+      "wellness": "Salut i benestar",
+      "technology": "Internet i treball",
+      "security": "Seguretat de la llar",
+      "storage": "Emmagatzematge",
+      "transportation": "Aparcament i transport",
+      "community": "Espais comuns",
+      "other": "Més"
+    }
+  },
   "Home": "Inici",
   "Search": "Cercar",
   "Notifications": "Notificacions",
@@ -444,6 +461,10 @@
     }
   },
   "property": {
+    "amenities": {
+      "title": "El que ofereix aquest lloc",
+      "showAll": "Mostrar les {{count}} comoditats"
+    },
     "communityNotes": {
       "title": "Notes de la comunitat",
       "subtitle": "Notes verificades per la comunitat sobre l'edifici. L'experiència pot variar segons l'habitatge.",
@@ -507,7 +528,6 @@
       "vsAvgCheaper": "{{percent}}% per sota de la mitjana",
       "vsAvgPricier": "{{percent}}% per sobre de la mitjana",
       "vsAvgSame": "Just a la mitjana",
-      "thisHome": "Aquest habitatge",
       "rangeMarkerLabel": "{{price}} · {{deltaLabel}}",
       "average": "Mitjana {{avg}}",
       "perSqm": "{{price}}/m² vs zona {{areaPrice}}/m²",
@@ -520,13 +540,11 @@
       "neighborhoodSame": "{{neighborhood}} té preus semblants a {{city}}",
       "distributionLabel": "Distribució de preus d'habitatges propers",
       "lowDataNote": "Encara no hi ha prou anuncis propers per comparar.",
-      "lowSampleCaveat": "Basat en només {{count}} anunci proper: pren-ho com a orientació.",
-      "lowSampleCaveat_other": "Basat en només {{count}} anuncis propers: pren-ho com a orientació.",
-      "errorRetry": "No s'han pogut carregar els preus de la zona."
+      "lowSampleCaveat_one": "Basat en només {{count}} anunci proper: pren-ho com a orientació.",
+      "lowSampleCaveat_other": "Basat en només {{count}} anuncis propers: pren-ho com a orientació."
     },
     "similarHomes": {
-      "title": "Habitatges semblants a prop",
-      "subtitle": "Anuncis comparables a menys de {{radiusKm}} km"
+      "title": "Habitatges semblants a prop"
     },
     "moveInCost": {
       "title": "Cost d'entrada",
@@ -538,8 +556,6 @@
       "taxes": "Impostos",
       "total": "Total per entrar",
       "totalUpfront": "Total inicial",
-      "summary": "{{rent}} + {{deposit}} = {{total}} per entrar",
-      "summaryWithFees": "{{rent}} + {{deposit}} + {{fees}} = {{total}} per entrar",
       "note": "Cost inicial estimat. El propietari confirma els imports finals."
     },
     "demand": {
