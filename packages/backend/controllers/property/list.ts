@@ -3,11 +3,13 @@ const { Property, Reservation } = require('../../models');
 import { paginationResponse } from '../../middlewares/errorHandler';
 const {
   RentMode,
+  ListingIntent,
   AvailabilityWindowStatus,
   ReservationStatus
 } = require('@homiio/shared-types');
 
 const HYBRID_RENT_MODES = new Set([RentMode.LONG_TERM, RentMode.VACATION]);
+const LISTING_INTENT_VALUES = new Set(Object.values(ListingIntent));
 
 export const getProperties = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -58,6 +60,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       lng,
       radius,
       rentMode,
+      intent,
       instantBook,
       minGuests,
       checkIn,
@@ -223,6 +226,39 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
         filters.rentMode = { $in: [requestedMode, RentMode.BOTH] };
       } else if (requestedMode === RentMode.BOTH) {
         filters.rentMode = RentMode.BOTH;
+      }
+    }
+
+    // ---- Listing intent (rent / sale / exchange) ----
+    // Mirrors `applyIntentFilter` in searchQueryBuilder so the home/list feed
+    // and the search endpoint scope to intents identically. `intents` is an
+    // array, so equality matches membership. Legacy listings predate the field
+    // and are rent-only, so a `rent` query must ALSO match docs where `intents`
+    // is missing or empty (the same set the read-time back-compat surfaces as
+    // `['rent']`).
+    if (intent) {
+      const intentValue = String(intent).toLowerCase();
+      if (LISTING_INTENT_VALUES.has(intentValue)) {
+        if (intentValue !== ListingIntent.RENT) {
+          filters.intents = intentValue;
+        } else {
+          const rentOr = [
+            { intents: ListingIntent.RENT },
+            { intents: { $exists: false } },
+            { intents: { $size: 0 } }
+          ];
+          // Compose with any pre-existing $or rather than clobbering it.
+          if (Array.isArray(filters.$or)) {
+            filters.$and = [
+              ...(Array.isArray(filters.$and) ? filters.$and : []),
+              { $or: filters.$or },
+              { $or: rentOr }
+            ];
+            delete filters.$or;
+          } else {
+            filters.$or = rentOr;
+          }
+        }
       }
     }
 
