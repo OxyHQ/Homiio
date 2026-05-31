@@ -33,6 +33,7 @@ import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
 import { CommunityNoteCard, type ReviewData } from '@/components/property/CommunityNoteCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { Stars } from '@/components/ui/Stars';
 import { SectionHeader, SECTION_GUTTER } from '@/components/property/Section';
 import { api } from '@/utils/api';
 import { colors } from '@/styles/colors';
@@ -47,15 +48,11 @@ interface CommunityNotesSectionProps {
 type SortKey = 'recent' | 'highest' | 'helpful';
 
 const STAR_SCALE = [5, 4, 3, 2, 1] as const;
-const RECOMMEND_RATING_THRESHOLD = 4;
 const SUMMARY_STAR_SIZE = 16;
 
 interface AggregatedStats {
   averageRating: number;
   totalNotes: number;
-  recommendationPercentage: number;
-  verifiedCount: number;
-  withEvidenceCount: number;
   distribution: Record<number, number>;
 }
 
@@ -73,43 +70,26 @@ const normalizeNote = (raw: ReviewData): ReviewData => ({
   ...raw,
   positiveComment: raw.positiveComment ?? '',
   negativeComment: raw.negativeComment ?? '',
-  images: raw.images ?? [],
-  services: raw.services ?? [],
   isAnonymous: raw.isAnonymous ?? true,
-  confidenceScore: raw.confidenceScore ?? 75,
   evidenceAttached: raw.evidenceAttached ?? false,
-  flaggedIssues: raw.flaggedIssues ?? [],
-  karmaScore: raw.karmaScore ?? 0,
   replyAllowed: raw.replyAllowed ?? true,
   moderationStatus: raw.moderationStatus ?? 'approved',
   helpfulVotes: raw.helpfulVotes ?? 0,
-  unhelpfulVotes: raw.unhelpfulVotes ?? 0,
-  reportCount: raw.reportCount ?? 0,
-  evidenceCount: raw.evidenceCount ?? 0,
 });
 
 const computeStats = (notes: ReviewData[]): AggregatedStats | null => {
   if (notes.length === 0) return null;
   const distribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   let ratingSum = 0;
-  let recommended = 0;
-  let verified = 0;
-  let withEvidence = 0;
   for (const note of notes) {
     const rating = note.rating || 0;
     ratingSum += rating;
     const bucket = Math.min(STAR_SCALE[0], Math.max(1, Math.round(rating)));
     distribution[bucket] += 1;
-    if (rating >= RECOMMEND_RATING_THRESHOLD) recommended += 1;
-    if (note.verified) verified += 1;
-    if (note.evidenceAttached) withEvidence += 1;
   }
   return {
     averageRating: ratingSum / notes.length,
     totalNotes: notes.length,
-    recommendationPercentage: (recommended / notes.length) * 100,
-    verifiedCount: verified,
-    withEvidenceCount: withEvidence,
     distribution,
   };
 };
@@ -129,34 +109,6 @@ const sortNotes = (notes: ReviewData[], sort: SortKey): ReviewData[] => {
   }
 };
 
-interface SummaryStarsProps {
-  rating: number;
-}
-
-const SummaryStars: React.FC<SummaryStarsProps> = ({ rating }) => {
-  const full = Math.floor(rating);
-  const hasHalf = rating - full >= 0.5;
-  const empty = STAR_SCALE[0] - full - (hasHalf ? 1 : 0);
-  return (
-    <View style={styles.summaryStars}>
-      {Array.from({ length: full }).map((_, i) => (
-        <Ionicons key={`f-${i}`} name="star" size={SUMMARY_STAR_SIZE} color={colors.ratingStar} />
-      ))}
-      {hasHalf ? (
-        <Ionicons name="star-half" size={SUMMARY_STAR_SIZE} color={colors.ratingStar} />
-      ) : null}
-      {Array.from({ length: empty }).map((_, i) => (
-        <Ionicons
-          key={`e-${i}`}
-          name="star-outline"
-          size={SUMMARY_STAR_SIZE}
-          color={colors.COLOR_BLACK_LIGHT_5}
-        />
-      ))}
-    </View>
-  );
-};
-
 interface RatingSummaryProps {
   stats: AggregatedStats;
 }
@@ -168,7 +120,7 @@ const RatingSummary: React.FC<RatingSummaryProps> = ({ stats }) => {
       <View style={styles.summaryScore}>
         <H1 style={styles.summaryNumber}>{stats.averageRating.toFixed(1)}</H1>
         <View style={styles.summaryScoreMeta}>
-          <SummaryStars rating={stats.averageRating} />
+          <Stars rating={stats.averageRating} size={SUMMARY_STAR_SIZE} />
           <BloomText style={styles.summaryCount}>
             {t('property.communityNotes.count', { count: stats.totalNotes })}
           </BloomText>
@@ -491,11 +443,6 @@ const styles = StyleSheet.create({
   },
   summaryScoreMeta: {
     gap: spacing.xs,
-  },
-  summaryStars: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
   },
   summaryCount: {
     fontSize: 14,

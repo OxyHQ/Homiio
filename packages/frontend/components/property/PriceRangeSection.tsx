@@ -58,6 +58,26 @@ const VERDICT_TINT: Record<
 
 const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
 
+/**
+ * Resolve a signed comparison to one of three i18n keys —
+ * `cheaperKey` (n < 0), `pricierKey` (n > 0) or `sameKey` (n === 0) —
+ * passing `|n|` as `percent` (plus any shared interpolation args) to the
+ * directional variants. The `same` variant receives only `args`, matching
+ * the copy that omits a percentage when there is no difference.
+ */
+const signedKey = (
+  t: ReturnType<typeof useTranslation>['t'],
+  n: number,
+  cheaperKey: string,
+  pricierKey: string,
+  sameKey: string,
+  args: Record<string, string | number> = {},
+): string => {
+  if (n < 0) return t(cheaperKey, { ...args, percent: Math.abs(n) });
+  if (n > 0) return t(pricierKey, { ...args, percent: Math.abs(n) });
+  return t(sameKey, args);
+};
+
 export const PriceRangeSection: React.FC<PriceRangeSectionProps> = ({
   propertyId,
   bedrooms,
@@ -119,10 +139,9 @@ const PriceRangeContent: React.FC<PriceRangeContentProps> = ({
 
   // All prices in the payload share `currency`; format every value through the
   // same path PropertyCard uses (convert to the user's display currency).
-  const money = useMemo(
-    () => (amount: number): string => convertAndFormat(amount, currency, false),
-    [convertAndFormat, currency],
-  );
+  // `convertAndFormat` is re-created each render, so memoizing buys nothing.
+  const money = (amount: number): string =>
+    convertAndFormat(amount, currency, false);
 
   const isStudio = bedrooms <= 0;
   const subtitle = useMemo(() => {
@@ -163,13 +182,13 @@ const PriceRangeContent: React.FC<PriceRangeContentProps> = ({
   const verdictLabel = t(`property.areaInsights.verdict.${comparison.verdict}`);
 
   // vs-average delta label (handles +/- and equality).
-  const absPercent = Math.abs(comparison.percentDiffFromAvg);
-  const deltaLabel =
-    comparison.percentDiffFromAvg < 0
-      ? t('property.areaInsights.vsAvgCheaper', { percent: absPercent })
-      : comparison.percentDiffFromAvg > 0
-        ? t('property.areaInsights.vsAvgPricier', { percent: absPercent })
-        : t('property.areaInsights.vsAvgSame');
+  const deltaLabel = signedKey(
+    t,
+    comparison.percentDiffFromAvg,
+    'property.areaInsights.vsAvgCheaper',
+    'property.areaInsights.vsAvgPricier',
+    'property.areaInsights.vsAvgSame',
+  );
 
   // Range-bar marker positions (clamped to the track).
   const span = comparison.max - comparison.min;
@@ -185,10 +204,9 @@ const PriceRangeContent: React.FC<PriceRangeContentProps> = ({
   );
 
   // Stat line: average · (€/m² vs area) · sample size.
-  const samples =
-    insights.sampleSize === 1
-      ? t('property.areaInsights.samples_one', { count: insights.sampleSize })
-      : t('property.areaInsights.samples_other', { count: insights.sampleSize });
+  const samples = t('property.areaInsights.samples', {
+    count: insights.sampleSize,
+  });
   const averageText = t('property.areaInsights.average', {
     avg: money(comparison.avg),
   });
@@ -204,27 +222,19 @@ const PriceRangeContent: React.FC<PriceRangeContentProps> = ({
     : t('property.areaInsights.statLine', { average: averageText, samples });
 
   // Neighborhood-vs-city line (companion 3) — hidden when null.
-  let neighborhoodLine: string | null = null;
-  if (neighborhoodVsCity) {
-    const nAbs = Math.abs(neighborhoodVsCity.percentDiff);
-    neighborhoodLine =
-      neighborhoodVsCity.percentDiff > 0
-        ? t('property.areaInsights.neighborhoodPricier', {
-            neighborhood: neighborhoodVsCity.neighborhood,
-            city: neighborhoodVsCity.city,
-            percent: nAbs,
-          })
-        : neighborhoodVsCity.percentDiff < 0
-          ? t('property.areaInsights.neighborhoodCheaper', {
-              neighborhood: neighborhoodVsCity.neighborhood,
-              city: neighborhoodVsCity.city,
-              percent: nAbs,
-            })
-          : t('property.areaInsights.neighborhoodSame', {
-              neighborhood: neighborhoodVsCity.neighborhood,
-              city: neighborhoodVsCity.city,
-            });
-  }
+  const neighborhoodLine = neighborhoodVsCity
+    ? signedKey(
+        t,
+        neighborhoodVsCity.percentDiff,
+        'property.areaInsights.neighborhoodCheaper',
+        'property.areaInsights.neighborhoodPricier',
+        'property.areaInsights.neighborhoodSame',
+        {
+          neighborhood: neighborhoodVsCity.neighborhood,
+          city: neighborhoodVsCity.city,
+        },
+      )
+    : null;
 
   const isLowSample = insights.sampleSize < LOW_SAMPLE_THRESHOLD;
 
@@ -306,13 +316,9 @@ const PriceRangeContent: React.FC<PriceRangeContentProps> = ({
         {/* Low-sample caveat */}
         {isLowSample ? (
           <BloomText style={styles.caveat}>
-            {insights.sampleSize === 1
-              ? t('property.areaInsights.lowSampleCaveat', {
-                  count: insights.sampleSize,
-                })
-              : t('property.areaInsights.lowSampleCaveat_other', {
-                  count: insights.sampleSize,
-                })}
+            {t('property.areaInsights.lowSampleCaveat', {
+              count: insights.sampleSize,
+            })}
           </BloomText>
         ) : null}
       </View>

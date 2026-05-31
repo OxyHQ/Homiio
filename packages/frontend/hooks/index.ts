@@ -10,8 +10,21 @@ export {
   useProperty,
   usePropertyStats,
   useAreaInsights,
+  useNearbyServices,
   useSearchProperties,
 } from './usePropertyQueries';
+
+// Exchange hooks (home swap / free hosting)
+export {
+  useMyExchangeRequests,
+  useExchangeRequest,
+  useExchangeRequestReviews,
+  useProfileExchangeReviews,
+  useCreateExchangeRequest,
+  useUpdateExchangeStatus,
+  useCreateExchangeReview,
+  exchangeKeys,
+} from './useExchangeQueries';
 
 // Profile hooks
 export { useProfileRedux, useActiveProfile } from './useProfileQueries';

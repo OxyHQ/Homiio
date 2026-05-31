@@ -8,19 +8,25 @@ import {
 } from '@/store/createPropertyFormStore';
 import { useProperty } from '@/hooks/usePropertyQueries';
 import type { UploadedImage } from '@/services/imageUploadService';
-import type { Property, PropertyImage } from '@homiio/shared-types';
+import {
+  ExchangeMode,
+  ListingIntent,
+  type Property,
+  type PropertyImage,
+} from '@homiio/shared-types';
 import { logger } from '@/utils/logger';
 import {
-  STEP_FLOWS,
+  resolveStepFlow,
   FIELD_CONFIG,
   DEFAULT_PROPERTY_TYPE,
-  FALLBACK_PROPERTY_TYPE,
+  STEP_SALE_DETAILS,
 } from '@/components/property/create/constants';
 import {
   validateBasicInfoStep,
   validateLocationStep,
   validatePricingStep,
   validateAmenitiesStep,
+  validateSaleDetailsStep,
   validateFloor,
   PROPERTY_FORM_DEFAULTS,
   type StepValidationErrors,
@@ -92,15 +98,22 @@ export function usePropertyCreateForm(id: string | undefined) {
   const mapRef = useRef<MapApi | null>(null);
   const fullscreenMapRef = useRef<MapApi | null>(null);
 
-  // Derived step list for the active property type (no effect needed).
+  // Derived step list for the active property type AND the selected intents
+  // (no effect needed). The flow grows by a "Sale Details" step when the
+  // listing is also for sale, so it must recompute when either changes.
   const propertyType = formData.basicInfo.propertyType || DEFAULT_PROPERTY_TYPE;
+  const intents = formData.offering.intents;
   const steps = useMemo(
-    () => STEP_FLOWS[propertyType] ?? STEP_FLOWS[FALLBACK_PROPERTY_TYPE],
-    [propertyType],
+    () => resolveStepFlow(propertyType, intents),
+    [propertyType, intents],
   );
 
   const currentType = formData.basicInfo.propertyType || DEFAULT_PROPERTY_TYPE;
-  const stepName = steps[currentStep];
+  // Clamp the lookup index to the active flow. The flow can shrink when the
+  // host removes the 'sale' intent (dropping the Sale Details step); reading a
+  // clamped index keeps `stepName` valid (never `undefined`) without an effect.
+  const safeStepIndex = Math.min(currentStep, steps.length - 1);
+  const stepName = steps[safeStepIndex];
   const fieldsToShow = useMemo(
     () => FIELD_CONFIG[currentType]?.[stepName] ?? [],
     [currentType, stepName],
@@ -172,6 +185,31 @@ export function usePropertyCreateForm(id: string | undefined) {
       communityEvents: false,
       sharedSpacesList: [],
       otherFeatures: '',
+    });
+
+    // Hydrate the multi-intent offering. Legacy listings with no stored intents
+    // are rent-only; a stored `sale` block seeds the Sale Details fields and a
+    // stored `exchange` block seeds the Exchange Settings fields so editing a
+    // for-sale / exchange listing round-trips instead of dropping that data.
+    const storedIntents =
+      Array.isArray(property.intents) && property.intents.length > 0
+        ? property.intents
+        : [ListingIntent.RENT];
+    const exchange = property.exchange;
+    setFormData('offering', {
+      intents: storedIntents,
+      salePrice: property.sale?.price,
+      saleCurrency: property.sale?.currency,
+      chainStatus: property.sale?.chainStatus,
+      isPriceReduced: property.sale?.isPriceReduced,
+      exchangeMode: exchange?.mode ?? ExchangeMode.BOTH,
+      exchangeAvailabilityWindows: exchange?.availabilityWindows ?? [],
+      exchangeMinStay: exchange?.minStay,
+      exchangeMaxStay: exchange?.maxStay,
+      exchangeWelcomeNote: exchange?.welcomeNote,
+      exchangeLanguages: exchange?.languages ?? [],
+      exchangeMealsIncluded: exchange?.mealsIncluded ?? false,
+      exchangeRequiresReciprocity: exchange?.requiresReciprocity ?? false,
     });
   }, [isEditMode, property, setFormData]);
 
@@ -300,16 +338,22 @@ export function usePropertyCreateForm(id: string | undefined) {
       errors = validatePricingStep(formData.pricing, fieldsToShow);
     } else if (stepName === 'Amenities') {
       errors = validateAmenitiesStep(formData.rules, fieldsToShow);
+    } else if (stepName === STEP_SALE_DETAILS) {
+      errors = validateSaleDetailsStep(formData.offering);
     }
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   }, [stepName, fieldsToShow, formData]);
 
+  // The "next" cap derives from the ACTIVE flow length (RISK 5) — never a
+  // hardcoded literal — so adding the Sale Details step extends the reachable
+  // range automatically.
+  const maxStep = steps.length - 1;
   const handleNextStep = useCallback(() => {
     if (validateCurrentStep()) {
-      nextStep();
+      nextStep(maxStep);
     }
-  }, [validateCurrentStep, nextStep]);
+  }, [validateCurrentStep, nextStep, maxStep]);
 
   return {
     // state

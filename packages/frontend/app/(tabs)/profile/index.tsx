@@ -358,6 +358,15 @@ export default function ProfileScreen() {
             value={String(totalReservations)}
             onPress={() => router.push('/stays')}
           />
+          <SettingsListItem
+            icon={<RowIcon name="swap-horizontal" />}
+            title={t('profile.exchanges', 'Exchanges')}
+            description={t(
+              'profile.exchangesDescription',
+              'Your home swaps and hosting requests.',
+            )}
+            onPress={() => router.push('/exchange/requests')}
+          />
         </SettingsListGroup>
 
         <SettingsListGroup

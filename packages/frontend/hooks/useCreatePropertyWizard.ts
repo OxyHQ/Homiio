@@ -6,10 +6,13 @@ import {
   PaymentFrequency,
   UtilitiesIncluded,
   PropertyStatus,
+  ListingIntent,
   type CreatePropertyData,
   type PropertyType,
   type Property,
   type PropertyImage,
+  type PropertySale,
+  type PropertyExchange,
 } from '@homiio/shared-types';
 import {
   useCreatePropertyFormStore,
@@ -26,6 +29,19 @@ const VALID_UTILITIES: readonly UtilitiesIncluded[] = [
 
 const DEFAULT_COUNTRY = 'US';
 const DEFAULT_CURRENCY = 'USD';
+
+/** Valid `PropertySale.chainStatus` values, used to narrow the stored string. */
+const SALE_CHAIN_STATUSES: ReadonlySet<string> = new Set<
+  NonNullable<PropertySale['chainStatus']>
+>(['no_chain', 'chain', 'unknown']);
+
+/** Narrow a stored chain-status string to the `PropertySale` union, or undefined. */
+function toChainStatus(value: string | undefined): PropertySale['chainStatus'] | undefined {
+  if (value !== undefined && SALE_CHAIN_STATUSES.has(value)) {
+    return value as NonNullable<PropertySale['chainStatus']>;
+  }
+  return undefined;
+}
 
 /**
  * Payload sent to the property API. Extends `CreatePropertyData` with the
@@ -64,7 +80,7 @@ const resolveUtilities = (utilities: string[] | undefined): UtilitiesIncluded =>
  * conditional coliving block), now strongly typed.
  */
 export function buildPropertyPayload(formData: CreatePropertyFormData): PropertySubmitPayload {
-  const { location, basicInfo, pricing, amenities, media, colivingFeatures } = formData;
+  const { location, basicInfo, pricing, amenities, media, colivingFeatures, offering } = formData;
 
   const coordinates =
     location.latitude && location.longitude
@@ -117,7 +133,54 @@ export function buildPropertyPayload(formData: CreatePropertyFormData): Property
         isPrimary: img.isPrimary || false,
       })) ?? [],
     status: PropertyStatus.PUBLISHED,
+    // Multi-intent offering. `intents` defaults to ['rent'] in the store, so
+    // it is always present; the backend additionally normalises an empty list.
+    intents: offering.intents,
   };
+
+  // Sale block — sent only when the listing is for sale. The backend requires a
+  // positive `price` and a non-empty `currency`; `pricePerSqm` is derived
+  // server-side from price + squareFootage, so we never send it.
+  if (offering.intents.includes(ListingIntent.SALE)) {
+    const sale: PropertySale = {
+      price: offering.salePrice ?? 0,
+      currency: offering.saleCurrency || pricing.currency || DEFAULT_CURRENCY,
+    };
+    const chainStatus = toChainStatus(offering.chainStatus);
+    if (chainStatus) {
+      sale.chainStatus = chainStatus;
+    }
+    if (offering.isPriceReduced !== undefined) {
+      sale.isPriceReduced = offering.isPriceReduced;
+    }
+    payload.sale = sale;
+  }
+
+  // Exchange block — sent only when the listing is open to exchange. `mode` and
+  // `availabilityWindows` are always part of the shape; the rest are optional
+  // and only included when set so we never overwrite stored data with blanks.
+  if (offering.intents.includes(ListingIntent.EXCHANGE)) {
+    const exchange: PropertyExchange = {
+      mode: offering.exchangeMode,
+      availabilityWindows: offering.exchangeAvailabilityWindows,
+      mealsIncluded: offering.exchangeMealsIncluded,
+      requiresReciprocity: offering.exchangeRequiresReciprocity,
+    };
+    if (offering.exchangeMinStay !== undefined) {
+      exchange.minStay = offering.exchangeMinStay;
+    }
+    if (offering.exchangeMaxStay !== undefined) {
+      exchange.maxStay = offering.exchangeMaxStay;
+    }
+    const welcomeNote = offering.exchangeWelcomeNote?.trim();
+    if (welcomeNote) {
+      exchange.welcomeNote = welcomeNote;
+    }
+    if (offering.exchangeLanguages.length > 0) {
+      exchange.languages = offering.exchangeLanguages;
+    }
+    payload.exchange = exchange;
+  }
 
   if (basicInfo.propertyType === 'coliving') {
     payload.colivingFeatures = colivingFeatures;

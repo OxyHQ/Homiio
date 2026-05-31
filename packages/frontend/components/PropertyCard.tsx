@@ -1,15 +1,21 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, Image, StyleSheet, Pressable, TouchableOpacity, ViewStyle, Platform } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
-import { Property, PriceUnit, RentMode } from '@homiio/shared-types';
-import { getPropertyTitle, getPropertyImageSource } from '@/utils/propertyUtils';
+import { Property, ListingIntent, RentMode } from '@homiio/shared-types';
+import {
+  getPropertyTitle,
+  getPropertyImageSource,
+  resolvePrimaryOffering,
+} from '@/utils/propertyUtils';
 
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { useRentalMode } from '@/context/RentalModeContext';
 
 import { SaveButton } from './SaveButton';
 import { CurrencyFormatter } from './CurrencyFormatter';
+import { IntentBadge } from './property/IntentBadge';
 import { PropertyImageCarousel } from './property/PropertyImageCarousel';
 import { ThemedText } from '@/components/ThemedText';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
@@ -19,19 +25,6 @@ import { prefetchProperty, prefetchPropertyStats } from '@/utils/queryPrefetch';
 import { PropertyCardSkeleton } from './ui/skeletons/PropertyCardSkeleton';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
-/**
- * Derive the displayed price unit for a property based on the user's
- * currently-selected rental mode. Listings tagged `RentMode.VACATION` or
- * `RentMode.BOTH` displayed in vacation mode always show per-night pricing
- * regardless of how the host stored the unit. Long-term mode falls back to
- * the stored unit (typically MONTH).
- */
-function resolvePriceUnit(property: Property, mode: 'long_term' | 'vacation'): PriceUnit {
-  if (mode === 'vacation') return PriceUnit.NIGHT;
-  if (property.priceUnit) return property.priceUnit;
-  return PriceUnit.MONTH;
-}
 
 function shouldShowInstantBook(
   property: Property,
@@ -205,6 +198,7 @@ export function PropertyCard({
   const { isPropertySaved, isInitialized } = useSavedPropertiesContext();
   const { mode } = useRentalMode();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   // Define the callback function (using property parameter directly)
   const handlePressIn = useCallback(() => {
@@ -242,14 +236,33 @@ export function PropertyCard({
     return null;
   }
 
+  // The single primary price/offering this card displays. Centralised in
+  // `resolvePrimaryOffering` (priority rent → sale → exchange) so a rent listing
+  // — including a "rent + sell" one — keeps its exact previous price display,
+  // a sale-only listing shows the sale price (no per-unit suffix), and an
+  // exchange-only listing shows "Free".
+  const primaryOffering = resolvePrimaryOffering(
+    property,
+    mode,
+    t('listing.exchange.free', 'Free'),
+  );
+
+  // Non-rent intents drive the floating "For sale" / "Exchange" badges. A
+  // listing with no stored intents is rent-only, so this is empty for it.
+  const nonRentIntents = (property.intents ?? []).filter(
+    (intent) => intent !== ListingIntent.RENT,
+  );
+
   // Extract data from property object
   const propertyData = {
     id: property._id || property.id,
     title: getPropertyTitle(property),
     location: `${property.address?.city || ''}, ${property.address?.state || ''}`,
-    price: property.rent.amount,
-    currency: property.rent.currency,
-    priceUnit: resolvePriceUnit(property, mode),
+    price: primaryOffering.amount,
+    currency: primaryOffering.currency,
+    priceUnit: primaryOffering.priceUnit,
+    offeringKind: primaryOffering.kind,
+    offeringLabel: primaryOffering.label,
     type: property.type === 'room' ? 'apartment' : property.type === 'studio' ? 'apartment' : property.type,
     imageSource: getPropertyImageSource(property),
     bedrooms: property.bedrooms || 0,
@@ -323,6 +336,17 @@ export function PropertyCard({
       {/* Status badges — suppressed in grid variant to keep cards photo-first */}
       {!isGrid && (
         <>
+          {/* Intent badges — "For sale" / "Exchange" for each non-rent intent.
+              Pinned top-left below the small eco/verified chips so labeled
+              chips never collide with the top-right save heart. */}
+          {nonRentIntents.length > 0 && (
+            <View style={styles.intentBadgeRow}>
+              {nonRentIntents.map((intent) => (
+                <IntentBadge key={intent} intent={intent} size="md" />
+              ))}
+            </View>
+          )}
+
           {/* Eco Badge */}
           {isEco && (
             <View style={[styles.ecoBadge, styles.statusChip, { backgroundColor: colors.successSubtle }]}>
@@ -443,8 +467,14 @@ export function PropertyCard({
         </View>
       )}
 
-      {/* Price */}
-      {finalShowPrice && propertyData.price && (
+      {/* Price — driven by the resolved primary offering. Exchange-only listings
+          have no money price, so they render the "Free" label (RISK 3) instead
+          of CurrencyFormatter; sale shows the sale price with NO per-unit
+          suffix; rent keeps its exact previous amount + per-unit display. */}
+      {finalShowPrice &&
+        (propertyData.offeringKind === 'exchange'
+          ? propertyData.offeringLabel.length > 0
+          : propertyData.price > 0) && (
         <View style={[styles.priceContainer, isGrid ? styles.gridPriceContainer : null]}>
           <BloomText
             style={[
@@ -453,14 +483,22 @@ export function PropertyCard({
               isGrid ? styles.gridPrice : null,
             ]}
           >
-            <CurrencyFormatter
-              amount={propertyData.price}
-              originalCurrency={propertyData.currency}
-              showConversion={false}
-            />
-            <BloomText style={[styles.priceUnit, isGrid ? styles.gridPriceUnit : null]}>
-              {' / '}{propertyData.priceUnit}
-            </BloomText>
+            {propertyData.offeringKind === 'exchange' ? (
+              propertyData.offeringLabel
+            ) : (
+              <>
+                <CurrencyFormatter
+                  amount={propertyData.price}
+                  originalCurrency={propertyData.currency}
+                  showConversion={false}
+                />
+                {propertyData.priceUnit ? (
+                  <BloomText style={[styles.priceUnit, isGrid ? styles.gridPriceUnit : null]}>
+                    {' / '}{propertyData.priceUnit}
+                  </BloomText>
+                ) : null}
+              </>
+            )}
           </BloomText>
         </View>
       )}
@@ -730,6 +768,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // Row of "For sale" / "Exchange" chips, pinned top-left and offset down so it
+  // clears the small (24px) eco/verified status chips that sit at top: 8. Only
+  // rendered for non-rent listings, so existing rent cards are unaffected.
+  intentBadgeRow: {
+    position: 'absolute',
+    top: 40,
+    left: spacing.sm,
+    zIndex: 2,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
   },
   ecoBadge: {
     position: 'absolute',

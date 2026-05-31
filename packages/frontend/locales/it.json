@@ -284,7 +284,8 @@
     "noResults": "Nessun risultato trovato",
     "tryAgain": "Riprova",
     "goBack": "Torna indietro",
-    "goHome": "Vai alla home"
+    "goHome": "Vai alla home",
+    "signIn": "Accedi"
   },
   "home": {
     "hero": {
@@ -430,6 +431,9 @@
       "universityDistrict": "Distretto Universitario",
       "businessDistrict": "Distretto Commerciale",
       "residentialArea": "Area Residenziale"
+    },
+    "filters": {
+      "listingType": "Tipo di annuncio"
     }
   },
   "profile": {
@@ -438,7 +442,9 @@
     "savedProperties": "Proprietà Salvate",
     "myContracts": "I Miei Contratti",
     "trustScore": "Punteggio di Fiducia",
-    "logOut": "Esci"
+    "logOut": "Esci",
+    "exchanges": "Scambi",
+    "exchangesDescription": "I tuoi scambi casa e le richieste di ospitalità."
   },
   "notifications": {
     "title": "Notifiche",
@@ -600,6 +606,24 @@
       "lowDataNote": "Non ci sono ancora abbastanza annunci vicini per confrontare.",
       "lowSampleCaveat_one": "Basato su solo {{count}} annuncio vicino: usalo come riferimento.",
       "lowSampleCaveat_other": "Basato su solo {{count}} annunci vicini: usalo come riferimento."
+    },
+    "nearbyServices": {
+      "title": "Cosa c'è nei dintorni",
+      "within": "Entro {{km}} km",
+      "partialNote": "Alcuni dati nelle vicinanze potrebbero non essere disponibili.",
+      "labels": {
+        "pharmacy": "Farmacia",
+        "school": "Scuola",
+        "hospital": "Ospedale",
+        "police": "Polizia",
+        "fire_station": "Caserma dei pompieri",
+        "supermarket": "Supermercato",
+        "transit": "Trasporto pubblico",
+        "park": "Parco",
+        "bank": "Banca",
+        "restaurant": "Ristorante",
+        "gym": "Palestra"
+      }
     },
     "similarHomes": {
       "title": "Case simili nelle vicinanze"
@@ -942,5 +966,170 @@
       "oldest": "Prima i Più Vecchi",
       "alphabetical": "Alfabetico"
     }
-  }
+  },
+  "listing": {
+    "intent": {
+      "rent": "Affitto",
+      "sale": "In vendita",
+      "exchange": "Scambio"
+    },
+    "exchange": {
+      "free": "Gratis",
+      "sectionTitle": "Scambio casa",
+      "requestCta": "Richiedi scambio",
+      "stepTitle": "Impostazioni scambio",
+      "stepHelp": "Spiega agli ospiti come funziona il tuo scambio o ospitalità.",
+      "modeLabel": "Come vuoi scambiare?",
+      "modeLabelShort": "Tipo",
+      "mode": {
+        "swap": "Scambio casa",
+        "swapHelp": "Ognuno soggiorna nella casa dell’altro.",
+        "host": "Ospitalità gratuita",
+        "hostHelp": "Accogli un ospite senza soggiorno in cambio.",
+        "both": "Entrambi",
+        "bothHelp": "Aperto a uno scambio o a ospitare un ospite."
+      },
+      "availabilityLabel": "Quando sei disponibile?",
+      "availabilityTitle": "Disponibilità",
+      "addWindow": "Aggiungi disponibilità",
+      "removeWindow": "Rimuovi periodo",
+      "noWindows": "Ancora nessun periodo. Aggiungi le date in cui la tua casa è libera.",
+      "moreWindows": "+{{count}} altri",
+      "welcomeNote": "Nota di benvenuto",
+      "welcomeNotePlaceholder": "Racconta cosa rende speciale soggiornare a casa tua.",
+      "languages": "Lingue che parli",
+      "languagesValue": "Parla {{languages}}",
+      "mealsIncluded": "Pasti inclusi",
+      "mealsIncludedFact": "Pasti inclusi",
+      "requiresReciprocity": "Richiede un soggiorno reciproco",
+      "requiresReciprocityHelp": "Attivo è uno scambio vero; disattivo consente l’ospitalità a senso unico.",
+      "reciprocityRequired": "Soggiorno reciproco previsto",
+      "reciprocityOptional": "Nessun soggiorno reciproco richiesto",
+      "minStay": "Min {{count}} notti",
+      "maxStay": "Max {{count}} notti",
+      "stayRange": "{{min}}–{{max}} notti",
+      "requestTitle": "Richiedi scambio",
+      "requestModeLabel": "Cosa proponi?",
+      "requestedWindow": "Date in cui vuoi soggiornare",
+      "offeredWindow": "Date che offri",
+      "offeredProperty": "Casa che offri",
+      "offeredHome": "Casa offerta",
+      "offeredStay": "Soggiorno offerto",
+      "requestedStay": "Soggiorno richiesto",
+      "addDates": "Aggiungi date",
+      "noExchangeProperties": "Non hai ancora case abilitate allo scambio. Pubblicane una per proporre uno scambio.",
+      "messageLabel": "Messaggio all’host",
+      "messagePlaceholder": "Presentati e racconta il tuo viaggio.",
+      "messageHeading": "Messaggio",
+      "sendRequest": "Invia richiesta",
+      "requestSent": "Richiesta di scambio inviata",
+      "requestsTitle": "Scambi",
+      "detailTitle": "Scambio",
+      "detailsLabel": "Dettagli scambio",
+      "cardFallback": "Casa",
+      "asGuest": "Le mie richieste",
+      "asHost": "Per le mie case",
+      "signInTitle": "Accedi per vedere i tuoi scambi",
+      "signInBody": "Qui trovi i tuoi scambi casa e le richieste di ospitalità.",
+      "emptyGuestTitle": "Ancora nessuna richiesta di scambio",
+      "emptyGuestBody": "Quando richiedi uno scambio o un soggiorno comparirà qui.",
+      "emptyHostTitle": "Ancora nessuna richiesta per le tue case",
+      "emptyHostBody": "Quando qualcuno propone uno scambio con la tua casa comparirà qui.",
+      "loadErrorTitle": "Impossibile caricare gli scambi",
+      "unavailable": "Scambio non disponibile",
+      "unavailableBody": "Impossibile caricare questo scambio.",
+      "invalidId": "Id scambio non valido",
+      "invalidIdBody": "Manca il riferimento dello scambio nel link.",
+      "status": {
+        "pending": "In attesa",
+        "confirmed": "Confermato",
+        "declined": "Rifiutato",
+        "cancelled": "Annullato",
+        "completed": "Completato"
+      },
+      "actions": {
+        "approve": "Accetta",
+        "decline": "Rifiuta",
+        "cancel": "Annulla richiesta",
+        "complete": "Segna come completato"
+      },
+      "confirm": {
+        "approveTitle": "Accettare lo scambio?",
+        "approveBody": "Il richiedente sarà avvisato e le date saranno segnate come confermate.",
+        "declineTitle": "Rifiutare lo scambio?",
+        "declineBody": "Il richiedente sarà avvisato che la richiesta è stata rifiutata.",
+        "cancelTitle": "Annullare la richiesta?",
+        "cancelBody": "Questo ritirerà la tua richiesta di scambio.",
+        "cancelConfirm": "Sì, annulla",
+        "completeTitle": "Segnare come completato?",
+        "completeBody": "Conferma che il soggiorno è avvenuto. Poi potrai lasciare una recensione."
+      },
+      "toasts": {
+        "confirmed": "Scambio confermato",
+        "declined": "Scambio rifiutato",
+        "cancelled": "Scambio annullato",
+        "completed": "Scambio completato",
+        "updated": "Scambio aggiornato"
+      },
+      "errors": {
+        "pickDates": "Scegli le date in cui vuoi soggiornare",
+        "pickProperty": "Scegli la casa che offri",
+        "pickOfferedDates": "Scegli le date che offri",
+        "failed": "Impossibile inviare la richiesta"
+      },
+      "review": {
+        "title": "Lascia una recensione",
+        "subtitle": "Valuta il tuo scambio: il tuo feedback crea fiducia per tutti.",
+        "placeholder": "Racconta com’è andato il soggiorno (facoltativo).",
+        "submit": "Invia recensione",
+        "pickRating": "Scegli prima una valutazione",
+        "thanks": "Grazie per la recensione",
+        "failed": "Impossibile inviare la recensione",
+        "starLabel": "{{count}} stelle",
+        "alreadyLeft": "Hai già recensito questo scambio.",
+        "profileHeading": "Recensioni scambio",
+        "summary": "{{average}} · {{count}} recensioni",
+        "guestAuthor": "Ospite di scambio"
+      }
+    },
+    "badge": {
+      "forSale": "In vendita",
+      "exchange": "Scambio"
+    },
+    "offering": {
+      "stepTitle": "Come lo offri?",
+      "stepHelp": "Scegli una o più opzioni. Puoi affittare e vendere lo stesso immobile."
+    },
+    "sale": {
+      "stepTitle": "Dettagli della vendita",
+      "sectionTitle": "In vendita",
+      "askingPrice": "Prezzo richiesto",
+      "currency": "Valuta",
+      "pricePerSqm": "Prezzo al m²",
+      "estimatedYield": "Rendimento stimato",
+      "priceReduced": "Prezzo ridotto",
+      "requestViewing": "Richiedi una visita",
+      "chainStatus": {
+        "label": "Stato della catena",
+        "noChain": "Nessuna catena",
+        "chain": "In catena",
+        "unknown": "Sconosciuto"
+      }
+    },
+    "mortgage": {
+      "title": "Calcolatore del mutuo",
+      "subtitle": "È una stima, non un'offerta di mutuo.",
+      "perMonth": "mese",
+      "downPayment": "Anticipo",
+      "interestRate": "Tasso d'interesse",
+      "term": "Durata",
+      "years": "{{count}} anni",
+      "principal": "Capitale",
+      "interest": "Interessi",
+      "loanAmount": "Importo del prestito",
+      "totalInterest": "Interessi totali",
+      "totalPaid": "Totale pagato"
+    }
+  },
+  "goBack": "Indietro"
 }

@@ -15,6 +15,7 @@ import { SaveButton } from '@/components/SaveButton';
 import { useSavedProfiles } from '@/store/savedProfilesStore';
 import { PropertyCard } from '@/components/PropertyCard';
 import ProfileAvatar from '@/components/ProfileAvatar';
+import { ProfileExchangeReviews } from '@/components/exchange/ProfileExchangeReviews';
 import { colors } from '@/styles/colors';
 import { useOxy } from '@oxyhq/services';
 import { api } from '@/utils/api';
@@ -310,6 +311,13 @@ export default function PublicProfileScreen() {
         />
       ) : (
         <ScrollView contentContainerStyle={styles.aboutContainer}>
+          {/* Home-exchange trust signal — avg rating + recent reviews. Self-hides
+              when the profile has no exchange reviews. */}
+          {profileId ? (
+            <View style={styles.exchangeReviewsWrap}>
+              <ProfileExchangeReviews profileId={String(profileId)} />
+            </View>
+          ) : null}
           {/* About details by type */}
           {profile && profile.profileType === ProfileType.PERSONAL && (
             <View style={styles.aboutCard}>
@@ -551,6 +559,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     padding: 12,
+    marginBottom: 12,
+  },
+  exchangeReviewsWrap: {
     marginBottom: 12,
   },
   aboutTitle: {

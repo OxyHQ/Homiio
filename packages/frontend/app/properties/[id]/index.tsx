@@ -48,14 +48,14 @@ import { SaveButton } from '@/components/SaveButton';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { useIsDesktop } from '@/hooks/useOptimizedMediaQuery';
 import { useLayoutScroll } from '@/context/LayoutScrollContext';
-import { useAreaInsights, useProperty } from '@/hooks';
+import { useAreaInsights, useNearbyServices, useProperty } from '@/hooks';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { propertyService } from '@/services/propertyService';
 import profileService, { type Profile } from '@/services/profileService';
 import ViewingService from '@/services/viewingService';
-import { PropertyType, RentMode, type Property, type PropertyImage } from '@homiio/shared-types';
+import { ListingIntent, PropertyType, RentMode, type Property, type PropertyImage } from '@homiio/shared-types';
 
 import { PropertyDetailSkeleton } from '@/components/ui/skeletons/PropertyDetailSkeleton';
 import { BookingWidget } from '@/components/BookingWidget';
@@ -73,10 +73,15 @@ import { BasicInfoSection } from '@/components/property/BasicInfoSection';
 import { PropertyDetailsCard } from '@/components/property/PropertyDetailsCard';
 import { PropertyFeatures } from '@/components/property/PropertyFeatures';
 import { PricingDetails } from '@/components/property/PricingDetails';
+import { SaleDetailsSection } from '@/components/property/SaleDetailsSection';
+import { MortgageCalculatorSection } from '@/components/property/MortgageCalculatorSection';
+import { ExchangeSection } from '@/components/property/ExchangeSection';
+import { ExchangeRequestBottomSheet } from '@/components/exchange/ExchangeRequestBottomSheet';
 import { HouseRules } from '@/components/property/HouseRules';
 import { LocationDisplay } from '@/components/property/LocationDisplay';
 import { PropertyOverview } from '@/components/property/PropertyOverview';
 import { NeighborhoodInfo } from '@/components/property/NeighborhoodInfo';
+import { NearbyServicesSection } from '@/components/property/NearbyServicesSection';
 import { AvailabilitySection } from '@/components/property/AvailabilitySection';
 import { AmenitiesSection } from '@/components/property/AmenitiesSection';
 import { CommunityNotesSection } from '@/components/property/CommunityNotesSection';
@@ -143,11 +148,34 @@ export default function PropertyDetailPage() {
     !areaInsightsLoading &&
     (areaInsights?.comparables.length ?? 0) > 0;
 
+  // "What's nearby" — same gating story as the price block: read the shared
+  // React Query cache here (the child section reuses the same key, so this
+  // doesn't duplicate the request) to decide whether to render the flat
+  // wrapper, so a fail-soft/degraded-empty section never leaves a bare
+  // hairline divider. The gate mirrors the section's own self-hide rule: hidden
+  // on error, and hidden when a degraded (`partial`) payload found nothing
+  // (treated as "unknown", not "nothing nearby").
+  const {
+    nearbyServices,
+    loading: nearbyServicesLoading,
+    error: nearbyServicesError,
+  } = useNearbyServices(propertyIdParam);
+
+  const nearbyHasContent =
+    Boolean(nearbyServices) &&
+    !(
+      nearbyServices?.partial &&
+      !nearbyServices.categories.some((category) => category.present)
+    );
+  const showNearbyServicesSection =
+    !nearbyServicesError && (nearbyServicesLoading || nearbyHasContent);
+
   const hasViewedRef = useRef(false);
   const [hasActiveViewing, setHasActiveViewing] = useState(false);
   const [landlordProfile, setLandlordProfile] = useState<Profile | null>(null);
   const [ownerProperties, setOwnerProperties] = useState<Property[]>([]);
   const [stickyHeaderVisible, setStickyHeaderVisible] = useState(false);
+  const [exchangeSheetVisible, setExchangeSheetVisible] = useState(false);
 
   // Normalize landlord id (handles legacy MongoDB $oid envelopes).
   const landlordProfileId = useMemo<string | undefined>(() => {
@@ -409,6 +437,24 @@ export default function PropertyDetailPage() {
     }
   }, [apiProperty, rentalMode, router, handleContact, handlePublicHousingApply]);
 
+  // Sale-listing primary CTA: open the existing viewing-request flow.
+  const handleRequestViewing = useCallback(() => {
+    const targetId = apiProperty?._id ?? apiProperty?.id;
+    if (targetId) {
+      router.push(`/properties/${targetId}/book-viewing`);
+    }
+  }, [apiProperty, router]);
+
+  // Exchange-listing primary CTA: open the request-exchange sheet. Routes to
+  // sign-in first when unauthenticated, matching the other gated actions.
+  const handleRequestExchange = useCallback(() => {
+    if (!oxyServices || !activeSessionId) {
+      showSignInModal();
+      return;
+    }
+    setExchangeSheetVisible(true);
+  }, [oxyServices, activeSessionId]);
+
   // Sticky header trigger driven by scrollY. Uses Reanimated SharedValue
   // so the value stays UI-thread native; React state is toggled via runOnJS
   // only when crossing the threshold.
@@ -464,6 +510,21 @@ export default function PropertyDetailPage() {
       (apiProperty.rentMode === RentMode.VACATION ||
         apiProperty.rentMode === RentMode.BOTH),
   );
+
+  // Whether this listing is (also) for sale. Drives the Sale Details + Mortgage
+  // sections below. Both additionally require the `sale` sub-payload to render,
+  // so a sale listing with no stored sale block never leaves a bare divider.
+  const isSaleListing = Boolean(apiProperty?.intents?.includes(ListingIntent.SALE));
+  const saleData = isSaleListing ? apiProperty?.sale : undefined;
+
+  // Whether this listing is open to home exchange (swap / free hosting). Drives
+  // the Exchange section + the action-bar CTA. Like sale, the section also
+  // requires the `exchange` sub-payload to render, so an exchange listing with
+  // no stored exchange block never leaves a bare divider.
+  const isExchangeListing = Boolean(
+    apiProperty?.intents?.includes(ListingIntent.EXCHANGE),
+  );
+  const exchangeData = isExchangeListing ? apiProperty?.exchange : undefined;
 
   const showBookingWidgetMobile =
     !isDesktop && rentalMode === 'vacation' && isVacationRentable;
@@ -646,6 +707,36 @@ export default function PropertyDetailPage() {
               <PricingDetails property={apiProperty} />
             </View>
 
+            {/* Sale details + mortgage calculator — only for sale listings that
+                carry a sale block (gated together so neither leaves a bare
+                hairline divider behind). */}
+            {saleData ? (
+              <View style={[styles.section, styles.divider]}>
+                <SaleDetailsSection sale={saleData} />
+              </View>
+            ) : null}
+
+            {saleData ? (
+              <View style={[styles.section, styles.divider]}>
+                <MortgageCalculatorSection
+                  salePrice={saleData.price}
+                  currency={saleData.currency}
+                />
+              </View>
+            ) : null}
+
+            {/* Home exchange — only for exchange listings that carry an exchange
+                block. Gated like the sale section so it never leaves a bare
+                hairline divider. */}
+            {exchangeData ? (
+              <View style={[styles.section, styles.divider]}>
+                <ExchangeSection
+                  exchange={exchangeData}
+                  onRequestExchange={handleRequestExchange}
+                />
+              </View>
+            ) : null}
+
             <View style={[styles.section, styles.divider]}>
               <HouseRules property={apiProperty} />
             </View>
@@ -661,6 +752,15 @@ export default function PropertyDetailPage() {
             <View style={[styles.section, styles.divider]}>
               <NeighborhoodInfo property={apiProperty} />
             </View>
+
+            {/* What's nearby — everyday services (pharmacy, school, transit, …)
+                near this listing. Gated so a fail-soft / degraded-empty section
+                never leaves a bare hairline divider behind. */}
+            {showNearbyServicesSection ? (
+              <View style={[styles.section, styles.divider]}>
+                <NearbyServicesSection propertyId={property.id} />
+              </View>
+            ) : null}
 
             <View style={[styles.section, styles.divider]}>
               <AvailabilitySection property={apiProperty} />
@@ -763,7 +863,21 @@ export default function PropertyDetailPage() {
         onContact={handleContact}
         onCall={handleCall}
         onApplyPublic={handlePublicHousingApply}
+        isSaleListing={isSaleListing}
+        onRequestViewing={handleRequestViewing}
+        isExchangeListing={isExchangeListing}
+        onRequestExchange={handleRequestExchange}
       />
+
+      {/* Mounted on-demand: the request flow (and its own-properties query) only
+          spins up once the authed user opens the sheet, never on idle views. */}
+      {exchangeData && apiProperty && exchangeSheetVisible ? (
+        <ExchangeRequestBottomSheet
+          property={apiProperty as Property}
+          visible={exchangeSheetVisible}
+          onClose={() => setExchangeSheetVisible(false)}
+        />
+      ) : null}
     </View>
   );
 }

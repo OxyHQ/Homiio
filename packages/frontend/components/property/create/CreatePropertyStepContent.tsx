@@ -7,10 +7,14 @@ import type { StepValidationErrors } from '@/utils/propertyFormSchema';
 import { BasicInfoStep } from './BasicInfoStep';
 import { LocationStep } from './LocationStep';
 import { PricingStep } from './PricingStep';
+import { OfferingStep } from './OfferingStep';
+import { SaleDetailsStep } from './SaleDetailsStep';
+import { ExchangeSettingsStep } from './ExchangeSettingsStep';
 import { AmenitiesStep } from './AmenitiesStep';
 import { ColivingFeaturesStep } from './ColivingFeaturesStep';
 import { MediaStep } from './MediaStep';
 import { PreviewStep } from './PreviewStep';
+import { STEP_EXCHANGE_SETTINGS, STEP_OFFERING, STEP_SALE_DETAILS } from './constants';
 import type { SetFormData, UpdateFormField } from './types';
 
 interface CreatePropertyStepContentProps {
@@ -82,6 +86,12 @@ export function CreatePropertyStepContent({
       );
     case 'Pricing':
       return <PricingStep {...sharedProps} />;
+    case STEP_OFFERING:
+      return <OfferingStep {...sharedProps} />;
+    case STEP_SALE_DETAILS:
+      return <SaleDetailsStep {...sharedProps} />;
+    case STEP_EXCHANGE_SETTINGS:
+      return <ExchangeSettingsStep {...sharedProps} />;
     case 'Amenities':
       return <AmenitiesStep {...sharedProps} onAmenityToggle={onAmenityToggle} />;
     case 'Coliving Features':

@@ -14,6 +14,24 @@ interface Props {
     onContact: () => void;
     onCall: () => void;
     onApplyPublic: () => void;
+    /**
+     * Whether this listing is for sale. When true (and the listing isn't public
+     * housing / external), the primary CTA becomes "Request viewing" — buyers
+     * book a viewing rather than starting a rental enquiry. Rent/vacation CTAs
+     * are unchanged.
+     */
+    isSaleListing?: boolean;
+    /** Open the viewing-request flow (sale-listing primary CTA). */
+    onRequestViewing?: () => void;
+    /**
+     * Whether this listing is open to home exchange. When true (and not public
+     * housing / external), the primary CTA becomes "Request exchange" — guests
+     * propose a swap or hosting stay. Takes precedence over the sale CTA when a
+     * listing is both, since exchange is the more specific exchange-flow action.
+     */
+    isExchangeListing?: boolean;
+    /** Open the request-exchange flow (exchange-listing primary CTA). */
+    onRequestExchange?: () => void;
 }
 
 export const PropertyActionBar: React.FC<Props> = ({
@@ -24,11 +42,70 @@ export const PropertyActionBar: React.FC<Props> = ({
     onContact,
     onCall,
     onApplyPublic,
+    isSaleListing = false,
+    onRequestViewing,
+    isExchangeListing = false,
+    onRequestExchange,
 }) => {
     const { t } = useTranslation();
     if (!property) return null;
     const isPublic = property.housingType === HousingType.PUBLIC;
     const isExternal = property.isExternal;
+    // Exchange listings (other than public/external ones) lead with "Request
+    // exchange" + a secondary contact CTA. Checked before the sale CTA so a
+    // listing that is both for-sale and exchangeable surfaces the exchange flow.
+    let exchangePrimary: React.ReactNode = null;
+    if (isExchangeListing && !isPublic && !isExternal && onRequestExchange) {
+        exchangePrimary = (
+            <>
+                <ActionButton
+                    icon="swap-horizontal"
+                    text={t('listing.exchange.requestCta', 'Request exchange')}
+                    onPress={onRequestExchange}
+                    variant="primary"
+                    size="large"
+                    style={{ flex: 1, marginRight: 10 }}
+                />
+                <ActionButton
+                    icon="chatbubble-outline"
+                    text={t('properties.contact')}
+                    onPress={onContact}
+                    variant="secondary"
+                    size="large"
+                    disabled={!landlordProfile || !canContact}
+                    style={{ flex: 1 }}
+                />
+            </>
+        );
+    }
+    // Sale listings (other than public/external ones) lead with "Request
+    // viewing" instead of the rental contact CTA. Requires a handler to be
+    // useful, so we fall back to the standard CTA when none is provided. The
+    // explicit `if` narrows `onRequestViewing` to a defined callback.
+    let salePrimary: React.ReactNode = null;
+    if (isSaleListing && !isPublic && !isExternal && onRequestViewing) {
+        salePrimary = (
+            <>
+                <ActionButton
+                    icon="calendar-outline"
+                    text={t('listing.sale.requestViewing', 'Request viewing')}
+                    onPress={onRequestViewing}
+                    variant="primary"
+                    size="large"
+                    style={{ flex: 1, marginRight: 10 }}
+                />
+                <ActionButton
+                    icon="chatbubble-outline"
+                    text={t('properties.contact')}
+                    onPress={onContact}
+                    variant="secondary"
+                    size="large"
+                    disabled={!landlordProfile || !canContact}
+                    style={{ flex: 1 }}
+                />
+            </>
+        );
+    }
     return (
         <SafeAreaView edges={['bottom']} style={styles.bottomBar}>
             <View style={styles.bottomBarInner}>
@@ -50,6 +127,10 @@ export const PropertyActionBar: React.FC<Props> = ({
                         size="large"
                         style={{ flex: 1 }}
                     />
+                ) : exchangePrimary ? (
+                    exchangePrimary
+                ) : salePrimary ? (
+                    salePrimary
                 ) : (
                     <>
                         <ActionButton

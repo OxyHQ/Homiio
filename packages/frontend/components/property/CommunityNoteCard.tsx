@@ -31,9 +31,11 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
+import { format } from 'date-fns';
 
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
+import { Stars } from '@/components/ui/Stars';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 
@@ -102,40 +104,8 @@ export interface ReviewData {
   evidenceCount?: number;
 }
 
-const STAR_COUNT = 5;
-const HALF_STAR_THRESHOLD = 0.5;
 const BODY_CLAMP_LINES = 4;
-const STAR_SIZE = 14;
 const AVATAR_SIZE = 40;
-
-interface StarsProps {
-  rating: number;
-}
-
-const Stars: React.FC<StarsProps> = ({ rating }) => {
-  const fullStars = Math.floor(rating);
-  const hasHalf = rating - fullStars >= HALF_STAR_THRESHOLD;
-  const emptyStars = STAR_COUNT - fullStars - (hasHalf ? 1 : 0);
-
-  return (
-    <View style={styles.starsRow}>
-      {Array.from({ length: fullStars }).map((_, i) => (
-        <Ionicons key={`f-${i}`} name="star" size={STAR_SIZE} color={colors.ratingStar} />
-      ))}
-      {hasHalf ? (
-        <Ionicons name="star-half" size={STAR_SIZE} color={colors.ratingStar} />
-      ) : null}
-      {Array.from({ length: emptyStars }).map((_, i) => (
-        <Ionicons
-          key={`e-${i}`}
-          name="star-outline"
-          size={STAR_SIZE}
-          color={colors.COLOR_BLACK_LIGHT_5}
-        />
-      ))}
-    </View>
-  );
-};
 
 interface FooterButtonProps {
   icon: React.ComponentProps<typeof Ionicons>['name'];
@@ -191,10 +161,7 @@ export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({
     ? t('property.communityNotes.anonymous')
     : t('property.communityNotes.verifiedResident');
 
-  const formattedDate = new Date(note.createdAt).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'long',
-  });
+  const formattedDate = format(new Date(note.createdAt), 'MMMM yyyy');
 
   // Measure once (collapsed) to decide whether "Read more" is needed; the
   // measurement only matters before expansion, so it's a no-op afterwards.
@@ -436,11 +403,6 @@ const styles = StyleSheet.create({
   metaDot: {
     fontSize: 13,
     color: colors.COLOR_BLACK_LIGHT_5,
-  },
-  starsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
   },
   body: {
     fontSize: 15,

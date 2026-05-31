@@ -197,6 +197,22 @@ export function validatePricingStep(
 }
 
 /**
+ * Sale Details step. Only reachable when the listing is for sale, so the sale
+ * price is required and must be positive (mirrors the backend's
+ * `applyIntentRules` contract: a sale listing requires a positive `sale.price`).
+ */
+export function validateSaleDetailsStep(
+  offering: CreatePropertyFormData['offering'],
+): StepValidationErrors {
+  const errors: StepValidationErrors = {};
+  const price = offering.salePrice;
+  if (price === undefined || Number.isNaN(price) || price <= 0) {
+    errors.salePrice = 'Sale price is required and must be greater than 0';
+  }
+  return errors;
+}
+
+/**
  * Amenities step. Validates the combined amenities + rules: when guests are
  * allowed and the maxGuests field is visible, a minimum of 1 guest is required.
  */

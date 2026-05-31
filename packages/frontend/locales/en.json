@@ -363,7 +363,9 @@
     "Pets Allowed": "Pets Allowed",
     "Verified": "Verified",
     "Search with": "Search with",
-    "filters": "filters",
+    "filters": {
+      "listingType": "Listing type"
+    },
     "Advanced Filters": "Advanced Filters",
     "types": {
       "apartments": "Apartments",
@@ -442,7 +444,9 @@
       "loadFailed": "Failed to load profiles",
       "updateFailed": "Failed to update profile",
       "deleteFailed": "Failed to delete profile"
-    }
+    },
+    "exchanges": "Exchanges",
+    "exchangesDescription": "Your home swaps and hosting requests."
   },
   "trust": {
     "loadingVerification": "Loading verification status...",
@@ -760,7 +764,8 @@
     "noResults": "No results found",
     "tryAgain": "Try again",
     "goBack": "Go back",
-    "goHome": "Go home"
+    "goHome": "Go home",
+    "signIn": "Sign in"
   },
   "sindi": {
     "name": "Sindi",
@@ -1143,6 +1148,24 @@
       "lowSampleCaveat_one": "Based on just {{count}} nearby listing — treat as a rough guide.",
       "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide."
     },
+    "nearbyServices": {
+      "title": "What's nearby",
+      "within": "Within {{km}} km",
+      "partialNote": "Some nearby data may be unavailable.",
+      "labels": {
+        "pharmacy": "Pharmacy",
+        "school": "School",
+        "hospital": "Hospital",
+        "police": "Police",
+        "fire_station": "Fire station",
+        "supermarket": "Supermarket",
+        "transit": "Public transit",
+        "park": "Park",
+        "bank": "Bank",
+        "restaurant": "Restaurant",
+        "gym": "Gym"
+      }
+    },
     "similarHomes": {
       "title": "Similar homes nearby"
     },
@@ -1275,5 +1298,170 @@
         ]
       }
     }
-  }
+  },
+  "listing": {
+    "intent": {
+      "rent": "Rent",
+      "sale": "For sale",
+      "exchange": "Exchange"
+    },
+    "exchange": {
+      "free": "Free",
+      "sectionTitle": "Home exchange",
+      "requestCta": "Request exchange",
+      "stepTitle": "Exchange settings",
+      "stepHelp": "Tell guests how your home swap or hosting works.",
+      "modeLabel": "How do you want to exchange?",
+      "modeLabelShort": "Type",
+      "mode": {
+        "swap": "Home swap",
+        "swapHelp": "Each party stays in the other’s home.",
+        "host": "Free hosting",
+        "hostHelp": "Welcome a guest with no stay in return.",
+        "both": "Either",
+        "bothHelp": "Open to a swap or to hosting a guest."
+      },
+      "availabilityLabel": "When are you available?",
+      "availabilityTitle": "Availability",
+      "addWindow": "Add availability",
+      "removeWindow": "Remove window",
+      "noWindows": "No windows yet. Add the dates your home is free.",
+      "moreWindows": "+{{count}} more",
+      "welcomeNote": "Welcome note",
+      "welcomeNotePlaceholder": "Share what makes staying in your home special.",
+      "languages": "Languages you speak",
+      "languagesValue": "Speaks {{languages}}",
+      "mealsIncluded": "Meals included",
+      "mealsIncludedFact": "Meals included",
+      "requiresReciprocity": "Requires a return stay",
+      "requiresReciprocityHelp": "On means a true swap; off allows one-way hosting.",
+      "reciprocityRequired": "Return stay expected",
+      "reciprocityOptional": "No return stay required",
+      "minStay": "Min {{count}} nights",
+      "maxStay": "Max {{count}} nights",
+      "stayRange": "{{min}}–{{max}} nights",
+      "requestTitle": "Request exchange",
+      "requestModeLabel": "What are you proposing?",
+      "requestedWindow": "Dates you want to stay",
+      "offeredWindow": "Dates you’re offering",
+      "offeredProperty": "Home you’re offering",
+      "offeredHome": "Offered home",
+      "offeredStay": "Offered stay",
+      "requestedStay": "Requested stay",
+      "addDates": "Add dates",
+      "noExchangeProperties": "You have no exchange-enabled homes yet. List one to propose a swap.",
+      "messageLabel": "Message to the host",
+      "messagePlaceholder": "Introduce yourself and your trip.",
+      "messageHeading": "Message",
+      "sendRequest": "Send request",
+      "requestSent": "Exchange request sent",
+      "requestsTitle": "Exchanges",
+      "detailTitle": "Exchange",
+      "detailsLabel": "Exchange details",
+      "cardFallback": "Home",
+      "asGuest": "My requests",
+      "asHost": "For my homes",
+      "signInTitle": "Sign in to see your exchanges",
+      "signInBody": "Your home swaps and hosting requests live here.",
+      "emptyGuestTitle": "No exchange requests yet",
+      "emptyGuestBody": "When you request a swap or hosting stay it shows up here.",
+      "emptyHostTitle": "No requests for your homes yet",
+      "emptyHostBody": "When someone proposes an exchange with your home it shows up here.",
+      "loadErrorTitle": "Couldn’t load exchanges",
+      "unavailable": "Exchange unavailable",
+      "unavailableBody": "This exchange could not be loaded.",
+      "invalidId": "Invalid exchange id",
+      "invalidIdBody": "The link is missing the exchange reference.",
+      "status": {
+        "pending": "Pending",
+        "confirmed": "Confirmed",
+        "declined": "Declined",
+        "cancelled": "Cancelled",
+        "completed": "Completed"
+      },
+      "actions": {
+        "approve": "Approve",
+        "decline": "Decline",
+        "cancel": "Cancel request",
+        "complete": "Mark completed"
+      },
+      "confirm": {
+        "approveTitle": "Approve exchange?",
+        "approveBody": "The requester will be notified and the dates will be marked confirmed.",
+        "declineTitle": "Decline exchange?",
+        "declineBody": "The requester will be notified that this request was declined.",
+        "cancelTitle": "Cancel request?",
+        "cancelBody": "This will withdraw your exchange request.",
+        "cancelConfirm": "Yes, cancel",
+        "completeTitle": "Mark as completed?",
+        "completeBody": "Confirm the stay happened. You’ll then be able to leave a review."
+      },
+      "toasts": {
+        "confirmed": "Exchange confirmed",
+        "declined": "Exchange declined",
+        "cancelled": "Exchange cancelled",
+        "completed": "Exchange completed",
+        "updated": "Exchange updated"
+      },
+      "errors": {
+        "pickDates": "Pick the dates you want to stay",
+        "pickProperty": "Choose the home you’re offering",
+        "pickOfferedDates": "Pick the dates you’re offering",
+        "failed": "Could not send request"
+      },
+      "review": {
+        "title": "Leave a review",
+        "subtitle": "Rate your exchange — your feedback builds trust for everyone.",
+        "placeholder": "Share how the stay went (optional).",
+        "submit": "Submit review",
+        "pickRating": "Pick a star rating first",
+        "thanks": "Thanks for your review",
+        "failed": "Could not submit review",
+        "starLabel": "{{count}} stars",
+        "alreadyLeft": "You’ve already reviewed this exchange.",
+        "profileHeading": "Exchange reviews",
+        "summary": "{{average}} · {{count}} reviews",
+        "guestAuthor": "Exchange guest"
+      }
+    },
+    "badge": {
+      "forSale": "For sale",
+      "exchange": "Exchange"
+    },
+    "offering": {
+      "stepTitle": "How are you offering this?",
+      "stepHelp": "Choose one or more. You can rent and sell the same place."
+    },
+    "sale": {
+      "stepTitle": "Sale details",
+      "sectionTitle": "For sale",
+      "askingPrice": "Asking price",
+      "currency": "Currency",
+      "pricePerSqm": "Price per m²",
+      "estimatedYield": "Estimated yield",
+      "priceReduced": "Price reduced",
+      "requestViewing": "Request viewing",
+      "chainStatus": {
+        "label": "Chain status",
+        "noChain": "No chain",
+        "chain": "In a chain",
+        "unknown": "Unknown"
+      }
+    },
+    "mortgage": {
+      "title": "Mortgage calculator",
+      "subtitle": "An estimate — not a mortgage offer.",
+      "perMonth": "mo",
+      "downPayment": "Down payment",
+      "interestRate": "Interest rate",
+      "term": "Term",
+      "years": "{{count}} yr",
+      "principal": "Principal",
+      "interest": "Interest",
+      "loanAmount": "Loan amount",
+      "totalInterest": "Total interest",
+      "totalPaid": "Total paid"
+    }
+  },
+  "goBack": "Go back"
 }

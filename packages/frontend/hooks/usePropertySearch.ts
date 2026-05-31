@@ -21,7 +21,7 @@ import {
 } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { api } from '@/utils/api';
-import type { Property } from '@homiio/shared-types';
+import { ListingIntent, type Property } from '@homiio/shared-types';
 import type { SearchBounds, SearchQuery } from '@/components/search/types';
 
 /** Hard cap matching the backend `MAX_LIMIT`. */
@@ -76,13 +76,20 @@ function boundsToParams(bounds: SearchBounds): Record<string, number> {
  * exported so the query key can be derived from the exact same object.
  */
 export function buildSearchParams(query: SearchQuery): Record<string, string | number> {
+  const isSaleIntent = query.intent === ListingIntent.SALE;
   const params: Record<string, string | number> = {
     page: 1,
     limit: PAGE_SIZE,
     rentMode: query.rentMode,
-    sortBy: query.sortBy,
+    // When scoped to sale, sort by sale price rather than rent (`price` ->
+    // `salePrice`); the backend recognises the dedicated sale-price sort field.
+    sortBy: isSaleIntent && query.sortBy === 'price' ? 'salePrice' : query.sortBy,
     sortOrder: query.sortOrder,
   };
+
+  if (query.intent !== undefined) {
+    params.intent = query.intent;
+  }
 
   const location = query.location;
   if (location?.bounds) {
@@ -99,8 +106,15 @@ export function buildSearchParams(query: SearchQuery): Record<string, string | n
   if (query.propertyTypes.length > 0) {
     params.propertyType = query.propertyTypes.join(',');
   }
-  if (typeof query.priceMin === 'number') params.priceMin = query.priceMin;
-  if (typeof query.priceMax === 'number') params.priceMax = query.priceMax;
+  // For a sale search the price range refers to the SALE price (the backend
+  // ignores rent priceMin/priceMax when intent=sale), so route it to the
+  // dedicated sale-price params; otherwise it's the rent price range.
+  if (typeof query.priceMin === 'number') {
+    params[isSaleIntent ? 'minSalePrice' : 'priceMin'] = query.priceMin;
+  }
+  if (typeof query.priceMax === 'number') {
+    params[isSaleIntent ? 'maxSalePrice' : 'priceMax'] = query.priceMax;
+  }
   if (typeof query.bedrooms === 'number' && query.bedrooms > 0) {
     params.bedrooms = query.bedrooms;
   }

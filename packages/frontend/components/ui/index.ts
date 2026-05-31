@@ -11,6 +11,7 @@ export { PropertyResultsGrid } from './PropertyResultsGrid';
 export { PropertyResultsGridSkeleton } from './PropertyResultsGridSkeleton';
 export { SectionCard } from './SectionCard';
 export { SectionEyebrow } from './SectionEyebrow';
+export { Stars } from './Stars';
 
 // Existing UI Components
 export { IconSymbol } from './IconSymbol';

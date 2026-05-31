@@ -5,6 +5,7 @@ import {
   Property,
   PropertyImage,
   PropertyAreaInsights,
+  PropertyNearbyServices,
 } from '@homiio/shared-types';
 
 // Re-export types for use in other files
@@ -330,6 +331,26 @@ class PropertyService {
   ): Promise<PropertyAreaInsights> {
     const response = await api.get<{ data: PropertyAreaInsights }>(
       `${this.baseUrl}/${propertyId}/area-insights`,
+    );
+    return response.data.data;
+  }
+
+  /**
+   * Everyday services near a property ("What's nearby"): for a fixed set of
+   * categories (pharmacy, school, transit, …) whether each exists near the
+   * listing, how many, and the distance to the nearest. Backed by
+   * `GET /api/properties/:id/nearby-services` (sourced from OpenStreetMap).
+   *
+   * Mirrors `getAreaInsights`: unwraps the `{ data }` envelope and lets
+   * transport/HTTP errors propagate so the calling React Query hook owns the
+   * loading/error/empty states (the detail screen fails soft by hiding the
+   * section).
+   */
+  async getNearbyServices(
+    propertyId: string,
+  ): Promise<PropertyNearbyServices> {
+    const response = await api.get<{ data: PropertyNearbyServices }>(
+      `${this.baseUrl}/${propertyId}/nearby-services`,
     );
     return response.data.data;
   }

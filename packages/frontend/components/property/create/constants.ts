@@ -6,6 +6,7 @@
  * are unchanged to preserve the exact wizard behaviour (step order, which
  * fields are visible per type/step, and picker options).
  */
+import { ExchangeMode, ListingIntent } from '@homiio/shared-types';
 
 export interface PropertyTypeOption {
   id: string;
@@ -24,23 +25,64 @@ export const PROPERTY_TYPES: readonly PropertyTypeOption[] = [
 export const DEFAULT_PROPERTY_TYPE = 'apartment';
 export const FALLBACK_PROPERTY_TYPE = 'other';
 
-// Step flows for each property type
+// --- Wizard step names (named so the flow-resolver and the step switch stay
+//     in sync — no stringly-typed drift between the two). ---
+export const STEP_OFFERING = 'Offering';
+export const STEP_SALE_DETAILS = 'Sale Details';
+export const STEP_EXCHANGE_SETTINGS = 'Exchange Settings';
+
+/**
+ * Base step flow per property type. Every flow now includes the `Offering`
+ * step (the multi-intent picker) right after `Pricing`: rent pricing is always
+ * relevant (a listing always carries rent fields, and `intents` defaults to
+ * rent), and the offering picker then lets the host add sale/exchange. The
+ * conditional `Sale Details` step is inserted by {@link resolveStepFlow}, NOT
+ * stored here, so the base flow stays declarative.
+ */
 export const STEP_FLOWS: Record<string, string[]> = {
-  apartment: ['Basic Info', 'Location', 'Pricing', 'Amenities', 'Media', 'Preview'],
-  house: ['Basic Info', 'Location', 'Pricing', 'Amenities', 'Media', 'Preview'],
-  room: ['Basic Info', 'Location', 'Pricing', 'Amenities', 'Media', 'Preview'],
-  studio: ['Basic Info', 'Location', 'Pricing', 'Amenities', 'Media', 'Preview'],
+  apartment: ['Basic Info', 'Location', 'Pricing', STEP_OFFERING, 'Amenities', 'Media', 'Preview'],
+  house: ['Basic Info', 'Location', 'Pricing', STEP_OFFERING, 'Amenities', 'Media', 'Preview'],
+  room: ['Basic Info', 'Location', 'Pricing', STEP_OFFERING, 'Amenities', 'Media', 'Preview'],
+  studio: ['Basic Info', 'Location', 'Pricing', STEP_OFFERING, 'Amenities', 'Media', 'Preview'],
   coliving: [
     'Basic Info',
     'Location',
     'Pricing',
+    STEP_OFFERING,
     'Amenities',
     'Coliving Features',
     'Media',
     'Preview',
   ],
-  other: ['Basic Info', 'Location', 'Pricing', 'Media', 'Preview'],
+  other: ['Basic Info', 'Location', 'Pricing', STEP_OFFERING, 'Media', 'Preview'],
 };
+
+/**
+ * Resolve the active step list for a property type AND the selected intents.
+ * Replaces the static `STEP_FLOWS[type]` lookup: it starts from the type's base
+ * flow and inserts the conditional `Sale Details` and `Exchange Settings` steps
+ * immediately after `Offering` when the listing is (also) for sale / open to
+ * exchange. When both intents are present, Sale Details precedes Exchange
+ * Settings (commercial terms, then exchange terms). Unknown types fall back to
+ * the {@link FALLBACK_PROPERTY_TYPE} flow, matching the previous lookup.
+ */
+export function resolveStepFlow(
+  propertyType: string,
+  intents: readonly ListingIntent[],
+): string[] {
+  const base = STEP_FLOWS[propertyType] ?? STEP_FLOWS[FALLBACK_PROPERTY_TYPE];
+  const inserts: string[] = [];
+  if (intents.includes(ListingIntent.SALE)) inserts.push(STEP_SALE_DETAILS);
+  if (intents.includes(ListingIntent.EXCHANGE)) inserts.push(STEP_EXCHANGE_SETTINGS);
+  if (inserts.length === 0) {
+    return [...base];
+  }
+  const offeringIndex = base.indexOf(STEP_OFFERING);
+  // Defensive: every base flow contains Offering, but if it ever didn't we
+  // append the conditional steps rather than dropping them.
+  const insertAt = offeringIndex >= 0 ? offeringIndex + 1 : base.length;
+  return [...base.slice(0, insertAt), ...inserts, ...base.slice(insertAt)];
+}
 
 // Field configuration for each property type and step
 // Carefully tailored to real-world property listing needs
@@ -305,6 +347,97 @@ export const CURRENCY_OPTIONS: readonly string[] = [
   'MXN',
   'FAIR (FairCoin)',
   'Other',
+];
+
+/**
+ * Sale-only multi-intent offerings shown as multi-select chips on the Offering
+ * step. `value` is the canonical {@link ListingIntent}; the label is resolved
+ * via i18n (`listing.intent.*`) at render time. Rent is the default and always
+ * present, the others are opt-in.
+ */
+export interface OfferingOption {
+  value: ListingIntent;
+  i18nKey: string;
+  fallback: string;
+}
+
+export const OFFERING_OPTIONS: readonly OfferingOption[] = [
+  { value: ListingIntent.RENT, i18nKey: 'listing.intent.rent', fallback: 'Rent' },
+  { value: ListingIntent.SALE, i18nKey: 'listing.intent.sale', fallback: 'For sale' },
+  { value: ListingIntent.EXCHANGE, i18nKey: 'listing.intent.exchange', fallback: 'Exchange' },
+];
+
+/**
+ * Chain-status options for a sale listing (UK-style onward-chain disclosure).
+ * `value` matches `PropertySale['chainStatus']`; labels resolve via i18n.
+ */
+export interface ChainStatusOption {
+  value: NonNullable<import('@homiio/shared-types').PropertySale['chainStatus']>;
+  i18nKey: string;
+  fallback: string;
+}
+
+export const CHAIN_STATUS_OPTIONS: readonly ChainStatusOption[] = [
+  { value: 'no_chain', i18nKey: 'listing.sale.chainStatus.noChain', fallback: 'No chain' },
+  { value: 'chain', i18nKey: 'listing.sale.chainStatus.chain', fallback: 'In a chain' },
+  { value: 'unknown', i18nKey: 'listing.sale.chainStatus.unknown', fallback: 'Unknown' },
+];
+
+/**
+ * Exchange-mode options on the Exchange Settings step. `value` is the canonical
+ * {@link ExchangeMode}; labels + helper copy resolve via i18n. `both` is the
+ * most permissive (accepts a swap or a one-way hosting request).
+ */
+export interface ExchangeModeOption {
+  value: ExchangeMode;
+  i18nKey: string;
+  fallback: string;
+  descriptionKey: string;
+  descriptionFallback: string;
+}
+
+export const EXCHANGE_MODE_OPTIONS: readonly ExchangeModeOption[] = [
+  {
+    value: ExchangeMode.SWAP,
+    i18nKey: 'listing.exchange.mode.swap',
+    fallback: 'Home swap',
+    descriptionKey: 'listing.exchange.mode.swapHelp',
+    descriptionFallback: 'Each party stays in the other’s home.',
+  },
+  {
+    value: ExchangeMode.HOST,
+    i18nKey: 'listing.exchange.mode.host',
+    fallback: 'Free hosting',
+    descriptionKey: 'listing.exchange.mode.hostHelp',
+    descriptionFallback: 'Welcome a guest with no stay in return.',
+  },
+  {
+    value: ExchangeMode.BOTH,
+    i18nKey: 'listing.exchange.mode.both',
+    fallback: 'Either',
+    descriptionKey: 'listing.exchange.mode.bothHelp',
+    descriptionFallback: 'Open to a swap or to hosting a guest.',
+  },
+];
+
+/**
+ * Languages a host may select on the Exchange Settings step (stored as the
+ * English label so they round-trip into `exchange.languages`). Curated to the
+ * most common travel languages rather than an exhaustive ISO list.
+ */
+export const EXCHANGE_LANGUAGE_OPTIONS: readonly string[] = [
+  'English',
+  'Spanish',
+  'Catalan',
+  'French',
+  'German',
+  'Italian',
+  'Portuguese',
+  'Dutch',
+  'Arabic',
+  'Mandarin',
+  'Japanese',
+  'Russian',
 ];
 
 export const SHARED_SPACE_OPTIONS: readonly string[] = [

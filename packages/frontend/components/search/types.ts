@@ -7,7 +7,7 @@
  * data (no React) so both the Zustand stores and the components can depend on
  * them without a cycle.
  */
-import type { PropertyType, RentMode } from '@homiio/shared-types';
+import type { ListingIntent, PropertyType, RentMode } from '@homiio/shared-types';
 
 /**
  * A geographic bounding box in the same `{ west, south, east, north }` shape the
@@ -63,6 +63,12 @@ export interface SearchQuery {
   rentMode: RentMode;
   /** Resolved "Where" selection, if any. */
   location?: SearchLocation;
+  /**
+   * Listing type to scope to (rent / sale / exchange). Undefined = any
+   * (default). When `sale`, the price range below is interpreted as the SALE
+   * price range by the search hook (the backend ignores rent price for sale).
+   */
+  intent?: ListingIntent;
   /** Selected property types (empty = any). */
   propertyTypes: PropertyType[];
   /** Minimum price (per-month long-term, per-night vacation). */

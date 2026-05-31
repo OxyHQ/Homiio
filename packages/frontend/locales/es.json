@@ -263,7 +263,9 @@
     "Pets Allowed": "Mascotas Permitidas",
     "Verified": "Verificado",
     "Search with": "Buscar con",
-    "filters": "filtros",
+    "filters": {
+      "listingType": "Tipo de anuncio"
+    },
     "Advanced Filters": "Filtros Avanzados",
     "types": {
       "apartments": "Apartamentos",
@@ -342,7 +344,9 @@
       "loadFailed": "Error al cargar perfiles",
       "updateFailed": "Error al actualizar perfil",
       "deleteFailed": "Error al eliminar perfil"
-    }
+    },
+    "exchanges": "Intercambios",
+    "exchangesDescription": "Tus intercambios de casa y solicitudes de alojamiento."
   },
   "trust": {
     "loadingVerification": "Cargando estado de verificación...",
@@ -520,6 +524,24 @@
       "lowDataNote": "Aún no hay suficientes anuncios cercanos para comparar.",
       "lowSampleCaveat_one": "Basado en solo {{count}} anuncio cercano: tómalo como orientación.",
       "lowSampleCaveat_other": "Basado en solo {{count}} anuncios cercanos: tómalo como orientación."
+    },
+    "nearbyServices": {
+      "title": "Qué hay cerca",
+      "within": "A menos de {{km}} km",
+      "partialNote": "Es posible que algunos datos cercanos no estén disponibles.",
+      "labels": {
+        "pharmacy": "Farmacia",
+        "school": "Colegio",
+        "hospital": "Hospital",
+        "police": "Policía",
+        "fire_station": "Parque de bomberos",
+        "supermarket": "Supermercado",
+        "transit": "Transporte público",
+        "park": "Parque",
+        "bank": "Banco",
+        "restaurant": "Restaurante",
+        "gym": "Gimnasio"
+      }
     },
     "similarHomes": {
       "title": "Viviendas similares cerca"
@@ -790,7 +812,8 @@
     "noResults": "No se encontraron resultados",
     "tryAgain": "Intentar de nuevo",
     "goBack": "Volver",
-    "goHome": "Ir al inicio"
+    "goHome": "Ir al inicio",
+    "signIn": "Iniciar sesión"
   },
   "sindi": {
     "name": "Sindi",
@@ -1136,5 +1159,170 @@
         ]
       }
     }
-  }
+  },
+  "listing": {
+    "intent": {
+      "rent": "Alquiler",
+      "sale": "En venta",
+      "exchange": "Intercambio"
+    },
+    "exchange": {
+      "free": "Gratis",
+      "sectionTitle": "Intercambio de casa",
+      "requestCta": "Solicitar intercambio",
+      "stepTitle": "Ajustes de intercambio",
+      "stepHelp": "Explica a los huéspedes cómo funciona tu intercambio o alojamiento.",
+      "modeLabel": "¿Cómo quieres intercambiar?",
+      "modeLabelShort": "Tipo",
+      "mode": {
+        "swap": "Intercambio de casa",
+        "swapHelp": "Cada parte se aloja en la casa de la otra.",
+        "host": "Alojamiento gratuito",
+        "hostHelp": "Acoge a un huésped sin estancia a cambio.",
+        "both": "Cualquiera",
+        "bothHelp": "Abierto a un intercambio o a alojar a un huésped."
+      },
+      "availabilityLabel": "¿Cuándo estás disponible?",
+      "availabilityTitle": "Disponibilidad",
+      "addWindow": "Añadir disponibilidad",
+      "removeWindow": "Quitar periodo",
+      "noWindows": "Aún no hay periodos. Añade las fechas en que tu casa está libre.",
+      "moreWindows": "+{{count}} más",
+      "welcomeNote": "Nota de bienvenida",
+      "welcomeNotePlaceholder": "Cuenta qué hace especial alojarse en tu casa.",
+      "languages": "Idiomas que hablas",
+      "languagesValue": "Habla {{languages}}",
+      "mealsIncluded": "Comidas incluidas",
+      "mealsIncludedFact": "Comidas incluidas",
+      "requiresReciprocity": "Requiere estancia recíproca",
+      "requiresReciprocityHelp": "Activado es un intercambio real; desactivado permite alojamiento de una vía.",
+      "reciprocityRequired": "Se espera estancia recíproca",
+      "reciprocityOptional": "No se requiere estancia recíproca",
+      "minStay": "Mín. {{count}} noches",
+      "maxStay": "Máx. {{count}} noches",
+      "stayRange": "{{min}}–{{max}} noches",
+      "requestTitle": "Solicitar intercambio",
+      "requestModeLabel": "¿Qué propones?",
+      "requestedWindow": "Fechas en que quieres alojarte",
+      "offeredWindow": "Fechas que ofreces",
+      "offeredProperty": "Casa que ofreces",
+      "offeredHome": "Casa ofrecida",
+      "offeredStay": "Estancia ofrecida",
+      "requestedStay": "Estancia solicitada",
+      "addDates": "Añadir fechas",
+      "noExchangeProperties": "Aún no tienes casas con intercambio activado. Publica una para proponer un intercambio.",
+      "messageLabel": "Mensaje al anfitrión",
+      "messagePlaceholder": "Preséntate y cuéntale tu viaje.",
+      "messageHeading": "Mensaje",
+      "sendRequest": "Enviar solicitud",
+      "requestSent": "Solicitud de intercambio enviada",
+      "requestsTitle": "Intercambios",
+      "detailTitle": "Intercambio",
+      "detailsLabel": "Detalles del intercambio",
+      "cardFallback": "Casa",
+      "asGuest": "Mis solicitudes",
+      "asHost": "Para mis casas",
+      "signInTitle": "Inicia sesión para ver tus intercambios",
+      "signInBody": "Aquí están tus intercambios de casa y solicitudes de alojamiento.",
+      "emptyGuestTitle": "Aún no hay solicitudes de intercambio",
+      "emptyGuestBody": "Cuando solicites un intercambio o alojamiento aparecerá aquí.",
+      "emptyHostTitle": "Aún no hay solicitudes para tus casas",
+      "emptyHostBody": "Cuando alguien proponga un intercambio con tu casa aparecerá aquí.",
+      "loadErrorTitle": "No se pudieron cargar los intercambios",
+      "unavailable": "Intercambio no disponible",
+      "unavailableBody": "No se pudo cargar este intercambio.",
+      "invalidId": "Id de intercambio no válido",
+      "invalidIdBody": "Falta la referencia del intercambio en el enlace.",
+      "status": {
+        "pending": "Pendiente",
+        "confirmed": "Confirmado",
+        "declined": "Rechazado",
+        "cancelled": "Cancelado",
+        "completed": "Completado"
+      },
+      "actions": {
+        "approve": "Aceptar",
+        "decline": "Rechazar",
+        "cancel": "Cancelar solicitud",
+        "complete": "Marcar como completado"
+      },
+      "confirm": {
+        "approveTitle": "¿Aceptar el intercambio?",
+        "approveBody": "Se notificará al solicitante y las fechas se marcarán como confirmadas.",
+        "declineTitle": "¿Rechazar el intercambio?",
+        "declineBody": "Se notificará al solicitante que se rechazó la solicitud.",
+        "cancelTitle": "¿Cancelar la solicitud?",
+        "cancelBody": "Esto retirará tu solicitud de intercambio.",
+        "cancelConfirm": "Sí, cancelar",
+        "completeTitle": "¿Marcar como completado?",
+        "completeBody": "Confirma que la estancia ocurrió. Después podrás dejar una reseña."
+      },
+      "toasts": {
+        "confirmed": "Intercambio confirmado",
+        "declined": "Intercambio rechazado",
+        "cancelled": "Intercambio cancelado",
+        "completed": "Intercambio completado",
+        "updated": "Intercambio actualizado"
+      },
+      "errors": {
+        "pickDates": "Elige las fechas en que quieres alojarte",
+        "pickProperty": "Elige la casa que ofreces",
+        "pickOfferedDates": "Elige las fechas que ofreces",
+        "failed": "No se pudo enviar la solicitud"
+      },
+      "review": {
+        "title": "Deja una reseña",
+        "subtitle": "Valora tu intercambio: tu opinión genera confianza para todos.",
+        "placeholder": "Cuenta cómo fue la estancia (opcional).",
+        "submit": "Enviar ressenya",
+        "pickRating": "Elige primero una valoración",
+        "thanks": "Gracias por tu reseña",
+        "failed": "No se pudo enviar la reseña",
+        "starLabel": "{{count}} estrellas",
+        "alreadyLeft": "Ya has reseñado este intercambio.",
+        "profileHeading": "Reseñas de intercambio",
+        "summary": "{{average}} · {{count}} reseñas",
+        "guestAuthor": "Huésped de intercambio"
+      }
+    },
+    "badge": {
+      "forSale": "En venta",
+      "exchange": "Intercambio"
+    },
+    "offering": {
+      "stepTitle": "¿Cómo lo ofreces?",
+      "stepHelp": "Elige una o varias opciones. Puedes alquilar y vender el mismo inmueble."
+    },
+    "sale": {
+      "stepTitle": "Detalles de la venta",
+      "sectionTitle": "En venta",
+      "askingPrice": "Precio de venta",
+      "currency": "Moneda",
+      "pricePerSqm": "Precio por m²",
+      "estimatedYield": "Rentabilidad estimada",
+      "priceReduced": "Precio rebajado",
+      "requestViewing": "Solicitar visita",
+      "chainStatus": {
+        "label": "Situación de la cadena",
+        "noChain": "Sin cadena",
+        "chain": "En cadena",
+        "unknown": "Desconocido"
+      }
+    },
+    "mortgage": {
+      "title": "Calculadora de hipoteca",
+      "subtitle": "Es una estimación, no una oferta hipotecaria.",
+      "perMonth": "mes",
+      "downPayment": "Entrada",
+      "interestRate": "Tipo de interés",
+      "term": "Plazo",
+      "years": "{{count}} años",
+      "principal": "Capital",
+      "interest": "Intereses",
+      "loanAmount": "Importe del préstamo",
+      "totalInterest": "Intereses totales",
+      "totalPaid": "Total pagado"
+    }
+  },
+  "goBack": "Volver"
 }

@@ -11,6 +11,7 @@ import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
+import { differenceInCalendarDays } from 'date-fns';
 
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
@@ -23,8 +24,6 @@ interface DemandSignalProps {
   /** Listing creation timestamp (ISO-8601). */
   createdAt: string | undefined;
 }
-
-const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 /** Safely read `savesCount` off the (loosely-typed) stats payload. */
 const readSavesCount = (stats: unknown): number => {
@@ -39,14 +38,13 @@ const readSavesCount = (stats: unknown): number => {
   return 0;
 };
 
-/** Whole days between `createdAt` and now, or null if the date is unusable. */
+/** Calendar days between `createdAt` and today, or null if the date is unusable. */
 const daysSince = (createdAt: string | undefined): number | null => {
   if (!createdAt) return null;
-  const created = new Date(createdAt).getTime();
-  if (Number.isNaN(created)) return null;
-  const diff = Date.now() - created;
-  if (diff < 0) return 0;
-  return Math.floor(diff / MS_PER_DAY);
+  const created = new Date(createdAt);
+  if (Number.isNaN(created.getTime())) return null;
+  const diff = differenceInCalendarDays(new Date(), created);
+  return diff < 0 ? 0 : diff;
 };
 
 export const DemandSignal: React.FC<DemandSignalProps> = ({
@@ -69,11 +67,7 @@ export const DemandSignal: React.FC<DemandSignalProps> = ({
   if (!listedLabel) return null;
 
   const savedLabel =
-    savesCount > 0
-      ? savesCount === 1
-        ? t('property.demand.saved_one', { count: savesCount })
-        : t('property.demand.saved_other', { count: savesCount })
-      : null;
+    savesCount > 0 ? t('property.demand.saved', { count: savesCount }) : null;
 
   return (
     <View style={styles.row}>

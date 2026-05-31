@@ -285,7 +285,9 @@
     "Pets Allowed": "Mascotes Permeses",
     "Verified": "Verificat",
     "Search with": "Cercar amb",
-    "filters": "filtres",
+    "filters": {
+      "listingType": "Tipus d'anunci"
+    },
     "Advanced Filters": "Filtres Avançats",
     "types": {
       "apartments": "Apartaments",
@@ -364,7 +366,9 @@
       "loadFailed": "Error carregant perfils",
       "updateFailed": "Error actualitzant perfil",
       "deleteFailed": "Error eliminant perfil"
-    }
+    },
+    "exchanges": "Intercanvis",
+    "exchangesDescription": "Els teus intercanvis de casa i sol·licituds d’allotjament."
   },
   "trust": {
     "loadingVerification": "Carregant estat de verificació...",
@@ -542,6 +546,24 @@
       "lowDataNote": "Encara no hi ha prou anuncis propers per comparar.",
       "lowSampleCaveat_one": "Basat en només {{count}} anunci proper: pren-ho com a orientació.",
       "lowSampleCaveat_other": "Basat en només {{count}} anuncis propers: pren-ho com a orientació."
+    },
+    "nearbyServices": {
+      "title": "Què hi ha a prop",
+      "within": "A menys de {{km}} km",
+      "partialNote": "És possible que algunes dades properes no estiguin disponibles.",
+      "labels": {
+        "pharmacy": "Farmàcia",
+        "school": "Escola",
+        "hospital": "Hospital",
+        "police": "Policia",
+        "fire_station": "Parc de bombers",
+        "supermarket": "Supermercat",
+        "transit": "Transport públic",
+        "park": "Parc",
+        "bank": "Banc",
+        "restaurant": "Restaurant",
+        "gym": "Gimnàs"
+      }
     },
     "similarHomes": {
       "title": "Habitatges semblants a prop"
@@ -809,7 +831,8 @@
     "noResults": "No s'han trobat resultats",
     "tryAgain": "Provar de nou",
     "goBack": "Tornar",
-    "goHome": "Anar a l'inici"
+    "goHome": "Anar a l'inici",
+    "signIn": "Inicia sessió"
   },
   "sindi": {
     "name": "Sindi",
@@ -1058,5 +1081,170 @@
       "oldest": "Més Antics Primer",
       "alphabetical": "Alfabètic"
     }
-  }
+  },
+  "listing": {
+    "intent": {
+      "rent": "Lloguer",
+      "sale": "En venda",
+      "exchange": "Intercanvi"
+    },
+    "exchange": {
+      "free": "Gratis",
+      "sectionTitle": "Intercanvi de casa",
+      "requestCta": "Sol·licitar intercanvi",
+      "stepTitle": "Configuració d’intercanvi",
+      "stepHelp": "Explica als hostes com funciona el teu intercanvi o allotjament.",
+      "modeLabel": "Com vols intercanviar?",
+      "modeLabelShort": "Tipus",
+      "mode": {
+        "swap": "Intercanvi de casa",
+        "swapHelp": "Cada part s’allotja a la casa de l’altra.",
+        "host": "Allotjament gratuït",
+        "hostHelp": "Acull un hoste sense estada a canvi.",
+        "both": "Qualsevol",
+        "bothHelp": "Obert a un intercanvi o a allotjar un hoste."
+      },
+      "availabilityLabel": "Quan estàs disponible?",
+      "availabilityTitle": "Disponibilitat",
+      "addWindow": "Afegir disponibilitat",
+      "removeWindow": "Treure període",
+      "noWindows": "Encara no hi ha períodes. Afegeix les dates en què casa teva està lliure.",
+      "moreWindows": "+{{count}} més",
+      "welcomeNote": "Nota de benvinguda",
+      "welcomeNotePlaceholder": "Explica què fa especial allotjar-se a casa teva.",
+      "languages": "Idiomes que parles",
+      "languagesValue": "Parla {{languages}}",
+      "mealsIncluded": "Àpats inclosos",
+      "mealsIncludedFact": "Àpats inclosos",
+      "requiresReciprocity": "Requereix estada recíproca",
+      "requiresReciprocityHelp": "Activat és un intercanvi real; desactivat permet allotjament d’un sol sentit.",
+      "reciprocityRequired": "S’espera estada recíproca",
+      "reciprocityOptional": "No cal estada recíproca",
+      "minStay": "Mín. {{count}} nits",
+      "maxStay": "Màx. {{count}} nits",
+      "stayRange": "{{min}}–{{max}} nits",
+      "requestTitle": "Sol·licitar intercanvi",
+      "requestModeLabel": "Què proposes?",
+      "requestedWindow": "Dates en què vols allotjar-te",
+      "offeredWindow": "Dates que ofereixes",
+      "offeredProperty": "Casa que ofereixes",
+      "offeredHome": "Casa oferta",
+      "offeredStay": "Estada oferta",
+      "requestedStay": "Estada sol·licitada",
+      "addDates": "Afegir dates",
+      "noExchangeProperties": "Encara no tens cases amb intercanvi activat. Publica’n una per proposar un intercanvi.",
+      "messageLabel": "Missatge a l’amfitrió",
+      "messagePlaceholder": "Presenta’t i explica el teu viatge.",
+      "messageHeading": "Missatge",
+      "sendRequest": "Enviar sol·licitud",
+      "requestSent": "Sol·licitud d’intercanvi enviada",
+      "requestsTitle": "Intercanvis",
+      "detailTitle": "Intercanvi",
+      "detailsLabel": "Detalls de l’intercanvi",
+      "cardFallback": "Casa",
+      "asGuest": "Les meves sol·licituds",
+      "asHost": "Per a les meves cases",
+      "signInTitle": "Inicia sessió per veure els teus intercanvis",
+      "signInBody": "Aquí hi ha els teus intercanvis de casa i sol·licituds d’allotjament.",
+      "emptyGuestTitle": "Encara no hi ha sol·licituds d’intercanvi",
+      "emptyGuestBody": "Quan sol·licitis un intercanvi o allotjament apareixerà aquí.",
+      "emptyHostTitle": "Encara no hi ha sol·licituds per a les teves cases",
+      "emptyHostBody": "Quan algú proposi un intercanvi amb casa teva apareixerà aquí.",
+      "loadErrorTitle": "No s’han pogut carregar els intercanvis",
+      "unavailable": "Intercanvi no disponible",
+      "unavailableBody": "No s’ha pogut carregar aquest intercanvi.",
+      "invalidId": "Id d’intercanvi no vàlid",
+      "invalidIdBody": "Falta la referència de l’intercanvi a l’enllaç.",
+      "status": {
+        "pending": "Pendent",
+        "confirmed": "Confirmat",
+        "declined": "Rebutjat",
+        "cancelled": "Cancel·lat",
+        "completed": "Completat"
+      },
+      "actions": {
+        "approve": "Acceptar",
+        "decline": "Rebutjar",
+        "cancel": "Cancel·lar sol·licitud",
+        "complete": "Marcar com a completat"
+      },
+      "confirm": {
+        "approveTitle": "Acceptar l’intercanvi?",
+        "approveBody": "Es notificarà el sol·licitant i les dates es marcaran com a confirmades.",
+        "declineTitle": "Rebutjar l’intercanvi?",
+        "declineBody": "Es notificarà el sol·licitant que la sol·licitud s’ha rebutjat.",
+        "cancelTitle": "Cancel·lar la sol·licitud?",
+        "cancelBody": "Això retirarà la teva sol·licitud d’intercanvi.",
+        "cancelConfirm": "Sí, cancel·la",
+        "completeTitle": "Marcar com a completat?",
+        "completeBody": "Confirma que l’estada va passar. Després podràs deixar una ressenya."
+      },
+      "toasts": {
+        "confirmed": "Intercanvi confirmat",
+        "declined": "Intercanvi rebutjat",
+        "cancelled": "Intercanvi cancel·lat",
+        "completed": "Intercanvi completat",
+        "updated": "Intercanvi actualitzat"
+      },
+      "errors": {
+        "pickDates": "Tria les dates en què vols allotjar-te",
+        "pickProperty": "Tria la casa que ofereixes",
+        "pickOfferedDates": "Tria les dates que ofereixes",
+        "failed": "No s’ha pogut enviar la sol·licitud"
+      },
+      "review": {
+        "title": "Deixa una ressenya",
+        "subtitle": "Valora el teu intercanvi: la teva opinió genera confiança per a tothom.",
+        "placeholder": "Explica com va anar l’estada (opcional).",
+        "submit": "Enviar ressenya",
+        "pickRating": "Tria primer una valoració",
+        "thanks": "Gràcies per la teva ressenya",
+        "failed": "No s’ha pogut enviar la ressenya",
+        "starLabel": "{{count}} estrelles",
+        "alreadyLeft": "Ja has ressenyat aquest intercanvi.",
+        "profileHeading": "Ressenyes d’intercanvi",
+        "summary": "{{average}} · {{count}} ressenyes",
+        "guestAuthor": "Hoste d’intercanvi"
+      }
+    },
+    "badge": {
+      "forSale": "En venda",
+      "exchange": "Intercanvi"
+    },
+    "offering": {
+      "stepTitle": "Com ho ofereixes?",
+      "stepHelp": "Tria una o més opcions. Pots llogar i vendre el mateix immoble."
+    },
+    "sale": {
+      "stepTitle": "Detalls de la venda",
+      "sectionTitle": "En venda",
+      "askingPrice": "Preu de venda",
+      "currency": "Moneda",
+      "pricePerSqm": "Preu per m²",
+      "estimatedYield": "Rendibilitat estimada",
+      "priceReduced": "Preu rebaixat",
+      "requestViewing": "Sol·licitar visita",
+      "chainStatus": {
+        "label": "Situació de la cadena",
+        "noChain": "Sense cadena",
+        "chain": "En cadena",
+        "unknown": "Desconegut"
+      }
+    },
+    "mortgage": {
+      "title": "Calculadora d'hipoteca",
+      "subtitle": "És una estimació, no una oferta hipotecària.",
+      "perMonth": "mes",
+      "downPayment": "Entrada",
+      "interestRate": "Tipus d'interès",
+      "term": "Termini",
+      "years": "{{count}} anys",
+      "principal": "Capital",
+      "interest": "Interessos",
+      "loanAmount": "Import del préstec",
+      "totalInterest": "Interessos totals",
+      "totalPaid": "Total pagat"
+    }
+  },
+  "goBack": "Tornar"
 }

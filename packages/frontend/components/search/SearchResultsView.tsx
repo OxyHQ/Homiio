@@ -47,7 +47,7 @@ import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { colors } from '@/styles/colors';
 import { cardShadow, hairline, radius, spacing } from '@/constants/styles';
-import { PropertyType } from '@homiio/shared-types';
+import { ListingIntent, PropertyType } from '@homiio/shared-types';
 import type { Property } from '@homiio/shared-types';
 
 import { SearchActionPill } from './SearchActionPill';
@@ -104,6 +104,7 @@ function toSheetFilters(query: SearchQuery): SearchFilters {
     bedrooms: query.bedrooms ?? 1,
     bathrooms: query.bathrooms ?? 1,
     type: query.propertyTypes[0],
+    intent: query.intent,
     amenities: query.amenities,
     guests: query.guests,
     checkIn: query.dates?.start,
@@ -119,6 +120,7 @@ function toSheetFilters(query: SearchQuery): SearchFilters {
  */
 function countActiveFilters(query: SearchQuery): number {
   let count = 0;
+  if (query.intent !== undefined) count += 1;
   count += query.propertyTypes.length;
   if (query.priceMin !== undefined || query.priceMax !== undefined) count += 1;
   if (query.bedrooms !== undefined) count += 1;
@@ -175,6 +177,24 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     () => resolveSortLabel(query.sortBy, query.sortOrder, t),
     [query.sortBy, query.sortOrder, t],
   );
+
+  // Active "Listing type" chip, surfaced as a dismissible pill in the top bar.
+  const intentPillLabel = useMemo(() => {
+    switch (query.intent) {
+      case ListingIntent.RENT:
+        return t('listing.intent.rent', 'Rent');
+      case ListingIntent.SALE:
+        return t('listing.intent.sale', 'For sale');
+      case ListingIntent.EXCHANGE:
+        return t('listing.intent.exchange', 'Exchange');
+      default:
+        return null;
+    }
+  }, [query.intent, t]);
+
+  const handleClearIntent = useCallback(() => {
+    onQueryChange({ intent: undefined });
+  }, [onQueryChange]);
 
   // A search is "saved" when one already exists matching this location label.
   const isSearchSaved = useMemo(() => {
@@ -246,6 +266,18 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   const handleSheetFilterChange = useCallback(
     (sectionId: string, value: FilterValue) => {
       switch (sectionId) {
+        case 'intent': {
+          // Single-select; re-tapping the active chip clears the filter.
+          const intentValues = Object.values(ListingIntent) as string[];
+          const nextIntent =
+            typeof value === 'string' && intentValues.includes(value)
+              ? (value as ListingIntent)
+              : undefined;
+          onQueryChange({
+            intent: query.intent === nextIntent ? undefined : nextIntent,
+          });
+          return;
+        }
         case 'type':
           onQueryChange({
             propertyTypes:
@@ -293,7 +325,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
           return;
       }
     },
-    [onQueryChange, query.amenities],
+    [onQueryChange, query.amenities, query.intent],
   );
 
   const handleFiltersPress = useCallback(() => {
@@ -304,6 +336,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         onApply={() => bottomSheet.closeBottomSheet()}
         onClear={() => {
           onQueryChange({
+            intent: undefined,
             propertyTypes: [],
             priceMin: undefined,
             priceMax: undefined,
@@ -329,6 +362,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         query={label}
         filters={{
           rentMode: query.rentMode,
+          intent: query.intent,
           propertyTypes: query.propertyTypes,
           priceMin: query.priceMin,
           priceMax: query.priceMax,
@@ -396,6 +430,18 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
           style={styles.topBarActionsScroll}
           contentContainerStyle={styles.topBarActions}
         >
+          {/* Dismissible "Listing type" pill — only when an intent is set. Its
+              active treatment shows a close affordance; tapping clears it. */}
+          {intentPillLabel ? (
+            <SearchActionPill
+              label={intentPillLabel}
+              icon="pricetag-outline"
+              activeIcon="close"
+              active
+              onPress={handleClearIntent}
+              accessibilityLabel={`${t('search.filters.listingType', 'Listing type')}: ${intentPillLabel}. ${t('common.clear', 'Clear')}`}
+            />
+          ) : null}
           <SearchActionPill
             label={t('search.actions.filters', 'Filters') || 'Filters'}
             icon="options-outline"

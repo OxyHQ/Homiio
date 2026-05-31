@@ -1,6 +1,109 @@
 import { generatePropertyTitle, TitleFormat } from './propertyTitleGenerator';
-import { Property, PropertyImage } from '@homiio/shared-types';
+import { ListingIntent, PriceUnit, Property, PropertyImage } from '@homiio/shared-types';
 import propertyPlaceholder from '@/assets/images/property_placeholder.jpg';
+
+/** The rental experience the user is currently browsing in. */
+export type RentalMode = 'long_term' | 'vacation';
+
+/** Which offering a card/headline is displaying. */
+export type OfferingKind = 'rent' | 'sale' | 'exchange';
+
+/**
+ * The single, display-ready price decision for a property. `amount`/`currency`
+ * feed `CurrencyFormatter`; `priceUnit` is the per-unit suffix (only set for
+ * rent — sale has none); `label` is a ready-to-render fallback string used when
+ * there is no numeric price (exchange → "Free"). `kind` lets callers branch
+ * (e.g. render `label` instead of `CurrencyFormatter` for an exchange).
+ */
+export interface PrimaryOffering {
+  amount: number;
+  currency: string;
+  priceUnit?: PriceUnit;
+  label: string;
+  kind: OfferingKind;
+}
+
+/**
+ * Whether a property carries a given intent. A listing with no stored `intents`
+ * is treated as rent-only for back-compat (mirrors the backend + shared-types).
+ */
+function hasIntent(property: Property, intent: ListingIntent): boolean {
+  const intents = property.intents;
+  if (!Array.isArray(intents) || intents.length === 0) {
+    return intent === ListingIntent.RENT;
+  }
+  return intents.includes(intent);
+}
+
+/**
+ * Derive the displayed rent price unit for a property given the user's selected
+ * rental mode. Vacation/both listings viewed in vacation mode always show
+ * per-night pricing regardless of how the host stored the unit; long-term falls
+ * back to the stored unit (typically MONTH). Centralised here so `PropertyCard`,
+ * detail headlines, and any future surface share one rule.
+ */
+export function resolvePriceUnit(property: Property, mode: RentalMode): PriceUnit {
+  if (mode === 'vacation') return PriceUnit.NIGHT;
+  if (property.priceUnit) return property.priceUnit;
+  return PriceUnit.MONTH;
+}
+
+/**
+ * Resolve the ONE primary price/offering a card or headline should display for
+ * a (possibly multi-intent) listing. Priority is rent → sale → exchange:
+ *
+ *  - Rent (default, and any listing that includes the rent intent) keeps the
+ *    EXISTING behaviour exactly — rent amount + per-unit suffix (mode-aware).
+ *    This guarantees rent listings, including "rent + sell" ones, are visually
+ *    unchanged; the "For sale" badge communicates the secondary sale intent.
+ *  - Sale-only listings show the sale price with NO per-unit suffix.
+ *  - Exchange-only listings have no price → `label: 'Free'`, `kind: 'exchange'`.
+ *
+ * `freeLabel` is injected by the caller (i18n: `listing.exchange.free`) so this
+ * pure helper stays translation-agnostic.
+ */
+export function resolvePrimaryOffering(
+  property: Property,
+  mode: RentalMode,
+  freeLabel = 'Free',
+): PrimaryOffering {
+  // Rent takes precedence so existing rent (and rent+sale) cards are unchanged.
+  if (hasIntent(property, ListingIntent.RENT)) {
+    const amount = property.rent?.amount ?? 0;
+    const currency = property.rent?.currency ?? 'EUR';
+    return {
+      amount,
+      currency,
+      priceUnit: resolvePriceUnit(property, mode),
+      label: '',
+      kind: 'rent',
+    };
+  }
+
+  if (hasIntent(property, ListingIntent.SALE) && property.sale) {
+    return {
+      amount: property.sale.price,
+      currency: property.sale.currency,
+      priceUnit: undefined,
+      label: '',
+      kind: 'sale',
+    };
+  }
+
+  if (hasIntent(property, ListingIntent.EXCHANGE)) {
+    return { amount: 0, currency: '', priceUnit: undefined, label: freeLabel, kind: 'exchange' };
+  }
+
+  // Fallback: treat as rent (back-compat with listings that somehow carry no
+  // recognised intent), preserving the prior rent-amount display.
+  return {
+    amount: property.rent?.amount ?? 0,
+    currency: property.rent?.currency ?? 'EUR',
+    priceUnit: resolvePriceUnit(property, mode),
+    label: '',
+    kind: 'rent',
+  };
+}
 
 /**
  * A display-ready image source for `expo-image`/RN `Image`: either a remote URI

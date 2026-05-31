@@ -23,7 +23,7 @@ import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useOxy } from '@oxyhq/services';
 
-import { PropertyType, RentMode, type Property } from '@homiio/shared-types';
+import { ListingIntent, PropertyType, RentMode, type Property } from '@homiio/shared-types';
 
 import { SearchResultsView } from '@/components/search/SearchResultsView';
 import { SearchPanel } from '@/components/search/SearchPanel';
@@ -53,6 +53,14 @@ function parseRentMode(value: string | undefined): RentMode | undefined {
 
 /** All valid {@link PropertyType} values, for narrowing saved-search payloads. */
 const PROPERTY_TYPES = new Set<string>(Object.values(PropertyType));
+
+/** All valid {@link ListingIntent} values, for narrowing saved-search payloads. */
+const LISTING_INTENTS = new Set<string>(Object.values(ListingIntent));
+
+const readIntent = (value: unknown): ListingIntent | undefined =>
+  typeof value === 'string' && LISTING_INTENTS.has(value)
+    ? (value as ListingIntent)
+    : undefined;
 
 const readNumber = (value: unknown): number | undefined =>
   typeof value === 'number' && Number.isFinite(value) ? value : undefined;
@@ -100,6 +108,7 @@ function payloadToQuery(payload: SavedSearchPayload): SearchQuery {
   return {
     ...DEFAULT_SEARCH_QUERY,
     rentMode,
+    intent: readIntent(filters.intent),
     propertyTypes,
     priceMin,
     priceMax,

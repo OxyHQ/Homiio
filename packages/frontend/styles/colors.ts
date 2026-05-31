@@ -227,6 +227,20 @@ export const colors = {
    * so this is a Homiio status surface paired with Bloom's `warning`.
    */
   warningSubtle: '#FBEFDD',
+  /**
+   * Sale-listing amber accent + soft surface (the "For sale" intent badge).
+   * Homiio status surfaces — Bloom models no amber. `saleAccent` is the readable
+   * foreground used for the badge label/icon over `saleSubtle`.
+   */
+  saleAccent: '#B45309',
+  saleSubtle: '#FEF3C7',
+  /**
+   * Home-exchange teal accent + soft surface (the "Exchange" intent badge).
+   * Homiio status surfaces — Bloom models no teal. `exchangeAccent` is the
+   * readable foreground over `exchangeSubtle`.
+   */
+  exchangeAccent: '#0F766E',
+  exchangeSubtle: '#CCFBF1',
   /** Informational accent (neutral statuses, secondary metadata highlights). */
   info: L('info'),
   /** Soft info surface for info badges and inline notices. */

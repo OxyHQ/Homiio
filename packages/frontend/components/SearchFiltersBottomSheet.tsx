@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiltersBottomSheet, FilterSection, FilterValue } from '@/components/FiltersBar/FiltersBottomSheet';
 import { useRentalMode } from '@/context/RentalModeContext';
-import { CancellationPolicy } from '@homiio/shared-types';
+import { CancellationPolicy, ListingIntent } from '@homiio/shared-types';
 
 /**
  * Shared filter shape used by SearchScreen + SearchBar quick filters.
@@ -18,6 +18,8 @@ export interface SearchFilters {
     bedrooms: number | string;
     bathrooms: number | string;
     type?: string;
+    /** Listing type to scope to (rent / sale / exchange). Undefined = any. */
+    intent?: ListingIntent;
     amenities?: string[];
 
     // Vacation-specific
@@ -40,6 +42,12 @@ interface SearchFiltersBottomSheetProps {
     onApply: () => void;
     onClear: () => void;
 }
+
+const LISTING_TYPES = [
+    { id: ListingIntent.RENT, label: 'listing.intent.rent', fallback: 'Rent' },
+    { id: ListingIntent.SALE, label: 'listing.intent.sale', fallback: 'For sale' },
+    { id: ListingIntent.EXCHANGE, label: 'listing.intent.exchange', fallback: 'Exchange' },
+];
 
 const PROPERTY_TYPES_LONG_TERM = [
     { id: 'apartment', label: 'Apartments' },
@@ -95,6 +103,17 @@ export function SearchFiltersBottomSheet({
     const filterSections: FilterSection[] = useMemo(() => {
         const propertyTypes = mode === 'vacation' ? PROPERTY_TYPES_VACATION : PROPERTY_TYPES_LONG_TERM;
         const sections: FilterSection[] = [
+            {
+                id: 'intent',
+                title: t('search.filters.listingType', 'Listing type'),
+                type: 'chips',
+                options: LISTING_TYPES.map((listingType) => ({
+                    id: listingType.id,
+                    label: t(listingType.label, listingType.fallback),
+                    value: listingType.id,
+                })),
+                value: filters.intent,
+            },
             {
                 id: 'type',
                 title: t('Property Type'),

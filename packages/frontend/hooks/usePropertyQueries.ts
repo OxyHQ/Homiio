@@ -1,13 +1,19 @@
 import { useCallback, useState, useEffect } from 'react';
 import { usePropertyStore, usePropertySelectors } from '@/store/propertyStore';
 import { Property, PropertyFilters, propertyService } from '@/services/propertyService';
-import { CreatePropertyData, PropertyAreaInsights } from '@homiio/shared-types';
+import {
+  CreatePropertyData,
+  PropertyAreaInsights,
+  PropertyNearbyServices,
+} from '@homiio/shared-types';
 import { toast } from '@/lib/sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-/** Area-insights cache is comparatively expensive to compute server-side and
- *  changes slowly (it aggregates a whole neighborhood), so we keep it fresh
- *  longer than the per-property detail query. */
+/** Area-scale lookups (price insights, nearby services) are comparatively
+ *  expensive to compute server-side and change slowly (they aggregate a whole
+ *  neighborhood / query OpenStreetMap), so we keep them fresh far longer than
+ *  the per-property detail query. Shared by `useAreaInsights` +
+ *  `useNearbyServices`. */
 const AREA_INSIGHTS_STALE_TIME = 1000 * 60 * 5;
 const AREA_INSIGHTS_GC_TIME = 1000 * 60 * 30;
 
@@ -148,6 +154,29 @@ export const useAreaInsights = (propertyId: string) => {
 
   return {
     insights: data ?? null,
+    loading: isLoading,
+    error: error instanceof Error ? error.message : null,
+    refetch,
+  };
+};
+
+/**
+ * Everyday services near a property ("What's nearby" block on the detail
+ * screen). Read-only, so it lives entirely in React Query — no Zustand sync.
+ * Fails soft: the section hides itself on `error` and treats a `partial`
+ * all-absent payload as "unknown" rather than "nothing nearby".
+ */
+export const useNearbyServices = (propertyId: string) => {
+  const { data, isLoading, error, refetch } = useQuery<PropertyNearbyServices>({
+    queryKey: ['nearbyServices', propertyId],
+    queryFn: async () => propertyService.getNearbyServices(propertyId),
+    enabled: Boolean(propertyId),
+    staleTime: AREA_INSIGHTS_STALE_TIME,
+    gcTime: AREA_INSIGHTS_GC_TIME,
+  });
+
+  return {
+    nearbyServices: data ?? null,
     loading: isLoading,
     error: error instanceof Error ? error.message : null,
     refetch,

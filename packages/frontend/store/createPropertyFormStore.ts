@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { ExchangeMode, ListingIntent } from '@homiio/shared-types';
+import type { AvailabilityWindow } from '@homiio/shared-types';
 import type { UploadedImage } from '@/services/imageUploadService';
 
 export interface PropertyBasicInfo {
@@ -80,6 +82,45 @@ export interface PropertyColivingFeatures {
   otherFeatures?: string;
 }
 
+/**
+ * Multi-intent offering for the listing (rent / sale / exchange). `intents` is
+ * multi-select so a listing can be offered as several things at once (e.g.
+ * "rent + sell"). The sale fields are only meaningful when `intents` includes
+ * `ListingIntent.SALE` and are submitted under the property `sale` block; the
+ * exchange fields likewise apply only when `intents` includes
+ * `ListingIntent.EXCHANGE` and are submitted under the property `exchange` block.
+ */
+export interface PropertyOffering {
+  intents: ListingIntent[];
+  salePrice?: number;
+  saleCurrency?: string;
+  chainStatus?: string;
+  isPriceReduced?: boolean;
+  // Exchange (home swap / free hosting) sub-fields.
+  exchangeMode: ExchangeMode;
+  exchangeAvailabilityWindows: AvailabilityWindow[];
+  exchangeMinStay?: number;
+  exchangeMaxStay?: number;
+  exchangeWelcomeNote?: string;
+  exchangeLanguages: string[];
+  exchangeMealsIncluded: boolean;
+  exchangeRequiresReciprocity: boolean;
+}
+
+/**
+ * Default offering: a new listing is rent-only until the host opts into more.
+ * Exchange defaults are inert until the host adds the EXCHANGE intent — `both`
+ * is the most permissive mode (accepts a swap or a hosting request).
+ */
+export const DEFAULT_OFFERING: PropertyOffering = {
+  intents: [ListingIntent.RENT],
+  exchangeMode: ExchangeMode.BOTH,
+  exchangeAvailabilityWindows: [],
+  exchangeLanguages: [],
+  exchangeMealsIncluded: false,
+  exchangeRequiresReciprocity: false,
+};
+
 export interface CreatePropertyFormData {
   basicInfo: PropertyBasicInfo;
   location: PropertyLocation;
@@ -88,6 +129,7 @@ export interface CreatePropertyFormData {
   rules: PropertyRules;
   media: PropertyMedia;
   colivingFeatures: PropertyColivingFeatures;
+  offering: PropertyOffering;
 }
 
 export type CreatePropertyFormSection = keyof CreatePropertyFormData;
@@ -113,7 +155,13 @@ interface CreatePropertyFormState {
     field: keyof CreatePropertyFormData[S],
     value: CreatePropertyFormData[S][keyof CreatePropertyFormData[S]],
   ) => void;
-  nextStep: () => void;
+  /**
+   * Advance to the next step, clamped to `maxStep` (the last index of the
+   * ACTIVE step list). The cap is passed in by the wizard so it always tracks
+   * the resolved flow length (which now varies with the selected intents),
+   * instead of a hardcoded literal.
+   */
+  nextStep: (maxStep: number) => void;
   prevStep: () => void;
   setCurrentStep: (step: number) => void;
   setIsDirty: (dirty: boolean) => void;
@@ -195,6 +243,7 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()((set
       sharedSpacesList: [],
       otherFeatures: '',
     },
+    offering: { ...DEFAULT_OFFERING },
   },
   currentStep: 0,
   isDirty: false,
@@ -221,9 +270,12 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()((set
       },
       isDirty: true,
     })),
-  nextStep: () =>
+  nextStep: (maxStep) =>
     set((state) => ({
-      currentStep: Math.min(state.currentStep + 1, 6), // 6 is the max step (0-indexed)
+      // Clamp to the last index of the active flow (derived by the caller from
+      // the resolved step list length), never a hardcoded literal — the flow
+      // grows when 'sale' adds the Sale Details step.
+      currentStep: Math.min(state.currentStep + 1, maxStep),
     })),
   prevStep: () =>
     set((state) => ({
@@ -297,6 +349,10 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()((set
           sharedSpacesList: [],
           otherFeatures: '',
         },
+        // RISK 4: reset MUST re-seed offering to the rent-only default, or the
+        // next listing inherits the previous one's intents + sale/exchange
+        // sub-fields (stale state). Spread so each reset gets a fresh array refs.
+        offering: { ...DEFAULT_OFFERING },
       },
       currentStep: 0,
       isDirty: false,

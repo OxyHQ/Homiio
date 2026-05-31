@@ -24,6 +24,7 @@ import type {
 export const DEFAULT_SEARCH_QUERY: SearchQuery = {
   rentMode: RentMode.LONG_TERM,
   location: undefined,
+  intent: undefined,
   propertyTypes: [],
   priceMin: undefined,
   priceMax: undefined,
