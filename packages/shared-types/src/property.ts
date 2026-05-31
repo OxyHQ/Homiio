@@ -523,7 +523,8 @@ export type NearbyServiceKey =
   | 'park'
   | 'bank'
   | 'restaurant'
-  | 'gym';
+  | 'gym'
+  | 'spa';
 
 /**
  * Presence summary for a single service category near a property.

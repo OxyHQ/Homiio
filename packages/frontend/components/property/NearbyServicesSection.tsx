@@ -114,6 +114,11 @@ const SERVICE_META: Record<
     labelKey: 'property.nearbyServices.labels.gym',
     image: require('@/assets/nearby/gym.png'),
   },
+  spa: {
+    icon: 'flower-outline',
+    labelKey: 'property.nearbyServices.labels.spa',
+    image: require('@/assets/nearby/spa.png'),
+  },
 };
 
 /** Metres in one kilometre — distances at/above this switch to a km label. */

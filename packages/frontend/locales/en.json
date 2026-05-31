@@ -1163,7 +1163,8 @@
         "park": "Park",
         "bank": "Bank",
         "restaurant": "Restaurant",
-        "gym": "Gym"
+        "gym": "Gym",
+        "spa": "Spa"
       }
     },
     "similarHomes": {

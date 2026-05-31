@@ -85,6 +85,7 @@ const CATEGORY_TAG_FILTERS: Record<NearbyServiceKey, readonly string[]> = {
   bank: ['amenity~"bank|atm"'],
   restaurant: ['amenity~"restaurant|cafe"'],
   gym: ['leisure~"fitness_centre|sports_centre"'],
+  spa: ['leisure=spa', 'shop=massage'],
 } as const;
 
 /** Stable ordering for the returned categories (and for query generation). */

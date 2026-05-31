@@ -540,7 +540,8 @@
         "park": "Parque",
         "bank": "Banco",
         "restaurant": "Restaurante",
-        "gym": "Gimnasio"
+        "gym": "Gimnasio",
+        "spa": "Spa"
       }
     },
     "similarHomes": {

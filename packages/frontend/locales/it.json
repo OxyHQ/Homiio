@@ -622,7 +622,8 @@
         "park": "Parco",
         "bank": "Banca",
         "restaurant": "Ristorante",
-        "gym": "Palestra"
+        "gym": "Palestra",
+        "spa": "Spa"
       }
     },
     "similarHomes": {
