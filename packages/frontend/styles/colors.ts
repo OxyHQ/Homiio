@@ -71,6 +71,13 @@ const toHex = (value: string): string => {
 const L = (key: keyof ThemeColors): string => toHex(BLOOM_LIGHT[key]);
 
 /**
+ * Homiio's signature brand blue — Bloom `blue` primary, kept ONLY for the splash
+ * brand gradient so the launch moment stays blue→cream regardless of the app's
+ * runtime accent (now the `yellow` preset). Bloom-sourced, not hardcoded.
+ */
+export const brandBlue = toHex(buildTheme('blue', 'light').colors.primary);
+
+/**
  * Pure white — a LITERAL white fill, used for white-on-dark / on-image / on-overlay
  * icons + text and white surfaces. This is NO LONGER the primary foreground: on the
  * `yellow` preset, readable text on the brand fill is BLACK, so anything sitting on a
