@@ -7,7 +7,7 @@
  *
  * It exposes three pieces, sharing ONE StyleSheet:
  *   - `DetailIconGrid`        the responsive wrapping container (column/row
- *                             gaps, cell width/minWidth, flex-grow).
+ *                             gaps, cell width/minWidth).
  *   - `DetailIconRow`         one line: leading icon + label, with an optional
  *                             TRAILING text (e.g. a distance), an optional
  *                             `muted` state (greyed icon/label/trailing for an
@@ -214,10 +214,11 @@ const styles = StyleSheet.create({
   },
   cell: {
     // ~3 columns on tablet/web, 2 on a phone. The minWidth floor keeps a single
-    // short label from truncating before the row wraps.
+    // short label from truncating before the row wraps. A fixed 31% width (no
+    // flex-grow) keeps every cell uniform so a lone/last item in a row stays
+    // left-aligned at 31% instead of stretching to fill the row.
     width: '31%',
     minWidth: 150,
-    flexGrow: 1,
   },
   cellReserveTrailing: {
     // A touch wider so a trailing distance ("Pharmacy · 97 m") fits on one row
