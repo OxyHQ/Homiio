@@ -375,8 +375,8 @@ export default function ApplyToRentScreen() {
             <View style={styles.propertyCard}>
               <ThemedText style={styles.propertyTitle}>{propertyTitle}</ThemedText>
               <ThemedText style={styles.propertyLocation}>
-                {property.address?.city}
-                {property.address?.country ? `, ${property.address.country}` : ''}
+                {property.address?.cityName}
+                {property.address?.countryName ? `, ${property.address.countryName}` : ''}
               </ThemedText>
               {property.longTermRent && (
                 <ThemedText style={styles.propertyPrice}>

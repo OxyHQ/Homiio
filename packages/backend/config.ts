@@ -52,6 +52,8 @@ export interface Config {
     secretAccessKey: string;
     bucketName: string;
   };
+  /** Public, externally-reachable base URL of this backend (no trailing slash). */
+  publicUrl: string;
   rateLimit: {
     windowMs: number;
     max: number;
@@ -67,6 +69,15 @@ export interface Config {
     webhookSecret?: string;
     successUrl?: string;
     cancelUrl?: string;
+  };
+  web: {
+    /**
+     * Public base URL of the Homiio web/app frontend. Sourced from
+     * `FRONTEND_URL`, falling back to the production domain or the local Expo
+     * dev server. The single place server-built deep links (e.g. partner
+     * referral links) are derived from, so they can never hardcode a host.
+     */
+    baseUrl: string;
   };
   geocoding: {
     /**
@@ -187,6 +198,17 @@ const config: Config = {
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
     bucketName: process.env.AWS_S3_BUCKET || 'homiio-images',
   },
+
+  // Public, externally-reachable base URL of THIS backend. Used to build
+  // absolute URLs the client can fetch directly — most importantly the
+  // self-hosted local image store served at `/api/images/file/*` when object
+  // storage (S3) is not configured. Sourced from `PUBLIC_API_URL`, falling back
+  // to the local dev server. (For an Android emulator pointing at the host's
+  // 10.0.2.2 alias, set `PUBLIC_API_URL=http://10.0.2.2:<port>`.)
+  publicUrl: process.env.PUBLIC_API_URL ||
+    (process.env.NODE_ENV === 'production'
+      ? 'https://api.homiio.com'
+      : `http://localhost:${process.env.PORT || '4000'}`),
   
   // Rate Limiting
   rateLimit: {
@@ -200,6 +222,12 @@ const config: Config = {
     file: process.env.LOG_FILE || (process.env.VERCEL ? '/tmp/app.log' : './logs/app.log'),
   },
   
+  // Web frontend base URL — single source for server-built deep links.
+  web: {
+    baseUrl: process.env.FRONTEND_URL ||
+      (process.env.NODE_ENV === 'production' ? 'https://homiio.com' : 'http://localhost:8081'),
+  },
+
   // Stripe Configuration (optional)
   stripe: {
     secretKey: process.env.STRIPE_SECRET_KEY,
@@ -207,8 +235,8 @@ const config: Config = {
     priceFile: process.env.STRIPE_PRICE_FILE,
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
     // Automatic URLs based on NODE_ENV:
-    // - In development: always use FRONTEND_URL (or localhost) to avoid redirecting to production
-    // - In production: allow STRIPE_* overrides, else default to homiio.com
+    // - In development: always use the web base URL (localhost) to avoid redirecting to production
+    // - In production: allow STRIPE_* overrides, else default to the web base URL
     ...((): { successUrl: string; cancelUrl: string } => {
       const isProd = process.env.NODE_ENV === 'production';
       const defaultFrontend = process.env.FRONTEND_URL || (isProd ? 'https://homiio.com' : 'http://localhost:8081');

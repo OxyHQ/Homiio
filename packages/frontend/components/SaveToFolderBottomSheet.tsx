@@ -231,9 +231,9 @@ export function SaveToFolderBottomSheet({
             <ThemedText style={styles.previewTitle} numberOfLines={1}>
               {getPropertyTitle(property)}
             </ThemedText>
-            {!!property.address?.city && (
+            {!!property.address?.cityName && (
               <ThemedText style={styles.previewSubtitle} numberOfLines={1}>
-                {property.address.city}{property.address?.state ? `, ${property.address.state}` : ''}
+                {property.address.cityName}{property.address?.regionName ? `, ${property.address.regionName}` : ''}
               </ThemedText>
             )}
           </View>

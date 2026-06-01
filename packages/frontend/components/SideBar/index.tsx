@@ -292,7 +292,7 @@ export function SideBar() {
         key: 'search',
         icon: Search,
         iconActive: Search,
-        label: t('sidebar.navigation.search'),
+        label: t('sidebar.navigation.explore'),
         route: '/search',
       },
     ];
@@ -437,10 +437,10 @@ export function SideBar() {
             : undefined;
 
       const title = getPropertyTitle(property, 'short');
-      const subtitle = property.address?.city
-        ? property.address.state
-          ? `${property.address.city}, ${property.address.state}`
-          : property.address.city
+      const subtitle = property.address?.cityName
+        ? property.address.regionName
+          ? `${property.address.cityName}, ${property.address.regionName}`
+          : property.address.cityName
         : undefined;
 
       // Properties with no timestamp are treated as the most recent and sort

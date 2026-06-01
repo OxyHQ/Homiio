@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useMemo, useCallback, useContext } from 'react';
+import React, { useState, useMemo, useCallback, useContext } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
   ActivityIndicator,
-  TouchableOpacity,
-  ScrollView,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/styles/colors';
@@ -15,25 +14,38 @@ import { colors } from '@/styles/colors';
 import { Header } from '@/components/Header';
 import { PropertyCard } from '@/components/PropertyCard';
 import { Property } from '@homiio/shared-types';
-import { cityService, City } from '@/services/cityService';
+import { useCity, usePropertiesByCity } from '@/hooks/useCityQueries';
+import { cityCountryName, getCityImageSource } from '@/utils/cityDisplay';
 import { LinearGradient } from 'expo-linear-gradient';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FiltersBar } from '@/components/FiltersBar';
 import { FiltersBottomSheet, type FilterSection, type FilterValue } from '@/components/FiltersBar/FiltersBottomSheet';
 
 import { BottomSheetContext } from '@/context/BottomSheetContext';
-import { logger } from '@/utils/logger';
 
 export default function CityPropertiesPage() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { id } = useLocalSearchParams();
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [city, setCity] = useState<City | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const cityId = typeof id === 'string' ? id : undefined;
   const [headerHeight, setHeaderHeight] = useState(0);
   const bottomSheet = useContext(BottomSheetContext);
+
+  // City + its published properties from the DB (relational geo + self-hosted
+  // cover image). React Query owns loading/error/caching — no local effects.
+  const { data: city, isLoading: cityLoading, isError: cityError } = useCity(cityId);
+  const { data: cityProperties, isLoading: propertiesLoading } = usePropertiesByCity(cityId, {
+    limit: 50,
+    sort: 'createdAt',
+  });
+  const properties = useMemo<Property[]>(
+    () => cityProperties?.properties ?? [],
+    [cityProperties],
+  );
+  const loading = cityLoading || propertiesLoading;
+  const error = cityError ? 'City not found' : null;
+  const cityImageSource = getCityImageSource(city ?? undefined, 'large');
+  const countryName = cityCountryName(city ?? undefined);
 
   const [filters, setFilters] = useState({
     verified: false,
@@ -87,45 +99,6 @@ export default function CityPropertiesPage() {
       value: filters.bathrooms
     }
   ], [t, filters]);
-
-  // Load city and properties data
-  useEffect(() => {
-    const loadCityData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Get city data by slug
-        const cityResponse = await cityService.getCityBySlug(id as string);
-        if (!cityResponse) {
-          setError('City not found');
-          setLoading(false);
-          return;
-        }
-
-        setCity(cityResponse.data);
-
-        // Get properties for this city using the city service
-        const propertiesResponse = await cityService.getPropertiesByCity(cityResponse.data._id, {
-          limit: 50,
-          sort: 'createdAt',
-        });
-
-        // Ensure we always set an array
-        setProperties(propertiesResponse?.properties || []);
-      } catch (err: unknown) {
-        logger.error('Error loading city data:', err);
-        setError('Failed to load city data');
-        setProperties([]); // Ensure properties is always an array
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (id) {
-      loadCityData();
-    }
-  }, [id]);
 
   const handleFilterChange = useCallback((sectionId: string, value: FilterValue) => {
     setFilters(prev => {
@@ -218,7 +191,9 @@ export default function CityPropertiesPage() {
   const renderPropertyItem = ({ item }: { item: Property }) => (
     <PropertyCard
       property={item}
-      onPress={() => router.push(`/properties/${item.id}`)}
+      // The city-properties endpoint returns lean docs (only `_id`, no `id`
+      // virtual), so prefer `_id` for navigation.
+      onPress={() => router.push(`/properties/${item._id || item.id}`)}
       style={styles.propertyCard}
     />
   );
@@ -291,18 +266,40 @@ export default function CityPropertiesPage() {
         />
       </View>
       <View style={{ paddingTop: headerHeight, flex: 1 }}>
-        {/* Hero Section */}
+        {/* Hero Section — DB-stored cover image (self-hosted) behind a scrim,
+            falling back to a brand gradient when the city has no cover image. */}
         <View style={styles.heroSection}>
-          <LinearGradient
-            colors={[colors.primaryColor, colors.secondaryLight]}
-            style={styles.heroContainer}
-          >
+          <View style={styles.heroContainer}>
+            {cityImageSource ? (
+              <Image
+                source={cityImageSource}
+                style={styles.heroImage}
+                contentFit="cover"
+                transition={200}
+                cachePolicy="memory-disk"
+              />
+            ) : (
+              <LinearGradient
+                colors={[colors.primaryColor, colors.secondaryLight]}
+                style={styles.heroImage}
+              />
+            )}
+            <LinearGradient
+              colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.45)', 'rgba(0,0,0,0.72)']}
+              locations={[0, 0.55, 1]}
+              style={styles.heroScrim}
+              pointerEvents="none"
+            />
             <View style={styles.heroContent}>
               <Text style={styles.heroTitle}>{city.name}</Text>
-              <Text style={styles.heroSubtitle}>{city.country}</Text>
-              <Text style={styles.heroDescription}>{city.description}</Text>
+              {countryName ? <Text style={styles.heroSubtitle}>{countryName}</Text> : null}
+              {city.description ? (
+                <Text style={styles.heroDescription} numberOfLines={3}>
+                  {city.description}
+                </Text>
+              ) : null}
             </View>
-          </LinearGradient>
+          </View>
         </View>
 
         {/* City Stats Cards */}
@@ -311,35 +308,13 @@ export default function CityPropertiesPage() {
             <Text style={styles.statNumber}>{city.propertiesCount}</Text>
             <Text style={styles.statLabel}>{t('Properties')}</Text>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>
-              {city.averageRent ? `⊜${city.averageRent.toLocaleString()}` : 'N/A'}
-            </Text>
-            <Text style={styles.statLabel}>{t('Avg. Price')}</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{city.popularNeighborhoods?.length || 0}</Text>
-            <Text style={styles.statLabel}>{t('Neighborhoods')}</Text>
-          </View>
+          {typeof city.population === 'number' && city.population > 0 ? (
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{city.population.toLocaleString()}</Text>
+              <Text style={styles.statLabel}>{t('Population')}</Text>
+            </View>
+          ) : null}
         </View>
-
-        {/* Neighborhood Pills */}
-        {city.popularNeighborhoods && city.popularNeighborhoods.length > 0 && (
-          <View style={styles.neighborhoodSection}>
-            <Text style={styles.sectionTitle}>{t('Popular Neighborhoods')}</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.neighborhoodScroll}
-            >
-              {city.popularNeighborhoods.map((neighborhood, index) => (
-                <TouchableOpacity key={index} style={styles.neighborhoodPill}>
-                  <Text style={styles.neighborhoodText}>{neighborhood}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
 
         {/* Properties Section */}
         <View style={styles.propertiesSection}>
@@ -450,8 +425,25 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   heroContainer: {
-    height: 200,
+    height: 240,
     justifyContent: 'flex-end',
+    position: 'relative',
+    overflow: 'hidden',
+    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
+  },
+  heroImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  heroScrim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   heroContent: {
     padding: 24,
@@ -505,36 +497,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // Neighborhood Section
-  neighborhoodSection: {
-    marginBottom: 32,
-    paddingHorizontal: 20,
-  },
   sectionTitle: {
     fontSize: 22,
     fontWeight: 'bold',
     color: colors.COLOR_BLACK,
     marginBottom: 16,
-  },
-  neighborhoodScroll: {
-    paddingRight: 20,
-  },
-  neighborhoodPill: {
-    backgroundColor: colors.white,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 25,
-    marginRight: 12,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  neighborhoodText: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK,
-    fontWeight: '500',
   },
 
   // Properties Section

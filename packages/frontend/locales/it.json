@@ -398,6 +398,115 @@
         "question": "Quali sono i requisiti per la domanda di affitto?",
         "answer": "I requisiti variano per proprietà, ma tipicamente includono prova di reddito, storia di affitto, controllo del credito e referenze. Ogni annuncio specificherà i requisiti esatti necessari."
       }
+    },
+    "cityShowcase": {
+      "title": "Esplora {{place}}",
+      "defaultPlace": "Spagna"
+    }
+  },
+  "agent": {
+    "menu": {
+      "section": "Guadagna",
+      "title": "Guadagna con Homiio",
+      "description": "Porta case su Homiio e guadagna quando vengono affittate o vendute."
+    },
+    "hero": {
+      "title": "Chiunque può fare l'agente immobiliare.",
+      "subtitle": "Porta una casa su Homiio. Quando viene affittata o venduta, guadagni.",
+      "trust": "Nessuna licenza. Lavora dal telefono."
+    },
+    "cta": {
+      "start": "Inizia a guadagnare",
+      "share": "Condividi il tuo link"
+    },
+    "how": {
+      "title": "Come funziona",
+      "steps": {
+        "find": {
+          "title": "Trova una casa e il suo proprietario",
+          "body": "Individua un bel posto: l'appartamento di un amico, uno sfitto, qualsiasi cosa."
+        },
+        "list": {
+          "title": "La pubblicano con il tuo link",
+          "body": "Il proprietario pubblica su Homiio tramite il tuo referral."
+        },
+        "earn": {
+          "title": "Si affitta o si vende: vieni pagato",
+          "body": "Guadagna una ricompensa ogni volta che una casa che hai portato viene affittata o venduta."
+        }
+      }
+    },
+    "calculator": {
+      "title": "Scopri quanto potresti guadagnare",
+      "monthlyRent": "Affitto mensile",
+      "salePrice": "Prezzo di vendita",
+      "perMonth": "mese",
+      "result": "Guadagni",
+      "caption": "Pagato alla chiusura dell'affare, senza licenza.",
+      "flatNoteSale": "Ricompensa fissa per ogni vendita conclusa",
+      "flatNoteExchange": "Ricompensa fissa per ogni scambio",
+      "offerings": {
+        "rent": "Affitto",
+        "sale": "Vendita",
+        "exchange": "Scambio"
+      }
+    },
+    "rewards": {
+      "title": "Sali di livello e vieni premiato",
+      "subtitle": "Più porti, più sblocchi.",
+      "pointsLabel": "{{count}} pt",
+      "tiers": {
+        "bronze": "Bronzo",
+        "silver": "Argento",
+        "gold": "Oro",
+        "platinum": "Platino"
+      },
+      "perks": {
+        "profile": "Il tuo profilo agente Homiio",
+        "brandedPen": "Penna con marchio Homiio",
+        "prioritySupport": "Supporto prioritario",
+        "businessCards": "Biglietti da visita personalizzati",
+        "featuredBadge": "Badge agente in evidenza",
+        "swagBox": "Box gadget premium",
+        "higherShare": "Quota di commissione più alta"
+      }
+    },
+    "referral": {
+      "title": "Il tuo link di referral",
+      "copy": "Copia",
+      "copiedShort": "Copiato",
+      "copied": "Link copiato",
+      "copyFailed": "Impossibile copiare il link",
+      "share": "Condividi il tuo link",
+      "shareTitle": "Guadagna con Homiio",
+      "shareMessage": "Pubblica la tua casa su Homiio: {{link}}",
+      "shareFailed": "Impossibile condividere il link"
+    },
+    "dashboard": {
+      "title": "La tua dashboard",
+      "referrals": "Referral",
+      "listings": "Annunci",
+      "pending": "In sospeso",
+      "earned": "Guadagnato",
+      "pointsValue": "{{count}} pt",
+      "toNext": "{{points}} pt per {{tier}}",
+      "maxTier": "Hai raggiunto il livello massimo.",
+      "recentReferrals": "I tuoi referral",
+      "noReferrals": "Ancora nessun annuncio referral: condividi il tuo link per iniziare.",
+      "recentEarnings": "Guadagni recenti",
+      "noEarnings": "Ancora nessun guadagno: vedrai i pagamenti qui quando un affare referral si chiude.",
+      "status": {
+        "pending": "In sospeso",
+        "approved": "Approvato",
+        "paid": "Pagato",
+        "cancelled": "Annullato"
+      }
+    },
+    "banner": {
+      "title": "Inizia oggi. Senza licenza.",
+      "subtitle": "Trasforma le case intorno a te in reddito.",
+      "cta": "Diventa agente",
+      "trust": "Nessuna licenza. Lavora dal telefono."
     }
   },
   "tips": {

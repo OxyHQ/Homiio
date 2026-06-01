@@ -19,6 +19,7 @@ import {
   useCreatePropertyFormStore,
   type CreatePropertyFormData,
 } from '@/store/createPropertyFormStore';
+import { useReferralStore } from '@/store/referralStore';
 import { propertyService } from '@/services/propertyService';
 import { logger } from '@/utils/logger';
 
@@ -49,6 +50,12 @@ export type PropertySubmitPayload = Omit<CreatePropertyData, 'images'> & {
   images: PropertyImage[];
   status: PropertyStatus;
   colivingFeatures?: CreatePropertyFormData['colivingFeatures'];
+  /**
+   * Partner referral code captured when the owner reached the create flow via a
+   * partner's link. Sent only when present so the backend can attribute the
+   * listing to the sourcing partner; omitted entirely for un-referred listings.
+   */
+  referralCode?: string;
 };
 
 const toNumber = (
@@ -245,7 +252,15 @@ export function useCreatePropertyWizard(id: string | undefined) {
         return { property, redirectId: id };
       }
 
-      const property = await propertyService.createProperty(payload);
+      // Attribute a brand-new listing to the partner whose referral link the
+      // owner arrived through (captured into the referral store on the create
+      // screen). Only sent on create — an edit never carries a `ref` param.
+      const referralCode = useReferralStore.getState().referralCode;
+      const createPayload: PropertySubmitPayload = referralCode
+        ? { ...payload, referralCode }
+        : payload;
+
+      const property = await propertyService.createProperty(createPayload);
       return { property, redirectId: property?._id ?? null };
     },
     onMutate: () => {
@@ -269,6 +284,9 @@ export function useCreatePropertyWizard(id: string | undefined) {
       }
       logger.info('Property creation result', property);
       toast.success('Property created successfully');
+      // The captured referral code has now been consumed by this listing —
+      // clear it so a later, un-referred listing isn't mis-attributed.
+      useReferralStore.getState().clearReferralCode();
       if (redirectId) {
         router.push(`/properties/${redirectId}`);
       } else {

@@ -142,7 +142,7 @@ export default function BookViewingPage() {
     return {
       id: apiProperty._id || apiProperty.id || '',
       title: generatedTitle,
-      location: `${apiProperty.address?.city || ''}, ${apiProperty.address?.state || ''}`,
+      location: `${apiProperty.address?.cityName || ''}, ${apiProperty.address?.regionName || ''}`,
       landlordName: 'Property Owner',
       landlordRating: 4.8,
     };

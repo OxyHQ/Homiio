@@ -31,6 +31,15 @@ const Property: Model<IProperty> = models.Property;
 const Address: Model<IAddress> = models.Address;
 const { paginationResponse } = require('../../middlewares/errorHandler');
 const { logger } = require('../../middlewares/logging');
+const {
+  resolveGeoFilterAddressIds,
+  resolveCityId,
+  resolveRegionId,
+} = require('../../services/geoQueryService');
+const {
+  serializePropertyAddresses,
+  ADDRESS_GEO_POPULATE,
+} = require('../../services/propertyAddressSerializer');
 
 /** Address subset selected for id-resolution lookups. */
 type AddressIdLean = { _id: Types.ObjectId };
@@ -55,12 +64,18 @@ async function resolveAddressIds(
     addressConditions.push(centerRadiusToAddressQuery(params.centerRadius));
   }
 
-  // Explicit city/state filters narrow by address location.
+  // Explicit city/state filters narrow by RELATIONAL geo: resolve the name (or
+  // id) to a canonical City/Region id and match the Address ref. An unresolved
+  // city/region name means "no matches", so short-circuit to an empty set.
   if (params.city) {
-    addressConditions.push({ city: new RegExp(escapeRegExp(params.city), 'i') });
+    const cityId = await resolveCityId(params.city);
+    if (!cityId) return [];
+    addressConditions.push({ cityId });
   }
   if (params.state) {
-    addressConditions.push({ state: new RegExp(escapeRegExp(params.state), 'i') });
+    const regionId = await resolveRegionId(params.state);
+    if (!regionId) return [];
+    addressConditions.push({ regionId });
   }
 
   if (addressConditions.length === 0) {
@@ -73,18 +88,43 @@ async function resolveAddressIds(
 }
 
 /**
- * Find Address ids whose human-readable fields match a free-text query. Used
- * as a fallback so a search like "Barcelona" also matches by city/street even
- * when the property title/description text index does not.
+ * Find Address ids that match a free-text query. Used as a fallback so a search
+ * like "Barcelona" also matches by location even when the property
+ * title/description text index does not. Geo is relational, so the location
+ * branch resolves the term against the canonical City/Region collections (via
+ * `resolveGeoFilterAddressIds`); the building-level `street` is still matched
+ * directly on the Address.
  */
 async function resolveTextAddressIds(text: string): Promise<Types.ObjectId[]> {
-  const regex = new RegExp(escapeRegExp(text), 'i');
-  const matches = await Address.find({
-    $or: [{ city: regex }, { state: regex }, { street: regex }, { neighborhood: regex }],
-  })
-    .select('_id')
-    .lean<AddressIdLean[]>();
-  return matches.map((a) => a._id);
+  const [geoIds, streetMatches] = await Promise.all([
+    // Treat the term as both a possible city and a possible region name; the
+    // resolver returns the union's address ids (null when neither resolves).
+    resolveGeoAddressIdsForText(text),
+    Address.find({ street: new RegExp(escapeRegExp(text), 'i') })
+      .select('_id')
+      .lean<AddressIdLean[]>(),
+  ]);
+
+  const ids = new Map<string, Types.ObjectId>();
+  for (const id of geoIds) ids.set(id.toString(), id);
+  for (const a of streetMatches) ids.set(a._id.toString(), a._id);
+  return Array.from(ids.values());
+}
+
+/**
+ * Resolve a free-text term to Address ids by matching it against canonical city
+ * AND region names (union). Returns the combined address-id set (empty when the
+ * term resolves to no city or region).
+ */
+async function resolveGeoAddressIdsForText(text: string): Promise<Types.ObjectId[]> {
+  const [byCity, byRegion] = await Promise.all([
+    resolveGeoFilterAddressIds({ city: text }),
+    resolveGeoFilterAddressIds({ state: text }),
+  ]);
+  const ids = new Map<string, Types.ObjectId>();
+  for (const id of byCity ?? []) ids.set(id.toString(), id);
+  for (const id of byRegion ?? []) ids.set(id.toString(), id);
+  return Array.from(ids.values());
 }
 
 /**
@@ -180,13 +220,18 @@ export async function searchProperties(req: Request, res: Response, next: NextFu
 
     const [properties, total] = await Promise.all([
       Property.find(filter, projection)
-        .populate('addressId')
+        .populate(ADDRESS_GEO_POPULATE)
         .sort(sort)
         .skip(skip)
         .limit(params.limit)
         .lean(),
       Property.countDocuments(filter),
     ]);
+
+    // Resolve each address's city/region/country NAMES from the deep-populated
+    // geo refs, then flatten the refs back to ids, so result cards/map pins
+    // render a location label without an N+1 lookup.
+    serializePropertyAddresses(properties);
 
     res.json(buildSearchResponse(properties, params.page, params.limit, total, 'Search completed successfully'));
   } catch (error) {

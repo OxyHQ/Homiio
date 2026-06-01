@@ -148,11 +148,13 @@ export function usePropertyCreateForm(id: string | undefined) {
       address: property.address?.street || '',
       floor: property.floor,
       showFloor: Boolean(property.floor),
-      neighborhood: property.address?.neighborhood || '',
-      city: property.address?.city || '',
-      state: property.address?.state || '',
+      // Geo is relational: seed the form's resolution inputs from the address's
+      // resolved display NAMES (the geo `*Id` fields are ids, not strings).
+      neighborhood: property.address?.neighborhoodName || '',
+      city: property.address?.cityName || '',
+      state: property.address?.regionName || '',
       postal_code: property.address?.postal_code || '',
-      country: property.address?.country || '',
+      country: property.address?.countryName || '',
       latitude: hasPoint ? coordinates.coordinates[1] : undefined,
       longitude: hasPoint ? coordinates.coordinates[0] : undefined,
       availableFrom: '',

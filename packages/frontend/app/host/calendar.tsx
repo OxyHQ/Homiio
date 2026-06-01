@@ -340,7 +340,7 @@ export default function HostCalendarScreen() {
                 <H2 style={styles.title}>{getPropertyTitle(selectedProperty)}</H2>
                 {selectedProperty.address ? (
                   <BloomText style={styles.subtitle}>
-                    {[selectedProperty.address.city, selectedProperty.address.country]
+                    {[selectedProperty.address.cityName, selectedProperty.address.countryName]
                       .filter(Boolean)
                       .join(', ')}
                   </BloomText>

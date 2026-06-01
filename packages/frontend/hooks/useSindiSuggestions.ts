@@ -48,7 +48,7 @@ export function useSindiSuggestions({ property, conversationContext }: UseSindiS
                 // Build property context for better suggestions
                 const propertyContext = {
                     type: property.type,
-                    city: property.address?.city,
+                    city: property.address?.cityName,
                     bedrooms: property.bedrooms,
                     bathrooms: property.bathrooms,
                     offerings: property.offerings,

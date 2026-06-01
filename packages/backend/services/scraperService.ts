@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { OfferingType } from '@homiio/shared-types';
+import { forwardGeocode } from './geocodingService';
 // API responses are now in the correct format, no transformer needed
 // CommonJS export, use require
 const Property = require('../models/schemas/PropertySchema');
@@ -114,24 +115,29 @@ function sanitizeData(raw: any): any {
     },
   };
 }
-// Enhanced map function with better error handling
-function mapToProperty(raw: any) {
+/**
+ * Map a raw scraped listing into (a) the canonical Address input — building
+ * fields + coordinates + geo NAMES used to resolve the relational geo id chain —
+ * and (b) the Property fields. Geo is relational, so the address is never
+ * embedded on the Property; the upserter resolves it to an `addressId`.
+ */
+function mapToProperty(raw: any): { property: Record<string, unknown>; addressInput: Record<string, unknown> } {
   try {
-    return {
+    const addressInput = {
+      street: raw.address?.street || '',
+      postal_code: raw.address?.zipCode || raw.address?.postal_code || '',
+      // Place NAMES — resolved to country/region/city/neighborhood ids, not stored as text.
+      city: raw.address?.city || '',
+      state: raw.address?.state || '',
+      country: raw.address?.country || 'Spain',
+      neighborhood: raw.address?.neighborhood || '',
+      coordinates: raw.address?.coordinates
+        ? { type: 'Point', coordinates: [raw.address.coordinates.lng, raw.address.coordinates.lat] }
+        : undefined,
+    };
+
+    const property = {
       description: raw.description || '',
-      address: {
-        street: raw.address?.street || '',
-        city: raw.address?.city || '',
-        state: raw.address?.state || '',
-        zipCode: raw.address?.zipCode || '',
-        country: raw.address?.country || 'Spain',
-        neighborhood: raw.address?.neighborhood || '',
-        coordinates: raw.address?.coordinates ? {
-          type: 'Point',
-          coordinates: [raw.address.coordinates.lng, raw.address.coordinates.lat] // [longitude, latitude]
-        } : undefined
-      },
-      location: raw.location,
       type: raw.type || 'apartment',
       bedrooms: raw.bedrooms ?? 0,
       bathrooms: raw.bathrooms ?? 0,
@@ -150,14 +156,16 @@ function mapToProperty(raw: any) {
       furnishedStatus: raw.furnishedStatus ?? 'unfurnished',
       availableFrom: raw.availableFrom,
       images: Array.isArray(raw.images)
-        ? raw.images.map((img, idx) => ({ 
-            url: img.url, 
-            caption: img.caption, 
-            isPrimary: !!img.isPrimary || idx === 0 
+        ? raw.images.map((img, idx) => ({
+            url: img.url,
+            caption: img.caption,
+            isPrimary: !!img.isPrimary || idx === 0
           }))
         : [],
       status: raw.status ?? 'active',
     };
+
+    return { property, addressInput };
   } catch (error) {
     throw new Error(`Failed to map property data: ${error.message}`);
   }
@@ -185,10 +193,26 @@ export async function upsertExternalListing(
       }
 
       const sanitized = sanitizeData(raw);
-      const mapped = mapToProperty(sanitized);
-      
+      const { property: mapped, addressInput } = mapToProperty(sanitized);
+
+      // Resolve the canonical building Address (relational geo). Coordinates are
+      // required; when the source omits them, forward-geocode the address once.
+      if (!addressInput.coordinates) {
+        const query = [addressInput.street, addressInput.city, addressInput.state, addressInput.postal_code, addressInput.country]
+          .filter(Boolean)
+          .join(', ');
+        const geocoded = await forwardGeocode(query);
+        if (!geocoded.success || !geocoded.data?.coordinates) {
+          return { status: 'error', error: 'Could not resolve coordinates for the external listing address' };
+        }
+        addressInput.coordinates = { type: 'Point', coordinates: geocoded.data.coordinates };
+      }
+      const { Address } = require('../models');
+      const address = await Address.findOrCreateCanonical(addressInput);
+
       const update = {
         ...mapped,
+        addressId: address._id,
         source,
         sourceId: raw.id,
         isExternal: true,

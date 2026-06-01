@@ -43,13 +43,15 @@ export const LocationDisplay: React.FC<LocationDisplayProps> = ({ property }) =>
 
   const neighborhoodSummary = useMemo(() => {
     if (!address) return null;
+    // Geo is relational: use the server-resolved display NAMES
+    // (neighborhood/city/region/country), not the geo `*Id` references.
     const parts = [
-      address.neighborhood,
-      address.city,
-      address.state,
-      address.country,
+      address.neighborhoodName,
+      address.cityName,
+      address.regionName,
+      address.countryName,
     ].filter(Boolean);
-    return parts.join(', ');
+    return parts.length > 0 ? parts.join(', ') : null;
   }, [address]);
 
   if (!coordinates && !neighborhoodSummary) return null;

@@ -229,13 +229,17 @@ function buildSyntheticProperty({ id, type, price, city }: SyntheticPropertyInpu
       deposit: 0,
       utilities: DEFAULT_UTILITIES,
     },
+    // Synthetic line: only the resolved display NAME is known (geo is
+    // relational; there are no real geo ids for an AI-parsed search line).
     address: {
       street: '',
-      city,
-      state: '',
       postal_code: '',
-      country: '',
       countryCode: '',
+      countryId: '',
+      regionId: '',
+      cityId: '',
+      cityName: city,
+      location: city,
     },
     status: DEFAULT_PROPERTY_STATUS,
     bedrooms: DEFAULT_ROOM_COUNT,

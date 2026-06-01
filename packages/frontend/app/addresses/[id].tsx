@@ -43,17 +43,18 @@ type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 interface AddressData {
   _id: string;
   street: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
-  neighborhood?: string;
+  postal_code?: string;
+  /** Server-resolved geo display names (geo is relational). */
+  cityName?: string;
+  regionName?: string;
+  countryName?: string;
+  neighborhoodName?: string;
   coordinates: {
     type: 'Point';
     coordinates: [number, number];
   };
-  fullAddress: string;
-  location: string;
+  /** Composed display label ("City, Region, Country"), when geo resolves. */
+  location?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -528,10 +529,10 @@ export default function AddressDetailsPage() {
 
   const getAddressTitle = () => {
     if (!address) return 'Address';
-    if (address.fullAddress) return address.fullAddress;
+    const parts = [address.street, address.cityName, address.regionName].filter(Boolean);
+    if (parts.length > 0) return parts.join(', ');
     if (address.location) return address.location;
-    const parts = [address.street, address.city, address.state].filter(Boolean);
-    return parts.length > 0 ? parts.join(', ') : 'Address';
+    return 'Address';
   };
 
   const headerTitle = (() => {
@@ -575,10 +576,12 @@ export default function AddressDetailsPage() {
 
   const addressForDisplay = {
     street: address.street,
-    city: address.city,
-    state: address.state,
-    zipCode: address.zipCode,
-    country: address.country,
+    // Geo is relational: feed the resolved display NAMES into the presentational
+    // AddressDisplay (which renders city/state/zip/country strings).
+    city: address.cityName ?? '',
+    state: address.regionName ?? '',
+    zipCode: address.postal_code ?? '',
+    country: address.countryName,
     coordinates: address.coordinates
       ? {
           lat: address.coordinates.coordinates[1],
@@ -646,9 +649,9 @@ export default function AddressDetailsPage() {
 
           <View style={styles.sectionCard}>
             <NeighborhoodRatingWidget
-              neighborhoodName={address.neighborhood || ''}
-              city={address.city}
-              state={address.state}
+              neighborhoodName={address.neighborhoodName || ''}
+              city={address.cityName ?? ''}
+              state={address.regionName ?? ''}
             />
           </View>
 

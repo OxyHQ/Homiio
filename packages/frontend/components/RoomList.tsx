@@ -86,7 +86,7 @@ const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
                 </View>
 
                 <Text style={styles.location} numberOfLines={1}>
-                    {[property.address?.city, property.address?.state].filter(Boolean).join(', ')}
+                    {[property.address?.cityName, property.address?.regionName].filter(Boolean).join(', ')}
                 </Text>
 
                 {/* Room Features */}

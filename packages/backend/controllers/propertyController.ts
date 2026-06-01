@@ -11,6 +11,7 @@ class PropertyController { }
   'getPropertyById',
   'getMyProperties',
   'updateProperty',
+  'markPropertyTransacted',
   'deleteProperty',
   'searchProperties',
   'findNearbyProperties',

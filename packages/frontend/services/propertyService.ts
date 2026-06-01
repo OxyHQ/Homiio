@@ -6,6 +6,8 @@ import {
   PropertyImage,
   PropertyAreaInsights,
   PropertyNearbyServices,
+  CreatePropertyData,
+  UpdatePropertyData,
 } from '@homiio/shared-types';
 
 // Re-export types for use in other files
@@ -172,12 +174,13 @@ class PropertyService {
       }
     }
 
-    // Location match
+    // Location match. Geo is relational: compare against the server-resolved
+    // display NAMES (`cityName`/`regionName`), not the geo id references.
     if (preferences.preferredLocations && preferences.preferredLocations.length > 0) {
       const locationMatch = preferences.preferredLocations.some(
         (loc: any) =>
-          property.address.city.toLowerCase() === loc.city.toLowerCase() &&
-          property.address.state?.toLowerCase() === loc.state?.toLowerCase()
+          property.address.cityName?.toLowerCase() === loc.city?.toLowerCase() &&
+          property.address.regionName?.toLowerCase() === loc.state?.toLowerCase()
       );
       if (!locationMatch) {
         score -= 15;
@@ -366,9 +369,11 @@ class PropertyService {
     return response.data.data;
   }
 
-  // Create property
+  // Create property. Accepts the create DTO whose `address` is an AddressInput
+  // (place NAMES + coordinates the backend resolves into the relational geo
+  // chain), not a serialized Property.
   async createProperty(
-    data: Partial<Property>,
+    data: CreatePropertyData,
   ): Promise<Property> {
     try {
       const response = await api.post(this.baseUrl, data);
@@ -378,10 +383,11 @@ class PropertyService {
     }
   }
 
-  // Update property
+  // Update property. Accepts a partial update DTO (same AddressInput-based
+  // `address` resolution as create).
   async updateProperty(
     propertyId: string,
-    data: Partial<Property>,
+    data: UpdatePropertyData,
   ): Promise<Property> {
     try {
       const response = await api.put(`${this.baseUrl}/${propertyId}`, data);

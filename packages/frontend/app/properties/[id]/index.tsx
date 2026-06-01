@@ -392,7 +392,7 @@ export default function PropertyDetailPage() {
   }, [oxyServices, activeSessionId, landlordProfile, t]);
 
   const handlePublicHousingApply = useCallback(() => {
-    const state = (apiProperty?.address?.state || '').toLowerCase();
+    const state = (apiProperty?.address?.regionName || '').toLowerCase();
     const stateWebsites: Record<string, string> = {
       california:
         'https://www.hcd.ca.gov/grants-funding/active-funding/multifamily-housing-program',
@@ -403,7 +403,7 @@ export default function PropertyDetailPage() {
     const websiteUrl =
       stateWebsites[state] || 'https://www.hud.gov/topics/rental_assistance/phprog';
     router.push(`/browser?url=${encodeURIComponent(websiteUrl)}`);
-  }, [apiProperty?.address?.state, router]);
+  }, [apiProperty?.address?.regionName, router]);
 
   const handleShare = useCallback(async () => {
     if (!property) return;

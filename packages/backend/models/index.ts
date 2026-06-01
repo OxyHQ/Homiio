@@ -8,7 +8,10 @@ const SavedPropertyFolderModel = require('./schemas/SavedPropertyFolderSchema');
 const SavedSearchModel = require('./schemas/SavedSearchSchema');
 const ProfileModel = require('./schemas/ProfileSchema');
 const ConversationModel = require('./schemas/ConversationSchema');
+const CountryModel = require('./schemas/CountrySchema');
+const RegionModel = require('./schemas/RegionSchema');
 const CityModel = require('./schemas/CitySchema');
+const NeighborhoodModel = require('./schemas/NeighborhoodSchema');
 const SavedModel = require('./schemas/SavedSchema');
 const BillingModel = require('./schemas/BillingSchema');
 const ReservationModel = require('./schemas/ReservationSchema');
@@ -17,6 +20,10 @@ const NotificationModel = require('./schemas/NotificationSchema');
 const ExchangeRequestModel = require('./schemas/ExchangeRequestSchema');
 const ExchangeReviewModel = require('./schemas/ExchangeReviewSchema');
 const ListingReportModel = require('./schemas/ListingReportSchema');
+const PartnerModel = require('./schemas/PartnerSchema');
+const CommissionModel = require('./schemas/CommissionSchema');
+const ImageModel = require('./schemas/ImageSchema');
+const PlacePoiModel = require('./schemas/PlacePoiSchema');
 
 // Import the Review model as TypeScript model
 const ReviewModel = require('./Review').Review;
@@ -33,7 +40,10 @@ module.exports = {
   SavedSearch: SavedSearchModel,
   Profile: ProfileModel,
   Conversation: ConversationModel,
+  Country: CountryModel,
+  Region: RegionModel,
   City: CityModel,
+  Neighborhood: NeighborhoodModel,
   Saved: SavedModel,
   Billing: BillingModel,
   Reservation: ReservationModel,
@@ -41,5 +51,9 @@ module.exports = {
   Notification: NotificationModel,
   ExchangeRequest: ExchangeRequestModel,
   ExchangeReview: ExchangeReviewModel,
-  ListingReport: ListingReportModel
+  ListingReport: ListingReportModel,
+  Partner: PartnerModel,
+  Commission: CommissionModel,
+  Image: ImageModel,
+  PlacePoi: PlacePoiModel
 };

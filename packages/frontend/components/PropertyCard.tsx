@@ -7,6 +7,7 @@ import { PriceUnit, Property } from '@homiio/shared-types';
 import {
   getPropertyTitle,
   getPropertyImageSource,
+  getPropertyLocationLabel,
   resolveOfferingSummaries,
   resolvePrimaryOffering,
 } from '@/utils/propertyUtils';
@@ -258,7 +259,7 @@ export function PropertyCard({
   const propertyData = {
     id: property._id || property.id,
     title: getPropertyTitle(property),
-    location: `${property.address?.city || ''}, ${property.address?.state || ''}`,
+    location: getPropertyLocationLabel(property),
     price: primaryOffering.amount,
     currency: primaryOffering.currency,
     priceUnit: primaryOffering.priceUnit,

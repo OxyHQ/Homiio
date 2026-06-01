@@ -5,14 +5,14 @@
  * search.
  *
  * This sits on the home page between the property carousel and the
- * featured grid; it answers the visual question "what does Spain look
+ * featured grid; it answers the visual question "what does this region look
  * like right now?" without leaning on long-form copy.
  *
- * Photos come from the Unsplash open library, queried by city name.
- * Each photo is a 1280-wide JPEG; expo-image caches them aggressively
- * so re-renders feel instant. If the user has no network or a photo
- * 404s, the gradient fallback inherited from the underlying View shows
- * through.
+ * Cities + photos are DB-sourced: each {@link City} carries a self-hosted cover
+ * image (`coverImageId.urls`, stored in our own object storage at seed time) and
+ * its populated region/country names. expo-image caches the photos aggressively
+ * so re-renders feel instant; when a city has no cover image the gradient
+ * fallback inherited from the underlying View shows through.
  */
 import React, { useRef, useState } from 'react';
 import {
@@ -32,21 +32,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMediaQuery } from 'react-responsive';
 
 import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
+import type { City } from '@homiio/shared-types';
 
 import { colors } from '@/styles/colors';
 import { cardShadow, gridGap, radius, spacing, tracker } from '@/constants/styles';
-
-export interface CityShowcaseItem {
-  id: string;
-  name: string;
-  subtitle?: string;
-  imageUrl: string;
-}
+import { cityRegionName, getCityImageSource } from '@/utils/cityDisplay';
 
 interface CityShowcaseSectionProps {
   title: string;
-  items: readonly CityShowcaseItem[];
-  onPressCity: (item: CityShowcaseItem) => void;
+  /** DB cities to showcase (each with populated region + cover image). */
+  items: readonly City[];
+  onPressCity: (city: City) => void;
 }
 
 const CARD_GAP = gridGap.normal;
@@ -127,13 +123,13 @@ export function CityShowcaseSection({ title, items, onPressCity }: CityShowcaseS
           contentContainerStyle={styles.scrollContent}
         >
           <View style={styles.rowFlex}>
-            {items.map((item) => (
+            {items.map((city) => (
               <CityCard
-                key={item.id}
-                item={item}
+                key={city._id}
+                city={city}
                 width={cardWidth}
                 height={cardHeight}
-                onPress={() => onPressCity(item)}
+                onPress={() => onPressCity(city)}
               />
             ))}
           </View>
@@ -144,15 +140,23 @@ export function CityShowcaseSection({ title, items, onPressCity }: CityShowcaseS
 }
 
 interface CityCardProps {
-  item: CityShowcaseItem;
+  city: City;
   width: number;
   height: number;
   onPress: () => void;
 }
 
-const CityCard: React.FC<CityCardProps> = ({ item, width, height, onPress }) => {
+const CityCard: React.FC<CityCardProps> = ({ city, width, height, onPress }) => {
   const [hovered, setHovered] = useState(false);
   const isWeb = Platform.OS === 'web';
+  const imageSource = getCityImageSource(city, 'large');
+  // Subtitle: the city's region (e.g. "Catalonia"), resolved from the populated
+  // region ref. Falls back to a short property-count line when no region name.
+  const subtitle =
+    cityRegionName(city) ||
+    (typeof city.propertiesCount === 'number' && city.propertiesCount > 0
+      ? `${city.propertiesCount} homes`
+      : undefined);
 
   return (
     <Pressable
@@ -160,20 +164,28 @@ const CityCard: React.FC<CityCardProps> = ({ item, width, height, onPress }) => 
       onHoverIn={() => setHovered(true)}
       onHoverOut={() => setHovered(false)}
       accessibilityRole="button"
-      accessibilityLabel={`Explore homes in ${item.name}`}
+      accessibilityLabel={`Explore homes in ${city.name}`}
       style={[
         styles.card,
         { width, height },
         hovered && isWeb ? styles.cardHover : null,
       ]}
     >
-      <Image
-        source={{ uri: item.imageUrl }}
-        style={styles.cardImage}
-        contentFit="cover"
-        transition={200}
-        cachePolicy="memory-disk"
-      />
+      {imageSource ? (
+        <Image
+          source={imageSource}
+          style={styles.cardImage}
+          contentFit="cover"
+          transition={200}
+          cachePolicy="memory-disk"
+        />
+      ) : (
+        <LinearGradient
+          colors={[colors.primaryColor, colors.secondaryLight]}
+          style={styles.cardImage}
+          pointerEvents="none"
+        />
+      )}
       <LinearGradient
         colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.55)']}
         locations={[0.4, 1]}
@@ -181,10 +193,10 @@ const CityCard: React.FC<CityCardProps> = ({ item, width, height, onPress }) => 
         pointerEvents="none"
       />
       <View style={styles.cardCopy}>
-        <BloomText style={styles.cardCity}>{item.name}</BloomText>
-        {item.subtitle ? (
+        <BloomText style={styles.cardCity}>{city.name}</BloomText>
+        {subtitle ? (
           <BloomText style={styles.cardSubtitle} numberOfLines={1}>
-            {item.subtitle}
+            {subtitle}
           </BloomText>
         ) : null}
       </View>

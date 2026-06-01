@@ -14,6 +14,10 @@ router.post("/test-telegram", validation.validateProperty, asyncHandler(property
 router.put("/:propertyId", validation.validateProperty, asyncHandler(propertyController.updateProperty));
 router.delete("/:propertyId", asyncHandler(propertyController.deleteProperty));
 
+// Close a deal (rented/sold/exchanged) — owner only; fires the partner
+// commission trigger (idempotent: at most one commission per property).
+router.post("/:propertyId/mark-transacted", asyncHandler(propertyController.markPropertyTransacted));
+
 // Property tracking (requires authentication)
 router.post("/:propertyId/track-view", asyncHandler(profileController.trackPropertyView));
 

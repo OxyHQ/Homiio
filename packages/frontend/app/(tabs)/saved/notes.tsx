@@ -56,13 +56,13 @@ export default function NotesScreen() {
     savedProperties.forEach((p) => {
       const pid = (p._id || p.id) as string;
       const notesArr = parseNotesString(p.notes);
-      const title = getPropertyTitle(p) || p.address?.city || 'Property';
+      const title = getPropertyTitle(p) || p.address?.cityName || 'Property';
       const image = getPropertyImageSource(p);
       // Headline price for the saved-note card: monthly when present, else the
       // nightly rate for vacation-only listings.
       const price = p.longTermRent?.monthlyAmount ?? p.shortTermRent?.nightlyRate;
       const currency = p.longTermRent?.currency ?? p.shortTermRent?.currency;
-      const location = [p.address?.city, p.address?.state].filter(Boolean).join(', ');
+      const location = [p.address?.cityName, p.address?.regionName].filter(Boolean).join(', ');
       const bedrooms = p.bedrooms;
       const bathrooms = p.bathrooms;
       notesArr.forEach((n) =>
@@ -298,7 +298,7 @@ export default function NotesScreen() {
                           onPress={() => setSelectedPropertyId(pid)}
                         >
                           <Text style={[styles.pillText, isSel && styles.pillTextActive]}>
-                            {getPropertyTitle(p) || p.address?.city || 'Property'}
+                            {getPropertyTitle(p) || p.address?.cityName || 'Property'}
                           </Text>
                         </TouchableOpacity>
                       );

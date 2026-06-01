@@ -323,6 +323,115 @@
         "question": "What are the rental application requirements?",
         "answer": "Requirements vary by property, but typically include proof of income, rental history, credit check, and references. Each listing will specify the exact requirements needed."
       }
+    },
+    "cityShowcase": {
+      "title": "Explore {{place}}",
+      "defaultPlace": "Spain"
+    }
+  },
+  "agent": {
+    "menu": {
+      "section": "Earn",
+      "title": "Earn with Homiio",
+      "description": "Bring homes to Homiio and earn when they rent or sell."
+    },
+    "hero": {
+      "title": "Anyone can be a real estate agent.",
+      "subtitle": "Bring a home to Homiio. When it rents or sells, you earn.",
+      "trust": "No license needed. Work from your phone."
+    },
+    "cta": {
+      "start": "Start earning",
+      "share": "Share your link"
+    },
+    "how": {
+      "title": "How it works",
+      "steps": {
+        "find": {
+          "title": "Find a home and its owner",
+          "body": "Spot a great place: a friend's flat, a vacancy, anything."
+        },
+        "list": {
+          "title": "They list it with your link",
+          "body": "The owner publishes on Homiio through your referral."
+        },
+        "earn": {
+          "title": "It rents or sells — you get paid",
+          "body": "Earn a reward every time a home you brought rents or sells."
+        }
+      }
+    },
+    "calculator": {
+      "title": "See what you could earn",
+      "monthlyRent": "Monthly rent",
+      "salePrice": "Sale price",
+      "perMonth": "mo",
+      "result": "You earn",
+      "caption": "Paid when the deal closes — no license needed.",
+      "flatNoteSale": "Flat reward per closed sale",
+      "flatNoteExchange": "Flat reward per exchange",
+      "offerings": {
+        "rent": "Rent",
+        "sale": "Sale",
+        "exchange": "Exchange"
+      }
+    },
+    "rewards": {
+      "title": "Level up, get rewarded",
+      "subtitle": "The more you bring in, the more you unlock.",
+      "pointsLabel": "{{count}} pts",
+      "tiers": {
+        "bronze": "Bronze",
+        "silver": "Silver",
+        "gold": "Gold",
+        "platinum": "Platinum"
+      },
+      "perks": {
+        "profile": "Your Homiio agent profile",
+        "brandedPen": "Homiio-branded pen",
+        "prioritySupport": "Priority support",
+        "businessCards": "Personalized business cards",
+        "featuredBadge": "Featured agent badge",
+        "swagBox": "Premium swag box",
+        "higherShare": "Higher commission share"
+      }
+    },
+    "referral": {
+      "title": "Your referral link",
+      "copy": "Copy",
+      "copiedShort": "Copied",
+      "copied": "Link copied",
+      "copyFailed": "Could not copy the link",
+      "share": "Share your link",
+      "shareTitle": "Earn with Homiio",
+      "shareMessage": "List your home on Homiio: {{link}}",
+      "shareFailed": "Could not share the link"
+    },
+    "dashboard": {
+      "title": "Your dashboard",
+      "referrals": "Referrals",
+      "listings": "Listings",
+      "pending": "Pending",
+      "earned": "Earned",
+      "pointsValue": "{{count}} pts",
+      "toNext": "{{points}} pts to {{tier}}",
+      "maxTier": "You've reached the top tier.",
+      "recentReferrals": "Your referrals",
+      "noReferrals": "No referred listings yet — share your link to get started.",
+      "recentEarnings": "Recent earnings",
+      "noEarnings": "No earnings yet — you'll see payouts here when a referred deal closes.",
+      "status": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "paid": "Paid",
+        "cancelled": "Cancelled"
+      }
+    },
+    "banner": {
+      "title": "Start today. No license needed.",
+      "subtitle": "Turn the homes around you into income.",
+      "cta": "Become an agent",
+      "trust": "No license needed. Work from your phone."
     }
   },
   "tips": {

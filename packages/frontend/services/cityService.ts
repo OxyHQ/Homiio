@@ -10,7 +10,6 @@ import {
   CityFilters,
   CityPropertiesResponse,
   CitiesResponse,
-  Property,
 } from '@homiio/shared-types';
 
 // Re-export the types for backward compatibility
@@ -23,9 +22,12 @@ class CityService {
   async getCities(filters: CityFilters = {}): Promise<CitiesResponse> {
     const params = new URLSearchParams();
 
+    // Geo is relational: cities filter by country/region IDS (or ISO-2 country
+    // code), resolved server-side — there is no free-text state/country param.
     if (filters.search) params.append('search', filters.search);
-    if (filters.state) params.append('state', filters.state);
-    if (filters.country) params.append('country', filters.country);
+    if (filters.countryId) params.append('countryId', filters.countryId);
+    if (filters.countryCode) params.append('countryCode', filters.countryCode);
+    if (filters.regionId) params.append('regionId', filters.regionId);
     if (filters.limit) params.append('limit', filters.limit.toString());
     if (filters.page) params.append('page', filters.page.toString());
 
@@ -95,7 +97,11 @@ class CityService {
     if (options.minPrice) params.append('minPrice', options.minPrice.toString());
 
     const response = await api.get(`/api/cities/${cityId}/properties?${params.toString()}`);
-    return response.data;
+    // The endpoint wraps the payload as `{ success, data: { city, properties,
+    // pagination } }`; unwrap to the `CityPropertiesResponse` shape (tolerating a
+    // flat body for safety).
+    const body = response.data;
+    return (body?.data ?? body) as CityPropertiesResponse;
   }
 
   /**

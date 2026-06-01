@@ -236,6 +236,115 @@
         "question": "¿Cuáles son los requisitos de la aplicación de alquiler?",
         "answer": "Los requisitos varían según la propiedad, pero típicamente incluyen comprobante de ingresos, historial de alquiler, verificación de crédito y referencias. Cada listado especificará los requisitos exactos necesarios."
       }
+    },
+    "cityShowcase": {
+      "title": "Explora {{place}}",
+      "defaultPlace": "España"
+    }
+  },
+  "agent": {
+    "menu": {
+      "section": "Gana",
+      "title": "Gana con Homiio",
+      "description": "Trae hogares a Homiio y gana cuando se alquilen o se vendan."
+    },
+    "hero": {
+      "title": "Cualquiera puede ser agente inmobiliario.",
+      "subtitle": "Trae un hogar a Homiio. Cuando se alquile o se venda, ganas.",
+      "trust": "Sin licencia. Trabaja desde tu móvil."
+    },
+    "cta": {
+      "start": "Empieza a ganar",
+      "share": "Comparte tu enlace"
+    },
+    "how": {
+      "title": "Cómo funciona",
+      "steps": {
+        "find": {
+          "title": "Encuentra un hogar y a su dueño",
+          "body": "Detecta un buen sitio: el piso de un amigo, una vacante, lo que sea."
+        },
+        "list": {
+          "title": "Lo publican con tu enlace",
+          "body": "El propietario publica en Homiio a través de tu referido."
+        },
+        "earn": {
+          "title": "Se alquila o se vende: cobras",
+          "body": "Gana una recompensa cada vez que un hogar que trajiste se alquila o se vende."
+        }
+      }
+    },
+    "calculator": {
+      "title": "Mira cuánto podrías ganar",
+      "monthlyRent": "Alquiler mensual",
+      "salePrice": "Precio de venta",
+      "perMonth": "mes",
+      "result": "Ganas",
+      "caption": "Se paga cuando se cierra el trato, sin licencia.",
+      "flatNoteSale": "Recompensa fija por cada venta cerrada",
+      "flatNoteExchange": "Recompensa fija por cada intercambio",
+      "offerings": {
+        "rent": "Alquiler",
+        "sale": "Venta",
+        "exchange": "Intercambio"
+      }
+    },
+    "rewards": {
+      "title": "Sube de nivel y consigue recompensas",
+      "subtitle": "Cuanto más traigas, más desbloqueas.",
+      "pointsLabel": "{{count}} pts",
+      "tiers": {
+        "bronze": "Bronce",
+        "silver": "Plata",
+        "gold": "Oro",
+        "platinum": "Platino"
+      },
+      "perks": {
+        "profile": "Tu perfil de agente de Homiio",
+        "brandedPen": "Bolígrafo con la marca Homiio",
+        "prioritySupport": "Soporte prioritario",
+        "businessCards": "Tarjetas de visita personalizadas",
+        "featuredBadge": "Insignia de agente destacado",
+        "swagBox": "Caja de regalos premium",
+        "higherShare": "Mayor porcentaje de comisión"
+      }
+    },
+    "referral": {
+      "title": "Tu enlace de referido",
+      "copy": "Copiar",
+      "copiedShort": "Copiado",
+      "copied": "Enlace copiado",
+      "copyFailed": "No se pudo copiar el enlace",
+      "share": "Comparte tu enlace",
+      "shareTitle": "Gana con Homiio",
+      "shareMessage": "Publica tu hogar en Homiio: {{link}}",
+      "shareFailed": "No se pudo compartir el enlace"
+    },
+    "dashboard": {
+      "title": "Tu panel",
+      "referrals": "Referidos",
+      "listings": "Anuncios",
+      "pending": "Pendiente",
+      "earned": "Ganado",
+      "pointsValue": "{{count}} pts",
+      "toNext": "{{points}} pts para {{tier}}",
+      "maxTier": "Has alcanzado el nivel máximo.",
+      "recentReferrals": "Tus referidos",
+      "noReferrals": "Aún no hay anuncios referidos: comparte tu enlace para empezar.",
+      "recentEarnings": "Ganancias recientes",
+      "noEarnings": "Aún no hay ganancias: verás los pagos aquí cuando se cierre un trato referido.",
+      "status": {
+        "pending": "Pendiente",
+        "approved": "Aprobado",
+        "paid": "Pagado",
+        "cancelled": "Cancelado"
+      }
+    },
+    "banner": {
+      "title": "Empieza hoy. Sin licencia.",
+      "subtitle": "Convierte los hogares que te rodean en ingresos.",
+      "cta": "Hazte agente",
+      "trust": "Sin licencia. Trabaja desde tu móvil."
     }
   },
   "search": {

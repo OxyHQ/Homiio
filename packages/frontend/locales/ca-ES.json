@@ -258,6 +258,115 @@
         "question": "Quins són els requisits de la sol·licitud de lloguer?",
         "answer": "Els requisits varien segons la propietat, però típicament inclouen comprovant d'ingressos, historial de lloguer, verificació de crèdit i referències. Cada llistat especificarà els requisits exactes necessaris."
       }
+    },
+    "cityShowcase": {
+      "title": "Explora {{place}}",
+      "defaultPlace": "Espanya"
+    }
+  },
+  "agent": {
+    "menu": {
+      "section": "Guanya",
+      "title": "Guanya amb Homiio",
+      "description": "Porta llars a Homiio i guanya quan es lloguin o es venguin."
+    },
+    "hero": {
+      "title": "Qualsevol pot ser agent immobiliari.",
+      "subtitle": "Porta una llar a Homiio. Quan es llogui o es vengui, guanyes.",
+      "trust": "Sense llicència. Treballa des del mòbil."
+    },
+    "cta": {
+      "start": "Comença a guanyar",
+      "share": "Comparteix el teu enllaç"
+    },
+    "how": {
+      "title": "Com funciona",
+      "steps": {
+        "find": {
+          "title": "Troba una llar i el seu propietari",
+          "body": "Detecta un bon lloc: el pis d'un amic, un habitatge buit, el que sigui."
+        },
+        "list": {
+          "title": "El publiquen amb el teu enllaç",
+          "body": "El propietari publica a Homiio a través del teu referit."
+        },
+        "earn": {
+          "title": "Es lloga o es ven: cobres",
+          "body": "Guanya una recompensa cada cop que una llar que has portat es lloga o es ven."
+        }
+      }
+    },
+    "calculator": {
+      "title": "Mira quant podries guanyar",
+      "monthlyRent": "Lloguer mensual",
+      "salePrice": "Preu de venda",
+      "perMonth": "mes",
+      "result": "Guanyes",
+      "caption": "Es paga quan es tanca el tracte, sense llicència.",
+      "flatNoteSale": "Recompensa fixa per cada venda tancada",
+      "flatNoteExchange": "Recompensa fixa per cada intercanvi",
+      "offerings": {
+        "rent": "Lloguer",
+        "sale": "Venda",
+        "exchange": "Intercanvi"
+      }
+    },
+    "rewards": {
+      "title": "Puja de nivell i aconsegueix recompenses",
+      "subtitle": "Com més portis, més desbloqueges.",
+      "pointsLabel": "{{count}} pts",
+      "tiers": {
+        "bronze": "Bronze",
+        "silver": "Plata",
+        "gold": "Or",
+        "platinum": "Platí"
+      },
+      "perks": {
+        "profile": "El teu perfil d'agent de Homiio",
+        "brandedPen": "Bolígraf amb la marca Homiio",
+        "prioritySupport": "Suport prioritari",
+        "businessCards": "Targetes de visita personalitzades",
+        "featuredBadge": "Insígnia d'agent destacat",
+        "swagBox": "Caixa de regals premium",
+        "higherShare": "Major percentatge de comissió"
+      }
+    },
+    "referral": {
+      "title": "El teu enllaç de referit",
+      "copy": "Copia",
+      "copiedShort": "Copiat",
+      "copied": "Enllaç copiat",
+      "copyFailed": "No s'ha pogut copiar l'enllaç",
+      "share": "Comparteix el teu enllaç",
+      "shareTitle": "Guanya amb Homiio",
+      "shareMessage": "Publica la teva llar a Homiio: {{link}}",
+      "shareFailed": "No s'ha pogut compartir l'enllaç"
+    },
+    "dashboard": {
+      "title": "El teu tauler",
+      "referrals": "Referits",
+      "listings": "Anuncis",
+      "pending": "Pendent",
+      "earned": "Guanyat",
+      "pointsValue": "{{count}} pts",
+      "toNext": "{{points}} pts per a {{tier}}",
+      "maxTier": "Has assolit el nivell màxim.",
+      "recentReferrals": "Els teus referits",
+      "noReferrals": "Encara no hi ha anuncis referits: comparteix el teu enllaç per començar.",
+      "recentEarnings": "Guanys recents",
+      "noEarnings": "Encara no hi ha guanys: veuràs els pagaments aquí quan es tanqui un tracte referit.",
+      "status": {
+        "pending": "Pendent",
+        "approved": "Aprovat",
+        "paid": "Pagat",
+        "cancelled": "Cancel·lat"
+      }
+    },
+    "banner": {
+      "title": "Comença avui. Sense llicència.",
+      "subtitle": "Converteix les llars que t'envolten en ingressos.",
+      "cta": "Fes-te agent",
+      "trust": "Sense llicència. Treballa des del mòbil."
     }
   },
   "search": {

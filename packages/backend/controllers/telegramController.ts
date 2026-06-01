@@ -81,33 +81,20 @@ class TelegramController {
     try {
       const { propertyId } = req.params;
 
-      // Get the property from database
-      const property = await Property.findById(propertyId);
+      // Populate the address so the notifier can resolve the relational geo.
+      const property = await Property.findById(propertyId).populate('addressId');
       if (!property) {
         return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));
       }
 
+      const { resolveAddressDisplay } = require('../services/geoDisplayService');
+      const geo = await resolveAddressDisplay(property.address);
       const success = await telegramService.sendPropertyNotification(property);
 
-      if (success) {
-        res.json(successResponse(
-          { 
-            propertyId,
-            city: property.address?.city,
-            sent: true 
-          },
-          'Property notification sent successfully'
-        ));
-      } else {
-        res.status(500).json(successResponse(
-          { 
-            propertyId,
-            city: property.address?.city,
-            sent: false 
-          },
-          'Failed to send property notification'
-        ));
-      }
+      res.status(success ? 200 : 500).json(successResponse(
+        { propertyId, city: geo.city, sent: success },
+        success ? 'Property notification sent successfully' : 'Failed to send property notification'
+      ));
     } catch (error) {
       if (error.name === 'CastError') {
         return next(new AppError('Invalid property ID', 400, 'INVALID_PROPERTY_ID'));
@@ -132,20 +119,16 @@ class TelegramController {
         // Send notifications based on filters
         const query: any = {};
         
-        // Handle city filter with Address lookup
+        // Handle city filter via RELATIONAL geo resolution (name/id → cityId).
         if (filters.city) {
-          const { Address } = require('../models');
-          const addressQuery = { city: new RegExp(filters.city, 'i') };
-          const matchingAddresses = await Address.find(addressQuery).select('_id');
-          const addressIds = matchingAddresses.map(addr => addr._id);
-          
-          if (addressIds.length === 0) {
+          const { resolveGeoFilterAddressIds } = require('../services/geoQueryService');
+          const addressIds = await resolveGeoFilterAddressIds({ city: String(filters.city) });
+          if (addressIds === null || addressIds.length === 0) {
             return res.json(successResponse(
               { total: 0, successful: 0, failed: 0 },
               'No properties found in specified city'
             ));
           }
-          
           query.addressId = { $in: addressIds };
         }
         
@@ -263,15 +246,18 @@ class TelegramController {
 
       const results = await telegramService.sendBulkNotifications(recentProperties);
 
+      const { resolveAddressDisplay } = require('../services/geoDisplayService');
+      const properties = await Promise.all(recentProperties.map(async (p) => ({
+        id: p._id,
+        city: (await resolveAddressDisplay(p.address)).city,
+        type: p.type,
+        createdAt: p.createdAt
+      })));
+
       res.json(successResponse({
         ...results,
         timeframe: `${hours} hours`,
-        properties: recentProperties.map(p => ({
-          id: p._id,
-          city: p.address?.city,
-          type: p.type,
-          createdAt: p.createdAt
-        }))
+        properties
       }, 'Test notifications sent for recent properties'));
     } catch (error) {
       next(error);

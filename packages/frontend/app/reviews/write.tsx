@@ -129,10 +129,12 @@ export default function WriteReviewPage() {
         setFormData((prev) => ({
           ...prev,
           street: address.street || '',
-          city: address.city || '',
-          state: address.state || '',
+          // Geo is relational: the address exposes resolved display NAMES; seed
+          // the form's resolution inputs from them (fall back to legacy strings).
+          city: address.cityName || address.city || '',
+          state: address.regionName || address.state || '',
           postal_code: address.postal_code || address.zipCode || '',
-          country: address.country || '',
+          country: address.countryName || address.country || '',
           number: address.number || '',
           building_name: address.building_name || '',
           floor: address.floor || '',

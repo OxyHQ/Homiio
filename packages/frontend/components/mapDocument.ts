@@ -24,7 +24,12 @@ const MAPLIBRE_CSS_URL = `https://unpkg.com/maplibre-gl@${MAPLIBRE_VERSION}/dist
 /** Free, keyless OpenStreetMap-based vector style (positron/bright are alternates). */
 export const DEFAULT_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
 
-const ATTRIBUTION =
+/**
+ * Attribution markup for the compact `AttributionControl`. Exported so the web
+ * map (`Map.web.tsx`, which drives maplibre-gl directly without this HTML
+ * document) renders the exact same OSM/OpenFreeMap credit.
+ */
+export const ATTRIBUTION =
   '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors · <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>';
 
 export interface MapDocumentOptions {
@@ -36,15 +41,22 @@ export interface MapDocumentOptions {
   enableAddressLookup: boolean;
 }
 
+/** CSS class applied to the Airbnb-style price bubble (shared web + native). */
+export const PRICE_PILL_CLASS = 'homiio-price-pill';
+/** Modifier toggled on the pill when its marker is the selected/highlighted one. */
+export const PRICE_PILL_SELECTED_CLASS = 'is-selected';
+
 /**
  * Pill-marker stylesheet. The Airbnb-style price bubble is a real DOM node
  * anchored by a MapLibre `Marker` so we get a rounded-pill shape, soft
  * shadow, and crisp typography that GL circle/symbol layers can't produce.
+ *
+ * Exported so the web map (`Map.web.tsx`) can inject the identical rules into
+ * the document head — the bubbles look the same whether they live inside the
+ * native WebView document or directly in the web app's DOM.
  */
-const MARKER_STYLES = `
-  html,body,#map{height:100%;margin:0;padding:0}
-  #map{position:absolute;inset:0}
-  .homiio-price-pill {
+export const PRICE_PILL_CSS = `
+  .${PRICE_PILL_CLASS} {
     background: #ffffff;
     color: #1a1a1a;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -59,12 +71,18 @@ const MARKER_STYLES = `
     user-select: none;
     line-height: 18px;
   }
-  .homiio-price-pill:hover { transform: scale(1.05); }
-  .homiio-price-pill.is-selected {
+  .${PRICE_PILL_CLASS}:hover { transform: scale(1.05); }
+  .${PRICE_PILL_CLASS}.${PRICE_PILL_SELECTED_CLASS} {
     background: #1a1a1a;
     color: #ffffff;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28), 0 0 0 2px #ffffff;
   }`;
+
+/** Native HTML document stylesheet: full-bleed container reset + the shared pill rules. */
+const MARKER_STYLES = `
+  html,body,#map{height:100%;margin:0;padding:0}
+  #map{position:absolute;inset:0}
+${PRICE_PILL_CSS}`;
 
 /**
  * Map bootstrap script. MapLibre is API-compatible with mapbox-gl, so the

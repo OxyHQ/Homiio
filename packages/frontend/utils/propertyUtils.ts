@@ -1,5 +1,5 @@
 import { generatePropertyTitle, TitleFormat } from './propertyTitleGenerator';
-import { OfferingType, PriceUnit, Property, PropertyImage } from '@homiio/shared-types';
+import { OfferingType, PriceUnit, Property, PropertyAddress, PropertyImage } from '@homiio/shared-types';
 import type { BrowseMode } from '@/components/search/types';
 import propertyPlaceholder from '@/assets/images/property_placeholder.jpg';
 
@@ -255,6 +255,43 @@ function moveCoverToFront<T>(items: readonly T[], coverIndex: number | undefined
 }
 
 /**
+ * Resolve an address's display geo names into the shape the title generator
+ * consumes. Geo is relational: the canonical city/region/country/neighborhood
+ * NAMES are resolved server-side onto the serialized address as
+ * `cityName`/`regionName`/`countryName`/`neighborhoodName` (the `*Id` fields are
+ * ids, not human strings). This maps those resolved names onto the generator's
+ * `{ city, state, country, neighborhood }` keys.
+ */
+function addressDisplayNames(address: PropertyAddress | undefined): {
+  street?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  neighborhood?: string;
+} {
+  return {
+    street: address?.street,
+    city: address?.cityName,
+    state: address?.regionName,
+    country: address?.countryName,
+    neighborhood: address?.neighborhoodName,
+  };
+}
+
+/**
+ * A short, display-ready location label for a property (e.g. "Barcelona,
+ * Catalonia"). Prefers the server-resolved `location` string, then composes from
+ * the resolved city/region names, and returns an empty string when no geo name
+ * resolved (so callers can choose their own placeholder).
+ */
+export function getPropertyLocationLabel(property: Property | undefined): string {
+  const address = property?.address;
+  if (!address) return '';
+  if (address.location) return address.location;
+  return [address.cityName, address.regionName].filter(Boolean).join(', ');
+}
+
+/**
  * Get the title for a property, generating it dynamically if needed
  * @param property - Property object
  * @param format - Title format ('default', 'short', or 'large')
@@ -263,11 +300,7 @@ function moveCoverToFront<T>(items: readonly T[], coverIndex: number | undefined
 export function getPropertyTitle(property: Property, format: TitleFormat = 'default'): string {
   return generatePropertyTitle({
     type: property.type,
-    address: {
-      ...property.address,
-      // Use neighborhood field from address if available
-      neighborhood: property.address.neighborhood,
-    },
+    address: addressDisplayNames(property.address),
     bedrooms: property.bedrooms,
     bathrooms: property.bathrooms,
   }, format);

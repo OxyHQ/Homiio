@@ -277,6 +277,20 @@ const propertySchema = new mongoose.Schema({
     type: Date,
     index: { expireAfterSeconds: 0 }, // TTL index; document auto-removed after this date
   },
+  // Partner (agent) referral attribution — set when the listing is created
+  // through a partner's referral link. `sourcedByReferralCode` is an audit copy
+  // of the code captured at create time (the partner may rotate codes later).
+  sourcedByPartner: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Partner',
+    index: true,
+    sparse: true
+  },
+  sourcedByReferralCode: {
+    type: String,
+    trim: true,
+    lowercase: true
+  },
   description: {
     type: String,
     trim: true,
@@ -460,7 +474,15 @@ const propertySchema = new mongoose.Schema({
     type: rulesSchema,
     default: {}
   },
+  // Property photos, backed by the canonical Image collection. Each entry keeps
+  // the historical `{ url, caption, isPrimary }` read shape (url = the stored
+  // MEDIUM variant) and references its canonical Image via `imageId`, carrying
+  // the full variant `urls` for opt-in use. See `services/imageSerializer`.
   images: [{
+    imageId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Image'
+    },
     url: {
       type: String,
       validate: {
@@ -475,6 +497,22 @@ const propertySchema = new mongoose.Schema({
     isPrimary: {
       type: Boolean,
       default: false
+    },
+    order: {
+      type: Number,
+      default: 0,
+      min: [0, 'Image order cannot be negative']
+    },
+    // All processed variant URLs (small/medium/large/original). Optional so
+    // legacy/external entries that predate the Image collection still validate.
+    urls: {
+      type: new mongoose.Schema({
+        original: { type: String },
+        small: { type: String },
+        medium: { type: String },
+        large: { type: String }
+      }, { _id: false }),
+      default: undefined
     }
   }],
   coverImageIndex: {
@@ -675,26 +713,37 @@ propertySchema.path('offerings').validate({
   message: 'offerings must be non-empty and match exactly the present priced blocks, each with a positive price'
 });
 
-// Virtual for full address (requires population)
+// Helper: read a geo ref's name when the ref is DEEP-populated (id form yields
+// null — names are relational and live on the Country/Region/City docs).
+const geoRefName = (ref: any): string | null =>
+  ref && typeof ref === 'object' && typeof ref.name === 'string' ? ref.name : null;
+
+// Virtual for full address. Requires the address to be populated, and its
+// city/region/country to be DEEP-populated for the names (geo is relational).
 propertySchema.virtual('fullAddress').get(function() {
   const address = this.address || this.addressId;
-  if (address && address.street) {
-    return `${address.street}, ${address.city}, ${address.state} ${address.zipCode}`;
-  }
-  return null;
+  if (!address || !address.street) return null;
+  const parts = [address.street];
+  const city = geoRefName(address.cityId);
+  const region = geoRefName(address.regionId);
+  if (city) parts.push(city);
+  const regionPostal = [region, address.postal_code].filter(Boolean).join(' ').trim();
+  if (regionPostal) parts.push(regionPostal);
+  return parts.join(', ');
 });
 
-// Virtual for location string (requires population)
+// Virtual for location string. Same deep-population requirement for names.
 propertySchema.virtual('location').get(function() {
   const address = this.address || this.addressId;
-  if (address && address.city) {
-    const parts = [];
-    if (address.city) parts.push(address.city);
-    if (address.state) parts.push(address.state);
-    if (address.country && address.country !== 'USA') parts.push(address.country);
-    return parts.join(', ');
-  }
-  return null;
+  if (!address) return null;
+  const parts = [];
+  const city = geoRefName(address.cityId);
+  const region = geoRefName(address.regionId);
+  const country = geoRefName(address.countryId);
+  if (city) parts.push(city);
+  if (region) parts.push(region);
+  if (country) parts.push(country);
+  return parts.length > 0 ? parts.join(', ') : null;
 });
 
 // Virtual for primary image
@@ -812,26 +861,15 @@ propertySchema.statics.search = async function(searchParams) {
     query.amenities = { $in: amenities };
   }
 
-  // If city or state filters are provided, we need to find matching addresses first
+  // If city or state filters are provided, resolve them to canonical geo ids
+  // (City/Region collections) and constrain by the matching Address ids. Geo is
+  // relational, so there is no free-text city/state matching on the Address.
   if (city || state) {
-    const Address = require('./AddressSchema');
-    const addressQuery: any = {};
-    
-    if (city) {
-      addressQuery.city = new RegExp(city, 'i');
+    const { resolveGeoFilterAddressIds } = require('../../services/geoQueryService');
+    const addressIds = await resolveGeoFilterAddressIds({ city, state });
+    if (addressIds === null || addressIds.length === 0) {
+      return []; // No matching city/region, or no addresses there
     }
-    
-    if (state) {
-      addressQuery.state = new RegExp(state, 'i');
-    }
-    
-    const matchingAddresses = await Address.find(addressQuery).select('_id');
-    const addressIds = matchingAddresses.map(addr => addr._id);
-    
-    if (addressIds.length === 0) {
-      return []; // No matching addresses found
-    }
-    
     query.addressId = { $in: addressIds };
   }
 
@@ -841,7 +879,7 @@ propertySchema.statics.search = async function(searchParams) {
 // Geospatial query methods
 propertySchema.statics.findNearby = async function(longitude, latitude, maxDistance = 10000) {
   // First find addresses within the specified distance
-  const Address = require('./AddressSchema');
+  const Address = mongoose.model('Address');
   const nearbyAddresses = await Address.find({
     coordinates: {
       $near: {
@@ -869,7 +907,7 @@ propertySchema.statics.findNearby = async function(longitude, latitude, maxDista
 
 propertySchema.statics.findWithinRadius = async function(longitude, latitude, radiusInMeters) {
   // First find addresses within the specified radius
-  const Address = require('./AddressSchema');
+  const Address = mongoose.model('Address');
   const nearbyAddresses = await Address.find({
     coordinates: {
       $geoWithin: {
@@ -893,7 +931,7 @@ propertySchema.statics.findWithinRadius = async function(longitude, latitude, ra
 
 propertySchema.statics.findInPolygon = async function(coordinates) {
   // First find addresses within the specified polygon
-  const Address = require('./AddressSchema');
+  const Address = mongoose.model('Address');
   const addressesInPolygon = await Address.find({
     coordinates: {
       $geoWithin: {
@@ -935,7 +973,7 @@ propertySchema.methods.updateRating = function(newRating) {
 propertySchema.methods.setLocation = async function(longitude, latitude) {
   // This method now needs to update the referenced address
   if (this.addressId) {
-    const Address = require('./AddressSchema');
+    const Address = mongoose.model('Address');
     const address = await Address.findById(this.addressId);
     if (address) {
       address.setLocation(longitude, latitude);

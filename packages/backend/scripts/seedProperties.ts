@@ -35,6 +35,13 @@ import {
   ProfileType
 } from '@homiio/shared-types';
 import database from '../database/connection';
+import { seedGeo } from './seedGeo';
+import {
+  seedPropertyImages,
+  seedEntityCoverImage,
+  CITY_COVER_IMAGE_URLS,
+  logStorageMode,
+} from './seedImages';
 
 /**
  * Furnished status is defined as an inline enum on PropertySchema (no shared
@@ -48,7 +55,7 @@ const FurnishedStatus = {
   NOT_SPECIFIED: 'not_specified'
 } as const;
 
-const { Property, Address, Profile } = require('../models');
+const { Property, Address, Profile, Country, Region, City, Neighborhood, Image } = require('../models');
 
 const SEED_SOURCE = 'seed';
 const SEED_OWNER_OXY_USER_ID = 'seed-demo-host';
@@ -717,13 +724,16 @@ const properties: SeedProperty[] = [
   }
 ];
 
+/**
+ * Unsplash transform params: format-negotiated, cropped, capped to a sensible
+ * source width/quality. Appended before fetching so the bytes we process and
+ * store are reasonably sized rather than multi-megabyte originals.
+ */
 const UNSPLASH_PARAMS = '?auto=format&fit=crop&w=1200&q=80';
 
-function buildImages(urls: string[]) {
-  return urls.map((url, index) => ({
-    url: `${url}${UNSPLASH_PARAMS}`,
-    isPrimary: index === 0
-  }));
+/** Append the Unsplash transform params to each bare seed photo URL. */
+function withUnsplashParams(urls: readonly string[]): string[] {
+  return urls.map((url) => `${url}${UNSPLASH_PARAMS}`);
 }
 
 /** Build the `offerings` array from whichever priced blocks the seed sets. */
@@ -811,7 +821,12 @@ async function upsertProperty(seed: SeedProperty, profileId: string): Promise<'i
     sale,
     exchange,
     amenities: seed.amenities,
-    images: buildImages(seed.imageUrls),
+    // Photos are attached AFTER the property is saved: each seed photo URL is
+    // fetched once and persisted as a canonical Image doc keyed by the new
+    // property's `_id`, then the resolved `PropertyImageRef[]` is embedded here
+    // (see `seedPropertyImages`). Start empty so the property has an `_id` to
+    // own its images.
+    images: [],
     coverImageIndex: 0,
     leaseTerm: isLongTermCapable ? LeaseDuration.YEARLY : LeaseDuration.FLEXIBLE,
     maxGuests: seed.maxGuests ?? Math.max(1, seed.bedrooms * 2 || 1),
@@ -839,17 +854,78 @@ async function upsertProperty(seed: SeedProperty, profileId: string): Promise<'i
   // cross-field `offerings`↔blocks check needs the whole document as `this`,
   // which Mongoose's update-validators (on findOneAndUpdate) do not provide.
   doc.sourceId = seed.sourceId;
-  await new Property(doc).save();
+  const property = await new Property(doc).save();
+
+  // Backfill the canonical Image collection for this property, then embed the
+  // resolved `{ url, caption, isPrimary, urls }` refs (the shape the frontend
+  // already consumes, now backed by Image docs). `coverImageIndex` stays 0 — the
+  // first/primary photo leads.
+  const imageRefs = await seedPropertyImages(property._id, withUnsplashParams(seed.imageUrls));
+  property.images = imageRefs;
+  await property.save();
 
   return 'inserted';
+}
+
+/**
+ * Seed each city's cover image. For every seeded city with a curated URL, fetch
+ * the photo once, store it as an Image doc (`entityType: 'city'`,
+ * `entityId = city._id`) and set the city's `coverImageId` + `imageIds`. Runs
+ * after geo is seeded so the City rows (and their `_id`s) exist.
+ */
+async function seedCityCoverImages(): Promise<void> {
+  const cities = await City.find({}).select('_id name');
+  for (const city of cities) {
+    const url = CITY_COVER_IMAGE_URLS[city.name as keyof typeof CITY_COVER_IMAGE_URLS];
+    if (!url) {
+      console.warn(`[seed-properties] No curated cover image for city "${city.name}" — skipping`);
+      continue;
+    }
+    try {
+      const imageId = await seedEntityCoverImage('city', city._id, url, `${city.name} cityscape`);
+      if (imageId) {
+        city.coverImageId = imageId;
+        city.imageIds = [imageId];
+        await city.save();
+        console.log(`[seed-properties] city image  ${city.name} -> ${String(imageId)}`);
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`[seed-properties] FAILED city image ${city.name}: ${message}`);
+      throw err;
+    }
+  }
 }
 
 async function run(): Promise<void> {
   console.log('[seed-properties] Connecting to database...');
   await database.connect();
 
-  console.log('[seed-properties] Wiping existing seed properties...');
-  await Property.deleteMany({ source: SEED_SOURCE });
+  // Fresh reseed (no migration): wipe properties, addresses, the geo hierarchy
+  // AND every Image doc (property + geo photos), then re-seed geo so addresses
+  // resolve against canonical rows.
+  console.log('[seed-properties] Wiping properties, addresses, geo collections and images...');
+  await Promise.all([
+    Property.deleteMany({ source: SEED_SOURCE }),
+    Address.deleteMany({}),
+    Country.deleteMany({}),
+    Region.deleteMany({}),
+    City.deleteMany({}),
+    Neighborhood.deleteMany({}),
+    Image.deleteMany({}),
+  ]);
+
+  logStorageMode();
+
+  console.log('[seed-properties] Seeding geo hierarchy (Spain)...');
+  const geoSummary = await seedGeo();
+  console.log(`[seed-properties] Geo seeded: ${geoSummary.countries} country, ${geoSummary.regions} regions, ${geoSummary.cities} cities, ${geoSummary.neighborhoods} neighborhoods`);
+
+  // Seed each city's cover image: fetch the curated photo ONCE, store it as an
+  // Image doc (entityType 'city') in our own object storage, and link it via
+  // `coverImageId` — so the runtime never depends on an external image host.
+  console.log('[seed-properties] Seeding city cover images (fetch-once-then-store)...');
+  await seedCityCoverImages();
 
   console.log('[seed-properties] Ensuring seed owner profile...');
   const profileId = await ensureSeedOwner();
@@ -872,6 +948,13 @@ async function run(): Promise<void> {
       console.error(`[seed-properties] FAILED ${seed.sourceId}: ${message}`);
       throw err;
     }
+  }
+
+  // Refresh each city's cached propertiesCount from its resolved addresses.
+  console.log('[seed-properties] Refreshing city property counts...');
+  const cities = await City.find({}).select('_id name');
+  for (const city of cities) {
+    await city.updatePropertiesCount();
   }
 
   const totalSeed = await Property.countDocuments({ source: SEED_SOURCE });

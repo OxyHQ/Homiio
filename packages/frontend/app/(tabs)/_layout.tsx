@@ -61,7 +61,7 @@ export default function TabsLayout() {
           md="explore"
         />
         <NativeTabs.Trigger.Label>
-          {t('sidebar.navigation.explore')}
+          {t('sidebar.navigation.home')}
         </NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
 

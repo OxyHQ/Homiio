@@ -8,6 +8,12 @@
 // Common types and enums
 export * from './common';
 
+// Geo hierarchy entities (Country / Region / City / Neighborhood)
+export * from './geo';
+
+// Media / Image entities (reusable image collection backing all entity photos)
+export * from './media';
+
 // Address types
 export * from './address';
 
@@ -37,3 +43,6 @@ export * from './exchange';
 
 // Listing report types (trust & safety flagging)
 export * from './report';
+
+// Partner (agent) referral-commission types
+export * from './partner';

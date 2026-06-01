@@ -23,7 +23,7 @@ export const LocationSection: React.FC<Props> = ({ property }) => {
     const coordinates = property?.address?.coordinates?.type === 'Point'
         ? property.address.coordinates.coordinates
         : undefined;
-    const hasAddress = address && (address.street || address.city || address.state || address.country);
+    const hasAddress = address && (address.street || address.cityName || address.regionName || address.countryName);
     const hasMap = Array.isArray(coordinates) && coordinates.length === 2 &&
         coordinates[0] >= -180 && coordinates[0] <= 180 && // Valid  longitude
         coordinates[1] >= -90 && coordinates[1] <= 90;     // Valid latitude
@@ -41,7 +41,7 @@ export const LocationSection: React.FC<Props> = ({ property }) => {
                 <View style={styles.card}>
                     {address.street && <ThemedText style={styles.item}>{address.street}</ThemedText>}
                     <ThemedText style={styles.item}>
-                        {[address.city, address.state, address.country].filter(Boolean).join(', ')}
+                        {[address.cityName, address.regionName, address.countryName].filter(Boolean).join(', ')}
                     </ThemedText>
                 </View>
             )}
