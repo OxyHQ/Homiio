@@ -292,7 +292,7 @@ export function SideBar() {
         key: 'search',
         icon: Search,
         iconActive: Search,
-        label: t('sidebar.navigation.search'),
+        label: t('sidebar.navigation.explore'),
         route: '/search',
       },
     ];
