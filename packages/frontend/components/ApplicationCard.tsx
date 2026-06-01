@@ -5,17 +5,20 @@
  * lives under different routes; the parent supplies `href`).
  */
 import React, { useMemo } from 'react';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { Avatar } from '@oxyhq/bloom/avatar';
 import { TenantApplication } from '@homiio/shared-types';
 import { ApplicationStatusBadge } from '@/components/ApplicationStatusBadge';
+import { ThumbnailCard } from '@/components/ui/ThumbnailCard';
+import { ThumbnailImage } from '@/components/ui/ThumbnailImage';
 import { useProperty } from '@/hooks';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
+import { formatCurrency } from '@/utils/currency';
 import { colors } from '@/styles/colors';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 
 export interface ApplicationCardProps {
   application: TenantApplication;
@@ -29,18 +32,7 @@ export interface ApplicationCardProps {
   applicantAvatarUrl?: string;
 }
 
-const formatCurrency = (amount: number): string => {
-  try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  } catch {
-    return `${amount.toFixed(0)}`;
-  }
-};
+const APPLICATION_INCOME_CURRENCY = 'EUR';
 
 const formatEmployment = (status: string): string =>
   status
@@ -77,85 +69,51 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
   };
 
   return (
-    <Pressable
-      style={styles.card}
+    <ThumbnailCard
+      thumbnail={<ThumbnailImage source={imageSource} />}
       onPress={handlePress}
-      accessibilityRole="button"
       accessibilityLabel={`Application ${application.id}`}
     >
-      <View style={styles.thumbWrapper}>
-        {imageSource ? (
-          <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
-        ) : (
-          <View style={[styles.thumb, styles.thumbPlaceholder]} />
-        )}
+      <View style={styles.headerRow}>
+        <BloomText style={styles.title} numberOfLines={1}>
+          {variant === 'landlord' ? applicantName ?? 'Applicant' : propertyTitle}
+        </BloomText>
+        <ApplicationStatusBadge status={application.status} />
       </View>
-      <View style={styles.body}>
-        <View style={styles.headerRow}>
-          <BloomText style={styles.title} numberOfLines={1}>
-            {variant === 'landlord' ? applicantName ?? 'Applicant' : propertyTitle}
-          </BloomText>
-          <ApplicationStatusBadge status={application.status} />
-        </View>
-        {variant === 'landlord' ? (
-          <>
-            <View style={styles.applicantRow}>
-              <Avatar
-                size={20}
-                name={applicantName ?? 'A'}
-                source={applicantAvatarUrl ?? null}
-              />
-              <BloomText style={styles.subtitle} numberOfLines={1}>
-                {propertyTitle}
-              </BloomText>
-            </View>
-            <BloomText style={styles.meta} numberOfLines={1}>
-              {formatCurrency(application.monthlyIncome)} / month ·{' '}
-              {formatEmployment(application.employmentStatus)} · Move-in{' '}
-              {format(new Date(application.moveInDate), 'MMM d')}
-            </BloomText>
-          </>
-        ) : (
-          <>
+      {variant === 'landlord' ? (
+        <>
+          <View style={styles.applicantRow}>
+            <Avatar
+              size={20}
+              name={applicantName ?? 'A'}
+              source={applicantAvatarUrl ?? null}
+            />
             <BloomText style={styles.subtitle} numberOfLines={1}>
-              {application.leaseTermMonths}-month lease · Move-in{' '}
-              {format(new Date(application.moveInDate), 'MMM d, yyyy')}
+              {propertyTitle}
             </BloomText>
-            <BloomText style={styles.meta} numberOfLines={1}>
-              Submitted {submittedLabel}
-            </BloomText>
-          </>
-        )}
-      </View>
-    </Pressable>
+          </View>
+          <BloomText style={styles.meta} numberOfLines={1}>
+            {formatCurrency(application.monthlyIncome, APPLICATION_INCOME_CURRENCY)} / month ·{' '}
+            {formatEmployment(application.employmentStatus)} · Move-in{' '}
+            {format(new Date(application.moveInDate), 'MMM d')}
+          </BloomText>
+        </>
+      ) : (
+        <>
+          <BloomText style={styles.subtitle} numberOfLines={1}>
+            {application.leaseTermMonths}-month lease · Move-in{' '}
+            {format(new Date(application.moveInDate), 'MMM d, yyyy')}
+          </BloomText>
+          <BloomText style={styles.meta} numberOfLines={1}>
+            Submitted {submittedLabel}
+          </BloomText>
+        </>
+      )}
+    </ThumbnailCard>
   );
 };
 
 const styles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    backgroundColor: colors.white,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-    marginBottom: spacing.md,
-    ...withShadow('sm'),
-  },
-  thumbWrapper: {
-    width: 96,
-    height: 96,
-  },
-  thumb: {
-    width: '100%',
-    height: '100%',
-  },
-  thumbPlaceholder: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-  },
-  body: {
-    flex: 1,
-    padding: spacing.md,
-    justifyContent: 'space-between',
-  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',

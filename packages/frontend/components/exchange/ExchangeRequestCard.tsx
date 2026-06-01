@@ -1,18 +1,20 @@
 import React, { useMemo } from 'react';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { format, parseISO } from 'date-fns';
 
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { Ionicons } from '@expo/vector-icons';
 import { ExchangeMode, type ExchangeRequest } from '@homiio/shared-types';
 
 import { ExchangeStatusBadge } from '@/components/exchange/ExchangeStatusBadge';
+import { ThumbnailCard } from '@/components/ui/ThumbnailCard';
+import { ThumbnailImage } from '@/components/ui/ThumbnailImage';
 import { useProperty } from '@/hooks';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
+import { formatDateRange } from '@/utils/dateFormatting';
 import { colors } from '@/styles/colors';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 
 export interface ExchangeRequestCardProps {
   request: ExchangeRequest;
@@ -20,12 +22,8 @@ export interface ExchangeRequestCardProps {
   actions?: React.ReactNode;
 }
 
-const formatRange = (start: string, end: string): string => {
-  const startDate = parseISO(start);
-  const endDate = parseISO(end);
-  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return '';
-  return `${format(startDate, 'MMM d, yyyy')} → ${format(endDate, 'MMM d, yyyy')}`;
-};
+/** Glyph size for the small mode line ("Home swap" / "Free hosting"). */
+const MODE_ICON_SIZE = 13;
 
 export const ExchangeRequestCard: React.FC<ExchangeRequestCardProps> = ({
   request,
@@ -50,74 +48,36 @@ export const ExchangeRequestCard: React.FC<ExchangeRequestCardProps> = ({
       : t('listing.exchange.mode.host', 'Free hosting');
 
   return (
-    <View style={styles.card}>
-      <Pressable
-        style={styles.body}
-        onPress={() => router.push(`/exchange/${request.id}`)}
-        accessibilityRole="button"
-        accessibilityLabel={title}
-      >
-        <View style={styles.thumbWrapper}>
-          {imageSource ? (
-            <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
-          ) : (
-            <View style={[styles.thumb, styles.thumbPlaceholder]} />
-          )}
-        </View>
-        <View style={styles.bodyText}>
-          <View style={styles.headerRow}>
-            <BloomText style={styles.title} numberOfLines={1}>
-              {title}
-            </BloomText>
-            <ExchangeStatusBadge status={request.status} />
-          </View>
-          <BloomText style={styles.dates} numberOfLines={1}>
-            {formatRange(request.requestedWindow.start, request.requestedWindow.end)}
-          </BloomText>
-          <View style={styles.metaRow}>
-            <Ionicons
-              name={request.mode === ExchangeMode.SWAP ? 'swap-horizontal' : 'bed-outline'}
-              size={13}
-              color={colors.exchangeAccent}
-            />
-            <BloomText style={styles.meta} numberOfLines={1}>
-              {modeLabel}
-            </BloomText>
-          </View>
-        </View>
-      </Pressable>
-      {actions ? <View style={styles.actions}>{actions}</View> : null}
-    </View>
+    <ThumbnailCard
+      thumbnail={<ThumbnailImage source={imageSource} />}
+      onPress={() => router.push(`/exchange/${request.id}`)}
+      accessibilityLabel={title}
+      actions={actions}
+    >
+      <View style={styles.headerRow}>
+        <BloomText style={styles.title} numberOfLines={1}>
+          {title}
+        </BloomText>
+        <ExchangeStatusBadge status={request.status} />
+      </View>
+      <BloomText style={styles.dates} numberOfLines={1}>
+        {formatDateRange(request.requestedWindow.start, request.requestedWindow.end)}
+      </BloomText>
+      <View style={styles.metaRow}>
+        <Ionicons
+          name={request.mode === ExchangeMode.SWAP ? 'swap-horizontal' : 'bed-outline'}
+          size={MODE_ICON_SIZE}
+          color={colors.exchangeAccent}
+        />
+        <BloomText style={styles.meta} numberOfLines={1}>
+          {modeLabel}
+        </BloomText>
+      </View>
+    </ThumbnailCard>
   );
 };
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-    marginBottom: spacing.md,
-    ...withShadow('sm'),
-  },
-  body: {
-    flexDirection: 'row',
-  },
-  thumbWrapper: {
-    width: 96,
-    height: 96,
-  },
-  thumb: {
-    width: '100%',
-    height: '100%',
-  },
-  thumbPlaceholder: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-  },
-  bodyText: {
-    flex: 1,
-    padding: spacing.md,
-    justifyContent: 'space-between',
-  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -141,12 +101,6 @@ const styles = StyleSheet.create({
   meta: {
     fontSize: 12,
     color: colors.COLOR_BLACK_LIGHT_4,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
   },
 });
 

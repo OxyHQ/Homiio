@@ -2,9 +2,15 @@
  * ContractCard — lease summary used by `/contracts` and shared list views.
  *
  * Stream Q polish:
- *   - Pressable card surface with withShadow('sm') and radius.lg.
+ *   - CardSurface (surfaceElevated, withShadow('sm'), radius.lg) container.
  *   - Bloom Typography for every label / value, no raw <Text>.
- *   - Inline Bloom Button actions for share / download (when provided).
+ *   - Inline Bloom Button actions for share / download (when provided), laid
+ *     out by the shared CardActionsFooter.
+ *
+ * The property / parties rows stay bespoke (a 16px icon + small label, and a
+ * fixed-width-label + value row): the shared `DetailIconRow` renders a 32px
+ * icon box + 15px label with its own vertical padding and a single shrinking
+ * label, which can't express either of these without changing the visual.
  */
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -12,7 +18,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@oxyhq/bloom/button';
 import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
 import { colors } from '@/styles/colors';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { radius, spacing } from '@/constants/styles';
+import { CardSurface } from './ui/CardSurface';
+import { CardActionsFooter } from './ui/CardActionsFooter';
 import { StatusBadge, type StatusType } from './ui/StatusBadge';
 
 export type ContractStatus =
@@ -136,16 +144,13 @@ export const ContractCard: React.FC<ContractCardProps> = ({
   );
 
   return (
-    <View style={styles.container}>
+    <CardSurface padding={spacing.lg} style={styles.surface}>
       {onPress ? (
         <Pressable
           onPress={onPress}
           onPressIn={() => setPressed(true)}
           onPressOut={() => setPressed(false)}
-          style={[
-            styles.bodyPressable,
-            pressed && styles.containerPressed,
-          ]}
+          style={[styles.bodyPressable, pressed && styles.containerPressed]}
           accessibilityRole="button"
           accessibilityLabel={`Contract ${title}`}
         >
@@ -155,8 +160,8 @@ export const ContractCard: React.FC<ContractCardProps> = ({
         <View style={styles.bodyPressable}>{body}</View>
       )}
 
-      {(onSharePress || onDownloadPress) && (
-        <View style={styles.actionsContainer}>
+      {onSharePress || onDownloadPress ? (
+        <CardActionsFooter inset="inline">
           {onSharePress ? (
             <Button
               variant="secondary"
@@ -189,21 +194,17 @@ export const ContractCard: React.FC<ContractCardProps> = ({
               Download
             </Button>
           ) : null}
-        </View>
-      )}
-    </View>
+        </CardActionsFooter>
+      ) : null}
+    </CardSurface>
   );
 };
 
 export default ContractCard;
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
+  surface: {
     gap: spacing.sm,
-    ...withShadow('sm'),
   },
   bodyPressable: {
     gap: spacing.sm,
@@ -285,10 +286,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: colors.COLOR_BLACK,
-  },
-  actionsContainer: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
   },
 });

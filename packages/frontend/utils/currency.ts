@@ -344,16 +344,32 @@ export function convertCurrency(amount: number, fromCurrency: string, toCurrency
   return (amount / fromRate) * toRate;
 }
 
-/**
- * Format amount with currency symbol
- */
-export function formatCurrency(amount: number, currencyCode: string = 'USD'): string {
-  const currency = getCurrencyByCode(currencyCode) || getDefaultCurrency();
+/** Fraction-digit overrides for {@link formatCurrency}. */
+export interface FormatCurrencyOptions {
+  /** Minimum fraction digits (defaults to 0 — whole amounts show no decimals). */
+  minimumFractionDigits?: number;
+  /** Maximum fraction digits (defaults to 2). */
+  maximumFractionDigits?: number;
+}
 
-  // Format the number with appropriate decimal places
-  const formattedAmount = amount.toLocaleString('en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
+/**
+ * Format amount with currency symbol.
+ *
+ * Defaults to `0–2` fraction digits (whole amounts render without decimals).
+ * Pass `options` to force a fixed precision — e.g. a price breakdown that
+ * always shows cents passes `{ minimumFractionDigits: 2, maximumFractionDigits: 2 }`.
+ */
+export function formatCurrency(
+  amount: number,
+  currencyCode: string = 'USD',
+  options: FormatCurrencyOptions = {},
+): string {
+  const currency = getCurrencyByCode(currencyCode) || getDefaultCurrency();
+  const safeAmount = Number.isFinite(amount) ? amount : 0;
+
+  const formattedAmount = safeAmount.toLocaleString('en-US', {
+    minimumFractionDigits: options.minimumFractionDigits ?? 0,
+    maximumFractionDigits: options.maximumFractionDigits ?? 2,
   });
 
   return `${currency.symbol}${formattedAmount}`;

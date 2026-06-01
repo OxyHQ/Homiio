@@ -2,6 +2,13 @@ import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { colors } from '@/styles/colors';
+import { formatCurrency } from '@/utils/currency';
+
+/** A price breakdown always shows cents, so fix precision at 2 fraction digits. */
+const MONEY_FORMAT: { minimumFractionDigits: number; maximumFractionDigits: number } = {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+};
 
 export interface PriceBreakdownProps {
   nights: number;
@@ -22,20 +29,6 @@ interface LineProps {
   emphasis?: boolean;
 }
 
-const formatMoney = (amount: number, currency: string): string => {
-  const safeAmount = Number.isFinite(amount) ? amount : 0;
-  try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(safeAmount);
-  } catch {
-    return `${currency} ${safeAmount.toFixed(2)}`;
-  }
-};
-
 const Line: React.FC<LineProps> = ({ label, amount, currency, emphasis }) => (
   <View style={styles.line}>
     <BloomText
@@ -46,7 +39,7 @@ const Line: React.FC<LineProps> = ({ label, amount, currency, emphasis }) => (
     <BloomText
       style={[styles.lineAmount, emphasis ? styles.lineAmountEmphasis : null]}
     >
-      {formatMoney(amount, currency)}
+      {formatCurrency(amount, currency, MONEY_FORMAT)}
     </BloomText>
   </View>
 );
@@ -94,7 +87,7 @@ export const PriceBreakdown: React.FC<PriceBreakdownProps> = ({
   return (
     <View style={[styles.container, compact ? styles.containerCompact : null]}>
       <Line
-        label={`${formatMoney(breakdown.safeRate, currency)} × ${breakdown.safeNights} ${
+        label={`${formatCurrency(breakdown.safeRate, currency, MONEY_FORMAT)} × ${breakdown.safeNights} ${
           breakdown.safeNights === 1 ? 'night' : 'nights'
         }`}
         amount={breakdown.subtotal}
