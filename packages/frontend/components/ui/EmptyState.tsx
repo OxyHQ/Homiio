@@ -18,7 +18,7 @@ import { Button } from '@oxyhq/bloom/button';
 import { H3, Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { colors } from '@/styles/colors';
-import { spacing } from '@/constants/styles';
+import { ICON_SIZES, spacing } from '@/constants/styles';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -43,7 +43,7 @@ export function EmptyState({
   actionIcon,
   onAction,
   style,
-  iconSize = 28,
+  iconSize = ICON_SIZES.xl,
   iconColor = colors.COLOR_BLACK_LIGHT_3,
 }: EmptyStateProps) {
   return (
@@ -66,7 +66,7 @@ export function EmptyState({
             size="medium"
             icon={
               actionIcon ? (
-                <Ionicons name={actionIcon} size={16} color={colors.primaryForeground} />
+                <Ionicons name={actionIcon} size={ICON_SIZES.sm} color={colors.primaryForeground} />
               ) : undefined
             }
           >

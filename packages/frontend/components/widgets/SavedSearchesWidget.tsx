@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
+import { ICON_SIZES } from '@/constants/styles';
 import { BaseWidget } from './BaseWidget';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
 import { webAlert } from '@/utils/api';
@@ -163,7 +164,7 @@ export function SavedSearchesWidget() {
       <View style={styles.searchActions}>
         {item.notificationsEnabled && (
           <View style={styles.notificationBadge}>
-            <Ionicons name="notifications" size={12} color={colors.primaryColor} />
+            <Ionicons name="notifications" size={ICON_SIZES.xs} color={colors.primaryColor} />
           </View>
         )}
         <TouchableOpacity
@@ -171,7 +172,7 @@ export function SavedSearchesWidget() {
           onPress={() => handleShowActions(item)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="ellipsis-vertical" size={16} color={colors.COLOR_BLACK_LIGHT_4} />
+          <Ionicons name="ellipsis-vertical" size={ICON_SIZES.sm} color={colors.COLOR_BLACK_LIGHT_4} />
         </TouchableOpacity>
       </View>
     </View>
@@ -258,7 +259,7 @@ export function SavedSearchesWidget() {
                   style={styles.actionItem}
                   onPress={() => handleEditSearch(selectedSearch)}
                 >
-                  <Ionicons name="create-outline" size={20} color={colors.primaryColor} />
+                  <Ionicons name="create-outline" size={ICON_SIZES.md} color={colors.primaryColor} />
                   <Text style={styles.actionText}>{t('common.edit')}</Text>
                 </TouchableOpacity>
 
@@ -272,7 +273,7 @@ export function SavedSearchesWidget() {
                         ? 'notifications-off-outline'
                         : 'notifications-outline'
                     }
-                    size={20}
+                    size={ICON_SIZES.md}
                     color={colors.primaryColor}
                   />
                   <Text style={styles.actionText}>
@@ -286,7 +287,7 @@ export function SavedSearchesWidget() {
                   style={styles.actionItem}
                   onPress={() => handleDeleteSavedSearch(selectedSearch)}
                 >
-                  <Ionicons name="trash-outline" size={20} color={colors.danger} />
+                  <Ionicons name="trash-outline" size={ICON_SIZES.md} color={colors.danger} />
                   <Text style={[styles.actionText, styles.deleteText]}>{t('common.delete')}</Text>
                 </TouchableOpacity>
               </>
@@ -308,7 +309,7 @@ export function SavedSearchesWidget() {
             <View style={styles.editModalHeader}>
               <Text style={styles.editModalTitle}>{t('search.editSearch')}</Text>
               <TouchableOpacity onPress={handleEditClose} style={styles.closeButton}>
-                <Ionicons name="close" size={24} color={colors.COLOR_BLACK_LIGHT_3} />
+                <Ionicons name="close" size={ICON_SIZES.lg} color={colors.COLOR_BLACK_LIGHT_3} />
               </TouchableOpacity>
             </View>
 

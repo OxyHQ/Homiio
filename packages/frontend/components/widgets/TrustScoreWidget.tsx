@@ -9,6 +9,7 @@ import { TrustScoreCompact } from '../TrustScoreCompact';
 import { useTrustScore } from '@/hooks/useTrustScore';
 import { useActiveProfile } from '@/hooks/useProfileQueries';
 import { ThemedText } from '../ThemedText';
+import { BaseWidget } from './BaseWidget';
 
 export const TrustScoreWidget = React.memo(function TrustScoreWidget() {
   const { t } = useTranslation();
@@ -185,20 +186,17 @@ export const TrustScoreWidget = React.memo(function TrustScoreWidget() {
     return null; // Don't show the widget if the user is not authenticated
   }
 
+  // Chrome (primaryLight surface + radius) comes from the shared BaseWidget.
+  // This widget has no header, so `noPadding` suppresses BaseWidget's default
+  // content padding and we keep our own 20px content wrapper.
   return (
-    <View style={styles.widgetContainer}>
-      {/* Widget Content */}
+    <BaseWidget noPadding>
       <View style={styles.widgetContent}>{renderContent}</View>
-    </View>
+    </BaseWidget>
   );
 });
 
 const styles = StyleSheet.create({
-  widgetContainer: {
-    backgroundColor: colors.primaryLight,
-    borderRadius: 15,
-    overflow: 'hidden',
-  },
   widgetContent: {
     padding: 20,
   },

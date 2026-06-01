@@ -92,6 +92,31 @@ export const radius = {
 } as const;
 
 /**
+ * Icon-size scale for `Ionicons`/glyph `size={…}`. Pick the nearest token
+ * instead of sprinkling raw numbers so glyphs line up across buttons, list
+ * rows, empty/error states, and widget headers.
+ *
+ *   xs (12) — inline meta glyphs, chip progress markers
+ *   sm (16) — button-leading icons, dense badges
+ *   md (20) — list-row affordances, secondary actions
+ *   lg (24) — widget headers, primary nav icons
+ *   xl (28) — empty/error hero glyphs, large rating stars
+ *
+ * The property detail grid keeps its own `DETAIL_ICON_SIZE` (22) because it
+ * is sized to the fixed box the isometric PNG fallback reserves; it sits
+ * between `lg` and `xl` on purpose and stays independent of this scale.
+ */
+export const ICON_SIZES = {
+  xs: 12,
+  sm: 16,
+  md: 20,
+  lg: 24,
+  xl: 28,
+} as const;
+
+export type IconSizeKey = keyof typeof ICON_SIZES;
+
+/**
  * Section spacing rhythm. Web is a touch more generous; mobile keeps
  * content dense enough to avoid scroll fatigue but still breathes.
  *

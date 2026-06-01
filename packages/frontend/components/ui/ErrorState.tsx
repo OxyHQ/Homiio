@@ -19,7 +19,7 @@ import { Button } from '@oxyhq/bloom/button';
 import { H3, Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { colors } from '@/styles/colors';
-import { spacing } from '@/constants/styles';
+import { ICON_SIZES, spacing } from '@/constants/styles';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -45,7 +45,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   return (
     <View style={[styles.container, style]}>
       <View style={styles.iconCircle}>
-        <Ionicons name={icon} size={28} color={colors.COLOR_BLACK_LIGHT_3} />
+        <Ionicons name={icon} size={ICON_SIZES.xl} color={colors.COLOR_BLACK_LIGHT_3} />
       </View>
       <H3 style={styles.title}>{title}</H3>
       {description ? (
